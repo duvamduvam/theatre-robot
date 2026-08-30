@@ -48,6 +48,19 @@ POURQUOI CHAT_STATE_TOPIC est un nouveau topic (seule exception au "zéro
        LOCAL (même piège documenté qu'ANIMATION_STATE plus bas) et SANS passer
        par l'arbitrage (_publish_state, à la différence de _publish) : un état
        n'entre jamais en conflit avec une séquence de spectacle.
+POURQUOI le gate `vision.audio.live_audio_gate` (lot du 2026-08-30, gate
+       « source audio vivante », dadou_robot_ros/docs/
+       etude-declenchement-conversation.md §10) : le node construit le gate
+       depuis la config (source unique de vérité, cf. vision_config.py) et
+       lui fournit `show_audio_active` -- un CALLABLE, PAS un bool figé, qui
+       RÉUTILISE arbitration.effective_state déjà câblé pour l'arbitrage
+       amont (ne pas le dupliquer : c'est lui qui porte la péremption
+       deadman évitant de rester sourd pour toujours si animations_node
+       meurt). La DÉCISION elle-même est déléguée à
+       arbitration.show_audio_live, qui porte ses deux exclusions et leur
+       pourquoi -- "parle" (l'animation du chat lui-même : blocage
+       circulaire) et None (topic jamais reçu : surdité définitive et
+       silencieuse). Ces règles ne sont écrites qu'à cet endroit-là.
 """
 import json
 import logging
@@ -70,6 +83,7 @@ from vision.ai.performance import RosMessage
 from vision.ai.stt import FasterWhisperStt
 from vision.ai.tts_piper import PiperTts
 from vision.audio.beeps import build_thinking_beeps
+from vision.audio.live_audio_gate import LiveAudioGate
 from vision.audio.mic import MicCapture
 from vision.audio.playback import AudioPlayer
 from vision.audio.vad import EnergyVad
@@ -219,6 +233,11 @@ class ChatNode(Node):
         try:
             mic = MicCapture(mic_device, sample_rate=MIC_SAMPLE_RATE, frame_ms=MIC_FRAME_MS)
             vad = EnergyVad(config["chat_vad"], frame_ms=MIC_FRAME_MS)
+            # Gate « source audio vivante » (cf. docstring de module POURQUOI) :
+            # construit ICI, avec micro/VAD, même philosophie de construction
+            # pure protégée par le même try/except (peu de raisons d'échouer,
+            # mais un échec resterait un échec de DÉMARRAGE propre).
+            gate = LiveAudioGate(config["chat_live_audio_gate"])
         except Exception as exc:  # noqa: BLE001 - log explicite avant de propager
             self.get_logger().error(f"Échec d'initialisation micro/VAD : {exc}")
             raise ChatStartupError("échec init micro/VAD") from exc
@@ -319,6 +338,15 @@ class ChatNode(Node):
             # le mode interactif démarre TOUJOURS activé (cf. self._enabled
             # ci-dessous, lancer le node = vouloir la conversation).
             initial_state="listening",
+            # Gate « source audio vivante » (cf. docstring de module) :
+            # show_audio_active est une méthode LIÉE, pas un bool calculé ici
+            # -- self._animation_state/_animation_expiry n'existent pas
+            # encore à cet instant précis (affectés plus bas dans ce
+            # constructeur), mais seule la RÉFÉRENCE à la méthode est stockée
+            # ici ; elle n'est APPELÉE que depuis le thread de conversation,
+            # démarré en tout dernier dans ce __init__, bien après que ces
+            # attributs existent.
+            gate=gate, show_audio_active=self._show_audio_active,
         )
         self._mic = mic
         self._player = player
@@ -466,6 +494,24 @@ class ChatNode(Node):
             self._animation_expiry = arbitration.state_expiry(
                 int(ros_msg.time), time.monotonic())
         self._animation_state = state
+
+    def _show_audio_active(self) -> bool:
+        """Callback `show_audio_active` injecté dans ConversationEngine (cf.
+        vision.audio.live_audio_gate, canal C4 « séquence de spectacle ») :
+        appelé PAR LE THREAD de conversation à chaque frame micro tant que le
+        gate est câblé -- RÉUTILISE arbitration.effective_state (même calcul
+        que _publish ci-dessous, même péremption deadman) plutôt que de le
+        dupliquer, cf. docstring de module POURQUOI.
+
+        Ce node ne fait ici QUE deux choses : appliquer la péremption
+        (effective_state, comme _publish) et déléguer la DÉCISION à
+        arbitration.show_audio_live — laquelle porte les deux exclusions
+        ("parle" et None) et leur pourquoi, au même endroit que la doctrine
+        jumelle d'allow_message. Aucune règle ne doit être réécrite ici :
+        c'est le genre de duplication qui diverge en silence."""
+        state = arbitration.effective_state(
+            self._animation_state, self._animation_expiry, time.monotonic())
+        return arbitration.show_audio_live(state)
 
     def _publish(self, message: RosMessage) -> None:
         """Callback injecté dans ConversationEngine : traduit un RosMessage en

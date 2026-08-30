@@ -86,6 +86,39 @@ def parse_animation_state(raw: str) -> str:
     return value if isinstance(value, str) else ""
 
 
+def show_audio_live(animation_state: Optional[str]) -> bool:
+    """Une séquence de spectacle AUTRE que celle du chat a-t-elle la main ?
+    C'est le canal C4 du gate « source audio vivante » (lot du 2026-08-30,
+    cf. vision.audio.live_audio_gate et dadou_robot_ros/docs/
+    etude-declenchement-conversation.md §10.5) : une séquence en cours peut
+    porter une piste audio, qui sort par la même sono que tout le reste.
+
+    Vit ICI et pas dans chat_node parce que les deux exclusions sont la MÊME
+    doctrine que celle d'allow_message ci-dessous, et qu'elle doit être
+    tranchée à un seul endroit :
+
+    - CHAT_ANIMATION ("parle") exclue : c'est l'animation que le chat lance
+      lui-même, sa propre voix est déjà couverte par la coupure micro et la
+      queue acoustique. L'inclure créerait un blocage CIRCULAIRE — le chat
+      resterait sourd tant que son propre "parle" n'est pas retombé.
+    - ⚠️ None (topic JAMAIS reçu) exclu AUSSI, et c'est le piège coûteux :
+      sans cette exclusion, un `animations_node` pas encore démarré (ou un Pi
+      robot éteint, ou un topic absent) bloquerait CHAQUE trame et rendrait
+      Didier sourd DÉFINITIVEMENT et EN SILENCE. C'est la panne que la
+      péremption deadman (state_expiry/effective_state) existe pour empêcher,
+      et allow_message a déjà tranché ce cas dans le même sens ("jamais reçu
+      : TOUT passe", dégradation douce plutôt que muet pour toujours).
+      Ce qui rend l'exclusion SÛRE, et pas juste commode : C4 n'est pas le
+      canal porteur du gate. Une piste audio qui joue VRAIMENT déclenche le
+      canal acoustique C3 (elle sort par la sono, le micro l'entend) — C4 ne
+      fait que l'anticiper. Ignorer une information ABSENTE ne coûte donc
+      rien de réel ; la lire comme « une séquence joue » coûte tout.
+
+    L'appelant doit passer l'état EFFECTIF (cf. effective_state ci-dessus),
+    pas l'état brut : sinon la péremption ne s'applique pas."""
+    return animation_state not in (None, "", CHAT_ANIMATION)
+
+
 def allow_message(topic: str, payload: str, animation_state: Optional[str]) -> bool:
     """Le message chat (topic FACE ou ANIMATION, payload = json.dumps(valeur),
     cf. RosMessage de vision.ai.performance) a-t-il le droit de partir, vu

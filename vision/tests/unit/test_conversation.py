@@ -62,8 +62,20 @@ class FakeMic:
     def frame_rms(self, frame):
         return 0.0  # valeur sans importance : FakeVad ne l'utilise pas
 
+    def frame_peak(self, frame):
+        # Valeur sans importance ici aussi : dans les tests du gate (cf. plus
+        # bas), c'est FakeGate qui décide du blocage via sa séquence
+        # scriptée, jamais via level/peak — même logique que frame_rms.
+        return 0.0
+
     def preroll(self):
         return self._preroll
+
+    def purge_preroll(self):
+        # Purge du pré-roll appelée par le gate (§10.5.3) quand une trame est
+        # bloquée en pleine phrase — notée dans la timeline pour les tests
+        # dédiés au gate ci-dessous (jamais invoquée quand gate=None).
+        self._timeline.append(("mic_purge_preroll",))
 
 
 class FakeVad:
@@ -72,13 +84,27 @@ class FakeVad:
     comportement de EnergyVad est déjà testé indépendamment, cf.
     test_vad.py)."""
 
-    def __init__(self, events):
+    def __init__(self, events, timeline=None):
         self._events = list(events)
+        # timeline optionnelle (None par défaut, cf. usages existants qui ne
+        # la fournissent pas) : sert UNIQUEMENT à noter les appels à reset()
+        # pour les tests du gate — feed() n'y écrit RIEN, pour ne jamais
+        # perturber les assertions de séquence COMPLÈTE des tests existants.
+        self._timeline = timeline
+        # Compteur de trames VUES par feed() — le test de contrat §10.8
+        # ("une trame bloquée n'atteint jamais la VAD") s'appuie dessus :
+        # un faux VAD qui compte, comme demandé par la spec.
+        self.feed_calls = 0
 
     def feed(self, level):
+        self.feed_calls += 1
         if not self._events:
             return None
         return self._events.pop(0)
+
+    def reset(self):
+        if self._timeline is not None:
+            self._timeline.append(("vad_reset",))
 
 
 class FakeStt:
@@ -140,17 +166,42 @@ def _make_publish(timeline):
     return publish
 
 
+class FakeGate:
+    """Gate scripté : feed() consomme une séquence FIXE de booléens (un par
+    trame VUE, bloquée ou pas — un appel par frame lue, cf.
+    ConversationEngine._listen_for_utterance) et note chaque appel dans la
+    timeline partagée. La vraie temporisation (hold_s, écrêtage...) est
+    testée indépendamment côté vision.audio.live_audio_gate (cf.
+    test_live_audio_gate.py) : ici on ne teste QUE le câblage — l'ordre des
+    appels côté ConversationEngine, pas la décision elle-même."""
+
+    def __init__(self, timeline, blocked_sequence):
+        self._timeline = timeline
+        self._blocked_sequence = list(blocked_sequence)
+
+    def feed(self, level, peak, show_audio=False):
+        self._timeline.append(("gate_feed", level, peak, show_audio))
+        if not self._blocked_sequence:
+            return False
+        return self._blocked_sequence.pop(0)
+
+    def arm_tail(self):
+        self._timeline.append(("gate_arm_tail",))
+
+
 def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
                   brain_raises=False, beeps=True, on_state=None,
-                  initial_state=None):
+                  initial_state=None, gate=None, show_audio_active=None):
     """Assemble un ConversationEngine avec des fakes câblés sur la même
     timeline — factorise le câblage répété par les tests ci-dessous.
     L'appelant est responsable de _cleanup_beeps(engine) en fin de test.
     dead_mic_backoff_s=0.0 : pas d'attente réelle dans les tests (la valeur
-    par défaut ferait dormir 0,5 s chaque test de flux micro mort)."""
+    par défaut ferait dormir 0,5 s chaque test de flux micro mort).
+    gate/show_audio_active : None par défaut (cf. les tests dédiés au gate
+    plus bas), pour ne rien changer aux appels existants de cette factory."""
     return ConversationEngine(
         mic=FakeMic(timeline, frames),
-        vad=FakeVad(vad_events),
+        vad=FakeVad(vad_events, timeline=timeline),
         stt=FakeStt(timeline, stt_text),
         brain=FakeBrain(timeline, brain_deltas, raise_error=brain_raises),
         tts=FakeTts(timeline),
@@ -162,6 +213,8 @@ def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
         dead_mic_backoff_s=0.0,
         on_state=on_state,
         initial_state=initial_state,
+        gate=gate,
+        show_audio_active=show_audio_active,
     )
 
 
@@ -587,3 +640,191 @@ def test_run_forever_pause_off_emis_une_seule_fois(timeline):
         _cleanup_beeps(engine)
 
     assert states == ["off"]
+
+
+# --------------------------------------------------------------------------
+# Gate « source audio vivante » (half-duplex élargi, lot du 2026-08-30, cf.
+# dadou_robot_ros/docs/etude-declenchement-conversation.md §10) — contrat de
+# tests fixé par §10.8 : les trames bloquées n'atteignent jamais la VAD, un
+# blocage en pleine phrase jette l'énoncé partiel, gate=None laisse le
+# comportement strictement inchangé, et le micro redémarre avec le gate
+# amorcé (arm_tail) après drain(). La vraie décision de blocage (niveaux,
+# écrêtage, maintien...) est testée indépendamment côté
+# test_live_audio_gate.py -- ici on ne teste QUE le câblage.
+# --------------------------------------------------------------------------
+
+def test_trame_bloquee_par_le_gate_n_atteint_jamais_la_vad(timeline):
+    # 3 trames, celle du MILIEU est bloquée : la VAD ne doit voir QUE les
+    # deux autres (feed_calls == 2, jamais 3) -- "faux VAD compteur" demandé
+    # par la spec (§10.8).
+    frames = [b"f0", b"f1", b"f2"]
+    vad = FakeVad([None, None])
+    gate = FakeGate(timeline, blocked_sequence=[False, True, False])
+
+    engine = ConversationEngine(
+        mic=FakeMic(timeline, frames),
+        vad=vad,
+        stt=FakeStt(timeline, "jamais utilisé"),
+        brain=FakeBrain(timeline, ["jamais utilisé"]),
+        tts=FakeTts(timeline),
+        player=FakePlayer(timeline),
+        publish=_make_publish(timeline),
+        gate=gate,
+    )
+    try:
+        result = engine._listen_for_utterance()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is None  # frames épuisées sans qu'aucune parole ne démarre
+    assert vad.feed_calls == 2  # PAS 3 : la trame bloquée n'a jamais atteint feed()
+    # La trame bloquée est quand même vue par le gate lui-même (3 appels).
+    gate_calls = [event for event in timeline if event[0] == "gate_feed"]
+    assert len(gate_calls) == 3
+
+
+def test_blocage_en_pleine_phrase_jette_l_enonce_partiel(timeline):
+    # Un premier speech_start démarre un énoncé (f0, f1 accumulées), puis le
+    # gate bloque EN PLEIN MILIEU (f2) : l'énoncé partiel doit être jeté (pas
+    # de recollage), le pré-roll purgé et la VAD réarmée -- un DEUXIÈME
+    # speech_start légitime (f3, f4) doit repartir de zéro.
+    frames = [b"f0", b"f1", b"f2", b"f3", b"f4"]
+    vad_events = [
+        VadEvent(kind="speech_start", preroll_frames=2),  # f0
+        None,                                              # f1 (mi-phrase)
+        VadEvent(kind="speech_start", preroll_frames=2),  # f3 (nouveau départ)
+        VadEvent(kind="speech_end", reason="silence"),    # f4
+    ]
+    gate = FakeGate(timeline, blocked_sequence=[False, False, True, False, False])
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=vad_events,
+        stt_text="peu importe", brain_deltas=["peu importe {\"emotion\": \"neutral\"}"],
+        gate=gate,
+    )
+    try:
+        engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    # Le STT reçoit UNIQUEMENT le pré-roll + f4 du SECOND énoncé -- si le
+    # partiel (PREROLL+f1) n'avait pas été jeté, ces octets se retrouveraient
+    # concaténés ou dédoublés dans les octets transmis.
+    assert ("stt_transcribe", b"PREROLLf4", 16000) in timeline
+    tags = [event[0] for event in timeline]
+    assert tags.count("mic_purge_preroll") == 1  # une seule trame bloquée
+    assert tags.count("vad_reset") == 1
+
+
+def test_gate_none_laisse_le_chemin_gate_totalement_inerte(timeline):
+    # gate=None (défaut) : AUCUNE méthode liée au gate ne doit jamais être
+    # sollicitée -- clause de réversibilité du lot (§10.5 : "les tests
+    # existants restent verts sans y toucher"). Vérifié ici en profondeur
+    # (pas seulement par l'absence de régression sur les tests existants)
+    # avec un mic/VAD qui LÈVENT si frame_peak/purge_preroll/reset sont
+    # appelés malgré tout.
+    class PoisonedMic(FakeMic):
+        def frame_peak(self, frame):
+            raise AssertionError("frame_peak appelé alors que gate=None")
+
+        def purge_preroll(self):
+            raise AssertionError("purge_preroll appelé alors que gate=None")
+
+    class PoisonedVad(FakeVad):
+        def reset(self):
+            raise AssertionError("vad.reset() appelé alors que gate=None")
+
+    frames, events = _speech_frames_and_events()
+    engine = ConversationEngine(
+        mic=PoisonedMic(timeline, frames),
+        vad=PoisonedVad(events),
+        stt=FakeStt(timeline, "salut"),
+        brain=FakeBrain(timeline, ['Salut. {"emotion": "neutral"}']),
+        tts=FakeTts(timeline),
+        player=FakePlayer(timeline),
+        publish=_make_publish(timeline),
+        beeps_pcm=BEEPS_PCM, beeps_rate=BEEPS_RATE, refresh_ms=REFRESH_MS,
+        dead_mic_backoff_s=0.0,
+        # gate et show_audio_active volontairement OMIS (défaut None).
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True  # le tour s'est déroulé normalement malgré les pièges
+
+
+def test_apres_drain_le_micro_redemarre_avec_le_gate_amorce(timeline):
+    # arm_tail() DOIT être appelé juste AVANT le mic_start final qui relance
+    # l'écoute après que Didier a fini de parler (§10.5 : "dans les DEUX
+    # sorties de _speak_reply") -- chemin nominal (succès, après drain()).
+    frames, events = _speech_frames_and_events()
+    gate = FakeGate(timeline, blocked_sequence=[False, False, False])
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="salut", brain_deltas=['Salut. {"emotion": "neutral"}'],
+        gate=gate,
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    tags = [event[0] for event in timeline]
+    final_mic_start = tags.index("mic_start", 1)  # le restart, pas le start initial
+    assert tags[final_mic_start - 1] == "gate_arm_tail"
+
+
+def test_apres_une_erreur_llm_le_micro_redemarre_aussi_avec_le_gate_amorce(timeline):
+    # Même exigence que ci-dessus, sur l'AUTRE sortie de _speak_reply (celle
+    # de l'exception) : le player peut encore jouer un reliquat déjà enfilé
+    # (pas de drain() sur ce chemin) -- la queue acoustique doit quand même
+    # être armée avant de réécouter.
+    frames, events = _speech_frames_and_events()
+    gate = FakeGate(timeline, blocked_sequence=[False, False, False])
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="salut", brain_deltas=["Bonjour ! "], brain_raises=True,
+        gate=gate,
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is False
+    tags = [event[0] for event in timeline]
+    final_mic_start = tags.index("mic_start", 1)
+    assert tags[final_mic_start - 1] == "gate_arm_tail"
+
+
+def test_show_audio_active_est_transmis_au_gate_a_chaque_trame(timeline):
+    # show_audio_active est un CALLABLE réévalué à chaque frame (pas un bool
+    # figé, cf. docstring de ConversationEngine.__init__) : sa valeur de
+    # retour doit se retrouver telle quelle dans le show_audio passé à
+    # gate.feed().
+    frames = [b"f0", b"f1"]
+    gate = FakeGate(timeline, blocked_sequence=[False, False])
+
+    engine = ConversationEngine(
+        mic=FakeMic(timeline, frames),
+        vad=FakeVad([None, None]),
+        stt=FakeStt(timeline, "jamais utilisé"),
+        brain=FakeBrain(timeline, ["jamais utilisé"]),
+        tts=FakeTts(timeline),
+        player=FakePlayer(timeline),
+        publish=_make_publish(timeline),
+        gate=gate, show_audio_active=lambda: True,
+    )
+    try:
+        engine._listen_for_utterance()
+    finally:
+        _cleanup_beeps(engine)
+
+    gate_calls = [event for event in timeline if event[0] == "gate_feed"]
+    assert len(gate_calls) == 2
+    assert all(call[3] is True for call in gate_calls)

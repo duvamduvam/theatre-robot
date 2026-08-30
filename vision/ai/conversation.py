@@ -35,6 +35,16 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        STT inexploitable, AVANT de relancer le micro. thinking() reste publié
        dès speech_end SANS changement (réaction honnête toujours voulue) :
        seule la SORTIE d'un tour abandonné change, pas son entrée.
+
+       ÉLARGISSEMENT du 2026-08-30 (gate « source audio vivante », half-
+       duplex élargi, cf. dadou_robot_ros/docs/
+       etude-declenchement-conversation.md §10) : deux kwargs OPTIONNELS
+       `gate` et `show_audio_active` (défaut None = comportement HISTORIQUE
+       inchangé à l'octet près, clause de réversibilité du lot). Quand ils
+       sont fournis, `_listen_for_utterance` jette toute trame bruyante/
+       écrêtée/de spectacle AVANT qu'elle n'atteigne la VAD, et
+       `_speak_reply` arme une queue acoustique (`arm_tail`) avant de
+       relancer le micro, dans ses DEUX sorties (succès et exception).
 """
 from __future__ import annotations
 
@@ -84,9 +94,23 @@ class ConversationEngine:
                  refresh_ms: int = 15000,
                  dead_mic_backoff_s: float = DEAD_MIC_BACKOFF_S,
                  on_state: Optional[Callable[[str], None]] = None,
-                 initial_state: Optional[str] = None):
+                 initial_state: Optional[str] = None,
+                 gate=None,
+                 show_audio_active: Optional[Callable[[], bool]] = None):
         self._mic = mic
         self._vad = vad
+        # Gate « source audio vivante » (half-duplex élargi, cf.
+        # dadou_robot_ros/docs/etude-declenchement-conversation.md §10) :
+        # None = comportement HISTORIQUE inchangé à l'octet près (clause de
+        # réversibilité du lot, cf. §10.5 -- les tests existants restent
+        # verts sans y toucher). `show_audio_active` est un CALLABLE (pas un
+        # bool figé au constructeur) : il doit refléter l'état COURANT de
+        # l'animation en cours à chaque frame, recalculé à la volée par
+        # chat_node (cf. arbitration.effective_state, qui applique sa propre
+        # péremption deadman) — un bool gelé à la construction serait faux
+        # dès la première séquence de spectacle lancée après coup.
+        self._gate = gate
+        self._show_audio_active = show_audio_active
         self._stt = stt
         self._brain = brain
         self._tts = tts
@@ -281,6 +305,32 @@ class ConversationEngine:
                 return None
 
             level = self._mic.frame_rms(frame)
+
+            if self._gate is not None:
+                # Gate évalué AVANT la VAD (cf. §10.5.1 de l'étude) : la VAD
+                # ne doit JAMAIS voir une trame bruyante. Sa calibration est
+                # à usage unique (médiane des 1000 premières ms) -- une sono
+                # vivante pendant cette fenêtre empoisonnerait le seuil pour
+                # toute la vie de l'instance, rendant Didier durablement
+                # sourd à un humain sans que rien ne le signale.
+                peak = self._mic.frame_peak(frame)
+                show_audio = (self._show_audio_active() if self._show_audio_active
+                              is not None else False)
+                if self._gate.feed(level, peak, show_audio):
+                    # Trame bloquée : jetée avant la VAD. Un blocage en
+                    # pleine phrase jette l'énoncé PARTIEL (jamais de
+                    # recollage d'avant/après un trou de gate, cf. §10.5.2) ;
+                    # le pré-roll est purgé (§10.5.3, sinon la prochaine
+                    # phrase légitime démarrerait avec du bruit de sono dans
+                    # son pré-roll) ; la VAD est ramenée en IDLE (§10.5.4,
+                    # sans quoi une VAD restée en SPEECH attendrait son
+                    # end_silence_ms sur des trames qu'elle ne reçoit plus).
+                    speech_bytes = b""
+                    in_speech = False
+                    self._mic.purge_preroll()
+                    self._vad.reset()
+                    continue
+
             event = self._vad.feed(level)
 
             if not in_speech:
@@ -319,6 +369,15 @@ class ConversationEngine:
             logging.exception(
                 "Erreur pendant la génération/synthèse de la réponse — tour abandonné.")
             self._publish_all(self._perf.speaking_stop())
+            if self._gate is not None:
+                # Queue acoustique (C2) même sur ABANDON : le player peut
+                # encore être en train de jouer ce qui était déjà enfilé
+                # (aucun drain() sur ce chemin, cf. commentaire du test
+                # test_erreur_llm_publie_quand_meme_speaking_stop) — la
+                # réverbération/le tampon ALSA de CE résidu ne doit pas être
+                # réécoutée dès la reprise du micro (§10.5, arm_tail avant
+                # _mic.start() dans les DEUX sorties de _speak_reply).
+                self._gate.arm_tail()
             self._mic.start()
             self._set_state("listening")
             return False
@@ -326,6 +385,10 @@ class ConversationEngine:
         self._player.drain()
         self._publish_all(self._perf.speaking_stop())
         self._publish_all(self._perf.emotion(emotion_params))
+        if self._gate is not None:
+            # Queue acoustique (C2) après un drain() réussi : cf. commentaire
+            # ci-dessus, même raison, chemin nominal.
+            self._gate.arm_tail()
         self._mic.start()
         self._set_state("listening")
         return True

@@ -156,3 +156,21 @@ class EnergyVad:
         self._consecutive_above = 0
         self._consecutive_below_ms = 0
         self._speech_elapsed_ms = 0
+
+    def reset(self) -> None:
+        """Version PUBLIQUE de `_reset_to_idle`, pour un appelant externe qui
+        vient d'invalider les trames en cours (cf. gate « source audio
+        vivante », dadou_robot_ros/docs/etude-declenchement-conversation.md
+        §10.5) : un blocage du gate en pleine phrase jette l'énoncé côté
+        ConversationEngine, mais SANS ce reset, la VAD resterait en SPEECH et
+        attendrait son `end_silence_ms` sur des trames qu'elle ne reçoit plus
+        (le gate les jette avant qu'elles n'atteignent feed()) — la phrase
+        SUIVANTE, légitime, ne déclencherait donc jamais de nouveau
+        speech_start.
+
+        No-op pendant CALIBRATING : il n'y a pas encore de seuil déterminé,
+        rien à "remettre à IDLE" — appeler reset() ici casserait la mesure du
+        bruit de fond en cours sans aucun bénéfice (le seuil est à usage
+        unique, cf. docstring de module)."""
+        if self._state is not VadState.CALIBRATING:
+            self._reset_to_idle()

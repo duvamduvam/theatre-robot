@@ -181,3 +181,41 @@ def test_two_successive_speech_rounds():
     start_event = vad.feed(loud)
     assert start_event.kind == "speech_start"
     assert vad.state is VadState.SPEECH
+
+
+# --------------------------------------------------------------------------
+# reset() public (gate « source audio vivante », cf. dadou_robot_ros/docs/
+# etude-declenchement-conversation.md §10.5.4) : conserve le seuil calibré,
+# no-op pendant CALIBRATING.
+# --------------------------------------------------------------------------
+
+def test_reset_conserve_le_seuil_calibre():
+    config = VadConfig()
+    vad, loud, quiet = _start_speech(config)
+    threshold_before = vad.threshold
+    assert vad.state is VadState.SPEECH  # en pleine phrase avant reset()
+
+    vad.reset()
+
+    assert vad.state is VadState.IDLE
+    assert vad.threshold == threshold_before  # PAS recalibré
+
+    # Ré-armée pour un futur speech_start, comme après une fin de phrase
+    # normale (cf. test_two_successive_speech_rounds).
+    assert vad.feed(loud) is None
+    assert vad.feed(loud) is None
+    event = vad.feed(loud)
+    assert event.kind == "speech_start"
+    assert vad.state is VadState.SPEECH
+
+
+def test_reset_est_un_no_op_pendant_calibrating():
+    config = VadConfig()
+    vad = EnergyVad(config, frame_ms=FRAME_MS)
+    assert vad.state is VadState.CALIBRATING
+
+    vad.reset()  # ne doit PAS casser la calibration en cours
+
+    assert vad.state is VadState.CALIBRATING
+    assert vad.threshold is None
+    _feed_calibration(vad, config, level=1.0)  # la calibration va à son terme normalement

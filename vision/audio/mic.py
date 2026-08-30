@@ -33,6 +33,26 @@ import numpy as np
 _BYTES_PER_SAMPLE = 2
 
 
+def frame_peak(frame: bytes) -> float:
+    """Crête absolue (max des |échantillon|) d'une trame S16_LE mono —
+    fonction PURE extraite de MicCapture (exposée en méthode liée ci-dessous,
+    même patron que `frame_rms` juste en dessous, POUR LA MÊME RAISON :
+    vision.audio.vad_replay doit rejouer un enregistrement de rue à travers
+    le MÊME calcul que la prod).
+
+    POURQUOI la crête en plus du RMS (cf. dadou_robot_ros/docs/
+    etude-declenchement-conversation.md §10.3/§10.4) : c'est la mesure que
+    consomme vision.audio.live_audio_gate.LiveAudioGate pour détecter
+    l'ÉCRÊTAGE (l'entrée sature quand la voix HF de David passe par la
+    sono) — un signal peut écrêter en gardant un RMS moyen sous le seuil de
+    niveau (une syllabe forte isolée au milieu d'un silence), donc les deux
+    mesures sont complémentaires, jamais interchangeables."""
+    if not frame:
+        return 0.0
+    samples = np.frombuffer(frame, dtype=np.int16)
+    return float(np.max(np.abs(samples)))
+
+
 def frame_rms(frame: bytes) -> float:
     """Niveau sonore RMS (racine de la moyenne des carrés) d'une trame S16_LE
     mono — la mesure attendue par vision.audio.vad.EnergyVad.feed.
@@ -108,6 +128,19 @@ class MicCapture:
             if hasattr(self._process, "wait"):
                 self._process.wait()
             self._process = None
+        self.purge_preroll()
+
+    def purge_preroll(self) -> None:
+        """Vide le ring buffer de pré-roll — extrait de `stop()` ci-dessus
+        (qui continue de l'appeler, cf. son docstring pour le POURQUOI
+        initial) pour être réutilisé par le gate « source audio vivante »
+        (cf. vision.ai.conversation._listen_for_utterance et
+        dadou_robot_ros/docs/etude-declenchement-conversation.md §10.5) :
+        une trame bloquée par le gate (sono/HF vivant, séquence de spectacle)
+        ne doit JAMAIS pouvoir réapparaître dans le pré-roll du PROCHAIN
+        énoncé accepté — exactement le même risque que celui documenté dans
+        stop(), pour la même raison, mais déclenché par un AUTRE événement
+        (un blocage du gate, pas un stop() complet du flux)."""
         self._ring.clear()
 
     def read_frame(self) -> Optional[bytes]:
@@ -138,6 +171,13 @@ class MicCapture:
         ne rien changer côté appelants existants (self._mic.frame_rms(frame),
         cf. vision.ai.conversation)."""
         return frame_rms(frame)
+
+    def frame_peak(self, frame: bytes) -> float:
+        """Méthode liée qui délègue à la fonction pure module-level
+        `frame_peak` ci-dessus (cf. son docstring POURQUOI) — même patron que
+        `frame_rms`, pour le même appelant (self._mic.frame_peak(frame), cf.
+        vision.ai.conversation._listen_for_utterance)."""
+        return frame_peak(frame)
 
     def preroll(self) -> bytes:
         """Contenu actuel du ring buffer, concaténé dans l'ordre chronologique

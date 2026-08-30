@@ -13,6 +13,7 @@ importables et testables même sans `conf/secret` sur la machine (CI).
 """
 import os
 
+from vision.audio.live_audio_gate import LiveAudioGateConfig
 from vision.audio.vad import VadConfig
 
 # Racine du dépôt : vision/vision_config.py -> vision/ -> racine.
@@ -131,6 +132,14 @@ config = {
     # plutôt que des clés de config éclatées, pour rester la source unique de
     # vérité si VadConfig gagne de nouveaux champs un jour.
     "chat_vad": VadConfig(),
+
+    # Gate « source audio vivante » (vision/audio/live_audio_gate.py, lot du
+    # 2026-08-30, half-duplex élargi) : instance LiveAudioGateConfig avec ses
+    # valeurs par défaut déjà mesurées le 26/08 sur la chaîne d'acquisition
+    # réelle (cf. docstring de LiveAudioGateConfig) — même patron que
+    # "chat_vad" ci-dessus, un objet complet pour rester source unique de
+    # vérité si la dataclass gagne un champ.
+    "chat_live_audio_gate": LiveAudioGateConfig(),
 
     # Personnalité de Didier au démarrage (vision/ai/personas.py, lot D3 —
     # atelier du 2026-07-13) : « bougon » = la plus proche du registre

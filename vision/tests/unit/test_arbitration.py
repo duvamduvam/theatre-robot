@@ -13,7 +13,8 @@ from dadou_utils_ros.utils_static import ANIMATION, FACE
 
 from vision.ai.arbitration import (CHAT_ANIMATION, STATE_EXPIRY_MARGIN_S,
                                    allow_message, effective_state,
-                                   parse_animation_state, state_expiry)
+                                   parse_animation_state, show_audio_live,
+                                   state_expiry)
 
 FACE_PAYLOAD = json.dumps("joie")  # peu importe l'expression exacte ici
 PARLE_PAYLOAD = json.dumps(CHAT_ANIMATION)  # lancement/refresh de "parle"
@@ -158,3 +159,39 @@ def test_effective_state_repos_et_none_ne_periment_jamais():
     # quels, même très au-delà de l'échéance.
     assert effective_state("", expiry_monotonic=0.0, now_monotonic=1e9) == ""
     assert effective_state(None, expiry_monotonic=0.0, now_monotonic=1e9) is None
+
+
+# --- show_audio_live : canal C4 du gate « source audio vivante » -------------
+# (lot du 2026-08-30, cf. dadou_robot_ros/docs/etude-declenchement-
+# conversation.md §10.5). Les deux exclusions ci-dessous ne sont PAS des cas
+# limites décoratifs : chacune, oubliée, rend Didier sourd sans rien signaler.
+
+
+def test_show_audio_live_une_sequence_de_spectacle_bloque():
+    # Le cas nominal : une séquence tierce joue, elle peut porter une piste
+    # audio qui sort par la même sono -> le micro ne doit pas écouter.
+    assert show_audio_live("berceuse") is True
+
+
+def test_show_audio_live_le_repos_ne_bloque_pas():
+    assert show_audio_live("") is False
+
+
+def test_show_audio_live_l_animation_du_chat_ne_bloque_pas():
+    # "parle" est l'animation que le chat lance LUI-MÊME : sa voix est déjà
+    # couverte par la coupure micro + la queue acoustique. L'inclure ici
+    # créerait un blocage CIRCULAIRE (chat sourd tant que son propre "parle"
+    # n'est pas retombé).
+    assert show_audio_live(CHAT_ANIMATION) is False
+
+
+def test_show_audio_live_topic_jamais_recu_ne_bloque_pas():
+    # ⚠️ LE piège du câblage (corrigé le 30/08 avant le premier essai réel) :
+    # effective_state rend None tant qu'animations_node n'a rien publié (Pi
+    # robot éteint, topic absent, node pas encore démarré). Lire cette
+    # ABSENCE comme « une séquence joue » bloquerait CHAQUE trame -> surdité
+    # DÉFINITIVE et SILENCIEUSE, la panne même que la péremption deadman
+    # existe pour empêcher. Même tranchage que allow_message (« jamais reçu :
+    # tout passe »), et sans coût réel : une piste audio qui joue vraiment
+    # déclenche le canal ACOUSTIQUE du gate, C4 ne fait que l'anticiper.
+    assert show_audio_live(None) is False
