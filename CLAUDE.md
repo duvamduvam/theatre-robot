@@ -77,3 +77,23 @@ Cerveau perceptif du robot de théâtre Didier, sur Pi 5 « vision » (alias ssh
   main, et son stop d'animation devient CIBLÉ (n'arrête que "parle", plus
   d'arrêt global qui écraserait une séquence en cours).
 - Prochains lots : V3 personnage autonome (ARCHITECTURE.md).
+
+## Banc PC x86 (2026-09-13 — Didier immobilisé, Pi 4 fumé)
+
+Le MÊME code (image bâtie du Dockerfile-arm, base multi-arch) tourne sur le
+PC de dev : webcam + Scarlett réelles, corps simulé dans Gazebo
+(`ROS_DOMAIN_ID=43`). Mode d'emploi : dadou_robot_ros `docs/operations.md`
+§Banc PC. Depuis `conf/docker/x86/` :
+
+```bash
+./build-x86.sh                                        # 1re fois (long) — PAS compose build :
+                                                      # le symlink dadou_utils_ros casse le
+                                                      # contexte (« too many links »), le script
+                                                      # streame un tar déréférencé
+CHAT=true docker compose -f docker-compose-x86.yml up -d
+```
+
+Les alias ALSA `casque_mic`/`mixette` sont fournis au conteneur par
+`asound-pc.conf` (pointés Scarlett) : aucun paramètre du code ne change.
+⚠️ Les seuils audio (gate, VAD) calibrés sur le banc ne valent PAS sur le
+Pi 5 — le protocole physique chat_node V2 reste dû.

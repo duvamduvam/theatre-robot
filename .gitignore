@@ -8,3 +8,5 @@ __pycache__/
 *.pyc
 .idea/
 .pytest_cache/
+# Workspace colcon local du banc PC x86 (jetable, cf. docker-compose-x86.yml)
+conf/docker/x86/workspace/
