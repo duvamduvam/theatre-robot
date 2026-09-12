@@ -32,6 +32,12 @@ services:
       # Activation explicite : CHAT=true docker compose ... up.
       - CHAT=${CHAT:-false}
     network_mode: "host"
+    # ipc host OBLIGATOIRE : FastDDS passe les DONNÉES en mémoire partagée
+    # entre participants du même hôte (la découverte, elle, passe en UDP —
+    # les topics se voient mais aucun message ne traverse, piège silencieux
+    # constaté le 2026-09-13). Même réglage dans docker-compose-sim.yml côté
+    # robot. Sans objet sur le parc réel : robot et vision sont deux Pi.
+    ipc: "host"
     volumes:
       # Mêmes montages de sources que docker-compose-arm.yml (itération sans
       # rebuild ; conf/ apporte aussi conf/secret, jamais dans l'image).
