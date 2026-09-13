@@ -19,6 +19,7 @@ from vision.vision_config import config
 
 ROLE = "role"
 SYSTEM = "system"
+ASSISTANT = "assistant"
 USER = "user"
 CONTENT = "content"
 
@@ -53,7 +54,21 @@ class ChatDB(SQLObject):
     def get_history(self):
         if not self.history:
             self.history = json.dumps([])
-        return json.loads(self.history)
+        history = json.loads(self.history)
+
+        # Compat descendante (bug corrigé le 2026-09-13, cf. add_assistant_text) :
+        # les bases écrites avant la correction contiennent d'anciennes répliques
+        # de Didier enregistrées à tort avec le rôle SYSTEM. Le VRAI prompt système
+        # n'est JAMAIS stocké ici — il est injecté à la volée par stream_reply()/
+        # generate_request() à chaque appel — donc toute entrée SYSTEM trouvée en
+        # base ne peut être qu'une ancienne réplique du robot. On la requalifie en
+        # ASSISTANT À LA LECTURE : sans ça, une session déjà ouverte au moment de
+        # la mise à jour continuerait d'envoyer ces répliques au LLM comme des
+        # consignes (c'est exactement le bug observé : deux tours identiques).
+        for message in history:
+            if message.get(ROLE) == SYSTEM:
+                message[ROLE] = ASSISTANT
+        return history
 
     def set_history(self, history):
         self.history = json.dumps(history)
@@ -63,8 +78,8 @@ class ChatDB(SQLObject):
         history.append(message)
         self.set_history(history)
 
-    def add_system_text(self, text):
-        self.add_interaction({ROLE: SYSTEM, CONTENT: text})
+    def add_assistant_text(self, text):
+        self.add_interaction({ROLE: ASSISTANT, CONTENT: text})
 
     def add_user_text(self, text):
         self.add_interaction({ROLE: USER, CONTENT: text})

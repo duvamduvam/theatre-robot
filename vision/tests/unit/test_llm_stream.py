@@ -117,7 +117,7 @@ def test_history_accumulates_across_turns(tmp_path):
     history = brain._history_entry.get_history()
     assert history == [
         {"role": "user", "content": "Premier message"},
-        {"role": "system", "content": "Réponse un."},
+        {"role": "assistant", "content": "Réponse un."},
     ]
 
     client.completions._deltas = ["Réponse deux."]
@@ -126,10 +126,34 @@ def test_history_accumulates_across_turns(tmp_path):
     history = brain._history_entry.get_history()
     assert history == [
         {"role": "user", "content": "Premier message"},
-        {"role": "system", "content": "Réponse un."},
+        {"role": "assistant", "content": "Réponse un."},
         {"role": "user", "content": "Deuxième message"},
-        {"role": "system", "content": "Réponse deux."},
+        {"role": "assistant", "content": "Réponse deux."},
     ]
+
+
+def test_only_the_personality_prompt_is_sent_as_system_role(tmp_path):
+    # Verrou du bug du 2026-09-13 : c'est CE test qui aurait attrapé la
+    # régression (role=system pour les répliques de Didier stockées en
+    # historique). Le seul message "system" envoyé au LLM doit être le
+    # prompt de personnalité ajouté par stream_reply() — aucun message
+    # "system" ne doit provenir de l'historique, même après plusieurs tours.
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Réponse un."])
+
+    brain = StreamingBrain(
+        model="m", base_url="https://x", system_prompt="Tu es Didier.",
+        client_factory=lambda: client,
+    )
+
+    list(brain.stream_reply("Premier message"))
+
+    client.completions._deltas = ["Réponse deux."]
+    list(brain.stream_reply("Deuxième message"))
+
+    messages = client.completions.last_call["messages"]
+    system_messages = [m for m in messages if m["role"] == "system"]
+    assert system_messages == [{"role": "system", "content": "Tu es Didier."}]
 
 
 def test_history_limit_truncates_messages_sent_to_llm(tmp_path):

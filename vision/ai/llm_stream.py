@@ -49,7 +49,7 @@ class StreamingBrain:
         # Une session ChatDB par instance de StreamingBrain — même pattern
         # que vision.ai.interactions.AInteractions (ChatDB.create({}) au
         # constructeur, historique accumulé au fil des tours via
-        # add_user_text/add_system_text).
+        # add_user_text/add_assistant_text).
         self._history_entry = ChatDB.create({})
 
     def reconfigure(self, system_prompt: str) -> None:
@@ -125,4 +125,9 @@ class StreamingBrain:
             full_text += delta
             yield delta
 
-        self._history_entry.add_system_text(full_text)
+        # add_assistant_text (PAS add_system_text, bug corrigé le 2026-09-13) :
+        # une réplique enregistrée sous role=system revient au LLM comme une
+        # CONSIGNE et non comme son propre tour — la règle anti-répétition du
+        # prompt ne peut alors rien y faire (rien n'est identifié comme parole
+        # de l'assistant), cf. post-mortem.
+        self._history_entry.add_assistant_text(full_text)

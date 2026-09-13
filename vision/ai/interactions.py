@@ -81,7 +81,7 @@ class AInteractions:
         new_msg = text.lower()
         self.current_history.tokens = chat_completion.usage.total_tokens
         logging.info(new_msg)
-        self.current_history.add_system_text(new_msg)
+        self.current_history.add_assistant_text(new_msg)
 
         return new_msg
 
