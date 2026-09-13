@@ -32,6 +32,18 @@ def test_max_amplitude_does_not_exceed_amplitude_param():
     assert np.max(np.abs(samples)) <= amplitude
 
 
+def test_amplitude_plus_basse_donne_une_crete_plus_basse():
+    # Lot du 2026-09-13 (David : "baisse le niveau des bips, c'est ennuyeux",
+    # cf. config["chat_beep_amplitude"]) : vérifié sur les OCTETS produits
+    # (pas sur l'argument transmis) — même seed pour isoler l'effet de
+    # l'amplitude du tirage aléatoire des notes.
+    loud = build_thinking_beeps(1.0, amplitude=14000, seed=1)
+    quiet = build_thinking_beeps(1.0, amplitude=5000, seed=1)
+    loud_peak = np.max(np.abs(np.frombuffer(loud, dtype=np.int16)))
+    quiet_peak = np.max(np.abs(np.frombuffer(quiet, dtype=np.int16)))
+    assert quiet_peak < loud_peak
+
+
 def test_deterministic_with_fixed_seed():
     a = build_thinking_beeps(1.0, seed=7)
     b = build_thinking_beeps(1.0, seed=7)

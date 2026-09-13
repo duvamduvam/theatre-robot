@@ -61,7 +61,34 @@ POURQUOI le gate `vision.audio.live_audio_gate` (lot du 2026-08-30, gate
        pourquoi -- "parle" (l'animation du chat lui-même : blocage
        circulaire) et None (topic jamais reçu : surdité définitive et
        silencieuse). Ces règles ne sont écrites qu'à cet endroit-là.
+POURQUOI `diag_port` (lot du 2026-09-13, demande de David en séance -- « un
+       indicateur pour voir si ma voix passe », « la conversation n'est pas
+       fluide du tout ») : serveur de diagnostic web (vumètre temps réel +
+       latences par tour), OFF par défaut (0) -- AUCUN thread/socket créé, ni
+       aucun coût ajouté aux callbacks `on_meter`/`on_timing` de
+       ConversationEngine tant qu'il n'est pas explicitement demandé (cf.
+       clause de réversibilité de vision.ai.conversation). PIÈGE DEUX (en fait
+       TROIS) BOUCLES D'ÉVÉNEMENTS : ce node a DÉJÀ rclpy.spin (thread
+       principal, cf. main()) ET le thread dédié de run_forever ci-dessus --
+       aiohttp a besoin de SA PROPRE boucle asyncio, qui ne peut vivre dans
+       AUCUN des deux (bloquants tous les deux, incompatibles avec asyncio).
+       `DiagServer` le lance donc dans un TROISIÈME thread daemon, avec
+       `asyncio.new_event_loop()` + `AppRunner`/`TCPSite` (PAS `web.run_app` :
+       il tente d'installer des handlers de signal, qui ne fonctionnent QUE
+       dans le thread principal -- ça planterait ici). Même motif que
+       dadou_robot_ros/conf/ros2_dependencies/robot_web/robot_web/
+       web_bridge_node.py et robot/nodes/face_sim_node.py, à ceci près que
+       CES DEUX nodes-là hébergent aiohttp dans leur thread PRINCIPAL (rclpy.
+       spin y est le thread secondaire) -- chat_node ne peut pas faire pareil,
+       son thread principal est déjà pris par rclpy.spin (cf. main()).
+       `_DiagState` (état partagé) est écrit par le thread de conversation
+       (callbacks on_meter/on_timing/on_state, cadence des trames) et lu par
+       le thread aiohttp (rendu SSE, ~10 Hz) : protégé par un threading.Lock
+       (PAS asyncio.Lock, mêmes raisons que web_bridge_node.py) ; AUCUN I/O ni
+       encodage JSON dans les callbacks eux-mêmes (juste un rangement de
+       valeurs), l'encodage se fait côté HTTP, à la cadence d'affichage.
 """
+import asyncio
 import json
 import logging
 import os
@@ -69,6 +96,7 @@ import threading
 import time
 
 import rclpy
+from aiohttp import web
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
@@ -83,7 +111,7 @@ from vision.ai.performance import RosMessage
 from vision.ai.stt import FasterWhisperStt
 from vision.ai.tts_piper import PiperTts
 from vision.audio.beeps import build_thinking_beeps
-from vision.audio.live_audio_gate import LiveAudioGate
+from vision.audio.live_audio_gate import LiveAudioGate, LiveAudioGateConfig
 from vision.audio.mic import MicCapture
 from vision.audio.playback import AudioPlayer
 from vision.audio.vad import EnergyVad
@@ -158,6 +186,282 @@ PERSONA_STATE_TOPIC = "persona_state"
 CHAT_STATE_TOPIC = "chat_state"
 
 
+# --- Serveur de diagnostic web (vumètre + latences, cf. docstring de module
+# POURQUOI `diag_port`) -----------------------------------------------------
+
+# Cadence du flux SSE /events (cf. spec du lot -- "~10 Hz") : largement
+# suffisant pour l'œil humain sur un vumètre, pas besoin de coller à la
+# cadence des trames (30 ms, cf. _DiagState.on_meter) qui, elle, reste interne.
+DIAG_EVENTS_PERIOD_S = 0.1
+
+
+class _DiagState:
+    """État partagé du serveur de diagnostic. ÉCRIT par le thread de
+    conversation (callbacks on_meter/on_timing/on_state, cadence des trames
+    pour le premier) et LU par le thread aiohttp (rendu SSE, cf.
+    DIAG_EVENTS_PERIOD_S) -- protégé par un threading.Lock, PAS un
+    asyncio.Lock (cf. docstring de module PIÈGE DEUX BOUCLES : les
+    producteurs ne sont pas dans la boucle asyncio). Aucun I/O ni encodage
+    JSON dans les callbacks eux-mêmes (cf. spec du lot) : juste un rangement
+    de valeurs, l'encodage se fait dans `snapshot` côté handler HTTP."""
+
+    def __init__(self, vad: EnergyVad, gate_config: LiveAudioGateConfig):
+        self._lock = threading.Lock()
+        # Références VIVANTES vers les objets réellement construits par
+        # ChatNode (cf. spec : "JAMAIS des constantes recopiées") -- lues à
+        # chaque snapshot, pas figées ici : vad.threshold passe de None à une
+        # valeur ~1 s après le démarrage (fin de calibration), la page doit
+        # refléter ce changement sans redémarrer le node.
+        self._vad = vad
+        self._gate_config = gate_config
+        # Dernière trame vue (mise à jour à la cadence des trames, ~30 ms) :
+        # valeurs neutres tant qu'aucune trame n'est encore passée.
+        self._level = 0.0
+        self._peak = 0.0
+        self._blocked = False
+        self._in_speech = False
+        # État courant (listening/thinking/speaking/off), alimenté par un
+        # callback CÂBLÉ EN PLUS de ChatNode._publish_state (cf. son
+        # commentaire) -- "listening" en dur : le mode interactif démarre
+        # toujours activé (même valeur que initial_state du moteur).
+        self._chat_state = "listening"
+        # Dernier tour TERMINÉ (dict on_timing, cf. vision.ai.conversation) :
+        # None tant qu'aucun tour n'a encore atteint le STT.
+        self._timing = None
+
+    def on_meter(self, level: float, peak: float, blocked: bool, in_speech: bool) -> None:
+        """Callback `on_meter` de ConversationEngine (cadence des trames,
+        30 ms) : DOIT rester le moins coûteux possible (cf. spec) -- pas de
+        json.dumps ici, juste un rangement sous verrou."""
+        with self._lock:
+            self._level = level
+            self._peak = peak
+            self._blocked = blocked
+            self._in_speech = in_speech
+
+    def on_timing(self, timing: dict) -> None:
+        """Callback `on_timing` de ConversationEngine (une fois par tour)."""
+        with self._lock:
+            self._timing = timing
+
+    def on_state(self, state: str) -> None:
+        """Câblé EN PLUS de ChatNode._publish_state (pas un remplacement) :
+        ne publie rien sur ROS, alimente seulement la page de diagnostic."""
+        with self._lock:
+            self._chat_state = state
+
+    def snapshot(self) -> dict:
+        """Copie protégée de l'état courant, ENRICHIE des seuils EFFECTIFS
+        lus en direct sur les objets réellement construits (cf. docstring de
+        classe) -- `vad_threshold` reste None tant que la calibration
+        initiale (~1 s) n'est pas terminée, la page l'affiche tel quel."""
+        with self._lock:
+            return {
+                "level": self._level,
+                "peak": self._peak,
+                "blocked": self._blocked,
+                "in_speech": self._in_speech,
+                "chat_state": self._chat_state,
+                "timing": self._timing,
+                "vad_threshold": self._vad.threshold,
+                "gate_loud_rms": self._gate_config.loud_rms,
+                "gate_clip_peak": self._gate_config.clip_peak,
+            }
+
+
+# Page HTML AUTONOME (pas de CDN -- même contrainte que le reste du parc, cf.
+# robot_web/static et face_sim_node._INDEX_HTML : le robot n'a pas toujours de
+# réseau). Vumètre en échelle LOGARITHMIQUE (dBFS) : un vumètre linéaire en
+# unités int16 est illisible, la parole vit tout en bas de l'échelle -- cf.
+# spec du lot. FLOOR_DB (JS) : tout ce qui est plus bas est écrasé à 0% de
+# barre (le silence absolu n'a pas besoin de résolution visuelle).
+_DIAG_INDEX_HTML = """<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Didier — diagnostic conversation</title>
+<style>
+  body { background:#111; color:#ddd; font-family: sans-serif; margin: 2em; }
+  h1 { font-size: 1.3em; color:#fff; }
+  .bloc { margin-bottom: 2em; }
+  .meter-wrap { position: relative; height: 32px; background:#222;
+                border: 1px solid #444; margin-top: 1.5em; }
+  .meter-bar { position: absolute; top:0; left:0; height:100%;
+               background:#2a2; transition: width 0.08s linear; }
+  .meter-bar.speech { background:#29d; }
+  .meter-bar.blocked { background:#a22; }
+  .marker { position: absolute; top:0; bottom:0; width:2px; background:#fd0; }
+  .marker-label { position: absolute; top:-1.4em; font-size:0.75em; color:#fd0;
+                  white-space: nowrap; transform: translateX(-50%); }
+  table { border-collapse: collapse; }
+  td { padding: 2px 12px 2px 0; }
+  td.label { color:#888; }
+  #clip { font-weight: bold; color:#555; }
+  #clip.on { color:#f44; }
+</style>
+</head>
+<body>
+<h1>Didier — diagnostic conversation</h1>
+
+<div class="bloc">
+  <div class="meter-wrap" id="meter-wrap">
+    <div class="meter-bar" id="meter-bar"></div>
+    <div class="marker" id="marker-vad" style="display:none"></div>
+    <div class="marker-label" id="marker-vad-label" style="display:none"></div>
+    <div class="marker" id="marker-gate"></div>
+    <div class="marker-label" id="marker-gate-label"></div>
+  </div>
+  <p>niveau : <span id="level-db">--</span> — crête : <span id="peak-db">--</span>
+     — <span id="clip">écrêtage</span></p>
+</div>
+
+<div class="bloc">
+  <table>
+    <tr><td class="label">état</td><td id="chat_state">--</td></tr>
+    <tr><td class="label">dernier texte STT</td><td id="stt_text">--</td></tr>
+    <tr><td class="label">STT</td><td id="stt_ms">--</td></tr>
+    <tr><td class="label">1re réplique (LLM)</td><td id="llm_first_ms">--</td></tr>
+    <tr><td class="label">1er son</td><td id="audio_first_ms">--</td></tr>
+    <tr><td class="label">latence totale perçue</td><td id="total_ms">--</td></tr>
+  </table>
+</div>
+
+<script>
+const FLOOR_DB = -60;  // plancher d'affichage (cf. commentaire Python ci-dessus)
+function toDb(value) {
+  return value > 0 ? 20 * Math.log10(value / 32768) : FLOOR_DB;
+}
+function pct(db) {
+  return Math.min(100, Math.max(0, (db - FLOOR_DB) / (0 - FLOOR_DB) * 100));
+}
+function fmtDb(db) {
+  return (db <= FLOOR_DB ? "< " + FLOOR_DB : db.toFixed(1)) + " dBFS";
+}
+function fmtMs(value) {
+  return (value === null || value === undefined) ? "—" : Math.round(value) + " ms";
+}
+function placeMarker(marker, label, text, db) {
+  const p = pct(db) + "%";
+  marker.style.left = p;
+  label.style.left = p;
+  label.textContent = text;
+}
+
+const bar = document.getElementById("meter-bar");
+const markerVad = document.getElementById("marker-vad");
+const markerVadLabel = document.getElementById("marker-vad-label");
+const markerGate = document.getElementById("marker-gate");
+const markerGateLabel = document.getElementById("marker-gate-label");
+const clip = document.getElementById("clip");
+
+new EventSource("/events").onmessage = (evt) => {
+  const data = JSON.parse(evt.data);
+  const levelDb = toDb(data.level);
+
+  bar.style.width = pct(levelDb) + "%";
+  // Priorité d'affichage : ROUGE (bloqué par le gate) > BLEU (VAD en parole)
+  // > VERT (par défaut) -- cf. spec du lot.
+  bar.classList.toggle("blocked", data.blocked);
+  bar.classList.toggle("speech", data.in_speech && !data.blocked);
+
+  document.getElementById("level-db").textContent = fmtDb(levelDb);
+  document.getElementById("peak-db").textContent = fmtDb(toDb(data.peak));
+  clip.classList.toggle("on", data.peak >= data.gate_clip_peak);
+
+  if (data.vad_threshold === null || data.vad_threshold === undefined) {
+    markerVad.style.display = "none";
+    markerVadLabel.style.display = "none";
+  } else {
+    markerVad.style.display = "";
+    markerVadLabel.style.display = "";
+    placeMarker(markerVad, markerVadLabel,
+                "VAD (" + toDb(data.vad_threshold).toFixed(1) + " dBFS)",
+                toDb(data.vad_threshold));
+  }
+  placeMarker(markerGate, markerGateLabel,
+              "gate (" + toDb(data.gate_loud_rms).toFixed(1) + " dBFS)",
+              toDb(data.gate_loud_rms));
+
+  document.getElementById("chat_state").textContent = data.chat_state;
+
+  const timing = data.timing;
+  document.getElementById("stt_text").textContent = timing ? (timing.stt_text || "—") : "--";
+  document.getElementById("stt_ms").textContent = timing ? fmtMs(timing.stt_ms) : "--";
+  document.getElementById("llm_first_ms").textContent = timing ? fmtMs(timing.llm_first_ms) : "--";
+  document.getElementById("audio_first_ms").textContent = timing ? fmtMs(timing.audio_first_ms) : "--";
+  document.getElementById("total_ms").textContent = timing ? fmtMs(timing.total_ms) : "--";
+};
+</script>
+</body>
+</html>
+"""
+
+
+async def _diag_index_handler(_request: web.Request) -> web.Response:
+    return web.Response(text=_DIAG_INDEX_HTML, content_type="text/html")
+
+
+async def _diag_events_handler(request: web.Request) -> web.StreamResponse:
+    """GET /events : flux Server-Sent Events (~10 Hz, cf. DIAG_EVENTS_PERIOD_S).
+    SSE plutôt que WebSocket (cf. spec du lot) : ce flux est UNIDIRECTIONNEL
+    (le navigateur ne pilote rien, il observe) -- EventSource est trivial côté
+    navigateur (reconnexion automatique intégrée, aucun framing à gérer), et
+    il n'y a aucun handshake bidirectionnel à maintenir contrairement à un
+    WebSocket, inutilement complexe pour un simple flux de lecture seule.
+    Chaque client est INDÉPENDANT (sa propre boucle d'envoi) ; déconnexion
+    propre (onglet fermé) avalée, même motif que /video et /stream côté
+    robot_web/face_sim_node."""
+    state: _DiagState = request.app["state"]
+    resp = web.StreamResponse(status=200, headers={
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+    })
+    await resp.prepare(request)
+    try:
+        while True:
+            await resp.write(f"data: {json.dumps(state.snapshot())}\n\n".encode())
+            await asyncio.sleep(DIAG_EVENTS_PERIOD_S)
+    except (ConnectionResetError, asyncio.CancelledError):
+        pass  # client parti (onglet fermé) : normal, rien à logger
+    return resp
+
+
+def _build_diag_app(state: _DiagState) -> web.Application:
+    app = web.Application()
+    app["state"] = state
+    app.router.add_get("/", _diag_index_handler)
+    app.router.add_get("/events", _diag_events_handler)
+    return app
+
+
+class DiagServer:
+    """Troisième boucle d'événements du node (cf. docstring de module POURQUOI
+    `diag_port`) : thread daemon dédié, avec SA PROPRE boucle asyncio.
+    AppRunner/TCPSite plutôt que `web.run_app` (cf. docstring de module --
+    `run_app` tente d'installer des handlers de signal, qui ne fonctionnent
+    QUE dans le thread principal : ça planterait ici). Aucun arrêt propre
+    exposé (pas demandé par la spec, même tolérance que le thread rclpy.spin
+    de robot_web/face_sim_node) : le thread daemon meurt avec le process."""
+
+    def __init__(self, port: int, state: _DiagState):
+        self._port = port
+        self._state = state
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def _run(self) -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        runner = web.AppRunner(_build_diag_app(self._state))
+        loop.run_until_complete(runner.setup())
+        loop.run_until_complete(
+            web.TCPSite(runner, host="0.0.0.0", port=self._port).start())
+        loop.run_forever()
+
+
 class ChatStartupError(RuntimeError):
     """Levée quand le node ne peut pas démarrer proprement (secret, voix
     Piper, modèle STT... manquants ou invalides). Différencie un échec de
@@ -185,7 +489,16 @@ class ChatNode(Node):
         self.declare_parameter("out_device", defaults["out_device"])
         self.declare_parameter("refresh_ms", defaults["refresh_ms"])
         self.declare_parameter("beep_seconds", defaults["beep_seconds"])
+        self.declare_parameter("beep_amplitude", defaults["beep_amplitude"])
         self.declare_parameter("persona", defaults["persona"])
+        # Paramètre TECHNIQUE (pas dans vision_config -- pas une variable de
+        # personnage, cf. les autres ci-dessus) : serveur de diagnostic web
+        # (vumètre + latences par tour, cf. docstring de module POURQUOI
+        # `diag_port`). 0 = DÉSACTIVÉ (défaut) -- même philosophie que
+        # `web_port`/`drive_enabled` côté robot_web/web_bridge_node.py, un
+        # toggle d'exploitation qui n'a pas sa place dans le socle de config
+        # partagé du personnage (default_chat_parameters ci-dessus).
+        self.declare_parameter("diag_port", 0)
 
         llm_model = self.get_parameter("llm_model").value
         llm_base_url = self.get_parameter("llm_base_url").value
@@ -195,7 +508,9 @@ class ChatNode(Node):
         out_device = self.get_parameter("out_device").value
         refresh_ms = int(self.get_parameter("refresh_ms").value)
         beep_seconds = float(self.get_parameter("beep_seconds").value)
+        beep_amplitude = int(self.get_parameter("beep_amplitude").value)
         persona_name = str(self.get_parameter("persona").value)
+        diag_port = int(self.get_parameter("diag_port").value)
 
         # --- Personnalité de démarrage : validée ICI, échec de démarrage
         # EXPLICITE sur un nom inconnu (une faute de frappe dans un launch/
@@ -237,10 +552,24 @@ class ChatNode(Node):
             # construit ICI, avec micro/VAD, même philosophie de construction
             # pure protégée par le même try/except (peu de raisons d'échouer,
             # mais un échec resterait un échec de DÉMARRAGE propre).
-            gate = LiveAudioGate(config["chat_live_audio_gate"])
+            # gate_config gardé à part (pas juste passé inline) : le serveur
+            # de diagnostic (cf. plus bas, DiagState) doit lire les seuils
+            # EFFECTIFS depuis CET objet réellement construit, jamais depuis
+            # une constante recopiée (cf. spec du lot diag_port, 2026-09-13).
+            gate_config = config["chat_live_audio_gate"]
+            gate = LiveAudioGate(gate_config)
         except Exception as exc:  # noqa: BLE001 - log explicite avant de propager
             self.get_logger().error(f"Échec d'initialisation micro/VAD : {exc}")
             raise ChatStartupError("échec init micro/VAD") from exc
+
+        # --- Diagnostic web (vumètre + latences, cf. docstring de module
+        # POURQUOI `diag_port`) : self._diag EXISTE TOUJOURS (None si
+        # désactivé) -- construit ICI (juste après vad/gate_config, dont il a
+        # besoin pour les seuils effectifs) et AVANT ConversationEngine, dont
+        # le constructeur appelle déjà on_state("listening") via
+        # initial_state (cf. plus bas) : self._diag doit être un attribut
+        # valide (None ou DiagState) avant ce premier appel à _publish_state.
+        self._diag = _DiagState(vad, gate_config) if diag_port > 0 else None
 
         # --- STT (faster-whisper local) -----------------------------------
         try:
@@ -298,7 +627,12 @@ class ChatNode(Node):
             self.get_logger().error(f"Échec d'initialisation du lecteur audio ({out_device}) : {exc}")
             raise ChatStartupError("échec init AudioPlayer") from exc
 
-        beeps_pcm = build_thinking_beeps(beep_seconds, sample_rate=BEEPS_SAMPLE_RATE)
+        # amplitude=beep_amplitude (paramètre ROS, cf. config["chat_beep_amplitude"]
+        # POURQUOI) : NE PAS laisser le défaut de build_thinking_beeps (14000,
+        # jugé fatigant par David en séance le 2026-09-13) — il ne devait être
+        # réglable qu'en éditant le code avant ce lot.
+        beeps_pcm = build_thinking_beeps(
+            beep_seconds, sample_rate=BEEPS_SAMPLE_RATE, amplitude=beep_amplitude)
 
         # --- Publishers StringTime : un par topic réutilisé côté robot ----
         # PIÈGE (vécu, 2026-07-11) : ne JAMAIS nommer cet attribut
@@ -347,6 +681,12 @@ class ChatNode(Node):
             # démarré en tout dernier dans ce __init__, bien après que ces
             # attributs existent.
             gate=gate, show_audio_active=self._show_audio_active,
+            # Vumètre + latences (cf. docstring de module POURQUOI
+            # `diag_port`) : None si self._diag est None (diag désactivé) --
+            # ConversationEngine traite déjà None comme "comportement
+            # historique inchangé", aucune condition à dupliquer ici.
+            on_meter=self._diag.on_meter if self._diag is not None else None,
+            on_timing=self._diag.on_timing if self._diag is not None else None,
         )
         self._mic = mic
         self._player = player
@@ -407,6 +747,16 @@ class ChatNode(Node):
         )
         self._thread.start()
 
+        # --- Serveur de diagnostic (cf. docstring de module POURQUOI
+        # `diag_port`) : démarré EN TOUT DERNIER, une fois tout le reste du
+        # node opérationnel (self._diag, s'il existe, est déjà câblé dans
+        # ConversationEngine/_publish_state depuis plus haut) -- None si
+        # diag_port=0, aucun thread/socket créé dans ce cas (cf. clause OFF
+        # par défaut).
+        self._diag_server = DiagServer(diag_port, self._diag) if self._diag is not None else None
+        if self._diag_server is not None:
+            self._diag_server.start()
+
         self.get_logger().info(
             f"chat démarré (llm_model={llm_model}, whisper_model={whisper_model}, "
             f"mic_device={mic_device}, out_device={out_device}, "
@@ -414,6 +764,7 @@ class ChatNode(Node):
             f"'{CHAT_CMD_TOPIC}' (on/off), persona sur '{PERSONA_TOPIC}' "
             f"({'/'.join(personas.persona_names())}), état publié sur "
             f"'{CHAT_STATE_TOPIC}' (latché)"
+            + (f", diagnostic sur http://0.0.0.0:{diag_port}" if diag_port > 0 else "")
         )
 
     def _on_chat_cmd(self, ros_msg):
@@ -554,8 +905,16 @@ class ChatNode(Node):
         à retenir. msg=state BRUT (pas de json.dumps, contrairement à
         FACE/ANIMATION) : ce topic n'a pas le même contrat que ceux
         d'animations_node, une chaîne simple suffit à un abonné qui lit
-        `msg` directement."""
+        `msg` directement.
+
+        Alimente AUSSI la page de diagnostic (cf. docstring de module
+        POURQUOI `diag_port`) si elle est active -- ConversationEngine ne
+        porte qu'UN SEUL callback `on_state` (pas une liste d'abonnés), c'est
+        donc ICI qu'on relaie vers `_DiagState.on_state`, pas en ajoutant un
+        second kwarg au moteur pour ce qui reste un simple relais local."""
         self._chat_state_pub.publish(StringTime(msg=state, time=0, anim=False))
+        if self._diag is not None:
+            self._diag.on_state(state)
 
     def destroy_node(self):
         # Arrêt propre : stop_event débloque la boucle run_forever DÈS que le

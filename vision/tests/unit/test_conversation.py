@@ -191,14 +191,16 @@ class FakeGate:
 
 def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
                   brain_raises=False, beeps=True, on_state=None,
-                  initial_state=None, gate=None, show_audio_active=None):
+                  initial_state=None, gate=None, show_audio_active=None,
+                  on_meter=None, on_timing=None):
     """Assemble un ConversationEngine avec des fakes câblés sur la même
     timeline — factorise le câblage répété par les tests ci-dessous.
     L'appelant est responsable de _cleanup_beeps(engine) en fin de test.
     dead_mic_backoff_s=0.0 : pas d'attente réelle dans les tests (la valeur
     par défaut ferait dormir 0,5 s chaque test de flux micro mort).
-    gate/show_audio_active : None par défaut (cf. les tests dédiés au gate
-    plus bas), pour ne rien changer aux appels existants de cette factory."""
+    gate/show_audio_active/on_meter/on_timing : None par défaut (cf. les
+    tests dédiés plus bas), pour ne rien changer aux appels existants de
+    cette factory."""
     return ConversationEngine(
         mic=FakeMic(timeline, frames),
         vad=FakeVad(vad_events, timeline=timeline),
@@ -215,6 +217,8 @@ def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
         initial_state=initial_state,
         gate=gate,
         show_audio_active=show_audio_active,
+        on_meter=on_meter,
+        on_timing=on_timing,
     )
 
 
@@ -398,15 +402,68 @@ def test_erreur_llm_publie_quand_meme_speaking_stop(timeline):
     # La phrase reçue AVANT la panne a bien été jouée.
     assert ("tts_synthesize", "Bonjour !") in timeline
     assert ("player_play", b"PCM:Bonjour !", 22050) in timeline
-    # speaking_stop est publié MALGRÉ l'erreur (dernier publish avant le
-    # redémarrage micro) — pas d'emotion() publiée (le tour est abandonné
-    # avant flush(), aucun JSON d'émotion n'a jamais été vu).
+    # speaking_stop est publié MALGRÉ l'erreur, PUIS idle() (correctif du
+    # 2026-09-13, cf. DÉCISION/CORRECTIF en tête de module) : sans lui,
+    # l'expression "parle" (loop:true côté robot) resterait à s'agiter
+    # indéfiniment après un tour cassé, aucun JSON d'émotion n'ayant jamais
+    # été vu (tour abandonné avant flush()) pour la remplacer.
     publishes = [event[1] for event in timeline if event[0] == "publish"]
-    assert publishes[-1] == RosMessage(ANIMATION, json.dumps(False))
+    assert publishes[-2] == RosMessage(ANIMATION, json.dumps(False))
+    assert publishes[-1] == RosMessage(FACE, json.dumps("stop"))
     # drain() n'est PAS appelé : on abandonne immédiatement sur erreur, sans
     # attendre la fin de la lecture de ce qui est déjà en file.
     assert "player_drain" not in tags
     assert tags[-1] == "mic_start"
+
+
+# --------------------------------------------------------------------------
+# Rattrapage visage en fin de réplique (2026-09-13, "la bouche n'est pas
+# raccord avec la parole" -- David, cf. DÉCISION/CORRECTIF en tête de module).
+# C'est le test ci-dessous (sans émotion finale) qui aurait attrapé le bug :
+# emotion(None) renvoie une liste vide, donc AUCUN publish sur le topic face
+# ne partait après speaking_stop() -- l'expression "parle" (loop:true côté
+# robot) restait à s'agiter indéfiniment pendant toute l'écoute suivante.
+# --------------------------------------------------------------------------
+
+def test_tour_nominal_sans_emotion_publie_idle_en_rattrapage(timeline):
+    frames, events = _speech_frames_and_events()
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="salut", brain_deltas=["Salut."],  # aucun JSON d'émotion
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    # ORDRE : idle() part APRÈS speaking_stop(), jamais avant -- sinon
+    # l'animation "parle" encore en cours réécraserait le visage neutre.
+    assert publishes[-2] == RosMessage(ANIMATION, json.dumps(False))  # speaking_stop
+    assert publishes[-1] == RosMessage(FACE, json.dumps("stop"))  # idle()
+
+
+def test_tour_nominal_avec_emotion_ne_publie_pas_idle_en_plus(timeline):
+    # Une émotion EST exploitée par le LLM : elle doit être publiée telle
+    # quelle, JAMAIS écrasée par un idle() superflu juste après (le rattrapage
+    # ne doit se déclencher QUE quand emotion() n'a rien produit).
+    frames, events = _speech_frames_and_events()
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="salut", brain_deltas=['Salut. {"emotion": "happy"}'],
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    assert publishes[-2] == RosMessage(ANIMATION, json.dumps(False))  # speaking_stop
+    assert publishes[-1] == RosMessage(FACE, json.dumps("joie"))  # emotion happy -> joie, PAS idle()
 
 
 # --------------------------------------------------------------------------
@@ -828,3 +885,222 @@ def test_show_audio_active_est_transmis_au_gate_a_chaque_trame(timeline):
     gate_calls = [event for event in timeline if event[0] == "gate_feed"]
     assert len(gate_calls) == 2
     assert all(call[3] is True for call in gate_calls)
+
+
+# --------------------------------------------------------------------------
+# Vumètre web + latences par tour (2026-09-13, demande de David en séance —
+# cf. docstring de module OBSERVABILITÉ). Mêmes clauses de réversibilité que
+# le gate ci-dessus : gate/show_audio_active/on_meter/on_timing restent
+# indépendants les uns des autres, on_meter/on_timing=None (déjà le défaut de
+# TOUS les tests précédents de ce fichier, jamais modifiés) prouve que le
+# reste de la suite couvre déjà "sans les kwargs, rien ne change".
+# --------------------------------------------------------------------------
+
+def test_on_meter_appele_pour_chaque_trame_avec_blocage_gate(timeline):
+    # 3 trames, celle du MILIEU bloquée par le gate : on_meter doit être
+    # notifié pour LES TROIS (contrairement à la VAD qui n'en voit que 2, cf.
+    # test_trame_bloquee_par_le_gate_n_atteint_jamais_la_vad) -- c'est
+    # justement ce blocage que le vumètre web doit pouvoir montrer en direct.
+    frames = [b"f0", b"f1", b"f2"]
+    vad = FakeVad([None, None])
+    gate = FakeGate(timeline, blocked_sequence=[False, True, False])
+    meter_calls = []
+
+    engine = ConversationEngine(
+        mic=FakeMic(timeline, frames),
+        vad=vad,
+        stt=FakeStt(timeline, "jamais utilisé"),
+        brain=FakeBrain(timeline, ["jamais utilisé"]),
+        tts=FakeTts(timeline),
+        player=FakePlayer(timeline),
+        publish=_make_publish(timeline),
+        gate=gate,
+        on_meter=lambda level, peak, blocked, in_speech:
+            meter_calls.append((level, peak, blocked, in_speech)),
+    )
+    try:
+        engine._listen_for_utterance()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert len(meter_calls) == 3  # une notification par trame LUE, pas par trame VUE par la VAD
+    assert [call[2] for call in meter_calls] == [False, True, False]
+
+
+def test_on_meter_sans_gate_blocked_toujours_false(timeline):
+    # gate=None (comportement historique, cf. clause de réversibilité) :
+    # on_meter reste utilisable seul, blocked vaut toujours False -- il n'y a
+    # simplement personne pour jeter une trame.
+    frames, events = _speech_frames_and_events()
+    meter_calls = []
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="salut", brain_deltas=['Salut. {"emotion": "neutral"}'],
+        on_meter=lambda level, peak, blocked, in_speech:
+            meter_calls.append((level, peak, blocked, in_speech)),
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    assert len(meter_calls) == 3  # les 3 trames de _speech_frames_and_events()
+    assert all(call[2] is False for call in meter_calls)
+
+
+def test_callback_on_meter_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
+    # Le vumètre est un outil de confort, jamais un signal de sécurité (cf.
+    # docstring de module) : un on_meter qui plante à CHAQUE trame ne doit
+    # jamais empêcher le tour de se terminer normalement.
+    frames, events = _speech_frames_and_events()
+
+    def failing_meter(level, peak, blocked, in_speech):
+        raise RuntimeError("vumètre cassé (test)")
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="salut", brain_deltas=['Salut. {"emotion": "neutral"}'],
+        on_meter=failing_meter,
+    )
+    try:
+        with caplog.at_level("DEBUG", logger="vision.ai.conversation"):
+            result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True  # le tour est allé jusqu'au bout malgré le callback cassé
+    assert any("on_meter" in record.message for record in caplog.records)
+
+
+def test_on_timing_appele_une_fois_par_tour_nominal(timeline):
+    # UNE SEULE notification par tour, même si la réponse contient plusieurs
+    # Sentence (donc plusieurs synthèses/lectures) -- seul le PREMIER jalon de
+    # chaque sorte compte pour la latence perçue.
+    frames, events = _speech_frames_and_events()
+    timing_calls = []
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="salut", brain_deltas=['Salut. Comment ça va ? {"emotion": "neutral"}'],
+        on_timing=lambda timing: timing_calls.append(timing),
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    assert len(timing_calls) == 1
+    timing = timing_calls[0]
+    assert timing["abandoned"] is False
+    assert timing["stt_text"] == "salut"
+    # Tous les jalons sont atteints dans un tour nominal : aucun ne doit
+    # rester None (cf. docstring de module -- None = "jamais atteint").
+    assert timing["stt_ms"] >= 0.0
+    assert timing["llm_first_ms"] is not None and timing["llm_first_ms"] >= 0.0
+    assert timing["audio_first_ms"] is not None and timing["audio_first_ms"] >= 0.0
+    assert timing["total_ms"] is not None and timing["total_ms"] >= 0.0
+
+
+def test_on_timing_abandoned_sur_stt_inexploitable(timeline):
+    # Réplique EXACTE du contrat documenté en tête de module : STT
+    # inexploitable -> abandoned=True, champs AVAL (après le STT) à None.
+    frames, events = _speech_frames_and_events()
+    timing_calls = []
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="... ...", brain_deltas=["jamais utilisé"],
+        on_timing=lambda timing: timing_calls.append(timing),
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is False
+    assert len(timing_calls) == 1
+    timing = timing_calls[0]
+    assert timing["abandoned"] is True
+    assert timing["stt_text"] == "... ..."
+    assert timing["stt_ms"] >= 0.0  # le STT, lui, a bien tourné
+    assert timing["llm_first_ms"] is None
+    assert timing["audio_first_ms"] is None
+    assert timing["total_ms"] is None
+
+
+def test_on_timing_abandoned_sur_erreur_llm(timeline):
+    # Extension du contrat documenté (cf. commentaire de _speak_reply) : une
+    # panne LLM/TTS EST aussi la fin d'un tour, donc notifiée -- ici la panne
+    # survient AVANT toute Sentence (aucun delta ne contient de frontière de
+    # phrase), les jalons aval restent donc None comme sur l'abandon STT.
+    frames, events = _speech_frames_and_events()
+    timing_calls = []
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        # "Bonjour" SANS terminateur de phrase (contrairement au delta du
+        # test test_erreur_llm_publie_quand_meme_speaking_stop) : aucune
+        # frontière de phrase n'est encore vue quand l'exception part, donc
+        # aucune Sentence n'est jamais émise -- condition nécessaire pour
+        # tester le cas "jalons aval jamais atteints".
+        stt_text="salut", brain_deltas=["Bonjour"], brain_raises=True,
+        on_timing=lambda timing: timing_calls.append(timing),
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is False
+    assert len(timing_calls) == 1
+    timing = timing_calls[0]
+    assert timing["abandoned"] is True
+    assert timing["llm_first_ms"] is None
+    assert timing["audio_first_ms"] is None
+    assert timing["total_ms"] is None
+
+
+def test_on_timing_jamais_appele_si_flux_micro_mort_avant_le_stt(timeline):
+    # Un tour qui n'atteint jamais le STT (flux micro mort en cours d'écoute)
+    # n'a rien à mesurer -- cf. docstring de run_once : ce chemin ne doit
+    # JAMAIS déclencher on_timing (pas de notification à moitié remplie).
+    timing_calls = []
+
+    engine = _make_engine(
+        timeline, frames=[], vad_events=[],
+        stt_text="jamais utilisé", brain_deltas=["jamais utilisé"],
+        on_timing=lambda timing: timing_calls.append(timing),
+    )
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is False
+    assert timing_calls == []
+
+
+def test_callback_on_timing_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
+    # Même exigence que pour on_meter/on_state : un tableau de bord cassé ne
+    # doit jamais rendre Didier muet.
+    frames, events = _speech_frames_and_events()
+
+    def failing_timing(_timing):
+        raise RuntimeError("console de diagnostic cassée (test)")
+
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="salut", brain_deltas=['Salut. {"emotion": "neutral"}'],
+        on_timing=failing_timing,
+    )
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True  # le tour est allé jusqu'au bout malgré le callback cassé
+    assert any("on_timing" in record.message for record in caplog.records)

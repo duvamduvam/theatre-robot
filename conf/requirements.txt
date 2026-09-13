@@ -9,6 +9,14 @@ openai>=1.50.0
 # Historique de conversation persistant en SQLite (vision/db/chat_db.py)
 sqlobject
 
+# Serveur de diagnostic web du chat_node V2 (vumètre + latences par tour,
+# lot du 2026-09-13, param ROS `diag_port`, OFF par défaut) : même lib que
+# robot_web/face_sim_node côté dadou_robot_ros (motif "troisième boucle
+# d'événements", cf. vision/nodes/chat_node.py) — importée sans condition
+# (chat_node en a besoin même diag désactivé, coût nul au runtime tant que
+# diag_port=0 : aucun thread/socket créé, cf. docstring du node).
+aiohttp
+
 # Lecture de la réponse TTS sur la sortie audio ALSA (vision/ai/tts.py,
 # PyAudio.open + player_stream.write)
 pyaudio~=0.2.14

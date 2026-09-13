@@ -68,17 +68,19 @@ def test_default_chat_parameters_reprend_la_config_unique():
     assert defaults["out_device"] == config["chat_out_device"]
     assert defaults["refresh_ms"] == config["chat_animation_refresh_ms"]
     assert defaults["beep_seconds"] == config["chat_beep_seconds"]
+    assert defaults["beep_amplitude"] == config["chat_beep_amplitude"]
     assert defaults["persona"] == config["chat_persona"]
 
 
 def test_default_chat_parameters_couvre_exactement_les_parametres_ros():
-    # Fige la liste des 9 paramètres ROS déclarés par ChatNode.__init__ : un
+    # Fige la liste des 10 paramètres ROS déclarés par ChatNode.__init__ : un
     # ajout/retrait de paramètre ROS doit être visible ici en revue, pas
     # découvert au runtime sur le robot. ("persona" ajouté au lot D3,
-    # atelier du 2026-07-13.)
+    # atelier du 2026-07-13 ; "beep_amplitude" ajouté le 2026-09-13.)
     assert set(default_chat_parameters().keys()) == {
         "llm_model", "llm_base_url", "whisper_model", "piper_voice",
-        "mic_device", "out_device", "refresh_ms", "beep_seconds", "persona",
+        "mic_device", "out_device", "refresh_ms", "beep_seconds",
+        "beep_amplitude", "persona",
     }
 
 

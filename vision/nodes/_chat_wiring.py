@@ -62,6 +62,7 @@ def default_chat_parameters() -> Dict[str, Any]:
         "out_device": config["chat_out_device"],
         "refresh_ms": config["chat_animation_refresh_ms"],
         "beep_seconds": config["chat_beep_seconds"],
+        "beep_amplitude": config["chat_beep_amplitude"],
         "persona": config["chat_persona"],
     }
 

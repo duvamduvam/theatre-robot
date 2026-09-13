@@ -127,6 +127,17 @@ config = {
     # avant la fin réelle du STT.
     "chat_beep_seconds": 2.0,
 
+    # Amplitude (int16, cf. vision/audio/beeps.py build_thinking_beeps) des
+    # bips de réflexion, RELATIVE à la voix de Didier — baissée le 2026-09-13
+    # après écoute de David en séance (« baisse le niveau des bips, c'est
+    # ennuyeux ») : 14000 (défaut historique de build_thinking_beeps, ≈ -7,4
+    # dBFS) était fatigant au casque d'atelier. 5000 ≈ -16,3 dBFS, ~9 dB de
+    # moins. ⚠️ Ce niveau dépend aussi du LIEU de diffusion : au casque
+    # d'atelier le besoin n'est pas le même qu'en rue via la sono du robot, où
+    # les bips servent à masquer la latence perçue du LLM — à réécouter lors
+    # du protocole physique, ne pas retoucher cette valeur à l'aveugle avant.
+    "chat_beep_amplitude": 5000,
+
     # VAD (vision/audio/vad.py) : instance VadConfig avec ses valeurs par
     # défaut déjà validées (cf. docstring de VadConfig) — un objet complet
     # plutôt que des clés de config éclatées, pour rester la source unique de
