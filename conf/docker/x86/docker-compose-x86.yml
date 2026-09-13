@@ -31,6 +31,10 @@ services:
       # même prudence que sur le Pi (micro physique + budget LLM payant).
       # Activation explicite : CHAT=true docker compose ... up.
       - CHAT=${CHAT:-false}
+      # Audio par PIPEWIRE et non par les cartes ALSA (le casque du banc est
+      # en Bluetooth : aucune carte ALSA ne le représente, cf. asound-pc.conf).
+      # La socket est celle de la session graphique de l'hôte, montée ci-dessous.
+      - PULSE_SERVER=unix:/run/pulse/native
     network_mode: "host"
     # ipc host OBLIGATOIRE : FastDDS passe les DONNÉES en mémoire partagée
     # entre participants du même hôte (la découverte, elle, passe en UDP —
@@ -70,6 +74,13 @@ services:
       # pointés sur la carte son du PC) : le code tourne sans changer un seul
       # paramètre. Fichier versionné ici, l'hôte n'est pas touché.
       - ./asound-pc.conf:/etc/asound.conf:ro
+      # Socket PipeWire de la session hôte (uid 1000) : c'est par là que
+      # passent micro ET sortie du casque Bluetooth. Chemin figé côté
+      # conteneur (/run/pulse) pour que PULSE_SERVER ne dépende pas de l'uid.
+      # ⚠️ La session graphique doit être ouverte : pas de PipeWire, pas de son
+      # (un tour headless/cron n'aurait pas d'audio — sans objet ici, le banc
+      # est une séance devant l'écran).
+      - /run/user/1000/pulse:/run/pulse:ro
       # Webcam (/dev/video0, person_tracker) + audio (/dev/snd, chat) — même
       # pattern que le compose ARM.
       - /dev:/dev

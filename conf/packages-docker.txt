@@ -13,6 +13,14 @@ alsa-utils
 libasound2-dev
 portaudio19-dev
 
+# Plugin ALSA -> PulseAudio/PipeWire (`pcm.type pulse`). Requis par le BANC PC
+# x86 (conf/docker/x86/) pour atteindre un casque BLUETOOTH : le Bluetooth
+# n'existe pas comme carte ALSA, il n'est servi que par PipeWire côté hôte —
+# sans ce plugin, arecord/aplay -D <alias pulse> échouent sur "Unknown PCM".
+# Neutre sur le Pi (il attaque ses cartes USB en hw direct, aucun serveur
+# audio n'y tourne) : le paquet est présent mais jamais sollicité.
+libasound2-plugins
+
 # Build helper requis pour compiler le binding C de PyAudio contre portaudio
 python3-dev
 
