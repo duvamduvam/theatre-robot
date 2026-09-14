@@ -118,66 +118,201 @@ class TargetPicker:
           personne à l'autre à chaque frame (choix instable, cou qui
           "saccade" d'une personne à l'autre au lieu de suivre calmement
           celle déjà engagée).
+      designated_radius : distance MAXIMALE en azimut brut entre une
+          détection et le dernier azimut de la cible DÉSIGNÉE (cf. designate()
+          ci-dessous) pour être considérée comme étant toujours elle. Rôle
+          analogue à adherence_radius, mais pour le régime désigné : ici
+          c'est le SEUL critère (pas de pondération par score/aire), la
+          cible est une identité verrouillée, pas la "meilleure" boîte.
     """
 
     def __init__(self, ema_alpha: float = 0.4, adherence_radius: float = 0.3,
-                 adherence_bonus: float = 1.5):
+                 adherence_bonus: float = 1.5, designated_radius: float = 0.3):
         self._ema_alpha = ema_alpha
         self._adherence_radius = adherence_radius
         self._adherence_bonus = adherence_bonus
+        self._designated_radius = designated_radius
+        # Drapeaux de désignation par bouton (2026-09-14, cf. étude
+        # identification-acteur) : INITIALISÉS ICI, PAS dans _reset_state().
+        # C'est volontaire et c'est LE piège de cette fonctionnalité : si
+        # _reset_state() les effaçait, une simple frame sans détection (David
+        # masqué un instant) ferait perdre la désignation — cf. update() et
+        # le commentaire détaillé sur ce point précis.
+        self._designated = False
+        self._designation_pending = False
         self._reset_state()
 
     def _reset_state(self) -> None:
+        """Remet à zéro le LISSAGE seul (EMA + dernier azimut brut) — ne
+        touche JAMAIS à _designated/_designation_pending (cf. __init__ et
+        designate()/release() : ce sont les SEULS points qui les modifient)."""
         self._ema_azimuth: Optional[float] = None
         self._ema_elevation: Optional[float] = None
         self._ema_height: Optional[float] = None
         # Azimut BRUT (pas lissé) de la dernière cible retenue : sert de
-        # référence à l'adhérence, comparé à l'azimut BRUT des nouvelles
-        # détections (comparer du brut à du brut, pas du brut à du lissé).
+        # référence à l'adhérence (et, en régime désigné, à la fenêtre de
+        # ré-acquisition designated_radius), comparé à l'azimut BRUT des
+        # nouvelles détections (comparer du brut à du brut, pas du brut à du
+        # lissé).
         self._last_raw_azimuth: Optional[float] = None
 
     def reset(self) -> None:
-        """Repart de zéro : appelé explicitement en cas de perte de la cible.
+        """Repart de zéro : appelé explicitement en cas de perte de la cible
+        (SANS désignation active — cf. update(), qui gère différemment la
+        frame vide quand une désignation est en cours, précisément pour
+        garder _last_raw_azimuth intact et permettre la ré-acquisition).
         POURQUOI un reset et pas juste "arrêter de publier" : si on gardait
         le vieux lissage EMA, la PROCHAINE personne détectée hériterait d'un
         état lissé qui n'a rien à voir avec elle (fantôme de la personne
         précédente) — reset garantit que la nouvelle personne repart d'une
-        mesure brute, pas d'un mélange avec le passé."""
+        mesure brute, pas d'un mélange avec le passé.
+        Ne touche PAS aux drapeaux de désignation (cf. _reset_state), mais
+        efface bien _last_raw_azimuth : un appelant qui veut PRÉSERVER ce
+        repère (cas de la frame vide sous désignation) ne doit PAS passer
+        par cette méthode — cf. update()."""
         self._reset_state()
+
+    def designate(self) -> None:
+        """Arme une désignation (appui bouton du gant, cf. person_tracker_node) :
+        la PROCHAINE frame comportant au moins une détection choisira la
+        personne la plus CENTRÉE (cf. update(), régime a), sans égard au
+        score/à l'aire ni à l'adhérence historique.
+        Remet à zéro le lissage EMA pour la MÊME raison que reset() : la
+        personne désignée ne doit pas hériter du fantôme EMA de la cible
+        précédente. MAIS le drapeau _designation_pending posé juste après
+        DOIT SURVIVRE à cette remise à zéro — _reset_state() ne le touche
+        pas exprès (cf. sa docstring) : si l'ordre était inversé côté
+        _reset_state, l'armement serait effacé avant même d'avoir pu
+        s'appliquer à la prochaine frame."""
+        self._reset_state()
+        self._designation_pending = True
+
+    def release(self) -> None:
+        """Annule la désignation et revient au comportement historique
+        (area_ratio * score + adhérence, régime c de update()). Ne touche
+        PAS au lissage EMA : la personne actuellement suivie ne doit pas
+        "sauter" visuellement au moment du relâchement du bouton, seul le
+        CRITÈRE de sélection change à la prochaine frame."""
+        self._designated = False
+        self._designation_pending = False
 
     def update(self, detections: list, image_width: float,
                image_height: float) -> Optional[Target]:
         """Traite les détections d'UNE frame. Retourne un Target (azimut,
         élévation, hauteur lissés + confiance brute), ou None si aucune
-        détection (silence = personne perdue, cf. contrat ARCHITECTURE.md —
-        c'est à l'appelant [le node] de ne rien publier dans ce cas, ce module
-        se contente de renvoyer None)."""
+        détection retenue (silence = personne perdue, cf. contrat
+        ARCHITECTURE.md — c'est à l'appelant [le node] de ne rien publier
+        dans ce cas, ce module se contente de renvoyer None).
+
+        Trois régimes, dans cet ordre :
+          (a) désignation en attente (designate() vient d'être appelé, pas
+              encore de frame avec du monde depuis) : la détection la plus
+              CENTRÉE gagne — c'est le seul critère que l'opérateur contrôle
+              en se plaçant face au robot avant d'appuyer.
+          (b) cible déjà désignée : seule compte la proximité en azimut brut
+              avec la dernière position connue de CETTE personne (fenêtre
+              designated_radius) — score/aire/adhérence n'entrent plus en jeu.
+          (c) aucune désignation : comportement historique, inchangé.
+        """
         if not detections:
-            self.reset()
+            # PIÈGE (cf. étude identification-acteur §désignation) : un
+            # self.reset() INCONDITIONNEL ici effacerait _last_raw_azimuth
+            # (cf. _reset_state) — hors ce dernier est le SEUL repère qui
+            # permet au régime (b) de reconnaître David à son retour. Si on
+            # l'efface au premier hoquet de détection, la désignation "survit"
+            # au sens des drapeaux (_designated reste True) mais devient
+            # inutile en pratique : plus aucune référence à comparer, la
+            # PROCHAINE personne détectée — n'importe qui — serait acceptée
+            # comme si elle avait un azimut "proche de None".
+            # Donc : désignation active -> on remet seulement le LISSAGE EMA
+            # à zéro (pas de fantôme de mesure lissée à la ré-acquisition),
+            # en conservant _last_raw_azimuth intact. Pas de désignation ->
+            # comportement historique inchangé (reset() complet).
+            # Dans les deux cas, _designated/_designation_pending ne sont
+            # JAMAIS effacés ici (cf. _reset_state, designate(), release()) :
+            # une désignation survit ainsi à une ou plusieurs frames sans
+            # détection (David masqué un instant, ou sorti du champ puis
+            # revenu). Pas d'expiration voulue : si David part 2 minutes, le
+            # robot reste désigné et se tait (aucune publication) jusqu'à son
+            # retour PRÈS DU MÊME AZIMUT — pour reprendre ailleurs, il
+            # ré-appuie (release()/designate()), pas de minuteur caché.
+            if self._designated or self._designation_pending:
+                self._ema_azimuth = None
+                self._ema_elevation = None
+                self._ema_height = None
+            else:
+                self.reset()
             return None
 
-        best_weight = None
-        best = None  # (azimuth_brut, elevation_brut, score, height_brut)
-        for det in detections:
+        def _components(det):
+            """Azimut/élévation/score/hauteur bruts d'UNE détection — factorisé
+            pour ne pas dupliquer les 3 conversions dans les 3 régimes."""
             azimuth = _azimuth(det.x1, det.x2, image_width)
             elevation = _elevation(det.y1, det.y2, image_height)
             height = _height_ratio(det.y1, det.y2, image_height)
-            area_ratio = _area_ratio(det.x1, det.y1, det.x2, det.y2,
-                                      image_width, image_height)
-            weight = area_ratio * det.score
-            if (self._last_raw_azimuth is not None
-                    and abs(azimuth - self._last_raw_azimuth) <= self._adherence_radius):
-                weight *= self._adherence_bonus
-            if best_weight is None or weight > best_weight:
-                best_weight = weight
-                best = (azimuth, elevation, det.score, height)
+            return azimuth, elevation, det.score, height
 
-        azimuth, elevation, confidence, height = best
+        if self._designation_pending:
+            # (a) Désignation en attente : la détection la plus CENTRÉE
+            # gagne, quels que soient son score/son aire (cf. docstring
+            # ci-dessus — POURQUOI : c'est le seul signal que l'opérateur
+            # maîtrise directement).
+            azimuth, elevation, confidence, height = min(
+                (_components(det) for det in detections),
+                key=lambda components: abs(components[0]),
+            )
+            self._designation_pending = False
+            self._designated = True
 
-        # EMA : pas de valeur précédente (premier calcul après un reset) ->
-        # on part directement de la mesure brute, ne PAS lisser artificiellement
-        # vers 0 (une personne qui apparaît sur le bord de l'image ne doit pas
-        # sembler démarrer du centre).
+        elif self._designated:
+            # (b) Cible déjà désignée : on cherche, parmi les détections de
+            # cette frame, celle dont l'azimut BRUT est le plus proche de
+            # _last_raw_azimuth (l'identité de la personne, pas la qualité de
+            # sa boîte) — et on l'accepte seulement si l'écart reste dans la
+            # fenêtre designated_radius.
+            candidate = None
+            candidate_gap = None
+            for det in detections:
+                azimuth_candidate = _azimuth(det.x1, det.x2, image_width)
+                gap = abs(azimuth_candidate - self._last_raw_azimuth)
+                if gap <= self._designated_radius and (
+                        candidate_gap is None or gap < candidate_gap):
+                    candidate = det
+                    candidate_gap = gap
+            if candidate is None:
+                # Personne dans la fenêtre cette frame (angle mort, dos
+                # tourné, badaud passé devant...) : silence, PAS perte de la
+                # désignation. _designated et _last_raw_azimuth restent EN
+                # L'ÉTAT (on ne les touche pas ici) pour permettre la
+                # ré-acquisition dès que David repasse près de cet azimut —
+                # cf. contrat du régime (b) dans la docstring de la méthode.
+                return None
+            azimuth, elevation, confidence, height = _components(candidate)
+
+        else:
+            # (c) Comportement historique, STRICTEMENT inchangé.
+            best_weight = None
+            best = None  # (azimuth_brut, elevation_brut, score, height_brut)
+            for det in detections:
+                azimuth = _azimuth(det.x1, det.x2, image_width)
+                elevation = _elevation(det.y1, det.y2, image_height)
+                height = _height_ratio(det.y1, det.y2, image_height)
+                area_ratio = _area_ratio(det.x1, det.y1, det.x2, det.y2,
+                                          image_width, image_height)
+                weight = area_ratio * det.score
+                if (self._last_raw_azimuth is not None
+                        and abs(azimuth - self._last_raw_azimuth) <= self._adherence_radius):
+                    weight *= self._adherence_bonus
+                if best_weight is None or weight > best_weight:
+                    best_weight = weight
+                    best = (azimuth, elevation, det.score, height)
+
+            azimuth, elevation, confidence, height = best
+
+        # EMA (commun aux trois régimes) : pas de valeur précédente (premier
+        # calcul après un reset) -> on part directement de la mesure brute,
+        # ne PAS lisser artificiellement vers 0 (une personne qui apparaît
+        # sur le bord de l'image ne doit pas sembler démarrer du centre).
         self._ema_azimuth = (
             azimuth if self._ema_azimuth is None
             else self._ema_alpha * azimuth + (1.0 - self._ema_alpha) * self._ema_azimuth

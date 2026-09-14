@@ -182,3 +182,108 @@ def test_height_bornee_boite_aberrante():
     picker = TargetPicker()
     target = picker.update([_det(40, 80, 60, 20)], IMG_W, IMG_H)
     assert target.height == pytest.approx(0.0)
+
+
+# --------------------------------------------------------------------------
+# Désignation par bouton (2026-09-14, cf. étude identification-acteur).
+# --------------------------------------------------------------------------
+
+def test_designate_choisit_la_plus_centree_pas_la_plus_grosse():
+    # Une détection GROSSE mais décentrée, une PETITE mais bien centrée :
+    # sans désignation area_ratio*score ferait gagner la grosse (cf. non-
+    # régression plus bas) ; désignée, seule la centration compte.
+    picker = TargetPicker()
+    picker.designate()
+    grosse_decentree = _det(60, 10, 95, 90, score=0.9)  # centre x=77.5 -> azimut 0.55, très grande
+    petite_centree = _det(45, 45, 55, 55, score=0.3)    # centre x=50 -> azimut 0.0, petite
+    azimuth, _, _, _ = picker.update([grosse_decentree, petite_centree], IMG_W, IMG_H)
+    assert azimuth == pytest.approx(0.0)
+
+
+def test_designation_pending_retombe_sur_designated_apres_choix():
+    # Après le premier update() qui arme la désignation, l'état interne doit
+    # être passé en "verrouillé" (pas encore testé ci-dessus via l'API
+    # publique) — vérifié indirectement : une frame suivante avec une
+    # personne plus grosse ailleurs ne doit PAS voler la cible (cf. test
+    # suivant, qui couvre ce même point plus explicitement).
+    picker = TargetPicker()
+    picker.designate()
+    picker.update([_det(45, 45, 55, 55, score=0.3)], IMG_W, IMG_H)  # verrouille sur azimut 0
+    assert picker._designated is True
+    assert picker._designation_pending is False
+
+
+def test_apres_designation_une_personne_plus_grosse_ne_vole_pas_la_cible():
+    # ema_alpha=1.0 (pas de lissage) : calcul déterministe sur la 2e frame,
+    # même raison que test_adherence_prefers_detection_close_to_previous_target.
+    picker = TargetPicker(ema_alpha=1.0, designated_radius=0.3)
+    picker.designate()
+    # Verrouille sur la personne centrée (azimut 0).
+    picker.update([_det(45, 45, 55, 55, score=0.3)], IMG_W, IMG_H)
+
+    # Frame suivante : la cible désignée bouge un peu (toujours dans la
+    # fenêtre), une personne BEAUCOUP plus grosse apparaît loin (hors fenêtre).
+    cible_toujours_proche = _det(42, 45, 52, 55, score=0.2)  # centre x=47 -> azimut -0.06
+    grosse_intruse = _det(70, 5, 95, 95, score=0.9)          # centre x=82.5 -> azimut 0.65, énorme
+    azimuth, _, _, _ = picker.update([cible_toujours_proche, grosse_intruse], IMG_W, IMG_H)
+    assert azimuth == pytest.approx(-0.06)
+
+
+def test_designation_survit_a_une_frame_vide_puis_reacquiert():
+    picker = TargetPicker(designated_radius=0.3)
+    picker.designate()
+    picker.update([_det(45, 45, 55, 55, score=0.3)], IMG_W, IMG_H)  # verrouille sur azimut 0
+
+    # Frame sans aucune détection : David momentanément hors champ/masqué.
+    assert picker.update([], IMG_W, IMG_H) is None
+    # La désignation ne doit PAS avoir disparu.
+    assert picker._designated is True
+
+    # David revient près du même azimut -> ré-acquis.
+    azimuth, _, _, _ = picker.update([_det(43, 45, 53, 55, score=0.3)], IMG_W, IMG_H)
+    assert azimuth == pytest.approx(-0.04)
+
+
+def test_personne_loin_de_l_azimut_memorise_n_est_pas_reacquise():
+    picker = TargetPicker(designated_radius=0.3)
+    picker.designate()
+    picker.update([_det(45, 45, 55, 55, score=0.3)], IMG_W, IMG_H)  # verrouille sur azimut 0
+
+    # Une seule détection cette frame, LOIN de l'azimut mémorisé (écart 0.7 > 0.3).
+    loin = _det(90, 45, 100, 55, score=0.9)  # centre x=95 -> azimut 0.9
+    assert picker.update([loin], IMG_W, IMG_H) is None
+    # La désignation reste en place pour une éventuelle ré-acquisition ultérieure.
+    assert picker._designated is True
+
+
+def test_release_restaure_le_comportement_historique():
+    # ema_alpha=1.0 : même raison que ci-dessus, calcul déterministe sur la
+    # 2e frame (celle qui suit release()).
+    picker = TargetPicker(ema_alpha=1.0)
+    picker.designate()
+    picker.update([_det(45, 45, 55, 55, score=0.3)], IMG_W, IMG_H)  # verrouille
+
+    picker.release()
+    assert picker._designated is False
+    assert picker._designation_pending is False
+
+    # Comportement historique restauré : la GROSSE boîte doit maintenant
+    # gagner (area_ratio*score), même si elle est décentrée.
+    grosse_decentree = _det(60, 10, 95, 90, score=0.9)
+    petite_centree = _det(45, 45, 55, 55, score=0.3)
+    azimuth, _, _, _ = picker.update([grosse_decentree, petite_centree], IMG_W, IMG_H)
+    assert azimuth == pytest.approx(0.55)
+
+
+def test_sans_designation_comportement_identique_a_avant():
+    # Non-régression explicite : un TargetPicker jamais désigné (donc jamais
+    # passé par designate()/release()) se comporte EXACTEMENT comme avant
+    # cette fonctionnalité — même cas que test_designate_choisit_la_plus_
+    # centree_pas_la_plus_grosse, mais SANS désignation : c'est cette fois la
+    # GROSSE boîte décentrée qui doit gagner (area_ratio*score), preuve que
+    # le régime (c) n'a pas changé.
+    picker = TargetPicker()
+    grosse_decentree = _det(60, 10, 95, 90, score=0.9)  # centre x=77.5 -> azimut 0.55, très grande
+    petite_centree = _det(45, 45, 55, 55, score=0.3)    # centre x=50 -> azimut 0.0, petite
+    azimuth, _, _, _ = picker.update([grosse_decentree, petite_centree], IMG_W, IMG_H)
+    assert azimuth == pytest.approx(0.55)

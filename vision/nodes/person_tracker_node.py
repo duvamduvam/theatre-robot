@@ -20,6 +20,7 @@ CONTRAT (ARCHITECTURE.md, ne pas dévier) : silence = personne perdue — on ne
        "vide"), le consommateur (gaze_follower côté robot) gère son timeout,
        comme cmd_vel/twist_deadman.
 """
+import json
 import os
 import time
 
@@ -28,6 +29,7 @@ import rclpy
 from geometry_msgs.msg import PointStamped
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from robot_interfaces.msg import StringTime
 from sensor_msgs.msg import CompressedImage
 
 from vision.tracking.detector import MediaPipeDetector, open_camera
@@ -62,6 +64,15 @@ CAMERA_FRAME_ID = "camera"
 VIDEO_TOPIC = "camera/image_raw/compressed"
 VIDEO_FPS_DEFAULT = 5.0        # 0 = publication désactivée
 VIDEO_JPEG_QUALITY = 70        # même qualité que _encode_jpeg côté web_bridge
+
+# Désignation par bouton (2026-09-14, cf. dadou_robot_ros docs/
+# etude-identification-acteur.md) : David se place devant le robot et appuie
+# sur le gant -> ce topic bascule TargetPicker en cible verrouillée (voir
+# TargetPicker.designate/release). Même contrat StringTime que `chat`/`gaze`
+# côté robot : payload JSON "on"/true ou "off"/false, topic de COMMANDE (pas
+# latché — contrairement à animation_state, personne n'a besoin de connaître
+# l'état de désignation au démarrage tardif d'un abonné).
+DESIGNATE_TOPIC = "designate"
 
 
 class PersonTrackerStartupError(RuntimeError):
@@ -138,6 +149,12 @@ class PersonTrackerNode(Node):
         # (dadou_robot_ros). Mêmes règles : silence = personne perdue.
         self._box_publisher = self.create_publisher(PointStamped, "/vision/person_box", 10)
 
+        # Désignation par bouton (cf. constante DESIGNATE_TOPIC) : bascule le
+        # TargetPicker entre régime historique et cible verrouillée. QoS par
+        # défaut (depth=10, VOLATILE) : c'est une commande, pas un état à
+        # rattraper par un abonné tardif.
+        self.create_subscription(StringTime, DESIGNATE_TOPIC, self._on_designate, 10)
+
         # Retour vidéo (cf. constantes VIDEO_*) : publisher créé SEULEMENT si
         # video_fps > 0 — même garantie structurelle que drive_enabled côté
         # web_bridge (aucune ligne de code ne PEUT publier d'image sinon).
@@ -154,6 +171,30 @@ class PersonTrackerNode(Node):
             f"video_fps={self._video_fps:g}) -> /vision/person"
             + (f" + {VIDEO_TOPIC}" if self._video_pub is not None else "")
         )
+
+    def _on_designate(self, ros_msg) -> None:
+        """Active/désactive la désignation par bouton — même contrat que
+        chat_node._on_chat_cmd (dadou_vision_ros/vision/nodes/chat_node.py) :
+        "on"/"off", JSON ou brut. PIÈGE ÉVITÉ : le décodage StringTime commun
+        du dépôt frère (dadou_robot_ros/robot/nodes/payload.py::decode) n'est
+        PAS réutilisable ici — il importe robot.robot_static, un paquet ROS
+        que vision n'a et ne doit PAS dépendre (dépôts frères indépendants).
+        Ce dépôt n'a pas d'équivalent factorisé pour ses topics de commande
+        (chat/persona) : on suit donc le même motif dupliqué, pas de perte
+        silencieuse — toute valeur non reconnue est logguée en warning."""
+        raw = ros_msg.msg
+        try:
+            value = json.loads(raw)
+        except (ValueError, TypeError):
+            value = raw
+        if value in ("on", True, 1, "1"):
+            self._picker.designate()
+            self.get_logger().info("désignation ON : verrouillage sur la prochaine personne centrée")
+        elif value in ("off", False, 0, "0"):
+            self._picker.release()
+            self.get_logger().info("désignation OFF : retour au choix historique (score * aire)")
+        else:
+            self.get_logger().warning(f"commande designate inconnue : {raw!r}")
 
     def _publish_video(self, frame) -> None:
         """Republie la trame courante en JPEG compressé, throttlée à video_fps.
