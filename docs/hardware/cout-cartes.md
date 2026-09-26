@@ -1,5 +1,11 @@
 # Ce que coûtent les cartes électroniques de Didier (chiffrage du 2026-09-26)
 
+> **Mise à jour du 27/09** : la bascule sous 100 × 100 est FAITE —
+> **4 cartes** de 100 × 100 (audio + la porteuse en 3), Gerber prêts dans
+> `didier/pcb/kicad/fab/`. Le poste PCB passe de 41 $ + ~80 $ à **4 × 5 $ les
+> cinq** (pages PCBWay du 26/09). Les §2.x ci-dessous décrivent la situation
+> AVANT bascule ; l'étude : [`etude-cartes-100x100.md`](etude-cartes-100x100.md) §10.
+
 Première estimation chiffrée de la fabrication des cartes du robot. Elle complète
 [`inventaire-stock.md`](inventaire-stock.md) (ce qu'on possède) et
 [`croisement-etudes.md`](croisement-etudes.md) (ce qu'il faut acheter) par la
@@ -201,6 +207,7 @@ Les distributeurs les plus complets ont bloqué la collecte (Mouser et Farnell e
 | Porte-fusibles CI 5×20 mm | 9 | main-carrier (8) + audio (1) |
 | `74HC123` DIP-16 / `74HC74` DIP-14 | 1 + 1 *(le schéma en montre 3 + 3 : ce sont les unités d'un symbole multi-unités, pas des puces)* | main-carrier |
 | `PCF8574P` DIP-16 | 1 | audio-relays |
+| PTC radiaux (tête de nappe, ajoutés le 27/09) | 2 | carrier-p |
 | Supports tulipe DIP-14 / DIP-16 | 2 + 1 | main-carrier |
 | Connecteur IDC 2×20 + nappe 40 c. | 1 | main-carrier |
 | `L7805CV` / `L7809CV` | 2 | audio-relays |

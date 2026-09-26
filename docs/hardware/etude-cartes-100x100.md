@@ -344,3 +344,54 @@ Surfaces à trois cartes, inchangées : P 46 / M 62 / L 31 cm².
    filetage des entretoises, taille du module INA226.
 7. Montage, puis **protocole caméra** roues hors sol, avec le geste nouveau :
    débrancher chaque nappe en plein mouvement.
+
+---
+
+## 10. Réalisation (26-27/09/2026) — les 4 cartes sont prêtes à fabriquer
+
+Dépôt `didier/pcb`, dossier `kicad/`. **Les 4 cartes : ERC 0, DRC 0 violation /
+0 pad non connecté, sérigraphie 0 conflit, pile cohérente** ; Gerber + perçages
+dans `kicad/fab/<carte>.zip` (`make_fab.sh`), contours contrôlés dans les Gerber :
+100,00 × 100,00 mm.
+
+| Carte | Commit clé | Particularité |
+|---|---|---|
+| `audio-relays` | `56a1e5b` | 150×100 → 100×100 sans sacrifice, routée pour la 1ʳᵉ fois |
+| `carrier-l` Pi + sécurité | `dccd525` | bande de sécurité inchangée net pour net |
+| `carrier-m` modules | `946eaa5`, `9a21307` | R10 (pull-up OE) contre M1 |
+| `carrier-p` puissance | `9a21307`, `4222f0a` | **posée tournée de 180°**, PTC de tête de nappe, nappe autoroutée |
+
+Outillage (tout rejouable, `/usr/bin/python3 generate_pcb.py` par carte) :
+`pcbgen.py` (tables → carte, zones remplies en headless), `schgen.py`,
+`carrier_design.py` (LA table des 3 cartes + nappes), `check_stack.py`
+(alignement mécanique de la pile), `make_fab.sh`, et Freerouting pour les seuls
+signaux de nappe de P (session `.ses` versionnée, réimportée à l'identique).
+
+**Écarts avec les §3-§8, à connaître :**
+
+1. **Les deux nappes sont des IDC 2×8** (le §8 prévoyait P↔L en 2×5 : les I²C
+   des INA226, qui vivent sur P, y passent aussi).
+2. **J1.17 (2ᵉ 3V3 du Pi) est NC** : le relier coûtait une lane entière le long
+   de J1 ; le pin 1 suffit.
+3. **Erreur de conception trouvée et corrigée le 27/09 : les nappes n'étaient
+   pas alignées d'un étage à l'autre** (J50 de P au bord ouest face à J51 de L
+   au bord est ; J53 de M 30 mm à côté de J52). Les trois DRC étaient à 0 : un
+   DRC vérifie une carte, pas une pile. Corrigé : J53 sous J52 ; **P posée
+   tournée de 180°** (4 trous symétriques) avec J50 tourné, pour tomber broche 1
+   sur broche 1 au-dessus de J51. Conséquence physique : les borniers de P
+   changent de côté dans le robot (le faisceau suit). `check_stack.py` vérifie
+   désormais la pile broche par broche (contre-épreuve : l'ancien placement
+   sort 16 défauts).
+4. **Les nappes contournent la tranche est** (connecteurs sur la face supérieure,
+   la carte du dessus est en travers) : ~7 mm entre connecteur et bord.
+   Sertissage normal aux deux bouts.
+5. **Revue de sûreté des nappes faite (net par net, §3.5)** : la logique d'arrêt
+   tient, et elle a trouvé **un défaut, corrigé : F9/F10, PTC de tête de nappe
+   sur P** — le +5V et le +12V de la nappe étaient pris avant tout fusible et
+   passent dans du 28 AWG. Détail : `kicad/carrier-p/DESIGN.md`.
+
+**Reste avant commande** : cotes réelles des RCA et du transfo (empreintes
+provisoires d'`audio-relays`), brochage G5V-2 sur fiche Omron, entraxe du HW-171,
+choix des deux PTC (maintien ≥ 0,5 A, ≤ 0,4 Ω sur le +5V), et mesure du courant
+de la bobine du relais 40 A. **Au premier montage** : protocole caméra roues hors
+sol, avec le geste nouveau — débrancher chaque nappe en plein mouvement.
