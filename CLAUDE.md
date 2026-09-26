@@ -91,7 +91,7 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
 
 **Tableau de bord des chantiers : `docs/chantiers.md`** — statut, prochaine
 action et verrous de CHAQUE chantier (web, télédiagnostic, suivi de personne,
-gaze/arbitrage, fond de tiroir). C'est LÀ que l'état se met à jour à chaque
+gaze/arbitrage, pistes en veille). C'est LÀ que l'état se met à jour à chaque
 lot — ce fichier-ci ne garde que les règles, les commandes et la tête de liste.
 Le détail des décisions vit dans les `docs/etude-*.md` de chaque chantier.
 

@@ -639,7 +639,7 @@ def show_audio_live(animation_state) -> bool:
 
 *Règle générale que ce cas illustre, et qui vaut au-delà de ce lot* :
 **ne jamais déduire un état actif de l'absence d'information.** Même
-discipline que le garde-fou d'obstacle (`chantiers.md`, fond de tiroir) :
+discipline que le garde-fou d'obstacle (`chantiers.md`, pistes en veille) :
 exiger un battement de cœur positif, jamais lire un silence comme une valeur.
 
 **Config** (`vision_config.py`) : `"chat_live_audio_gate": LiveAudioGateConfig()`

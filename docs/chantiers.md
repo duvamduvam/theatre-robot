@@ -49,7 +49,7 @@ journal de bord illisible).*
 | Chaîne de sécurité matérielle (main-carrier) | schéma révisé 14/07 ; **contrat figé en tests sur la branche `chaine-securite`** ; ⚠️ **le robot tourne sur STRIPBOARD DIY — watchdog, `OE` et coup-de-poing PHYSIQUEMENT INEXISTANTS** : aujourd'hui, si `wheels_node` meurt, **rien n'arrête les roues** (seul arrêt = coupure générale à la main) ; **chiffré le 26/09** — [`hardware/cout-cartes.md`](hardware/cout-cartes.md) : ≈ 110-150 € les 2 PCB nus (les 2 cartes dépassent 100×100, donc hors tarif forfaitaire) + ≈ 81 € de composants vérifiés, une quarantaine de références restant non chiffrées ; **26/09 : étude du passage sous 100×100** — [`hardware/etude-cartes-100x100.md`](hardware/etude-cartes-100x100.md) : 128,6 cm² d'encombrement réel (ombres des modules comprises) → **2 cartes** (sans le 2ᵉ PCA9685 ni la cascade PCF, 56/55 % d'occupation) ou **3 cartes** (tout gardé) ; nappe inter-cartes fail-safe net par net ; PCB 41 + ~80 $ → 20 $ ; **TRANCHÉ par David le 26/09 : 3 cartes (tout gardé), EMPILÉES — ordre M bas / L milieu / P haut, +5V des modules via L, R10 sur M** (étude §8) | placement `audio-relays` 100×100 (aucune piste à refaire), puis découpage `INSTANCES` de main-carrier (nappes P↔L 2×5 et L↔M 2×8) ; **geste gratuit d'abord : mesurer au réglet le pas d'un bornier vert du stock** (s'il est en 5,08, 19 embases + 13 fiches sortent de la commande) | carte non fabriquée ; pas de devis ferme tant que le routage n'est pas fini (les calculateurs exigent des gerbers) ; si empilé : hauteur du PCA9685 enfiché et filetage des entretoises à mesurer |
 | Chemin de commande roues (PWM moteur) | **INSTRUIT et TRANCHÉ 30/08** — le Pico ne commandera pas ; le gain visé est déjà couvert par la chaîne de sécurité | réserver + documenter 4 GPIO sur la carte odométrie (gratuit) ; adresses I²C explicites | ⟸ routage de la bande sécurité (le vrai verrou) |
 | **Télécommande USB RP2040** | ÉTUDE ÉCRITE le 14/09 — [`etude-telecommande-usb.md`](etude-telecommande-usb.md), rien de fabriqué. Née de 4 photos d'atelier d'un module joystick **`HW-504`** (réf lue ; ⚠️ `R5` NON peuplée ⇒ `SW` flottant ⇒ pull-up interne obligatoire ; ⚠️ la broche marquée `+5V` doit être alimentée en **3,3 V**, sinon les ADC du RP2040 prennent 5 V pour un max absolu de 3,63 V). Destination **double** : télécommande Pi 4 **et** simulation, **tout en série USB CDC**. ⚠️ **2 décisions RENVERSÉES le soir même du 14/09, par David** : (1) le **HID est écarté** — il ne servait qu'à piloter la sim sans code, ne servait PAS le menu, et portait la seule inconnue bloquante (aucun exemple officiel de HID+CDC sur RP2040, endpoints non chiffrés) ; (2) **le menu ne vit PAS dans le firmware mais CÔTÉ HÔTE** — « contrôler tous les éléments » implique un catalogue (animations, visages, lumières) qui vit côté robot ; le RP2040 devient un **terminal générique** qui affiche ce qu'on lui envoie, donc son firmware ne change plus quand le spectacle change. **OLED identifié** par photo : I²C 4 broches, pont d'adresse `0x78`/`0x7A` ⇒ 0x3C/0x3D. Carte : **XIAO RP2040** (USB-C, 4 ADC, en stock) — mais **11 broches seulement**, décompte sans marge. ⭐ **Le seul chantier qui avance sans le robot** (banc + sim), donc utile pendant le gel du Pi 4 **T1 FAIT le 14/09** (`302ef28`) : `firmware/remote_usb/remote_protocol.py` + `test_remote_protocol.py`, **678 tests** verts. Revue adversariale passée, 4 défauts réels corrigés — dont **le CRC que rien ne figeait** : muter le polynôme laissait les 63 tests verts (tout était recalculé avec la fonction testée), or le décodeur hôte s'écrira dans `dadou_control_ros`, **dépôt frère sans code partagé**, d'après le README → une dérive aurait refusé 100 % des trames, CI verte. Vecteurs gravés, vérifié par mutation. ⭐ **Le même trou était dans `test_odom_protocol.py`, protocole DÉJÀ EN SERVICE** — vecteur gravé là aussi. **Suite = T2** : `code.py`/`boot.py` (broches, ADC, pull-up du `SW`, émission 50 Hz) — demande la carte en main et le joystick câblé à l'air | **aucun** — le chantier n'a plus d'inconnue bloquante depuis l'abandon du HID. ⚠️ Le jour où il commande des roues RÉELLES il entre dans le chemin roues ⇒ sim + protocole caméra + revue Opus. **Reste ouvert** : `SW` du joystick câblé ou non (il coûte la dernière voie analogique), SSD1306 vs SH1106 (au 1ᵉʳ affichage), dalle OLED peut-être décollée, nb exact de XIAO |
-| Fond de tiroir | — | voir §Fond de tiroir | — |
+| Pistes en veille | — | voir §Pistes en veille | — |
 
 ## 0. Conversation — protocole physique chat_node V2
 
@@ -1069,7 +1069,51 @@ Pi vision. Arbitrage aval par source différé (étude §5.3).
 gaze ON pendant une séquence (la tête ne doit plus trembler), et le gate chat
 en conversation réelle (avec le chantier 0).
 
-## Fond de tiroir (pas urgents, pas oubliés)
+## Pistes en veille (pas urgentes, pas oubliées)
+
+- **COBOT DU COMMERCE SUR DIDIER — évalué le 2026-09-26, ÉCARTÉ.** Né d'une
+  annonce AliExpress (bras collaboratif 6 axes, 5 kg, affiché **90,69 €**) que
+  David a fait instruire « pour comprendre ». ⚠️ **Les 90,69 € sont un
+  ACOMPTE** — le titre dit « prix d'acompte », la variante s'appelle
+  « 5KG (Deposit) ». Le solde n'est **jamais** un champ de la page : vérifié,
+  la fiche ne rend ses prix qu'en JavaScript (le HTML servi est une coquille),
+  l'API `aeproductsourcesite` est fermée, l'annonce n'est pas indexée. Sur ce
+  type d'annonce le prix s'obtient **par message au vendeur**, pas par lecture.
+  **Ordre de grandeur réel** (comparables relevés le 26/09) : **10 356,82 €**
+  (Acctek 5 kg / 922 mm, prix complet sur AliExpress DE), **8 100 $** (AUBO i5,
+  Alibaba, à l'unité), jusqu'à 23 000 $ chez d'autres fournisseurs ⇒ **8 000 à
+  15 000 € départ Chine**, + TVA 20 % et droits (~4,5 %) prélevés **sur le
+  solde**, pas sur l'acompte.
+  **Pourquoi c'est écarté — et ce n'est pas le prix** (datasheet AUBO i5s,
+  modèle représentatif de la classe 5 kg) :
+  ① **pic 2000 W** (200 W en moyenne) contre un **BMS Daly 30 A** sur 24 V,
+  soit **720 W** au maximum que le pack laisse passer — via onduleur, ce pic
+  appelle **~98 A** côté batterie. Pour situer : il vaut **4× toute la
+  motorisation** du robot (2 × 250 W) ;
+  ② l'alimentation est **100-240 V AC** ⇒ onduleur dans la caisse. Or la caisse
+  **est l'enceinte acoustique** (`hardware/overview.md`) et le chantier
+  ronflement a conclu le 30/08 « une seule batterie, **pas de référence
+  secteur** » : l'onduleur rouvrirait exactement le verrou qu'on vient de
+  fermer. **C'est rédhibitoire indépendamment de l'énergie** ;
+  ③ **+39 kg** (bras 24 kg + control box 15 kg, 390×370×265 mm) sur un robot de
+  50 kg — ce n'est plus adapter Didier, c'est refaire châssis, alim et
+  motorisation autour du bras.
+  **Ce qui passait, et qui surprend** : le **logiciel** (driver ROS 2 officiel
+  `AuboRobot/aubo_ros2_driver`, plus un fork communautaire à branche Jazzy ; le
+  cobot embarque son propre contrôleur temps réel, donc le tick 20 Hz de Didier
+  suffit à lui envoyer des poses) et la **stabilité statique** (bras tendu avec
+  5 kg au bout : ~137 N·m de moment de renversement ; à 89 kg de masse totale
+  il ne faut qu'une demi-base de 16 cm). Le **dynamique** n'est pas instruit
+  (3,4 m/s en bout d'outil, freinage du robot, scène en pente). Et la
+  certification cobot **suppose une base FIXE** : cobot + base mobile + public
+  sort du cadre ISO/TS 15066.
+  ⭐ **La leçon réutilisable est un critère d'achat** : pour un bras sur Didier,
+  ce qui décide n'est pas la charge utile mais l'**alimentation native**.
+  Filtre à appliquer avant même de regarder un prix : **48 V DC** (pas de
+  secteur, pas d'onduleur, pas de ronflement), pic **< 300 W** (le BMS 30 A est
+  le plafond), masse **< 5 kg**.
+  **Déclencheur de réveil** : un bras DC natif sous 300 W de pic — ou une
+  refonte du pack et du BMS décidée pour une autre raison.
 
 - **INVENTAIRE DU STOCK DE COMPOSANTS** — *3 vidéos dépouillées le 03/09* :
   `docs/hardware/inventaire-stock.md`. Motif du chantier : en deux heures, le
@@ -1174,7 +1218,7 @@ en conversation réelle (avec le chantier 0).
   lent possible).
 - Batterie : aucun capteur câblé — parqué vers le chantier élec (cartes PCB),
   décision télédiagnostic §8.
-- ~~Micro réseau~~ — **SORTI DU FOND DE TIROIR** : ReSpeaker XVF3800 acheté
+- ~~Micro réseau~~ — **SORTI DE LA VEILLE** : ReSpeaker XVF3800 acheté
   (66,39 €), **REÇU et testé au banc sur le Pi 5 le 26/08** (driverless UAC 2.0,
   16 kHz natif, 21 dB de SNR à 3 m, Whisper transcrit). Mesures et restes à
   faire : `hardware/overview.md` §Microphone. **DoA testée le 26/08 aussi**
