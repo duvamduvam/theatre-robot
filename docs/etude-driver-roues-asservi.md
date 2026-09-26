@@ -201,6 +201,56 @@ elle tient son chiffre en pointe, pas en durée.
 | **RoboClaw 2x30A** | 53 × 74 × 23 mm | **60 g** | 30 A continu / 60 A crête |
 | **RoboClaw 2x45A** | 52 × 74 × 18 mm | **62 g** | 45 A continu / *non lu* |
 
+### ⚠️ AMENDEMENT du 26/09 (David sort le datasheet du 2x60A) : la bonne carte existe
+
+David a téléchargé `roboclaw_datasheet_2x60A.pdf` et demandé : « on peut facilement rajouter
+un radiateur ? » **Il n'y en a pas besoin — le 2x60A en a un d'usine, et il joue dans une
+autre catégorie que le 2x30A.** Extrait du datasheet (lu en local) : `Weight 2X60A
+10.4 (295) Oz (g)`, `Motor Current Per Channel 60 (typ) / 120 (max) A`, résistance à l'état
+passant **2,75 mΩ**, et en tête des caractéristiques : « **Air Cooled** » et « **Dual Cooling
+Fan Control** ». Le dissipateur sert même de repère de câblage dans la doc (« *the ground pin
+is near the heatsink* »). Le pilotage de ventilateurs délivre 5 V / 230 mA, enclenche à
+45 °C, coupe à 35 °C, pour **deux ventilateurs 40 × 40 mm** (référence testée par le
+fabricant : DigiKey 259-1794-ND) ; sur le V7, les dissipateurs ont des **trous taraudés pour
+les monter directement**.
+
+La gamme complète, masse et prix lus à la source le 26/09 :
+
+| Modèle | Masse | Courant/canal | Dissipateur | Prix lu |
+|---|---|---|---|---|
+| RoboClaw 2x30A V6B | 60 g | 30 A / 60 A | non | **152,50 € TTC** (Botland, en stock) |
+| RoboClaw 2x45A | 62 g | 45 A / *non lu* | non | *« withdrawn products » chez Botland* |
+| **RoboClaw 2x60A V8** (3687) | **300 g** — 100 × 86 × 30 mm | **60 A / 120 A** | **oui** | **229,95 $** (Pololu, « New! ») |
+| ~~RoboClaw 2x60A V7~~ (3292) | 320 g — 3,4″ × 3,9″ × 1,2″ | 60 A / 120 A | oui | 229,95 $ mais **OBSOLÈTE** ; **retiré de l'offre chez TME** |
+| *pour mémoire* Cytron MDS40B ×2 | *non lu* | 40 A / 80 A | — | 176,60 € TTC les deux |
+
+Le V8 diffère du V7 par la suppression des boutons de configuration physiques : **tout se
+configure en logiciel**. À noter au vu des quatre pièges du §4.2 — plus aucun réglage n'est
+visible ni modifiable sans ordinateur, ce qui est un point de moins pour l'exploitation sur
+un plateau, mais un point de plus pour la reproductibilité (tout est scriptable).
+
+🔴 **Et voilà où le raisonnement de David se retourne** : il voulait « plus simple **et** moins
+cher ». Avec le modèle correctement dimensionné, c'est **plus simple, mieux dimensionné, mais
+PLUS CHER** — 229,95 $ chez Pololu (import US : + TVA 20 %, + port, + les frais de douane
+documentés dans le commit `44dfd52`), ou **322,69 € TTC / 264,50 € HT** chez un revendeur
+européen (Steplab/servocity.eu, chiffre vu en recherche, **non confirmé par lecture directe
+de la page** — à revérifier avant tout achat). Contre 176,60 € pour remplacer les deux Cytron
+à l'identique.
+
+**L'arbitrage est donc binaire, sans option intermédiaire** (le 2x45A ne pèse que 2 g de plus
+que le 2x30A, il ne résout rien) :
+
+- **152,50 €** → une seule carte, asservie, **mais 60 g et 30/60 A : moins que l'existant** ;
+- **~230 $ / ~322 €** → une seule carte, asservie, **300 g et 60/120 A : plus que l'existant**,
+  et le double du prix du remplacement à l'identique.
+
+⚠️ Une variante existe aussi en **`RoboClaw Solo 60A`** (canal unique, POLOLU-3291, prix non
+lu) : deux exemplaires reproduiraient l'architecture actuelle « une carte par roue » avec
+l'asservissement en plus — mais on perdrait justement la simplification recherchée, et le
+prix serait doublé. Mentionné pour mémoire, pas retenu.
+
+### Ce qui reste vrai du constat initial
+
 Deux faits à retenir :
 
 1. **À courant annoncé comparable, le RoboClaw a quatre fois moins de masse et quatre fois
@@ -214,7 +264,8 @@ Deux faits à retenir :
    RoboClaw — des cartes compactes refroidies par l'air ambiant. (Et les 2x45A sont classés
    « withdrawn products » chez Botland : la disponibilité UE se dégrade quand on monte.)
 
-**Donc le RoboClaw 2x30A serait un recul de puissance par rapport à l'existant** :
+**Donc le RoboClaw 2x30A — et lui seul — serait un recul de puissance par rapport à
+l'existant** (le 2x60A, lui, est au-dessus, cf. l'amendement ci-dessus) :
 30 A continu / 60 A crête contre 40 A / 80 A aujourd'hui. Ce n'est pas rédhibitoire — les
 MY1016Z tirent **moins de 13,4 A au nominal** (fiche constructeur, à vide < 2,2 A), donc
 30 A continu reste plus du double du nominal. Le risque n'est pas le régime établi, c'est le
@@ -286,7 +337,7 @@ code de trame est écrit ici, **graver des vecteurs de test**.
 
 | # | Inconnue | Comment la lever | Bloquant ? |
 |---|---|---|---|
-| 1 | **Courant réellement tiré par les moteurs** (nominal lu : < 13,4 A ; blocage **non documenté**) | **pince ampèremétrique pendant le test scénique au sol**, + roue bloquée roues hors sol (§5 bis) | 🔴 **OUI** — et monter en 2x45A ne règle pas la masse thermique (62 g) : c'est la gamme entière qui est légère |
+| 1 | **Courant réellement tiré par les moteurs** (nominal lu : < 13,4 A ; blocage **non documenté**) | **pince ampèremétrique pendant le test scénique au sol**, + roue bloquée roues hors sol (§5 bis) | 🔴 **OUI** — c'est LUI qui décide entre le 2x30A (152,50 €, 30/60 A) et le 2x60A (~322 €, 60/120 A). Sans ce chiffre on paie 170 € de marge dont on ignore si elle sert |
 | 2 | **Comment tenir la règle « simulation d'abord »** sans plugin Gazebo | lire si `basicmicro_ros2` peut tourner en mock dans la sim, ou si `diff_drive_controller` suffit à valider la cinématique | 🔴 **OUI** — c'est une règle de méthode du projet |
 | 3 | Le PID tient-il à ~10 impulsions/s (régime de jeu) ? | banc d'établi, roues hors sol, avant tout usage au sol | non (repli : boucle ouverte + odométrie) |
 | 4 | Câblage du chemin de retour batterie / diode, quand Didier est **poussé à la main** | manuel §Wiring + dimensionnement | 🔴 **OUI** — sécurité |
@@ -315,9 +366,13 @@ crédible au *« si `wheels_node` meurt, rien n'arrête les roues »*.
   autour de l'E-Stop du RoboClaw changerait une conception en cours, pas une carte finie —
   ce qui est d'ailleurs le **bon moment** pour le faire, si on le fait.
 
-- 🔴 **et le dimensionnement thermique (§5 bis) est le premier verrou de tous** : quatre fois
-  moins de masse que l'existant, pour un courant annoncé inférieur, dans une gamme où monter
-  en modèle n'apporte que 2 g. C'est l'objection de David, et elle est fondée.
+- 🔴 **le dimensionnement (§5 bis) a déplacé la question du technique vers le PRIX.**
+  L'objection de David était fondée sur le 2x30A (60 g, 30/60 A, moins que l'existant) ; mais
+  le **2x60A** existe, avec dissipateur d'usine, 300 g et 60/120 A — au-dessus de l'existant.
+  Seulement il coûte **229,95 $ / ~322 € TTC** contre 176,60 € pour remplacer les deux Cytron
+  à l'identique. Le « plus simple ET moins cher » devient donc **« plus simple et mieux
+  dimensionné, mais deux fois plus cher »** — et ça, c'est un arbitrage de David, pas une
+  conclusion technique.
 
 **Séquence proposée, sans rien acheter et sans rien démonter :**
 
