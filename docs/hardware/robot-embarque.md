@@ -197,6 +197,15 @@ d'acheter une DI.
 - **Cytron SmartDrive 40** : `SmartDrive 4.0` + `DS40B` + `RC1 RC2` lus nettement
   (`t0140`, `t0141`, `t0149`, revus `t0129`-`t0132`). La doc est juste, et on a la
   référence de carte exacte.
+  ⚠️ **CORRECTION du 2026-09-26, de David : il y a UNE CARTE PAR ROUE, donc DEUX.**
+  Ce sont des drivers à **canal simple** (`RC1`/`RC2` sont les deux entrées du mode
+  radio, pas deux canaux moteur) — la vidéo n'en a filmé qu'une, et « driver moteur
+  double » au tableau §1.10 était une déduction fausse tirée de ce marquage.
+  Le code le confirme : `robot_config.py` réserve **quatre** canaux PCA9685 pour les
+  roues (`WHEEL_LEFT_DIR=0`, `WHEEL_LEFT_PWM=1`, `WHEEL_RIGHT_PWM=2`,
+  `WHEEL_RIGHT_DIR=3`), soit un couple PWM+DIR par carte. C'est cette correction qui
+  rend intéressant le remplacement instruit dans `etude-odometrie.md` §6 bis : un
+  contrôleur double canal remplacerait **deux** cartes, pas une.
 - **PCA9685** : `HW-170` lu (`t0046`, `t0047`) — c'est la sérigraphie des modules PCA9685
   16 voies. Cohérent avec la doc et avec l'exemplaire de rechange vu au stock (`t0273`).
 
@@ -211,7 +220,7 @@ Confiance : **H** = référence lue ou forme sans ambiguïté · **M** = famille
 
 | Élément | Référence lue | Montage observé | Repère | Conf. |
 |---|---|---|---|---|
-| Driver moteur double | `SmartDrive 4.0` / `DS40B` / `RC1 RC2` | vissé verticalement au-dessus d'un boîtier perforé, bornier vert, domino à levier en entrée | t0140, t0141, t0149 | H |
+| Driver moteur **canal simple, ×2 (une par roue** — corrigé le 26/09, cf. §1.9) | `SmartDrive 4.0` / `DS40B` / `RC1 RC2` | vissé verticalement au-dessus d'un boîtier perforé, bornier vert, domino à levier en entrée | t0140, t0141, t0149 | H |
 | Carte rouge sur dissipateur alu massif, 2 trimmers `A`/`B`, bornier `M1`/`M2` | *(sérigraphie non lue)* | dans le bas de caisse, câblage rose/magenta | t0061 | M |
 | Transmission **par chaîne à rouleaux** + pignon sur moyeu | — | roue ↔ bloc moteur-réducteur | t0000, t0173, t0174 | H |
 | Transmission **par courroie crantée** + carter alu | — | entre deux axes, dans le bas de caisse | t0081 | M |

@@ -10,8 +10,9 @@ Les roues de Didier n'ont **aucun retour de rotation**. Ce n'est pas un oubli, c
 conséquence du matériel : le moteur est un **MY1016Z à balais** (et non un brushless, comme
 la fiche matériel l'a longtemps prétendu à tort — corrigé le 2026-07-14). Un moteur à balais
 n'a pas de capteurs Hall de commutation ; il n'y a donc rien à dériver, aucun encodeur
-gratuit. Le Cytron SmartDrive40 qui le pilote est lui aussi un driver *brushed* (PWM + DIR)
-et n'expose aucune sortie tachymétrique.
+gratuit. Les Cytron SmartDrive40 qui les pilotent — **un par roue, donc deux** (corrigé le
+2026-09-26) — sont eux aussi des drivers *brushed* (PWM + DIR) et n'exposent aucune
+sortie tachymétrique.
 
 Deux conséquences, qu'il faut bien distinguer parce qu'elles se réparent ensemble mais ne
 font pas mal au même endroit :
@@ -968,7 +969,7 @@ expédition 24 h** (lu le 26/09/2026). 6-34 V, **30 A continu / 60 A crête par 
 19,6 M pps, **USB + série TTL**, et des drivers ROS 2 existent (`basicmicro/basicmicro_ros2`,
 MIT, `ros2_control`).
 
-Il remplacerait **à la fois** le Cytron SmartDrive40 **et** le comptage, et surtout il
+Il remplacerait **à la fois les DEUX Cytron SmartDrive40** (un par roue) **et** le comptage, et surtout il
 fermerait la boucle de vitesse **dans le matériel** au lieu de la faire en Python sur le Pi.
 C'est la seule piste de cette recherche qui apporte quelque chose que la carte maison
 n'apporte pas.
@@ -984,26 +985,22 @@ n'apporte pas.
 3. On perdrait le bénéfice du **Cytron MDDS30 de rechange** présent en stock
    (`inventaire-stock.md` §1.4).
 
-**Donc : à garder en réserve pour l'étape 5 (ros2_control), pas maintenant.** Le noter ici
-évite de le redécouvrir dans six mois, et évite surtout de l'acheter dans l'urgence.
+**Donc : instruit à part**, dans [`etude-driver-roues-asservi.md`](etude-driver-roues-asservi.md)
+— c'est une décision de *driver de puissance*, pas d'odométrie, et elle a ses propres
+verrous de sécurité.
 
-### Conclusion : la carte reste, mais deux allègements sont acquis
+### Conclusion : rien à acheter pour lire les capteurs
 
-Rien ne justifie d'acheter. En revanche la question de David est juste sur un point : **le
-travail de plaque est fastidieux**, et deux allègements le réduisent sans rien céder :
+**Le plan de la carte ne change pas** — ni le schéma, ni le plan de plaque, ni la
+nomenclature. Aucun produit ne réunit capteur 12 V NPN + isolation galvanique +
+quadrature à un prix ou à une simplicité supérieurs, et les deux familles qui
+s'en approchent échouent chacune sur un point dur : les cartes de loisir n'isolent
+jamais, les automates coûtent 85 à 336 € et restent à programmer.
 
-1. **Ne monter qu'UNE ROUE d'abord** (2 voies au lieu de 4) : ~34 coupures au lieu de 67, et
-   ça teste déjà **tout** ce qui compte — l'isolation, la quadrature, le sens, le firmware, le
-   nœud ROS. La seconde roue n'est qu'une répétition, à souder une fois la première prouvée.
-2. **Les 4 LED de diagnostic et les 4 × 10 nF peuvent attendre le PCB** (étape 4) : ils
-   suppriment 8 composants et 4 résistances de la plaque provisoire. ⚠️ À reprendre
-   impérativement au PCB : la LED par canal est ce qui montre un capteur mort **sans
-   ordinateur** sur un plateau (et elle alimente le télédiagnostic), le 10 nF filtre les arcs
-   de balais.
-
-Et le rappel qui vaut pour toute cette recherche : **le PCB (étape 4, 66 × 74 mm, donc sous le
-seuil des 100 × 100) est LA vraie réponse aux 67 coupures** — mais après validation, jamais
-avant. On ne grave pas ce qu'on n'a pas vu fonctionner.
+Le seul enseignement qui change quelque chose n'est **pas** dans le périmètre de
+cette étude : c'est le **RoboClaw**, qui ne remplace pas la lecture des capteurs mais
+**les deux drivers de puissance**. Instruit à part — voir
+[`etude-driver-roues-asservi.md`](etude-driver-roues-asservi.md).
 
 > **Sources consultées le 2026-09-26** (prix lus à la source) : botland.store (RoboClaw
 > 2x30A V6B), generationrobots.com (Kangaroo x2 : 25,22 € TTC — mais c'est un add-on qui
