@@ -138,10 +138,11 @@ empreintes dont 4 RCA, 4 relais et un transfo : ce n'est pas gagné, mais c'est
 la question la moins chère à se poser avant de router (elle n'a aucune piste :
 le moment est idéal, il n'y a rien à refaire).
 
-Pour `main-carrier` (83 empreintes, 195 × 150), l'exercice n'a pas de sens.
-En revanche, son élargissement à 195 mm reste à trancher pour une autre raison,
-mécanique celle-là : les 45 mm ajoutés à droite sont en porte-à-faux sans
-fixation, avec trois connecteurs posés dessus (voir la mémoire projet PCB).
+Pour `main-carrier` (83 empreintes, 195 × 150), une seule carte 100 × 100 est
+exclue — mais **un découpage en deux ou trois cartes ≤ 100 × 100 est faisable** :
+c'est l'objet de [`etude-cartes-100x100.md`](etude-cartes-100x100.md) (demande
+de David le jour même), qui règle au passage le porte-à-faux des 45 mm ajoutés
+à droite.
 
 ---
 
@@ -174,7 +175,7 @@ au-dessus.
 
 Croisé avec [`inventaire-stock.md`](inventaire-stock.md) :
 
-- **5 × `SN74AHCT125N`** — en stock (6 à 8, DIP-14, référence lue) ;
+- **1 × `SN74AHCT125N`** (une seule puce, 4 portes) — en stock (6 à 8, DIP-14, référence lue) ;
 - **fusibles verre 5×20** — 150 à 250 en stock (les *porte*-fusibles, eux, sont
   à acheter) ;
 - **électrolytiques 470 µF / 100 µF** — kit BOJACK 630 pièces ;
@@ -198,9 +199,9 @@ Les distributeurs les plus complets ont bloqué la collecte (Mouser et Farnell e
 | Embases mâles CI débrochables 5,08 mm (le pendant des fiches du §3.1) | 19 | les deux |
 | Embases RCA à souder sur CI | 4 | audio-relays |
 | Porte-fusibles CI 5×20 mm | 9 | main-carrier (8) + audio (1) |
-| `74HC123` DIP-16 / `74HC74` DIP-14 | 3 + 3 | main-carrier |
+| `74HC123` DIP-16 / `74HC74` DIP-14 | 1 + 1 *(le schéma en montre 3 + 3 : ce sont les unités d'un symbole multi-unités, pas des puces)* | main-carrier |
 | `PCF8574P` DIP-16 | 1 | audio-relays |
-| Supports tulipe DIP-14 / DIP-16 | 11 | main-carrier |
+| Supports tulipe DIP-14 / DIP-16 | 2 + 1 | main-carrier |
 | Connecteur IDC 2×20 + nappe 40 c. | 1 | main-carrier |
 | `L7805CV` / `L7809CV` | 2 | audio-relays |
 | Module PCF8574 (type HW-171) | 1 à 2 | main-carrier |
@@ -228,8 +229,9 @@ Trois actions, par rapport qualité/prix décroissant :
 1. **Mesurer le pas d'un bornier vert du stock** (2 minutes, un réglet). S'il
    est en 5,08, un poste entier de la commande disparaît — 19 embases + 13
    fiches. C'est le geste le plus rentable du chantier, et il ne coûte rien.
-2. **Se poser la question des 100 × 100 pour `audio-relays` avant de la router**
-   (§2.5) : facteur 8 sur le prix du PCB, et elle n'a aucune piste à refaire.
+2. **Passer sous 100 × 100** — `audio-relays` sans sacrifice, `main-carrier` en
+   2 ou 3 cartes : étudié dans [`etude-cartes-100x100.md`](etude-cartes-100x100.md),
+   décisions en attente de David.
 3. **Finir le routage, sortir les gerbers, déposer le zip dans les
    calculateurs.** C'est la seule façon d'avoir un prix ferme : les calculateurs
    sont en JavaScript, donc illisibles autrement — constat déjà fait le 13/09 et
