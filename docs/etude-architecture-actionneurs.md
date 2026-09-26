@@ -92,40 +92,62 @@ position que la mécanique refuse — et le servo forcera jusqu'à la limite de 
 Le contrat de données testé (« chaque visuel/audio/brique référencé doit exister ») protège
 des références manquantes, pas des valeurs hors butée.
 
-## 4. 🔴 UN DOUTE MAJEUR À LEVER : les bras sont-ils vraiment à rotation continue ?
+## 4. ⭐ LE DOUTE EST LEVÉ — et il révèle un actif dormant
 
-`docs/hardware/overview.md:988` écrit, littéralement :
+`docs/hardware/overview.md` écrivait : *« The arms and mouth are controlled by ASME-MR
+380 kg·cm **continuous-rotation** RC servos. »* J'ai d'abord soupçonné une erreur d'une lettre
+(`ASME` continu / `ASMC` positionnel chez DSSERVO). **C'était plus intéressant que ça.**
 
-> *« The arms and mouth are controlled by **ASME-MR 380 kg·cm continuous-rotation** RC
-> servos. »*
+La photo produit du dépôt (`docs/pictures/consumable-parts/arm-motor.png`) confirme la
+référence `ASME-MR` et la mention « 360 Degree » — donc **pas d'erreur de référence**. Mais la
+fiche du fabricant dit ce que « ASME-MR » désigne réellement :
 
-**Si c'est exact, l'architecture logicielle repose sur un malentendu.** Un servo à rotation
-continue n'a pas d'asservissement de position : sa consigne commande une **vitesse**
-(≈1,5 ms = arrêt, plus court ou plus long = rotation dans un sens). Or tout le code le traite
-comme un servo **positionnel** : `target_pos`, `current_pos`, rampe entre deux positions,
-`default_pos`.
+> **`ASME-MR` = Magnetic Encoding Series Digital Servo, 360 degree.** Capteur magnétique
+> **12 bits**, *« uses digital ports to directly read sensor data and **return angle
+> information**, with a true 360-degree controllable range »*. Origine réglable à 1500 µs dans
+> les 360°. Couple de démarrage 380 kg·cm, couple de maintien 340 kg·cm.
 
-**Mais un fait observable contredit la doc** : le bras droit a `DEFAULT_POS = 180`. Sur un
-servo à rotation continue, 180 correspond à la **vitesse maximale dans un sens** — le bras
-droit tournerait donc sans fin dès la mise sous tension, ce qui se serait vu immédiatement.
+**Ce sont donc des servos POSITIONNELS**, pas à rotation continue : le modèle de commande de
+`servo.py` (`target_pos`, rampe, `default_pos`) est **juste**. La documentation était fausse,
+elle est corrigée.
 
-**L'hypothèse la plus probable est donc une erreur de documentation d'une seule lettre** :
-chez DSSERVO, la série **`ASME`** est à rotation continue et la série **`ASMC`** est
-positionnelle (270°), pour un même couple. Une lettre sépare les deux.
+### ⭐ Et la vraie découverte : le retour de position EXISTE DÉJÀ dans le matériel
 
-> **Le test qui tranche en trente secondes, sans rien démonter** : commander un bras à 30,
-> puis à 70, et regarder. **S'il s'arrête à deux endroits différents et y reste**, ce sont des
-> servos positionnels (`ASMC`) et la doc est fausse — à corriger. **S'il tourne tant que la
-> consigne n'est pas 50**, ce sont bien des `ASME`, et c'est tout le modèle de commande des
-> bras qui est à revoir.
+La faiblesse n° 1 de cette étude — « la boucle est ouverte, on ne sait jamais où sont les
+bras » — **n'est pas une fatalité du matériel. C'est un câble qu'on n'a pas branché.**
 
-⚠️ **Tant que ce point n'est pas levé, aucune conclusion sur les bras n'est fiable** — ni la
-mienne, ni celle du code. Et c'est typiquement l'erreur qui coûte une soirée d'atelier à
-chasser un fantôme.
+Ces servos embarquent un encodeur magnétique 12 bits et savent renvoyer leur angle. Le robot
+possède donc déjà, sur ses deux actionneurs les plus puissants, exactement ce que j'allais
+recommander d'acheter.
+
+**Ce qui reste à vérifier, et qui demande le robot** (gelé depuis l'incident Pi 4 du
+2026-09-12) :
+
+1. **Le modèle exact** : `ASME-MR` simple ou variante `ASME-MRB` ? La fiche la plus explicite
+   sur le retour d'angle est celle du `MRB`. À lire sur l'étiquette du servo monté.
+2. **Le câblage** : la photo montre **deux connecteurs** (un câble servo 3 fils classique, plus
+   un second). Le second est probablement la liaison de retour. Est-il seulement raccordé sur
+   Didier, ou pend-il dans le vide depuis le début ?
+3. **Le protocole** : « digital ports » n'est pas une spécification. Quel bus, quelle trame ?
+   À obtenir du fabricant ou à observer à l'analyseur logique.
+
+⚠️ Tant que ces trois points ne sont pas levés, **ne pas compter dessus** — mais **ne pas
+acheter de solution de retour non plus** (§5.C devient sans objet si le retour est déjà là).
 
 ## 5. Les alternatives, classées par rapport gain / effort
 
-### 🥇 A. Mesurer le courant des servos — le meilleur rapport de tout ce document
+### 🥇 A′ (NOUVEAU, prioritaire depuis le §4). Brancher et lire le retour d'angle des bras
+
+**Coût : zéro euro si le câble est déjà là.** Avant toute autre chose, établir si le retour de
+position des `ASME-MR` est raccordé et lisible. S'il l'est, on obtient d'un coup la position
+réelle des deux actionneurs les plus dangereux du robot — et, par comparaison entre consigne et
+position réelle, **une détection de blocage** : si l'écart ne se referme pas, c'est que le bras
+force contre quelque chose.
+
+C'est exactement la fonction que A et C ci-dessous allaient acheter. **À instruire en premier**,
+dès que le robot est réalimentable.
+
+### 🥈 A. Mesurer le courant des servos — le meilleur rapport SI le retour d'angle n'existe pas
 
 **Le problème qu'elle règle** : la détection de blocage (§3.1), donc le seul point de
 *sécurité* de cette étude.
@@ -148,7 +170,7 @@ appliquer mécaniquement.
 **Effort** : une carte, un nœud de lecture, un seuil. **Gain** : on passe d'« aucune détection
 de blocage » à « le robot sait qu'il force ».
 
-### 🥈 B. Passer les YEUX et le COU en servos à bus série
+### 🥉 B. Passer les YEUX et le COU en servos à bus série
 
 **Le problème qu'elle règle** : la boucle ouverte (§3.1) et les limites d'angle (§3.3), sur
 les articulations où c'est le plus utile — le regard, qui est déjà asservi par le gaze.
@@ -166,7 +188,7 @@ peut-être le cou, pas une refonte.
 supports imprimés (l'empreinte diffère). **Gain** : les articulations d'expression deviennent
 observables.
 
-### 🥉 C. Ajouter un retour de position sur les bras, sans changer les servos
+### C. Ajouter un retour de position sur les bras — ⚠️ probablement SANS OBJET (cf. §4)
 
 Si le test du §4 révèle des servos à rotation continue, le retour de position devient
 **indispensable** et non plus confortable. En DIY : un **potentiomètre** monté sur l'axe de
@@ -189,8 +211,12 @@ sont les bras.
 
 ## 6. Ce que je recommande, dans l'ordre
 
-1. **Lever le doute du §4** (30 secondes, aucun démontage). Tant qu'il tient, tout le reste est
-   bâti sur du sable. Et corriger `overview.md` dans la foulée, quel que soit le résultat.
+0. ⚠️ **Rappel de contexte** : le robot est **gelé depuis le 2026-09-12** (incident Pi 4).
+   Tout ce qui demande de l'alimenter attend la levée de ce blocage — ce qui inclut les
+   points 1 et 4.
+1. ✅ **FAIT le 26/09** : le doute du §4 est levé (servos **positionnels** à encodeur
+   magnétique), `overview.md` est corrigé, et il en sort une piste **A′** qui prime sur tout
+   le reste : **le retour de position existe déjà dans le matériel**.
 2. **Rendre les adresses I²C explicites** (§3.2). Deux lignes, à faire **avant** la séparation
    0x40/0x41, pas après.
 3. **Coder les limites d'angle par servo** (§3.3), dans la configuration, avec un test qui

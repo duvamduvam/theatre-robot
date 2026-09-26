@@ -985,7 +985,21 @@ Disc geometry (diameter, slot count, read radius, sensor spacing) is pending thr
 `docs/etude-odometrie.md`.
 
 ### Arms, eyes and mouth servos
-The arms and mouth are controlled by ASME-MR 380 kg·cm continuous-rotation RC servos.
+The arms and mouth are controlled by **ASME-MR 380 kg·cm** servos.
+
+> ⚠️ **CORRECTED 2026-09-26.** This line previously said *« continuous-rotation »*. That is
+> **wrong**, and the mistake matters: a continuous-rotation servo takes a *speed* command, which
+> would make the whole `target_pos` / `current_pos` / ramp model in `servo.py` meaningless.
+> `ASME-MR` is in fact the **Magnetic Encoding Series**: a **positional** servo over a true 360°
+> range, with a **12-bit magnetic sensor**, sold as able to *« use digital ports to directly read
+> sensor data and return angle information »*. The product photo below confirms the reference
+> and « 360 Degree ».
+>
+> ⭐ **Consequence not yet exploited: these servos CAN report their own position.** The arms are
+> therefore not inherently open-loop — the feedback exists in the hardware and nobody queries it.
+> See [`../etude-architecture-actionneurs.md`](../etude-architecture-actionneurs.md) §4.
+> **To verify on the real robot** (frozen since the 2026-09-12 Pi 4 incident): the exact wiring of
+> the feedback line, and whether the fitted model is the plain `ASME-MR` or the `ASME-MRB` variant.
 ![ASME-MR servo](../../docs/pictures/consumable-parts/arm-motor.png)
 *ASME-MR high-torque servo for arms and mouth.*
 
