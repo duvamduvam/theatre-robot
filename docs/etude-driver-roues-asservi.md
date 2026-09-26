@@ -231,7 +231,7 @@ La gamme complète, masse et prix lus à la source le 26/09 :
 | RoboClaw 2x30A V6B | 60 g | 30 A / 60 A | non | **152,50 € TTC** (Botland, en stock) |
 | RoboClaw 2x45A | 62 g | 45 A / *non lu* | non | *« withdrawn products » chez Botland* |
 | **RoboClaw 2x60A V8** (3687) | **300 g** — 100 × 86 × 30 mm | **60 A / 120 A** | **oui** | **229,95 $** (Pololu, « New! ») |
-| ~~RoboClaw 2x60A V7~~ (3292) | 320 g — 3,4″ × 3,9″ × 1,2″ | 60 A / 120 A | oui | 229,95 $ mais **OBSOLÈTE** ; **retiré de l'offre chez TME** |
+| ~~RoboClaw 2x60A V7~~ (3292) | 300 g — 100 × 86 × 30 mm | 60 A / 120 A | oui, **taraudés** | 229,95 $ mais **OBSOLÈTE** ; **retiré de l'offre chez TME** |
 | *pour mémoire* Cytron MDS40B ×2 | *non lu* | 40 A / 80 A | — | 176,60 € TTC les deux |
 
 Le V8 diffère du V7 par la suppression des boutons de configuration physiques : **tout se
@@ -473,6 +473,54 @@ choix se réduit donc bien à **2x30A (60 A crête) ou 2x60A (120 A crête)**.
 Noté au passage : le **BEC 5 V du 2x60A est tombé à 1,2 A sur les versions « V7 or later »**
 (contre 3 A avant). Sans importance si on n'alimente rien depuis la carte, à savoir si on
 comptait y brancher des capteurs.
+
+### Les révisions V6 → V7 → V8, et ce qu'il faut exiger à l'achat
+
+*Question de David, 26/09. Tout est lu sur les pages Pololu des items 3292 (V7) et 3687 (V8).*
+
+| | V6 et antérieurs | **V7** | **V8** |
+|---|---|---|---|
+| MOSFET | d'origine | 🟢 **améliorés** (« *improved MOSFETs for better performance* ») | identiques au V7 |
+| Dissipateurs **taraudés** pour monter 2 ventilateurs | ❌ non | 🟢 **oui** (« *the heat sinks **now** include tapped holes* ») | oui |
+| BEC 5 V | 3 A | **1,2 A** (« *V7 or later* ») | 1,2 A |
+| Boutons de configuration physiques | oui | **oui** | ❌ **supprimés** |
+| Configuration | boutons **ou** logiciel | boutons **ou** logiciel | **logiciel uniquement** |
+| Format, emplacements des connecteurs | — | inchangés (« *drop-in replacement* ») | inchangés |
+| Dimensions / masse / prix | — | 100 × 86 × 30 mm · 300 g · 229,95 $ | **identiques** |
+| Statut au 26/09/2026 | — | 🔴 **obsolète**, retiré de l'offre chez TME | **au catalogue, 11 en stock chez Pololu** |
+
+**Deux changements comptent vraiment pour Didier, et ils sont tous les deux au V7 :**
+
+1. 🔴 **Les MOSFET améliorés.** On choisit précisément cette carte pour sa marge thermique
+   (§5 bis) : prendre une révision antérieure au V7, ce serait acheter la masse du dissipateur
+   sans l'amélioration du silicium qui va avec.
+2. 🔴 **Les trous taraudés des dissipateurs.** C'est la réponse à la question « où mettre les
+   ventilateurs ? » (§6 quater) : elle n'existe **qu'à partir du V7**. Sur une révision plus
+   ancienne, il faudrait fabriquer un berceau ; à partir du V7, les ventilateurs se vissent
+   directement.
+
+⚠️ **Le BEC est descendu de 3 A à 1,2 A au V7.** Sans effet ici (le domaine propre de la carte
+optos ne consomme que quelques milliampères), mais à savoir si un jour on voulait alimenter
+autre chose depuis le contrôleur.
+
+### Et un arbitrage contre-intuitif : le V7 serait PRÉFÉRABLE au V8 pour ce robot
+
+Le seul changement du V8 est la **suppression des boutons de configuration**. Or sur un robot
+de théâtre, ces boutons sont un **avantage d'exploitation** : ils permettent de vérifier ou de
+corriger un mode **sans ordinateur**, dans une loge, avant l'entrée en scène. Vu les quatre
+pièges de configuration du §4.2 — `Idle Mode` en roue libre par défaut, `Home (Auto)` qui fait
+bouger le moteur au démarrage — pouvoir contrôler un réglage sans sortir un portable et un
+câble n'est pas un luxe.
+
+Le V8 a en échange un vrai mérite : **tout est scriptable**, donc reproductible et
+versionnable — ce qui va dans le sens du projet (une configuration en fichier, rejouable après
+un remplacement de carte).
+
+**Conséquence pratique** : si RobotShop EU livre un **V7** sous sa référence `IMC414`, c'est
+une bonne nouvelle, pas une déception — à condition que ce soit bien un V7 et pas un V6.
+**La question à leur poser devient donc précise** : *« la carte livrée est-elle une V7 ou une
+révision antérieure ? »* Une V6 serait à refuser (MOSFET d'origine, dissipateurs non taraudés) ;
+une V7 est le meilleur compromis pour cet usage ; une V8 convient aussi.
 
 #### Où l'acheter : deux offres, deux compromis
 
@@ -910,16 +958,34 @@ comme le §6 de l'étude odométrie l'avait raisonné.
 
 ### Encombrement
 
-Le plan actuel fait **26 × 29 trous (66 × 74 mm)**, dont une part notable pour le module
-(neuf pastilles par colonne, corps débordant d'une rangée de chaque côté). Le retirer libère
-beaucoup ; ajouter deux connecteurs de sortie en reprend une partie. **La carte sera
-sensiblement plus petite, mais je ne donne pas de chiffre sans avoir refait le plan** —
-c'est précisément la leçon du projet sur les cotes non mesurées.
+**PLAN GÉNÉRÉ le 26/09**, à la demande de David :
+`pcb/kicad/wheel-odometry/gen-stripboard-roboclaw.py` → `stripboard-roboclaw.png`/`.svg`
+(dépôt `pcb`, commit `5914674`). Le plan officiel à RP2040 est **intact** — les six fichiers
+de référence n'ont pas été touchés.
 
-> Le vérificateur `gen-stripboard.py` du dépôt `pcb` est déjà écrit et éprouvé par mutation :
-> régénérer un plan pour cette variante est un travail cadré, pas une reprise de conception.
-> **Dis-le-moi si tu veux que je le fasse** — mais à mon sens pas avant que le RoboClaw soit
-> décidé, sinon on entretient deux plans concurrents.
+| | Plan officiel (RP2040) | **Variante RoboClaw** |
+|---|---|---|
+| Plaque | 26 × 29 trous (~66 × 74 mm) | **26 × 27 trous (~66 × 69 mm)** |
+| Coupures | 67 | **54** |
+| Straps | 10 | 10 |
+| Nets / broches | — | 22 / 74 |
+
+⚠️ **Le gain de surface est modeste, et il faut le dire** : la suppression du module libère
+8 rangées, les deux connecteurs de sortie en reprennent 5. J'avais annoncé « sensiblement
+plus petite » — c'est deux rangées. **Le vrai gain est ailleurs** : 13 coupures de moins, et
+surtout plus de module, donc **plus de firmware, plus de flashage, plus de règle udev, plus
+de numéro de série à gérer**.
+
+**Vérification par mutation, rejouée par l'orchestrateur** (pas seulement déclarée par l'agent
+qui a produit le plan) : barrière découpée → 5 courts-circuits dont `GNDPWR + GND` sur la
+même bande, refusé ; strap `ODO_LA → J7.A` retiré → « net éclaté sur 2 tronçons », refusé ;
+bus `+5V_RC` tronqué → « éclaté sur 5 tronçons », refusé.
+
+> 💡 **Enseignement d'une mutation mal ciblée, qui resservira** : supprimer les coupures de la
+> *seule* colonne 11 laisse le vérificateur vert — à raison. La barrière est coupée sur **deux**
+> colonnes (11 et 12) et une seule suffit électriquement ; la seconde est une **redondance
+> volontaire**, la marge qui pardonne une coupure mal faite ou une bavure de cuivre. Ne pas la
+> prendre pour un défaut du contrôle.
 
 ### Trois points à vérifier sur la carte réelle, avant tout plan
 
@@ -1052,6 +1118,171 @@ sans rien racheter : même carte, même câblage d'encodeurs, mêmes optos.
    banc, plus l'architecture cible. Elle reste utile à lever, elle n'arrête plus rien.
 
 
+## 6 sexies. « Des odomètres en 5 V, ce ne serait pas plus simple ? » — non, et le manuel l'explique
+
+*Question de David le 26/09 : « sinon ça ne serait pas plus simple des odomètres à 5 V ?
+C'est courant ? Fiable ? »* Elle est excellente, parce qu'elle vise le seul composant qui
+pourrait disparaître — et la réponse tient en une phrase : **l'optocoupleur n'est pas là pour
+convertir une tension, il est là pour séparer deux masses.** Changer la tension du capteur ne
+supprime donc pas le besoin ; ça supprime seulement l'illusion du besoin.
+
+### Est-ce courant ? Oui. Est-ce fiable ? Ça dépend entièrement du châssis
+
+**Courant : absolument.** Un encodeur 5 V branché directement sur les entrées d'un contrôleur,
+c'est la norme de toute la robotique de loisir et de la plupart des robots de service. Les
+`EN1`/`EN2` du RoboClaw sont faits pour ça.
+
+**Fiable : sur un robot propre, oui. Sur Didier, non** — et ce n'est pas un avis, c'est écrit
+dans le manuel du RoboClaw, section *Encoder Signal Conditioning* :
+
+> *« RoboClaw accepts direct quadrature encoder inputs but **does not include built-in signal
+> conditioning**, as this would limit maximum count speed. Some encoders provide weak or noisy
+> signals that may require external conditioning [...] This can include **adding pull-up
+> resistors to open-collector or open-drain outputs** [...] Some encoders may **inject noise
+> onto the power lines, which can interfere with RoboClaw and other connected devices**. For
+> applications in **electrically noisy environments, differential encoders are strongly
+> recommended** to improve noise immunity and signal integrity. »*
+
+Trois choses à en retenir, dans l'ordre :
+
+1. **Le RoboClaw ne conditionne rien.** Ses entrées sont nues, par choix de conception (pour
+   ne pas plafonner la vitesse de comptage). Tout le filtrage est à notre charge.
+2. **Il recommande lui-même d'ajouter des rappels sur les sorties à collecteur ouvert** —
+   c'est-à-dire exactement le montage de notre carte, qui existait avant lui.
+3. **Il avertit qu'un capteur peut injecter du bruit dans l'alimentation** et perturber le
+   contrôleur *et les autres appareils connectés*. Alimenter des capteurs 5 V depuis le BEC du
+   RoboClaw, au bout de 1 à 2 m de câble courant le long des moteurs, c'est précisément le
+   scénario qu'il déconseille.
+4. Et pour un milieu bruité, sa recommandation n'est pas « du 5 V simple », c'est **du
+   différentiel** — c'est-à-dire *plus* de précautions que ce qu'on a, pas moins.
+
+### Le point qui tue l'idée : avec le RoboClaw, la masse logique EST la masse de puissance
+
+C'est l'argument décisif, et il est prouvé par une phrase du datasheet :
+
+> *« **Do not disconnect the negative terminal if other ground sources are connected**, such as
+> USB cable. Damage will occur. »*
+
+Si débrancher le `B−` de la batterie pouvait détruire la carte quand un câble USB est
+branché, c'est que **la masse de puissance et la masse logique sont le même cuivre**. Or ce
+cuivre-là voit passer **jusqu'à 120 A de crête** quand les moteurs démarrent.
+
+Conséquence concrète : brancher un capteur 5 V en direct reviendrait à faire courir sa masse
+de retour sur 1 à 2 m, le long des moteurs, pour la raccorder à ce cuivre. Quelques
+milliohms × 60 A = **des centaines de millivolts** de chute qui s'ajouteraient au signal
+logique, dont le seuil haut est à 2 V. Ce n'est pas une marge confortable, c'est une loterie
+— et une loterie intermittente, qui ne se manifesterait qu'en pleine accélération, donc le
+soir de la représentation.
+
+**L'isolation est donc PLUS nécessaire avec le RoboClaw qu'avec le RP2040**, pas moins : le
+RP2040 avait au moins une masse logique propre, alimentée par l'USB.
+
+### Ce qu'on perdrait aussi, et qui n'est pas évident
+
+Le §6 de l'étude odométrie avait choisi le 12 V à collecteur ouvert pour une raison précise :
+*« basse impédance, forte amplitude — une brute, quasi insensible aux parasites ; c'est pour
+ça que l'industrie l'utilise dans des armoires bourrées de variateurs »*. C'est ce signal-là
+qui fait les 1 à 2 m jusqu'aux roues.
+
+En 5 V, on remplacerait ce signal robuste par un signal fragile **sur la même longueur de
+câble**, dans le même environnement. On ne déplacerait pas le problème : on l'aggraverait aux
+deux bouts.
+
+### ⚠️ Correction du 26/09 : la variante 5 V EXISTE (David l'a trouvée)
+
+Cette section affirmait d'abord que ces capteurs « ne descendent pas à 5 V ». **C'est faux au
+niveau de la famille** : le **`LJ12A3-4-Z/BX-5V`** existe, vendu explicitement « tension de
+travail 5 VDC, spécial pour MCU », **4,29 € TTC** (ELECAPITAL, AliExpress, relevé par David le
+26/09 ; 40 vendus, 2 avis). C'était vrai des **six exemplaires en stock** — eux sont bien en
+6-36 V — mais pas de la référence en général. L'argument « fait accompli » était donc le plus
+faible des quatre, et il tombe à moitié : il resterait ~26 € et un délai pour rééquiper.
+
+**Mais les trois autres arguments tiennent intégralement, et deux EMPIRENT en 5 V :**
+
+| Argument | En 12 V | En 5 V |
+|---|---|---|
+| L'opto isole deux masses | nécessaire | **toujours aussi nécessaire** — la tension n'y change rien |
+| Marge de bruit sur 1-2 m le long des moteurs | large (le signal est « une brute ») | 🔴 **divisée par plus de deux** : seuil haut à 2 V, seuil bas à 0,8 V |
+| Chute de masse due au courant moteur (jusqu'à 120 A de crête) | noyée dans l'amplitude | 🔴 **mange directement la marge** |
+| Bruit injecté sur l'alimentation du capteur | sans effet (rail 12 V dédié) | 🔴 remonterait vers le **BEC du RoboClaw** — ce que son manuel déconseille explicitement |
+
+Autrement dit : **le seul scénario où le 5 V simplifierait vraiment, c'est celui où l'on
+renoncerait à l'isolation.** Et c'est le scénario qu'on refuse, pour la raison écrite plus
+haut — avec le RoboClaw, la masse logique *est* la masse de puissance.
+
+Un capteur 5 V **derrière** l'optocoupleur, lui, n'apporte rien du tout : on garderait la
+carte, on paierait de nouveaux capteurs, et on perdrait la robustesse du 12 V sur les deux
+mètres qui comptent. Il n'existe donc **aucun scénario où le 5 V est meilleur ici** — ce qui
+est une conclusion plus forte, et mieux fondée, que le simple « on les a déjà achetés ».
+
+> 💡 **À garder en tête pour un AUTRE robot** : sur une machine plus petite, aux moteurs plus
+> faibles et au câblage court, le `LJ12A3-4-Z/BX-5V` branché en direct sur un `EN1`/`EN2`
+> serait le bon choix — simple, éprouvé, et à 4,29 €. Ce n'est pas une mauvaise idée en soi,
+> c'est une mauvaise idée **pour ce châssis-ci**.
+
+Enfin, l'arbitrage du §4 de l'étude odométrie (inductif plutôt qu'optique : tolérance à la
+poussière de plateau et à la graisse, portée réglable, robustesse industrielle) **reste
+valable dans les deux tensions** — il n'est pas rouvert par cette question.
+
+> À titre de complétude : des solutions 5 V existent bel et bien en stock — les **fourches
+> optiques** `MH-Sensor-Series` (8 à 10 modules, cf. `inventaire-stock.md` §1.3). Elles restent
+> le plan B documenté si un capteur inductif venait à manquer. Mais elles ne suppriment pas la
+> barrière non plus, **et une fourche optique sur un robot de théâtre est un capteur qui se
+> remplit de poussière de plateau** — c'est une des raisons du choix inductif.
+
+### « Il faut garder l'optocoupleur ? » — oui, et voici l'argument qui décide
+
+*Question de David, 26/09.* Elle mérite une réponse franche, y compris sur ce qui est
+discutable.
+
+**Avec les capteurs 12 V actuels : ce n'est pas négociable.** Les entrées `EN` du RoboClaw
+acceptent 0-5 V, maximum absolu 5 V. Un capteur 12 V dont la sortie se retrouverait
+accidentellement au potentiel d'alimentation — fil pincé, capteur claqué, erreur de câblage
+sur un bornier — enverrait **12 V dans une entrée prévue pour 5** et détruirait le
+contrôleur. C'est exactement le piège « NPN, et JAMAIS PNP » du §4 de l'étude odométrie, avec
+une carte à 250 € au bout au lieu d'un RP2040 à 5 €. L'opto, lui, encaisse : le défaut meurt
+sur la LED, et il ne coûte que 7 centimes à remplacer dans son support tulipe.
+
+**Avec des capteurs 5 V, c'est techniquement discutable — et je le dis honnêtement.** On
+pourrait s'en passer. C'est ce que fait l'immense majorité de la robotique, et le corps des
+`LJ12A3` étant monté dans une patte en PETG imprimé, il est déjà isolé du châssis : câblés en
+étoile depuis le connecteur `EN`, les capteurs ne créeraient pas de boucle de masse. L'idée
+tient debout.
+
+**Ce qu'on perdrait quand même, et qui n'est pas rattrapable ailleurs :**
+
+1. **La protection contre les défauts** (ci-dessus) : elle disparaît, quelle que soit la
+   tension nominale. Un capteur à 4 € peut tuer un contrôleur à 250 €.
+2. **L'immunité aux arcs de balais.** Deux mètres de câble longeant des moteurs qui commutent
+   jusqu'à 120 A captent des transitoires par couplage capacitif et inductif — ça ne passe pas
+   par la masse, donc un câblage en étoile n'y change rien. Avec un seuil de basculement à
+   2 V, la marge est mince ; c'est précisément ce que le manuel RoboClaw anticipe en
+   recommandant des **encodeurs différentiels** en milieu bruité.
+3. **Le filtre `C 10 nF`**, qui avale les pointes des balais, perdrait son point d'application
+   propre.
+
+**Et le coût de la garder est faible, surtout maintenant.** Sans le RP2040, la carte se réduit
+à quatre voies identiques et à sa protection d'entrée : ~7 centimes par optocoupleur, des
+composants **déjà en stock**, et une carte nettement plus petite qu'aujourd'hui (§6 quater).
+Face à un contrôleur à 250 € et à un robot qui joue devant du public, le rapport est sans
+appel.
+
+> **La formulation juste n'est donc pas « faut-il garder l'opto ? » mais « que coûterait de le
+> retirer ? ».** Réponse : quatre composants à 7 centimes et environ deux heures de montage,
+> contre la disparition d'une barrière qui protège une carte à 250 €, dans un châssis dont
+> l'étude odométrie a déjà établi qu'il est « électriquement hostile ». Le projet a une règle
+> de sécurité non négociable et des incidents roues au compteur : on ne retire pas une
+> protection déjà conçue, testée en modèle et dont les composants sont achetés, pour économiser
+> deux heures.
+
+
+### Conclusion
+
+**La carte à optocoupleurs reste indispensable, quelle que soit la tension des capteurs et
+quel que soit le contrôleur.** C'est même le seul élément de tout ce chantier qu'aucune des
+architectures étudiées ne remet en cause. Le §6 quater ne change donc pas d'une ligne.
+
+
 ## 7. Inconnues à lever avant toute décision
 
 | # | Inconnue | Comment la lever | Bloquant ? |
@@ -1064,7 +1295,7 @@ sans rien racheter : même carte, même câblage d'encodeurs, mêmes optos.
 | 6 | Les entrées encodeur A/B ont-elles vraiment des pull-ups internes ? | multimètre sur la carte — la doc l'affirme *globalement* mais pas pour EN1/EN2 | non (on met un pull-up externe de toute façon, §5 odométrie) |
 | 7 | `basicmicro_ros2` arrête-t-il les moteurs si le flux ROS cesse ? | lire le code, pas le README | 🔴 **OUI** si c'est ce driver qui est retenu |
 | 8 | Valeur d'usine du timeout série | non documentée → **la régler explicitement**, ne jamais s'y fier | non (contourné) |
-| 9 | **Révision livrée par RobotShop EU** (`RB-Bat-48` / `IMC414`) | leur demander — le V8 de Pololu est équipé et sans boutons ; la photo RobotShop montre des boutons, donc une révision antérieure | non, mais à demander AVANT d'acheter |
+| 9 | **Révision livrée par RobotShop EU** (`RB-Bat-48` / `IMC414`) : **V7 ou antérieure ?** | leur demander. La photo montre des boutons, donc ce n'est pas un V8 — reste à savoir si c'est un **V7 (acceptable, voire préférable)** ou un **V6 (à refuser** : MOSFET d'origine, dissipateurs non taraudés) | 🔴 **OUI avant d'acheter** |
 | 10 | **Isolation du lien TTL série** Pi ↔ RoboClaw | le pilotage passe par le TTL (l'USB est déconseillé par le fabricant en milieu bruité) : signal logique nu entre deux masses, au milieu des moteurs → même problème qu'au §5 de l'étude odométrie | 🔴 **OUI** — à traiter comme la barrière des capteurs |
 | 12 | **Réarmement du watchdog 74HC123** : plus d'écriture I²C roues à prouver | le réarmer sur l'acquittement d'une trame Packet Serial ; à trancher au routage de la bande sécurité. ⚠️ **Ne concerne QUE les architectures A et B** — en architecture C (mode RC), le watchdog et le `OE` restent valables tels quels (§6 bis) | 🔴 **OUI en A/B**, sans objet en C |
 | 13 | **En mode RC, les compteurs d'encodeurs sont-ils lisibles par USB ?** | banc, 10 min : RoboClaw en mode RC, USB branché, commande 16/17 « Read Encoder Count » | **non bloquant depuis la recommandation §6 quinquies** : ne conditionne plus que le confort du banc, l'architecture cible étant A |
