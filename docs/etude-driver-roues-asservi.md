@@ -1301,6 +1301,139 @@ architectures étudiées ne remet en cause. Le §6 quater ne change donc pas d'u
 | 13 | **En mode RC, les compteurs d'encodeurs sont-ils lisibles par USB ?** | banc, 10 min : RoboClaw en mode RC, USB branché, commande 16/17 « Read Encoder Count » | **non bloquant depuis la recommandation §6 quinquies** : ne conditionne plus que le confort du banc, l'architecture cible étant A |
 | 11 | **Source de la batterie logique séparée** | le datasheet l'exige sous forte charge (effondrement de tension = redémarrage logique en pleine manœuvre) ; le rail 12 V Mean Well existe-t-il assez près ? | 🔴 **OUI** |
 
+## 9 bis. COMPARATIF SÉRIEUX — Cytron MDS40B (monté) contre RoboClaw 2x60A
+
+*Demandé par David le 26/09 : « j'ai un doute finalement ».* Le doute est fondé, et ce
+comparatif a fait tomber **trois** de mes arguments antérieurs. Sources : manuel officiel
+Cytron `MDS40B User's Manual` Rev 1.0 (déc. 2015, 24 p., lu page par page) et documentation
+Basicmicro (datasheet 2x60A + user manual, lus en local). ⚠️ Une `Rev 1.1` de juillet 2023
+est signalée par une recherche mais n'a **pas pu être lue** — ce comparatif ne couvre que la
+Rev 1.0.
+
+### Le tableau
+
+| | **Cytron MDS40B ×2** (monté) | **RoboClaw 2x60A** |
+|---|---|---|
+| Prix | **75,00 € TTC** pièce (Opencircuit, NL) → **150 €** les deux | **250,86 € TTC** franco (RobotShop EU) |
+| Tension | **10-45 V** | 6-34 V |
+| Courant continu / crête par canal | 40 A / **80 A (1 s)** | **60 A / 120 A** |
+| Dérating thermique | 🟢 **progressif, ne coupe JAMAIS** : 80 A < 50 °C, 50 A à 50-70 °C, 45 A à 70-100 °C, 40 A à 100-110 °C, **35 A au-delà de 110 °C** | 🔴 dérating de 85 °C à **0 A à 100 °C**, puis défaut → roue libre |
+| Commutation | **16 kHz**, régénérée en interne | non lue (élevée) |
+| Encombrement | 105 × 106 × 38 mm **× 2** = ~844 cm³ | **100 × 86 × 30 mm** = ~258 cm³ |
+| Masse | non trouvée (nulle part) | 300 g |
+| Safe start | 🟢 **oui** (« the input data must be 'stop' … prevent the driver from sudden run ») | 🟢 oui (option `Safe Start`) |
+| **Timeout de perte de signal** | ⚠️ **documenté SEULEMENT en mode RC** (100 ms). **Rien pour le mode PWM/Analog — celui qu'on utilise** | 🟢 série réglable (0-25,5 s) **et** `RC Timeout` 100 ms |
+| Entrée E-Stop pour chaîne externe | 🔴 **aucune** (le bornier `M` ne coupe que la logique) | 🟢 `S3/S4/S5` en `E-Stop (Latching)`, freinage |
+| Entrée encodeur | 🔴 aucune | 🟢 2 × quadrature |
+| Asservissement | 🔴 aucun | PID 300 Hz *(voir la réserve ci-dessous)* |
+| Télémétrie relisible | 🔴 **aucune** — les deux modes série sont en **écriture seule** | 🟢 courant, tensions, 2 températures, encodeurs, erreurs |
+| Sous-tension | ⚠️ **avertissement seul, la puissance est maintenue** | roue libre tant que la condition dure |
+| Surtension | > 45 V → arrêt | seuils réglables |
+| Inversion de polarité | 🔴 **aucune protection** (répété 3× en rouge) | 🔴 aucune non plus |
+| Régénération | même avertissement : batterie en parallèle obligatoire | idem + `VClamp` dédié |
+| Statut catalogue 2026 | contradictoire ; **commandable chez Opencircuit (UE), 5-7 j** | au catalogue, 11 en stock |
+| **Validé sur Didier** | 🟢 **OUI — protocole caméra 4/4 du 2026-07-04** | ❌ jamais branché |
+
+### Trois de mes arguments tombent — il faut le dire
+
+**1. 🔴 Le ronflement à 60 Hz n'existe pas.** Le manuel Cytron, mode PWM : *« The filter
+capacitor is connected and **the input signal is low pass filtered to be an analog signal**. »*
+Le Cytron ne recopie donc pas le PWM d'entrée : il le **filtre en tension**, puis pilote ses
+MOSFET à **16 kHz régénérés en interne** (*« switched at 16 KHz to ensure quiet operation and
+no annoying whining sound »*). Le moteur n'a jamais été haché à 60 Hz.
+👉 **Correction à reporter dans [`etude-chemin-commande-roues.md`](etude-chemin-commande-roues.md) §2.1**,
+qui présentait ce ronflement comme « un point de qualité, lui bien réel mais non mesuré ».
+Il n'est pas réel. Et l'argument « le RoboClaw supprime le ronflement » disparaît avec lui.
+
+**2. 🔴 Le PID à 300 Hz est inutilisable au régime de jeu.** Avec 40 impulsions par tour de
+roue (~51/m) : ~51 impulsions/s à 1 m/s, mais **~10/s à 0,2 m/s** — le PID passerait une
+trentaine de cycles à corriger sur une mesure périmée. On ne peut pas asservir plus vite qu'on
+ne mesure. Un asservissement côté Pi à 20 Hz, alimenté par le comptage du RP2040, ferait
+presque aussi bien. **L'argument « il asservit tout seul » vaut donc surtout au-dessus de
+0,5 m/s**, c'est-à-dire hors du régime où Didier joue.
+
+**3. 🔴 Le Cytron tient mieux la chaleur que le RoboClaw.** C'est contre-intuitif vu les
+masses, mais c'est écrit : le Cytron **dégrade progressivement et ne coupe jamais** (35 A
+encore disponibles au-delà de 110 °C), là où le RoboClaw **tombe à 0 A à 100 °C** puis passe
+en défaut roue libre. Pour un spectacle, une dégradation progressive vaut mieux qu'un arrêt
+net — un robot qui ralentit se rattrape, un robot qui s'arrête casse la scène.
+
+### Ce qui reste, et qui est réel
+
+**Au crédit du RoboClaw :**
+
+1. 🟢 **Le timeout et l'E-Stop matériels.** C'est le point le plus lourd, et le comparatif
+   l'aggrave encore en faveur du RoboClaw : le manuel Cytron ne documente un timeout **qu'en
+   mode RC**, or Didier utilise le **mode PWM/Analog**, pour lequel *rien* n'est écrit. Pire,
+   ce mode filtre l'entrée en tension : si le PCA9685 se fige (bus I²C planté), le condensateur
+   garde sa charge et **le moteur continue**. C'est exactement le scénario que la chaîne de
+   sécurité matérielle existe pour traiter — et ce comparatif confirme qu'elle est
+   indispensable, RoboClaw ou pas.
+2. 🟢 **Aucune télémétrie côté Cytron** : ses deux modes série sont en **écriture seule**. Pas
+   de courant, pas de tension, pas de température. Le chantier télédiagnostic restera aveugle
+   sur la puissance tant qu'on gardera les Cytron.
+3. 🟢 **L'encombrement** : 258 cm³ contre ~844 cm³ pour les deux Cytron réunis, soit **trois
+   fois moins**, avec un seul jeu de câbles et une seule fixation.
+4. 🟢 **L'odométrie intégrée**, qui supprime le RP2040 et son firmware.
+
+**Au crédit du Cytron :**
+
+1. 🟢 **Il est validé sur le robot** — protocole caméra 4/4 du 2026-07-04. C'est le seul
+   maillon du chemin roues qui ait été éprouvé physiquement. Ça ne se remplace pas par une
+   fiche technique.
+2. 🟢 **Il est moins cher** : 150 € les deux contre 250,86 €. L'écart réel est de **~100 €**,
+   pas de 74 € comme l'indiquait le premier chiffrage (le prix Opencircuit à 75 € est
+   inférieur aux 88,30 € de Neven7).
+3. 🟢 **Meilleure marge de tension** (10-45 V contre 6-34 V) et **meilleur comportement
+   thermique**.
+4. 🟢 **Zéro travail logiciel, zéro risque de régression.**
+
+### ⚠️ Une découverte qui concerne le montage ACTUEL, indépendamment de toute décision
+
+Le mode PWM du Cytron **filtre le signal en tension**. Or on l'attaque à **60 Hz** (période
+16,7 ms), et **le manuel ne donne aucune plage de fréquence d'entrée acceptée** — la donnée
+n'existe pas dans le document. Un filtre passe-bas dimensionné pour du PWM de quelques kHz,
+attaqué à 60 Hz, laisse passer une **ondulation résiduelle** sur la tension de consigne.
+
+Cela pourrait expliquer le vestige relevé dans le code et jamais élucidé : `wheels.py:34`
+déclare `FREQUENCY = 500`, **utilisé nulle part**. Quelqu'un avait vu qu'il fallait monter la
+fréquence, et n'est pas allé au bout.
+
+👉 **C'est une vérification à faire au test scénique au sol**, quelle que soit la suite : on
+cherche une consigne qui tremble à basse vitesse. Si c'est le cas, monter la fréquence du
+PCA9685 est bloqué par les servos qui partagent la puce (§2.1) — ce qui redonne du poids à la
+séparation 0x40/0x41 déjà prévue… **ou au RoboClaw, qui supprime le problème à la racine.**
+
+### Verdict
+
+**Le RoboClaw reste le meilleur contrôleur sur le fond** — timeout et E-Stop matériels,
+télémétrie, encombrement, odométrie intégrée. Mais le comparatif a réduit son avance : son
+PID ne sert pas au régime de jeu, il ne supprime aucun ronflement, il tient moins bien la
+chaleur, et il coûte 100 € de plus.
+
+**Et surtout : aucun de ses avantages n'est un verrou du projet aujourd'hui.**
+
+- La sécurité réelle viendra de la **bande sécurité routée**, pas du choix de driver — le
+  comparatif le confirme même doublement, puisque le Cytron en mode PWM n'a aucun timeout
+  documenté.
+- L'odométrie a **déjà** sa solution complète, écrite et testée (RP2040, 35 tests, carte
+  dessinée et vérifiée).
+- Le verrou n° 1 du projet reste le **test scénique au sol**, qui se fait avec l'existant.
+
+**Recommandation révisée, et elle s'aligne avec le doute de David : ne pas changer
+maintenant.** Faire rouler le robot au sol avec les Cytron validés, mesurer le courant à la
+pince, écouter la consigne à basse vitesse. Ces trois informations coûtent zéro euro et
+décideront mieux que n'importe quelle fiche technique.
+
+> 💡 **Une précaution qui ne coûte presque rien et préserve les deux options** : au moment de
+> **router la bande sécurité**, sortir la sortie de la bascule 74HC74 sur un **cavalier à deux
+> positions** — l'une vers le `OE` du PCA9685 (architecture actuelle), l'autre vers un
+> connecteur 2 points destiné à une entrée `E-Stop` externe. Le coût est d'un cavalier et de
+> deux pastilles. Le bénéfice : la carte main-carrier reste valable **quel que soit le driver
+> choisi plus tard**, et la décision RoboClaw cesse d'être bloquée par le calendrier du
+> routage. C'est la seule action de cette étude qui mérite d'être faite **maintenant**.
+
+
 ## 8. Où en est la décision
 
 **Ce qui est acquis** : le calcul de David est juste (152,50 € contre 176,60 € pour un

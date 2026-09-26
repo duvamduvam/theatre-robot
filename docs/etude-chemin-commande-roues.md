@@ -69,11 +69,35 @@ vitesse ne dérive pas. La course existe, elle est réelle, mais son effet est n
 Elle mérite d'être corrigée par **propreté** (personne n'a choisi cette fréquence), pas par
 urgence. ⚠️ **Ne pas la re-promouvoir en incident** : c'est déjà arrivé une fois.
 
-Reste un point de *qualité*, lui bien réel mais non mesuré : 50-60 Hz est une fréquence de
-*servo*. Le SmartDrive40 accepte beaucoup plus (annoncé jusqu'à 20 kHz — **à confirmer sur sa
-fiche**). Un moteur à balais haché à 60 Hz a une ondulation de courant marquée, donc un couple
-pulsé et un **ronflement audible à 60 Hz** — ce qui, sur un robot de théâtre, est un sujet
-artistique autant que technique. ⚠️ Mais **ce n'est PAS un problème de gigue ou de « vrai
+~~Reste un point de *qualité*, lui bien réel mais non mesuré : 50-60 Hz est une fréquence de
+*servo* […] un **ronflement audible à 60 Hz**~~ — 🔴 **FAUX, corrigé le 2026-09-26** après
+lecture du **manuel officiel du MDS40B** (Rev 1.0, déc. 2015), qui tranche en deux phrases :
+
+> *« **PWM Input Mode** – The input is PWM signal. **The filter capacitor is connected and the
+> input signal is low pass filtered to be an analog signal.** »* (§8.2, p. 17)
+> *« MOSFETs are switched at **16 KHz** to ensure quiet operation and no annoying whining
+> sound. »* (§1, p. 3)
+
+**Le Cytron ne recopie pas le PWM d'entrée : il le FILTRE en tension, puis pilote ses MOSFET
+à 16 kHz régénérés en interne.** Le moteur n'a donc jamais été haché à 60 Hz, et il n'y a
+aucun ronflement de 60 Hz à aller chercher. Un argument avancé en faveur d'un changement de
+driver (« il supprimerait le ronflement ») tombe avec cette correction — détail dans
+[`etude-driver-roues-asservi.md`](etude-driver-roues-asservi.md) §9 bis.
+
+⚠️ **MAIS la découverte ouvre un autre sujet, celui-là non réglé.** Puisque l'entrée est
+**filtrée en tension**, la fréquence du PCA9685 ne détermine plus le hachage du moteur — elle
+détermine la **qualité du filtrage**. Or on l'attaque à **60 Hz** (période 16,7 ms), et **le
+manuel ne donne AUCUNE plage de fréquence d'entrée acceptée** : la donnée n'existe pas dans le
+document. Un filtre passe-bas dimensionné pour du PWM de quelques kHz, attaqué à 60 Hz, laisse
+passer une **ondulation résiduelle sur la tension de consigne** — donc une vitesse qui tremble,
+surtout à faible rapport cyclique.
+
+Ce serait une explication au *vestige révélateur* ci-dessous (`FREQUENCY = 500` déclaré et
+jamais utilisé) : quelqu'un avait peut-être constaté le tremblement.
+
+👉 **À observer au test scénique au sol** (chantier priorité 1) : chercher une vitesse qui
+oscille à basse consigne, roues hors sol d'abord. Si c'est confirmé, la séparation 0x40/0x41
+du §4 cesse d'être un simple confort et devient la condition pour monter la fréquence roues. ⚠️ Mais **ce n'est PAS un problème de gigue ou de « vrai
 timing »** : la PCA9685 est un générateur PWM matériel (oscillateur 25 MHz, compteur 12 bits)
 et la forme d'onde est propre quoi que fasse Linux ; l'I²C ne fait que porter les *changements
 de consigne*, à 20 Hz, ce qui suffit très largement. Personne n'a jamais signalé ce ronflement
