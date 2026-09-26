@@ -875,6 +875,146 @@ détail vit dans `chantiers.md` § « Chemin de commande des roues V2 » ; en tr
 mais c'est une décision de sécurité à prendre explicitement — jamais un effet de bord d'un
 chantier capteur.
 
+## 6 bis. « Une carte du commerce ne le fait-elle pas déjà ? » — RECHERCHE du 2026-09-26
+
+**Question de David** : « la carte d'odométrie est beaucoup plus compliquée que j'aurais pensé,
+il n'y a pas de petites cartes qui font déjà ça ? » Recherche menée le 2026-09-26 sur cinq
+axes (contrôleurs moteur à encodeur, cartes d'entrées isolées pour Pi, compteurs de
+quadrature, automates industriels compacts, cartes « contrôleur ROS » toutes faites).
+**Tous les prix ci-dessous ont été LUS sur la page du vendeur le 26/09/2026** ; ce qui n'a pas
+pu être lu est écrit « prix non lu » — jamais complété de mémoire.
+
+**Réponse courte : chaque brique existe séparément, aucune carte ne fait l'ensemble, et rien
+de ce qui existe n'est à la fois moins cher, plus sûr et plus rapide à mettre en œuvre que la
+plaque en cours.** Une seule trouvaille mérite un examen — et elle ne concerne pas
+l'odométrie mais le *chemin roues* (voir « le seul vrai candidat » plus bas).
+
+### Pourquoi ça n'existe pas : cette carte tombe dans un trou entre deux mondes
+
+Le besoin croise quatre exigences que personne ne réunit dans un produit :
+capteur **industriel 12 V NPN à collecteur ouvert**, **isolation galvanique**,
+**quadrature** (donc le sens), et **très basse résolution** (40 impulsions/tour).
+
+| Monde | Ce qu'il offre | Ce qui manque |
+|---|---|---|
+| **Robotique de loisir / ROS** | entrées encodeur, PID parfois, prix bas | **jamais d'isolation**, logique 3,3/5 V, puissance 12 V / 1-3 A — conçu pour des robots de 2 à 5 kg |
+| **Automatisme industriel** | entrées 24 V **isolées**, comptage, robustesse | souvent **PNP seulement**, comptage bridé, liaison Modbus/EtherCAT, **150 à 340 €**, et tout le pont ROS reste à écrire |
+
+La carte de Didier est exactement la pièce qui manque entre les deux. **Elle n'est pas
+compliquée parce qu'elle est mal conçue : elle est compliquée parce qu'elle est à
+l'intersection.** Et sa complexité est de la **répétition, pas de la conception** — quatre
+voies identiques de part et d'autre d'une barrière. C'est ce qui fabrique les 67 coupures.
+
+### Ce qui existe, brique par brique
+
+**Brique « isolation + mise à niveau » (§5) — ça existe, et ça porte un nom industriel.**
+On l'appelle *convertisseur de signal codeur HTL 24 V → TTL 5 V, isolé, 4 voies, rail DIN*
+(NPN **et** PNP, jusqu'à 2 MHz). Fabricants sérieux : **motrona GV210**, **Johannes Hübner**,
+**Nidec DSR4** — aucun ne publie ses prix (gamme industrielle sur devis, **prix non lu**).
+Les exemplaires à bas prix ne se trouvent que sur Amazon US et AliExpress.
+- **Pi-Plates DIGIplate** : la **seule** carte de toute la recherche qui affirme noir sur blanc
+  accepter du **NPN comme du PNP** ; isolation 1400 Vpeak entrée↔Pi **et 500 VDC
+  canal-à-canal** ; **SPI** (donc pas d'I²C) ; 2 kHz mesuré sur Pi 4. **74,99 $** + 29,99 $
+  pour le support rail DIN, site éditeur US → import. Mais elle se monte **sur le Pi**, ce qui
+  contredit la décision du 20/08 (carte en bas, près des roues, lien USB).
+- **Sequent Microsystems** (16 entrées 60 $, 8 entrées HV 50 $) : **éliminés, I²C uniquement**
+  (cf. §6, l'I²C est interdit).
+- **Widgetlords PI-SPI-DIN-8DI** : 35,95 $, SPI, opto TLP292-4, mais exige en plus un module
+  hôte séparé, et **aucune fréquence documentée**.
+- **Modules génériques PC817 en UE** : Kamami (PL) vend des modules **4 et 8 canaux**
+  (prix non lu, page non extractible) ; elektroweb.pl 8 canaux 15,50 PLN — **en rupture** ;
+  botnroll.pt 9,90 € — **arrêté**.
+  ⚠️ **Et la fiche du module polonais confirme noir sur blanc le piège que redoutait le §5** :
+  ses **masses sont reliées par des cavaliers d'origine**, l'isolation n'existe qu'après les
+  avoir retirés. Un module tout fait n'isole pas parce qu'il s'appelle « isolateur ».
+
+**Brique « comptage » — rien d'utilisable.**
+- **Phidgets 1047** : 4 voies quadrature sur USB, **85 $**, **hors stock** au 26/09, **non isolé**.
+  Le DAQ1400 (25 $) accepte explicitement NPN/PNP mais **ne fait pas de quadrature**.
+- **LS7366R** : compteur quadrature 32 bits SPI, mais c'est un **circuit nu SOIC-14** ; les
+  breakouts tout faits n'ont pas pu être atteints (403). Le HCTL-2032 n'a **aucun** breakout.
+- **Industriels** : Beckhoff EL1512 = pas de vraie quadrature (compteur + fil de sens),
+  **EtherCAT**, 1 kHz ; ADAM-4080 = isolé 2500 V, 50 kHz, mais **compteur simple**, prix sur
+  devis ; Brainboxes ED-038 plafonne à **200 Hz** ; Wago 750-637 non documenté.
+- **Aucun driver ROS 2 trouvé pour aucun d'entre eux.**
+
+**Brique « tout-en-un » : les automates compacts — ça existe vraiment, et c'est cher.**
+- **Revolution Pi RevPi DIO** : **14 entrées 24 V galvaniquement isolées**, configurables en
+  **jusqu'à 6 décodeurs de quadrature**, 500 Hz en mode encodeur (largement au-dessus de nos
+  30 Hz), anti-rebond réglable. C'est le produit **qui fait le plus exactement le travail** de
+  cette carte. **196 € le module seul** (revolutionpi.com) — **et il faut en plus un RevPi Core
+  pour l'héberger**. Polarité NPN/PNP non précisée au datasheet.
+- **Arduino Portenta Machine Control** : 8 entrées 24 V + **2 canaux encodeur dédiés**,
+  **336 € TTC**. **Arduino Opta Lite** : 156 € TTC, aucune fonction compteur documentée.
+- **NORVI IIOT-AE03** : 8 entrées 24 V **opto-isolées**, annoncées **« Sink/Source » donc NPN
+  accepté** — le seul de la famille à un prix voisin : **84,95 € TTC** (minipc.de, DE). Mais
+  **aucun comptage documenté** : il faudrait programmer son ESP32… c'est-à-dire refaire
+  exactement ce que le firmware RP2040 fait déjà.
+- ⚠️ **Industrial Shields M-Duino** : donné **PNP seulement** par les résumés — ce serait
+  **éliminatoire** ici. Non confirmé (site en 403).
+
+**Brique « carte contrôleur ROS toute faite » — toutes éliminées par la puissance.**
+Hiwonder (5-12,6 V), Yahboom (12 V max, 79 $), Waveshare General Driver (7-13 V, et
+**2 entrées encodeur seulement**, 27,99 $), Husarion CORE2 (6-16 V, **1 A continu / 2 A crête
+par moteur**). Ce sont des cartes pour robots de 2 à 5 kg : les MY1016Z demandent 24 V et
+~10-20 A. **Aucune n'est isolée.** ODrive S1 (149 €, rupture) est écarté pour une autre
+raison, structurelle : **sortie triphasée, brushless uniquement**.
+
+### Le seul vrai candidat — et ce n'est pas une décision d'odométrie
+
+**Basicmicro RoboClaw 2x30A USB V6B — 152,50 € TTC / 128,15 € HT, Botland (PL, UE), en stock,
+expédition 24 h** (lu le 26/09/2026). 6-34 V, **30 A continu / 60 A crête par canal**,
+**double PID en boucle fermée** (position ET vitesse), entrées **quadrature** jusqu'à
+19,6 M pps, **USB + série TTL**, et des drivers ROS 2 existent (`basicmicro/basicmicro_ros2`,
+MIT, `ros2_control`).
+
+Il remplacerait **à la fois** le Cytron SmartDrive40 **et** le comptage, et surtout il
+fermerait la boucle de vitesse **dans le matériel** au lieu de la faire en Python sur le Pi.
+C'est la seule piste de cette recherche qui apporte quelque chose que la carte maison
+n'apporte pas.
+
+**Mais trois réserves, dont une bloquante :**
+1. **Ses entrées encodeur ne sont PAS isolées** — logique 3,3/5 V à masse commune. Les quatre
+   optocoupleurs restent nécessaires **de toute façon**. Le RoboClaw supprime le RP2040
+   (~5 €), pas la barrière.
+2. **C'est le CHEMIN ROUES.** Changer le driver de puissance déclenche la règle non
+   négociable : simulation d'abord, puis protocole caméra roues hors sol, puis revue Opus. Sur
+   un robot **actuellement en pièces**, alors que la priorité n° 1 est le test scénique au sol
+   **avec le Cytron déjà validé le 2026-07-04**.
+3. On perdrait le bénéfice du **Cytron MDDS30 de rechange** présent en stock
+   (`inventaire-stock.md` §1.4).
+
+**Donc : à garder en réserve pour l'étape 5 (ros2_control), pas maintenant.** Le noter ici
+évite de le redécouvrir dans six mois, et évite surtout de l'acheter dans l'urgence.
+
+### Conclusion : la carte reste, mais deux allègements sont acquis
+
+Rien ne justifie d'acheter. En revanche la question de David est juste sur un point : **le
+travail de plaque est fastidieux**, et deux allègements le réduisent sans rien céder :
+
+1. **Ne monter qu'UNE ROUE d'abord** (2 voies au lieu de 4) : ~34 coupures au lieu de 67, et
+   ça teste déjà **tout** ce qui compte — l'isolation, la quadrature, le sens, le firmware, le
+   nœud ROS. La seconde roue n'est qu'une répétition, à souder une fois la première prouvée.
+2. **Les 4 LED de diagnostic et les 4 × 10 nF peuvent attendre le PCB** (étape 4) : ils
+   suppriment 8 composants et 4 résistances de la plaque provisoire. ⚠️ À reprendre
+   impérativement au PCB : la LED par canal est ce qui montre un capteur mort **sans
+   ordinateur** sur un plateau (et elle alimente le télédiagnostic), le 10 nF filtre les arcs
+   de balais.
+
+Et le rappel qui vaut pour toute cette recherche : **le PCB (étape 4, 66 × 74 mm, donc sous le
+seuil des 100 × 100) est LA vraie réponse aux 67 coupures** — mais après validation, jamais
+avant. On ne grave pas ce qu'on n'a pas vu fonctionner.
+
+> **Sources consultées le 2026-09-26** (prix lus à la source) : botland.store (RoboClaw
+> 2x30A V6B), generationrobots.com (Kangaroo x2 : 25,22 € TTC — mais c'est un add-on qui
+> exige un Sabertooth/SyRen, que nous n'avons pas), revolutionpi.com (RevPi DIO),
+> store.arduino.cc (Opta Lite, Portenta Machine Control), minipc.de (NORVI AE03),
+> pi-plates.com (DIGIplate), phidgets.com (1047, DAQ1400), sequentmicrosystems.com,
+> widgetlords.com, berrybase.de (RP2040-Zero sans header : **4,90 €**),
+> resources.basicmicro.com, beckhoff.com (EL1512), advantech.com (ADAM-4080),
+> elektroweb.pl et botnroll.com (modules PC817 génériques), waveshare.com, norvi.io,
+> yahboom.net, husarion.com, eu.odriverobotics.com.
+
 ## 7. Inconnues à lever
 
 Relevé du 14/07 — **six inconnues levées**, il en reste **trois**, et **plus aucune ne bloque** :
@@ -1059,6 +1199,10 @@ le piège NPN/PNP du capteur :
 - **PC817C**, pas A/B/D : la lettre est le gain de transfert (CTR).
 
 ### Reste à acheter — état au 2026-09-02
+
+> 🔎 **« Et une carte du commerce ? »** — question posée le 26/09, instruite sur cinq
+> axes en §6 bis : **rien à acheter**, aucun produit ne réunit capteur 12 V NPN +
+> isolation + quadrature à un prix inférieur. Ne pas refaire la recherche, la lire.
 
 > 📋 **Avant de commander, passer par `docs/hardware/inventaire-stock.md` §1.1** : la liste
 > ci-dessous y est confrontée au stock ligne à ligne (inventaire du 03/09). Quatre lignes y
