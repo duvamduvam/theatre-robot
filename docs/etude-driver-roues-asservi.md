@@ -232,22 +232,101 @@ un plateau, mais un point de plus pour la reproductibilité (tout est scriptable
 🔴 **Et voilà où le raisonnement de David se retourne** : il voulait « plus simple **et** moins
 cher ». Avec le modèle correctement dimensionné, c'est **plus simple, mieux dimensionné, mais
 PLUS CHER** — 229,95 $ chez Pololu (import US : + TVA 20 %, + port, + les frais de douane
-documentés dans le commit `44dfd52`), ou **322,69 € TTC / 264,50 € HT** chez un revendeur
-européen (Steplab/servocity.eu, chiffre vu en recherche, **non confirmé par lecture directe
-de la page** — à revérifier avant tout achat). Contre 176,60 € pour remplacer les deux Cytron
+documentés dans le commit `44dfd52`), ou **250,86 € TTC franco** chez **RobotShop EU** (prix relevé par David sur la page le 26/09 ; réapprovisionnement en cours). Contre 176,60 € pour remplacer les deux Cytron
 à l'identique.
 
 **L'arbitrage est donc binaire, sans option intermédiaire** (le 2x45A ne pèse que 2 g de plus
 que le 2x30A, il ne résout rien) :
 
 - **152,50 €** → une seule carte, asservie, **mais 60 g et 30/60 A : moins que l'existant** ;
-- **~230 $ / ~322 €** → une seule carte, asservie, **300 g et 60/120 A : plus que l'existant**,
-  et le double du prix du remplacement à l'identique.
+- **250,86 € TTC franco** (RobotShop EU) → une seule carte, asservie, **300 g et 60/120 A :
+  plus que l'existant**, moins encombrante que les deux Cytron réunies, pour **~74 € de plus**
+  que le remplacement à l'identique.
 
 ⚠️ Une variante existe aussi en **`RoboClaw Solo 60A`** (canal unique, POLOLU-3291, prix non
 lu) : deux exemplaires reproduiraient l'architecture actuelle « une carte par roue » avec
 l'asservissement en plus — mais on perdrait justement la simplification recherchée, et le
 prix serait doublé. Mentionné pour mémoire, pas retenu.
+
+### Amendement n° 2 du 26/09 — le prix réel, l'USB, et les ventilateurs (David)
+
+**① Le prix.** David a trouvé la carte chez **RobotShop EU** (page `eu.robotshop.com/fr`,
+« Contrôleur de moteur régénératif RoboClaw 2x60A, 6-34VDC », BASICMICRO, UGS `RB-Bat-48`,
+n° fabricant **`IMC414`**) : **250,86 € taxe incluse**, livraison gratuite dès 250 € — donc
+**franco**. Stock : « **Réapprovisionnement prochain** » (pas en stock au 26/09).
+
+Le chiffre de 322,69 € cité plus haut (Steplab, jamais confirmé par lecture directe) est donc
+**à écarter**. Le surcoût réel par rapport au remplacement à l'identique des deux Cytron
+(176,60 €) est de **~74 €**, pas de 150. Le raisonnement de David tient bien mieux qu'annoncé.
+
+**② L'encombrement, gain non compté jusqu'ici.** Une carte de 100 × 86 × 30 mm remplace deux
+cartes de la classe 101 × 96 × 42 mm (cote lue sur le MDDS30) : le volume occupé est divisé
+par deux environ, et surtout il n'y a plus qu'**un** jeu de câbles de commande, **un** point
+de fixation, **un** connecteur d'alimentation. Sur un robot où la place se négocie au
+millimètre, ça compte autant que le prix.
+
+**③ 🔴 « On peut tout contrôler en USB ? » — NON, et le fabricant le dit lui-même.**
+C'est la découverte la plus importante de cet amendement, parce qu'elle va contre l'intuition
+(« un seul câble, encore plus simple »). Datasheet 2x60A, section *USB*, littéralement :
+
+> « A dual ferrit core USB cable is required. **The USB port should be used for configuration
+> and debugging. The USB protocol is not designed for electrically noisy environments. The USB
+> port will likely disconnect and not automatically recover during operation in electrically
+> noisy environments.** »
+
+Or Didier, c'est exactement l'environnement décrit : deux moteurs à balais de 250 W qui
+arcent, un ampli de sono, des rubans LED à fronts raides — c'est le §5 de l'étude odométrie,
+mot pour mot. **Le pilotage doit donc passer par le `TTL serial` en mode Packet Serial**
+(trame à CRC16), l'USB restant ce pour quoi il est prévu : Motion Studio à l'atelier,
+configuration, mises à jour de firmware, diagnostic.
+
+Ce n'est pas une mauvaise nouvelle : le TTL série est **3 fils sur le connecteur du Pi**, sans
+énumération USB, sans `/dev/ttyACM*` qui change de nom, sans hub. C'est plus simple que l'USB,
+pas moins — c'est d'ailleurs le sens du renversement inverse qu'avait fait l'étude odométrie
+pour le RP2040 (où c'était le connecteur micro-USB **mécanique** qui posait problème, pas le
+protocole). ⚠️ Conséquence à ne pas rater : le lien redevient un **signal logique nu entre
+deux masses différentes**, au milieu des moteurs — donc la question de l'isolation se repose,
+exactement comme au §5 de l'étude odométrie. Le manuel mentionne un **isolateur USB** vendu
+par Basicmicro pour casser les boucles de masse ; pour le TTL, ce serait un isolateur
+numérique ou un optocoupleur sur RX/TX.
+
+**④ Deux avertissements de câblage, à graver :**
+
+- **Batterie logique SÉPARÉE.** Datasheet : *« A second power source should be used to power
+  the logic section in situations where the main power will be under heavy load. Voltage drops
+  can occur from constant full load or high speed direction changes. Voltage drop can cause
+  logic brown outs if only a main battery is used without a logic battery. »* Un robot de
+  50 kg qui change de sens brutalement, c'est le cas décrit. La carte a une entrée
+  `Logic Battery` (6-34 V) prévue pour ça — **elle doit être utilisée**, sinon un
+  effondrement de tension redémarre la logique en pleine manœuvre.
+- ⚠️ *« Do not disconnect the negative terminal if other ground sources are connected, such as
+  USB cable. Damage will occur. »* — l'ordre de branchement/débranchement n'est pas libre.
+
+**⑤ Les ventilateurs : où les mettre ?** Question de David, et la réponse honnête est que
+**le datasheet ne spécifie AUCUN point de montage**. Il dit seulement : *« any 40mmx40mm fan
+can be used »*, avec une référence testée (DigiKey `259-1794-ND`), 5 V / 230 mA max, deux
+ventilateurs pilotés automatiquement (ON à 45 °C, OFF à 35 °C).
+
+C'est la page Pololu du **V7** qui précise que « *les dissipateurs incluent désormais des
+trous taraudés permettant de monter directement une paire de ventilateurs* » — le mot
+« désormais » indiquant que c'est une **nouveauté du V7**. La carte photographiée chez
+RobotShop montre des **boutons de configuration** (`MODE`/`SET`/`LIPO`) en bas de carte, or le
+V8 les a supprimés : **la carte vendue là est donc antérieure au V8, et probablement au V7** —
+donc sans trous taraudés. À vérifier sur la carte reçue, ou en demandant la révision exacte au
+vendeur avant d'acheter.
+
+Deux remarques qui désamorcent largement le sujet :
+
+1. **Les ventilateurs ne sont sans doute pas nécessaires.** Le datasheet les présente comme un
+   moyen « d'aider à maintenir des courants continus **dans des conditions extrêmes** ». Une
+   carte donnée pour 60 A continu par canal, alimentant des moteurs de **moins de 13,4 A au
+   nominal**, travaille à ~20 % de sa capacité. C'est précisément pour ça qu'on prend la carte
+   massive : pour ne pas avoir besoin de la ventiler. La mesure à la pince (§5 bis) le
+   confirmera ou l'infirmera.
+2. **Et s'il en faut, c'est un support imprimé.** Deux ventilateurs 40 × 40 en soufflage au
+   travers des ailettes, tenus par un berceau en PETG vissé sur les trous de fixation de la
+   carte — c'est exactement le type de pièce que le projet sait faire (CR-10, cf.
+   `plans/`). Aucun perçage du dissipateur n'est nécessaire.
 
 ### Ce qui reste vrai du constat initial
 
@@ -345,6 +424,9 @@ code de trame est écrit ici, **graver des vecteurs de test**.
 | 6 | Les entrées encodeur A/B ont-elles vraiment des pull-ups internes ? | multimètre sur la carte — la doc l'affirme *globalement* mais pas pour EN1/EN2 | non (on met un pull-up externe de toute façon, §5 odométrie) |
 | 7 | `basicmicro_ros2` arrête-t-il les moteurs si le flux ROS cesse ? | lire le code, pas le README | 🔴 **OUI** si c'est ce driver qui est retenu |
 | 8 | Valeur d'usine du timeout série | non documentée → **la régler explicitement**, ne jamais s'y fier | non (contourné) |
+| 9 | **Révision exacte de la carte vendue** (V5/V6/V7/V8 ?) | demander au vendeur : décide si les dissipateurs ont les **trous taraudés** pour les ventilateurs, et si les boutons de config existent | non, mais à demander AVANT d'acheter |
+| 10 | **Isolation du lien TTL série** Pi ↔ RoboClaw | le pilotage passe par le TTL (l'USB est déconseillé par le fabricant en milieu bruité) : signal logique nu entre deux masses, au milieu des moteurs → même problème qu'au §5 de l'étude odométrie | 🔴 **OUI** — à traiter comme la barrière des capteurs |
+| 11 | **Source de la batterie logique séparée** | le datasheet l'exige sous forte charge (effondrement de tension = redémarrage logique en pleine manœuvre) ; le rail 12 V Mean Well existe-t-il assez près ? | 🔴 **OUI** |
 
 ## 8. Où en est la décision
 
@@ -369,10 +451,10 @@ crédible au *« si `wheels_node` meurt, rien n'arrête les roues »*.
 - 🔴 **le dimensionnement (§5 bis) a déplacé la question du technique vers le PRIX.**
   L'objection de David était fondée sur le 2x30A (60 g, 30/60 A, moins que l'existant) ; mais
   le **2x60A** existe, avec dissipateur d'usine, 300 g et 60/120 A — au-dessus de l'existant.
-  Seulement il coûte **229,95 $ / ~322 € TTC** contre 176,60 € pour remplacer les deux Cytron
-  à l'identique. Le « plus simple ET moins cher » devient donc **« plus simple et mieux
-  dimensionné, mais deux fois plus cher »** — et ça, c'est un arbitrage de David, pas une
-  conclusion technique.
+  Seulement il coûte **250,86 € TTC franco** (RobotShop EU, relevé par David) contre 176,60 €
+  pour remplacer les deux Cytron à l'identique. Le « plus simple ET moins cher » devient donc
+  **« plus simple, plus compact, mieux dimensionné, pour ~74 € de plus »** — un arbitrage
+  bien plus favorable que ce que laissait croire le premier chiffrage.
 
 **Séquence proposée, sans rien acheter et sans rien démonter :**
 
