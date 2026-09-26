@@ -294,15 +294,53 @@ chinois, pas d'une économie de matière**.
 
 ---
 
-## 8. Plan d'exécution proposé
+## 8. Décisions de David (2026-09-26, le jour même) — et ce qu'elles rouvrent
 
-1. David tranche §7-1 et §7-2.
+**Tranché** : **trois cartes** (tout gardé : M2, M6, M9) et **empilées**.
+Fusibles 5×20 conservés (pas d'objection).
+
+Le choix « trois » rend caduc l'ordre d'empilement proposé au §4, qui raisonnait
+à deux cartes. À trois niveaux, la question devient : où mettre M (les modules,
+la carte la plus haute, ~25 mm avec un PCA9685 enfiché) et L (le nœud des
+nappes). Ce point est technique, je le tranche et je l'explique :
+
+| Niveau | Carte | Pourquoi là |
+|---|---|---|
+| **haut** | **P** puissance | les 8 fusibles, les LED de présence et tous les borniers de puissance restent sous la main — la seule contrainte non négociable |
+| **milieu** | **L** Pi + sécurité | c'est **le nœud** : elle parle à P (+5V, +12V bobine, data LED) et à M (I²C, `OE_WHEELS`, +5V des modules). Au milieu, **les deux nappes sont courtes et adjacentes** ; aucune nappe ne saute un niveau, aucun net ne transite par une carte tierce. Ses borniers J41-J43 se prennent par la tranche |
+| **bas** | **M** modules | on n'y touche qu'à l'atelier ; leur hauteur tombe dans l'écart bas, qu'on dimensionne pour eux ; le V+ 10 A arrive **par fil** de P aux borniers verts, le long de la colonne d'entretoises |
+
+Conséquences à graver dans les tables :
+
+- **le +5V des modules passe par L** (P → L → M) : nappe L↔M débranchée =
+  modules éteints = PWM coupés ; nappe P↔L débranchée = L **et** M éteints,
+  bobine du relais 40 A retombée. La propriété « aucun fil n'a besoin d'être
+  présent pour que Didier s'arrête » tient toujours, à trois cartes ;
+- **R10 (pull-up `OE_WHEELS`) sur M, à côté de M1** — règle du §3.5, désormais
+  obligatoire ;
+- **deux nappes**, pas trois : P↔L (2×5 suffit : +5V ×2, +12V ×2, GND ×3,
+  LED data ×2, 1 libre) et L↔M (2×8 : +5V ×2, GND ×3, SDA/SCL_5V, `OE_WHEELS`,
+  SDA/SCL_PI, +3V3 pour M7, 4 libres). M7/M8 (INA226) restent sur **P** avec
+  leurs shunts, comme au §3.3 — la carte M ne porte que les modules du bus et
+  J11 ;
+- **quatre trous M3 aux mêmes coordonnées sur les trois cartes** ; l'écart
+  bas (M→L) se mesure sur le PCA9685 enfiché, l'écart haut (L→P) sur les DIP
+  sur support et l'IDC J1 (nappe Pi à brancher avant d'empiler, ou J1 en bord).
+
+Surfaces à trois cartes, inchangées : P 46 / M 62 / L 31 cm².
+
+## 9. Plan d'exécution
+
+1. ~~David tranche §7-1 et §7-2.~~ **Fait le 26/09** (§8).
 2. `audio-relays` en 100 × 100 : nouvelle `PLACE`, DRC placement, rendu, **puis
    routage** (elle est la plus simple et la plus urgente pour la ronflette).
-3. `main-carrier` : découpage de `INSTANCES` (connecteurs de nappe, M1.6 NC,
-   feuilles), puis carte L (Pi + sécurité + M1 + M6), puis carte P.
-4. **Revue Opus** du schéma découpé, avec la question unique : « la nappe
-   débranchée arrête-t-elle le robot, net par net ? » (§3.5).
-5. Gerbers des trois cartes → **une seule commande**, DDP → premier prix ferme.
-6. Montage, puis **protocole caméra** roues hors sol, avec le geste nouveau :
-   débrancher la nappe en plein mouvement.
+3. `main-carrier` : découpage de `INSTANCES` (deux connecteurs de nappe par
+   carte concernée, M1.6 NC, R10 déplacé vers M, feuilles hiérarchiques), puis
+   carte L (Pi + sécurité), puis M (modules), puis P (puissance).
+4. **Revue Opus** du schéma découpé, avec la question unique : « une nappe
+   débranchée arrête-t-elle le robot, net par net ? » (§3.5 et §8).
+5. Gerbers des quatre cartes → **une seule commande**, DDP → premier prix ferme.
+6. Mesures d'atelier avant le support imprimé : hauteur du PCA9685 enfiché,
+   filetage des entretoises, taille du module INA226.
+7. Montage, puis **protocole caméra** roues hors sol, avec le geste nouveau :
+   débrancher chaque nappe en plein mouvement.
