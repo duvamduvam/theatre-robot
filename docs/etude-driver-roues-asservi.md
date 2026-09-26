@@ -111,6 +111,10 @@ Le coup-de-poing 40 A catégorie 0 sur l'entrée de puissance, lui, est inchang�
 
 ### 4.2 Quatre pièges, tous issus de la documentation officielle
 
+0. 🔴🔴 **En architecture C (mode RC), `Idle Mode = Braking` n'est plus une bonne pratique
+   mais une CONDITION DE SÉCURITÉ** — puisqu'il n'y a pas d'entrée E-Stop dans ce mode et que
+   tout l'arrêt repose sur `RC Timeout` (§6 ter ③). Laissé en `Freewheel`, un robot de 50 kg
+   coupé en pleine course continue sur son élan.
 1. 🔴 **« Stop » veut dire ROUE LIBRE par défaut.** Le mode d'arrêt dépend du réglage
    *Idle Mode* (commande 160), dont le **défaut usine est `Freewheel`** : « Motors coast ».
    Sur 50 kg et sur une scène en pente, la roue libre **n'est pas un arrêt**. Il faut régler
@@ -690,7 +694,7 @@ déjà** pour les servos du visage.
 | I²C dans le chemin roues | ❌ sort | ❌ sort | ✅ reste |
 | Odométrie + télémétrie | ✅ | ✅ | ✅ (par l'USB) |
 | Asservissement par encodeur | ✅ | ✅ | ✅ |
-| **Chaîne de sécurité conçue** | 🔴 **à refondre** (accrochage sur `E-Stop`, watchdog à réarmer autrement) | 🔴 **à refondre** | 🟢 **inchangée** |
+| **Chaîne de sécurité conçue** | 🔴 **à refondre** (accrochage sur `E-Stop`, watchdog à réarmer autrement) | 🔴 **à refondre** | 🟢 **inchangée** — mais ⚠️ **pas d'entrée E-Stop en mode RC** (réservée au mode série) : l'arrêt passe par la coupure du `OE`, donc par `RC Timeout` + `Idle Mode = Braking`. Voir §6 ter ③ |
 | Arrêt sur perte de lien | timeout série réglable (défaut **non documenté** → à régler) | idem | **`RC Timeout` 100 ms** + `OE` |
 | Panne du lien en spectacle | arrêt (sûr) | ⚠️ arrêt, **reprise manuelle** | 🟢 perte de la mesure seule |
 | Résolution de consigne | pleine | pleine | ~164 niveaux |
@@ -708,6 +712,127 @@ sans racheter quoi que ce soit**, puisque c'est la même carte et le même câbl
 information », ce qui devrait les inclure (commandes 16/17 « Read Encoder Count »), mais elle
 ne les nomme pas explicitement. **C'est le seul point qui peut faire tomber l'architecture C —
 à tester en dix minutes sur banc, avant tout le reste.**
+
+
+## 6 ter. PLAN DE CÂBLAGE — où va quoi, physiquement
+
+*Écrit le 26/09 sur quatre questions de David, en lisant le manuel et la vue de dessus du V8.*
+
+Le bandeau de connecteurs du V8, de gauche à droite (visible sur la photo produit Pololu) :
+
+```
+  ┌──────────── borniers à vis (puissance) ────────────┐
+  │  M1B  M1A   +   -   M2B  M2A                       │   ← batterie principale + 2 moteurs
+  └────────────────────────────────────────────────────┘
+  ┌──────── barrettes 2,54 mm (signal) ────────────────┐
+  │  LB IN │ - + │ EN1 │ EN2 │ S1 S2 S3 S4 S5 │ + -    │
+  └────────────────────────────────────────────────────┘
+        │              │                │
+        │              │                └── commande, E-Stop, fins de course
+        │              └── ENCODEURS (A, B, +5 V, GND)
+        └── batterie logique de secours
+```
+
+### ① « Où est l'odométrie ? Sur les S1-S4 ? » — **Non : sur `EN1` et `EN2`**
+
+Ce sont des **entrées dédiées**, séparées des entrées de commande. Manuel : *« EN1 and EN2 are
+the inputs from the encoders on pin header versions of RoboClaw. »* Chaque bloc porte quatre
+broches : **`A`, `B`, `+` et `−`**, avec deux repères physiques à connaître —
+*« The positive (+) is located **at the board edge** and supplies +5VDC. The ground (−) pin is
+**near the heatsink** »*, et *« `A` of both EN1 and EN2 are located at the board edge ;
+channel `B` pins are located near the heatsink. »*
+
+Donc : **roue gauche → `EN1`, roue droite → `EN2`**, deux fils de signal par roue, exactement
+ce que produit la carte à optocoupleurs. Les `S1`-`S5` ne servent **jamais** à l'odométrie.
+
+⚠️ **Piège de sens, déjà connu du projet sous une autre forme** : *« make sure the leading
+channel for the direction of rotation is connected to A. If one encoder is backwards to the
+other you will have one internal counter counting up and the other counting down. »* Les deux
+roues d'un différentiel étant montées en miroir, **l'une des deux sera nécessairement à
+l'envers**. Ça se corrige soit en croisant A et B au câblage, soit par logiciel
+(*« which encoder is used on which motor can be swapped via a software setting »*). C'est
+exactement le « sens de comptage à MESURER au protocole caméra » déjà inscrit au tableau de
+bord — le RoboClaw ne supprime pas cette vérification, il la déplace.
+
+### ② « Quid des 12 V nécessaires ? » — le RoboClaw ne les fournit pas, et c'est sans effet
+
+Le RoboClaw ne sort que du **5 V** (BEC, **1,2 A** sur les versions V7 et ultérieures) sur les
+broches `+` des connecteurs d'encodeur. Or les `LJ12A3-4-Z/BX` demandent 6 à 36 V et sont
+alimentés en **12 V** (décision du §5 de l'étude odométrie, depuis le rail Mean Well).
+
+**Rien ne change donc pour eux** : le 12 V continue de venir du rail du robot, et
+**la carte à optocoupleurs reste strictement indispensable** — c'est elle qui fait la
+frontière entre le domaine 12 V sale et le domaine logique propre.
+
+Une seule valeur bouge dans la nomenclature de cette carte :
+
+| | Avec le RP2040 (plan actuel) | Avec le RoboClaw |
+|---|---|---|
+| Alimentation capteurs | 12 V (rail Mean Well) | **12 V — identique** |
+| Optocoupleurs + R série 1,5 kΩ | inchangés | **inchangés** |
+| Rappel de sortie | 10 kΩ vers le **3,3 V** du RP2040 | 10 kΩ vers le **+5 V** du connecteur `EN` |
+| Destination du signal | GP2-GP5 du RP2040 | **`EN1 A/B`, `EN2 A/B`** |
+| Le RP2040-Zero | nécessaire | **devient inutile** |
+
+Le RoboClaw accepte ce niveau sans adaptateur (`Input High` : min 2 V, max 5 V). ⚠️ Vérifier
+que les 1,2 A du BEC suffisent — ils alimenteraient seulement les quatre phototransistors,
+donc quelques milliampères : très large.
+
+### ③ « Où branche-t-on le stop ? » — sur `S3`, `S4` ou `S5`… **mais seulement en mode SÉRIE**
+
+🔴 **Nuance décisive, qui corrige l'architecture C du §6 bis.** Le manuel est explicite :
+
+> *« S1 and S2 are the control inputs for serial, analog and RC modes. S3 can be used as a
+> flip switch input when in RC or Analog modes. **In serial mode** S3, S4 and S5 can be used
+> as emergency stop inputs or as voltage clamp control outputs. When set as E-Stop inputs they
+> are active when pulled low and have internal pullups so they will not accidentally trip when
+> left floating. »*
+
+**L'entrée E-Stop n'existe donc PAS en mode RC.** En mode RC, `S3` est un inverseur de sens et
+`S4`/`S5` des contacts de fin de course ou d'origine.
+
+Ce n'est pas rédhibitoire pour l'architecture C, **mais ça change la façon dont elle arrête le
+robot** — et il faut l'écrire précisément :
+
+| | Architecture A/B (série) | Architecture C (mode RC) |
+|---|---|---|
+| Point d'accrochage de la chaîne de sécurité | `S3` configuré en **`E-Stop (Latching)`** | le **`OE` du PCA9685**, comme aujourd'hui |
+| Ce qui arrête les moteurs | l'E-Stop, **par freinage** (« *Motors are stopped by braking* ») | la disparition des impulsions → **`RC Timeout` 100 ms** |
+| Mode d'arrêt | freinage, garanti | **celui d'`Idle Mode`** → 🔴 `Freewheel` par défaut, **à régler sur `Braking`** |
+| Latence | immédiate | **≤ 100 ms** |
+
+Autrement dit, en architecture C la sécurité ne passe plus par une broche du RoboClaw mais par
+le fait de **taire la commande** — ce qui est précisément ce que la chaîne conçue sait faire.
+C'est cohérent, c'est même élégant, mais **ça repose entièrement sur le réglage `Idle Mode =
+Braking`** : laissé en `Freewheel`, un robot de 50 kg coupé en pleine course continuerait sur
+son élan. Ce réglage passe du rang de « bonne pratique » à celui de **condition de sécurité**.
+
+**Et dans les deux cas, le coup-de-poing 40 A reste le dernier mot**, ce que le manuel demande
+d'ailleurs explicitement : *« The motor controller should be wired with an external contactor,
+relay or high-amperage mechanical switch on the main power input. »* C'est exactement le
+coup-de-poing catégorie 0 déjà conçu sur la carte main-carrier — **inchangé**.
+
+### ④ « On ne peut pas souder un câble USB ? Ou faire du "pin USB" ? »
+
+**Il n'existe aucun connecteur USB en barrette sur cette carte** : le manuel et le datasheet ne
+mentionnent que le port micro-USB. Pas de « pin USB » documenté.
+
+Souder un câble directement sur les pastilles du micro-USB est physiquement possible, mais
+c'est une mauvaise affaire : ce sont des pastilles CMS minuscules, un arrachement emporte la
+piste, et on perdrait alors **à la fois la configuration et le diagnostic** — c'est-à-dire le
+seul moyen de régler `Idle Mode`, `MCU Mode` et le PID. Le connecteur fragile deviendrait
+irréparable.
+
+**Deux réponses meilleures, et le projet connaît déjà la première :**
+
+1. **Brider le câble mécaniquement.** C'est exactement la décision prise pour le RP2040-Zero
+   dans l'étude odométrie (« le bridage du câble à moins de 5 cm reste obligatoire ») : une
+   bride ou un collier fixé à la carte support, de sorte qu'aucun effort n'arrive au
+   connecteur. Le manuel impose de toute façon un **câble à double ferrite**.
+2. **Choisir une architecture où l'USB n'est pas critique.** C'est tout l'intérêt de
+   l'architecture C : l'USB n'y porte que la *lecture*. S'il se déconnecte, on perd
+   l'odométrie et la télémétrie — jamais la commande, jamais la sécurité. Le connecteur
+   fragile cesse alors d'être un point de défaillance du spectacle.
 
 
 ## 7. Inconnues à lever avant toute décision
