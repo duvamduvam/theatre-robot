@@ -142,6 +142,12 @@ que l'énergie régénérée *« peut endommager le contrôleur si elle n'est pa
 décrit le remède : batterie en parallèle comme chemin de retour, ou clampage sur une
 **résistance de puissance** (R3, typiquement 10 Ω / 50 W), avec une procédure d'essai par
 paliers de 5 % et, si insuffisant, 5 000 à 10 000 µF de capacité de découplage sur B+/B−.
+
+💡 **Il existe un produit dédié** (relevé sur la page Pololu le 26/09) : le **Basicmicro
+`VClamp`**, *« a voltage clamp specifically designed to work with the RoboClaw and MCP to
+suppress such voltage spikes »*, donné pour des alimentations jusqu'à 60 V et 60 A — donc
+dimensionné pour notre cas. **Prix non lu.** À chiffrer avec la carte, pas après : c'est un
+accessoire de sécurité, pas une option.
 Didier redescend des scènes en pente : ce dimensionnement n'est pas optionnel.
 
 Autres protections, pour mémoire : limite de courant réglable par canal (commandes
@@ -265,9 +271,21 @@ par deux environ, et surtout il n'y a plus qu'**un** jeu de câbles de commande,
 de fixation, **un** connecteur d'alimentation. Sur un robot où la place se négocie au
 millimètre, ça compte autant que le prix.
 
-**③ 🔴 « On peut tout contrôler en USB ? » — NON, et le fabricant le dit lui-même.**
-C'est la découverte la plus importante de cet amendement, parce qu'elle va contre l'intuition
-(« un seul câble, encore plus simple »). Datasheet 2x60A, section *USB*, littéralement :
+**③ « On peut tout contrôler en USB ? » — OUI techniquement, mais le fabricant le
+DÉCONSEILLE en milieu bruité.**
+
+⚠️ **Correction du 26/09** : cette section affirmait d'abord « NON ». C'était trop tranché, et
+David l'a relevé sur la page Pololu du V8, qui écrit : *« The RoboClaws have a USB interface
+that acts as a virtual serial (COM) port, **allowing it to be controlled directly from a
+computer** »*. C'est exact, et ce n'est pas propre au V8 : toute la famille le permet.
+
+**Les deux sources ne se contredisent pas, elles ne parlent pas de la même chose** : Pololu
+décrit une **capacité** (l'USB porte tout le jeu de commandes), Basicmicro décrit une **limite
+d'usage**. Noter d'ailleurs que la même phrase Pololu oppose « *controlled directly from a
+computer* » (USB) à « *controlled via **TTL serial for use with embedded systems*** » — et un
+Raspberry Pi embarqué dans un robot, c'est la seconde catégorie.
+
+La limite, elle, est écrite dans le datasheet 2x60A, section *USB*, littéralement :
 
 > « A dual ferrit core USB cable is required. **The USB port should be used for configuration
 > and debugging. The USB protocol is not designed for electrically noisy environments. The USB
@@ -276,9 +294,28 @@ C'est la découverte la plus importante de cet amendement, parce qu'elle va cont
 
 Or Didier, c'est exactement l'environnement décrit : deux moteurs à balais de 250 W qui
 arcent, un ampli de sono, des rubans LED à fronts raides — c'est le §5 de l'étude odométrie,
-mot pour mot. **Le pilotage doit donc passer par le `TTL serial` en mode Packet Serial**
-(trame à CRC16), l'USB restant ce pour quoi il est prévu : Motion Studio à l'atelier,
-configuration, mises à jour de firmware, diagnostic.
+mot pour mot.
+
+**Ce n'est donc pas une impossibilité, c'est un arbitrage de risque** :
+
+| | USB | TTL série (Packet Serial) |
+|---|---|---|
+| Câblage | 1 câble (à double ferrite, **exigé** par le datasheet) | 3 fils sur l'UART du Pi |
+| Nom du périphérique | `/dev/ttyACM*`, variable → règle udev par n° de série | port fixe, rien à résoudre |
+| Risque documenté | *« will likely disconnect and **not automatically recover** »* | aucun mentionné |
+| Reprise après coupure | **manuelle** (débrancher/rebrancher le câble, d'après la doc) | sans objet |
+| Isolation des masses | à faire (Basicmicro vend un isolateur USB) | à faire aussi (opto sur RX/TX) |
+
+⚠️ **Ce qui fait pencher, c'est la nature du métier** : avec le timeout matériel réglé, une
+déconnexion USB **arrête les moteurs** — c'est sûr, mais sur un plateau, en représentation,
+c'est un robot qui s'immobilise en plein jeu et qui ne repart pas sans intervention humaine
+sur un câble. Un incident de spectacle, pas seulement un incident technique.
+
+**Recommandation de l'étude : le pilotage passe par le `TTL serial` en mode Packet Serial**
+(trame à CRC16), l'USB restant pour ce qu'il fait le mieux — Motion Studio à l'atelier,
+configuration, mises à jour de firmware, diagnostic. Rien n'interdit de **commencer les
+essais en USB** (c'est plus rapide à câbler) et de basculer en TTL avant le premier usage
+scénique : les deux modes coexistent, et le protocole applicatif est identique.
 
 Ce n'est pas une mauvaise nouvelle : le TTL série est **3 fils sur le connecteur du Pi**, sans
 énumération USB, sans `/dev/ttyACM*` qui change de nom, sans hub. C'est plus simple que l'USB,
@@ -403,6 +440,27 @@ David a ouvert la page Pololu du **V8** (item 3687) le 26/09 : **229,95 $** l'un
 | 2x60AHV | 2 | 10,5-60 V | 60 A | 120 A |
 | 2x200A | 2 | 10,5-60 V | 200 A | 200 A |
 
+Et les prix, tailles et masses de la même page :
+
+| Modèle | Taille | Masse | Prix Pololu |
+|---|---|---|---|
+| Solo 30A / **Solo 60A** | 60×32,5×23,5 / **99×72,6×30 mm** | 130 g / **340 g** | 89,95 $ / **119,95 $** |
+| 2x7A | 48×42×17 mm | 20 g | 79,95 $ |
+| 2x15A / 2x30A / 2x45A | **74×52×17 mm** (identiques) | **60 g** (identiques) | 99,95 / **134,95** / 179,95 $ |
+| **2x60A** | **100×86×30 mm** | **300 g** | **229,95 $** |
+| 2x60AHV (10,5-60 V) | 100×86×30 mm | 300 g | 299,95 $ |
+| 2x200A | 155×126×50 mm | 1200 g | 599,95 $ |
+
+Ce tableau dit tout en une ligne : **les 2x15A, 2x30A et 2x45A sont la MÊME carte** (mêmes
+dimensions, même masse), seul le silicium change. Le premier double canal à changer de
+catégorie mécanique sous 34 V est le **2x60A**, et il n'y a rien entre les deux.
+
+> À noter, sans le retenir : **deux `Solo 60A`** (119,95 $ pièce, 340 g chacun, 60 A/120 A)
+> coûteraient **239,90 $**, à peine plus que le 2x60A, et reproduiraient l'architecture
+> actuelle « une carte par roue » avec l'asservissement en plus. Mais on garderait deux
+> cartes, deux fixations, deux jeux de câbles, 680 g — c'est-à-dire qu'on paierait le même
+> prix pour perdre la simplification recherchée.
+
 ⚠️ **Le 2x45A a la MÊME crête que le 2x30A (60 A)** — il n'apporte que du continu, pour
 2 g de dissipateur en plus (c'est-à-dire aucun). Il est définitivement hors course : sur ce
 robot, c'est la **crête** qui compte (démarrage de 50 kg, roue calée contre un décor). Le
@@ -523,6 +581,135 @@ paquet dont un octet arrive en retard est jeté). Le projet a déjà été mordu
 rien ne figeait (leçon `feedback-tests-graver-la-valeur`, lot T1 de la télécommande) : si du
 code de trame est écrit ici, **graver des vecteurs de test**.
 
+## 6 bis. Les MODES DE PILOTAGE — et une troisième architecture qu'on n'avait pas vue
+
+*Section écrite le 26/09 à la demande de David : « va jusqu'au bout pour le pilotage par pin
+pour bien comprendre la différence ». Tout vient du manuel utilisateur officiel, lu en local.*
+
+### Les cinq modes, et ce qui les sépare vraiment
+
+| Mode | Support physique | Encodeurs pour l'asservissement | **Peut-on LIRE les compteurs ?** |
+|---|---|---|---|
+| **RC** | impulsions servo sur `S1`/`S2` | ✅ oui | ❌ non (par ce lien) |
+| **Analog** | 0-2 V sur `S1`/`S2` | ✅ oui | ❌ non |
+| **Simple Serial** | TTL sur `S1` seul | ❌ **non** | ❌ non — *« receive only device »* |
+| **Packet Serial** | TTL `S1`(RX)/`S2`(TX), adressé, CRC16 | ✅ oui | ✅ **oui** |
+| **USB** | port COM virtuel | ✅ (selon le mode actif) | ✅ oui |
+
+**La ligne qui compte est la dernière colonne.** RC et Analog pilotent avec un *signal* : le
+dialogue est à sens unique, on commande mais on n'apprend rien. Packet Serial et USB
+**dialoguent** : on envoie des consignes et on relit les compteurs d'encodeurs, le courant par
+moteur, les tensions, les températures, les bits d'erreur.
+
+Pour Didier, la conséquence est directe : **l'odométrie — le but initial de tout ce
+chantier — exige un lien capable de LIRE.** Un RoboClaw piloté en RC seul asservirait bien sa
+vitesse tout seul, mais resterait muet : pas de TF `odom` → `base_link`, donc pas de nav2.
+
+⚠️ Et `Simple Serial` est un piège à éviter : c'est du TTL comme Packet Serial, mais
+unidirectionnel **et sans support d'encodeur**. Il n'apporte rien ici.
+
+### La trouvaille : le mode RC accepte les encodeurs, ET l'USB reste lisible par-dessus
+
+Deux phrases du manuel, qui prises ensemble ouvrent une voie :
+
+> **`RC Mode with feedback for velocity or position control`** — *« RC Mode supports encoder
+> feedback with either velocity or position PID control. »*
+
+> **`USB Control`** — *« USB can be used in any mode. [...] if RoboClaw is not in packet serial
+> mode, motor movement commands will be overridden by Analog or RC pulse input. **USB packet
+> serial commands can then only be used to read status information and set configuration
+> settings.** »*
+
+Autrement dit : en mode RC, on peut **asservir la vitesse par encodeur**, et brancher l'USB
+**en lecture seule** — ses commandes de mouvement sont ignorées (le RC gagne), mais toutes
+les commandes de lecture répondent.
+
+Or des impulsions servo de 1120 à 1920 µs, **c'est exactement ce que le PCA9685 produit
+déjà** pour les servos du visage.
+
+```
+  ARCHITECTURE C — « mode RC », la migration douce
+
+  Pi ─I²C─ ISO1540 ─I²C─ PCA9685 ──2 impulsions servo──► RoboClaw ──► moteurs
+                            ▲                              ▲
+                            │                              └── encodeurs (les 4 optos, inchangés)
+                    OE ◄── chaîne de sécurité                       │
+                          (watchdog 74HC123 + 74HC74,               │
+                           INCHANGÉE, réarmée par l'I²C)            │
+                                                                    ▼
+  Pi ◄──────── USB, LECTURE SEULE ──────── odométrie, courant, tension, température
+```
+
+### Pourquoi cette variante est remarquable
+
+1. 🟢 **La chaîne de sécurité conçue reste valable telle quelle.** Le `OE` du PCA9685 a
+   toujours quelque chose à couper, et le watchdog 74HC123 réarmé « après une écriture I²C
+   réussie » prouve toujours ce qu'il doit prouver. **L'inconnue n° 12 disparaît dans cette
+   variante** — c'est la seule des trois architectures qui ne demande pas de refondre une
+   conception déjà faite.
+2. 🟢 **Le risque USB devient bénin.** Si le port lâche (le défaut documenté), on perd la
+   *mesure*, jamais la *commande*. Plus de robot immobilisé en plein jeu pour un câble.
+3. 🟢 **`RC Timeout` : arrêt des moteurs si le signal est perdu plus de 100 ms** — quatre fois
+   plus rapide que le deadman logiciel actuel (400 ms), et **dans le matériel**. Et quand la
+   chaîne de sécurité coupe le `OE`, les impulsions cessent : les deux mécanismes se
+   composent au lieu de se remplacer.
+4. 🟢 **`Safe Start`** : le moteur refuse de démarrer tant que l'entrée n'est pas revenue au
+   centre. Un redémarrage de `wheels_node` ne peut plus relancer une consigne ancienne — c'est
+   exactement le piège du « réarmement » que le modèle de la chaîne de sécurité avait identifié
+   (`safety_chain_model.py`).
+5. 🟢 **`Fwd Limit (%)` / `Rev Limit (%)`** : bridage de la vitesse maximale **en dur dans la
+   carte**, indépendant du logiciel. Pour un robot qui joue près du public, c'est une ceinture
+   que rien dans ROS ne peut desserrer.
+6. 🟢 **`Exponential`** : sensibilité accrue à basse vitesse. Précisément le régime de jeu.
+7. 🟢 **Deux défauts documentés du chemin actuel tombent d'eux-mêmes** : le PCA9685 ne hache
+   plus un moteur à 60 Hz (donc plus d'ondulation de courant ni de **ronflement audible** —
+   le §2.1 de l'étude chemin devient sans objet), et **la ligne `DIR` détournée disparaît**
+   (§2.2 : un canal servo par roue au lieu d'un couple PWM+DIR, donc plus de `65530 ≠ 65535`).
+
+### Ses deux limites, à connaître avant de choisir
+
+1. 🔴 **`MCU Mode` est OBLIGATOIRE.** Par défaut, le RoboClaw **auto-calibre sa plage
+   d'impulsions au démarrage et à la volée** : *« If a pulse shorter than 1250 µs or longer
+   than 1750 µs is detected, the new value is set as the updated range limit. »* Piloté par un
+   microcontrôleur, c'est inacceptable — la correspondance consigne → vitesse changerait toute
+   seule en cours de spectacle. Avec `MCU Mode` activé, la plage est figée : **1120 µs plein
+   arrière, 1520 µs arrêt, 1920 µs plein avant**. À graver dans la procédure de mise en
+   service, au même titre que `Idle Mode = Braking`.
+2. ⚠️ **La résolution de consigne chute.** Le PCA9685 est un compteur 12 bits sur la période :
+   à 50 Hz, un pas vaut ~4,9 µs, donc la plage utile de 800 µs ne porte que **~164 niveaux**
+   (~82 par sens) au lieu des 4096 d'un PWM direct. Sur 0 à 1 m/s, cela fait environ **1 cm/s
+   de granularité** — largement suffisant pour ce robot, mais c'est une perte réelle, à
+   mesurer si un jour on cherche de la finesse à très basse vitesse.
+
+### Les trois architectures, côte à côte
+
+| | **A — Packet Serial (TTL)** | **B — USB seul** | **C — Mode RC + USB en lecture** |
+|---|---|---|---|
+| Câblage | 3 fils sur l'UART du Pi | 1 câble USB | PCA9685 (existant) + 1 câble USB |
+| PCA9685 dans le chemin roues | ❌ sort | ❌ sort | ✅ reste (2 canaux au lieu de 4) |
+| I²C dans le chemin roues | ❌ sort | ❌ sort | ✅ reste |
+| Odométrie + télémétrie | ✅ | ✅ | ✅ (par l'USB) |
+| Asservissement par encodeur | ✅ | ✅ | ✅ |
+| **Chaîne de sécurité conçue** | 🔴 **à refondre** (accrochage sur `E-Stop`, watchdog à réarmer autrement) | 🔴 **à refondre** | 🟢 **inchangée** |
+| Arrêt sur perte de lien | timeout série réglable (défaut **non documenté** → à régler) | idem | **`RC Timeout` 100 ms** + `OE` |
+| Panne du lien en spectacle | arrêt (sûr) | ⚠️ arrêt, **reprise manuelle** | 🟢 perte de la mesure seule |
+| Résolution de consigne | pleine | pleine | ~164 niveaux |
+| Travail logiciel | nouveau nœud + protocole CRC16 | idem | **`wheels_node` à peine modifié** (2 canaux servo) + un lecteur d'état |
+
+**Aucune n'est évidente, et c'est pour ça que la question de David était la bonne.** L'axe A
+est le plus propre architecturalement (il sort l'I²C du chemin roues, ce que le projet cherche
+par ailleurs) mais il oblige à refondre une chaîne de sécurité déjà conçue et testée en
+modèle. L'axe C est le plus prudent : il n'entame rien de l'existant, apporte quatre sécurités
+matérielles supplémentaires, et laisse la porte ouverte — **on peut passer de C à A plus tard
+sans racheter quoi que ce soit**, puisque c'est la même carte et le même câble d'encodeurs.
+
+⚠️ À vérifier avant de trancher, et ce n'est pas dans le manuel : en mode RC, le RoboClaw
+**publie-t-il vraiment ses compteurs d'encodeurs par USB** ? La phrase citée dit « read status
+information », ce qui devrait les inclure (commandes 16/17 « Read Encoder Count »), mais elle
+ne les nomme pas explicitement. **C'est le seul point qui peut faire tomber l'architecture C —
+à tester en dix minutes sur banc, avant tout le reste.**
+
+
 ## 7. Inconnues à lever avant toute décision
 
 | # | Inconnue | Comment la lever | Bloquant ? |
@@ -537,7 +724,8 @@ code de trame est écrit ici, **graver des vecteurs de test**.
 | 8 | Valeur d'usine du timeout série | non documentée → **la régler explicitement**, ne jamais s'y fier | non (contourné) |
 | 9 | **Révision livrée par RobotShop EU** (`RB-Bat-48` / `IMC414`) | leur demander — le V8 de Pololu est équipé et sans boutons ; la photo RobotShop montre des boutons, donc une révision antérieure | non, mais à demander AVANT d'acheter |
 | 10 | **Isolation du lien TTL série** Pi ↔ RoboClaw | le pilotage passe par le TTL (l'USB est déconseillé par le fabricant en milieu bruité) : signal logique nu entre deux masses, au milieu des moteurs → même problème qu'au §5 de l'étude odométrie | 🔴 **OUI** — à traiter comme la barrière des capteurs |
-| 12 | **Réarmement du watchdog 74HC123** : plus d'écriture I²C roues à prouver | le réarmer sur l'acquittement d'une trame Packet Serial ; à trancher au routage de la bande sécurité | 🔴 **OUI** (conception, pas câblage) |
+| 12 | **Réarmement du watchdog 74HC123** : plus d'écriture I²C roues à prouver | le réarmer sur l'acquittement d'une trame Packet Serial ; à trancher au routage de la bande sécurité. ⚠️ **Ne concerne QUE les architectures A et B** — en architecture C (mode RC), le watchdog et le `OE` restent valables tels quels (§6 bis) | 🔴 **OUI en A/B**, sans objet en C |
+| 13 | 🔴 **En mode RC, les compteurs d'encodeurs sont-ils lisibles par USB ?** | banc, 10 min : RoboClaw en mode RC, USB branché, commande 16/17 « Read Encoder Count ». Le manuel dit « read status information » sans les nommer | 🔴 **OUI** — c'est le seul point qui peut faire tomber l'architecture C, la plus prudente des trois |
 | 11 | **Source de la batterie logique séparée** | le datasheet l'exige sous forte charge (effondrement de tension = redémarrage logique en pleine manœuvre) ; le rail 12 V Mean Well existe-t-il assez près ? | 🔴 **OUI** |
 
 ## 8. Où en est la décision
