@@ -835,6 +835,223 @@ irréparable.
    fragile cesse alors d'être un point de défaillance du spectacle.
 
 
+## 6 quater. PROPOSITION — la carte d'odométrie dans la variante RoboClaw
+
+*Demandée par David le 26/09.* ⚠️ **Ceci est une VARIANTE conditionnelle.** Le plan officiel
+reste celui de [`etude-odometrie.md`](etude-odometrie.md) (RP2040-Zero, plaque 26 × 29,
+`2026-09-02-implantation-stripboard-rp2040-zero.png`) **tant que le RoboClaw n'est pas
+décidé**. Rien de ce qui suit ne remplace quoi que ce soit aujourd'hui.
+
+### Ce qui change, et ce qui ne change pas
+
+**Le cœur ne bouge pas.** La barrière d'isolation du §5 de l'étude odométrie reste identique
+au composant près : c'est elle qui justifiait la carte, et le RoboClaw ne l'apporte pas
+(ses entrées `EN` sont à masse commune). Quatre voies, quatre optocoupleurs, même calcul.
+
+| Bloc | Plan actuel (RP2040) | **Variante RoboClaw** |
+|---|---|---|
+| Entrée 12 V protégée (`F1` PTC, `D11` Schottky, `D12` TVS, `C11` 100 µF) | ✅ | ✅ **identique** |
+| 4 × `PC817` sur support tulipe DIP-4 | ✅ | ✅ **identique** |
+| 4 × R 1,5 kΩ (série LED d'opto, calibrée 12 V) | ✅ | ✅ **identique** |
+| 4 × LED 3 mm de diagnostic | ✅ | ✅ **identique** |
+| 4 × C 10 nF (filtre arcs de balais) | ✅ | ✅ **identique** |
+| 2 × JST-XH 4 pts (capteurs, un par roue) | ✅ | ✅ **identique** |
+| 1 × JST-XH 2 pts (entrée 12 V) | ✅ | ✅ **identique** |
+| 4 × rappel 10 kΩ | vers le **3,3 V** du RP2040 | vers le **+5 V du RoboClaw** |
+| **`U5` RP2040-Zero** | module + 2 barrettes tulipe 1×9 + 2 barrettes mâles 1×9 | 🔴 **SUPPRIMÉ** |
+| Lien vers le Pi | USB-C du module, bridé | 🔴 **SUPPRIMÉ** (c'est le RoboClaw qui parle au Pi) |
+| GPIO réservés au futur chantier PWM (GP6/7/26/27) | réservés | 🔴 sans objet |
+| **Sortie vers le contrôleur** | — | 🟢 **2 connecteurs 4 pts → `EN1` et `EN2`** |
+
+**Bilan** : −1 module, −4 barrettes 1×9, −1 lien USB ; +2 connecteurs. La carte devient un
+**pur organe d'isolation**, sans aucune intelligence — ce qui est une simplification de fond :
+plus de firmware embarqué, plus de flashage, plus de règle udev, plus de numéro de série à
+gérer. Le seul code restant vit côté Pi.
+
+### Schéma fonctionnel (une voie sur quatre)
+
+```
+   ◄──────── domaine 12 V « sale » ────────►┊◄──── domaine 5 V « propre » ────►
+                                            ┊        (alimenté PAR le RoboClaw)
+   +12V ──┬── R 1,5k ──┬── LED diag ──┐     ┊
+          │            │              │     ┊      +5V (du connecteur EN)
+     (brun)│      ┌─────┴──────┐       │     ┊            │
+    ┌──────┴────┐ │  PC817     │       │     ┊         R 10k
+    │ LJ12A3    │ │ (support   │       │     ┊            │
+    │ NPN NO    ├─┤  tulipe)   ├───────┘     ┊            ├──────► EN1.A  (ou .B)
+    └──────┬────┘ │ anode  cath│             ┊            │
+     (bleu)│      │            │  collecteur ├────────────┤
+   GNDPWR ─┘      └────────────┘             ┊         C 10nF
+                                             ┊            │
+                        BARRIÈRE ────────────┊──────────► GND (du connecteur EN)
+                   (fente fraisée au PCB,    ┊
+                    les 2 masses ne se       ┊
+                    rejoignent NULLE PART)   ┊
+```
+
+🟢 **Un gain d'intégrité de signal, gratuit** : le domaine propre est désormais alimenté par
+le **5 V du RoboClaw lui-même**, et non plus par l'USB via le Pi. La masse de référence des
+signaux est donc celle de la carte qui les lit, au bout d'un câble court. C'est
+électriquement meilleur que le montage actuel.
+
+### Où la poser — ⚠️ le placement change
+
+L'étude odométrie avait renversé sa décision le 20/08 : *carte en bas, près des roues*, parce
+que le lien fragile (3,3 V vers le Pi) devait être court. **Le raisonnement reste le même mais
+la cible change** : le lien fragile devient `optos → EN1/EN2`, donc
+
+> **la carte doit être collée au RoboClaw**, pas aux roues.
+
+Et comme le RoboClaw sera lui-même près des moteurs (câbles de puissance de 60 A aussi courts
+que possible), les deux se retrouvent au même endroit — vraisemblablement le coffre des
+alimentations retenu le 02/09, où le 12 V est déjà à demeure. Les câbles capteurs (1 à 2 m,
+signal 12 V à collecteur ouvert, robuste) continuent de faire la longue distance, exactement
+comme le §6 de l'étude odométrie l'avait raisonné.
+
+### Encombrement
+
+Le plan actuel fait **26 × 29 trous (66 × 74 mm)**, dont une part notable pour le module
+(neuf pastilles par colonne, corps débordant d'une rangée de chaque côté). Le retirer libère
+beaucoup ; ajouter deux connecteurs de sortie en reprend une partie. **La carte sera
+sensiblement plus petite, mais je ne donne pas de chiffre sans avoir refait le plan** —
+c'est précisément la leçon du projet sur les cotes non mesurées.
+
+> Le vérificateur `gen-stripboard.py` du dépôt `pcb` est déjà écrit et éprouvé par mutation :
+> régénérer un plan pour cette variante est un travail cadré, pas une reprise de conception.
+> **Dis-le-moi si tu veux que je le fasse** — mais à mon sens pas avant que le RoboClaw soit
+> décidé, sinon on entretient deux plans concurrents.
+
+### Trois points à vérifier sur la carte réelle, avant tout plan
+
+1. 🔴 **L'ordre exact des broches de `EN1`/`EN2`.** Le manuel donne des repères (« le `+` est
+   au bord de carte et sort du 5 V », « le `−` est près du dissipateur », « les voies `A` sont
+   au bord ») mais pas un brochage explicite pour ce modèle. **À relever sur la carte reçue ou
+   sur le fichier du fabricant, jamais sur une photo en perspective** — c'est la leçon
+   `feedback-cao-verifier-le-reel`, déjà payée une fois sur ce chantier avec les neuf
+   pastilles du RP2040-Zero comptées à huit.
+2. **Le sens A/B par roue** : les deux roues étant en miroir, l'une comptera à l'envers
+   (§6 ter ①). Se corrige au câblage ou par réglage logiciel — mais il faut choisir, et
+   l'écrire.
+3. **Le niveau logique visé** : le RoboClaw accepte 0-5 V (`Input High` ≥ 2 V). Le rappel vers
+   5 V donne le meilleur rapport signal/bruit ; un rappel vers 3,3 V fonctionnerait aussi.
+   À trancher au moment du plan.
+
+### Sur le micro-USB — David a raison, et voici ce qu'on peut y faire
+
+> « C'est quand même con d'être resté en micro-USB, c'est le pire connecteur pour cet usage. »
+
+C'est un fait objectif : le micro-USB est donné pour **~10 000 cycles** et sa rétention
+mécanique repose sur deux petites pattes latérales ; l'USB-C est donné pour ~10 000 cycles
+aussi mais avec une rétention franchement supérieure et surtout **réversible**. Un
+RP2040-Zero à 5 € a de l'USB-C ; une carte de puissance à 230 $ destinée à des machines qui
+vibrent est restée en micro-USB, et le V8 — révision de 2024+ — ne l'a pas corrigé. Il n'y a
+pas de bonne raison, sinon la compatibilité avec la lignée précédente.
+
+Ce qu'on peut faire, par ordre d'efficacité :
+
+1. **Ne pas en dépendre.** C'est l'argument le plus fort en faveur de l'architecture C : si
+   l'USB ne porte que la lecture, son arrachement coûte l'odométrie, jamais la commande ni la
+   sécurité. Un connecteur fragile qui ne tient rien de critique cesse d'être un problème.
+2. **Brider le câble**, comme déjà décidé pour le RP2040-Zero : collier ou bride sur la carte
+   support, à moins de 5 cm, de sorte qu'aucun effort n'atteigne le connecteur. Le manuel
+   impose de toute façon un **câble à double ferrite**.
+3. **Câble coudé + boîtier imprimé.** Une prise micro-USB coudée sortant à ras, plus un capot
+   PETG qui l'emprisonne : c'est le type de pièce que le projet sait produire, et ça supprime
+   le bras de levier, qui est le vrai tueur de ces connecteurs.
+4. ❌ **Ne pas souder sur les pastilles** (§6 ter ④) : on y perdrait la configuration ET le
+   diagnostic, donc le seul accès à `Idle Mode`, `MCU Mode` et au PID.
+
+
+## 6 quinquies. RECOMMANDATION — ce que je propose concrètement
+
+*Demandée par David le 26/09, après son constat : « c'est vraiment du debug finalement,
+contrairement à la doc ».*
+
+### Le constat qui tranche
+
+Il y a bien **deux discours**, et il faut choisir lequel engage :
+
+| Source | Ce qu'elle dit de l'USB | Ce qu'elle est |
+|---|---|---|
+| **Pololu** (page produit) | *« allowing it to be controlled directly from a computer »* | le **revendeur** |
+| **Basicmicro** (datasheet) | *« The USB port **should be used for configuration and debugging**. The USB protocol is not designed for electrically noisy environments. »* | le **concepteur** |
+
+**On croit le concepteur.** L'USB de cette carte est un port d'atelier, pas un lien
+d'exploitation. David a raison, et ça a une conséquence que la section §6 bis n'avait pas
+tirée jusqu'au bout.
+
+### ⚠️ Ce que ça change : l'architecture C est affaiblie
+
+J'ai présenté l'architecture C (mode RC + USB en lecture) comme « la plus prudente ». **Pour
+la sécurité, elle l'est** — perdre l'USB n'y coûte jamais la commande. **Mais pour l'objectif,
+elle ne l'est pas** : en mode RC, l'USB est le **seul** chemin qui remonte les compteurs
+d'encodeurs. Or l'odométrie *est* le but de tout ce chantier.
+
+Un USB intermittent donne donc une **odométrie intermittente** — c'est-à-dire une TF
+`odom` → `base_link` qui saute, donc nav2 qui décroche et le suivi de personne qui perd sa
+référence. Ce n'est pas un risque de sécurité, c'est un risque **fonctionnel**, et il porte
+précisément sur ce qu'on cherchait à obtenir.
+
+**Conclusion : C est une excellente configuration de BANC, une mauvaise CIBLE.**
+
+### Ma recommandation : A en cible, C pour le banc
+
+**Cible — architecture A, `Packet Serial` sur TTL :**
+
+```
+  Pi 4 ──UART, 3 fils (isolés)──► RoboClaw ──► moteurs
+                                     ▲
+  chaîne de sécurité ──────────► S3 « E-Stop (Latching) »
+  (watchdog 74HC123 + 74HC74)        ▲
+                                  EN1/EN2 ◄── carte optos ◄── capteurs 12 V
+  USB : DÉBRANCHÉ en service, rebranché à l'atelier pour Motion Studio
+```
+
+Pourquoi c'est la bonne cible, en trois raisons indépendantes :
+
+1. **C'est le seul lien qui porte la commande ET la lecture de façon fiable.** Un seul chemin
+   à fiabiliser, à isoler et à tester, au lieu de deux chemins dont un fragile.
+2. **L'E-Stop matériel `S3 (Latching)` est supérieur au `OE` du PCA9685** : il **freine**
+   (« *Motors are stopped by braking* ») là où le `OE` coupe le PWM et laisse 50 kg sur leur
+   élan ; et il est **latché**, donc il ne se réarme pas tout seul.
+3. **Le moment est le bon, et il ne se représentera pas.** La bande sécurité de la carte
+   main-carrier est **placée mais pas routée** (122 chevelus, volontaire). Changer le point
+   d'accrochage maintenant coûte un dessin ; le changer après gravure coûte une carte.
+   Ce qui ressemblait à un défaut de l'architecture A (« elle oblige à refondre la chaîne »)
+   est en réalité une **opportunité de calendrier**.
+
+**Banc — architecture C, pour la mise au point :**
+
+Mode RC piloté par le PCA9685 existant, USB branché pour observer. C'est là que l'USB est
+exactement à sa place : configuration, réglage du PID, lecture des compteurs, diagnostic. On
+y valide la mécanique, les optocoupleurs, le sens de comptage par roue, les constantes PID —
+**sans écrire une ligne du protocole série**. Puis on bascule en Packet Serial pour la cible,
+sans rien racheter : même carte, même câblage d'encodeurs, mêmes optos.
+
+### Les réglages qui ne sont pas négociables, quelle que soit l'architecture
+
+| Réglage | Valeur | Pourquoi |
+|---|---|---|
+| `Idle Mode` | **`Braking`** | le défaut `Freewheel` laisse 50 kg sur leur élan |
+| `MCU Mode` (si mode RC) | **activé** | sinon la plage d'impulsions s'auto-calibre en cours de spectacle |
+| `Timeout` série | **réglé explicitement** | la valeur d'usine n'est pas documentée |
+| `Home (Auto)` sur S4/S5 | **jamais** | fait bouger le moteur à la mise sous tension |
+| `Fwd/Rev Limit` | bridé au besoin | ceinture matérielle que ROS ne peut pas desserrer |
+| Écriture en NVM (cmd 94) | **après chaque réglage** | rien n'est sauvegardé automatiquement |
+| Batterie logique sur `LB IN` | **oui** | évite le redémarrage logique sous forte charge |
+
+### Ce que ça demande de décider, et dans quel ordre
+
+1. **Rien tout de suite.** La mesure du courant moteur à la pince, pendant le test scénique au
+   sol, décide du modèle (2x30A à 152,50 € ou 2x60A à 250,86 €) et ne coûte rien.
+2. **Si le RoboClaw est retenu** : acheter le 2x60A, et instruire au même moment le
+   ré-accrochage de la chaîne de sécurité sur `S3` — c'est un lot de conception, à faire
+   **avant** de router la bande sécurité.
+3. **L'inconnue n° 13 (les compteurs sont-ils lisibles par USB en mode RC ?) perd son
+   caractère bloquant** dans cette recommandation : elle ne conditionne plus que le confort du
+   banc, plus l'architecture cible. Elle reste utile à lever, elle n'arrête plus rien.
+
+
 ## 7. Inconnues à lever avant toute décision
 
 | # | Inconnue | Comment la lever | Bloquant ? |
@@ -850,7 +1067,7 @@ irréparable.
 | 9 | **Révision livrée par RobotShop EU** (`RB-Bat-48` / `IMC414`) | leur demander — le V8 de Pololu est équipé et sans boutons ; la photo RobotShop montre des boutons, donc une révision antérieure | non, mais à demander AVANT d'acheter |
 | 10 | **Isolation du lien TTL série** Pi ↔ RoboClaw | le pilotage passe par le TTL (l'USB est déconseillé par le fabricant en milieu bruité) : signal logique nu entre deux masses, au milieu des moteurs → même problème qu'au §5 de l'étude odométrie | 🔴 **OUI** — à traiter comme la barrière des capteurs |
 | 12 | **Réarmement du watchdog 74HC123** : plus d'écriture I²C roues à prouver | le réarmer sur l'acquittement d'une trame Packet Serial ; à trancher au routage de la bande sécurité. ⚠️ **Ne concerne QUE les architectures A et B** — en architecture C (mode RC), le watchdog et le `OE` restent valables tels quels (§6 bis) | 🔴 **OUI en A/B**, sans objet en C |
-| 13 | 🔴 **En mode RC, les compteurs d'encodeurs sont-ils lisibles par USB ?** | banc, 10 min : RoboClaw en mode RC, USB branché, commande 16/17 « Read Encoder Count ». Le manuel dit « read status information » sans les nommer | 🔴 **OUI** — c'est le seul point qui peut faire tomber l'architecture C, la plus prudente des trois |
+| 13 | **En mode RC, les compteurs d'encodeurs sont-ils lisibles par USB ?** | banc, 10 min : RoboClaw en mode RC, USB branché, commande 16/17 « Read Encoder Count » | **non bloquant depuis la recommandation §6 quinquies** : ne conditionne plus que le confort du banc, l'architecture cible étant A |
 | 11 | **Source de la batterie logique séparée** | le datasheet l'exige sous forte charge (effondrement de tension = redémarrage logique en pleine manœuvre) ; le rail 12 V Mean Well existe-t-il assez près ? | 🔴 **OUI** |
 
 ## 8. Où en est la décision
