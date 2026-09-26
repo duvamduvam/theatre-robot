@@ -383,6 +383,68 @@ seulement inutilisée le temps de l'essai.
 la **diode anti-génération** du §4.2 (piège 4) doivent être câblés **avant** le premier
 essai, pas après — c'est le seul câblage qui ne se défait pas en quinze minutes.
 
+### Amendement n° 3 — « si on ne peut pas en USB, comment ça marche ? » (David, 26/09)
+
+**Question exacte** : « on reste sur les mêmes cartes multiplexeur PWM ? » — **NON.**
+Confusion à lever, et elle est naturelle : **le TTL série n'a rien à voir avec le PWM.**
+
+Le PCA9685 est un **générateur de PWM** : on lui parle en I²C, il fabrique 16 signaux carrés.
+Le TTL série, c'est l'**UART natif du Raspberry Pi** — deux fils de données et une masse, sur
+des broches GPIO qui existent déjà. Il n'y a **rien à intercaler** entre le Pi et le RoboClaw.
+
+```
+   AUJOURD'HUI
+   Pi ──I²C── ISO1540 ──I²C── PCA9685 ──PWM+DIR ×4── 2× Cytron ── moteurs
+
+   AVEC LE RoboClaw EN TTL SÉRIE
+   Pi ──── 3 fils ──── RoboClaw ── moteurs
+      TXD (GPIO14) ──► S1
+      RXD (GPIO15) ◄── S2
+      GND ─────────── GND
+```
+
+**Câblage officiel, lu dans le manuel constructeur** (schéma « MCU ↔ RoboClaw ») :
+
+| Côté Pi | Côté RoboClaw |
+|---|---|
+| `UART TX` | **`S1` Signal** (entrée du RoboClaw) |
+| `UART RX` | **`S2` Signal** (sortie du RoboClaw) |
+| `GROUND` | `GROUND` |
+| ~~5 VDC~~ | ~~5 VDC~~ — ⚠️ *« If the MCU has its own power supply, **do not connect** the 5 V output »* |
+
+**Trois fils, donc.** Et aucun adaptateur de niveau : le datasheet est explicite — *« All pins
+are 5V tolerant and **output 3.3V for compatibility with processor such as Raspberry Pi** and
+Arduino »*. Le fabricant nomme le Raspberry Pi. (La mention d'un MAX232 dans la doc ne
+concerne qu'un PC muni d'un vrai port RS-232 à ±12 V, pas nous.)
+
+Le mode à utiliser est **`Packet Serial`** : c'est le seul qui accepte les encodeurs **et**
+qui autorise la lecture d'état. Chaque carte y porte une **adresse** (8 possibles), donc le
+jour où il en faudrait une seconde, le même lien série les dessert toutes.
+
+**Et le PCA9685 dans tout ça ?** Il reste — mais **pour les servos seulement** (visage, bras,
+cou). C'est exactement ce que cherchait à obtenir la séparation 0x40/0x41 prévue au §4 de
+[`etude-chemin-commande-roues.md`](etude-chemin-commande-roues.md) : chaque puce retrouve sa
+fréquence propre, et couper les roues ne fige plus le visage. Ici c'est obtenu **gratuitement,
+et mieux** : il n'y a plus du tout de PWM roues à cadencer.
+
+#### 🔴 Conséquence en cascade sur la chaîne de sécurité — à ne pas rater
+
+Le watchdog 74HC123 de la carte main-carrier est réarmé par « un battement GPIO26 émis
+**seulement après une écriture I²C réussie** ». C'est astucieux : le battement prouve que le
+bus vit. **Mais si les roues ne passent plus par l'I²C, cette preuve ne prouve plus rien de
+ce qui concerne les roues.**
+
+Il faudrait donc réarmer le watchdog sur **l'acquittement d'une trame série par le RoboClaw**
+(le mode Packet Serial en renvoie un), et non plus sur l'écriture I²C. La logique reste la
+même — un battement émis uniquement quand la communication est prouvée vivante — mais le
+déclencheur change. **À traiter au moment de router la bande sécurité**, ce qui est déjà le
+rendez-vous fixé au §8. C'est une modification de conception, pas de câblage.
+
+⚠️ Détail d'intégration à ne pas découvrir le jour J : sur un Raspberry Pi 4, l'UART primaire
+doit être **libéré** (console série désactivée, `enable_uart=1`), et le mini-UART lié à
+l'horloge du cœur est à éviter pour un lien à débit soutenu. À instruire au lot
+d'implémentation.
+
 ## 6. L'intégration ROS 2 — trois drivers, aucun parfait
 
 | Dépôt | Licence | Dernier commit | Type | Distro | Sécurité si le flux ROS s'arrête |
@@ -426,6 +488,7 @@ code de trame est écrit ici, **graver des vecteurs de test**.
 | 8 | Valeur d'usine du timeout série | non documentée → **la régler explicitement**, ne jamais s'y fier | non (contourné) |
 | 9 | **Révision exacte de la carte vendue** (V5/V6/V7/V8 ?) | demander au vendeur : décide si les dissipateurs ont les **trous taraudés** pour les ventilateurs, et si les boutons de config existent | non, mais à demander AVANT d'acheter |
 | 10 | **Isolation du lien TTL série** Pi ↔ RoboClaw | le pilotage passe par le TTL (l'USB est déconseillé par le fabricant en milieu bruité) : signal logique nu entre deux masses, au milieu des moteurs → même problème qu'au §5 de l'étude odométrie | 🔴 **OUI** — à traiter comme la barrière des capteurs |
+| 12 | **Réarmement du watchdog 74HC123** : plus d'écriture I²C roues à prouver | le réarmer sur l'acquittement d'une trame Packet Serial ; à trancher au routage de la bande sécurité | 🔴 **OUI** (conception, pas câblage) |
 | 11 | **Source de la batterie logique séparée** | le datasheet l'exige sous forte charge (effondrement de tension = redémarrage logique en pleine manœuvre) ; le rail 12 V Mean Well existe-t-il assez près ? | 🔴 **OUI** |
 
 ## 8. Où en est la décision
