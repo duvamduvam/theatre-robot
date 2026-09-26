@@ -383,6 +383,55 @@ seulement inutilisée le temps de l'essai.
 la **diode anti-génération** du §4.2 (piège 4) doivent être câblés **avant** le premier
 essai, pas après — c'est le seul câblage qui ne se défait pas en quinze minutes.
 
+### Amendement n° 4 — la gamme complète, et l'arbitrage import US / achat UE
+
+David a ouvert la page Pololu du **V8** (item 3687) le 26/09 : **229,95 $** l'unité
+(216,15 $ dès 5), **11 en stock**, backorders acceptés. Les photos du V8 montrent bien les
+**deux dissipateurs à ailettes** — l'inconnue n° 9 tombe donc pour cette version : le V8 est
+équipé, et il a perdu les boutons de configuration (tout en logiciel).
+
+**Le tableau comparatif de la gamme, relevé sur cette page**, rend l'arbitrage définitif :
+
+| Modèle | Canaux | Tension | Continu | **Crête** |
+|---|---|---|---|---|
+| Solo 30A / 60A / 300A | 1 | 6-34 / 6-60 / 6-60 V | 30 / 60 / 300 A | 60 / 120 / 300 A |
+| 2x7A | 2 | 6-34 V | 7,5 A | 15 A |
+| 2x15A | 2 | 6-34 V | 15 A | 30 A |
+| **2x30A** | 2 | 6-34 V | 30 A | 60 A |
+| **2x45A** | 2 | 6-34 V | 45 A | **60 A seulement** |
+| **2x60A** | 2 | 6-34 V | **60 A** | **120 A** |
+| 2x60AHV | 2 | 10,5-60 V | 60 A | 120 A |
+| 2x200A | 2 | 10,5-60 V | 200 A | 200 A |
+
+⚠️ **Le 2x45A a la MÊME crête que le 2x30A (60 A)** — il n'apporte que du continu, pour
+2 g de dissipateur en plus (c'est-à-dire aucun). Il est définitivement hors course : sur ce
+robot, c'est la **crête** qui compte (démarrage de 50 kg, roue calée contre un décor). Le
+choix se réduit donc bien à **2x30A (60 A crête) ou 2x60A (120 A crête)**.
+
+Noté au passage : le **BEC 5 V du 2x60A est tombé à 1,2 A sur les versions « V7 or later »**
+(contre 3 A avant). Sans importance si on n'alimente rien depuis la carte, à savoir si on
+comptait y brancher des capteurs.
+
+#### Où l'acheter : deux offres, deux compromis
+
+| | Prix affiché | Stock | Révision | À ajouter |
+|---|---|---|---|---|
+| **Pololu** (US) | **229,95 $** | **11 en stock** | **V8** (dissipateurs ✅, config 100 % logicielle) | port international, **TVA 20 %**, frais de douane — cf. le chiffrage du commit `44dfd52` |
+| **RobotShop EU** | **250,86 € TTC franco** | « réapprovisionnement prochain » | ⚠️ **inconnue** — la photo de la fiche montre les boutons `MODE`/`SET`/`LIPO`, **que le V8 n'a plus** : ce serait donc une révision antérieure | rien |
+
+**L'écart est plus faible qu'il n'y paraît** : 229,95 $ sont hors taxes et hors port ; une fois
+le transport international, la TVA à 20 % et les frais de dossier ajoutés (la règle douanière
+du 01/07/2026 documentée dans `44dfd52`), l'import US arrive vraisemblablement **au-dessus**
+des 250,86 € TTC franco de RobotShop. Le prix n'est donc pas le bon critère de choix entre
+les deux — **la révision l'est**.
+
+⚠️ **Question à poser à RobotShop avant d'acheter** (elle n'a pas pu être vérifiée : leur site
+refuse la consultation automatisée) : *quelle révision est livrée sous l'UGS `RB-Bat-48` /
+n° fabricant `IMC414` ?* Si c'est une V5/V6, il faut savoir que (a) les dissipateurs n'ont
+peut-être pas les trous taraudés des ventilateurs, et (b) les boutons de configuration
+physiques existent — ce qui est plutôt un **avantage** en exploitation (on peut vérifier ou
+corriger un mode sans ordinateur), à mettre en regard de la reproductibilité du tout-logiciel.
+
 ### Amendement n° 3 — « si on ne peut pas en USB, comment ça marche ? » (David, 26/09)
 
 **Question exacte** : « on reste sur les mêmes cartes multiplexeur PWM ? » — **NON.**
@@ -486,7 +535,7 @@ code de trame est écrit ici, **graver des vecteurs de test**.
 | 6 | Les entrées encodeur A/B ont-elles vraiment des pull-ups internes ? | multimètre sur la carte — la doc l'affirme *globalement* mais pas pour EN1/EN2 | non (on met un pull-up externe de toute façon, §5 odométrie) |
 | 7 | `basicmicro_ros2` arrête-t-il les moteurs si le flux ROS cesse ? | lire le code, pas le README | 🔴 **OUI** si c'est ce driver qui est retenu |
 | 8 | Valeur d'usine du timeout série | non documentée → **la régler explicitement**, ne jamais s'y fier | non (contourné) |
-| 9 | **Révision exacte de la carte vendue** (V5/V6/V7/V8 ?) | demander au vendeur : décide si les dissipateurs ont les **trous taraudés** pour les ventilateurs, et si les boutons de config existent | non, mais à demander AVANT d'acheter |
+| 9 | **Révision livrée par RobotShop EU** (`RB-Bat-48` / `IMC414`) | leur demander — le V8 de Pololu est équipé et sans boutons ; la photo RobotShop montre des boutons, donc une révision antérieure | non, mais à demander AVANT d'acheter |
 | 10 | **Isolation du lien TTL série** Pi ↔ RoboClaw | le pilotage passe par le TTL (l'USB est déconseillé par le fabricant en milieu bruité) : signal logique nu entre deux masses, au milieu des moteurs → même problème qu'au §5 de l'étude odométrie | 🔴 **OUI** — à traiter comme la barrière des capteurs |
 | 12 | **Réarmement du watchdog 74HC123** : plus d'écriture I²C roues à prouver | le réarmer sur l'acquittement d'une trame Packet Serial ; à trancher au routage de la bande sécurité | 🔴 **OUI** (conception, pas câblage) |
 | 11 | **Source de la batterie logique séparée** | le datasheet l'exige sous forte charge (effondrement de tension = redémarrage logique en pleine manœuvre) ; le rail 12 V Mean Well existe-t-il assez près ? | 🔴 **OUI** |
