@@ -190,6 +190,13 @@ Croisé avec [`inventaire-stock.md`](inventaire-stock.md) :
 - **barrettes sécables 2,54 mm** — 30 à 50, couvrent les 14 supports et barrettes
   des deux cartes ;
 - **poussoir 6 mm, LED, petites diodes** — présents, calibres à confirmer ;
+- **connecteurs IDC 2,54 mm + nappe arc-en-ciel** (~50 + plusieurs mètres,
+  `t0363`/`t0420`) et **nappes GPIO 40 c. déjà serties** (2-3, `t0047`) —
+  *ajouté le 30/09, oublié au premier croisement* : couvre la nappe du Pi et,
+  si les tailles 2×8 sont dans le lot, les **deux nappes de la pile** (4 embases
+  + 4 fiches 2×8, absentes de la première liste car nées de la bascule 100×100) ;
+- **supports tulipe DIP** (~10-20, `t0004`) — nombre de points non lisible à
+  l'image, mais le lot couvre très probablement les 3 supports ;
 - ⚠️ **les 300+ borniers débrochables verts du stock** pourraient couvrir tout le
   poste connectique de puissance — **mais leur pas n'a jamais été mesuré**
   (5,08 ? 3,81 ? 3,5 ?). Les cartes sont dessinées en 5,08. **Un réglet sur un
@@ -208,8 +215,8 @@ Les distributeurs les plus complets ont bloqué la collecte (Mouser et Farnell e
 | `74HC123` DIP-16 / `74HC74` DIP-14 | 1 + 1 *(le schéma en montre 3 + 3 : ce sont les unités d'un symbole multi-unités, pas des puces)* | main-carrier |
 | `PCF8574P` DIP-16 | 1 | audio-relays |
 | PTC radiaux (tête de nappe, ajoutés le 27/09) | 2 | carrier-p |
-| Supports tulipe DIP-14 / DIP-16 | 2 + 1 | main-carrier |
-| Connecteur IDC 2×20 + nappe 40 c. | 1 | main-carrier |
+| ~~Supports tulipe DIP-14 / DIP-16~~ → **stock probable** (§3.2) | 2 + 1 | L, audio |
+| ~~Connecteur IDC 2×20 + nappe 40 c.~~ → **stock** (§3.2), comme les IDC 2×8 de la pile si la taille y est | 1 + 4 | L, M, P |
 | `L7805CV` / `L7809CV` | 2 | audio-relays |
 | Module PCF8574 (type HW-171) | 1 à 2 | main-carrier |
 | `2N7000`, `BAT85` ×2, zener 5V1, `BC327` ×4, céramiques 100 nF / 1 µF | ~15 | les deux |
