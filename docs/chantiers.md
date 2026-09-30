@@ -50,6 +50,7 @@ journal de bord illisible).*
 | **Architecture des actionneurs (bras, cou, yeux)** | **ANALYSE FAITE le 26/09** — [`etude-architecture-actionneurs.md`](etude-architecture-actionneurs.md). Verdict : l'architecture **est sérieuse** (rampe au `dt` réel, anti-spam I²C, deadman servo, 38 tests) — elle n'est pas à refaire, elle est **à instrumenter**. 3 faiblesses : boucle **ouverte de bout en bout** (aucune lecture de position/courant/couple/T°, donc **aucune détection de blocage** sur des bras annoncés à 380 kg·cm ≈ 37 N·m, près du public) ; 6 nœuds écrivent sur la même puce avec une **adresse 0x40 implicite** ; **aucune limite d'angle par servo**. | ✅ **① FAIT le 26/09 — et ça a révélé un ACTIF DORMANT** : `ASME-MR` = **Magnetic Encoding Series**, servo **POSITIONNEL** 360° à **capteur magnétique 12 bits** qui sait *« return angle information »*. La doc disait « continuous-rotation » : FAUX, corrigé dans `overview.md`. ⭐ **Donc le retour de position EXISTE DÉJÀ dans le matériel** — la boucle ouverte n'est pas une fatalité, c'est un câble qu'on n'a pas branché. **A′ = brancher et lire ce retour** (0 € si le câble est là) devient prioritaire sur l'achat d'un INA219 : consigne vs position réelle = détection de blocage gratuite. ⚠️ 3 points à lever **sur le robot, donc après le dégel** : modèle exact (`ASME-MR` ou `ASME-MRB` ?), le 2ᵉ connecteur visible sur la photo est-il raccordé, et quel protocole. ② adresses I²C explicites (2 lignes, **avant** la séparation 0x40/0x41) ③ limites d'angle par servo + test ④ mesure du courant servos (INA219 ~3 €) = le seul point de **sécurité** | aucun — ①②③ se font robot en pièces et ne touchent pas au chemin roues |
 | Chemin de commande roues (PWM moteur) | **INSTRUIT et TRANCHÉ 30/08** — le Pico ne commandera pas ; le gain visé est déjà couvert par la chaîne de sécurité | réserver + documenter 4 GPIO sur la carte odométrie (gratuit) ; adresses I²C explicites | ⟸ routage de la bande sécurité (le vrai verrou) |
 | **Télécommande USB RP2040** | ÉTUDE ÉCRITE le 14/09 — [`etude-telecommande-usb.md`](etude-telecommande-usb.md), rien de fabriqué. Née de 4 photos d'atelier d'un module joystick **`HW-504`** (réf lue ; ⚠️ `R5` NON peuplée ⇒ `SW` flottant ⇒ pull-up interne obligatoire ; ⚠️ la broche marquée `+5V` doit être alimentée en **3,3 V**, sinon les ADC du RP2040 prennent 5 V pour un max absolu de 3,63 V). Destination **double** : télécommande Pi 4 **et** simulation, **tout en série USB CDC**. ⚠️ **2 décisions RENVERSÉES le soir même du 14/09, par David** : (1) le **HID est écarté** — il ne servait qu'à piloter la sim sans code, ne servait PAS le menu, et portait la seule inconnue bloquante (aucun exemple officiel de HID+CDC sur RP2040, endpoints non chiffrés) ; (2) **le menu ne vit PAS dans le firmware mais CÔTÉ HÔTE** — « contrôler tous les éléments » implique un catalogue (animations, visages, lumières) qui vit côté robot ; le RP2040 devient un **terminal générique** qui affiche ce qu'on lui envoie, donc son firmware ne change plus quand le spectacle change. **OLED identifié** par photo : I²C 4 broches, pont d'adresse `0x78`/`0x7A` ⇒ 0x3C/0x3D. Carte : **XIAO RP2040** (USB-C, 4 ADC, en stock) — mais **11 broches seulement**, décompte sans marge. ⭐ **Le seul chantier qui avance sans le robot** (banc + sim), donc utile pendant le gel du Pi 4 **T1 FAIT le 14/09** (`302ef28`) : `firmware/remote_usb/remote_protocol.py` + `test_remote_protocol.py`, **678 tests** verts. Revue adversariale passée, 4 défauts réels corrigés — dont **le CRC que rien ne figeait** : muter le polynôme laissait les 63 tests verts (tout était recalculé avec la fonction testée), or le décodeur hôte s'écrira dans `dadou_control_ros`, **dépôt frère sans code partagé**, d'après le README → une dérive aurait refusé 100 % des trames, CI verte. Vecteurs gravés, vérifié par mutation. ⭐ **Le même trou était dans `test_odom_protocol.py`, protocole DÉJÀ EN SERVICE** — vecteur gravé là aussi. **Suite = T2** : `code.py`/`boot.py` (broches, ADC, pull-up du `SW`, émission 50 Hz) — demande la carte en main et le joystick câblé à l'air | **aucun** — le chantier n'a plus d'inconnue bloquante depuis l'abandon du HID. ⚠️ Le jour où il commande des roues RÉELLES il entre dans le chemin roues ⇒ sim + protocole caméra + revue Opus. **Reste ouvert** : `SW` du joystick câblé ou non (il coûte la dernière voie analogique), SSD1306 vs SH1106 (au 1ᵉʳ affichage), dalle OLED peut-être décollée, nb exact de XIAO |
+| **Danse en cadence (chanson + gestes à la con)** | ÉTUDE ÉCRITE le 01/10 — [`etude-danse.md`](etude-danse.md), **rien d'acté**. Verdict : faisable, le lecteur de séquences fait déjà 80 % du travail ; ce qui manque = grille de beats précalculée (librosa : 3 chansons du corpus mesurées, 96-161 BPM, écart-type inter-beat 16-25 ms), écriture des figures **en temps musicaux** + compilateur vers le JSON existant (zéro changement embarqué), et **deux retards à mesurer** (démarrage du son — `playsound` dans un `Process`, aucun horodatage — et parcours des servos). ⚠️ Bras ASME annoncés **1 s/60° à 12 V** : le tempo se joue au cou, aux yeux et au visage, les bras marquent la mesure | **D0** outillage PC (`extract_beats.py`, `compile_dance.py`, tests à valeurs gravées, WAV) puis **D1** première danse en sim avec banc de calage automatique (`check-dance-timing.py`, vrai code) — les deux **sans le robot** | D2 (mesure du retard son, gigue, tension rail servo) ⟸ dégel du Pi 4 ; D4 déambulation ⟸ test scénique (1) ; **jamais de piste `wheels` dans une danse de déambulation** (au lâcher du manche, le mux basculerait sur l'anim) ; roues dansantes = chemin roues complet |
 | Pistes en veille | — | voir §Pistes en veille | — |
 
 ## 0. Conversation — protocole physique chat_node V2
@@ -1069,6 +1070,34 @@ Pi vision. Arbitrage aval par source différé (étude §5.3).
 **Reste** : vérif VISUELLE comportementale à la prochaine session robot —
 gaze ON pendant une séquence (la tête ne doit plus trembler), et le gate chat
 en conversation réelle (avec le chantier 0).
+
+## Danse en cadence (chanson + gestes à la con)
+
+**Ouvert le 01/10/2026** sur une question de David (« faire danser Didier en déambulation,
+chorégraphie pas forcément parfaite mais le tempo est crucial pour l'effet comique »).
+Étude complète (code, docs, web) : [`etude-danse.md`](etude-danse.md). **Rien d'acté** :
+les 5 questions du §6 attendent David.
+
+Ce que l'étude établit :
+- Le moteur existe (`Track` + `animations_node` + tick 20 Hz + arbitrage `animation_state`).
+  Une danse = une séquence JSON ordinaire **compilée sur PC** à partir de figures écrites
+  en mesures/temps et d'une grille de beats librosa. Aucun changement embarqué au lot 1.
+- Le calage tient sous ±40 ms **si le démarrage du son est répétable** — et ça, personne
+  ne l'a jamais mesuré (`SoundObject.play` = `default_timer()` avant le fork du
+  `Process`, puis `playsound`/GStreamer). C'est la mesure qui décide (lot D2, après dégel).
+- Les bras sont lents (ASME 380 kg·cm : 1 s/60° à 12 V, 0,5 s/60° à 24 V — tension du
+  rail à relever) : ~30° par temps à 120 BPM. Le rythme = cou + yeux + flash visage
+  (métronome visible) ; les bras tombent sur le temps fort. Anticipation calculée par le
+  compilateur pour que le servo ARRIVE sur le temps.
+- Sécurité : **pas de piste `wheels`** dans une danse de déambulation (prio anim 10 : au
+  lâcher du manche, le mux passerait l'anim → mouvement non commandé en public), amplitude
+  des bras plafonnée, mesure de courant servos avant un essai long, `time.monotonic()`
+  avant le réel.
+- Droits : SACEM par l'organisateur (relevé de programme), droits voisins non tranchés
+  pour la rue, pas de « synchro » hors audiovisuel — rien de bloquant techniquement.
+
+**Suite** : D0 + D1 (PC + sim, sans robot — l'un des rares chantiers qui avance pendant
+le gel) ; D2 mesures réelles au dégel ; D4 déambulation après le test scénique.
 
 ## Pistes en veille (pas urgentes, pas oubliées)
 
