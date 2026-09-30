@@ -31,15 +31,19 @@ parcourir que ~30° par temps. Le rythme se joue donc avec **le cou, les yeux et
 visage** (rapides), les bras marquant **les temps forts** (un par mesure) — ce qui, pour
 un robot lourdaud qui danse « à la con », est plutôt un atout comique qu'un défaut.
 
-Ce qui reste **soumis aux verrous existants** : toute piste **roues** dans une danse est
-du chemin roues (sim → protocole caméra → revue Opus), et la danse en déambulation
-doit rester **haut du corps seulement** tant que le test scénique au sol (chantier 1)
-n'est pas fait.
+Ce qui reste **soumis aux verrous existants** : le cas visé par David est **danser en
+suivant** (suivi de personne + odométrie, §7 bis). Le mux ne superpose pas deux
+sources : la cadence des roues doit être composée **dans** la chaîne de suivi, bornée,
+et elle hérite de tous les verrous du suivi au sol. Se développe en sim dès maintenant ;
+en réel, après le test scénique (1) et le protocole roues.
 
 ## 1. Le besoin, tel que formulé
 
-- **Situation** : déambulation en rue, David pilote à la télécommande. À un moment
-  Didier lance une chanson et « fait le con » en rythme tout en avançant.
+- **Situation** (précisée par David le 01/10 au soir) : déambulation en rue où **Didier
+  suit David tout seul** (suivi de personne aux roues + odométrie en service — ni l'un
+  ni l'autre n'est encore validé au sol). À un moment Didier lance une chanson et
+  « fait le con » en rythme **tout en continuant de suivre**, roues comprises. La
+  déambulation à la télécommande est le cas dégradé, pas le cas visé.
 - **Ce qui compte** : être **sur le temps**. Une chorégraphie approximative sur le
   tempo est drôle ; une belle chorégraphie à côté du tempo ne l'est pas. Ce constat est
   documenté en robotique (§4.4) : la synchronie seule fait lire « il danse », et le
@@ -327,13 +331,19 @@ chat se taisent, comme prévu. Le micro est déjà coupé quand du son sort
 
 ## 7. Sécurité et risques
 
-- **Roues + twist_mux en déambulation** : la piste `wheels` d'une danse est publiée
+- **Roues + twist_mux, cas télécommande** : la piste `wheels` d'une danse est publiée
   en prio 10. Tant que David tient le manche (prio 100) elle est écrasée ; **au moment
-  où il le lâche**, le mux bascule sur l'anim et le robot part de lui-même en plein
-  public. C'est un mouvement non commandé par l'humain, donc **interdit** : les danses
-  de déambulation n'ont **pas de piste `wheels`**, et le compilateur le vérifie (refus
-  de compiler une danse « déambulation » qui en contient une). Les danses avec roues
-  sont une famille à part, jouées à l'arrêt, avec le protocole roues complet.
+  où il le lâche** (timeout 0,5 s), le mux bascule sur l'anim et le robot part de
+  lui-même en plein public. Mouvement non commandé par l'humain, donc **interdit** :
+  une danse jouée pendant une conduite n'a **pas de piste `wheels`**, et le compilateur
+  le vérifie. Le même raisonnement vaut pour le suivi : prio follow 20 > anim 10, donc
+  une piste `wheels` de séquence ne passe **jamais** pendant le suivi — et passerait
+  au moment où le suivi se tait (cible perdue), c'est-à-dire au pire moment.
+  → **Une piste `wheels` de séquence ne sert qu'aux danses à l'arrêt** (§7 bis pour
+  le cas visé).
+- **Le cas visé — danser EN SUIVANT** : voir §7 bis. Le mux ne sait pas superposer :
+  le mouvement dansé des roues doit être **composé dans la chaîne de suivi**, pas
+  ajouté comme une source concurrente.
 - **Bras** : 37 N·m, boucle ouverte, aucune limite d'angle par servo, aucune mesure de
   courant (`etude-architecture-actionneurs.md`). Une danse répète des inversions
   pendant 2-3 min : chauffe et pointes de courant **inconnues** (aucune fiche ne les
@@ -352,6 +362,57 @@ chat se taisent, comme prévu. Le micro est déjà coupé quand du son sort
 - **Visage** : le flash par temps à 2-3 Hz reste loin du cas `chase` (20 rendus/s) qui
   avait révélé le bug du driver LED (13/07) ; le sleep de fin de trame est rétabli.
   À garder à l'œil quand même.
+
+## 7 bis. Le cas visé : danser en suivant David (suivi de personne + odométrie)
+
+Le scénario réel de David : Didier **le suit** aux roues (`person_follower`, prio 20,
+plafonds `max_lin` 0,25 m/s / `max_ang` 0,6 rad/s, durs 0,5 / 1,0), l'odométrie
+fonctionne, et pendant la chanson le robot « chaloupe » en cadence sans cesser de
+suivre.
+
+**Pourquoi le mux ne peut pas le faire.** `twist_mux` choisit UNE source, il n'en
+additionne pas deux. Pendant le suivi, une piste `wheels` de séquence (prio 10) est
+ignorée ; elle ne ressortirait qu'à l'instant où le suivi se tait (cible perdue,
+occlusion) — précisément quand on veut que le robot s'arrête. Donc : **pas de
+deuxième source**. La cadence entre dans le suivi lui-même.
+
+**Proposition : un « groove » composé dans `follow_control`.**
+- `animations_node` publie, quand une danse joue, une **horloge de beats** (topic
+  `beat` : index, temps fort oui/non, à l'instant compilé avec la même anticipation
+  que les servos). C'est une piste de plus dans la séquence compilée, rien d'autre.
+- `follow_control` (logique pure, déjà testée) accepte une **modulation bornée** de sa
+  sortie, pilotée par ces beats et par un motif choisi dans la danse :
+  - **angulaire** : ± `a` rad/s alternés par temps ou par mesure (zigzag, « déhanché »),
+    `a` petit et **ajouté** à la correction de cap, le tout borné par `max_ang` ;
+  - **linéaire** : un gain **≤ 1** appliqué à la vitesse de suivi (pas chaloupé, pause
+    sur le temps fort) — **jamais** un gain > 1 : la modulation ne fait pas avancer
+    plus vite que le suivi ne l'aurait décidé ;
+  - **freeze** sur le temps fort : vitesse 0 pendant un temps puis reprise. C'est le
+    geste roues le plus sûr (c'est un freinage) **et** le plus comique (la chute).
+- **Invariants gravés en tests** (règle du 14/09) : sortie modulée ≤ sortie de suivi en
+  norme linéaire ; si le suivi dit « stop » (cible perdue, S0 vraisemblance, deadman),
+  la modulation vaut zéro ; `ABS_MAX_*` intouchés ; aucun chemin où le groove publie
+  sans le suivi.
+
+**Ce que l'odométrie apporte — et ce qu'elle ne peut pas.**
+- Elle **mesure le retard des roues** (consigne → première impulsion) : c'est la
+  constante d'anticipation roues, aujourd'hui inconnue et dépendante de la tension
+  batterie, du plancher `MIN_PWM` et de l'inertie des 50 kg. Sans elle, un déhanché
+  « sur le temps » est un pari ; avec elle, c'est une mesure rejouable.
+- Elle **vérifie l'amplitude** d'un balancement par mesure (a-t-on bien fait ± 5 cm ?).
+- **Mais sa résolution est celle d'un compteur de tours** : 10 cibles par disque, soit
+  ~78 mm par impulsion pour une roue Ø 250 (hypothèse `ROUE_D`), 39 mm sur 2 fronts,
+  ~20 mm si les 4 fronts sont exploités. À 0,25 m/s cela fait **80 à 300 ms entre deux
+  impulsions** : on peut boucler sur la **mesure** (2 s), pas sur le **temps** (500 ms).
+  Les roues dansent donc **par mesure, en boucle ouverte calibrée**, l'odométrie
+  servant à calibrer et à contrôler après coup — pas à asservir chaque temps.
+
+**Verrous hérités, sans exception.** Ce scénario est du suivi au sol en public : il
+hérite de tous les verrous de `etude-suivi-personne.md` (occlusion partielle qui fait
+AVANCER, perception d'obstacle absente, `direction_sign` jamais tranché) et du test
+scénique (1). Un zigzag élargit la bande balayée dans la foule : à limiter en amplitude
+et à couper dès que la cible est proche. **En sim, tout se développe dès maintenant**
+(le suivi et la perception scriptée y existent) — c'est le lot D4.
 
 ## 8. Pistes en veille (ne pas ouvrir maintenant)
 
@@ -375,8 +436,9 @@ chat se taisent, comme prévu. Le micro est déjà coupé quand du son sort
 | **D1 — première danse en sim** | une danse sur `tactique-du-gendarme` (129 BPM, écart-type 25 ms) : hochement + yeux + flash, bras sur le 1 ; `check-dance-timing.py` ; regard de David sur Gazebo avec le WAV joué sur le PC | sim | D0 ; robot non requis |
 | **D2 — mesures réelles** | (a) retard et gigue du démarrage son : 10 lancements, caméra + micro, flash `faces` à t=0 ; (b) `T_servo` cou, yeux, bras pour 3 amplitudes ; (c) tension du rail servo ; (d) `time.monotonic()` dans la chaîne ; profil de retards **mesuré**, daté | robot, roues hors sol, robot immobile | **dégel du Pi 4** ; ne touche pas au chemin roues |
 | **D3 — danse réelle haut du corps** | rejouer D1 sur le robot, roues débranchées ; mesure de courant servos pendant 3 min (INA219) ; ajustement amplitude bras | robot | D2 ; point ④ actionneurs conseillé avant un essai long |
-| **D4 — déambulation** | danse haut du corps pendant que David roule à la télécommande ; règle « pas de `wheels` » vérifiée par le compilateur | rue / scène | **test scénique au sol (chantier 1)** |
-| **D5 — roues dans la danse** (optionnel) | famille « à l'arrêt » avec quarts de tour sur le refrain | sim → caméra → Opus | chemin roues complet |
+| **D4 — danser en suivant** (le cas visé, §7 bis) | topic `beat` publié par la danse ; modulation bornée dans `follow_control` (zigzag, pas chaloupé, freeze sur le temps fort) avec invariants gravés ; validation en sim avec le suivi et la perception scriptée ; puis retard roues mesuré à l'odométrie | sim maintenant ; réel après | chemin roues (sim → caméra → Opus) **et** verrous du suivi au sol (test scénique 1, occlusion, obstacles, `direction_sign`) |
+| **D4 bis — déambulation télécommandée** (cas dégradé) | danse haut du corps pendant que David conduit ; « pas de `wheels` » vérifié par le compilateur | rue / scène | test scénique (1) |
+| **D5 — roues à l'arrêt** (optionnel) | piste `wheels` de séquence, quarts de tour sur le refrain, robot immobile et personne ne conduit | sim → caméra → Opus | chemin roues complet |
 
 D0 et D1 se font **maintenant, sans le robot**. C'est, avec la télécommande USB, l'un
 des rares chantiers qui avance pendant le gel.
