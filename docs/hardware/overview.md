@@ -1052,8 +1052,9 @@ setup is documented »), dont l'absence avait déjà coûté un diagnostic le 20
 
 **Règle : une seule batterie, DEUX convertisseurs DC-DC indépendants.**
 
-**Le matériel est déjà commandé** : David a commandé **2× Mean Well SD-50B-5** le
-2026-09-12 (entrée 19-36 V → **5 V / 10 A / 50 W** chacun, livraison annoncée 21-26/09).
+**Matériel : 2× Mean Well SD-50B-5** (entrée 19-36 V → **5 V / 10 A / 50 W** chacun).
+⛔ La commande du 2026-09-12 a livré des **SD-50C-24** (36-72 V → 24 V, inutilisables ici,
+constaté le 2026-10-04) : **à recommander**, voir `alim-5v-pi.md` §2.
 Un par domaine — c'est précisément ce que cette topologie demande. Référence, cotes du
 boîtier, thermique, support imprimé et pièges de câblage (⚠️ **négociation USB-C PD**,
 viser **5,1 V mesurés au Pi**) : **`alim-5v-pi.md`**, qui traite le côté Pi 5 en détail.

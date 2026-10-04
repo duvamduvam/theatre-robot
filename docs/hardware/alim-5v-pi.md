@@ -1,6 +1,8 @@
 # Alimentation 5 V dédiée du Raspberry Pi 5 (Mean Well SD-50B-5)
 
-*Ouvert le 2026-09-12. Deux SD-50B-5 commandés par David (livraison annoncée 21-26/09).*
+*Ouvert le 2026-09-12. ⛔ **Les deux convertisseurs reçus sont des `SD-50C-24`, PAS des
+SD-50B-5** (constaté boîtiers ouverts le 2026-10-04, confirmé par la commande AliExpress
+n° 3076251302516752 : variante « SD-50C-24, 50 W » ×2). Voir §2.*
 
 ## 1. Pourquoi ce chantier n'est pas de la mécanique
 
@@ -21,10 +23,20 @@ liaison secteur par construction**. Ce support imprimé est donc le geste qui d�
 
 ## 2. La référence — vérifiée, pas supposée
 
-David a commandé **SD-50B-5**. La capture AliExpress transmise le 12/09 affichait
-« SD-50C-24 » dans le sélecteur : c'était la variante par défaut de la fiche produit, David a
-confirmé que la commande porte bien le B-5. L'écart méritait d'être levé, les deux axes de la
-référence comptant :
+> ⛔ **ERREUR DE COMMANDE CONSTATÉE LE 2026-10-04.** Le 12/09, la capture AliExpress
+> affichait « SD-50C-24 » dans le sélecteur ; on l'a prise pour la variante par défaut de la
+> fiche et la commande a été déclarée « bien en B-5 » **sans relire la ligne de commande**.
+> C'était faux : les deux pièces reçues sont des **SD-50C-24** (36-72 V → 24 V), et
+> l'historique de commande porte bien « SD-50C-24, 50 W » ×2. Sur la batterie 24 V elles ne
+> démarrent pas (sous la plage d'entrée) et, alimentées autrement, elles sortiraient **24 V
+> sur un Pi**. **Ne JAMAIS les câbler au robot.** À retourner/échanger (retour gratuit
+> affiché) et recommander en **SD-50B-5** ×2.
+>
+> **Leçon** : une référence se vérifie sur la **ligne de commande validée** (puis sur
+> l'étiquette à réception), jamais sur la parole « c'est bon » — la capture montrait déjà
+> l'erreur. Contrôle à réception : lire `SD-50B-5` sur l'étiquette AVANT d'ouvrir le bornier.
+
+David voulait **SD-50B-5** ; les deux axes de la référence comptent :
 
 | Suffixe | Plage d'entrée DC | Pertinent ici ? |
 |---|---|---|
