@@ -450,6 +450,8 @@ que la table ci-dessus (qui donne des ordres de grandeur, pas notre exemplaire) 
 
 📄 **Fiche d'atelier imprimable** (câblage, montage à cales, relevé, verdict) :
 `docs/pictures/odometrie/2026-10-05-fiche-mesure-portee.svg`.
+Câblage sur breadboard (capteur seul, option LED externe + 2 kΩ qui préfigure une voie de la
+carte) : `docs/pictures/odometrie/2026-10-05-breadboard-mesure-portee.svg`.
 
 Refaire la même mesure sur une vis zinguée avant de rééquiper : c'est le comparatif qui
 gravera enfin un chiffre mesuré à la place des ~2,8 mm de catalogue.

@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Plan breadboard de la mesure ① odométrie (compagnon de 2026-10-05-fiche-mesure-portee.svg). Monochrome pour l'imprimante thermique : trait plein = +12 V, tirets = 0 V, pointillés = NOIR. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210" font-family="DejaVu Sans, Arial, sans-serif">
+<rect width="297" height="210" fill="#fff"/>
+<text x="12" y="16" font-size="5.4" font-weight="bold">Odométrie ① — câblage sur breadboard (capteur seul)</text>
+<text x="12" y="23" font-size="3.4">Mesure de portée du LJ12A3. Tout passe par les rails du BAS. Aucune carte, aucun Pi.</text>
+<line x1="12" y1="27" x2="285" y2="27" stroke="#000" stroke-width="0.5"/>
+<rect x="26" y="42" width="159.0" height="92.0" rx="2" fill="none" stroke="#000" stroke-width="0.6"/>
+<line x1="31" y1="46" x2="182.0" y2="46" stroke="#000" stroke-width="0.35"/>
+<text x="28.5" y="49.2" font-size="3.4" font-weight="bold" text-anchor="middle">+</text>
+<line x1="31" y1="55.0" x2="182.0" y2="55.0" stroke="#000" stroke-width="0.35" stroke-dasharray="2 1.2"/>
+<text x="28.5" y="54.2" font-size="3.4" font-weight="bold" text-anchor="middle">−</text>
+<line x1="31" y1="121.0" x2="182.0" y2="121.0" stroke="#000" stroke-width="0.35"/>
+<text x="28.5" y="124.2" font-size="3.4" font-weight="bold" text-anchor="middle">+</text>
+<line x1="31" y1="130.0" x2="182.0" y2="130.0" stroke="#000" stroke-width="0.35" stroke-dasharray="2 1.2"/>
+<text x="28.5" y="129.2" font-size="3.4" font-weight="bold" text-anchor="middle">−</text>
+<line x1="31" y1="88.0" x2="182.0" y2="88.0" stroke="#000" stroke-width="0.3" stroke-dasharray="1 1"/>
+<rect x="33.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="47.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="52.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="62.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="67.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="72.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="77.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="82.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="92.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="97.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="102.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="107.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="58.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="88.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="118.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="148.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="178.4" y="112.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="122.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="33.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="38.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="43.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="48.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="53.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="63.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="68.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="73.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="78.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="83.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="93.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="98.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="103.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="108.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="113.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="123.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="128.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="133.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="138.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="143.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="153.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="158.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="163.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="168.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<rect x="173.4" y="127.4" width="1.2" height="1.2" fill="none" stroke="#000" stroke-width="0.22"/>
+<text x="28.5" y="64.0" font-size="2.6" text-anchor="middle">a</text>
+<text x="28.5" y="69.0" font-size="2.6" text-anchor="middle">b</text>
+<text x="28.5" y="74.0" font-size="2.6" text-anchor="middle">c</text>
+<text x="28.5" y="79.0" font-size="2.6" text-anchor="middle">d</text>
+<text x="28.5" y="84.0" font-size="2.6" text-anchor="middle">e</text>
+<text x="28.5" y="94.0" font-size="2.6" text-anchor="middle">f</text>
+<text x="28.5" y="99.0" font-size="2.6" text-anchor="middle">g</text>
+<text x="28.5" y="104.0" font-size="2.6" text-anchor="middle">h</text>
+<text x="28.5" y="109.0" font-size="2.6" text-anchor="middle">i</text>
+<text x="28.5" y="114.0" font-size="2.6" text-anchor="middle">j</text>
+<text x="34.0" y="60.4" font-size="2.6" text-anchor="middle">1</text>
+<text x="54.0" y="60.4" font-size="2.6" text-anchor="middle">5</text>
+<text x="79.0" y="60.4" font-size="2.6" text-anchor="middle">10</text>
+<text x="104.0" y="60.4" font-size="2.6" text-anchor="middle">15</text>
+<text x="129.0" y="60.4" font-size="2.6" text-anchor="middle">20</text>
+<text x="154.0" y="60.4" font-size="2.6" text-anchor="middle">25</text>
+<text x="179.0" y="60.4" font-size="2.6" text-anchor="middle">30</text>
+<rect x="14" y="150" width="44" height="22" fill="none" stroke="#000" stroke-width="0.6"/>
+<text x="36" y="158" font-size="3.6" font-weight="bold" text-anchor="middle">Alim 12 V</text>
+<text x="36" y="163.5" font-size="2.9" text-anchor="middle">labo limitée ~100 mA</text>
+<text x="36" y="168" font-size="2.9" text-anchor="middle">(ou D-30A, sortie 12 V)</text>
+<path d="M44.0 150 V123.0" stroke="#000" stroke-width="0.9" fill="none"/>
+<circle cx="44.0" cy="123.0" r="1.2" fill="#000"/>
+<text x="42.5" y="148" font-size="3" text-anchor="end">+12 V</text>
+<path d="M59.0 150 V128.0" stroke="#000" stroke-width="0.9" fill="none" stroke-dasharray="2.2 1"/>
+<circle cx="59.0" cy="128.0" r="1.2" fill="#000"/>
+<text x="60.5" y="148" font-size="3">0 V</text>
+<line x1="74.0" y1="123.0" x2="74.0" y2="113.0" stroke="#000" stroke-width="0.9" fill="none"/>
+<circle cx="74.0" cy="123.0" r="1.2" fill="#000"/>
+<circle cx="74.0" cy="113.0" r="1.2" fill="#000"/>
+<line x1="74.0" y1="103.0" x2="94.0" y2="103.0" stroke="#000" stroke-width="0.5"/>
+<rect x="77.5" y="101.2" width="13.0" height="3.6" fill="#fff" stroke="#000" stroke-width="0.6"/>
+<text x="84.0" y="104.0" font-size="2.4" text-anchor="middle" font-weight="bold">2 kΩ</text>
+<circle cx="74.0" cy="103.0" r="1.2" fill="#000"/>
+<circle cx="94.0" cy="103.0" r="1.2" fill="#000"/>
+<line x1="94.0" y1="98.0" x2="109.0" y2="98.0" stroke="#000" stroke-width="0.5"/>
+<path d="M99.5 96.0 L99.5 100.0 L103.5 98.0 Z" fill="#000"/>
+<line x1="103.5" y1="96.0" x2="103.5" y2="100.0" stroke="#000" stroke-width="0.6"/>
+<path d="M101.5 95.4 l1.4 -2.3 M103.3 95.4 l1.4 -2.3" stroke="#000" stroke-width="0.35"/>
+<circle cx="94.0" cy="98.0" r="1.2" fill="#000"/>
+<circle cx="109.0" cy="98.0" r="1.2" fill="#000"/>
+<text x="93.0" y="95.4" font-size="2.4" text-anchor="end">A (longue)</text>
+<text x="110.6" y="95.4" font-size="2.4">K</text>
+<rect x="66.5" y="90.0" width="50.0" height="26.0" fill="none" stroke="#000" stroke-width="0.4" stroke-dasharray="1.5 1"/>
+<rect x="121" y="95.2" width="43" height="4.8" fill="#fff"/><text x="122" y="98.8" font-size="2.9" font-weight="bold">← OPTION — LED externe</text>
+<rect x="215" y="153" width="50" height="14" fill="none" stroke="#000" stroke-width="0.6"/>
+<line x1="265" y1="153" x2="265" y2="167" stroke="#000" stroke-width="1.6"/>
+<text x="240" y="161.2" font-size="3.2" text-anchor="middle">LJ12A3-4-Z/BX</text>
+<text x="267" y="171" font-size="2.8">face</text>
+<text x="240" y="151" font-size="2.8" text-anchor="middle">LED témoin côté câble</text>
+<line x1="215" y1="160" x2="205" y2="160" stroke="#000" stroke-width="2.2"/>
+<path d="M205 157 H164.0 V123.0" stroke="#000" stroke-width="0.9" fill="none"/>
+<circle cx="164.0" cy="123.0" r="1.2" fill="#000"/>
+<text x="162.5" y="152" font-size="3" font-weight="bold" text-anchor="end">BRUN → rail +</text>
+<path d="M205 163 H174.0 V128.0" stroke="#000" stroke-width="0.9" fill="none" stroke-dasharray="2.2 1"/>
+<circle cx="174.0" cy="128.0" r="1.2" fill="#000"/>
+<text x="175.5" y="167.5" font-size="3" font-weight="bold">BLEU → rail −</text>
+<path d="M205 160 H109.0 V113.0" stroke="#000" stroke-width="0.9" fill="none" stroke-dasharray="0.6 0.8"/>
+<circle cx="109.0" cy="113.0" r="1.2" fill="#000"/>
+<text x="110.5" y="158.8" font-size="3" font-weight="bold">NOIR → j16 (enjambe les rails)</text>
+<text x="14" y="182.0" font-size="3">Trait plein = +12 V · tirets = 0 V · pointillés = NOIR (sortie du capteur).</text>
+<text x="14" y="186.2" font-size="3">Fils du capteur : multibrin, trop souple pour le trou → sertir une fiche Dupont mâle, ou étamer franchement.</text>
+<text x="14" y="190.4" font-size="3">SANS l'option : piquer le NOIR seul dans une colonne vide. La LED du capteur suffit comme témoin.</text>
+<text x="14" y="194.6" font-size="3">AVEC l'option : la LED externe s'allume quand une tête est vue (+12 V → 2 kΩ → LED → NOIR, que le capteur tire à 0 V).</text>
+<text x="14" y="198.8" font-size="3">   C'est la boucle d'une voie de la future carte, sans l'opto : ~4,5 mA. Elle valide au passage la 2 kΩ.</text>
+<text x="14" y="203.0" font-size="3">⚠ JAMAIS le NOIR directement sur le rail + : court-circuit de la sortie du capteur à la première détection.</text>
+<text x="14" y="207.2" font-size="3">⚠ Certaines breadboards ont des rails coupés au milieu (colonne 15) : vérifier au multimètre avant de mettre le 12 V.</text>
+</svg>
