@@ -480,7 +480,18 @@ jeu du roulement, au lieu des ~1,5 mm que visait le choix « 60 % de Sn ». **L'
 - S'il est plus grand → le M12 n'a pas la portée qu'il faut : envisager un **M18**
   (`LJ18A3-8-Z/BX`, 8 mm nominaux, même famille NPN NO) — le berceau v5 n'est que
   **dessiné, pas imprimé** : c'est le moment le moins cher pour changer de diamètre.
-  ⚠️ Prix et dispo à lire à la source, pas de mémoire.
+  Référence relevée le 2026-10-06 : **`LJ18A3-8-Z/BX`** — NPN NO, **6-36 V** (12 V OK, même
+  brochage brun/bleu/noir, même carte optos), M18×1×68, 500 Hz, câble 1,2 m.
+  Opencircuit (NL, UE donc pas de douane) : 2,60 € TTC en promo (3,15 € normal), en stock —
+  <https://opencircuit.shop/product/lj18a3-8-z-bx-proximity-sensor-n-o-npn-8mm>.
+  ⚠️ Botland vend le **`Z/BY` = PNP** (le piège NPN/PNP habituel) ; son `Z/BX` est arrêté.
+  ⚠️ **Deux réserves à lever SUR BANC avec 1 capteur avant d'en acheter 4+2** :
+  (1) les 8 mm sont mesurés sur une plaque d'acier de 18×18 mm — une tête M8 (13 mm sur
+  plats) est plus petite que la cible normalisée, la portée réelle sera moindre ;
+  (2) **le champ d'un M18 est plus large que l'intervalle entre deux têtes** (pas de
+  ~27,6 mm à R = 44 → ~14,6 mm de vide entre têtes de 13 mm) : le capteur risque de ne
+  jamais RELÂCHER entre deux cibles. Test : faire défiler le disque garni devant lui et
+  vérifier que la LED s'éteint franchement entre chaque tête.
 - Avant de conclure : vérifier que la vis acier mesurée avait une **tête 6 pans pleine** ;
   si c'était une tête creuse (BTR), la cible définitive portera un peu plus loin.
 
