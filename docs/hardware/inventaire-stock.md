@@ -84,10 +84,10 @@ faire en atelier*, ce qui n'est pas la même chose.
 | 4 × **LED 3 mm** | Plusieurs centaines de LED, mais identifiées **5 mm** (`t0134`). Un sachet paraît plus petit, non confirmé | À vérifier — sinon acheter |
 | 4 × Support **tulipe DIP-4** | Supports DIP tulipe vus (`t0004`) ; **David en a en DIP-10** (déclaré le 2026-10-05) | **RIEN À ACHETER** — un support tulipe se coupe entre deux rangées de picots (cutter/scie) : 1 DIP-10 donne 2 × DIP-4, donc 2 supports suffisent pour les 4 optos |
 | 2 × Barrette **tulipe 1×9** sécable | Non identifiée distinctement | À acheter, sauf découverte |
-| 8 × R **1,5 kΩ** et **10 kΩ** 1/4 W | ⚠️ **Le bac EXISTE** (filmé le 03/09) : ~20 sachets, **plusieurs centaines** de résistances 1/4 W. Mais **7 valeurs lisibles sur 20 sachets** (47R, 5K, 100K, 220K, 470K, 330?, 220R?) — ni 1,5k ni 10k parmi elles | **NE PAS ACHETER SANS REGARDER** — le passage de « aucun bac connu » à « plusieurs centaines de résistances » change tout. Fouiller le bac : 2 minutes |
-| 4 × C **10 nF** céramique | Le kit BOJACK est un kit d'**électrolytiques** : il ne couvre pas le 10 nF | À acheter |
+| 8 × R **1,5 kΩ** et **10 kΩ** 1/4 W | Bac trié et étiqueté le 2026-10-04 : **10 kΩ en stock, pas de 1,5 kΩ** ; 1 k, 2 k et 2,2 k présents | **RIEN À ACHETER** — 1,5 k remplacée par **2 kΩ** (3,7 mA dans la boucle au lieu de 4,9 ; sortie demandée 0,33 mA, marge ×4 même PC817A vieilli) |
+| 4 × C **10 nF** céramique | Le kit BOJACK est un kit d'**électrolytiques** : il ne couvre pas le 10 nF | **COMMANDÉ le 2026-10-05** (AliExpress) : kit MLCC 50 V GVMRZ, 15 valeurs 10 pF-100 nF ×30 — couvre aussi les ~13 × 100 nF des cartes PCB (pas de 1 µF dedans) |
 | 1 × **1N5819** (Schottky DO-41) | ✅ **Bande étiquetée `1N5819`**, ~20-25 pièces (`v2:t0309`, `v2:t0311`) | **RIEN À ACHETER** — étiquette de bande lue, c'est exactement la référence demandée |
-| 1 × **P6KE15A** / SA15A (TVS) | Rien d'identifié | À acheter |
+| 1 × **P6KE15A** / SA15A (TVS) | Rien d'identifié en stock (diodes DO-41 non lues : chercher un marquage `P6KE15A`) | **COMMANDÉ le 2026-10-05** (AliExpress, lot de 20). Un avis signale des 15A/16A mélangées : les deux conviennent ; refuser seulement un « CA » (bidirectionnelle) |
 | 1 × **PTC 500 mA** | Rien d'identifié | À acheter |
 | 2 × **RP2040-Zero** (Waveshare) | ✅ **David en a** (déclaré le 2026-10-05 — non vus en vidéo). Le stock filmé contient aussi `Seeed XIAO-RP2040`, `Waveshare RP2040-One` et ~5-10 cartes format Pico, qui ne sont PAS des remplacements directs | **RIEN À ACHETER** — le plan de plaque reste celui du Zero |
 
