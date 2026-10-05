@@ -82,14 +82,14 @@ faire en atelier*, ce qui n'est pas la même chose.
 | 1 × **JST-XH 2 pts** + boîtier + contacts | ✅ Boîtiers **2 points : ~40-55** + embases mâles 2 broches (~45) | idem — voir §1.2 |
 | 1 × C **100 µF / 25 V** radial | Kit BOJACK : la valeur `100 µF 25 V 5×11` figure au tableau, 20 pcs (`t0625`) | **Probablement en stock** |
 | 4 × **LED 3 mm** | Plusieurs centaines de LED, mais identifiées **5 mm** (`t0134`). Un sachet paraît plus petit, non confirmé | À vérifier — sinon acheter |
-| 4 × Support **tulipe DIP-4** | Supports DIP tulipe vus (`t0004`) mais **le nombre de points n'est pas lisible** | À vérifier — le DIP-4 est rare, ne pas parier dessus |
+| 4 × Support **tulipe DIP-4** | Supports DIP tulipe vus (`t0004`) ; **David en a en DIP-10** (déclaré le 2026-10-05) | **RIEN À ACHETER** — un support tulipe se coupe entre deux rangées de picots (cutter/scie) : 1 DIP-10 donne 2 × DIP-4, donc 2 supports suffisent pour les 4 optos |
 | 2 × Barrette **tulipe 1×9** sécable | Non identifiée distinctement | À acheter, sauf découverte |
 | 8 × R **1,5 kΩ** et **10 kΩ** 1/4 W | ⚠️ **Le bac EXISTE** (filmé le 03/09) : ~20 sachets, **plusieurs centaines** de résistances 1/4 W. Mais **7 valeurs lisibles sur 20 sachets** (47R, 5K, 100K, 220K, 470K, 330?, 220R?) — ni 1,5k ni 10k parmi elles | **NE PAS ACHETER SANS REGARDER** — le passage de « aucun bac connu » à « plusieurs centaines de résistances » change tout. Fouiller le bac : 2 minutes |
 | 4 × C **10 nF** céramique | Le kit BOJACK est un kit d'**électrolytiques** : il ne couvre pas le 10 nF | À acheter |
 | 1 × **1N5819** (Schottky DO-41) | ✅ **Bande étiquetée `1N5819`**, ~20-25 pièces (`v2:t0309`, `v2:t0311`) | **RIEN À ACHETER** — étiquette de bande lue, c'est exactement la référence demandée |
 | 1 × **P6KE15A** / SA15A (TVS) | Rien d'identifié | À acheter |
 | 1 × **PTC 500 mA** | Rien d'identifié | À acheter |
-| 2 × **RP2040-Zero** (Waveshare) | ⚠️ **Pas de Zero, mais beaucoup de RP2040** : `Seeed XIAO-RP2040`, `Waveshare RP2040-One` (le grand frère du Zero, même famille castellée), et **~5-10 cartes format Pico** (`c0301`-`c0306`). **Re-confirmé le 03/09** : le tiroir des « petites cartes bleues », jusque-là non identifié, contient bien 5 cartes MCU dont `RP2040-One` lue au zoom (`v2:t0249`, `v2:t0250`) — ce ne sont pas des modules d'alimentation | **À examiner avant d'acheter** — voir ci-dessous |
+| 2 × **RP2040-Zero** (Waveshare) | ✅ **David en a** (déclaré le 2026-10-05 — non vus en vidéo). Le stock filmé contient aussi `Seeed XIAO-RP2040`, `Waveshare RP2040-One` et ~5-10 cartes format Pico, qui ne sont PAS des remplacements directs | **RIEN À ACHETER** — le plan de plaque reste celui du Zero |
 
 **⚠️ Le point RP2040 mérite un examen, pas une conclusion.** Le plan de plaque à bandes de
 l'odométrie (`26 × 29 trous`, commit `99db4d8`) a été dessiné **pour le RP2040-Zero
