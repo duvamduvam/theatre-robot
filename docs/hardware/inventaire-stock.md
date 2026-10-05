@@ -88,7 +88,7 @@ faire en atelier*, ce qui n'est pas la même chose.
 | 4 × C **10 nF** céramique | Le kit BOJACK est un kit d'**électrolytiques** : il ne couvre pas le 10 nF | **COMMANDÉ le 2026-10-05** (AliExpress) : kit MLCC 50 V GVMRZ, 15 valeurs 10 pF-100 nF ×30 — couvre aussi les ~13 × 100 nF des cartes PCB (pas de 1 µF dedans) |
 | 1 × **1N5819** (Schottky DO-41) | ✅ **Bande étiquetée `1N5819`**, ~20-25 pièces (`v2:t0309`, `v2:t0311`) | **RIEN À ACHETER** — étiquette de bande lue, c'est exactement la référence demandée |
 | 1 × **P6KE15A** / SA15A (TVS) | Rien d'identifié en stock (diodes DO-41 non lues : chercher un marquage `P6KE15A`) | **COMMANDÉ le 2026-10-05** (AliExpress, lot de 20). Un avis signale des 15A/16A mélangées : les deux conviennent ; refuser seulement un « CA » (bidirectionnelle) |
-| 1 × **PTC 500 mA** | Rien d'identifié | À acheter |
+| 1 × **PTC 500 mA** | Rien d'identifié | **COMMANDÉ le 2026-10-05** (AliExpress, DQLZV) : **RXEF050** radiale 72 V 0,5 A, pas 5 mm, lot de 20 — ⚠️ les résultats « PTC 500 mA » sont presque tous CMS, chercher `RXEF050` |
 | 2 × **RP2040-Zero** (Waveshare) | ✅ **David en a** (déclaré le 2026-10-05 — non vus en vidéo). Le stock filmé contient aussi `Seeed XIAO-RP2040`, `Waveshare RP2040-One` et ~5-10 cartes format Pico, qui ne sont PAS des remplacements directs | **RIEN À ACHETER** — le plan de plaque reste celui du Zero |
 
 **⚠️ Le point RP2040 mérite un examen, pas une conclusion.** Le plan de plaque à bandes de

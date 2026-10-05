@@ -1234,13 +1234,12 @@ distributeur UE** (port unique, zéro douane — cf. la règle ci-dessous) :
 | 1 | **PTC 500 mA** (RXEF050 / MF-R050) | |
 | — | Gaine thermo | épissures des capteurs à la bride |
 
-> 🛒 **État au 2026-10-05** (liste confrontée au stock avec David) : **tout est là sauf la
-> PTC 500 mA** (F1, non commandée — la carte se soude sans elle pour le banc d'établi, à
-> poser avant le robot). RP2040-Zero : en stock. Supports DIP-4 : tulipes DIP-10 coupées.
+> 🛒 **État au 2026-10-05** (liste confrontée au stock avec David) : **plus rien à
+> acheter** — la PTC (F1) est commandée aussi (`RXEF050` radiale). RP2040-Zero : en stock. Supports DIP-4 : tulipes DIP-10 coupées.
 > **R série = 2 kΩ au lieu de 1,5 kΩ** (pas de 1,5 k au stock) : 3,7 mA dans la boucle,
 > sortie demandée 0,33 mA → marge ×4 même PC817A vieilli de −50 %. Commandés sur
-> AliExpress : kit MLCC 50 V (10 nF) et TVS P6KE15A — deux catégories, donc ~7 € de droits
-> acceptés plutôt que d'ouvrir une commande UE pour deux pièces. ⚠️ Le schéma KiCad et
+> AliExpress : kit MLCC 50 V (10 nF), TVS P6KE15A et PTC — trois catégories, ~11 € de droits
+> acceptés plutôt que d'ouvrir une commande UE pour trois pièces. ⚠️ Le schéma KiCad et
 > `DESIGN.md` (dépôt pcb) disent encore 1,5 kΩ.
 
 ⚠️ **Ne PAS commander ça sur AliExpress** : une dizaine de catégories tarifaires ×
