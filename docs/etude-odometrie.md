@@ -456,7 +456,38 @@ carte) : `docs/pictures/odometrie/2026-10-05-breadboard-mesure-portee.svg`.
 Refaire la même mesure sur une vis zinguée avant de rééquiper : c'est le comparatif qui
 gravera enfin un chiffre mesuré à la place des ~2,8 mm de catalogue.
 
+#### ✅ MESURÉ le 2026-10-05 par David (fiche + breadboard ci-dessus)
+
+| Cible | Portée relevée |
+|---|---|
+| Tête **A2-70** montée (6 pans creux) — les cibles actuelles | **~1 mm** |
+| Vis **acier** | **un peu plus de 3 mm** |
+
+**Verdict : < 2,5 mm → remplacement OBLIGATOIRE** des 20 cibles par de l'acier zingué,
+tête hexagonale **pleine**. La table de catalogue (2,8 mm sur inox) était optimiste d'un
+facteur 3 : elle vaut pour une plaque pleine, pas pour une couronne percée d'un 6 pans.
+
+⚠️ **Mais l'acier ne règle pas tout : 3 mm, c'est 75 % des 4 mm nominaux**, déjà sous la
+portée garantie de la norme (0,81 × Sn ≈ 3,2 mm) — banal pour ce capteur bon marché. Avec
+l'entrefer prévu de 2,5 mm, il ne reste que **0,5 mm** de marge pour le voile du disque et le
+jeu du roulement, au lieu des ~1,5 mm que visait le choix « 60 % de Sn ». **L'entrefer de
+2,5 mm est donc à revoir** (section suivante) — décision suspendue à une mesure :
+
+- **Faux-rond axial du disque à mesurer** (roue en l'air, on tourne à la main, cale ou
+  comparateur contre les têtes — c'était déjà la vigilance du 19/08).
+- Si le faux-rond est **≤ ~0,5 mm** → entrefer **~1,5 mm** avec cibles acier : la bascule
+  reste à 1,5 mm de part et d'autre (1,0 à 2,0 mm sur 3). Rien d'autre ne change.
+- S'il est plus grand → le M12 n'a pas la portée qu'il faut : envisager un **M18**
+  (`LJ18A3-8-Z/BX`, 8 mm nominaux, même famille NPN NO) — le berceau v5 n'est que
+  **dessiné, pas imprimé** : c'est le moment le moins cher pour changer de diamètre.
+  ⚠️ Prix et dispo à lire à la source, pas de mémoire.
+- Avant de conclure : vérifier que la vis acier mesurée avait une **tête 6 pans pleine** ;
+  si c'était une tête creuse (BTR), la cible définitive portera un peu plus loin.
+
 ### L'entrefer : 2,5 mm, mesuré depuis l'ACIER
+
+> ⚠️ **REMIS EN CAUSE le 2026-10-05** : la portée mesurée sur acier n'est que ~3 mm, pas 4
+> (voir la mesure juste au-dessus). Cible probable ~1,5 mm, suspendue au faux-rond du disque.
 
 Pas depuis la surface du disque : depuis la **tête de vis**. Le capteur ne voit que le métal (le
 PETG lui est transparent), mais le plastique occupe quand même la place — les têtes font saillie
