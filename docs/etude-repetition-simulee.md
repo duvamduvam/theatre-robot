@@ -187,12 +187,12 @@ qui croise David pour provoquer un saut de cible), pas un David.
 se pilote PAS à la manette** : depuis la décision du 07/10 (§4.5), les mains de
 David tiennent la **vraie télécommande**, comme en rue. L'avatar suit donc un
 **itinéraire tracé** le long du trottoir (le trajet vers le Hangar) et David
-ne commande que sa **progression** : avance / arrêt / demi-tour, par une
-entrée qui ne demande pas de main — pédale USB sur le PC (marcher = les pieds,
-c'est même plus juste), ou à défaut un bouton libre du profil manette de la
-télécommande qui publierait sur un topic sim-only. Il perd la liberté de
-quitter le trottoir ; il garde la seule chose à répéter : être devant, et que
-Didier décroche. Une silhouette statique est moins jolie qu'un acteur qui
+ne commande que sa **progression** : **[DÉCIDÉ 07/10] par un fader du
+boîtier de faders déjà en stock de la télécommande** (RP2040-Zero série, cf.
+§4.5) — fader à zéro = arrêt, fin de course = marche rapide, continu entre les
+deux ; le demi-tour est un bouton. C'est un geste de pouce, les mains restent
+sur la télécommande. Il perd la liberté de quitter le trottoir ; il garde la
+seule chose à répéter : être devant, et que Didier décroche. Une silhouette statique est moins jolie qu'un acteur qui
 marche ; mais c'est elle que MediaPipe doit voir, et le lot R0 mesure si elle
 est vue. Si la détection
 est trop faible, repli : **un acteur attaché** au modèle piloté (à essayer,
@@ -233,7 +233,7 @@ pupitre de la séance, pas seulement les roues.
 | **Réseau** | Conteneurs en `network_mode: host` des deux côtés ; la découverte FastDDS passe en multicast UDP sur le LAN — exactement comme entre la télécommande et le robot aujourd'hui. | La télécommande rejoint le **même réseau que le PC** (le WiFi de la maison, ou le routeur du robot si le PC y est). Si le multicast WiFi déconne (ça arrive), repli : `ROS_DISCOVERY_SERVER` sur le PC — même remède que pour la liaison réelle. |
 | **Roues** | Elle publie `wheels` en StringTime (legacy) ; dans la sim, `wheels_bridge` traduit vers `cmd_vel_remote`, **priorité 100** dans twist_mux, deadman 400 ms derrière. | **Rien** : `operations.md` le note déjà (« la télécommande physique, prio 100, garderait la main »). Elle écrase le suivi en sim comme en vrai. |
 | **Animations, visages, audio** | Mêmes topics que le robot ; la sim les consomme si `ANIMATIONS=true FACE=true`. | **Rien.** Le pupitre complet marche. |
-| **Avatar de David** | La télécommande occupe les mains. | Progression de l'avatar sur itinéraire par **pédale** ou bouton libre (§4.2). C'est la seule construction nouvelle qu'impose la décision. |
+| **Avatar de David** | La télécommande occupe les mains. **Le boîtier de faders existe** (`sliders`, RP2040-Zero série 9600 bauds) : aujourd'hui `send_sliders` mappe EN DUR 1 fader → cou (0..1) et 2 faders → roues gauche/droite (−100..100), selon la longueur du message. | **[DÉCIDÉ 07/10] un fader = progression de l'avatar.** Travail côté `dadou_control_ros` : rendre le mapping des faders **configurable par profil** (défaut = l'actuel, octet pour octet ; profil « répétition » = fader 1 → topic `avatar_speed`, StringTime 0..1) au lieu du `if len(msg)`. Petit, mais c'est du code de télécommande : tests à valeurs gravées (§11.4). |
 | **⚠️ Le vrai risque : le mélange des domaines** | Une télécommande oubliée en **43** le jour d'une sortie = aucun contrôle sur Didier. Une télécommande en **42** pendant une répétition, robot sous tension = **les commandes de répétition atteignent le vrai Didier**. Aujourd'hui le risque est nul (le robot est hors tension depuis le 12/09), mais il naît le jour où il revient. | **Avant le retour du robot** : un **indicateur visible** du domaine sur la GUI de la télécommande (bandeau « SIMULATION » / « DIDIER RÉEL », comme la console web le fait déjà en vert/rouge) et un geste **explicite** pour basculer, jamais une variable qu'on oublie. Petit lot côté `dadou_control_ros`, mais il est **antérieur** à toute répétition avec le robot rebranché. La règle CLAUDE.md « ne jamais mélanger 42 et 43 » prend ici son cas d'usage le plus concret. |
 
 Ce que la décision ne change pas : le régisseur peut toujours **couper la
@@ -350,7 +350,7 @@ interaction), et chaque lot a un verrou de sortie observable par David.
 | Lot | Contenu | Verrou de sortie |
 |---|---|---|
 | **R0 — Faisabilité** (1 séance) | Une silhouette humaine posée dans `stage.sdf` ; `person_tracker` branché sur l'image gz (param `camera_topic`) ; mesure du taux de détection à 1/2/3/5 m, de face et de dos ; latence du casque BT mesurée ; bruit de rue mélangé dans la source PipeWire | **On sait si la vraie perception voit l'avatar**, en nombres. Sinon, le reste du plan change (acteur attaché, ou perception scriptée). |
-| **R1 — La rue et le trajet** | `rue.sdf` (150–300 m, bordures, objets aimables, la banane au bout) ; avatar sur itinéraire, progression à la pédale ou au bouton libre ; **la vraie télécommande sur le domaine 43** (§4.5) ; passant scripté (acteur) ; suivi + gaze réels | Didier suit l'avatar sur 100 m, **perd la cible dans un virage, bloque sur une bordure, part avec le passant** — trois décrochages vrais, non scriptés. |
+| **R1 — La rue et le trajet** | `rue.sdf` (150–300 m, bordures, objets aimables, la banane au bout) ; avatar sur itinéraire, progression au **fader** de la télécommande (profil « répétition », §4.5) ; **la vraie télécommande sur le domaine 43** ; passant scripté (acteur) ; suivi + gaze réels | Didier suit l'avatar sur 100 m, **perd la cible dans un virage, bloque sur une bordure, part avec le passant** — trois décrochages vrais, non scriptés. |
 | **R2 — Le régisseur, canal technique** | Scénario YAML, 6 pannes du §2, relais de topics, kill/restart, retard calé Pi, journal horodaté | Une séance de 15 min où David **ne distingue pas** panne injectée et panne survenue (il devine à l'aveugle, on compte). |
 | **R3 — Le personnage** | Persona « mauvaise foi » (4ᵉ variante ou surcouche du socle) ; canal joué (lubies avec les objets du monde, les trois fermetures, le reboot-prétexte) ; **dépend de I0** (état de mission, `etude-interaction` §9) au moins en version minimale (destination + urgence) | Le trajet vers le Hangar **joué de bout en bout** sans que David sorte du jeu. C'est le verrou de la phase C. |
 | **R4 — Enregistrement et débrief** | rosbag + audio + journal → frise unique ; débrief guidé (temps passé dans chaque « vitesse », relances, bugs manqués) | Deux séances comparées : la **progression se voit**. |
@@ -374,8 +374,8 @@ temps : R0 une soirée, R1 deux à trois, R2 deux, R3 au rythme de l'écriture.
    (R0–R3), le triangle plus tard et avec réserve (R5). L'alternative (passant
    d'abord) entraîne une rue complaisante.
 2. ~~Qui déplace David~~ — **[DÉCIDÉ 07/10] la vraie télécommande dans les
-   mains** (§4.5). Conséquence : l'avatar progresse sur un itinéraire, commandé
-   par une entrée sans main (pédale ou bouton libre) — à choisir au lot R1.
+   mains** (§4.5), et **l'avatar progresse sur un itinéraire au rythme d'un
+   fader du boîtier déjà en stock** (décision du même jour).
 3. **Perception vraie ou scriptée** : **vraie** (param `camera_topic`, petit
    changement de prod), parce que les décrochages doivent être vrais pour
    que les bugs le soient. Repli scripté si R0 mesure une détection trop
@@ -474,3 +474,124 @@ Ce que je ne peux pas faire : écouter. Ces recettes sont des points de départ
 plausibles, pas des résultats. **Le choix est artistique et il est à David** —
 l'étude voix l'a déjà écrit, cette section ne fait que lui fournir de quoi
 écouter des choses fun avant le lot V0.
+
+---
+
+## 11. Architecture, tests et vérifications — ce qui reste dans le robot, ce qui n'y entre jamais
+
+*Ajouté le 07/10 à la demande de David : « rester au maximum dans un idéal
+d'architecture — rapidité, robustesse, fiabilité ; ajouter tous les tests et
+vérifications nécessaires ; une partie a vocation à rester dans le robot et
+doit être auditable et modifiable ».*
+
+### 11.1 Les principes — ceux du dépôt, posés comme contraintes de conception
+
+1. **Logique pure + node fin.** Tout comportement est un module pur (stdlib,
+   numpy au plus ; config en `dataclass` gelée, **source unique** des défauts)
+   et un node ROS qui ne fait que l'entrée/sortie. C'est ce qui rend tout
+   testable sur l'hôte sans ROS, donc en CI — le patron de `follow_control`,
+   `deadman`, `leds_logic`, `arbitration`.
+2. **Contrats explicites et gelés.** Noms de topics, types, QoS et bornes
+   vivent dans **un module de contrats par package**, et les tests de contrat
+   lisent **les vrais fichiers livrés** (YAML, JSON), jamais une copie — comme
+   `test_twist_mux_contract` parse `twist_mux.yaml`.
+3. **Sûr par défaut, et sûr quand ça meurt.** Tout démarre OFF ; toute panne
+   injectée a une **durée maximale** et se révoque seule ; si le régisseur
+   meurt, les relais retombent **seuls** en passant (chien de garde côté
+   relais, pas côté régisseur) ; **aucun relais de pannes n'est jamais posé
+   dans un chemin de prod**, et `/cmd_vel` final n'est relayable par rien.
+4. **Rapide parce que sobre.** Pas de relais sur l'image (15 Hz × 640×480 en
+   Python : coûteux et inutile) : les pannes de perception s'injectent **en
+   sortie** de perception (`/vision/person_box`, 16 Hz, 3 flottants). Relais
+   en QoS profondeur 1 (une consigne périmée ne vaut rien), horloges
+   **monotones** partout, aucun tampon non borné.
+5. **Déterministe.** Tout aléa passe par une **graine** consignée au journal :
+   une séance se **rejoue** à l'identique — c'est ce qui permet de comparer
+   deux soirs, et de reproduire un bug du simulateur lui-même.
+6. **Les comportements sont des données.** Scénario, catalogue de pannes,
+   presets de voix, liste blanche des process, profil de faders : des
+   fichiers validés par un **validateur qui refuse explicitement** (message
+   actionnable), jamais des constantes dispersées. C'est ce qui rend
+   l'ensemble modifiable par un humain ou par l'IA sans relire le code.
+
+### 11.2 La carte : ce qui a vocation à rester dans le robot, ce qui est sim-only
+
+| Brique | Destination | Dépôt | Pourquoi là |
+|---|---|---|---|
+| **`robot_health`** — topic latché (TRANSIENT_LOCAL, comme `animation_state`) : liste des composants dégradés + niveau 0..3, payload JSON validé | **PROD** (contrat) | robot (module de contrats) + vision (consommateur) | Le **même consommateur** sert les deux mondes : en sim le régisseur le publie, sur le robot ce sera le moniteur de santé du télédiagnostic (étape 2). Consommateurs : presets voix, jauge visage, agent de diagnostic. |
+| **Presets de voix** (§10) — table de paramètres + sélection par didascalie / persona / niveau de santé | **PROD** | vision (`effects.py`) | La voix est le produit. Niveau de santé 0 = **identité bit à bit** avec l'effet actuel (non-régression gravée). |
+| **Persona « mauvaise foi »** (surcouche du socle) + **topic d'instruction de jeu** (StringTime JSON, décodage commun) | **PROD** | vision (`personas.py`, `chat_node`) | C'est le lot I1 d'`etude-interaction` : le régisseur en sim et David en rue parlent à Didier par **le même canal**. |
+| **`camera_topic`** du tracker (défaut vide = `/dev/video0`, inchangé) | **PROD** (paramètre) | vision | Même patron que `drive_enabled`/`web_drive` : une option sim qui ne change rien au défaut, mais rend le node testable sur un sac d'images. |
+| **Journal d'événements** JSONL (t_mono, t_mur, source, type, payload) + lecteur → frise | **PROD** | robot (module pur partagé) | C'est **la boîte noire** du télédiagnostic. Un seul format pour la répétition et pour la rue. |
+| **Télécommande** : bandeau SIM / RÉEL + bascule de domaine explicite ; **mapping des faders par profil** | **PROD** | `dadou_control_ros` | Préalable sécurité au retour du robot (§4.5) ; le profil « répétition » n'est qu'une ligne de données de plus. |
+| **Routines de bug** (séquences JSON jouées : bras en grève, boude, redémarre) | **PROD** (contenu) | robot (`json/`) | Ce sont les « routines de sécurité » de la séance d'intention — du spectacle, pas de la sim. |
+| Monde `rue.sdf`, avatar + suivi d'itinéraire, acteurs passants | **SIM-ONLY** | robot (`robot_sim`) | Décor. |
+| **Régisseur** : scénario, ordonnanceur, relais de pannes, tueur de process en liste blanche, banc R0 | **SIM-ONLY** | robot — package **`robot_rehearsal`**, autonome comme `robot_drive` (aucun import `robot.*` ni `dadou_utils_ros`), **jamais dans `robot_bringup`** | Le code embarqué ne connaît pas la répétition. **Garde-fou structurel** : un test scanne `robot/`, `robot_bringup`, `robot_drive` et refuse toute référence à `robot_rehearsal` (§11.4). |
+
+### 11.3 Les composants sim-only — chacun en deux fichiers
+
+| Module pur (`robot_rehearsal/`) | Rôle | Node fin |
+|---|---|---|
+| `contracts.py` | topics relayables (liste **fermée**, `/cmd_vel` exclu), types, QoS, durées max par type de panne | — |
+| `scenario.py` | charge + **valide** le YAML (types connus, bornes, topics existants, `t` ≥ 0, durée ≤ max ; refus explicite) ; expanse les `t: random` avec la **graine** → timeline déterministe | — |
+| `director.py` | machine à états de l'ordonnanceur : `tick(now) → [start/stop]` ; exclusions (jamais deux pannes roues en même temps), auto-révocation, heartbeat | `director_node` : publie les ordres aux relais, le `robot_health`, le heartbeat, écrit le journal |
+| `fault_relay.py` | opérateurs sur un flux horodaté : `drop(p)`, `delay(ms)`, `freeze`, `zero`, `noise(σ)` → `(msg, now, state) → [msgs]` ; **passant si heartbeat absent > 1 s** | `fault_relay_node` générique (paramètres : topic in, topic out, type) — une instance par chemin relayé |
+| `process_faults.py` | liste blanche **gravée** de process/conteneurs sim ; kill / pause / restart ; anti-boucle (un restart par incident, comme le télédiagnostic §7) | exécuté par `director_node` |
+| `route_follower.py` | polyligne du trottoir ; vitesse normalisée (fader 0..1 → 0..1,4 m/s) ; position/cap à `t` ; demi-tour ; arrêt en bout | `avatar_node` : écoute `avatar_speed`, publie le Twist de l'avatar gz |
+| `journal.py` (**partagé, prod**) | écriture JSONL, lecture → frise ; champs obligatoires, ordre monotone | — |
+| `measure_detection.py` | banc R0 : pose l'avatar à 1/2/3/5 m, de face et de dos, compte `/vision/person_box` sur N trames → table | script |
+
+### 11.4 Les tests unitaires — hôte, sans ROS, dans `robot/tests/unit` (le `conftest.py` ajoute le package au path, comme pour `robot_drive`)
+
+Règle du dépôt depuis le 14/09 : **chaque test grave la valeur attendue** (un
+test qui recalcule l'attendu avec la fonction testée ne teste rien), et chaque
+lot inclut une **passe de mutation** — casser une branche, voir rougir,
+consigner dans le commit.
+
+| Module | Tests (valeurs gravées) | Mutation qui doit rougir |
+|---|---|---|
+| `scenario` | YAML de référence + graine 42 → **timeline exacte** gravée ; type inconnu / durée > max / topic hors liste / `t` négatif → refus **avec le bon message** ; graine différente → timeline différente ; même graine → identique | retirer une borne de validation |
+| `director` | séquence de ticks → ordres start/stop gravés ; panne dépassant sa durée → stop automatique ; deux pannes roues simultanées → la seconde est refusée ; heartbeat émis à chaque tick | supprimer l'auto-révocation |
+| `fault_relay` | `drop(1)` → rien, `drop(0)` → tout ; `delay(300)` sur 20 Hz → horodatages gravés ; `freeze` → dernier message répété ; `zero` → Twist nul ; **heartbeat absent > 1 s → passant** ; déterminisme sous graine | inverser la condition de drop ; retirer le chien de garde |
+| `process_faults` | la liste blanche **est exactement** l'ensemble gravé ; un nom hors liste → refus sans exécution ; deuxième restart du même incident → refus | élargir la liste |
+| `route_follower` | polyligne connue → positions à `t` gravées ; vitesse 0 → immobile ; bout de route → arrêt ; demi-tour → cap inversé ; fader 1 → 1,4 m/s exactement | changer la pente vitesse |
+| `journal` | aller-retour écriture/lecture ; champ manquant → refus ; ordre monotone imposé | accepter un champ manquant |
+| `robot_health` (contrat) | QoS latché lue **depuis le code du publisher** ; schéma du payload (niveau 0..3, noms de composants dans un ensemble fermé) ; **niveau → preset voix** gravé | changer le mapping niveau→preset |
+| presets voix (vision) | sinus 440 Hz int16 → par preset : RMS, nombre d'écrêtages, énergie par bande, **gravés** ; preset inconnu → refus ; **santé 0 = identité bit à bit avec `apply_robotic_effect` actuel** | toucher un paramètre d'un preset |
+| persona mauvaise foi (vision) | la composition contient la surcouche ; mots interdits (« intelligence artificielle », « assistant »…) absents ; longueur bornée ; la config pointe un persona existant (pattern déjà en place) | retirer la surcouche |
+| `camera_topic` (vision) | choix de source pur : `""` → périphérique, sinon → topic ; défaut = périphérique **gravé** | inverser la condition |
+| **anti-fuite** (contrat) | aucune occurrence de `robot_rehearsal` dans `robot/`, `robot_bringup`, `robot_drive`, `robot_web` ; aucune entrée de `contracts.py` ne cible `/cmd_vel` ; les relais ne sont déclarés que dans `rehearsal.launch.py` | ajouter une référence quelque part |
+| télécommande (`dadou_control_ros`) | profil défaut → messages 2 et 4 caractères donnent **exactement** l'actuel (cou 0..1, roues −100..100, octets gravés) ; profil « répétition » → `avatar_speed` 0..1 ; domaine 42 → bandeau « DIDIER RÉEL », 43 → « SIMULATION », autre → **refus de démarrer** | changer un seuil de mapping |
+
+### 11.5 Les vérifications d'intégration — contre la sim, rejouables, hors CI
+
+Scripts dans `conf/scripts/`, patron `validate-cmdvel-protocol.sh` : sortie = une
+table + un code retour, résultat consigné dans `chantiers.md`.
+
+| Script | Ce qu'il vérifie | Seuil gravé |
+|---|---|---|
+| `V-R0 measure-detection` | taux de détection de l'avatar par distance et orientation | ≥ 90 % à 1–3 m de face, sinon le plan change (acteur attaché / perception scriptée) |
+| `V-R1 follow-route` | avatar à fader 0,5 sur 100 m : distance robot–avatar bornée ; 3 décrochages provoqués (virage, passant, bordure) | zéro franc de `cmd_vel_follow` **< 700 ms** après perte (timeout 600 + marge) |
+| `V-R2 faults` | chaque type du catalogue exécuté une fois → start/stop présents au journal (**couverture du catalogue**) ; deadman injecté → `/cmd_vel` nul **< 440 ms** (le chiffre du protocole caméra) ; **kill du régisseur** → tous les relais passants **< 1 s** ; rejeu même graine → journal identique à ± 50 ms | un seul écart = rouge |
+| `V-R2 perf` | CPU des conteneurs (patron `mesure-cpu-conversation.sh`) ; latence ajoutée par un relais passant, mesurée par horodatage | relais < 2 % CPU, < 5 ms ajoutées |
+| `V-R3 séance` | 15 min, journal → frise, critères humains (David) consignés | « pas sorti du jeu » |
+| **non-régression prod** | `.venv/bin/pytest` complet vert + les tests vision ; **diff vide** sur `robot_bringup` et sur les compose du robot réel | — |
+
+### 11.6 Auditabilité et modifiabilité
+
+- **Un README par package** : quoi, pourquoi, comment tester, où sont les
+  données ; les pièges en français dans le code (le pourquoi, pas la
+  paraphrase).
+- **Le journal est la source de vérité** d'une séance : ce qui a été injecté,
+  dit, décidé — relisible par David, par l'agent de diagnostic, par un
+  autre modèle.
+- **Modifier un comportement = modifier une donnée** validée (scénario,
+  preset, liste blanche, profil) ; modifier le code n'est nécessaire que pour
+  un **nouveau type** d'opérateur, et il arrive avec sa ligne de tests.
+- **Revue adversariale (Opus minimum)** sur R2 (droit de tuer des process,
+  même sim-only : les réflexes définis ici iront sur le robot via le
+  télédiagnostic) et sur tout ce qui touche `robot_health`, `effects.py` et
+  la télécommande (prod).
+- **Ce qui n'est pas testé n'existe pas** : un type de panne sans ligne dans
+  `V-R2 faults` ne peut pas être déclaré dans un scénario — le validateur le
+  refuse, parce que la liste des types est **la même** des deux côtés.
