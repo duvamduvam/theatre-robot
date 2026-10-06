@@ -182,13 +182,19 @@ them ») et **aucun pilotage dynamique documenté** pour Harmonic (le service
 vérifié). Un acteur fait donc un **passant** parfait (trajectoire scriptée
 qui croise David pour provoquer un saut de cible), pas un David.
 
-**David = un modèle à roulettes avec une silhouette humaine**, piloté par le
-**stick gauche de la manette** (plugin `VelocityControl` de gz, Twist bridgé,
-~1,2 m/s, vitesse de marche). Le stick droit et les boutons restent la
-télécommande de Didier — la main gauche marche, la main droite pilote,
-exactement la charge réelle de David (il marche ET tient la manette). Une
-silhouette statique est moins jolie qu'un acteur qui marche ; mais c'est elle
-que MediaPipe doit voir, et le lot R0 mesure si elle est vue. Si la détection
+**David = un modèle à roulettes avec une silhouette humaine** (plugin
+`VelocityControl` de gz, Twist bridgé, ~1,2 m/s, vitesse de marche). **Il ne
+se pilote PAS à la manette** : depuis la décision du 07/10 (§4.5), les mains de
+David tiennent la **vraie télécommande**, comme en rue. L'avatar suit donc un
+**itinéraire tracé** le long du trottoir (le trajet vers le Hangar) et David
+ne commande que sa **progression** : avance / arrêt / demi-tour, par une
+entrée qui ne demande pas de main — pédale USB sur le PC (marcher = les pieds,
+c'est même plus juste), ou à défaut un bouton libre du profil manette de la
+télécommande qui publierait sur un topic sim-only. Il perd la liberté de
+quitter le trottoir ; il garde la seule chose à répéter : être devant, et que
+Didier décroche. Une silhouette statique est moins jolie qu'un acteur qui
+marche ; mais c'est elle que MediaPipe doit voir, et le lot R0 mesure si elle
+est vue. Si la détection
 est trop faible, repli : **un acteur attaché** au modèle piloté (à essayer,
 non garanti) ou, en dernier recours, la perception scriptée actuelle.
 
@@ -207,6 +213,32 @@ Recommandation : **(a)**, parce que le test de bout en bout en CI devient
 possible (un sac d'images rejoué dans le node) et parce que la règle du
 projet est « la vérification exécute le même code que la prod », pas « le
 même binaire sur un périphérique bidouillé ».
+
+### 4.5 La télécommande réelle dans la boucle — [DÉCIDÉ 07/10] « l'idéal »
+
+David a tranché : **pas de manette de substitution, la vraie télécommande**
+(le Pi 4 portable de `dadou_control_ros` : gamepad USB + GUI Tkinter). C'est
+le bon choix, pour trois raisons qui ne tiennent pas à la fidélité : c'est
+l'**accessoire du boss** qu'il faut apprendre à tenir en jouant (la 3ᵉ
+fermeture de lubie), c'est **sa latence et ses ratés** à elle qu'il faut
+connaître, et elle commande aussi les animations, visages et sons — tout le
+pupitre de la séance, pas seulement les roues.
+
+**Comment ça marche, et ce qu'il y a à faire** (vérifié dans le code le
+07/10) :
+
+| Point | Constat | Travail |
+|---|---|---|
+| **Domaine ROS** | La télécommande lit `ROS_DOMAIN_ID` dans son compose, défaut **42** (robot réel). Rien dans Ansible ni systemd ne le fixe autrement. | Lancer avec `ROS_DOMAIN_ID=43` (variable d'environnement ou fichier `.env` sur le Pi de la télécommande). **Aucune ligne de code.** |
+| **Réseau** | Conteneurs en `network_mode: host` des deux côtés ; la découverte FastDDS passe en multicast UDP sur le LAN — exactement comme entre la télécommande et le robot aujourd'hui. | La télécommande rejoint le **même réseau que le PC** (le WiFi de la maison, ou le routeur du robot si le PC y est). Si le multicast WiFi déconne (ça arrive), repli : `ROS_DISCOVERY_SERVER` sur le PC — même remède que pour la liaison réelle. |
+| **Roues** | Elle publie `wheels` en StringTime (legacy) ; dans la sim, `wheels_bridge` traduit vers `cmd_vel_remote`, **priorité 100** dans twist_mux, deadman 400 ms derrière. | **Rien** : `operations.md` le note déjà (« la télécommande physique, prio 100, garderait la main »). Elle écrase le suivi en sim comme en vrai. |
+| **Animations, visages, audio** | Mêmes topics que le robot ; la sim les consomme si `ANIMATIONS=true FACE=true`. | **Rien.** Le pupitre complet marche. |
+| **Avatar de David** | La télécommande occupe les mains. | Progression de l'avatar sur itinéraire par **pédale** ou bouton libre (§4.2). C'est la seule construction nouvelle qu'impose la décision. |
+| **⚠️ Le vrai risque : le mélange des domaines** | Une télécommande oubliée en **43** le jour d'une sortie = aucun contrôle sur Didier. Une télécommande en **42** pendant une répétition, robot sous tension = **les commandes de répétition atteignent le vrai Didier**. Aujourd'hui le risque est nul (le robot est hors tension depuis le 12/09), mais il naît le jour où il revient. | **Avant le retour du robot** : un **indicateur visible** du domaine sur la GUI de la télécommande (bandeau « SIMULATION » / « DIDIER RÉEL », comme la console web le fait déjà en vert/rouge) et un geste **explicite** pour basculer, jamais une variable qu'on oublie. Petit lot côté `dadou_control_ros`, mais il est **antérieur** à toute répétition avec le robot rebranché. La règle CLAUDE.md « ne jamais mélanger 42 et 43 » prend ici son cas d'usage le plus concret. |
+
+Ce que la décision ne change pas : le régisseur peut toujours **couper la
+télécommande** (relais sur `cmd_vel_remote` côté sim, 10 s) — la panne
+« manette qui rate » reste jouable sans toucher au Pi de la télécommande.
 
 ### 4.3 Le régisseur de pannes (package sim only, jamais dans le bringup)
 
@@ -318,7 +350,7 @@ interaction), et chaque lot a un verrou de sortie observable par David.
 | Lot | Contenu | Verrou de sortie |
 |---|---|---|
 | **R0 — Faisabilité** (1 séance) | Une silhouette humaine posée dans `stage.sdf` ; `person_tracker` branché sur l'image gz (param `camera_topic`) ; mesure du taux de détection à 1/2/3/5 m, de face et de dos ; latence du casque BT mesurée ; bruit de rue mélangé dans la source PipeWire | **On sait si la vraie perception voit l'avatar**, en nombres. Sinon, le reste du plan change (acteur attaché, ou perception scriptée). |
-| **R1 — La rue et le trajet** | `rue.sdf` (150–300 m, bordures, objets aimables, la banane au bout) ; avatar piloté au stick gauche ; manette = télécommande (43) ; passant scripté (acteur) ; suivi + gaze réels | Didier suit l'avatar sur 100 m, **perd la cible dans un virage, bloque sur une bordure, part avec le passant** — trois décrochages vrais, non scriptés. |
+| **R1 — La rue et le trajet** | `rue.sdf` (150–300 m, bordures, objets aimables, la banane au bout) ; avatar sur itinéraire, progression à la pédale ou au bouton libre ; **la vraie télécommande sur le domaine 43** (§4.5) ; passant scripté (acteur) ; suivi + gaze réels | Didier suit l'avatar sur 100 m, **perd la cible dans un virage, bloque sur une bordure, part avec le passant** — trois décrochages vrais, non scriptés. |
 | **R2 — Le régisseur, canal technique** | Scénario YAML, 6 pannes du §2, relais de topics, kill/restart, retard calé Pi, journal horodaté | Une séance de 15 min où David **ne distingue pas** panne injectée et panne survenue (il devine à l'aveugle, on compte). |
 | **R3 — Le personnage** | Persona « mauvaise foi » (4ᵉ variante ou surcouche du socle) ; canal joué (lubies avec les objets du monde, les trois fermetures, le reboot-prétexte) ; **dépend de I0** (état de mission, `etude-interaction` §9) au moins en version minimale (destination + urgence) | Le trajet vers le Hangar **joué de bout en bout** sans que David sorte du jeu. C'est le verrou de la phase C. |
 | **R4 — Enregistrement et débrief** | rosbag + audio + journal → frise unique ; débrief guidé (temps passé dans chaque « vitesse », relances, bugs manqués) | Deux séances comparées : la **progression se voit**. |
@@ -341,9 +373,9 @@ temps : R0 une soirée, R1 deux à trois, R2 deux, R3 au rythme de l'écriture.
 1. **Ce qu'on entraîne d'abord** : **le duo et le réflexe « panne = jeu »**
    (R0–R3), le triangle plus tard et avec réserve (R5). L'alternative (passant
    d'abord) entraîne une rue complaisante.
-2. **Qui déplace David** : **la manette, stick gauche** (la charge réelle :
-   marcher et piloter) ; alternative : un trajet scripté qui laisse les deux
-   mains libres mais retire la contrainte qu'on veut justement répéter.
+2. ~~Qui déplace David~~ — **[DÉCIDÉ 07/10] la vraie télécommande dans les
+   mains** (§4.5). Conséquence : l'avatar progresse sur un itinéraire, commandé
+   par une entrée sans main (pédale ou bouton libre) — à choisir au lot R1.
 3. **Perception vraie ou scriptée** : **vraie** (param `camera_topic`, petit
    changement de prod), parce que les décrochages doivent être vrais pour
    que les bugs le soient. Repli scripté si R0 mesure une détection trop
