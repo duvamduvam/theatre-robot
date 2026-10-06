@@ -595,3 +595,43 @@ table + un code retour, résultat consigné dans `chantiers.md`.
 - **Ce qui n'est pas testé n'existe pas** : un type de panne sans ligne dans
   `V-R2 faults` ne peut pas être déclaré dans un scénario — le validateur le
   refuse, parce que la liste des types est **la même** des deux côtés.
+
+---
+
+## 12. VARIANTE RETENUE le 07/10 — Didier chemine seul, David à la webcam
+
+*Décidé par David le soir même, après la question R0 : « il peut cheminer tout
+seul, interagir avec l'environnement et reprendre à ma voix pour jouer, mais
+regarder la webcam ». Cette variante remplace l'avatar comme **première
+construction** ; l'avatar et R0 passent en option.*
+
+**Pourquoi c'est plus proche de l'implémentation.** Le banc PC du 13/09 fait
+déjà : webcam réelle → gaze sur David, casque → `chat_node`, corps dans Gazebo.
+Il ne manque qu'**une** brique : Didier qui **chemine seul** dans la rue. La
+perception ne change pas d'une ligne (elle lit toujours la webcam physique),
+donc l'écart de domaine du §4.2 disparaît du chemin critique.
+
+**Ce que ça change dans l'histoire — et c'est mieux.** Didier **mène** au lieu
+de suivre : il a une volonté propre, part vers ses lubies, et David le ramène
+à la voix et à la télécommande. C'est le boss débordé qui n'arrive pas à
+amener son robot à 500 m. Le placement « David devant, Didier suit » reste vrai
+pour la rue (David le teste en vrai à sa prochaine sortie) ; la répétition
+travaille l'autre moitié : lui qui s'échappe.
+
+**Architecture (inchangée au §11, seul le porteur du suivi d'itinéraire change)** :
+
+| Brique | Décision |
+|---|---|
+| **Suiveur d'itinéraire** (`route_follower`, pur) | Branché sur **Didier**, pas sur un avatar. Publie `cmd_vel_follow` (créneau **priorité 20** du mux, celui du suivi de personne) : la télécommande (100) l'écrase toujours, le deadman reste derrière. Package **sim-only** `robot_rehearsal`, jamais dans le bringup. Plafonds durs **identiques** à ceux du suivi (0,5 m/s, 1,0 rad/s), vérifiés par test contre `FollowConfig`. |
+| **Suivi de personne aux roues** | **OFF** dans ce mode (même créneau du mux : deux publieurs à 20 se battraient). Le gaze, lui, reste ON et regarde David à la webcam. |
+| **Vitesse** | Topic `route_speed` 0..1 (le fader de la télécommande, profil « répétition », §4.5) ; défaut paramétrable. Activation par topic `route` on/off, **OFF au démarrage**, comme `follow`. |
+| **Environnement** | La rue est une **liste de points d'intérêt** (nom, position, rayon) dans le même YAML que l'itinéraire. L'odométrie de la sim (`/odom`, plugin DiffDrive) dit où est Didier ; un événement `enter`/`exit` à hystérésis part sur `rehearsal/poi_event` → régisseur → instruction de jeu au chat (canal joué). |
+| **Monde** | `rue.sdf` : trottoir à z = 0 (Didier y est posé comme sur la scène), chaussée **abaissée de 12 cm** (la bordure bloque vraiment), lampadaires, banc, boulangerie, poubelle, terrasse, hangar à la banane. ⚠️ Le **nom** du monde reste `stage` : le bridge LED cible `/world/stage/material_color` — c'est un contrat, pas une coquille. |
+
+**Ce qu'on perd** : les décrochages vrais du suivi (cible perdue dans un
+virage). Ils reviennent le jour où David veut le suivi en sim ; **R0 redevient
+utile à ce moment-là, pas avant**.
+
+**Plan révisé** : **R1 = rue + Didier qui chemine seul + points d'intérêt**
+(ce lot) → R2 régisseur → R3 personnage → R4 débrief → options : R0/avatar,
+R5 passant.
