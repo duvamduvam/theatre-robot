@@ -492,6 +492,12 @@ jeu du roulement, au lieu des ~1,5 mm que visait le choix « 60 % de Sn ». **L'
   ~27,6 mm à R = 44 → ~14,6 mm de vide entre têtes de 13 mm) : le capteur risque de ne
   jamais RELÂCHER entre deux cibles. Test : faire défiler le disque garni devant lui et
   vérifier que la LED s'éteint franchement entre chaque tête.
+  🛒 **COMMANDÉ le 2026-10-06 : 2 × `LJ18A3-8-Z/BX`** (AliExpress, E-Equipment Store,
+  ~5,29 € pièce, livraison annoncée 13-18/10). Annonce sans avis → **contrôle à réception** :
+  étiquette `Z/BX` lue sur le corps, puis breadboard AVEC l'option LED externe (elle ne
+  s'allume que si la sortie est bien NPN), puis les deux réserves ci-dessus sur le disque.
+  Longueur du corps à relever au pied à coulisse avant tout redessin du berceau (la photo
+  annonce 65 mm dont 49 filetés — une photo ne se mesure pas).
 - Avant de conclure : vérifier que la vis acier mesurée avait une **tête 6 pans pleine** ;
   si c'était une tête creuse (BTR), la cible définitive portera un peu plus loin.
 
