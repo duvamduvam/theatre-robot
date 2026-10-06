@@ -5,6 +5,7 @@ robot_description, robot_state_publisher et le bridge ros_gz.
 
     ros2 launch robot_sim sim.launch.py            # avec GUI
     ros2 launch robot_sim sim.launch.py headless:=true
+    ros2 launch robot_sim sim.launch.py world:=rue   # monde "rue" (étude répétition simulée)
 
     # Rejeu des séquences JSON (animations_node, package "robot" -- OFF par
     # défaut, comme gaze_follower : lancement explicite requis) :
@@ -59,15 +60,26 @@ def generate_launch_description():
         value_type=str,
     )
 
-    world = PathJoinSubstitution([FindPackageShare("robot_sim"), "worlds", "stage.sdf"])
+    # Dossier des mondes ; le nom de fichier est assemblé ci-dessous. On concatène
+    # dans la LISTE gz_args (le launch concatène les substitutions d'une liste)
+    # plutôt que d'imbriquer une sous-liste dans PathJoinSubstitution, dont le
+    # support des éléments composites n'est pas garanti en Jazzy.
+    worlds_dir = PathJoinSubstitution([FindPackageShare("robot_sim"), "worlds"])
 
     # -r : la simulation démarre en lecture (pas en pause) ; -s : serveur seul.
+    # Seul le FICHIER change avec `world` : le nom interne du monde reste `stage`
+    # dans stage.sdf ET rue.sdf (contrat : bridge et leds_sim_node ciblent
+    # /world/stage/material_color).
     gz_args = [
-        world, " -r",
+        worlds_dir, "/", LaunchConfiguration("world"), ".sdf", " -r",
         PythonExpression(["' -s' if '", headless, "' == 'true' else ''"]),
     ]
 
     return LaunchDescription([
+        DeclareLaunchArgument("world", default_value="stage",
+                              description="Monde gz : nom du fichier SANS extension dans worlds/"
+                                           " (stage = scène de théâtre, rue = rue de la répétition"
+                                           " simulée). Le nom interne du monde reste `stage`."),
         DeclareLaunchArgument("headless", default_value="false",
                               description="true = serveur gz seul, sans GUI"),
         DeclareLaunchArgument("animations", default_value="false",

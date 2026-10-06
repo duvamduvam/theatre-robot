@@ -21,6 +21,16 @@
   gz_type_name: "gz.msgs.Odometry"
   direction: GZ_TO_ROS
 
+# Vérité terrain (plugin OdometryPublisher du xacro, SIM-ONLY) : la pose
+# VRAIE de Didier dans le monde, pour le cheminement de la salle de
+# répétition (robot_rehearsal). /odom ci-dessus reste l'odométrie « comme
+# en vrai » (intégration des roues) — les deux coexistent volontairement.
+- ros_topic_name: "/ground_truth/odom"
+  gz_topic_name: "/ground_truth/odom"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS
+
 # TF odom -> base_link publié par le plugin DiffDrive.
 - ros_topic_name: "/tf"
   gz_topic_name: "/tf_gz"

@@ -137,6 +137,24 @@
       <topic>/joint_states</topic>
     </plugin>
 
+    <!-- VÉRITÉ TERRAIN (SIM-ONLY, salle de répétition — robot_rehearsal) :
+         pose du modèle dans le repère monde, publiée en gz.msgs.Odometry et
+         bridgée vers ROS /ground_truth/odom (gz_bridge.yaml). POURQUOI pas
+         /odom du DiffDrive : il INTÈGRE les roues — il ne se remet pas à
+         zéro quand on téléporte Didier au départ (set_pose) et il dérive au
+         premier patinage sur une bordure (vécu le 2026-10-07 : téléporté à
+         x=0, /odom disait toujours 59,5). Le cheminement a besoin d'une pose
+         vraie ; le vrai robot n'a de toute façon aucune odométrie. tf_topic
+         volontairement hors du bridge : aucune TF concurrente côté ROS. -->
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>world</odom_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <odom_topic>/ground_truth/odom</odom_topic>
+      <tf_topic>/ground_truth/tf_unused</tf_topic>
+      <odom_publish_frequency>20</odom_publish_frequency>
+      <dimensions>2</dimensions>
+    </plugin>
+
     <!-- Servos : un contrôleur en position par joint, piloté en vitesse
          (use_velocity_commands : stable sans réglage de PID). -->
     <xacro:macro name="servo_controller" params="joint">

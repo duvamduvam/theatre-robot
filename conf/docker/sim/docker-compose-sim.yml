@@ -17,6 +17,11 @@ services:
       - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-43}
       - HEADLESS=${HEADLESS:-false}
+      # Monde Gazebo : fichier worlds/<WORLD>.sdf de robot_sim (`stage` = le
+      # plateau nu historique, `rue` = la salle de répétition, étude
+      # docs/etude-repetition-simulee.md §12). Le NOM interne du monde reste
+      # `stage` dans les deux (contrat bridge LED), seul le fichier change.
+      - WORLD=${WORLD:-stage}
       # animations_node (rejeu des séquences JSON, cf. commentaire des volumes
       # "robot" plus bas) : OFF par défaut, comme gaze_follower -- un lancement
       # explicite (ANIMATIONS=true docker compose ... up) est requis.
@@ -59,7 +64,13 @@ services:
       - ../../ros2_dependencies/robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../ros2_dependencies/robot_drive:/home/ros2_ws/src/robot_drive
       - ../../ros2_dependencies/robot_web:/home/ros2_ws/src/robot_web
+      # robot_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
+      # bringup du robot) — cheminement de Didier dans la rue, lancé À LA
+      # MAIN (rehearsal.launch.py), cf. son README.
+      - ../../ros2_dependencies/robot_rehearsal:/home/ros2_ws/src/robot_rehearsal
       - ../../scripts/launch-sim-in-docker.sh:/home/ros2_ws/launch-sim-in-docker.sh
+      # V-R1 : protocole de vérification du cheminement (robot_rehearsal/README.md).
+      - ../../scripts/validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
       - ../../../json:/home/ros2_ws/json

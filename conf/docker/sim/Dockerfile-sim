@@ -34,6 +34,7 @@ COPY conf/ros2_dependencies/robot_sim /home/ros2_ws/src/robot_sim
 COPY conf/ros2_dependencies/robot_interfaces /home/ros2_ws/src/robot_interfaces
 COPY conf/ros2_dependencies/robot_drive /home/ros2_ws/src/robot_drive
 COPY conf/ros2_dependencies/robot_web /home/ros2_ws/src/robot_web
+COPY conf/ros2_dependencies/robot_rehearsal /home/ros2_ws/src/robot_rehearsal
 COPY conf/scripts/launch-sim-in-docker.sh /home/ros2_ws/
 
 # json/ : robot_lights.json, lights_base.json, colors.json lus par leds_sim_node

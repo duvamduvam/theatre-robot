@@ -120,6 +120,32 @@ tourne la tête (gaze) et pivote/avance (suivi, si activé) ; on parle dans le
 micro → réponse dans les enceintes, gestes « parle » dans Gazebo
 (`ANIMATIONS=true` requis), didascalies sur l'aperçu visage 8766.
 
+## Salle de répétition simulée — Didier chemine seul dans la rue (lot R1, 2026-10-07)
+
+Monde `rue` + package SIM-ONLY `robot_rehearsal` (étude
+[`etude-repetition-simulee.md`](etude-repetition-simulee.md) §12). Mode d'emploi
+complet et règles de séance : `conf/ros2_dependencies/robot_rehearsal/README.md`.
+
+```bash
+cd conf/docker/sim && WORLD=rue HEADLESS=true ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
+# chaîne roues puis cheminement (OFF au démarrage), même prudence que follow/gaze :
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py'
+# partir / s'arrêter / reprendre au début : topic `route` = "on" | "off" | "restart" ; vitesse 0..1 : topic `route_speed`
+docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 route robot_interfaces/msg/StringTime "{msg: \"on\"}"'
+# vérification rejouable V-R1 (départ, POI, télécommande qui écrase, zéro franc, arrivée) :
+docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-route.sh
+```
+
+- La route publie sur `cmd_vel_follow` (prio 20) : **le suivi de personne doit
+  rester OFF** pendant une route ; la télécommande (prio 100) écrase toujours.
+- La pose vient de la **vérité terrain** gz (`/ground_truth/odom`), pas de
+  `/odom` : téléporter Didier au départ se fait par
+  `gz service -s /world/stage/set_pose …` (voir le script V-R1) — `/odom`,
+  lui, ne verrait pas la téléportation.
+- Le monde s'appelle `stage` même dans `rue.sdf` (contrat bridge LED) ; seul le
+  fichier change (`WORLD=rue` ↔ `world:=rue`).
+
 ## Web interface on the REAL robot (sim → réel)
 
 **Une seule console, un sélecteur de cible** : la page (ouverte depuis

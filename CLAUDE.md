@@ -82,6 +82,9 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
 # Perception scriptée pour le tester (personne à droite, loin, sûre) :
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && ros2 topic pub -r 16 /vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.5, y: 0.2, z: 0.9}}"'
 
+# Salle de répétition (Didier chemine seul dans la rue, SIM-ONLY) : WORLD=rue + robot_rehearsal —
+# mode d'emploi dans conf/ros2_dependencies/robot_rehearsal/README.md (route on/off, V-R1).
+
 # Déploiement robot : Ansible dans ../dadou_utils_ros (rsync du checkout local, PAS de git sur le Pi).
 # ssh alias `r` = pi@robot. Logs applicatifs : /home/ros2_ws/log/robot.log DANS le conteneur (pas stdout docker).
 # Sentinelle de build : créer le fichier robot/change déclenche colcon build au (re)démarrage.
