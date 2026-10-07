@@ -90,12 +90,17 @@ def main(args=None):
     try:
         node = FaultRelayNode()
         rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         logging.error(e, exc_info=True)
     finally:
         if node is not None:
             node.destroy_node()
-        rclpy.shutdown()
+        # SIGTERM (kill du régisseur, arrêt du launch) a souvent DÉJÀ fermé le
+        # contexte : un second shutdown lève et sort en code 1 (vécu 08/10).
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

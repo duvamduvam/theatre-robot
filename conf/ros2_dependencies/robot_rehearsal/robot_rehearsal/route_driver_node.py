@@ -29,10 +29,15 @@ import yaml
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 
 from robot_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
-                                       ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, check_domain)
+                                       ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_TOPIC,
+                                       check_domain)
+
+# Latché : un abonné arrivé après coup (régisseur relancé) reçoit l'état courant.
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 from robot_rehearsal.route import (PoiWatcher, RouteConfig, RouteError, RouteFollower,
                                    load_route, yaw_from_quaternion)
 
@@ -101,10 +106,12 @@ class RouteDriverNode(Node):
 
         self.cmd_pub = self.create_publisher(Twist, CMD_VEL_TOPIC, 10)
         self.poi_pub = self.create_publisher(StringTime, POI_EVENT_TOPIC, 10)
+        self.state_pub = self.create_publisher(StringTime, ROUTE_STATE_TOPIC, LATCHED)
         self.create_subscription(Odometry, ODOM_TOPIC, self._on_odom, 10)
         self.create_subscription(StringTime, ROUTE_CMD_TOPIC, self._on_route_cmd, 10)
         self.create_subscription(StringTime, ROUTE_SPEED_TOPIC, self._on_speed, 10)
 
+        self._publish_state()
         tick_hz = float(self.get_parameter("tick_hz").value)
         self.create_timer(1.0 / tick_hz, self._tick)
         self.get_logger().info(
@@ -112,6 +119,9 @@ class RouteDriverNode(Node):
             f"{len(route.pois)} POI, enabled={self.follower.enabled}, speed={self.follower.speed:g} "
             f"-> {CMD_VEL_TOPIC} (mux prio 20)"
         )
+
+    def _publish_state(self):
+        self.state_pub.publish(StringTime(msg="on" if self.follower.enabled else "off", time=0, anim=False))
 
     def _on_odom(self, msg: Odometry):
         p = msg.pose.pose.position
@@ -127,9 +137,11 @@ class RouteDriverNode(Node):
         value = _decode(msg.msg)
         if value in ("on", True, 1, "1"):
             self.follower.set_enabled(True)
+            self._publish_state()
             self.get_logger().info("route ON : cheminement activé")
         elif value in ("off", False, 0, "0"):
             self.follower.set_enabled(False)
+            self._publish_state()
             self.get_logger().info("route OFF : cheminement désactivé (zéro publié)")
         elif value == "restart":
             self.follower.restart()
@@ -172,12 +184,17 @@ def main(args=None):
     try:
         node = RouteDriverNode()
         rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         logging.error(e, exc_info=True)
     finally:
         if node is not None:
             node.destroy_node()
-        rclpy.shutdown()
+        # SIGTERM (kill du régisseur, arrêt du launch) a souvent DÉJÀ fermé le
+        # contexte : un second shutdown lève et sort en code 1 (vécu 08/10).
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

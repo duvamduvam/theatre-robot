@@ -16,6 +16,11 @@ ROUTE_CMD_TOPIC = "route"
 # Facteur de vitesse 0..1 (StringTime, payload nombre) : c'est le fader de la
 # télécommande (profil « répétition », étude §4.5). Hors bornes -> borné.
 ROUTE_SPEED_TOPIC = "route_speed"
+# ÉTAT de la route, publié par route_driver en TRANSIENT_LOCAL (latché) :
+# "on"/"off" à chaque changement et au démarrage. C'est la SOURCE DE VÉRITÉ
+# du régisseur (bug vécu le 2026-10-08 : il déduisait l'état d'un unique
+# message `route on` volatile, raté sous charge → reboot sans relance).
+ROUTE_STATE_TOPIC = "route_state"
 # Sortie roues : créneau du suivi de personne dans le twist_mux (prio 20).
 # Le suivi de personne doit être OFF quand la route est ON (même créneau).
 CMD_VEL_TOPIC = "cmd_vel_follow"

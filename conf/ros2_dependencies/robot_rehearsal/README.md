@@ -45,6 +45,17 @@ lire **après**, jamais pendant (étude §4.3).
 (start, chien de garde en gelant le régisseur pendant un `zero`, reboot →
 respawn → `route on`, couverture du scénario au journal).
 
+## Regarder une séance en direct
+
+- **Vue 3D** : la sim tourne en headless ; on y branche une fenêtre à chaud,
+  sans rien redémarrer : `docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && gz sim -g'`.
+  Clic droit sur Didier → « Follow ». ⚠️ Ne pas fermer la fenêtre pendant une séance.
+- **Caméra de Didier + régie** : http://localhost:8765 (`WEB=true`) ; **visage LED** : http://localhost:8766 (`FACE=true`).
+- **Après la séance** : `conf/scripts/rehearsal/capture_seance.py` (images caméra aux
+  instants choisis + trajectoire, à lancer DANS le conteneur) puis `carte_seance.py`
+  (rue vue de dessus + vitesse aux roues, pannes du journal en couleur). Exemple :
+  `docs/pictures/repetition-simulee/2026-10-08_carte-seance-demo.png`.
+
 **Règles de séance**
 - La télécommande (prio 100) écrase toujours la route ; le deadman 400 ms reste derrière.
 - Le suivi de personne (`follow`) doit être **OFF** pendant la route : même créneau du mux.

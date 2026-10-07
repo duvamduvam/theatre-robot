@@ -36,6 +36,7 @@ def test_sortie_sur_le_creneau_du_suivi_jamais_cmd_vel_final():
     assert contracts.CMD_VEL_TOPIC == "cmd_vel_follow"
     assert contracts.CMD_VEL_TOPIC != "cmd_vel"
     assert contracts.ODOM_TOPIC == "/ground_truth/odom"
+    assert contracts.ROUTE_STATE_TOPIC == "route_state"
 
 
 def test_verite_terrain_declaree_dans_le_xacro_et_le_bridge():

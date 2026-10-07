@@ -28,12 +28,13 @@ from datetime import datetime
 import rclpy
 import yaml
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 
 from robot.diagnostic.journal import JournalWriter, make_event
 from robot_rehearsal.contracts import (DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC,
                                        RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC,
-                                       check_domain)
+                                       ROUTE_STATE_TOPIC, check_domain)
 from robot_rehearsal.director import Director, ReenablePolicy
 from robot_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from robot_rehearsal.scenario import ScenarioError, load_scenario
@@ -91,6 +92,10 @@ class DirectorNode(Node):
         # On ÉCOUTE le topic route (y compris nos propres ordres) : c'est ce qui
         # permet de ne jamais relancer la route contre un `off` de David.
         self.create_subscription(StringTime, ROUTE_CMD_TOPIC, self._on_route_cmd, 10)
+        # État LATCHÉ publié par route_driver : la source de vérité pour armer
+        # une relance (QoS TRANSIENT_LOCAL des DEUX côtés, sinon pas de latch).
+        self.create_subscription(StringTime, ROUTE_STATE_TOPIC, self._on_route_state,
+                                 QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
         self.create_timer(0.2, lambda: self.pub_heartbeat.publish(StringTime(msg="1", time=0, anim=False)))
         self.create_timer(1.0 / float(self.get_parameter("tick_hz").value), self._tick)
 
@@ -131,6 +136,12 @@ class DirectorNode(Node):
         self.director.start(time.monotonic())
         self.log("scenario_start", {"name": self.scenario.name, "seed": self.scenario.seed})
 
+    def _on_route_state(self, msg: StringTime):
+        confirmed = self.reenable.note_state(msg.msg.strip().strip('"'), time.monotonic())
+        if confirmed:
+            # Journalisé SEULEMENT sur confirmation par l'état latché.
+            self.log("route_reenable", {"after_kill": confirmed})
+
     def _on_route_cmd(self, msg: StringTime):
         self.reenable.note_route_cmd(msg.msg.strip().strip('"'))
 
@@ -159,10 +170,11 @@ class DirectorNode(Node):
         # Relance après kill : seulement quand route_driver est REVENU et ABONNÉ
         # à `route` (sinon le « on » partirait dans le vide, et le journal mentirait).
         ready = self.pub_route.get_subscription_count() > 0 and bool(find_pids("route_driver"))
-        fire, expired = self.reenable.due(now, ready)
-        if fire:
+        send, expired = self.reenable.due(now, ready)
+        if send:
+            # Ré-envoyé chaque retry_s jusqu'à confirmation par route_state.
             self.pub_route.publish(StringTime(msg="on", time=0, anim=False))
-            self.log("route_reenable", {"after_kill": fire})
+            self.get_logger().info(f"relance route : « on » envoyé {self.reenable.pending()}")
         if expired:
             self.log("route_reenable_expired", {"after_kill": expired})
 
@@ -241,7 +253,10 @@ def main(args=None):
             except Exception as e:
                 logging.error(e, exc_info=True)
             node.destroy_node()
-        rclpy.shutdown()
+        # SIGTERM (kill du régisseur, arrêt du launch) a souvent DÉJÀ fermé le
+        # contexte : un second shutdown lève et sort en code 1 (vécu 08/10).
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

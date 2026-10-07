@@ -129,23 +129,31 @@ class Reenable:
     fault_id: str
     not_before_s: float
     deadline_s: float
+    last_sent_s: float | None = None
 
 
 class ReenablePolicy:
-    """Relance de la route après un `kill` de route_driver — logique PURE
-    (revue du 08/10, défaut n°1). Règles :
-     - on n'arme une relance QUE si la route était ON au moment du kill ;
-     - toute commande `off` (David, télécommande, console) arrivée entre le
-       kill et la relance l'ANNULE — jamais de « route on » contre son ordre ;
-     - la relance n'est émise que quand le consommateur est revenu ET abonné
-       (`ready`), après `min_delay_s` ; passé `max_delay_s`, elle EXPIRE et le
-       journal le dit — jamais de route_reenable mensonger ;
+    """Relance de la route après un `kill` de route_driver — logique PURE, en
+    BOUCLE FERMÉE (revue du 08/10 + bug vécu le même jour). Règles :
+     - on n'arme une relance QUE si la route était ON au moment du kill
+       (état latché `route_state` OU commande `route on` vue) ;
+     - tout ordre `off` arrivé depuis l'ANNULE — jamais de « route on » contre
+       l'ordre de David ;
+     - une fois `min_delay_s` passé et le consommateur prêt, `due()` demande
+       d'envoyer « on » puis de RÉ-ESSAYER toutes les `retry_s` : un message
+       DDS unique peut se perdre pendant que les deux bouts se découvrent
+       (vécu : « on » publié 300 ms après le respawn, jamais reçu) ;
+     - la relance n'est CONFIRMÉE que par l'état latché « on » reçu après
+       `not_before` (note_state) — c'est seulement là qu'on journalise
+       route_reenable ; passé `max_delay_s` sans confirmation, elle EXPIRE et
+       le journal le dit ;
      - abort() vide tout.
     """
 
-    def __init__(self, *, min_delay_s: float = 6.0, max_delay_s: float = 30.0):
+    def __init__(self, *, min_delay_s: float = 6.0, max_delay_s: float = 30.0, retry_s: float = 1.0):
         self.min_delay_s = float(min_delay_s)
         self.max_delay_s = float(max_delay_s)
+        self.retry_s = float(retry_s)
         self._route_on = False
         self._pending: List[Reenable] = []
 
@@ -153,13 +161,26 @@ class ReenablePolicy:
     def route_on(self) -> bool:
         return self._route_on
 
+    def note_state(self, state: str, now_s: float) -> List[str]:
+        """État latché de route_driver. « on » reçu après not_before CONFIRME
+        les relances en attente (-> leurs ids). « off » (route_driver respawné
+        qui démarre éteint) n'annule RIEN."""
+        if state not in ("on", "off"):
+            return []
+        self._route_on = state == "on"
+        if state != "on":
+            return []
+        done = [r.fault_id for r in self._pending if now_s >= r.not_before_s]
+        self._pending = [r for r in self._pending if now_s < r.not_before_s]
+        return done
+
     def note_route_cmd(self, cmd: str) -> None:
-        """Toute commande vue sur le topic `route` (y compris les nôtres)."""
+        """Commande vue sur `route` : seul un `off` ANNULE les relances."""
         if cmd == "on":
             self._route_on = True
         elif cmd == "off":
             self._route_on = False
-            self._pending.clear()     # l'ordre humain prime : plus de relance
+            self._pending.clear()
 
     def arm(self, fault_id: str, now_s: float) -> bool:
         """-> True si une relance est armée (route ON au moment du kill)."""
@@ -173,18 +194,18 @@ class ReenablePolicy:
         self._pending.clear()
         return ids
 
+    def pending(self) -> List[str]:
+        return [r.fault_id for r in self._pending]
+
     def due(self, now_s: float, ready: bool) -> tuple:
-        """-> (ids à relancer maintenant, ids expirés). Au plus une relance par
-        appel pour les ids dus (un seul `route on` suffit à tous)."""
-        fire: List[str] = []
-        expired: List[str] = []
-        keep: List[Reenable] = []
-        for r in self._pending:
-            if now_s >= r.deadline_s:
-                expired.append(r.fault_id)
-            elif ready and now_s >= r.not_before_s:
-                fire.append(r.fault_id)
-            else:
-                keep.append(r)
-        self._pending = keep
-        return fire, expired
+        """-> (envoyer « on » maintenant ?, ids expirés). Envoi au plus tous
+        les retry_s tant qu'une relance due n'est pas confirmée."""
+        expired = [r.fault_id for r in self._pending if now_s >= r.deadline_s]
+        self._pending = [r for r in self._pending if now_s < r.deadline_s]
+        send = False
+        if ready:
+            for r in self._pending:
+                if now_s >= r.not_before_s and (r.last_sent_s is None or now_s - r.last_sent_s >= self.retry_s):
+                    send = True
+                    r.last_sent_s = now_s
+        return send, expired
