@@ -38,7 +38,7 @@ def test_delay_horodatages():
 
 
 def test_delay_file_bornee():
-    r = _relay("delay", {"delay_ms": 100_000})
+    r = _relay("delay", {"delay_ms": 50_000})
     for i in range(DELAY_QUEUE_MAX + 50):
         r.process(i, 1)
     assert len(r._queue) == DELAY_QUEUE_MAX
@@ -83,3 +83,40 @@ def test_operation_inconnue_refusee():
     import pytest
     with pytest.raises(ValueError):
         _relay().set_op("explose", {}, 0, 10)
+
+
+# --- revue adversariale du 2026-10-08 : trous de mutation fermés -------------
+
+def test_duree_max_imposee_par_le_relais():
+    from robot_rehearsal.fault_relay import RELAY_MAX_MS
+    assert RELAY_MAX_MS == 60_000
+    r = _relay(); r.heartbeat(0)
+    r.set_op("zero", {}, 1000, None)                 # sans échéance -> la borne
+    assert r._until_ms == 61_000
+    r.set_op("zero", {}, 1000, 10**12)               # échéance absurde -> bornée
+    assert r._until_ms == 61_000
+    r.set_op("pass", {}, 1000, 5000)                 # pass n'a JAMAIS d'échéance
+    assert r._until_ms is None
+
+
+def test_params_valides_avant_effet():
+    import pytest
+    r = _relay("zero")
+    for op, params in [("drop", {"p": "0.5"}), ("drop", {"p": 1.5}), ("drop", {"p": True}),
+                       ("delay", {}), ("delay", {"delay_ms": 0}), ("delay", {"delay_ms": 10**9})]:
+        with pytest.raises(ValueError):
+            r.set_op(op, params, 0, 1000)
+        assert r.op == "zero"                       # l'état courant n'a pas bougé
+    r.set_op("drop", {}, 0, 1000)
+    assert r._params == {"p": 1.0}                  # défaut gravé : tout jeter
+
+
+def test_file_de_retard_videe_au_changement_et_a_la_revocation():
+    r = _relay("delay", {"delay_ms": 5000})
+    r.process("ancien", 100)
+    r.set_op("drop", {"p": 0.0}, 200, 10_000)       # changement d'opération
+    assert r.tick(6000) == [] and len(r._queue) == 0
+    s = _relay("delay", {"delay_ms": 5000}, until=1000)
+    s.process("ancien", 100)
+    s.process("x", 1000)                             # expiration -> revert
+    assert s.op == "pass" and len(s._queue) == 0

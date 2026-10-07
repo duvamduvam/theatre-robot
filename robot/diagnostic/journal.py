@@ -55,6 +55,8 @@ def make_event(t_mono_ms: int, source: str, type_: str, payload: Dict[str, Any] 
         raise JournalError("payload : dictionnaire attendu")
     if t_wall is None:
         t_wall = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+    if not isinstance(t_wall, str) or not t_wall:
+        raise JournalError("t_wall : chaîne non vide attendue")
     return Event(t_mono_ms, t_wall, source, type_, payload)
 
 
@@ -69,8 +71,12 @@ def parse_line(line: str) -> Event:
     for key in REQUIRED:
         if key not in data:
             raise JournalError(f"champ obligatoire manquant : {key}")
+    # t_wall validé ICI : make_event(t_wall=None) voudrait dire « maintenant »,
+    # ce qu'une ligne relue n'a jamais le droit de faire.
+    if not isinstance(data["t_wall"], str) or not data["t_wall"]:
+        raise JournalError("t_wall : chaîne non vide attendue")
     return make_event(data["t_mono_ms"], data["source"], data["type"], data["payload"],
-                      t_wall=str(data["t_wall"]))
+                      t_wall=data["t_wall"])
 
 
 def parse_lines(lines: Iterable[str]) -> List[Event]:
@@ -88,3 +94,22 @@ def parse_lines(lines: Iterable[str]) -> List[Event]:
         last = ev.t_mono_ms
         events.append(ev)
     return events
+
+
+class JournalWriter:
+    """Écrivain à MONOTONIE IMPOSÉE : un événement plus ancien que le précédent
+    est refusé (JournalError) — le fichier ne peut pas devenir illisible par
+    parse_lines. CONTRAT : un fichier par démarrage (t_mono_ms repart de zéro
+    à chaque boot ; le nom porte l'horodatage mural et le PID pour qu'aucun
+    autre écrivain ne s'y entrelace). `sink` = tout objet avec write()/flush()."""
+
+    def __init__(self, sink):
+        self._sink = sink
+        self._last: int | None = None
+
+    def append(self, event: Event) -> None:
+        if self._last is not None and event.t_mono_ms < self._last:
+            raise JournalError(f"événement antérieur au précédent ({event.t_mono_ms} < {self._last})")
+        self._sink.write(event.to_line() + "\n")
+        self._sink.flush()
+        self._last = event.t_mono_ms

@@ -80,3 +80,25 @@ KILLABLE = ("route_driver",)
 # même si le scénario en demandait plus. Une panne infinie n'existe pas.
 FAULT_MAX_DURATION_S = {"relay": 60.0, "pause": 30.0, "kill": 0.0, "speed": 120.0,
                         "instruction": 0.0}
+
+# --- Garde-fou DOMAINE ROS (revue adversariale du 2026-10-08, défaut n°6) -------
+# Ce package ne doit JAMAIS tourner sur le domaine du vrai robot (42) : un shell
+# où ROS_DOMAIN_ID=42 traîne (télécommande) lancerait la sim sur le domaine réel
+# et le twist_mux de Didier recevrait cmd_vel_follow. Chaque node vérifie au
+# démarrage et REFUSE hors du domaine autorisé.
+SIM_DOMAIN_ID = 43
+
+
+def check_domain(env: dict) -> int:
+    """Lève RuntimeError si ROS_DOMAIN_ID (env) n'est pas SIM_DOMAIN_ID.
+    Absent = défaut ROS 0 = refusé aussi : on ne devine pas."""
+    raw = env.get("ROS_DOMAIN_ID", "")
+    try:
+        domain = int(raw)
+    except (TypeError, ValueError):
+        domain = -1
+    if domain != SIM_DOMAIN_ID:
+        raise RuntimeError(
+            f"robot_rehearsal refuse de démarrer : ROS_DOMAIN_ID={raw!r}, attendu {SIM_DOMAIN_ID} "
+            "(domaine de la SIMULATION — 42 est le vrai robot)")
+    return domain

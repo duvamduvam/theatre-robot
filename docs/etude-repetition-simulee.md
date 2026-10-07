@@ -516,6 +516,16 @@ doit être auditable et modifiable ».*
 
 ### 11.2 La carte : ce qui a vocation à rester dans le robot, ce qui est sim-only
 
+*Revue adversariale du 08/10 (lot R2) — quatre invariants revendiqués étaient
+faux, corrigés le jour même : relance de la route après `kill` contre un `off`
+de David (politique pure `ReenablePolicy` : route ON au kill, aucun `off`
+depuis, consommateur revenu et abonné, sinon expiration dite au journal) ;
+pause sans chien de garde (le SIGCONT est porté par un **gardien détaché** du
+régisseur, borné par la durée) ; durée max absente du relais (imposée **dans**
+le relais, sans échéance = la borne) ; journal acceptant une ligne sans date.
+Ajout d'un **garde-fou domaine** : les trois nodes refusent de démarrer hors
+`ROS_DOMAIN_ID=43`. Trous de mutation listés par la revue fermés par des tests.*
+
 | Brique | Destination | Dépôt | Pourquoi là |
 |---|---|---|---|
 | **`robot_health`** — topic latché (TRANSIENT_LOCAL, comme `animation_state`) : liste des composants dégradés + niveau 0..3, payload JSON validé | **PROD** (contrat) | robot (module de contrats) + vision (consommateur) | Le **même consommateur** sert les deux mondes : en sim le régisseur le publie, sur le robot ce sera le moniteur de santé du télédiagnostic (étape 2). Consommateurs : presets voix, jauge visage, agent de diagnostic. |
@@ -526,7 +536,7 @@ doit être auditable et modifiable ».*
 | **Télécommande** : bandeau SIM / RÉEL + bascule de domaine explicite ; **mapping des faders par profil** | **PROD** | `dadou_control_ros` | Préalable sécurité au retour du robot (§4.5) ; le profil « répétition » n'est qu'une ligne de données de plus. |
 | **Routines de bug** (séquences JSON jouées : bras en grève, boude, redémarre) | **PROD** (contenu) | robot (`json/`) | Ce sont les « routines de sécurité » de la séance d'intention — du spectacle, pas de la sim. |
 | Monde `rue.sdf`, avatar + suivi d'itinéraire, acteurs passants | **SIM-ONLY** | robot (`robot_sim`) | Décor. |
-| **Régisseur** : scénario, ordonnanceur, relais de pannes, tueur de process en liste blanche, banc R0 | **SIM-ONLY** | robot — package **`robot_rehearsal`**, autonome comme `robot_drive` (aucun import `robot.*` ni `dadou_utils_ros`), **jamais dans `robot_bringup`** | Le code embarqué ne connaît pas la répétition. **Garde-fou structurel** : un test scanne `robot/`, `robot_bringup`, `robot_drive` et refuse toute référence à `robot_rehearsal` (§11.4). |
+| **Régisseur** : scénario, ordonnanceur, relais de pannes, tueur de process en liste blanche, banc R0 | **SIM-ONLY** | robot — package **`robot_rehearsal`**, autonome comme `robot_drive` (aucun import `dadou_utils_ros` ni `robot_config`/matériel ; **seule** dépendance vers `robot.*` : le module PUR `robot.diagnostic.journal`, vérifiée par test), **jamais dans `robot_bringup`** | Le code embarqué ne connaît pas la répétition. **Garde-fou structurel** : un test scanne `robot/`, `robot_bringup`, `robot_drive` et refuse toute référence à `robot_rehearsal` (§11.4). |
 
 ### 11.3 Les composants sim-only — chacun en deux fichiers
 

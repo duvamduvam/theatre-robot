@@ -91,3 +91,32 @@ def test_cancel_libere_la_cible_sans_stop():
     assert d.status()["a"] == "error" and d.active() == []
     assert _kinds(d.tick(2.0)) == [("start", "b")]   # cible libre : b n'est pas sautée
     assert [k for k, _ in _kinds(d.tick(50.0))] == ["stop"]   # jamais de stop pour a
+
+
+# --- ReenablePolicy (revue adversariale du 2026-10-08, défaut n°1) ----------
+from robot_rehearsal.director import ReenablePolicy
+
+
+def test_relance_seulement_si_route_on_au_kill():
+    p = ReenablePolicy(min_delay_s=6.0, max_delay_s=30.0)
+    assert p.arm("k1", 100.0) is False            # route jamais mise ON
+    p.note_route_cmd("on")
+    assert p.arm("k2", 100.0) is True
+    assert p.due(105.9, True) == ([], [])          # trop tôt
+    assert p.due(106.0, False) == ([], [])         # consommateur pas prêt
+    assert p.due(106.0, True) == (["k2"], [])
+    assert p.due(107.0, True) == ([], [])          # une seule fois
+
+
+def test_off_de_david_annule_la_relance():
+    p = ReenablePolicy(); p.note_route_cmd("on"); p.arm("k", 0.0)
+    p.note_route_cmd("off")
+    assert p.due(10.0, True) == ([], []) and p.route_on is False
+
+
+def test_relance_expire_et_abort_vide():
+    p = ReenablePolicy(min_delay_s=6.0, max_delay_s=30.0); p.note_route_cmd("on")
+    p.arm("k", 0.0)
+    assert p.due(30.0, False) == ([], ["k"])       # jamais prêt -> expirée, dite
+    p.arm("k2", 0.0)
+    assert p.abort() == ["k2"] and p.due(10.0, True) == ([], [])

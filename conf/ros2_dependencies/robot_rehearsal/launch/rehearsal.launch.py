@@ -62,6 +62,7 @@ def generate_launch_description():
         Node(
             package="robot_rehearsal", executable="fault_relay", name="fault_relay_cmd_vel_follow",
             output="screen", parameters=[{"relay": "cmd_vel_follow"}],
+            respawn=True, respawn_delay=2.0,   # relais mort = mux sans entrée = deadman ; il renaît passant
         ),
         # Régisseur : charge le scénario, attend « start ».
         Node(

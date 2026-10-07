@@ -16,10 +16,14 @@ import random
 from collections import deque
 from typing import Any, Deque, List, Optional, Tuple
 
-from robot_rehearsal.contracts import HEARTBEAT_TIMEOUT_MS, RELAY_OPS
+from robot_rehearsal.contracts import FAULT_MAX_DURATION_S, HEARTBEAT_TIMEOUT_MS, RELAY_OPS
 
 ZERO = object()          # sentinel : « publie un message nul »
 DELAY_QUEUE_MAX = 200    # borne dure de la file de retard (20 Hz × 10 s)
+# Durée MAX d'une opération, imposée ICI aussi (revue du 08/10, défaut n°3) :
+# un ordre sans échéance, ou avec une échéance absurde, est borné par le
+# relais lui-même — pas seulement par le régisseur.
+RELAY_MAX_MS = int(FAULT_MAX_DURATION_S["relay"] * 1000)
 
 
 class FaultRelay:
@@ -42,13 +46,32 @@ class FaultRelay:
         self._last_heartbeat_ms = now_ms
 
     def set_op(self, op: str, params: dict | None, now_ms: int, until_ms: int | None) -> None:
+        """Arme une opération jusqu'à until_ms (absolu, horloge monotone), BORNÉ
+        à now + RELAY_MAX_MS ; sans échéance = la borne. Params VALIDÉS avant
+        tout effet (ValueError, sans changer l'état courant)."""
         if op not in RELAY_OPS:
             raise ValueError(f"relais {self.name} : opération inconnue {op!r}")
+        params = dict(params or {})
+        if op == "drop":
+            p = params.get("p", 1.0)
+            if isinstance(p, bool) or not isinstance(p, (int, float)) or not 0.0 <= p <= 1.0:
+                raise ValueError(f"relais {self.name} : drop.p doit être dans [0, 1], reçu {p!r}")
+            params["p"] = float(p)
+        if op == "delay":
+            d = params.get("delay_ms")
+            if isinstance(d, bool) or not isinstance(d, (int, float)) or not 1 <= d <= RELAY_MAX_MS:
+                raise ValueError(f"relais {self.name} : delay_ms doit être dans [1, {RELAY_MAX_MS}], reçu {d!r}")
+            params["delay_ms"] = int(d)
         self._op = op
-        self._params = dict(params or {})
-        self._until_ms = None if op == "pass" or until_ms is None else int(until_ms)
-        if op != "delay":
-            self._queue.clear()
+        self._params = params
+        if op == "pass":
+            self._until_ms = None
+        else:
+            cap = now_ms + RELAY_MAX_MS
+            self._until_ms = cap if until_ms is None else min(int(until_ms), cap)
+        # Toute nouvelle opération repart d'une file vide : des messages retardés
+        # d'un ordre précédent ne doivent pas resurgir sous un autre régime.
+        self._queue.clear()
 
     def _revert(self, reason: str) -> None:
         self._op = "pass"

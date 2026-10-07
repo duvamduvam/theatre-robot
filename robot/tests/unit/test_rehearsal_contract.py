@@ -11,6 +11,7 @@ Trois garanties :
 """
 import pathlib
 
+import pytest
 import yaml
 
 from robot.move.follow_control import ABS_MAX_ANG as FOLLOW_MAX_ANG, ABS_MAX_LIN as FOLLOW_MAX_LIN
@@ -115,6 +116,28 @@ def test_scenarios_livres_valides():
     demo = load_scenario(yaml.safe_load((PKG / "config" / "scenarios" / "demo.yaml").read_text(encoding="utf-8")))
     # couverture : chaque type de panne au moins une fois dans la démo (V-R2 s'en sert)
     assert {f.type for f in demo.faults} == {"relay", "pause", "kill", "speed", "instruction"}
+
+
+def test_import_robot_limite_au_journal_pur():
+    """Seule dépendance vers robot.* autorisée : robot.diagnostic.journal (pur,
+    stdlib). Tout autre import de robot.* (robot_config, matériel…) ferait
+    dépendre la sim du robot réel — refusé."""
+    import re
+    for path in sorted((PKG / "robot_rehearsal").glob("*.py")):
+        for m in re.finditer(r"^\s*(?:from|import)\s+(robot\.[\w.]*|robot)\b", path.read_text(encoding="utf-8"), re.M):
+            assert m.group(1) == "robot.diagnostic.journal", (path.name, m.group(0))
+
+
+def test_garde_fou_domaine():
+    from robot_rehearsal.contracts import SIM_DOMAIN_ID, check_domain
+    assert SIM_DOMAIN_ID == 43
+    assert check_domain({"ROS_DOMAIN_ID": "43"}) == 43
+    for env in ({}, {"ROS_DOMAIN_ID": "42"}, {"ROS_DOMAIN_ID": "0"}, {"ROS_DOMAIN_ID": "abc"}):
+        with pytest.raises(RuntimeError) as exc:
+            check_domain(env)
+        assert "42 est le vrai robot" in str(exc.value)
+    assert contracts.FAULT_MAX_DURATION_S == {"relay": 60.0, "pause": 30.0, "kill": 0.0,
+                                              "speed": 120.0, "instruction": 0.0}
 
 
 def test_launch_off_par_defaut():

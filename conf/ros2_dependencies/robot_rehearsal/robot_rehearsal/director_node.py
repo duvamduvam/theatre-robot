@@ -30,11 +30,12 @@ import yaml
 from rclpy.node import Node
 from robot_interfaces.msg import StringTime
 
-from robot.diagnostic.journal import make_event
+from robot.diagnostic.journal import JournalWriter, make_event
 from robot_rehearsal.contracts import (DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC,
-                                       RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC)
-from robot_rehearsal.director import Director
-from robot_rehearsal.process_faults import ProcessFaultError, apply
+                                       RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC,
+                                       check_domain)
+from robot_rehearsal.director import Director, ReenablePolicy
+from robot_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from robot_rehearsal.scenario import ScenarioError, load_scenario
 
 
@@ -44,13 +45,17 @@ def _mono_ms() -> int:
 
 class DirectorNode(Node):
     def __init__(self):
+        check_domain(os.environ)   # refus hors domaine 43, AVANT tout effet
         super().__init__("director")
         self.declare_parameter("scenario_file", "")
         self.declare_parameter("seed", -1)           # -1 = graine du fichier
         self.declare_parameter("autostart", False)
         self.declare_parameter("tick_hz", 10.0)
         self.declare_parameter("journal_dir", "/home/ros2_ws/log/rehearsal")
-        self.declare_parameter("reenable_delay_s", 8.0)   # > respawn_delay du launch (5 s)
+        # Relance après kill : au plus tôt min (> respawn_delay du launch, 5 s),
+        # au plus tard max — ensuite la relance EXPIRE et le journal le dit.
+        self.declare_parameter("reenable_min_delay_s", 6.0)
+        self.declare_parameter("reenable_max_delay_s", 30.0)
 
         path = str(self.get_parameter("scenario_file").value)
         if not path:
@@ -63,13 +68,19 @@ class DirectorNode(Node):
         except ScenarioError as e:
             raise RuntimeError(f"scénario invalide ({path}) : {e}") from e
         self.director = Director(self.scenario)
-        self.reenable_delay_s = float(self.get_parameter("reenable_delay_s").value)
+        self.reenable = ReenablePolicy(
+            min_delay_s=float(self.get_parameter("reenable_min_delay_s").value),
+            max_delay_s=float(self.get_parameter("reenable_max_delay_s").value))
+        self._paused = {}   # process -> pids gelés (pour l'abort / le finally)
 
         journal_dir = str(self.get_parameter("journal_dir").value)
         os.makedirs(journal_dir, exist_ok=True)
-        stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.journal_path = os.path.join(journal_dir, f"{stamp}_{self.scenario.name}.jsonl")
-        self._journal = open(self.journal_path, "a", encoding="utf-8")
+        # Un fichier par démarrage, horodatage à la ms + PID : aucun autre
+        # écrivain ne peut s'y entrelacer (contrat JournalWriter).
+        stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+        self.journal_path = os.path.join(journal_dir, f"{stamp}_{os.getpid()}_{self.scenario.name}.jsonl")
+        self._journal_file = open(self.journal_path, "x", encoding="utf-8")
+        self._journal = JournalWriter(self._journal_file)
 
         self.pub_heartbeat = self.create_publisher(StringTime, HEARTBEAT_TOPIC, 10)
         self.pub_relay = self.create_publisher(StringTime, RELAY_CMD_TOPIC, 10)
@@ -77,9 +88,11 @@ class DirectorNode(Node):
         self.pub_route = self.create_publisher(StringTime, ROUTE_CMD_TOPIC, 10)
         self.pub_speed = self.create_publisher(StringTime, ROUTE_SPEED_TOPIC, 10)
         self.create_subscription(StringTime, DIRECTOR_CMD_TOPIC, self._on_cmd, 10)
+        # On ÉCOUTE le topic route (y compris nos propres ordres) : c'est ce qui
+        # permet de ne jamais relancer la route contre un `off` de David.
+        self.create_subscription(StringTime, ROUTE_CMD_TOPIC, self._on_route_cmd, 10)
         self.create_timer(0.2, lambda: self.pub_heartbeat.publish(StringTime(msg="1", time=0, anim=False)))
         self.create_timer(1.0 / float(self.get_parameter("tick_hz").value), self._tick)
-        self._pending_reenable = []   # [(échéance_mono_s, fault_id)]
 
         self.log("scenario_loaded", {"name": self.scenario.name, "seed": self.scenario.seed,
                                      "duration_s": self.scenario.duration_s,
@@ -93,10 +106,13 @@ class DirectorNode(Node):
 
     # --- journal ------------------------------------------------------------
     def log(self, type_: str, payload: dict) -> None:
-        ev = make_event(_mono_ms(), "director", type_, payload)
-        self._journal.write(ev.to_line() + "\n")
-        self._journal.flush()
         self.get_logger().info(f"{type_} {json.dumps(payload, ensure_ascii=False)[:160]}")
+        try:
+            self._journal.append(make_event(_mono_ms(), "director", type_, payload))
+        except OSError as e:
+            # Disque plein, fichier disparu : le journal est perdu, PAS le
+            # régisseur (il doit rester vivant pour révoquer ses pannes).
+            self.get_logger().error(f"journal inécrivable : {e}")
 
     # --- commandes ----------------------------------------------------------
     def _on_cmd(self, msg: StringTime):
@@ -104,8 +120,7 @@ class DirectorNode(Node):
         if cmd == "start":
             self._start()
         elif cmd in ("stop", "abort"):
-            self._execute(self.director.abort(time.monotonic()))
-            self.log("scenario_abort", {"cmd": cmd})
+            self._abort(cmd)
         else:
             self.get_logger().warning(f"rehearsal/cmd ignoré : {msg.msg!r}")
 
@@ -116,14 +131,40 @@ class DirectorNode(Node):
         self.director.start(time.monotonic())
         self.log("scenario_start", {"name": self.scenario.name, "seed": self.scenario.seed})
 
+    def _on_route_cmd(self, msg: StringTime):
+        self.reenable.note_route_cmd(msg.msg.strip().strip('"'))
+
+    def _abort(self, reason: str):
+        """Tout révoquer, en une fois : pannes actives, relances armées,
+        processus gelés (ceinture : le gardien détaché fera aussi SIGCONT)."""
+        self._execute(self.director.abort(time.monotonic()))
+        dropped = self.reenable.abort()
+        for proc in list(self._paused):
+            self._resume(proc)
+        self.log("scenario_abort", {"cmd": reason, "reenable_dropped": dropped})
+
+    def _resume(self, proc: str):
+        try:
+            apply("resume", proc)
+        except (ProcessFaultError, OSError) as e:
+            self.get_logger().error(f"resume {proc} : {e}")
+        self._paused.pop(proc, None)
+
     def _tick(self):
         now = time.monotonic()
-        self._execute(self.director.tick(now))
-        due = [fid for (t, fid) in self._pending_reenable if now >= t]
-        if due:
-            self._pending_reenable = [(t, f) for (t, f) in self._pending_reenable if now < t]
+        try:
+            self._execute(self.director.tick(now))
+        except Exception as e:   # un timer qui lève tue le node : jamais ici
+            self.get_logger().error(f"tick : {e!r}")
+        # Relance après kill : seulement quand route_driver est REVENU et ABONNÉ
+        # à `route` (sinon le « on » partirait dans le vide, et le journal mentirait).
+        ready = self.pub_route.get_subscription_count() > 0 and bool(find_pids("route_driver"))
+        fire, expired = self.reenable.due(now, ready)
+        if fire:
             self.pub_route.publish(StringTime(msg="on", time=0, anim=False))
-            self.log("route_reenable", {"after_kill": due})
+            self.log("route_reenable", {"after_kill": fire})
+        if expired:
+            self.log("route_reenable_expired", {"after_kill": expired})
 
     # --- exécution des actions ---------------------------------------------
     def _execute(self, actions):
@@ -139,8 +180,8 @@ class DirectorNode(Node):
             try:
                 self._apply(a.kind, f)
                 self.log(f"fault_{a.kind}", payload)
-            except (ProcessFaultError, RuntimeError) as e:
-                self.log("fault_error", dict(payload, error=str(e)))
+            except Exception as e:   # ProcessFaultError, RuntimeError, OSError (pgrep absent, PID…)
+                self.log("fault_error", dict(payload, error=repr(e)))
                 if a.kind == "start":
                     # Jamais de fault_stop pour une panne jamais appliquée.
                     self.director.cancel(f.id, time.monotonic())
@@ -157,16 +198,21 @@ class DirectorNode(Node):
                 cmd = {"relay": p["relay"], "op": "pass", "params": {}, "until_ms": None}
             self.pub_relay.publish(StringTime(msg=json.dumps(cmd), time=0, anim=False))
         elif f.type == "pause":
-            pids = apply("pause" if kind == "start" else "resume", p["process"])
-            if kind == "start" and not pids:
-                raise RuntimeError(f"aucun processus « {p['process']} » à mettre en pause")
+            if kind == "start":
+                # Gardien détaché : SIGCONT après la durée même si le régisseur meurt.
+                pids = pause_bounded(p["process"], f.duration_s)
+                if not pids:
+                    raise RuntimeError(f"aucun processus « {p['process']} » à mettre en pause")
+                self._paused[p["process"]] = pids
+            else:
+                self._resume(p["process"])
         elif f.type == "kill":
             if kind == "start":
                 pids = apply("kill", p["process"])
                 if not pids:
                     raise RuntimeError(f"aucun processus « {p['process']} » à tuer")
-                if p.get("reenable", True):
-                    self._pending_reenable.append((time.monotonic() + self.reenable_delay_s, f.id))
+                if p.get("reenable", True) and not self.reenable.arm(f.id, time.monotonic()):
+                    self.log("route_reenable_skipped", {"after_kill": f.id, "reason": "route était OFF"})
         elif f.type == "speed":
             value = p["value"] if kind == "start" else p["restore"]
             self.pub_speed.publish(StringTime(msg=json.dumps(value), time=0, anim=False))
@@ -182,10 +228,18 @@ def main(args=None):
     try:
         node = DirectorNode()
         rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         logging.error(e, exc_info=True)
     finally:
         if node is not None:
+            # Ctrl-C ou crash : on révoque tout avant de partir (ceinture ; le
+            # gardien détaché et les chiens de garde des relais sont les bretelles).
+            try:
+                node._abort("shutdown")
+            except Exception as e:
+                logging.error(e, exc_info=True)
             node.destroy_node()
         rclpy.shutdown()
 

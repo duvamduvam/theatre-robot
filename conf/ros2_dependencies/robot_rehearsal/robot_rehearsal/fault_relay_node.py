@@ -9,6 +9,7 @@ ZERO en message nul du bon type. Paramètre `relay` = clé de contracts.RELAYS.
 """
 import json
 import logging
+import os
 import time
 
 import rclpy
@@ -16,7 +17,7 @@ from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from robot_interfaces.msg import StringTime
 
-from robot_rehearsal.contracts import HEARTBEAT_TOPIC, RELAYS, RELAY_CMD_TOPIC
+from robot_rehearsal.contracts import HEARTBEAT_TOPIC, RELAYS, RELAY_CMD_TOPIC, check_domain
 from robot_rehearsal.fault_relay import ZERO, FaultRelay
 
 TYPES = {"twist": Twist, "string_time": StringTime}
@@ -28,6 +29,7 @@ def _now_ms() -> int:
 
 class FaultRelayNode(Node):
     def __init__(self):
+        check_domain(os.environ)   # refus hors domaine 43
         super().__init__("fault_relay")
         self.declare_parameter("relay", "")
         self.declare_parameter("seed", 0)

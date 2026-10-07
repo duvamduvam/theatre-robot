@@ -51,3 +51,36 @@ def test_check_pure():
     check("pause", "route_driver"); check("kill", "route_driver")
     with pytest.raises(ProcessFaultError):
         check("kill", "leds_sim_node")
+
+
+# --- revue adversariale du 2026-10-08 ---------------------------------------
+
+def test_resume_hors_liste_refuse():
+    with pytest.raises(ProcessFaultError):
+        check("resume", "twist_deadman")
+
+
+def test_pid_disparu_ignore():
+    def kill(pid, sig):
+        if pid == 12:
+            raise ProcessLookupError
+    assert apply("pause", "face_sim", kill=kill, pgrep=lambda a: "12\n34\n") == [34]
+
+
+def test_resume_command_gravee():
+    from robot_rehearsal.process_faults import resume_command
+    assert resume_command([12, 34], 5.0) == [
+        "sh", "-c", "sleep 5.000 ; kill -CONT 12 2>/dev/null || true ; kill -CONT 34 2>/dev/null || true"]
+    assert resume_command([], 5.0) == [] and resume_command([12], 0.0) == []
+
+
+def test_pause_bounded_lance_le_gardien_detache():
+    from robot_rehearsal.process_faults import pause_bounded
+    spawned, signaled = [], []
+    pids = pause_bounded("face_sim", 3.0, spawn=lambda cmd: spawned.append(cmd),
+                         kill=lambda pid, sig: signaled.append((pid, sig)), pgrep=lambda a: "7\n")
+    assert pids == [7] and signaled == [(7, signal.SIGSTOP)]
+    assert spawned == [["sh", "-c", "sleep 3.000 ; kill -CONT 7 2>/dev/null || true"]]
+    with pytest.raises(ProcessFaultError):
+        pause_bounded("twist_mux", 3.0, spawn=lambda c: spawned.append(c))
+    assert len(spawned) == 1

@@ -47,10 +47,44 @@ def find_pids(process: str, *, pgrep: Callable[[List[str]], str] | None = None) 
 
 def apply(action: str, process: str, *, kill: Callable[[int, int], None] = os.kill,
           pgrep: Callable[[List[str]], str] | None = None) -> List[int]:
-    """Vérifie, trouve, signale. -> PIDs touchés (vide si rien ne tournait)."""
+    """Vérifie, trouve, signale. -> PIDs effectivement signalés (un PID disparu
+    entre pgrep et le signal est ignoré, pas une erreur : ProcessLookupError)."""
     check(action, process)
     sig = {"pause": signal.SIGSTOP, "resume": signal.SIGCONT, "kill": signal.SIGTERM}[action]
-    pids = find_pids(process, pgrep=pgrep)
-    for pid in pids:
-        kill(pid, sig)
+    done: List[int] = []
+    for pid in find_pids(process, pgrep=pgrep):
+        try:
+            kill(pid, sig)
+            done.append(pid)
+        except ProcessLookupError:
+            continue
+    return done
+
+
+def resume_command(pids: List[int], duration_s: float) -> List[str]:
+    """Commande du GARDIEN de pause (pure) : un processus DÉTACHÉ du régisseur
+    qui attend `duration_s` puis envoie SIGCONT — la révocation d'une pause ne
+    dépend donc pas de la survie du régisseur (revue du 08/10, défaut n°2).
+    SIGCONT sur un processus déjà repris ou disparu est sans effet (`|| true`)."""
+    if duration_s <= 0 or not pids:
+        return []
+    conts = " ; ".join(f"kill -CONT {int(pid)} 2>/dev/null || true" for pid in pids)
+    return ["sh", "-c", f"sleep {float(duration_s):.3f} ; {conts}"]
+
+
+def pause_bounded(process: str, duration_s: float, *, spawn: Callable[[List[str]], object] | None = None,
+                  kill: Callable[[int, int], None] = os.kill,
+                  pgrep: Callable[[List[str]], str] | None = None) -> List[int]:
+    """SIGSTOP + gardien détaché qui fera SIGCONT après duration_s quoi qu'il
+    arrive au régisseur. Le régisseur enverra AUSSI SIGCONT à la fin normale
+    (idempotent). -> PIDs mis en pause."""
+    check("pause", process)
+    pids = apply("pause", process, kill=kill, pgrep=pgrep)
+    cmd = resume_command(pids, duration_s)
+    if cmd:
+        runner = spawn or (lambda c: subprocess.Popen(c, start_new_session=True,
+                                                     stdin=subprocess.DEVNULL,
+                                                     stdout=subprocess.DEVNULL,
+                                                     stderr=subprocess.DEVNULL))
+        runner(cmd)
     return pids

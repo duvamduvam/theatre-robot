@@ -122,3 +122,69 @@ class Director:
             self._ended = True
             actions.append(Action("end", None, now_s))
         return actions
+
+
+@dataclass
+class Reenable:
+    fault_id: str
+    not_before_s: float
+    deadline_s: float
+
+
+class ReenablePolicy:
+    """Relance de la route après un `kill` de route_driver — logique PURE
+    (revue du 08/10, défaut n°1). Règles :
+     - on n'arme une relance QUE si la route était ON au moment du kill ;
+     - toute commande `off` (David, télécommande, console) arrivée entre le
+       kill et la relance l'ANNULE — jamais de « route on » contre son ordre ;
+     - la relance n'est émise que quand le consommateur est revenu ET abonné
+       (`ready`), après `min_delay_s` ; passé `max_delay_s`, elle EXPIRE et le
+       journal le dit — jamais de route_reenable mensonger ;
+     - abort() vide tout.
+    """
+
+    def __init__(self, *, min_delay_s: float = 6.0, max_delay_s: float = 30.0):
+        self.min_delay_s = float(min_delay_s)
+        self.max_delay_s = float(max_delay_s)
+        self._route_on = False
+        self._pending: List[Reenable] = []
+
+    @property
+    def route_on(self) -> bool:
+        return self._route_on
+
+    def note_route_cmd(self, cmd: str) -> None:
+        """Toute commande vue sur le topic `route` (y compris les nôtres)."""
+        if cmd == "on":
+            self._route_on = True
+        elif cmd == "off":
+            self._route_on = False
+            self._pending.clear()     # l'ordre humain prime : plus de relance
+
+    def arm(self, fault_id: str, now_s: float) -> bool:
+        """-> True si une relance est armée (route ON au moment du kill)."""
+        if not self._route_on:
+            return False
+        self._pending.append(Reenable(fault_id, now_s + self.min_delay_s, now_s + self.max_delay_s))
+        return True
+
+    def abort(self) -> List[str]:
+        ids = [r.fault_id for r in self._pending]
+        self._pending.clear()
+        return ids
+
+    def due(self, now_s: float, ready: bool) -> tuple:
+        """-> (ids à relancer maintenant, ids expirés). Au plus une relance par
+        appel pour les ids dus (un seul `route on` suffit à tous)."""
+        fire: List[str] = []
+        expired: List[str] = []
+        keep: List[Reenable] = []
+        for r in self._pending:
+            if now_s >= r.deadline_s:
+                expired.append(r.fault_id)
+            elif ready and now_s >= r.not_before_s:
+                fire.append(r.fault_id)
+            else:
+                keep.append(r)
+        self._pending = keep
+        return fire, expired

@@ -21,6 +21,7 @@ robot_rehearsal.route (pure, testée sans ROS).
 
 import json
 import logging
+import os
 import time
 
 import rclpy
@@ -31,7 +32,7 @@ from rclpy.node import Node
 from robot_interfaces.msg import StringTime
 
 from robot_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
-                                       ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC)
+                                       ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, check_domain)
 from robot_rehearsal.route import (PoiWatcher, RouteConfig, RouteError, RouteFollower,
                                    load_route, yaw_from_quaternion)
 
@@ -54,6 +55,7 @@ def _decode(raw: str):
 
 class RouteDriverNode(Node):
     def __init__(self):
+        check_domain(os.environ)   # refus hors domaine 43 (revue du 08/10)
         super().__init__("route_driver")
 
         defaults = RouteConfig()

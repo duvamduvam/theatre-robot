@@ -49,3 +49,32 @@ def test_ordre_monotone_impose():
     with pytest.raises(JournalError) as exc:
         parse_lines([b, a])
     assert "ligne 2" in str(exc.value)
+
+
+# --- revue adversariale du 2026-10-08 ---------------------------------------
+
+def test_t_wall_doit_etre_une_chaine():
+    for bad in ('{"t_mono_ms": 1, "t_wall": null, "source": "s", "type": "t", "payload": {}}',
+                '{"t_mono_ms": 1, "t_wall": 123, "source": "s", "type": "t", "payload": {}}',
+                '{"t_mono_ms": 1, "t_wall": "", "source": "s", "type": "t", "payload": {}}'):
+        with pytest.raises(JournalError) as exc:
+            parse_line(bad)
+        assert "t_wall" in str(exc.value)
+
+
+def test_egalite_de_temps_acceptee():
+    a = make_event(10, "s", "t", t_wall="x").to_line()
+    assert len(parse_lines([a, a])) == 2
+
+
+def test_writer_monotone():
+    from robot.diagnostic.journal import JournalWriter
+    class Sink:
+        def __init__(self): self.lines = []; self.flushed = 0
+        def write(self, s): self.lines.append(s)
+        def flush(self): self.flushed += 1
+    sink = Sink(); w = JournalWriter(sink)
+    w.append(make_event(5, "s", "t", t_wall="x")); w.append(make_event(5, "s", "t", t_wall="x"))
+    with pytest.raises(JournalError):
+        w.append(make_event(4, "s", "t", t_wall="x"))
+    assert len(sink.lines) == 2 and sink.flushed == 2
