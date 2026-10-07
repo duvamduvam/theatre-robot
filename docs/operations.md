@@ -137,6 +137,10 @@ docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
 docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-route.sh
 ```
 
+- **Régisseur de pannes** (lot R2) : lancé par `rehearsal.launch.py` avec le scénario
+  `demo` (chargé, en attente) ; `ros2 topic pub -1 rehearsal/cmd … "{msg: \"start\"}"`
+  pour dérouler, `abort` pour tout révoquer ; journal JSONL dans
+  `/home/ros2_ws/log/rehearsal/` (conteneur). Vérif : `validate-rehearsal-faults.sh`.
 - La route publie sur `cmd_vel_follow` (prio 20) : **le suivi de personne doit
   rester OFF** pendant une route ; la télécommande (prio 100) écrase toujours.
 - La pose vient de la **vérité terrain** gz (`/ground_truth/odom`), pas de

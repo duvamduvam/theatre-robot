@@ -90,6 +90,37 @@ def test_itineraire_rue_valide_et_sur_le_trottoir():
     )
 
 
+def test_relais_jamais_sur_la_chaine_de_securite():
+    """Aucun point de relais ne touche /cmd_vel final, la télécommande ni le
+    web : un relais ne peut être posé que sur ce que rehearsal.launch.py lance."""
+    for name, (amont, aval, typ) in contracts.RELAYS.items():
+        assert aval == name
+        assert amont == f"{name}_raw"
+        assert aval not in ("cmd_vel", "cmd_vel_mux", "cmd_vel_remote", "cmd_vel_web", "e_stop", "wheels")
+        assert typ in ("twist", "string_time")
+    assert set(contracts.RELAY_OPS) == {"pass", "drop", "delay", "freeze", "zero"}
+    assert contracts.HEARTBEAT_TIMEOUT_MS == 1000
+    assert contracts.FAULT_MAX_DURATION_S["kill"] == 0.0 and contracts.FAULT_MAX_DURATION_S["pause"] == 30.0
+
+
+def test_scenarios_livres_valides():
+    """Chaque YAML de config/scenarios/ se charge (refus explicite sinon) et ne
+    cible que des processus/relais des listes blanches — par construction."""
+    from robot_rehearsal.scenario import load_scenario
+    files = sorted((PKG / "config" / "scenarios").glob("*.yaml"))
+    assert [f.name for f in files] == ["demo.yaml"]
+    for f in files:
+        sc = load_scenario(yaml.safe_load(f.read_text(encoding="utf-8")))
+        assert sc.faults, f.name
+    demo = load_scenario(yaml.safe_load((PKG / "config" / "scenarios" / "demo.yaml").read_text(encoding="utf-8")))
+    # couverture : chaque type de panne au moins une fois dans la démo (V-R2 s'en sert)
+    assert {f.type for f in demo.faults} == {"relay", "pause", "kill", "speed", "instruction"}
+
+
 def test_launch_off_par_defaut():
     launch = (PKG / "launch" / "rehearsal.launch.py").read_text(encoding="utf-8")
     assert 'DeclareLaunchArgument("enabled", default_value="false"' in launch
+    # le régisseur ne démarre un scénario que sur "start" (autostart false)
+    assert 'DeclareLaunchArgument("autostart", default_value="false"' in launch
+    # route_driver publie vers l'amont du relais (remap), jamais directement
+    assert '("cmd_vel_follow", "cmd_vel_follow_raw")' in launch

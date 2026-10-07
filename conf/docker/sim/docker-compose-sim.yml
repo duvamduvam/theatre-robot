@@ -71,6 +71,7 @@ services:
       - ../../scripts/launch-sim-in-docker.sh:/home/ros2_ws/launch-sim-in-docker.sh
       # V-R1 : protocole de vérification du cheminement (robot_rehearsal/README.md).
       - ../../scripts/validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro
+      - ../../scripts/validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
       - ../../../json:/home/ros2_ws/json

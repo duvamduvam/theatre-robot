@@ -1,13 +1,19 @@
-"""Répétition simulée — lance le cheminement de Didier (SIM-ONLY).
+"""Répétition simulée — cheminement de Didier + relais + régisseur (SIM-ONLY).
 
-    ros2 launch robot_rehearsal rehearsal.launch.py                 # itinéraire rue.yaml, OFF
-    ros2 launch robot_rehearsal rehearsal.launch.py speed:=0.3
-    # puis, pour partir :  ros2 topic pub -1 route robot_interfaces/msg/StringTime '{msg: "on"}'
+    ros2 launch robot_rehearsal rehearsal.launch.py                 # route OFF, scénario demo chargé, en attente de « start »
+    ros2 launch robot_rehearsal rehearsal.launch.py speed:=0.3 scenario:=demo seed:=42
+    # partir :      ros2 topic pub -1 route robot_interfaces/msg/StringTime '{msg: "on"}'
+    # régisseur :   ros2 topic pub -1 rehearsal/cmd robot_interfaces/msg/StringTime '{msg: "start"}'   (stop | abort)
 
-Prérequis dans le conteneur sim : sim.launch.py world:=rue ET la chaîne
-roues (drive.launch.py use_sim_time:=true) — ce launch ne les lance PAS
-(prudence habituelle : aucun mouvement automatique au démarrage). Le suivi
-de personne doit rester OFF (même créneau prio 20 du mux).
+Topologie : route_driver publie `cmd_vel_follow_raw` (remap) -> fault_relay
+(passant par défaut) -> `cmd_vel_follow` -> twist_mux prio 20. Le régisseur
+(director) ne publie jamais de Twist : il parle aux relais, aux processus de la
+liste blanche, à route/route_speed, et journalise.
+
+Prérequis dans le conteneur sim : sim.launch.py world:=rue ET la chaîne roues
+(drive.launch.py use_sim_time:=true) — ce launch ne les lance PAS (aucun
+mouvement automatique au démarrage). Le suivi de personne doit rester OFF
+(même créneau prio 20 du mux).
 """
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -18,9 +24,10 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    route_file = PathJoinSubstitution([
-        FindPackageShare("robot_rehearsal"), "config", [LaunchConfiguration("route"), ".yaml"],
-    ])
+    share = FindPackageShare("robot_rehearsal")
+    route_file = PathJoinSubstitution([share, "config", [LaunchConfiguration("route"), ".yaml"]])
+    scenario_file = PathJoinSubstitution([share, "config", "scenarios",
+                                          [LaunchConfiguration("scenario"), ".yaml"]])
     return LaunchDescription([
         DeclareLaunchArgument("route", default_value="rue",
                               description="nom du YAML d'itinéraire dans config/ (sans extension)"),
@@ -30,15 +37,39 @@ def generate_launch_description():
         DeclareLaunchArgument("enabled", default_value="false",
                               description="SÉCURITÉ : true = part dès le lancement. Défaut false :"
                                           " activation explicite par le topic route (on/off)."),
+        DeclareLaunchArgument("scenario", default_value="demo",
+                              description="nom du YAML de scénario dans config/scenarios/ (sans extension)"),
+        DeclareLaunchArgument("seed", default_value="-1",
+                              description="graine du scénario (-1 = celle du fichier) ; même graine = même séance"),
+        DeclareLaunchArgument("autostart", default_value="false",
+                              description="true = le scénario démarre au lancement. Défaut false :"
+                                          " « start » explicite sur rehearsal/cmd."),
+
+        # Cheminement : publie vers l'AMONT du relais. respawn : une panne
+        # « kill » le fait renaître après respawn_delay (le reboot-prétexte) ;
+        # il renaît OFF, le régisseur renvoie « route on » (reenable).
         Node(
-            package="robot_rehearsal",
-            executable="route_driver",
-            name="route_driver",
-            output="screen",
+            package="robot_rehearsal", executable="route_driver", name="route_driver", output="screen",
             parameters=[{
                 "route_file": route_file,
                 "speed": ParameterValue(LaunchConfiguration("speed"), value_type=float),
                 "enabled": ParameterValue(LaunchConfiguration("enabled"), value_type=bool),
+            }],
+            remappings=[("cmd_vel_follow", "cmd_vel_follow_raw")],
+            respawn=True, respawn_delay=5.0,
+        ),
+        # Relais de pannes sur cmd_vel_follow (passant par défaut, chien de garde 1 s).
+        Node(
+            package="robot_rehearsal", executable="fault_relay", name="fault_relay_cmd_vel_follow",
+            output="screen", parameters=[{"relay": "cmd_vel_follow"}],
+        ),
+        # Régisseur : charge le scénario, attend « start ».
+        Node(
+            package="robot_rehearsal", executable="director", name="director", output="screen",
+            parameters=[{
+                "scenario_file": scenario_file,
+                "seed": ParameterValue(LaunchConfiguration("seed"), value_type=int),
+                "autostart": ParameterValue(LaunchConfiguration("autostart"), value_type=bool),
             }],
         ),
     ])

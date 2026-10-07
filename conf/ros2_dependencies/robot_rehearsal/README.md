@@ -18,6 +18,33 @@ refuse toute référence à ce package dans le code embarqué.
 | `config/rue.yaml` | le trajet vers le Hangar à Bananes + les points d'intérêt |
 | `launch/rehearsal.launch.py` | lance `route_driver`, OFF par défaut |
 
+## Lot R2 — le régisseur de pannes (canal technique)
+
+| Fichier | Rôle |
+|---|---|
+| `robot_rehearsal/scenario.py` | logique PURE : validation d'un scénario YAML (refus explicite), expansion des `t: random` avec la graine → timeline déterministe |
+| `robot_rehearsal/director.py` | ordonnanceur PUR : start/stop/skip/end, exclusion par cible, re-bornage des durées, abort |
+| `robot_rehearsal/fault_relay.py` | relais PUR : pass / drop / delay / freeze / zero, échéance, **chien de garde** (sans battement du régisseur > 1 s → passant) |
+| `robot_rehearsal/process_faults.py` | pause (SIGSTOP/SIGCONT) et kill (SIGTERM) de la **liste blanche** (`contracts.PAUSABLE/KILLABLE`) — jamais la chaîne de sécurité |
+| `robot_rehearsal/director_node.py` | node fin : exécute la timeline, bat à 5 Hz, journalise (JSONL, `robot.diagnostic.journal`) dans `/home/ros2_ws/log/rehearsal/` |
+| `robot_rehearsal/fault_relay_node.py` | node fin générique : un point de relais de `contracts.RELAYS` |
+| `config/scenarios/demo.yaml` | chaque type de panne une fois, instants fixes — le scénario de V-R2 |
+
+Types de pannes : `relay` (sur `cmd_vel_follow` : freeze = continue sur sa
+dernière consigne, zero = arrêt net, drop = à-coups, delay = réagit en retard),
+`pause` (visage figé, servos muets, route coupée → deadman), `kill` de
+`route_driver` (respawn par le launch après 5 s, puis `route on` = le
+reboot-prétexte), `speed` (batterie faible), `instruction` (canal joué,
+publié sur `rehearsal/instruction` — consommateur au lot R3).
+
+Commandes : `rehearsal/cmd` = `start` | `stop` | `abort`. Le journal de la
+séance est la **source de vérité du débrief** (ce qui a été tiré, quand) — à
+lire **après**, jamais pendant (étude §4.3).
+
+**Vérification V-R2** : `docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-faults.sh`
+(start, chien de garde en gelant le régisseur pendant un `zero`, reboot →
+respawn → `route on`, couverture du scénario au journal).
+
 **Règles de séance**
 - La télécommande (prio 100) écrase toujours la route ; le deadman 400 ms reste derrière.
 - Le suivi de personne (`follow`) doit être **OFF** pendant la route : même créneau du mux.

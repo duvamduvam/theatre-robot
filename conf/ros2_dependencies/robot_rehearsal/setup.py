@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'config', 'scenarios'), glob('config/scenarios/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,6 +26,8 @@ setup(
     entry_points={
         'console_scripts': [
             'route_driver = robot_rehearsal.route_driver_node:main',
+            'fault_relay = robot_rehearsal.fault_relay_node:main',
+            'director = robot_rehearsal.director_node:main',
         ],
     },
 )

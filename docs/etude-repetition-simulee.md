@@ -634,5 +634,6 @@ utile à ce moment-là, pas avant**.
 
 **Plan révisé** : **R1 = rue + Didier qui chemine seul + points d'intérêt** —
 **FAIT et vérifié en sim** (commit du 07/10, protocole V-R1 6/6 le 08/10 ; reste le
-profil fader côté télécommande) → R2 régisseur → R3 personnage → R4 débrief → options : R0/avatar,
-R5 passant.
+profil fader côté télécommande) → **R2 régisseur (canal technique) — FAIT le 08/10, V-R2 8/8** (le canal joué
+n'a encore que son topic `rehearsal/instruction`, consommateur en R3) → R3
+personnage → R4 débrief → options : R0/avatar, R5 passant.
