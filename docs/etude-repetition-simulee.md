@@ -632,6 +632,7 @@ travaille l'autre moitié : lui qui s'échappe.
 virage). Ils reviennent le jour où David veut le suivi en sim ; **R0 redevient
 utile à ce moment-là, pas avant**.
 
-**Plan révisé** : **R1 = rue + Didier qui chemine seul + points d'intérêt**
-(ce lot) → R2 régisseur → R3 personnage → R4 débrief → options : R0/avatar,
+**Plan révisé** : **R1 = rue + Didier qui chemine seul + points d'intérêt** —
+**FAIT et vérifié en sim** (commit du 07/10, protocole V-R1 6/6 le 08/10 ; reste le
+profil fader côté télécommande) → R2 régisseur → R3 personnage → R4 débrief → options : R0/avatar,
 R5 passant.
