@@ -22,6 +22,11 @@ refuse toute référence à ce package dans le code embarqué.
 - La télécommande (prio 100) écrase toujours la route ; le deadman 400 ms reste derrière.
 - Le suivi de personne (`follow`) doit être **OFF** pendant la route : même créneau du mux.
 - `route` : `on` / `off` / `restart` (StringTime). `route_speed` : nombre 0..1 (le fader).
+- **La vraie télécommande** (dépôt `dadou_control_ros`) pilote la séance : lancer son
+  compose avec `ROS_DOMAIN_ID=43 SLIDERS_PROFILE=repetition` — le joystick reste
+  les roues (prio 100, écrase la route), **le fader 1 du boîtier devient
+  `route_speed`** (fader à zéro = Didier s'arrête), le fader 2 le cou. Profils
+  décrits dans `dadou_control_ros/docs/interfaces.md`.
 
 **Dans le conteneur sim** (`conf/docker/sim`, domaine 43) :
 ```bash
