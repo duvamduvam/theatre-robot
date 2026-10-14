@@ -647,3 +647,275 @@ utile à ce moment-là, pas avant**.
 profil fader côté télécommande) → **R2 régisseur (canal technique) — FAIT le 08/10, V-R2 8/8** (le canal joué
 n'a encore que son topic `rehearsal/instruction`, consommateur en R3) → R3
 personnage → R4 débrief → options : R0/avatar, R5 passant.
+
+---
+
+## 13. LOT R3 « CHANTIERS » — décidé le 14/10 : 20 bugs, 30 délires, un trajet, une page
+
+*Demande de David (14/10) : « identifier 20 bugs que tu peux avoir à n'importe
+quel moment et 30 délires sur le chemin (un poster bizarre, une table trop
+basse, n'importe quoi) ; branche la totale ; un chemin des Machines de l'île
+à la grue Titan grise ; la simulation Gazebo en même temps qu'une page web
+avec les expressions et la voix en direct, avec laquelle je peux interagir. »*
+
+Ce lot est la **spec fermée** que les agents d'implémentation lisent. Tout ce
+qui est décidé ici ne se re-tranche pas en cours d'implémentation ; ce qui
+est marqué *(à valider par David)* est de l'écriture, pas de la technique.
+
+### 13.1 Ce qui ne change pas
+
+- Package `robot_rehearsal` **sim-only**, domaine **43**, créneau **prio 20**
+  du mux, deadman derrière, jamais dans le bringup (tests anti-fuite).
+- La chaîne roues, la télécommande (prio 100) et `/cmd_vel` ne sont jamais
+  relayés ni touchés. Les listes `PAUSABLE`/`KILLABLE` ne s'étendent pas.
+- La voix de Didier **sort par le casque Bluetooth** du banc (chat_node →
+  `aplay -D mixette` → PipeWire → casque, cf. `asound-pc.conf` du dépôt
+  vision). La page web n'ajoute PAS un second chemin audio : David est devant
+  le PC, le casque est déjà la « voix en direct ». *(Si un jour il faut
+  écouter depuis une autre machine : publier le wav sur un topic, lot séparé.)*
+- Le micro reste le vrai micro (ReSpeaker ou casque, selon `asound-pc.conf`).
+  La page ajoute un **clavier** (texte « entendu » sans STT), pas un micro
+  navigateur.
+- David **ne voit pas le tirage** : la page n'affiche ni les pannes ni les
+  consignes injectées par le régisseur. Seul le journal JSONL les porte,
+  à lire après.
+
+### 13.2 Le monde `chantiers` — des Nefs à la Titan grise
+
+Fichier `robot_sim/worlds/chantiers.sdf` (nom interne du monde : `stage`,
+contrat bridge LED, cf. `rue.sdf`), itinéraire
+`robot_rehearsal/config/chantiers.yaml`. `rue.sdf`/`rue.yaml` restent
+intacts (V-R1/V-R2 les rejouent).
+
+**Géographie (sources : relevé web du 14/10, §13.10)** : le Parc des Chantiers
+est une esplanade ouverte le long de la Loire, pas un canyon. Le monde est
+donc : une **dalle d'esplanade** (bitume/dalles, z = 0) large de ~12 m,
+**la Loire** côté y < 0 (plan d'eau 1 m plus bas, bleu, derrière un **quai**
+avec un ressaut de 12 cm puis une bande de 2 m — tomber à l'eau est possible
+si David pousse Didier dedans à la télécommande : la séance s'arrête, c'est
+voulu), **les bâtiments** côté y > 0 (les Nefs = grand hangar, puis des
+façades basses), des **rails** affleurants (visuels, 1 mm, sans collision),
+et au bout **la grue Titan grise** (portique + flèche, gris) qui ferme le
+trajet. La **grue jaune** est posée loin derrière, hors trajet (décor).
+
+**Échelle** : le trajet réel fait plusieurs centaines de mètres (§13.10) ; à
+0,25 m/s (fader à 50 %) ce serait > 30 min. Le monde est **compressé à
+~140 m de polyligne**, trajet ≈ 9 min à 50 %, ≈ 5 min à 100 %. Les 30 objets
+s'y répartissent tous les ~4-5 m, en quinconce (gauche/droite), rayon 2-3 m.
+
+**Primitives seulement** (boîtes, cylindres, sphères), aucune mesh, aucun
+Fuel : même règle que `rue.sdf`. Chaque objet est un `<model static>` nommé
+**exactement** comme son POI (contrat, test). Les couleurs servent à
+reconnaître l'objet sur la caméra de la régie (poster = panneau coloré,
+plot = cône orange…).
+
+**Le but** : la Titan grise est le dernier POI (rayon 6 m) ; l'itinéraire se
+termine à son pied, elle barre le passage comme le hangar de `rue`.
+
+### 13.3 Les 30 délires — objets du chemin et lubies
+
+Chaque POI du YAML porte, en plus de `{name, x, y, radius}`, un champ
+**`lubie`** (consigne de jeu, texte envoyé tel quel au chat) et un champ
+**`fermeture`** (indice de mise en scène, lu par personne en machine : c'est
+pour David au débrief et pour l'écriture). Les textes ci-dessous sont des
+**brouillons d'atelier** *(à valider par David)* ; le mécanisme ne dépend pas
+de leur contenu.
+
+Règle d'écriture d'une lubie : une phrase sur l'objet (ce que Didier croit),
+une phrase sur ce qu'il veut, une phrase sur ce qu'il faut pour qu'il cède.
+Il **s'arrête** devant l'objet (vitesse 0, cf. §13.4) : David doit le faire
+repartir — à la voix (Didier annonce qu'il repart, mais c'est le régisseur
+ou la télécommande qui rend la vitesse, limite assumée, cf. §13.6), à la
+télécommande (fader ou joystick, prio 100), ou en attendant (la lubie
+expire).
+
+| # | POI (`name`) | Objet dans le monde | Lubie (consigne) | Fermeture suggérée |
+|---|---|---|---|---|
+| 1 | `elephant` | grande boîte grise + 4 pieds + trompe (cylindre) | L'Éléphant mécanique est ton cousin. Tu veux lui parler de famille et tu refuses d'avancer tant qu'il n'a pas répondu. | contagion : David fait la voix de l'éléphant |
+| 2 | `nefs` | hangar long, toit bleu | Le grand hangar est ton usine natale, tu en es sûr. Tu veux rentrer pointer, tu as peur d'être en retard de dix ans. | raison absurde : « c'est fermé le mardi » |
+| 3 | `carrousel` | cylindre bas rayé + toit cône | Le carrousel : tu veux faire un tour. Tu réclames un ticket, tu n'as pas de monnaie, tu proposes de payer en boulons. | télécommande |
+| 4 | `rails` | deux bandes métal au sol (visuel) | Les rails : tu es persuadé d'être un train. Tu veux rouler dessus, tu demandes l'horaire du prochain départ. | raison absurde : « les trains sont en grève » |
+| 5 | `cale` | plan incliné vers l'eau | La cale de lancement : tu veux être lancé comme un navire, avec une bouteille et un discours. Tu attends la bouteille. | contagion : David fait le discours |
+| 6 | `bollard` | cylindre noir court | La bitte d'amarrage : tu la trouves très belle. Tu veux t'y amarrer pour la nuit et tu demandes une corde. | raison absurde |
+| 7 | `loire` | plan d'eau bleu (POI au bord) | L'eau : tu veux savoir si tu flottes. Tu proposes d'essayer tout de suite, tu es confiant. | télécommande (urgence jouée) |
+| 8 | `grue_jaune` | portique jaune lointain | La grue jaune au loin : la rivale de la grise. Tu refuses de la regarder et tu demandes à David de se mettre entre vous. | contagion |
+| 9 | `poster_bizarre` | panneau vertical violet/vert | Un poster bizarre : un chat avec des lunettes qui te fixe. Tu es sûr qu'il te juge, tu veux le confronter d'homme à chat. | raison absurde |
+| 10 | `table_basse` | table 30 cm de haut | Une table trop basse : un scandale d'urbanisme. Tu veux lancer une pétition maintenant, tu demandes à David de signer le premier. | contagion : David signe |
+| 11 | `banc` | banc bois | Un banc : tu veux t'asseoir. Tu n'as pas de fesses. Tu demandes à David comment on fait, en détail. | raison absurde |
+| 12 | `lampadaire` | mât + sphère lumineuse | Un lampadaire : tu es amoureux. Il est grand, il éclaire, il ne parle pas. Tu veux une photo avec lui avant de partir. | télécommande |
+| 13 | `poubelle_tri` | trois bacs jaune/vert/gris | Trois poubelles de tri : tu te demandes dans laquelle tu iras. Tu veux qu'on te classe tout de suite, pour savoir. | raison absurde : « tu es consigné » |
+| 14 | `pigeon` | petite sphère grise sur pied | Un pigeon : ton ennemi juré. Tu veux le suivre jusqu'à ce qu'il parte, et il ne part pas. | contagion : David chasse le pigeon |
+| 15 | `flaque` | disque bleu sombre au sol | Une flaque : tu refuses de passer, ça rouille. Tu demandes qu'on te porte. | télécommande |
+| 16 | `panneau_info` | panneau sur deux pieds | Un panneau d'information : tu le lis à voix haute en inventant tout. Tu veux y être inscrit comme monument. | raison absurde |
+| 17 | `velo_cadenas` | cadre + 2 roues cylindres | Un vélo cadenassé : tu le crois prisonnier. Tu veux le libérer et tu demandes une pince à David. | contagion |
+| 18 | `chien` | boîte + sphère tête | Un chien en plastique : tu veux l'adopter, tu as déjà choisi son nom (Boulon). Tu refuses de le laisser. | raison absurde |
+| 19 | `terrasse` | tables + chaises | La terrasse d'un café : tu veux commander une batterie-frites. Tu attends le serveur, qui ne vient pas. | contagion : David fait le serveur |
+| 20 | `plot_chantier` | cône orange | Un plot de chantier : tu crois que c'est un chapeau. Tu en veux un, tout de suite, le tien. | télécommande |
+| 21 | `statue` | cylindre sur socle | Une statue : tu es sûr que c'est toi en plus jeune. Tu veux une plaque avec ton nom, et une cérémonie. | raison absurde |
+| 22 | `vitrine_miroir` | panneau gris clair brillant | Une vitrine-miroir : tu te vois, tu te trouves beau. Tu ne peux plus partir, tu décris tes boulons un par un. | télécommande |
+| 23 | `pelouse` | dalle verte | La pelouse : interdite aux robots, tu en es sûr. Tu veux y rouler par principe, pour la liberté. | contagion |
+| 24 | `tas_de_sable` | demi-sphère beige | Un tas de sable : tu veux construire un château pour y vivre. Tu demandes un seau. | raison absurde |
+| 25 | `caisse_bois` | boîte bois | Une caisse en bois : tu es sûr qu'elle contient tes pièces d'origine. Tu veux l'ouvrir, tu n'as pas de mains. | contagion : David l'ouvre « pour de faux » |
+| 26 | `conteneur_rouge` | conteneur maritime rouge | Un conteneur : tu veux partir en voyage dedans, direction n'importe où. Tu demandes à David de venir, sans bagages. | télécommande |
+| 27 | `bouche_incendie` | petit cylindre rouge | Une bouche d'incendie : un petit robot timide. Tu veux lui apprendre à parler, lettre par lettre. | raison absurde |
+| 28 | `tag_mur` | panneau mural coloré | Un graffiti : tu es persuadé que c'est ton nom. Tu veux le signer en dessous, tu demandes une bombe. | contagion |
+| 29 | `horloge_arretee` | disque blanc sur mât | Une horloge arrêtée : le temps s'est arrêté, donc tu n'es jamais en retard. Tu veux attendre ici que ça reparte. | raison absurde |
+| 30 | `titan_grise` | portique gris + flèche (le but) | La grue Titan grise : c'est ELLE, le grand amour. Tu lui déclares ta flamme et tu demandes à David d'être témoin. | arrivée — pas de fermeture, c'est le final |
+
+### 13.4 Le régisseur — ce qui s'ajoute (lot technique, revue Opus)
+
+Trois nouveautés dans `robot_rehearsal`, toutes **bornées** et **testées à
+valeurs gravées + mutation** :
+
+1. **Déclencheur POI** : un élément de scénario peut avoir `t: poi` et
+   `poi: <name>` au lieu d'un instant. Il part sur l'événement
+   `enter` de ce POI (le régisseur s'abonne à `rehearsal/poi_event`),
+   au plus **une fois** par séance. Un champ `p` (0..1, défaut 1) le tire
+   **au chargement** avec la graine (gardé ou écarté une fois pour toutes :
+   la timeline reste déterministe et rejouable, le journal dit ce qui a
+   été tiré). Un déclencheur POI jamais atteint reste `pending` → `skipped`
+   à la fin, comme aujourd'hui.
+2. **Type `lubie`** : `{type: lubie, poi: X, t: poi|<s>, duration_s, p?,
+   text?, stop?: true}`. Au `start` : publie la consigne sur
+   `chat_instruction` (JSON string ; `text` du scénario, sinon le champ
+   `lubie` du POI dans l'itinéraire — le régisseur charge donc aussi le
+   YAML d'itinéraire, paramètre `route_file`) ; si `stop` (défaut true) :
+   `route_speed = 0` (Didier s'arrête devant l'objet). Au `stop` : publie
+   `""` sur `chat_instruction` (consigne levée) et `route_speed = restore`
+   (défaut 1.0, comme `speed`). Cible d'exclusion : **`speed`** (une lubie
+   et une batterie faible ne se chevauchent pas ; la seconde est sautée).
+   Durée max `FAULT_MAX_DURATION_S["lubie"] = 120`.
+   L'ancien type `instruction` devient **borné** lui aussi (`duration_s`
+   > 0 autorisé, max 120, `""` publié à la fin) — rétro-compatible : à 0 il
+   reste ponctuel et ne lève rien.
+3. **Type `chat`** : pannes de la **conversation**, exécutées par chat_node
+   (dépôt vision). `{type: chat, op: delay|garble|deaf|mute|phantom,
+   duration_s, params}`. Le régisseur publie sur **`rehearsal/chat_fault`**
+   (StringTime JSON `{"op", "params", "until_ms"}`) au start, et
+   `{"op": "pass"}` au stop. Cible `chat`. Max 60 s. Ce canal **n'a pas de
+   chien de garde** (c'est du texte, pas des roues) : la borne est tenue
+   par **les deux côtés** (régisseur : `FAULT_MAX_DURATION_S["chat"]` ;
+   chat_node : plafond local 60 s, cf. §13.5). Contrat JSON gravé dans les
+   tests des deux dépôts, avec les mêmes chaînes.
+
+Le topic d'instruction est renommé **`chat_instruction`** (était
+`rehearsal/instruction`, jamais consommé) : c'est une consigne de jeu
+générique — en prod, un humain pourra l'envoyer depuis la régie.
+
+**Journal** : chaque POI reçu (`poi_event`), chaque tirage au chargement
+(`timeline` avec `trigger: poi` et `drawn: true/false`), chaque consigne
+posée/levée, chaque panne chat.
+
+### 13.5 Les 20 bugs — catalogue gravé dans `config/scenarios/chantiers.yaml`
+
+Tous **réels** (vécus ou établis par les études, §2). Vingt entrées à
+`t: random` sur la durée de la séance, en plus des 30 lubies à `t: poi`
+(`p: 0.4` chacune → ~12 délires par séance, un toutes les 40 s environ).
+
+| # | id | Mécanisme | Le vrai bug derrière |
+|---|---|---|---|
+| 1 | `liaison` | `pause route_driver` 5 s | perte de liaison → deadman 400 ms |
+| 2 | `arret_net` | `relay zero` 6 s | arrêt franc (deadman, e-stop) |
+| 3 | `pause_syndicale` | `relay freeze` 4 s | continue sur sa dernière consigne (« deux signaux ») |
+| 4 | `acoups` | `relay drop p=0.7` 10 s | WiFi saturé en festival |
+| 5 | `retard` | `relay delay 1500 ms` 10 s | latence de liaison |
+| 6 | `batterie` | `speed 0.4` 20 s | batterie faible (autonomie jamais mesurée) |
+| 7 | `fader_mort` | `speed 0.0` 8 s | fader/télécommande qui ne répond plus |
+| 8 | `emballement` | `speed 1.0` 6 s | consigne à fond (plafond 0,5 m/s inchangé) |
+| 9 | `visage_fige` | `pause face_sim` 6 s | incident 13/07 (driver LED) |
+| 10 | `ruban_noir` | `pause leds_sim_node` 6 s | neopixel stock cassé (ruban noir silencieux) |
+| 11 | `bras_en_greve` | `pause servos_sim_node` 8 s | bras muet depuis sept. 2025 (bug `random`) |
+| 12 | `sequence_bloquee` | `pause animations_node` 8 s | bouche qui continue après la réplique (13/09) |
+| 13 | `regard_fige` | `pause gaze_follower` 8 s | gaze mort |
+| 14 | `reboot` | `kill route_driver` reenable | conteneur mort → black-out ~40 s |
+| 15 | `reboot_sans_reprise` | `kill route_driver` reenable=false | relance expirée (`route_reenable_expired`, vécu 08/10) |
+| 16 | `latence_pi` | `chat delay 6000 ms` 40 s | 4–9 s mesurés sur le Pi 5 |
+| 17 | `contresens` | `chat garble` 30 s | whisper `tiny` qui hallucine (« il parle d'Astérix ») |
+| 18 | `sourd` | `chat deaf` 20 s | sourd à 3 m (ronflement secteur) |
+| 19 | `muet` | `chat mute` 20 s | audio silencieux (texte sans voix) |
+| 20 | `parle_au_bus` | `chat phantom` text=« Sous-titres réalisés par la communauté d'Amara.org » | STT sur du bruit : Didier répond au trafic (hallucination whisper classique) |
+
+Non joués, et dits : la télécommande qui rate (jamais relayable, c'est le
+contrat — David la lâche lui-même), le Pi fumé.
+
+### 13.6 chat_node (dépôt vision) — quatre topics, un persona
+
+Changements **prod** (ils ont un sens hors sim) dans `vision/nodes/chat_node.py`
++ un module **pur** `vision/ai/stage.py` (testé sans ROS) :
+
+| Topic | Sens | Contrat |
+|---|---|---|
+| `chat_text` (sub) | texte « entendu » **sans micro ni STT** (clavier de la régie) | StringTime, payload JSON string ou brut ; servi au prochain tour, même micro mort ; coupe une écoute en cours |
+| `chat_instruction` (sub) | consigne de jeu courante | JSON string ; `""` = levée ; injectée comme **second message system** `« Consigne de mise en scène (à jouer, jamais à prononcer) : … »` à chaque tour tant qu'elle est posée ; **péremption locale 120 s** (si le régisseur meurt) |
+| `rehearsal/chat_fault` (sub) | panne de conversation | JSON `{"op": pass|delay|garble|deaf|mute|phantom, "params": {...}, "until_ms": n}` ; **plafond local 60 s** ; `delay` = sommeil avant le LLM (`delay_ms`) ; `garble` = la transcription est remplacée par un contresens tiré d'une liste gravée (ou `params.texts`) ; `deaf` = énoncés jetés (retour à l'écoute) ; `mute` = la voix n'est pas synthétisée, le texte est publié quand même ; `phantom` = ponctuel, `params.text` servi comme un énoncé entendu |
+| `chat_transcript` (pub) | la conversation telle qu'elle a eu lieu | JSON `{"role": "david"|"didier", "text": …, "t_ms": …}` — `david` = texte entendu (après garble, donc **ce que Didier a compris**), `didier` = chaque phrase. Jamais les consignes ni les pannes (David ignore le tirage) |
+
+Persona **`mauvaisefoi`** ajouté à `vision/ai/personas.py` *(texte à valider
+par David)* :
+
+> Ta personnalité du jour : DIDIER DE MAUVAISE FOI.
+> Tu n'as jamais tort, tu n'as jamais de bug : chaque panne est une
+> fonctionnalité, chaque arrêt est une décision, chaque silence est une pause
+> artistique. Quand on te prend en défaut, tu nies, puis tu minimises, puis
+> tu retournes l'accusation — avec aplomb et bonne humeur, jamais méchant.
+> Tu tombes amoureux des objets de la rue (un lampadaire, une grue, une
+> poubelle) et tu tiens à tes lubies ; tu cèdes seulement si on te donne une
+> raison absurde, ou si on entre dans ton délire — alors tu annonces que tu
+> repars, comme si c'était ton idée.
+> Ton histoire (tu y crois dur comme fer) : tu es en mission pour ton patron,
+> un homme débordé qui ne comprend rien à l'art ; tu dois l'amener quelque
+> part, mais c'est lui qui te retarde.
+> Tes tics de langage, à placer avec parcimonie : « c'est prévu », « je ne
+> vois pas de quoi tu parles », « c'est une fonctionnalité », « euh… non.
+> Si. En fait c'est normal. »
+> Phrases courtes, hésitations écrites, ruptures : un texte qui bafouille
+> sonne décalé sans aucun effet audio.
+
+Limite assumée (**pas dans ce lot**) : la fermeture **à la voix** reste
+verbale — Didier dit qu'il repart, mais la vitesse revient par la
+télécommande, par la page, ou à l'expiration de la lubie. Chat → mouvement
+est le lot **I1** d'`etude-interaction` (transitions de mission par réplique)
+et passe par une revue sécurité à part.
+
+### 13.7 La page « scène » (`/scene` du pont web)
+
+Servie par `web_bridge` (robot_web), même WebSocket, mêmes sessions. Trois
+colonnes : **caméra de Didier** (`/video`, MJPEG gz), **visage LED**
+(`<img>` sur le flux de `face_sim`, URL par défaut `http://<hôte>:8766/stream`,
+modifiable dans la page), **conversation** (transcript en direct + champ
+texte → `chat_text` + champ consigne → `chat_instruction`). Barre de
+contrôle : Parole on/off, persona (4 boutons dont `mauvaisefoi`), **route**
+on/off/restart, **vitesse** (slider → `route_speed`), **séance** start/stop
+(→ `rehearsal/cmd`). État : `chat_state` (écoute/réfléchit/parle),
+`persona_state`, `route_state`.
+
+Protocole : `chat_text` et `chat_instruction` entrent dans
+`WHITELIST_TECHNIQUE` (prod : la régie peut souffler à Didier) ; `route`,
+`route_speed`, `rehearsal/cmd` forment **`WHITELIST_REPETITION`**, activée
+par le paramètre **`rehearsal_enabled`** (défaut `false`, passé `true` par
+`sim.launch.py` quand `rehearsal:=true`) et annoncée dans `hello` — sur le
+vrai robot ces boutons n'existent pas. **Flux** : un nouveau message
+serveur → client `{"type": "feed", "topic": "chat_transcript", "msg": …}`
+diffusé **à chaque message** reçu (contrairement à `state`, qui ne porte que
+la dernière valeur toutes les 2 s) ; `TOPICS_FLUX = {"chat_transcript"}`,
+`route_state` rejoint `TOPICS_LECTURE`.
+
+### 13.8 Vérification
+
+- **Unitaire (hôte)** : les deux dépôts, valeurs gravées, passe de mutation
+  sur chaque nouveau type (tirage `p`, déclencheur POI, bornes, JSON).
+- **V-R3 technique** (`conf/scripts/validate-rehearsal-chantiers.sh`, dans
+  le conteneur sim, `WORLD=chantiers`) : route on → arrivée au pied de la
+  Titan ; ≥ 25 POI `enter` dans l'ordre du YAML ; scénario `chantiers` avec
+  graine fixe : les lubies tirées sont exactement celles du journal, chaque
+  lubie tirée a publié sa consigne puis `""`, `route_speed` 0 puis restore ;
+  chaque panne `chat` a publié son JSON et son `pass` ; les 20 bugs ont
+  démarré (statut `done`, `skipped` ou `error` ≠ `pending`).
+- **V-R3 séance** (David, casque) : le trajet joué de bout en bout sans sortir
+  du jeu — critère humain, journal → frise au débrief.
+
+### 13.9 Hors lot, à dire
+
+I0 (état de mission) n'est **pas** fait : la « mission » n'existe que dans le
+persona (texte). La fermeture à la voix (I1) non plus. Le passant (R5), le
+débrief outillé (R4), l'avatar (R0) : inchangés.
