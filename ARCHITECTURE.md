@@ -65,6 +65,22 @@ tests lumières/neopixel (copiés du robot), `conf/ros2_dependencies/` dupliqué
 | `/face`, `/audio` | `robot_interfaces/StringTime` | vision → robot | V2 : émotions et parole via les topics EXISTANTS du robot (lights_node/audio_node) — zéro modif côté robot. |
 | `animation_state` | `robot_interfaces/StringTime` (latché) | robot → vision | Arbitrage amont (étude 2026-07-12 côté robot, dadou_robot_ros/docs/etude-arbitrage-actionneurs.md) : chat_node s'y abonne et retient face/animation tant qu'une séquence de spectacle a la main ; son stop d'animation devient CIBLÉ (n'arrête que "parle", jamais une séquence en cours), cf. vision/ai/arbitration.py. |
 
+### Topics de régie du chat (14/10)
+
+Lot R3 « Chantiers » (spec fermée : `../dadou_robot_ros/docs/etude-repetition-simulee.md`
+§13.4 point 3 et §13.6). Logique pure dans `vision/ai/stage.py` (testée sans ROS),
+câblage dans `chat_node`. Tous en `robot_interfaces/StringTime` :
+
+| Topic | Sens | Contrat |
+|---|---|---|
+| `chat_text` | sub | Texte « entendu » sans micro ni STT (clavier de la régie). JSON string ou brut, vide refusé. Servi au prochain tour, même micro mort ; coupe une écoute en cours. |
+| `chat_instruction` | sub | Consigne de jeu courante, JSON string ou brut ; `""` = levée. Envoyée au LLM comme second message system (« Consigne de mise en scène (à jouer, jamais à prononcer) : … ») à chaque tour ; **péremption locale 120 s**. |
+| `rehearsal/chat_fault` | sub | Panne publiée par le régisseur de la répétition simulée : JSON `{"op": pass\|delay\|garble\|deaf\|mute\|phantom, "params": {...}, "until_ms": n}`, `until_ms` = DURÉE en ms (même convention que les ordres relais). **Plafond local 60 s** (None/absurde = 60 s). `delay` (`delay_ms` 1..60000) = sommeil avant le LLM ; `garble` = texte compris remplacé par un contresens (liste gravée ou `params.texts`) ; `deaf` = énoncés jetés ; `mute` = répliques non synthétisées (texte publié quand même) ; `phantom` (`params.text`) = ponctuel, servi comme un énoncé entendu. Sans effet en prod tant que personne ne publie. |
+| `chat_transcript` | pub | Flux (QoS volatile, depth 10) : JSON `{"role": "david"\|"didier", "text", "t_ms"}` (`t_ms` = epoch ms). `david` = ce que Didier a compris (après garble), `didier` = chaque phrase. Jamais les consignes ni les pannes. |
+
+Test à la main (domaine 43) :
+`ros2 topic pub --once chat_text robot_interfaces/msg/StringTime "{msg: 'bonjour Didier'}"`.
+
 Côté **robot** (chantier séparé, dadou_robot_ros) : un node `gaze_follower`
 /vision/person → `/neck/position` (**suivre du regard d'abord** — théâtral, sans
 risque, les servos sim/réels existent déjà) ; la conduite (cmd_vel prio basse via le

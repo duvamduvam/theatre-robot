@@ -14,6 +14,7 @@ ConversationEngine, pas le comportement isolé d'un seul fake.
 """
 import json
 import os
+import random
 import threading
 import time
 
@@ -21,8 +22,10 @@ import pytest
 
 from dadou_utils_ros.utils_static import ANIMATION, FACE
 
+from vision.ai import conversation as conversation_module
 from vision.ai.conversation import ConversationEngine, has_usable_text
 from vision.ai.performance import RosMessage
+from vision.ai.stage import StageState
 from vision.audio.vad import VadEvent
 
 REFRESH_MS = 15000
@@ -1104,3 +1107,383 @@ def test_callback_on_timing_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
 
     assert result is True  # le tour est allé jusqu'au bout malgré le callback cassé
     assert any("on_timing" in record.message for record in caplog.records)
+
+
+# --------------------------------------------------------------------------
+# Régie du chat (lot R3 « Chantiers », 2026-10-14 — dadou_robot_ros/docs/
+# etude-repetition-simulee.md §13.6, cf. docstring de module RÉGIE de
+# vision.ai.conversation) : texte tapé sans micro ni STT, pannes deaf/garble/
+# delay/mute/phantom, consigne en second message system, transcript. Les
+# bornes de StageState (plafond, péremption) sont testées dans test_stage.py ;
+# ici on teste le CÂBLAGE dans le tour. Les pannes sont armées avec
+# time.monotonic() : c'est l'horloge que le moteur lit.
+# --------------------------------------------------------------------------
+
+PARLE = RosMessage(ANIMATION, json.dumps("parle"), time_ms=REFRESH_MS)
+THINKING = RosMessage(FACE, json.dumps("reflechit"))
+IDLE = RosMessage(FACE, json.dumps("stop"))
+SPEAKING_STOP = RosMessage(ANIMATION, json.dumps(False))
+JOIE = RosMessage(FACE, json.dumps("joie"))
+
+
+class FakeStageBrain(FakeBrain):
+    """FakeBrain qui accepte `extra_system` (consigne de régie) et le note à
+    part, dans l'ordre des appels — la timeline garde le même tuple
+    ("brain_stream_reply", texte) que les tests historiques."""
+
+    def __init__(self, timeline, deltas, raise_error=False):
+        super().__init__(timeline, deltas, raise_error=raise_error)
+        self.extra_systems = []
+
+    def stream_reply(self, user_text, extra_system=None):
+        self.extra_systems.append(extra_system)
+        yield from super().stream_reply(user_text)
+
+
+class FakeMicAvecRegie(FakeMic):
+    """FakeMic qui appelle `on_read(n)` (n = numéro de lecture, à partir de 1)
+    AVANT de rendre la trame : simule un callback chat_node qui pousse un
+    texte pendant que le moteur écoute (thread rclpy.spin en vrai)."""
+
+    def __init__(self, timeline, frames, on_read):
+        super().__init__(timeline, frames)
+        self._on_read = on_read
+        self._reads = 0
+
+    def read_frame(self):
+        self._reads += 1
+        self._on_read(self._reads)
+        return super().read_frame()
+
+
+def _make_stage_engine(timeline, stage, *, brain_deltas, frames=(), vad_events=(),
+                       stt_text="jamais utilisé", mic=None, on_state=None,
+                       on_transcript=None, on_timing=None, dead_mic_backoff_s=0.0):
+    """Factory dédiée aux tests de régie (la factory historique reste
+    intacte) : renvoie (engine, brain) pour lire brain.extra_systems."""
+    brain = FakeStageBrain(timeline, brain_deltas)
+    engine = ConversationEngine(
+        mic=mic if mic is not None else FakeMic(timeline, frames),
+        vad=FakeVad(vad_events, timeline=timeline),
+        stt=FakeStt(timeline, stt_text),
+        brain=brain,
+        tts=FakeTts(timeline),
+        player=FakePlayer(timeline),
+        publish=_make_publish(timeline),
+        beeps_pcm=BEEPS_PCM,
+        beeps_rate=BEEPS_RATE,
+        refresh_ms=REFRESH_MS,
+        dead_mic_backoff_s=dead_mic_backoff_s,
+        on_state=on_state,
+        on_timing=on_timing,
+        stage=stage,
+        on_transcript=on_transcript,
+    )
+    return engine, brain
+
+
+def _transcript_recorder():
+    lines = []
+    return lines, lambda role, text: lines.append((role, text))
+
+
+def test_texte_tape_servi_sans_micro_ni_stt(timeline):
+    stage = StageState()
+    stage.push_text("bonjour Didier")
+    states = []
+    lines, on_transcript = _transcript_recorder()
+    engine, _brain = _make_stage_engine(
+        timeline, stage, brain_deltas=['Salut. {"emotion": "happy"}'],
+        on_state=states.append, on_transcript=on_transcript)
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    # Pas de mic_start en tête, pas de STT : le micro est coupé (il tournait
+    # peut-être depuis la fin du tour précédent), puis le tour se joue comme
+    # après un STT.
+    assert timeline == [
+        ("mic_stop",),
+        ("publish", THINKING),
+        ("player_play_async_raw", engine._beeps_path),
+        ("brain_stream_reply", "bonjour Didier"),
+        ("publish", PARLE),
+        ("tts_synthesize", "Salut."),
+        ("player_play", b"PCM:Salut.", 22050),
+        ("player_drain",),
+        ("publish", SPEAKING_STOP),
+        ("publish", JOIE),
+        ("mic_start",),
+    ]
+    assert states == ["thinking", "speaking", "listening"]
+    assert lines == [("david", "bonjour Didier"), ("didier", "Salut.")]
+    assert stage.has_text() is False
+
+
+def test_texte_tape_pendant_l_ecoute_l_interrompt(timeline):
+    stage = StageState()
+    frames, events = _speech_frames_and_events()
+
+    def on_read(n):
+        if n == 3:  # en pleine phrase : f1 a déclenché speech_start
+            stage.push_text("tu m'entends ?")
+
+    mic = FakeMicAvecRegie(timeline, frames, on_read)
+    engine, _brain = _make_stage_engine(
+        timeline, stage, brain_deltas=["Oui."], frames=frames, vad_events=events,
+        stt_text="ne doit jamais être transcrit", mic=mic)
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    tags = [event[0] for event in timeline]
+    # L'énoncé PARTIEL (pré-roll + f1) est jeté : jamais transcrit.
+    assert "stt_transcribe" not in tags
+    # Écoute interrompue : micro coupé + VAD ramenée en IDLE, puis le texte
+    # est servi (second mic_stop = anti-larsen de _serve_typed_text,
+    # idempotent sur le vrai MicCapture).
+    assert timeline[:5] == [
+        ("mic_start",),
+        ("mic_stop",),
+        ("vad_reset",),
+        ("mic_stop",),
+        ("publish", THINKING),
+    ]
+    assert ("brain_stream_reply", "tu m'entends ?") in timeline
+
+
+def test_texte_tape_avec_micro_coupe_n_est_pas_un_micro_mort(timeline, caplog):
+    # read_frame() rend None (flux coupé) alors qu'un texte attend déjà dans
+    # la file : le texte est servi, pas de faux « micro mort ».
+    stage = StageState()
+
+    def on_read(n):
+        if n == 1:
+            stage.push_text("allô ?")
+
+    mic = FakeMicAvecRegie(timeline, [], on_read)  # read_frame() -> None
+    engine, _brain = _make_stage_engine(timeline, stage, brain_deltas=["Oui."], mic=mic)
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    assert ("brain_stream_reply", "allô ?") in timeline
+    assert not any("micro mort" in record.message for record in caplog.records)
+
+
+def test_backoff_micro_mort_sonde_la_file_au_lieu_de_dormir(timeline, monkeypatch):
+    stage = StageState()
+    sleeps = []
+
+    def fake_sleep(seconds):
+        sleeps.append(seconds)
+        stage.push_text("le micro est mort, mais moi je tape")
+
+    monkeypatch.setattr(conversation_module.time, "sleep", fake_sleep)
+    engine, _brain = _make_stage_engine(
+        timeline, stage, brain_deltas=["Je t'entends."], dead_mic_backoff_s=5.0)
+    try:
+        first = engine.run_once()   # micro mort : backoff écourté par le texte
+        second = engine.run_once()  # le texte est servi au tour suivant
+    finally:
+        _cleanup_beeps(engine)
+
+    assert first is False
+    # UN SEUL pas de sondage (STAGE_POLL_S = 0,05 s), jamais le sleep(5.0)
+    # aveugle de l'historique.
+    assert sleeps == [0.05]
+    assert second is True
+    assert ("brain_stream_reply", "le micro est mort, mais moi je tape") in timeline
+
+
+def test_panne_deaf_abandonne_le_tour_comme_un_stt_inexploitable(timeline, caplog):
+    stage = StageState()
+    stage.set_fault("deaf", {}, 20000, time.monotonic())
+    frames, events = _speech_frames_and_events()
+    states = []
+    lines, on_transcript = _transcript_recorder()
+    engine, brain = _make_stage_engine(
+        timeline, stage, brain_deltas=["ne doit jamais être utilisé"], frames=frames,
+        vad_events=events, stt_text="raconte une blague",
+        on_state=states.append, on_transcript=on_transcript)
+    try:
+        with caplog.at_level("INFO", logger="vision.ai.conversation"):
+            result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is False
+    tags = [event[0] for event in timeline]
+    assert "stt_transcribe" in tags          # le STT a tourné…
+    assert "brain_stream_reply" not in tags  # …mais Didier n'a rien « entendu »
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    assert publishes == [THINKING, IDLE]
+    assert tags[-1] == "mic_start"
+    assert states == ["listening", "thinking", "listening"]
+    assert lines == []  # aucune ligne de transcript : rien n'a été compris
+    assert any("panne deaf" in record.message for record in caplog.records)
+
+
+def test_panne_garble_remplace_le_texte_compris(timeline):
+    stage = StageState(rng=random.Random(42))
+    stage.set_fault("garble", {}, 30000, time.monotonic())
+    frames, events = _speech_frames_and_events()
+    lines, on_transcript = _transcript_recorder()
+    timings = []
+    engine, _brain = _make_stage_engine(
+        timeline, stage, brain_deltas=["Astérix ? Jamais entendu parler."], frames=frames,
+        vad_events=events, stt_text="raconte une blague",
+        on_transcript=on_transcript, on_timing=timings.append)
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    garbled = "Sous-titres réalisés par la communauté d'Amara.org"  # graine 42
+    assert ("brain_stream_reply", garbled) in timeline
+    assert ("brain_stream_reply", "raconte une blague") not in timeline
+    # Transcript = ce que Didier a COMPRIS ; la console de diagnostic, elle,
+    # garde la vérité technique du STT.
+    assert lines[0] == ("david", garbled)
+    assert timings[0]["stt_text"] == "raconte une blague"
+
+
+def test_panne_garble_tire_dans_params_texts(timeline):
+    stage = StageState()
+    stage.set_fault("garble", {"texts": ["Tu as dit banane ?"]}, 30000, time.monotonic())
+    stage.push_text("tu as dit quoi ?")
+    engine, _brain = _make_stage_engine(timeline, stage, brain_deltas=["Banane."])
+    try:
+        engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert ("brain_stream_reply", "Tu as dit banane ?") in timeline
+
+
+def test_panne_delay_dort_avant_le_llm_pendant_les_bips(timeline, monkeypatch):
+    stage = StageState()
+    stage.set_fault("delay", {"delay_ms": 6000}, 40000, time.monotonic())
+    monkeypatch.setattr(conversation_module.time, "sleep",
+                        lambda seconds: timeline.append(("sleep", seconds)))
+    frames, events = _speech_frames_and_events()
+    states = []
+    engine, _brain = _make_stage_engine(
+        timeline, stage, brain_deltas=['Euh… oui. {"emotion": "neutral"}'], frames=frames,
+        vad_events=events, stt_text="tu es lent", on_state=states.append)
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    tags = [event[0] for event in timeline]
+    assert ("sleep", 6.0) in timeline
+    assert tags.count("sleep") == 1
+    # APRÈS le STT et les bips, AVANT l'appel LLM.
+    assert tags.index("player_play_async_raw") < tags.index("sleep")
+    assert tags.index("stt_transcribe") < tags.index("sleep") < tags.index("brain_stream_reply")
+    # L'état reste "thinking" pendant le sommeil (pas d'état intermédiaire).
+    assert states == ["listening", "thinking", "speaking", "listening"]
+
+
+def test_panne_mute_texte_sans_voix(timeline):
+    stage = StageState()
+    stage.set_fault("mute", {}, 20000, time.monotonic())
+    stage.push_text("chante-moi quelque chose")
+    lines, on_transcript = _transcript_recorder()
+    engine, _brain = _make_stage_engine(
+        timeline, stage,
+        brain_deltas=['Salut. *rit* Comment ça va ? {"emotion": "happy"}'],
+        on_transcript=on_transcript)
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    tags = [event[0] for event in timeline]
+    assert "tts_synthesize" not in tags
+    assert "player_play" not in tags
+    # Tout le reste joue normalement : bouche, didascalie, émotion finale.
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    assert publishes == [THINKING, PARLE, JOIE, PARLE, SPEAKING_STOP, JOIE]
+    assert lines == [("david", "chante-moi quelque chose"),
+                     ("didier", "Salut."), ("didier", "Comment ça va ?")]
+
+
+def test_consigne_transmise_au_brain_puis_levee(timeline):
+    stage = StageState()
+    stage.set_instruction("Tu es amoureux du lampadaire.", time.monotonic())
+    engine, brain = _make_stage_engine(timeline, stage, brain_deltas=["Qu'il est beau."])
+    try:
+        stage.push_text("on avance ?")
+        engine.run_once()
+        stage.set_instruction("", time.monotonic())
+        stage.push_text("et maintenant ?")
+        engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert brain.extra_systems == ["Tu es amoureux du lampadaire.", None]
+
+
+def test_phantom_servi_comme_un_enonce_entendu(timeline):
+    stage = StageState()
+    stage.set_fault("phantom", {"text": "Sous-titres réalisés par la communauté d'Amara.org"},
+                    1000, time.monotonic())
+    lines, on_transcript = _transcript_recorder()
+    engine, _brain = _make_stage_engine(
+        timeline, stage, brain_deltas=["Merci à eux."], on_transcript=on_transcript)
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    assert lines[0] == ("david", "Sous-titres réalisés par la communauté d'Amara.org")
+    assert stage.fault(time.monotonic()) == ("pass", {})
+
+
+def test_transcript_sans_stage_et_appel_brain_historique(timeline):
+    # on_transcript est indépendant de `stage` ; sans stage, le brain est
+    # appelé SANS extra_system (FakeBrain historique ne l'accepte même pas).
+    frames, events = _speech_frames_and_events()
+    lines, on_transcript = _transcript_recorder()
+    engine = ConversationEngine(
+        mic=FakeMic(timeline, frames), vad=FakeVad(events, timeline=timeline),
+        stt=FakeStt(timeline, "salut"), brain=FakeBrain(timeline, ["Salut. Ça va ?"]),
+        tts=FakeTts(timeline), player=FakePlayer(timeline), publish=_make_publish(timeline),
+        refresh_ms=REFRESH_MS, dead_mic_backoff_s=0.0, on_transcript=on_transcript,
+    )
+    assert engine.run_once() is True
+    assert lines == [("david", "salut"), ("didier", "Salut."), ("didier", "Ça va ?")]
+
+
+def test_callback_on_transcript_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
+    stage = StageState()
+    stage.push_text("salut")
+
+    def failing_transcript(_role, _text):
+        raise RuntimeError("page scène cassée (test)")
+
+    engine, _brain = _make_stage_engine(
+        timeline, stage, brain_deltas=['Salut. {"emotion": "neutral"}'],
+        on_transcript=failing_transcript)
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    assert ("tts_synthesize", "Salut.") in timeline
+    assert any("on_transcript" in record.message for record in caplog.records)

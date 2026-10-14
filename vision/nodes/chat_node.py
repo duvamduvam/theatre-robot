@@ -87,6 +87,15 @@ POURQUOI `diag_port` (lot du 2026-09-13, demande de David en séance -- « un
        (PAS asyncio.Lock, mêmes raisons que web_bridge_node.py) ; AUCUN I/O ni
        encodage JSON dans les callbacks eux-mêmes (juste un rangement de
        valeurs), l'encodage se fait côté HTTP, à la cadence d'affichage.
+POURQUOI les topics de RÉGIE (lot R3 « Chantiers », 2026-10-14, spec fermée
+       dadou_robot_ros/docs/etude-repetition-simulee.md §13.6) : CHAT_TEXT,
+       CHAT_INSTRUCTION et CHAT_FAULT sont décodés ici (vision.ai.stage, pur)
+       et rangés dans un StageState partagé avec ConversationEngine -- ÉCRIT
+       par les callbacks (thread rclpy.spin), LU par le thread de
+       conversation : StageState porte son propre verrou (cf. sa docstring,
+       pourquoi l'argument « affectation atomique sous le GIL » d'
+       _animation_state ne suffit pas là). CHAT_TRANSCRIPT est publié depuis
+       le thread de conversation (callback on_transcript), comme _publish.
 """
 import asyncio
 import json
@@ -104,7 +113,7 @@ from robot_interfaces.msg import StringTime
 
 from dadou_utils_ros.utils_static import ANIMATION, ANIMATION_STATE, FACE
 
-from vision.ai import arbitration, personas
+from vision.ai import arbitration, personas, stage
 from vision.ai.conversation import ConversationEngine
 from vision.ai.llm_stream import StreamingBrain
 from vision.ai.performance import RosMessage
@@ -165,7 +174,7 @@ CHAT_CMD_TOPIC = "chat"
 # Topic de changement de personnalité à chaud (lot D3, atelier persona du
 # 2026-07-13 — cf. vision.ai.personas et dadou_robot_ros/docs/
 # etude-declenchement-conversation.md §5.4) : payload = nom de variante
-# ("bougon"/"naif"/"vantard"), même souplesse de décodage que le toggle
+# ("bougon"/"naif"/"vantard"/"mauvaisefoi"), même souplesse de décodage que le toggle
 # `chat` (JSON ou brut, cf. _chat_wiring.decode_persona_command). Consommé
 # depuis la console web (whitelist technique) et, à terme, la télécommande.
 PERSONA_TOPIC = "persona"
@@ -184,6 +193,33 @@ PERSONA_STATE_TOPIC = "persona_state"
 # ci-dessus (ce topic n'a de sens que côté chat, aucune raison de le
 # mutualiser dans la lib partagée).
 CHAT_STATE_TOPIC = "chat_state"
+
+# --- Topics de RÉGIE du chat (lot R3, cf. docstring de module) -------------
+# Texte « entendu » SANS micro ni STT (clavier de la régie, page « scène » du
+# pont web) : prod-générique -- sur un vrai spectacle, la régie peut souffler
+# une réplique à Didier quand le micro ne passe plus (bruit, panne). Payload
+# JSON string ou brut ; coupe une écoute en cours (sondage du moteur, cf. _on_chat_text).
+CHAT_TEXT_TOPIC = "chat_text"
+
+# Consigne de jeu courante (texte ; "" = levée), injectée comme second message
+# system à chaque tour : prod-générique aussi -- la régie peut diriger
+# Didier en direct (« tu boudes », « tu es pressé »). Péremption locale
+# 120 s (vision.ai.stage.INSTRUCTION_TTL_S) si la levée se perd.
+CHAT_INSTRUCTION_TOPIC = "chat_instruction"
+
+# Panne de conversation injectée par le régisseur de la répétition simulée
+# (robot_rehearsal, dadou_robot_ros) : le nom `rehearsal/…` EST le contrat de
+# ce régisseur (§13.4 point 3, mêmes chaînes gravées dans les tests des deux
+# dépôts). Consommé aussi en prod, SANS effet tant que personne ne publie --
+# le régisseur ne tourne qu'en domaine 43 (sim) et n'entre jamais dans le
+# bringup. Plafond local 60 s (vision.ai.stage.FAULT_MAX_S).
+CHAT_FAULT_TOPIC = "rehearsal/chat_fault"
+
+# La conversation telle qu'elle a eu lieu, ligne par ligne : JSON {"role":
+# "david"|"didier", "text", "t_ms"} (vision.ai.stage.encode_transcript).
+# Jamais les consignes ni les pannes (David ignore le tirage, §13.1). Pas
+# latché : c'est un FLUX (la page l'affiche au fil de l'eau), pas un état.
+CHAT_TRANSCRIPT_TOPIC = "chat_transcript"
 
 
 # --- Serveur de diagnostic web (vumètre + latences, cf. docstring de module
@@ -660,6 +696,14 @@ class ChatNode(Node):
         self._persona_state_pub = self.create_publisher(
             StringTime, PERSONA_STATE_TOPIC,
             QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        # Transcript (cf. CHAT_TRANSCRIPT_TOPIC) : QoS VOLATILE depth=10 --
+        # un flux de lignes, pas un état (un abonné tardif n'a pas à recevoir
+        # une réplique d'il y a dix minutes comme si elle venait d'être dite).
+        self._transcript_pub = self.create_publisher(StringTime, CHAT_TRANSCRIPT_TOPIC, 10)
+
+        # --- Régie du chat (cf. docstring de module POURQUOI les topics de
+        # RÉGIE) : créé AVANT ConversationEngine, qui le reçoit en kwarg.
+        self._stage = stage.StageState()
 
         # --- Orchestrateur (logique déjà testée hors ROS) ------------------
         self._engine = ConversationEngine(
@@ -687,6 +731,11 @@ class ChatNode(Node):
             # historique inchangé", aucune condition à dupliquer ici.
             on_meter=self._diag.on_meter if self._diag is not None else None,
             on_timing=self._diag.on_timing if self._diag is not None else None,
+            # Régie (cf. docstring de module) : toujours câblée -- sans
+            # publication sur ses topics, StageState reste vide et chaque tour
+            # se déroule comme avant (seules les lignes du transcript
+            # s'ajoutent ; le backoff micro mort garde sa durée, en sondant).
+            stage=self._stage, on_transcript=self._publish_transcript,
         )
         self._mic = mic
         self._player = player
@@ -707,6 +756,10 @@ class ChatNode(Node):
         self._enabled.set()
         self.create_subscription(StringTime, CHAT_CMD_TOPIC, self._on_chat_cmd, 10)
         self.create_subscription(StringTime, PERSONA_TOPIC, self._on_persona, 10)
+        self.create_subscription(StringTime, CHAT_TEXT_TOPIC, self._on_chat_text, 10)
+        self.create_subscription(
+            StringTime, CHAT_INSTRUCTION_TOPIC, self._on_chat_instruction, 10)
+        self.create_subscription(StringTime, CHAT_FAULT_TOPIC, self._on_chat_fault, 10)
 
         # --- Arbitrage amont (2026-07-12, cf. docstring de module POURQUOI) :
         # None = jamais reçu (topic ANIMATION_STATE absent ou robot pas encore
@@ -763,7 +816,9 @@ class ChatNode(Node):
             f"persona={persona_name}) -> topics {FACE}/{ANIMATION}, toggle sur "
             f"'{CHAT_CMD_TOPIC}' (on/off), persona sur '{PERSONA_TOPIC}' "
             f"({'/'.join(personas.persona_names())}), état publié sur "
-            f"'{CHAT_STATE_TOPIC}' (latché)"
+            f"'{CHAT_STATE_TOPIC}' (latché), régie sur '{CHAT_TEXT_TOPIC}'/"
+            f"'{CHAT_INSTRUCTION_TOPIC}'/'{CHAT_FAULT_TOPIC}', transcript sur "
+            f"'{CHAT_TRANSCRIPT_TOPIC}'"
             + (f", diagnostic sur http://0.0.0.0:{diag_port}" if diag_port > 0 else "")
         )
 
@@ -825,6 +880,68 @@ class ChatNode(Node):
         abonné lit `msg` directement)."""
         self._persona_state_pub.publish(
             StringTime(msg=self._persona, time=0, anim=False))
+
+    def _on_chat_text(self, ros_msg):
+        """Texte tapé par la régie (cf. CHAT_TEXT_TOPIC) : SEULEMENT enfilé.
+
+        PAS de mic.stop() ici (décision du 2026-10-14) : MicCapture n'est pas
+        sûr entre threads -- son stop() appelé depuis CE thread (rclpy.spin)
+        pendant que le thread de conversation lit ou arrête le micro laisse
+        une fenêtre où `self._process` passe à None entre un test et son
+        usage (AttributeError : thread de conversation mort = Didier sourd
+        en silence, ou callback qui fait tomber rclpy.spin). La course
+        existe déjà pour le toggle OFF ; on ne l'élargit pas à chaque texte
+        tapé. Inutile de toute façon : ConversationEngine sonde la file à
+        CHAQUE trame micro (30 ms), interrompt l'écoute lui-même et arrête
+        le micro depuis SON thread. Pendant que Didier parle, le texte
+        attend le tour suivant ; chat OFF, il attend la reprise."""
+        try:
+            self._stage.push_text(stage.decode_text_payload(ros_msg.msg))
+        except ValueError as exc:
+            self.get_logger().warning(f"chat_text refusé : {exc} ({ros_msg.msg!r})")
+            return
+        self.get_logger().info("chat_text reçu : servi au prochain tour (écoute interrompue)")
+
+    def _on_chat_instruction(self, ros_msg):
+        """Consigne de jeu (cf. CHAT_INSTRUCTION_TOPIC) : "" = levée.
+        Journalisée ici (log du node, que David ne voit pas pendant la
+        séance) -- jamais dans le transcript."""
+        text = stage.decode_text_payload(ros_msg.msg)
+        self._stage.set_instruction(text, time.monotonic())
+        if text:
+            self.get_logger().info(f"consigne posée : {text!r}")
+        else:
+            self.get_logger().info("consigne levée")
+
+    def _on_chat_fault(self, ros_msg):
+        """Panne de conversation (cf. CHAT_FAULT_TOPIC) : décodée et validée
+        par vision.ai.stage (ValueError -> warning, jamais un crash du
+        callback ; un ordre refusé ne change pas la panne en cours)."""
+        try:
+            op, params, until_ms = stage.decode_fault_command(ros_msg.msg)
+            self._stage.set_fault(op, params, until_ms, time.monotonic())
+        except ValueError as exc:
+            self.get_logger().warning(f"{CHAT_FAULT_TOPIC} refusé : {exc}")
+            return
+        if op == "phantom":
+            # Ponctuel (cf. StageState.set_fault) : pas de durée à annoncer.
+            self.get_logger().info(f"panne chat phantom : énoncé fantôme enfilé {params['text']!r}")
+        elif op == "pass":
+            self.get_logger().info("panne chat levée (pass)")
+        else:
+            self.get_logger().info(
+                f"panne chat : {op} {params} pour "
+                f"{stage.fault_duration_s(until_ms):.1f} s (until_ms={until_ms!r}, "
+                f"plafond {stage.FAULT_MAX_S:.0f} s)")
+
+    def _publish_transcript(self, role: str, text: str) -> None:
+        """Callback `on_transcript` de ConversationEngine (thread de
+        conversation, comme _publish). t_ms = horloge MURALE (epoch, ms) :
+        la ligne voyage vers la page « scène » du Pi robot et le journal du
+        régisseur -- une horloge monotone ne voudrait rien dire hors de ce
+        process. PAS d'arbitrage : ce n'est pas un actionneur."""
+        payload = stage.encode_transcript(role, text, int(time.time() * 1000))
+        self._transcript_pub.publish(StringTime(msg=payload, time=0, anim=False))
 
     def _on_animation_state(self, ros_msg):
         """Callback du topic ANIMATION_STATE (latché, publié par

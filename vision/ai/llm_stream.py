@@ -24,10 +24,17 @@ POURQUOI client_factory injectable : permet aux tests de fournir un faux
 """
 from __future__ import annotations
 
-from typing import Iterator
+from typing import Iterator, Optional
 
 from vision.db.chat_db import ChatDB
 from vision.vision_config import get_secret
+
+# Préfixe de la consigne de mise en scène (topic `chat_instruction`, lot R3,
+# cf. vision.ai.stage) — texte fixé par la spec (dadou_robot_ros/docs/
+# etude-repetition-simulee.md §13.6) : « à jouer, jamais à prononcer » dit au
+# LLM que la consigne est une DIRECTION de jeu, pas une réplique à dire
+# (David ne doit pas entendre le tirage du régisseur).
+STAGE_INSTRUCTION_PREFIX = "Consigne de mise en scène (à jouer, jamais à prononcer) : "
 
 
 class StreamingBrain:
@@ -88,7 +95,7 @@ class StreamingBrain:
             self._client = OpenAI(base_url=self._base_url, api_key=api_key)
         return self._client
 
-    def stream_reply(self, user_text: str) -> Iterator[str]:
+    def stream_reply(self, user_text: str, extra_system: Optional[str] = None) -> Iterator[str]:
         """Envoie `user_text` au LLM, streame les deltas de la réponse, et
         met à jour l'historique (ChatDB) : le message utilisateur est ajouté
         AVANT l'appel (il doit faire partie du contexte envoyé), la réponse
@@ -96,7 +103,15 @@ class StreamingBrain:
         connus — on ne peut pas persister un historique partiel de façon
         cohérente si le flux est interrompu en cours de route, cf. gestion
         d'erreur dans vision.ai.conversation qui logge et abandonne le tour
-        proprement)."""
+        proprement).
+
+        `extra_system` (lot R3, consigne de jeu courante — None = rien de
+        plus, appel identique à l'historique) : envoyé comme SECOND message
+        system, juste après le prompt de personnalité, préfixé par
+        STAGE_INSTRUCTION_PREFIX. JAMAIS consigné dans ChatDB : une consigne
+        vaut pour le tour où elle est posée (elle est renvoyée à chaque tour
+        tant que la régie la maintient) — l'historiser la ferait survivre à
+        sa levée."""
         client = self._get_client()
 
         self._history_entry.add_user_text(user_text)
@@ -106,7 +121,11 @@ class StreamingBrain:
         # borne sur une longue session, cf. config["chat_*"] pour la valeur
         # par défaut retenue).
         history = self._history_entry.get_history()[-self._history_limit:]
-        messages = [{"role": "system", "content": self._system_prompt}] + history
+        messages = [{"role": "system", "content": self._system_prompt}]
+        if extra_system:
+            messages.append(
+                {"role": "system", "content": STAGE_INSTRUCTION_PREFIX + extra_system})
+        messages += history
 
         stream = client.chat.completions.create(
             model=self._model,

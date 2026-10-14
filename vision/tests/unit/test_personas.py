@@ -16,11 +16,13 @@ def test_persona_par_defaut_de_la_config_est_une_variante_connue():
 
 
 def test_persona_names_trie_et_complet():
-    assert personas.persona_names() == sorted(personas.PERSONAS)
-    assert set(personas.persona_names()) == {"bougon", "naif", "vantard"}
+    # Liste GRAVÉE (et triée) : "mauvaisefoi" ajoutée au lot R3 « Chantiers »
+    # (2026-10-14, dadou_robot_ros/docs/etude-repetition-simulee.md §13.6) —
+    # c'est aussi la liste des boutons de la page « scène » côté robot.
+    assert personas.persona_names() == ["bougon", "mauvaisefoi", "naif", "vantard"]
 
 
-@pytest.mark.parametrize("name", ["bougon", "naif", "vantard"])
+@pytest.mark.parametrize("name", ["bougon", "naif", "vantard", "mauvaisefoi"])
 def test_chaque_variante_embarque_le_contrat_technique(name):
     # Le contrat qui pilote le corps doit survivre à TOUTE itération
     # d'écriture : JSON d'émotion (visage), didascalies (gestes), interdiction
@@ -34,7 +36,7 @@ def test_chaque_variante_embarque_le_contrat_technique(name):
     assert "Didier" in prompt
 
 
-@pytest.mark.parametrize("name", ["bougon", "naif", "vantard"])
+@pytest.mark.parametrize("name", ["bougon", "naif", "vantard", "mauvaisefoi"])
 def test_chaque_variante_embarque_socle_et_personnalite(name):
     prompt = personas.compose_system_prompt(name)
     # Socle : robot assumé + interdiction de sortir du personnage.
@@ -47,9 +49,20 @@ def test_chaque_variante_embarque_socle_et_personnalite(name):
     assert personas.PERSONAS[name] in prompt
 
 
-def test_les_trois_variantes_sont_distinctes():
+def test_les_quatre_variantes_sont_distinctes():
     prompts = {name: personas.compose_system_prompt(name) for name in personas.PERSONAS}
-    assert len(set(prompts.values())) == 3
+    assert len(set(prompts.values())) == 4
+
+
+def test_mauvaisefoi_porte_le_texte_de_la_spec():
+    # Marqueurs GRAVÉS du texte du §13.6 (titre, ressort de jeu, tics, règle
+    # d'écriture qui remplace l'effet audio) : une réécriture d'atelier peut
+    # reformuler, mais pas perdre ces quatre piliers sans que ça se voie.
+    prompt = personas.compose_system_prompt("mauvaisefoi")
+    assert "Ta personnalité du jour : DIDIER DE MAUVAISE FOI." in prompt
+    assert "chaque panne est une fonctionnalité" in prompt
+    assert "« c'est une fonctionnalité »" in prompt
+    assert "un texte qui bafouille sonne décalé sans aucun effet audio." in prompt
 
 
 def test_nom_inconnu_leve_valueerror_avec_la_liste():

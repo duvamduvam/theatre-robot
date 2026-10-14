@@ -79,15 +79,30 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        nominal), et de façon INCONDITIONNELLE sur le chemin d'erreur LLM/TTS
        (une panne ne laisse jamais un `emotion_params` de fin fiable) --
        toujours APRÈS `speaking_stop()`, jamais avant.
+
+       RÉGIE (2026-10-14, lot R3 « Chantiers », dadou_robot_ros/docs/
+       etude-repetition-simulee.md §13.6) : deux kwargs OPTIONNELS de plus,
+       `stage` (vision.ai.stage.StageState) et `on_transcript` -- défaut None
+       = comportement HISTORIQUE inchangé, MÊME clause de réversibilité que
+       ci-dessus (les tests existants restent verts sans y toucher). Avec
+       `stage` : un texte TAPÉ par la régie est servi comme un énoncé entendu
+       (ni micro ni STT, au début du tour ou en interrompant l'écoute), la
+       PANNE courante est appliquée au texte compris (deaf = tour abandonné,
+       garble = contresens, delay = sommeil avant le LLM, mute = répliques
+       non synthétisées), et la CONSIGNE courante part au LLM comme second
+       message system. `on_transcript(role, texte)` reçoit ce que Didier a
+       compris ("david", après garble) et chaque phrase qu'il dit ("didier")
+       -- jamais les consignes ni les pannes (David ignore le tirage).
 """
 from __future__ import annotations
 
 import logging
 import threading
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 from vision.ai import performance
+from vision.ai.stage import ROLE_DAVID, ROLE_DIDIER, StageState, garble_text
 from vision.ai.stream_parser import Didascalie, Emotion, Sentence, StreamPerformanceParser
 
 # Logger stdlib (PAS le logger rclpy : ce module reste sans dépendance ROS,
@@ -104,6 +119,13 @@ logger = logging.getLogger(__name__)
 # premier test réel, 2026-07-11). 0,5 s suffit : assez court pour reprendre
 # vite quand le micro revient, assez long pour que la boucle soit inoffensive.
 DEAD_MIC_BACKOFF_S = 0.5
+
+# Pas de sondage (s) de la file des textes tapés pendant l'attente « micro
+# mort » (cf. _wait_dead_mic_backoff) : un texte de la régie doit être servi
+# même quand le micro est HS (banc sans micro, carte débranchée) — attendre
+# le backoff à l'aveugle le retarderait pour rien. 50 ms : imperceptible
+# pour la régie, négligeable en CPU.
+STAGE_POLL_S = 0.05
 
 
 def has_usable_text(text: Optional[str]) -> bool:
@@ -132,7 +154,9 @@ class ConversationEngine:
                  gate=None,
                  show_audio_active: Optional[Callable[[], bool]] = None,
                  on_meter: Optional[Callable[[float, float, bool, bool], None]] = None,
-                 on_timing: Optional[Callable[[dict], None]] = None):
+                 on_timing: Optional[Callable[[dict], None]] = None,
+                 stage: Optional[StageState] = None,
+                 on_transcript: Optional[Callable[[str, str], None]] = None):
         self._mic = mic
         self._vad = vad
         # Gate « source audio vivante » (half-duplex élargi, cf.
@@ -155,6 +179,12 @@ class ConversationEngine:
         self._on_meter = on_meter
         # Latences par tour (même lot) : None = comportement historique inchangé.
         self._on_timing = on_timing
+        # Régie (lot R3, cf. docstring de module RÉGIE) : None = comportement
+        # historique inchangé. Partagé avec chat_node, qui l'ÉCRIT depuis le
+        # thread rclpy.spin — StageState porte son propre verrou.
+        self._stage = stage
+        # Transcript (même lot) : None = personne n'écoute.
+        self._on_transcript = on_transcript
         self._stt = stt
         self._brain = brain
         self._tts = tts
@@ -260,6 +290,19 @@ class ConversationEngine:
         except Exception:
             logger.warning("Callback on_timing en échec (mesure du tour perdue).", exc_info=True)
 
+    def _notify_transcript(self, role: str, text: str) -> None:
+        """Notifie `on_transcript` (topic chat_transcript, cf. docstring de
+        module RÉGIE). Même garde que `_notify_timing` (warning, pas debug :
+        une ligne de dialogue, ça n'arrive pas à 33 Hz) — une page de régie
+        cassée ne doit jamais rendre Didier muet."""
+        if self._on_transcript is None:
+            return
+        try:
+            self._on_transcript(role, text)
+        except Exception:
+            logger.warning("Callback on_transcript en échec (ligne %r perdue).", role,
+                           exc_info=True)
+
     def _publish_all(self, messages) -> None:
         """publish() ne prend qu'UN SEUL message à la fois (contrat du
         constructeur) ; les fonctions de vision.ai.performance renvoient des
@@ -269,7 +312,7 @@ class ConversationEngine:
         for message in messages:
             self._publish(message)
 
-    def _handle_event(self, event, emotion_params, timing_marks: dict):
+    def _handle_event(self, event, emotion_params, timing_marks: dict, mute: bool = False):
         """Traduit UN événement du parseur de flux (Sentence/Didascalie/
         Emotion) en effet de bord (publish + synthèse/lecture), et retourne
         les params d'émotion à retenir (inchangés sauf si `event` EST
@@ -281,7 +324,12 @@ class ConversationEngine:
         rencontré dans le tour, pour `on_timing` (docstring de module
         OBSERVABILITÉ) — jamais réécrit une fois posé (`if ... is None`), une
         réponse a en général plusieurs Sentence mais seule la latence du
-        PREMIER son compte pour la latence perçue par le spectateur."""
+        PREMIER son compte pour la latence perçue par le spectateur.
+
+        `mute` (panne de régie, cf. docstring de module RÉGIE) : la Sentence
+        n'est ni synthétisée ni jouée — tout le reste part normalement
+        (transcript, bouche "parle", didascalies, émotion) : c'est le bug
+        réel simulé, « texte sans voix » (audio muet en silence)."""
         if isinstance(event, Sentence):
             if timing_marks["first_sentence_at"] is None:
                 # Horodaté AVANT même la synthèse TTS qui suit (elle peut
@@ -291,6 +339,7 @@ class ConversationEngine:
             # Journalisée AVANT la synthèse : si le TTS plante, la trace dit
             # quand même ce que Didier ALLAIT dire (diagnostic en direct).
             logger.info("Didier : %s", event.text)
+            self._notify_transcript(ROLE_DIDIER, event.text)
             # "speaking" : dédup absorbe la répétition à CHAQUE Sentence d'un
             # même tour (une réponse a en général plusieurs phrases).
             self._set_state("speaking")
@@ -299,6 +348,8 @@ class ConversationEngine:
             # chat_animation_refresh_ms dans vision_config.py, l'animation
             # "parle" doit rester active tant que le TTS streame encore.
             self._publish_all(self._perf.speaking_start(self._refresh_ms))
+            if mute:
+                return emotion_params
             pcm, sample_rate = self._tts.synthesize(event.text)
             # play() enfile : la synthèse de la Sentence SUIVANTE peut se
             # faire pendant que celle-ci joue encore (pipeline N/N+1 porté
@@ -326,10 +377,20 @@ class ConversationEngine:
         jusqu'au bout (émotion publiée) ; False dans tous les cas
         d'abandon : flux micro mort, STT vide/trop court, ou erreur
         LLM/TTS (le spectacle continue, cf. docstring de module)."""
+        # Texte tapé en attente (régie, cf. docstring de module RÉGIE) :
+        # servi SANS démarrer le micro ni passer par le STT.
+        typed = self._stage.pop_text() if self._stage is not None else None
+        if typed is not None:
+            return self._serve_typed_text(typed)
+
         self._mic.start()
         self._set_state("listening")
 
         speech_bytes = self._listen_for_utterance()
+        if isinstance(speech_bytes, str):
+            # Texte tapé arrivé PENDANT l'écoute (cf. _listen_for_utterance,
+            # qui a déjà coupé le micro et jeté l'énoncé partiel).
+            return self._serve_typed_text(speech_bytes)
         if speech_bytes is None:
             if self._enabled is not None and not self._enabled.is_set():
                 # Coupure VOLONTAIRE (toggle chat OFF pendant l'écoute, cf.
@@ -349,7 +410,10 @@ class ConversationEngine:
                 "Flux micro mort en cours d'écoute — nouvel essai dans %.1f s.",
                 self._dead_mic_backoff_s)
             if self._dead_mic_backoff_s > 0:
-                time.sleep(self._dead_mic_backoff_s)
+                if self._stage is None:
+                    time.sleep(self._dead_mic_backoff_s)
+                else:
+                    self._wait_dead_mic_backoff()
             self._mic.start()
             return False
 
@@ -400,17 +464,95 @@ class ConversationEngine:
             return False
 
         logger.info("STT : %r", text)
-        return self._speak_reply(text, stt_ms=stt_ms, stt_text=text, speech_end_at=speech_end_at)
+        return self._reply_with_stage(text, stt_ms=stt_ms, speech_end_at=speech_end_at)
 
-    def _listen_for_utterance(self) -> Optional[bytes]:
+    def _wait_dead_mic_backoff(self) -> None:
+        """Backoff « micro mort » quand la régie est branchée : même durée
+        que le time.sleep historique, mais en SONDANT la file des textes
+        tapés (pas de STAGE_POLL_S) — un texte arrivé pendant l'attente
+        l'écourte, il sera servi dès le tour suivant (cf. run_once)."""
+        deadline = time.monotonic() + self._dead_mic_backoff_s
+        while not self._stage.has_text():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return
+            time.sleep(min(STAGE_POLL_S, remaining))
+
+    def _serve_typed_text(self, text: str) -> bool:
+        """Un texte TAPÉ (régie ou phantom) est servi comme un énoncé entendu
+        dont le STT aurait déjà tourné : mêmes réactions visibles que le
+        chemin micro (thinking + bips, « il y pense »), sans micro ni STT.
+        mic.stop() d'abord : le micro tourne peut-être depuis la fin du tour
+        précédent (anti-larsen, comme le chemin micro avant thinking)."""
+        self._mic.stop()
+        self._publish_all(self._perf.thinking())
+        self._set_state("thinking")
+        if self._beeps_path is not None:
+            self._player.play_async_raw(self._beeps_path)
+        logger.info("Texte tapé : %r", text)
+        return self._reply_with_stage(text)
+
+    def _reply_with_stage(self, text: str, *, stt_ms: float = 0.0,
+                          speech_end_at: Optional[float] = None) -> bool:
+        """Applique la PANNE de régie courante au texte compris (STT ou texte
+        tapé), publie la ligne "david" du transcript, puis répond. Sans
+        `stage` : panne "pass" -> appel _speak_reply strictement historique.
+        La panne est lue UNE fois par tour (instantané) : une échéance qui
+        tombe en pleine réplique ne la coupe pas à moitié."""
+        op, params = (self._stage.fault(time.monotonic()) if self._stage is not None
+                      else ("pass", {}))
+        # stt_text du dict on_timing = ce que le STT a VRAIMENT produit (la
+        # console de diagnostic dit la vérité technique, même sous garble).
+        stt_text = text
+        if op == "deaf":
+            # Énoncé jeté, comme un STT inexploitable (même sortie : idle()
+            # avant de relancer le micro, cf. correctif du 2026-07-12) —
+            # aucune ligne de transcript : Didier n'a rien entendu.
+            logger.info("Tour abandonné, panne deaf : %r", text)
+            self._notify_timing({
+                "stt_ms": stt_ms, "llm_first_ms": None, "audio_first_ms": None,
+                "total_ms": None, "stt_text": stt_text, "abandoned": True,
+            })
+            self._publish_all(self._perf.idle())
+            self._mic.start()
+            self._set_state("listening")
+            return False
+        if op == "garble":
+            text = garble_text(self._stage.rng, params.get("texts"))
+            logger.info("Panne garble : %r compris comme %r", stt_text, text)
+        self._notify_transcript(ROLE_DAVID, text)
+        if op == "delay":
+            # AVANT l'appel LLM : les bips jouent déjà (fire-and-forget), le
+            # visage est sur "reflechit", l'état reste "thinking" — c'est la
+            # latence du Pi 5 (4 à 9 s mesurées) rejouée telle quelle.
+            logger.info("Panne delay : %d ms avant le LLM", params["delay_ms"])
+            time.sleep(params["delay_ms"] / 1000)
+        return self._speak_reply(text, stt_ms=stt_ms, stt_text=stt_text,
+                                 speech_end_at=speech_end_at, mute=(op == "mute"))
+
+    def _listen_for_utterance(self) -> Union[bytes, str, None]:
         """Boucle micro -> VAD jusqu'à détecter la fin d'un énoncé. Retourne
         les octets PCM accumulés depuis le pré-roll, ou None si le flux
-        micro est mort avant la fin de l'énoncé."""
+        micro est mort avant la fin de l'énoncé — ou une `str` (régie) : un
+        texte tapé arrivé pendant l'écoute, qui l'INTERROMPT (bytes et str
+        sont des types disjoints : run_once les distingue par isinstance)."""
         speech_bytes = b""
         in_speech = False
 
         while True:
             frame = self._mic.read_frame()
+            # Texte tapé (régie) : vérifié à CHAQUE trame — c'est CE sondage
+            # qui interrompt l'écoute (chat_node n'arrête pas le micro depuis
+            # son thread, cf. ChatNode._on_chat_text) — et aussi quand
+            # read_frame() rend None : un texte en attente passe avant le
+            # diagnostic « micro mort ». L'énoncé partiel est jeté et la VAD ramenée
+            # en IDLE (même raison que le blocage du gate ci-dessous : sinon
+            # elle attendrait la fin d'une phrase qu'on ne lui donne plus).
+            typed = self._stage.pop_text() if self._stage is not None else None
+            if typed is not None:
+                self._mic.stop()
+                self._vad.reset()
+                return typed
             if frame is None:
                 return None
 
@@ -480,7 +622,7 @@ class ConversationEngine:
                 return speech_bytes
 
     def _speak_reply(self, text: str, *, stt_ms: float = 0.0, stt_text: str = "",
-                      speech_end_at: Optional[float] = None) -> bool:
+                      speech_end_at: Optional[float] = None, mute: bool = False) -> bool:
         """Génère et joue la réponse du LLM pour `text` déjà transcrit ;
         retourne True si le tour est allé jusqu'au bout, False sur erreur
         LLM/TTS (log + retour à l'écoute, le spectacle continue).
@@ -489,7 +631,9 @@ class ConversationEngine:
         module OBSERVABILITÉ) : mesures du tour DÉJÀ prises en amont,
         transmises telles quelles pour composer le dict `on_timing` en fin de
         méthode — cette méthode n'a besoin de mesurer QUE ce qui se passe à
-        partir d'ici (latence LLM, latence premier son)."""
+        partir d'ici (latence LLM, latence premier son).
+
+        `mute` : panne de régie, transmise à _handle_event (cf. son docstring)."""
         parser = StreamPerformanceParser()
         emotion_params = None
         # Horodatage de départ pour llm_first_ms/audio_first_ms (relatifs au
@@ -501,11 +645,19 @@ class ConversationEngine:
         timing_marks = {"first_sentence_at": None, "first_play_at": None}
 
         try:
-            for delta in self._brain.stream_reply(text):
+            if self._stage is None:
+                deltas = self._brain.stream_reply(text)
+            else:
+                # Consigne de jeu courante (None si aucune, levée ou périmée,
+                # cf. StageState.instruction) relue à CHAQUE tour.
+                deltas = self._brain.stream_reply(
+                    text, extra_system=self._stage.instruction(time.monotonic()))
+            for delta in deltas:
                 for event in parser.feed(delta):
-                    emotion_params = self._handle_event(event, emotion_params, timing_marks)
+                    emotion_params = self._handle_event(
+                        event, emotion_params, timing_marks, mute)
             for event in parser.flush():
-                emotion_params = self._handle_event(event, emotion_params, timing_marks)
+                emotion_params = self._handle_event(event, emotion_params, timing_marks, mute)
         except Exception:
             # Le spectacle continue : une panne LLM/TTS ponctuelle ne doit
             # jamais arrêter la conversation, seulement ce tour-ci.

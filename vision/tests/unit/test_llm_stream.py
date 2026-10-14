@@ -240,3 +240,60 @@ def test_reconfigure_change_le_prompt_et_ouvre_une_nouvelle_session(tmp_path):
     contents = [m["content"] for m in call["messages"]]
     assert "premier tour, ancien personnage" not in contents
     assert "second tour, nouveau personnage" in contents
+
+
+# --------------------------------------------------------------------------
+# extra_system : consigne de mise en scène (lot R3, topic chat_instruction,
+# cf. vision.ai.stage) — SECOND message system, juste après le prompt de
+# personnalité, jamais consigné dans l'historique.
+# --------------------------------------------------------------------------
+
+def test_extra_system_envoye_en_second_message_system(tmp_path):
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Réponse un."])
+
+    brain = StreamingBrain(
+        model="m", base_url="https://x", system_prompt="Tu es Didier.",
+        client_factory=lambda: client,
+    )
+    list(brain.stream_reply("Premier message"))
+
+    client.completions._deltas = ["Réponse deux."]
+    list(brain.stream_reply("Deuxième message", extra_system="Tu boudes."))
+
+    # Texte EXACT gravé (préfixe compris) et place exacte : prompt, consigne,
+    # puis l'historique — la consigne du tour courant n'est pas noyée après
+    # les échanges passés.
+    assert client.completions.last_call["messages"] == [
+        {"role": "system", "content": "Tu es Didier."},
+        {"role": "system",
+         "content": "Consigne de mise en scène (à jouer, jamais à prononcer) : Tu boudes."},
+        {"role": "user", "content": "Premier message"},
+        {"role": "assistant", "content": "Réponse un."},
+        {"role": "user", "content": "Deuxième message"},
+    ]
+
+
+def test_extra_system_jamais_historise(tmp_path):
+    # Une consigne vaut pour le tour où elle est posée : l'historiser la
+    # ferait survivre à sa levée (cf. docstring de stream_reply).
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Oui."])
+
+    brain = StreamingBrain(
+        model="m", base_url="https://x", system_prompt="Tu es Didier.",
+        client_factory=lambda: client,
+    )
+    list(brain.stream_reply("Salut", extra_system="Tu es pressé."))
+    list(brain.stream_reply("Et alors ?"))
+
+    assert brain._history_entry.get_history() == [
+        {"role": "user", "content": "Salut"},
+        {"role": "assistant", "content": "Oui."},
+        {"role": "user", "content": "Et alors ?"},
+        {"role": "assistant", "content": "Oui."},
+    ]
+    # Consigne levée (extra_system absent) : plus qu'UN message system.
+    system_messages = [m for m in client.completions.last_call["messages"]
+                       if m["role"] == "system"]
+    assert system_messages == [{"role": "system", "content": "Tu es Didier."}]

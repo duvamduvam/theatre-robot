@@ -7,10 +7,17 @@ QUOI : vision/nodes/chat_node.py importe rclpy en tête de module (comme tous
        (traduction RosMessage -> kwargs StringTime, construction des défauts
        de paramètres ROS depuis la config) ont donc été extraits dans
        vision/nodes/_chat_wiring.py, un module PUR (aucun rclpy ni
-       robot_interfaces) — ce fichier de test n'importe QUE lui, jamais
+       robot_interfaces) — ce fichier de test n'importe QUE lui (et les
+       décodeurs des topics de régie de vision.ai.stage, pur aussi), jamais
        vision.nodes.chat_node.
 """
+import ast
+from pathlib import Path
+
+import pytest
+
 from vision.ai.performance import RosMessage
+from vision.ai.stage import decode_fault_command, decode_text_payload
 from vision.nodes._chat_wiring import (decode_persona_command, default_chat_parameters,
                                         ros_message_to_string_time_kwargs)
 from vision.vision_config import config
@@ -108,3 +115,295 @@ def test_decode_persona_command_ne_valide_pas():
     # loggue un warning sur ValueError) : ici un nom inconnu ressort
     # normalisé, jamais une exception.
     assert decode_persona_command("grincheux") == "grincheux"
+
+
+# ---------------------------------------------------------------------------
+# Décodage des trois topics de RÉGIE (lot R3 « Chantiers », 2026-10-14 —
+# chat_text, chat_instruction, rehearsal/chat_fault). La logique vit dans
+# vision.ai.stage (pur, importable sans rclpy) : les callbacks de chat_node
+# ne font qu'appeler ces décodeurs et transformer ValueError en warning.
+# Contrat chat_fault gravé avec les MÊMES chaînes que le régisseur
+# (robot_rehearsal, §13.4 point 3).
+# ---------------------------------------------------------------------------
+
+
+def test_decode_text_payload_json_et_brut():
+    # Le régisseur et la console web publient json.dumps(texte) ; un
+    # `ros2 topic pub` de débogage envoie du brut : même texte rogné.
+    assert decode_text_payload('"Tu es amoureux du lampadaire."') == "Tu es amoureux du lampadaire."
+    assert decode_text_payload("  bonjour Didier ") == "bonjour Didier"
+    assert decode_text_payload('" accentué é "') == "accentué é"
+
+
+def test_decode_text_payload_json_non_chaine_garde_le_brut():
+    # « 42 » ou « null » tapés au clavier sont des TEXTES, pas des valeurs.
+    assert decode_text_payload("42") == "42"
+    assert decode_text_payload("null") == "null"
+    assert decode_text_payload("[1, 2]") == "[1, 2]"
+
+
+def test_decode_text_payload_vide_vaut_levee_de_consigne():
+    # chat_instruction : "" = consigne levée (le régisseur publie json.dumps("")).
+    assert decode_text_payload('""') == ""
+    assert decode_text_payload("") == ""
+
+
+def test_decode_fault_command_contrat_du_regisseur():
+    assert decode_fault_command(
+        '{"op": "delay", "params": {"delay_ms": 6000}, "until_ms": 40000}'
+    ) == ("delay", {"delay_ms": 6000}, 40000)
+    assert decode_fault_command(
+        '{"op": "phantom", "params": {"text": "Sous-titres réalisés par la '
+        'communauté d\'Amara.org"}, "until_ms": 1000}'
+    ) == ("phantom", {"text": "Sous-titres réalisés par la communauté d'Amara.org"}, 1000)
+    # Fin de panne côté régisseur : {"op": "pass"} seul (params/until_ms absents).
+    assert decode_fault_command('{"op": "pass"}') == ("pass", {}, None)
+    assert decode_fault_command('{"op": "deaf", "params": null, "until_ms": null}') == (
+        "deaf", {}, None)
+
+
+@pytest.mark.parametrize("raw,fragment", [
+    ("pas du json", "illisible"),
+    ('"deaf"', "objet JSON attendu"),
+    ("[1, 2]", "objet JSON attendu"),
+    ('{"params": {}}', "op inconnue"),
+    ('{"op": "explose"}', "op inconnue"),
+    ('{"op": "garble", "params": ["Astérix"]}', "params doit être un objet"),
+])
+def test_decode_fault_command_refus_avec_message_precis(raw, fragment):
+    with pytest.raises(ValueError) as excinfo:
+        decode_fault_command(raw)
+    assert fragment in str(excinfo.value)
+
+
+# ---------------------------------------------------------------------------
+# Callback chat_text : n'arrête PAS le micro (décision du 2026-10-14).
+# MicCapture n'est pas sûr entre threads : un stop() depuis le thread
+# rclpy.spin pendant que le thread de conversation lit/arrête le micro peut
+# tuer ce dernier (AttributeError). Le moteur sonde la file à chaque trame et
+# arrête le micro depuis SON thread. chat_node importe rclpy (absent en CI) :
+# on inspecte donc son SOURCE (ast), sans l'importer.
+# ---------------------------------------------------------------------------
+
+CHAT_NODE_SOURCE = Path(__file__).resolve().parents[2] / "nodes" / "chat_node.py"
+
+
+def _calls_in_method(source_path, method_name):
+    tree = ast.parse(source_path.read_text(encoding="utf-8"))
+    methods = [node for node in ast.walk(tree)
+               if isinstance(node, ast.FunctionDef) and node.name == method_name]
+    assert len(methods) == 1, f"{method_name} introuvable ou en double"
+    return [ast.unparse(node.func) for node in ast.walk(methods[0])
+            if isinstance(node, ast.Call)]
+
+
+def test_callback_chat_text_n_arrete_pas_le_micro():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_on_chat_text")
+    # Ancre : c'est bien le callback qui enfile le texte qu'on inspecte.
+    assert "self._stage.push_text" in calls
+    # Aucun appel au micro depuis le thread rclpy (ni stop, ni autre).
+    assert "self._mic.stop" not in calls
+    assert not any("_mic" in call for call in calls)
+
+
+# ---------------------------------------------------------------------------
+# Garde-fous de CÂBLAGE des topics de régie (revue adversariale du
+# 2026-10-14 : aucun de ces points n'était testé, or chacun casse en
+# SILENCE sur le robot -- pas de crash, juste une régie qui ne répond plus
+# ou une fuite du tirage). Même procédé que ci-dessus : on lit le SOURCE de
+# chat_node par `ast`, sans l'importer (rclpy absent du host).
+# ---------------------------------------------------------------------------
+
+def _chat_node_tree():
+    return ast.parse(CHAT_NODE_SOURCE.read_text(encoding="utf-8"))
+
+
+def _module_string_constants(tree):
+    """{NOM: valeur} des seules affectations de tête de module `NOM = "littéral"`.
+    Une constante RECALCULÉE (f-string, concaténation, import) n'y figure pas :
+    c'est voulu, le test qui la réclame échoue au lieu de recalculer la même
+    chose que le code et de ne rien prouver."""
+    constants = {}
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)):
+            constants[node.targets[0].id] = node.value.value
+    return constants
+
+
+def _chat_node_method(tree, method_name):
+    """Méthode de la classe ChatNode (PAS n'importe quel `__init__` du
+    fichier : _DiagState et DiagServer en ont un aussi)."""
+    classes = [node for node in tree.body
+               if isinstance(node, ast.ClassDef) and node.name == "ChatNode"]
+    assert len(classes) == 1, "classe ChatNode introuvable ou en double"
+    methods = [node for node in classes[0].body
+               if isinstance(node, ast.FunctionDef) and node.name == method_name]
+    assert len(methods) == 1, f"ChatNode.{method_name} introuvable ou en double"
+    return methods[0]
+
+
+def _subscriptions(init):
+    """[(type, topic, callback)] de chaque `self.create_subscription(...)` du
+    constructeur, tels qu'écrits dans le source (ast.unparse) : le topic est
+    donc le NOM de la constante (CHAT_TEXT_TOPIC), pas sa valeur."""
+    found = []
+    for node in ast.walk(init):
+        if isinstance(node, ast.Call) and ast.unparse(node.func) == "self.create_subscription":
+            assert len(node.args) >= 3, ast.unparse(node)
+            msg_type, topic, callback = (ast.unparse(arg) for arg in node.args[:3])
+            found.append((msg_type, topic, callback))
+    return found
+
+
+def _publisher_topics(tree, constants):
+    """Valeur RÉSOLUE du topic de chaque `self.create_publisher(...)` du fichier :
+    une constante nommée est résolue par `constants`, un littéral inline est
+    pris tel quel -- publier sur 'chat_text' en dur ne doit pas échapper au
+    garde-fou anti-bouclage. Une constante non littérale ressort en <NOM>."""
+    topics = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and ast.unparse(node.func) == "self.create_publisher":
+            topic = node.args[1]
+            if isinstance(topic, ast.Constant):
+                topics.append(topic.value)
+            elif isinstance(topic, ast.Name):
+                topics.append(constants.get(topic.id, f"<{topic.id}>"))
+            else:
+                topics.append(ast.unparse(topic))
+    return topics
+
+
+# --- (1) Les quatre noms de topics : valeurs EXACTES ------------------------
+# CONTRAT PARTAGÉ avec le dépôt robot : ces chaînes sont aussi gravées de
+# l'autre côté (les renommer d'un seul côté coupe la liaison SANS erreur --
+# ROS accepte n'importe quel nom de topic, personne n'écoute plus, c'est tout) :
+#   - "chat_instruction" et "rehearsal/chat_fault" : INSTRUCTION_TOPIC et
+#     CHAT_FAULT_TOPIC dans /home/dadou/Nextcloud/dev/didier/python/dadou_robot_ros/conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/contracts.py
+#     (gravés par robot/tests/unit/test_rehearsal_contract.py, régisseur) ;
+#   - "chat_text" et "chat_transcript" : le pont web du robot
+#     (robot_web/web_protocol.py : WHITELIST_TECHNIQUE et TOPICS_FLUX, gravés
+#     par robot/tests/unit/test_web_protocol.py, page « scène »).
+# On compare donc à des LITTÉRAUX écrits ici, jamais à une valeur recalculée.
+
+@pytest.mark.parametrize("nom,valeur", [
+    ("CHAT_TEXT_TOPIC", "chat_text"),
+    ("CHAT_INSTRUCTION_TOPIC", "chat_instruction"),
+    ("CHAT_FAULT_TOPIC", "rehearsal/chat_fault"),
+    ("CHAT_TRANSCRIPT_TOPIC", "chat_transcript"),
+])
+def test_topics_de_regie_ont_la_valeur_du_contrat(nom, valeur):
+    constants = _module_string_constants(_chat_node_tree())
+
+    assert constants.get(nom) == valeur, (
+        f"{nom} doit rester le littéral {valeur!r} (contrat avec le dépôt robot), "
+        f"trouvé {constants.get(nom)!r}")
+
+
+# --- (2) Table abonnement -> callback ---------------------------------------
+# Le risque le plus grave : `chat_instruction` branché sur _on_chat_text. La
+# consigne de jeu (le tirage que David ignore, §13.1 de l'étude) serait alors
+# enfilée comme un énoncé et DITE comme « David » dans le transcript affiché
+# à l'écran -- fuite du tirage, et aucune erreur nulle part.
+
+ABONNEMENTS_DE_REGIE = [
+    ("CHAT_TEXT_TOPIC", "self._on_chat_text"),
+    ("CHAT_INSTRUCTION_TOPIC", "self._on_chat_instruction"),
+    ("CHAT_FAULT_TOPIC", "self._on_chat_fault"),
+]
+
+
+@pytest.mark.parametrize("topic,callback", ABONNEMENTS_DE_REGIE)
+def test_chaque_topic_de_regie_est_abonne_une_fois_au_bon_callback(topic, callback):
+    abonnements = _subscriptions(_chat_node_method(_chat_node_tree(), "__init__"))
+
+    assert [(msg_type, cb) for msg_type, t, cb in abonnements if t == topic] == [
+        ("StringTime", callback)], f"{topic} : abonnement absent, en double ou mal branché"
+
+
+@pytest.mark.parametrize("topic,callback", ABONNEMENTS_DE_REGIE)
+def test_chaque_callback_de_regie_ne_sert_que_son_topic(topic, callback):
+    # Sens inverse : un callback de régie ne doit écouter QUE son topic. Sans
+    # lui, brancher un 2e topic sur _on_chat_text passerait le test ci-dessus.
+    abonnements = _subscriptions(_chat_node_method(_chat_node_tree(), "__init__"))
+
+    assert [t for _, t, cb in abonnements if cb == callback] == [topic]
+
+
+def test_le_transcript_n_est_jamais_ecoute_par_le_node():
+    # Le transcript est une SORTIE : s'y abonner réinjecterait les répliques de
+    # Didier dans sa propre boucle.
+    abonnements = _subscriptions(_chat_node_method(_chat_node_tree(), "__init__"))
+
+    assert "CHAT_TRANSCRIPT_TOPIC" not in [topic for _, topic, _ in abonnements]
+
+
+# --- (3) Publication du transcript ------------------------------------------
+
+def test_publisher_du_transcript_est_cree_sur_son_propre_topic():
+    init = _chat_node_method(_chat_node_tree(), "__init__")
+    creations = [node for node in ast.walk(init)
+                 if isinstance(node, ast.Assign)
+                 and [ast.unparse(t) for t in node.targets] == ["self._transcript_pub"]]
+    assert len(creations) == 1, "self._transcript_pub créé zéro ou plusieurs fois"
+    appel = creations[0].value
+    assert isinstance(appel, ast.Call) and ast.unparse(appel.func) == "self.create_publisher"
+
+    assert ast.unparse(appel.args[0]) == "StringTime"
+    assert ast.unparse(appel.args[1]) == "CHAT_TRANSCRIPT_TOPIC"
+
+
+def test_le_node_ne_publie_jamais_sur_ses_topics_d_entree():
+    # Publier le transcript (ou quoi que ce soit) sur chat_text : Didier
+    # « entendrait » ses propres répliques comme un texte de la régie et se
+    # répondrait en boucle, sans fin et sans erreur. Vaut pour les littéraux
+    # en dur comme pour les constantes (cf. _publisher_topics).
+    tree = _chat_node_tree()
+    publies = _publisher_topics(tree, _module_string_constants(tree))
+
+    assert "chat_transcript" in publies  # ancre : le garde-fou voit bien les publishers
+    assert not {"chat_text", "chat_instruction", "rehearsal/chat_fault"} & set(publies)
+
+
+def test_publish_transcript_publie_par_le_publisher_dedie():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_publish_transcript")
+
+    # Ancre : c'est bien la méthode qui encode puis publie la ligne.
+    assert "stage.encode_transcript" in calls
+    # Une seule publication, et sur le publisher du transcript -- pas sur un
+    # publisher de _string_time_pubs (face/animation) ni sur un autre.
+    assert [call for call in calls if call.endswith(".publish")] == [
+        "self._transcript_pub.publish"]
+
+
+# --- (4) _on_chat_fault transmet la durée décodée ---------------------------
+# until_ms=None signifie « pas de durée annoncée » : StageState retombe sur le
+# plafond local (FAULT_MAX_S = 60 s). Une panne demandée pour 6 s par le
+# régisseur durerait alors 60 s, et aucun log d'erreur ne le dirait.
+
+def test_on_chat_fault_passe_le_until_ms_decode_a_set_fault():
+    methode = _chat_node_method(_chat_node_tree(), "_on_chat_fault")
+
+    decodages = [node for node in ast.walk(methode)
+                 if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call)
+                 and ast.unparse(node.value.func) == "stage.decode_fault_command"]
+    assert len(decodages) == 1, "decode_fault_command appelé zéro ou plusieurs fois"
+    cible = decodages[0].targets[0]
+    assert isinstance(cible, ast.Tuple) and len(cible.elts) == 3
+    assert all(isinstance(elt, ast.Name) for elt in cible.elts)
+    op, params, until_ms = (elt.id for elt in cible.elts)  # 3e valeur = la durée
+
+    appels = [node for node in ast.walk(methode)
+              if isinstance(node, ast.Call) and ast.unparse(node.func) == "self._stage.set_fault"]
+    assert len(appels) == 1, "set_fault appelé zéro ou plusieurs fois"
+    assert not appels[0].keywords, "set_fault attendu en positionnel (op, params, until_ms, now)"
+    assert [ast.unparse(arg) for arg in appels[0].args[:3]] == [op, params, until_ms]
+
+    # Et la variable décodée n'est pas réécrasée entre le décodage et l'appel
+    # (un `until_ms = None` glissé entre les deux passerait le contrôle ci-dessus).
+    ecritures = [node for node in ast.walk(methode)
+                 if isinstance(node, ast.Name) and node.id == until_ms
+                 and isinstance(node.ctx, ast.Store)]
+    assert len(ecritures) == 1
