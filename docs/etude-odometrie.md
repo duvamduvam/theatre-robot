@@ -290,7 +290,9 @@ pas de cible** — un écart de 81° = 2,25 pas vaut électriquement un quart de
 à la pièce ; le trim fin se fait en glissant le pinçage sur le filet, aux LED. Bloc **E**
 de `plans/odometrie/MESURES.md` : tout est ✅ sauf **E4 = 25 mm (HYPOTHÈSE — axe des vis
 → têtes de cibles, à valider au réglet avec la vue de montage AVANT impression)**.
-Détail et rendus : README du dossier plans, section v5, `rendus/berceau-v5-*.png`.
+Détail et rendus : README du dossier plans, section v5, `rendus/berceau-v5.1-m18-*.png`.
+**v5.1 le 17/10 : passage aux capteurs M18** (§4, « REÇUS le 2026-10-17 ») — même pièce,
+trou Ø 19 et oreilles 14,5 ; bloc **F** de MESURES.md (cotes du M18) à confirmer.
 
 Au passage le 19/08 : **impression du disque validée**, monté par David **plaqué contre la
 couronne avec rondelles en entretoise** (la visserie de la couronne empêche le contact
@@ -498,6 +500,17 @@ jeu du roulement, au lieu des ~1,5 mm que visait le choix « 60 % de Sn ». **L'
   s'allume que si la sortie est bien NPN), puis les deux réserves ci-dessus sur le disque.
   Longueur du corps à relever au pied à coulisse avant tout redessin du berceau (la photo
   annonce 65 mm dont 49 filetés — une photo ne se mesure pas).
+
+  ✅ **REÇUS le 2026-10-17 — berceau REDESSINÉ en M18 le jour même (v5.1,
+  `plans/odometrie/patte-capteur.scad`, rendus `rendus/berceau-v5.1-m18-*.png`).** Seuls le
+  Ø du trou et l'oreille changent dans le STL ; tous les gardes-fous du berceau passent.
+  **Décision de David** : le disque à 10 cibles est **conservé** bien que trois gardes-fous
+  du disque tombent en M18 (pas 27,6 < 36, vide 12,6 < 24, tête 15 < 24 — les satisfaire
+  imposerait 7 cibles, 28 mm/front, deux disques à réimprimer) ; ils sont passés en
+  **avertissements** dans `parametres.scad`, et c'est **le banc qui tranche** (les deux
+  réserves ci-dessus + la portée sur tête M8 acier, qui fixe `ENTREFER` — provisoirement 4).
+  Cotes catalogue à confirmer au pied à coulisse : bloc **F** de `plans/odometrie/MESURES.md`
+  (corps 68, écrous minces 4 mm / 24 sur plats). Détail : README plans, § « Passage au M18 ».
 - Avant de conclure : vérifier que la vis acier mesurée avait une **tête 6 pans pleine** ;
   si c'était une tête creuse (BTR), la cible définitive portera un peu plus loin.
 
