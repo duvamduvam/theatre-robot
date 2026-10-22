@@ -159,6 +159,17 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
 **2. La tête** (`../dadou_vision_ros/conf/docker/x86/`) :
 `CHAT=true docker compose -f docker-compose-x86.yml up -d` — puis, depuis la
 page scène, persona **mauvaisefoi**.
+- Au **casque Bluetooth** (M50, profil HFP — réglages du 22/10, banc PC
+  seulement, le Pi n'est pas touché) : micro atténué de 12 dB dans
+  `asound-pc.conf` (sinon le gate anti-sono bloque la voix) et
+  `CHAT_VAD_FACTOR=6` (le souffle du micro BT fluctue, à 1,3 la fin de phrase
+  n'est jamais détectée). `CHAT_PARTENAIRE=David` : Didier sait qu'il parle à
+  David, pas à un passant.
+- ⚠️ Tant que l'image vision n'est pas rebâtie avec `av>=14,<15`, chaque
+  `compose up` qui RECRÉE le conteneur remet PyAV 19 (whisper casse, STT
+  vide) : `docker exec dadou-vision-x86-container pip install
+  --break-system-packages --only-binary=:all: "av>=14,<15"` puis
+  `docker restart dadou-vision-x86-container`.
 
 **3. La page scène** : http://localhost:8765/scene — caméra de Didier, visage
 LED en direct, conversation (ce que Didier a *compris* et ce qu'il dit), un
