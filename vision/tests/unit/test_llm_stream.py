@@ -7,7 +7,10 @@ Isolation ChatDB : même pattern que test_chat_db.py — configure() vers un
 fichier SQLite temporaire AVANT toute création de StreamingBrain (qui crée
 une session ChatDB à la construction), jamais le fichier de prod.
 """
-from vision.ai.llm_stream import StreamingBrain
+import pytest
+
+from vision.ai.llm_stream import EmptyReplyError, StreamingBrain
+from vision.vision_config import config
 from vision.db.chat_db import ChatDB
 
 
@@ -23,7 +26,11 @@ class FakeChoice:
 
 class FakeChunk:
     def __init__(self, content):
-        self.choices = [FakeChoice(content)]
+        # content=NO_CHOICE : chunk SANS choix (chunk final d'usage d'OpenRouter).
+        self.choices = [] if content is NO_CHOICE else [FakeChoice(content)]
+
+
+NO_CHOICE = object()
 
 
 class FakeCompletions:
@@ -297,3 +304,50 @@ def test_extra_system_jamais_historise(tmp_path):
     system_messages = [m for m in client.completions.last_call["messages"]
                        if m["role"] == "system"]
     assert system_messages == [{"role": "system", "content": "Tu es Didier."}]
+
+
+# --------------------------------------------------------------------------
+# Bascule Haiku 5.5 (22/10/2026) : réflexion coupée via extra_body, garde-fou
+# réponse vide, chunk sans choix.
+# --------------------------------------------------------------------------
+
+def test_extra_body_transmis_tel_quel(tmp_path):
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Salut."])
+    brain = StreamingBrain(model="m", base_url="https://x",
+                           extra_body={"reasoning": {"enabled": False}},
+                           client_factory=lambda: client)
+    list(brain.stream_reply("Salut"))
+    assert client.completions.last_call["extra_body"] == {"reasoning": {"enabled": False}}
+
+
+def test_sans_extra_body_requete_standard(tmp_path):
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Salut."])
+    brain = StreamingBrain(model="m", base_url="https://x", client_factory=lambda: client)
+    list(brain.stream_reply("Salut"))
+    assert "extra_body" not in client.completions.last_call
+
+
+def test_config_prod_coupe_la_reflexion_et_relève_le_budget():
+    # Valeurs GRAVÉES : sans reasoning coupé, Haiku 5.5 rend des réponses
+    # vides (banc du 22/10) ; 200 tokens coupaient le JSON d'émotion.
+    assert config["chat_llm_model"] == "anthropic/claude-haiku-5.5"
+    assert config["chat_llm_extra_body"] == {"reasoning": {"enabled": False}}
+    assert config["chat_llm_max_tokens"] == 300
+
+
+def test_reponse_vide_leve_et_n_historise_rien(tmp_path):
+    _configure_test_db(tmp_path)
+    client = FakeClient([None, ""])  # flux terminé sans un caractère de texte
+    brain = StreamingBrain(model="m", base_url="https://x", client_factory=lambda: client)
+    with pytest.raises(EmptyReplyError):
+        list(brain.stream_reply("Salut"))
+    assert brain._history_entry.get_history() == [{"role": "user", "content": "Salut"}]
+
+
+def test_chunk_sans_choix_ignore(tmp_path):
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Oui", NO_CHOICE, "."])
+    brain = StreamingBrain(model="m", base_url="https://x", client_factory=lambda: client)
+    assert list(brain.stream_reply("Salut")) == ["Oui", "."]

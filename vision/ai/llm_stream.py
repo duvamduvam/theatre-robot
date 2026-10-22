@@ -9,7 +9,7 @@ QUOI : contrairement à vision.ai.interactions (GPT-4o, réponse complète
 POURQUOI OpenRouter plutôt que l'API OpenAI directe : base_url configurable
       (client OpenAI officiel, compatible — OpenRouter expose une API Chat
       Completions compatible OpenAI) permet de choisir le modèle par sa
-      chaîne complète (ex: "anthropic/claude-haiku-4.5", cf.
+      chaîne complète (ex: "anthropic/claude-haiku-5.5", cf.
       vision_config.py) sans changer de client SDK.
 POURQUOI l'import openai est DIFFÉRÉ (dans _get_client, pas en tête de
       module) : même raison que vision.ai.tts_piper/stt — openai N'EST PAS
@@ -37,19 +37,28 @@ from vision.vision_config import get_secret
 STAGE_INSTRUCTION_PREFIX = "Consigne de mise en scène (à jouer, jamais à prononcer) : "
 
 
+class EmptyReplyError(RuntimeError):
+    """Le LLM a terminé son flux sans produire un seul caractère de texte."""
+
+
 class StreamingBrain:
     """Orchestration d'une conversation LLM streamée, historique persistant
     via ChatDB (réutilisé tel quel — cf. vision.db.chat_db)."""
 
     def __init__(self, model: str, base_url: str, api_key_name: str = "openrouter_key",
                  system_prompt: str = "", history_limit: int = 12, max_tokens: int = 200,
-                 client_factory=None):
+                 extra_body: Optional[dict] = None, client_factory=None):
+        """`extra_body` : champs propres au fournisseur ajoutés tels quels au
+        corps de la requête (SDK OpenAI, extra_body) — sert à couper la
+        réflexion de Haiku 5.5 côté OpenRouter (cf. config["chat_llm_extra_body"]
+        pour le pourquoi chiffré). None = requête Chat Completions standard."""
         self._model = model
         self._base_url = base_url
         self._api_key_name = api_key_name
         self._system_prompt = system_prompt
         self._history_limit = history_limit
         self._max_tokens = max_tokens
+        self._extra_body = extra_body
         self._client_factory = client_factory
         self._client = None  # créé PARESSEUSEMENT, cf. _get_client
 
@@ -127,15 +136,20 @@ class StreamingBrain:
                 {"role": "system", "content": STAGE_INSTRUCTION_PREFIX + extra_system})
         messages += history
 
-        stream = client.chat.completions.create(
-            model=self._model,
-            messages=messages,
-            max_tokens=self._max_tokens,
-            stream=True,
-        )
+        request = dict(model=self._model, messages=messages,
+                       max_tokens=self._max_tokens, stream=True)
+        if self._extra_body:
+            request["extra_body"] = self._extra_body
+        stream = client.chat.completions.create(**request)
 
         full_text = ""
+        finish_reason = None
         for chunk in stream:
+            if not chunk.choices:
+                # Chunk sans choix (ex. chunk final d'usage d'OpenRouter) :
+                # rien à lire, et choices[0] lèverait IndexError.
+                continue
+            finish_reason = getattr(chunk.choices[0], "finish_reason", None) or finish_reason
             delta = chunk.choices[0].delta.content
             if not delta:
                 # Un chunk de streaming peut ne porter aucun texte (métadonnées
@@ -143,6 +157,16 @@ class StreamingBrain:
                 continue
             full_text += delta
             yield delta
+
+        if not full_text:
+            # Réponse VIDE : sans ce garde-fou, Didier se tait sans une ligne
+            # de log (panne vécue au banc du 22/10 : réflexion de Haiku 5.5
+            # qui épuise max_tokens, finish_reason="length", zéro texte).
+            # Lever fait logger le tour comme abandonné par ConversationEngine,
+            # et n'historise pas une réplique vide.
+            raise EmptyReplyError(
+                f"réponse LLM vide (modèle={self._model!r}, finish_reason={finish_reason!r}) "
+                "— budget max_tokens épuisé par la réflexion ? cf. chat_llm_extra_body")
 
         # add_assistant_text (PAS add_system_text, bug corrigé le 2026-09-13) :
         # une réplique enregistrée sous role=system revient au LLM comme une

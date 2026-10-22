@@ -663,6 +663,8 @@ class ChatNode(Node):
             brain = StreamingBrain(
                 model=llm_model, base_url=llm_base_url,
                 api_key_name=LLM_API_KEY_NAME, system_prompt=persona_prompt,
+                max_tokens=config["chat_llm_max_tokens"],
+                extra_body=config["chat_llm_extra_body"],
             )
         except Exception as exc:  # noqa: BLE001
             self.get_logger().error(

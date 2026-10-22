@@ -211,11 +211,26 @@ config = {
 
     # Modèle LLM streamé (vision/ai/llm_stream.py, StreamingBrain), via
     # OpenRouter (client OpenAI officiel avec base_url personnalisé — cf.
-    # llm_stream.py). Claude Haiku 4.5 : meilleur compromis latence/coût
-    # mesuré pour des réponses courtes scéniques (AI_REALTIME_RULES impose
-    # 1-3 phrases, pas besoin d'un modèle plus lourd).
-    "chat_llm_model": "anthropic/claude-haiku-4.5",
+    # llm_stream.py). Claude Haiku 5.5 (bascule du 22/10/2026, banc OpenRouter
+    # avec la vraie persona « bougon », 4 répliques par variante) : premier
+    # token 0,62-1,20 s contre 0,91-1,38 s pour Haiku 4.5, coût par réplique
+    # ~7× moindre, persona mieux tenue (reprend le lore du socle).
+    "chat_llm_model": "anthropic/claude-haiku-5.5",
     "chat_llm_base_url": "https://openrouter.ai/api/v1",
+    # ⚠️ RÉFLEXION COUPÉE, OBLIGATOIRE à partir de Haiku 5.5 : la réflexion
+    # adaptative y est active par défaut et ses tokens comptent dans
+    # max_tokens — au banc, 4 réponses sur 4 VIDES (200 tokens de réflexion,
+    # zéro texte : Didier muet) ; effort "low" : encore 3 sur 4 vides et
+    # premier token à 3,3-3,8 s. Une réplique scénique de 1-3 phrases n'a
+    # rien à gagner à réfléchir. Paramètre OpenRouter (normalisé par lui vers
+    # l'API Anthropic), passé tel quel en extra_body par StreamingBrain.
+    "chat_llm_extra_body": {"reasoning": {"enabled": False}},
+    # Budget de sortie : 200 suffisait à Haiku 4.5, mais le tokenizer de
+    # Haiku 5.5 compte ~30 % de tokens de plus pour le même texte, et 1
+    # réplique sur 4 du banc s'est fait couper à 200 en plein JSON d'émotion
+    # (émotion perdue). 300 = marge sans ouvrir la porte aux tirades
+    # (la longueur reste tenue par AI_REALTIME_RULES, pas par ce plafond).
+    "chat_llm_max_tokens": 300,
 
     # STT local (vision/ai/stt.py, FasterWhisperStt) : "base" retenu comme
     # meilleur compromis précision/latence au 10/07. Repli documenté : "tiny"
