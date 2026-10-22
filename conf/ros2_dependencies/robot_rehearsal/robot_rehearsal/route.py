@@ -33,6 +33,11 @@ class Poi:
     x: float
     y: float
     radius: float
+    # Lot R3, optionnels : `lubie` = consigne de jeu envoyée telle quelle au
+    # chat par le régisseur (type de panne `lubie` sans `text`) ; `fermeture`
+    # = indice de mise en scène, lu par PERSONNE en machine (débrief, écriture).
+    lubie: str = ""
+    fermeture: str = ""
 
 
 @dataclass(frozen=True)
@@ -53,8 +58,8 @@ def _finite(value, where: str) -> float:
 
 def load_route(data: dict) -> Route:
     """dict (YAML déjà chargé) -> Route validée. Clés : name (str), waypoints
-    (liste de [x, y], au moins 2), pois (liste de {name, x, y, radius > 0},
-    noms uniques ; optionnelle)."""
+    (liste de [x, y], au moins 2), pois (liste de {name, x, y, radius > 0,
+    lubie?: str, fermeture?: str}, noms uniques ; optionnelle)."""
     if not isinstance(data, dict):
         raise RouteError("itinéraire : un dictionnaire est attendu à la racine")
     name = data.get("name")
@@ -87,8 +92,16 @@ def load_route(data: dict) -> Route:
         radius = _finite(p.get("radius"), f"pois[{i}].radius")
         if radius <= 0:
             raise RouteError(f"pois[{i}].radius : > 0 attendu, reçu {radius}")
+        texts = {}
+        for key in ("lubie", "fermeture"):
+            # Une consigne non textuelle (nombre, liste) partirait telle quelle
+            # au chat : refusée ici plutôt que convertie.
+            value = p.get(key, "")
+            if not isinstance(value, str):
+                raise RouteError(f"pois[{i}].{key} : chaîne attendue, reçu {value!r}")
+            texts[key] = value
         pois.append(Poi(pname, _finite(p.get("x"), f"pois[{i}].x"),
-                        _finite(p.get("y"), f"pois[{i}].y"), radius))
+                        _finite(p.get("y"), f"pois[{i}].y"), radius, **texts))
 
     return Route(name=name, waypoints=tuple(waypoints), pois=tuple(pois))
 

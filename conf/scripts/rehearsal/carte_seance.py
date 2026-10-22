@@ -17,7 +17,11 @@ for e in ev:
     if e["type"] in ("fault_start", "fault_stop"):
         fid = e["payload"]["id"]; faults.setdefault(fid, {"type": e["payload"]["type"]})
         faults[fid][e["type"][6:]] = e["t_mono_ms"] / 1000 - t0 + start_rec
-COL = {"speed": "#d98e04", "relay": "#c0392b", "pause": "#7d3c98", "kill": "#111111", "instruction": "#1e8449"}
+# lubie/chat ajoutés au lot R3 (14/10) pour ne pas planter sur un journal « chantiers » ;
+# ⚠️ le FOND dessiné ci-dessous est celui de rue.sdf (hangar, trottoir) — pour le monde
+# chantiers la trajectoire et la frise restent justes, le décor non (à généraliser).
+COL = {"speed": "#d98e04", "relay": "#c0392b", "pause": "#7d3c98", "kill": "#111111", "instruction": "#1e8449",
+       "lubie": "#e91e63", "chat": "#2980b9"}
 LAB = {"batterie": "batterie faible", "freeze1": "gel consigne", "visage_fige": "visage figé", "zero1": "arrêt net",
        "lubie": "lubie (instruction)", "reboot": "reboot", "acoups": "à-coups", "liaison": "perte liaison", "retard": "réagit en retard"}
 fig, (ax, bx) = plt.subplots(2, 1, figsize=(14, 7.5), gridspec_kw={"height_ratios": [1.1, 1]})

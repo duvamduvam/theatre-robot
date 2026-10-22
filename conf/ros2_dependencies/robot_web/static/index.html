@@ -27,6 +27,9 @@
        "on doit TOUJOURS savoir à qui on parle". -->
   <header id="bandeau">
     <span class="marque">Didier</span>
+    <!-- Page « scène » : caméra + visage + conversation côte à côte (même pont,
+         mêmes sessions). Lien par origine de page, pas par la cible choisie ci-dessous. -->
+    <a class="scene-lien" href="/scene">Scène →</a>
     <!-- Cible : la page (servie par n'importe quel pont) peut se connecter au
          pont de la SIM ou à celui du VRAI robot -- une seule console sur le
          PC, un sélecteur. La vérité du mode reste le hello du serveur
@@ -209,6 +212,9 @@
             <button class="bouton-catalogue" data-topic="persona" data-value="bougon">Bougon</button>
             <button class="bouton-catalogue" data-topic="persona" data-value="naif">Naïf</button>
             <button class="bouton-catalogue" data-topic="persona" data-value="vantard">Vantard</button>
+            <!-- mauvaisefoi : persona du lot R3 (répétition simulée, 14/10), même
+                 contrat que les trois autres (vision.ai.personas). -->
+            <button class="bouton-catalogue" data-topic="persona" data-value="mauvaisefoi">Mauvaise foi</button>
           </span>
         </section>
 
@@ -243,6 +249,9 @@
     <ul id="journal-erreurs"></ul>
   </footer>
 
+  <!-- commun.js = liaison WebSocket, bandeau, flux MJPEG, partagés avec la page
+       « scène » ; il se charge AVANT app.js qui s'appuie dessus. -->
+  <script src="/static/commun.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

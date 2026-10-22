@@ -3,22 +3,43 @@
 Couvre : whitelist (garantie de sécurité W0 -- pas de roues/e_stop), parsing
 des 5 types de message client, auth/écriture exclusive/heartbeat de
 SessionManager (horloge injectée, jamais time.time() réel), le contenu exact
-de stop_all_commands() et les constructeurs de messages serveur.
+de stop_all_commands() et les constructeurs de messages serveur. Depuis la page
+« scène » : whitelist de répétition SIM-ONLY (effective_whitelist), flux "feed",
+contrat des pages statiques avec le protocole, et le pont lui-même (file de
+flux entre le thread rclpy et la boucle asyncio) avec rclpy simulé.
 """
 
 import ast
+import asyncio
+import importlib
+import json
 import pathlib
+import re
+import sys
+import threading
+import types
 
 import pytest
 
 from robot_web import web_catalog, web_protocol
 from robot_web.web_protocol import (
-    DRIVE_TIMEOUT_S, HEARTBEAT_PERIOD_S, WHITELIST, WHITELIST_SPECTACLE,
-    WHITELIST_TECHNIQUE, WRITE_TIMEOUT_S, DriveFlow, ProtocolError,
-    SessionManager, build_ack, build_err, build_hb_ack, build_hello,
-    build_state, drive_to_twist, mode_from_domain_id, parse_client_message,
+    DRIVE_TIMEOUT_S, HEARTBEAT_PERIOD_S, TOPICS_FLUX, TOPICS_LECTURE, WHITELIST,
+    WHITELIST_REPETITION, WHITELIST_SPECTACLE, WHITELIST_TECHNIQUE,
+    WRITE_TIMEOUT_S, DriveFlow, ProtocolError, SessionManager, build_ack,
+    build_err, build_feed, build_hb_ack, build_hello, build_state,
+    drive_to_twist, effective_whitelist, mode_from_domain_id,
+    TOPICS_MASQUES, parse_client_message, rehearsal_allowed, snapshot_visible,
     stop_all_commands,
 )
+
+# Racine du package robot_web (static/ est un frère de robot_web/ dans le dépôt).
+PACKAGE_WEB = pathlib.Path(web_protocol.__file__).resolve().parent.parent
+STATIC = PACKAGE_WEB / "static"
+
+# Topics qui ne doivent JAMAIS pouvoir être publiés par le web, répétition
+# activée ou non : les roues, le verrou e_stop, et tout ce qui est en lecture seule.
+TOPICS_INTERDITS = ["wheels", "cmd_vel", "cmd_vel_web", "cmd_vel_remote", "cmd_vel_anim",
+                    "cmd_vel_mux", "cmd_vel_follow", "e_stop"]
 
 
 def imported_roots(module):
@@ -63,19 +84,23 @@ def test_whitelist_est_l_union_spectacle_technique():
     # "persona" (2026-07-13, lot D3) : sélection de la personnalité de Didier
     # (payload = nom de variante, cf. vision.ai.personas) -- même nature que
     # "chat", une commande de configuration, pas un actionneur.
+    # "chat_text" / "chat_instruction" (2026-10-14, page « scène ») : la régie
+    # souffle un texte « entendu » ou pose une consigne de jeu -- conversation,
+    # pas un actionneur.
     assert WHITELIST == WHITELIST_SPECTACLE | WHITELIST_TECHNIQUE
     assert WHITELIST_SPECTACLE == {"animation", "face", "audio", "robot_lights"}
     assert WHITELIST_TECHNIQUE == {"relay", "neck", "left_eye", "right_eye", "left_arm",
-                                    "right_arm", "gaze", "chat", "persona", "system"}
+                                    "right_arm", "gaze", "chat", "persona", "system",
+                                    "chat_text", "chat_instruction"}
 
 
 def test_topics_lecture_jamais_publiables():
     # Les topics d'ÉTAT observés par le pont (surbrillance des options
     # actives, 2026-07-13) ne doivent JAMAIS entrer dans la whitelist de
     # publication : un client web ne peut pas forger l'état du chat.
-    from robot_web.web_protocol import TOPICS_LECTURE
-    assert TOPICS_LECTURE == {"chat_state", "persona_state"}
+    assert TOPICS_LECTURE == {"chat_state", "persona_state", "route_state"}
     assert TOPICS_LECTURE.isdisjoint(WHITELIST)
+    assert TOPICS_LECTURE.isdisjoint(WHITELIST_REPETITION)
 
 
 # --- Parsing des messages client --------------------------------------------
@@ -199,6 +224,33 @@ def test_stop_all_commands_liste_et_ordre_exacts():
     ]
 
 
+def test_stop_all_commands_repetition_coupe_la_route_et_la_seance():
+    """SIM-ONLY : avec la répétition activée, STOP ajoute EXACTEMENT, à la fin,
+    `route off` puis `rehearsal/cmd stop` (ordre : la route d'abord, la séance
+    ensuite). Sans répétition, rien de plus (liste gravée ci-dessus)."""
+    base = stop_all_commands()
+    assert stop_all_commands(False) == base
+    assert stop_all_commands(True) == base + [("route", "off"), ("rehearsal/cmd", "stop")]
+    assert {t for t, _ in stop_all_commands(True)} - {t for t, _ in base} == {"route", "rehearsal/cmd"}
+    assert {"route", "rehearsal/cmd"} <= WHITELIST_REPETITION
+
+
+def test_topics_masques_graves_et_filtres_du_state():
+    """`chat_instruction` (la lubie en cours) et `route_speed` (batterie faible,
+    arrêt devant un objet) ne sortent JAMAIS dans `state` : David ignore le
+    tirage. Ils restent publiables (whitelist) -- seul l'écho est coupé."""
+    assert TOPICS_MASQUES == frozenset({"chat_instruction", "route_speed"})
+    assert "chat_instruction" in WHITELIST_TECHNIQUE
+    assert "route_speed" in WHITELIST_REPETITION
+    topics = {"chat_state": {"msg": "listening", "at_s": 1.0},
+              "chat_instruction": {"msg": "tu es amoureux", "at_s": 1.0},
+              "route_speed": {"msg": 0, "at_s": 1.0},
+              "route_state": {"msg": "on", "at_s": 1.0}}
+    assert snapshot_visible(topics) == {"chat_state": {"msg": "listening", "at_s": 1.0},
+                                        "route_state": {"msg": "on", "at_s": 1.0}}
+    assert snapshot_visible({}) == {}
+
+
 def test_stop_all_commands_ne_touche_jamais_aux_roues():
     topics = {topic for topic, _value in stop_all_commands()}
     assert "wheels" not in topics
@@ -227,7 +279,8 @@ def test_build_hello():
                        drive_enabled=False, max_linear=0.5, max_angular=1.0) == {
         "type": "hello", "domain_id": 43, "mode": "SIMULATION",
         "writer": True, "token_required": False,
-        "drive_enabled": False, "max_linear": 0.5, "max_angular": 1.0}
+        "drive_enabled": False, "max_linear": 0.5, "max_angular": 1.0,
+        "rehearsal": False}
 
 
 def test_build_hello_expose_les_plafonds_et_l_etat_pilotage():
@@ -499,3 +552,567 @@ def test_drive_reste_hors_whitelist_cmd():
     assert "cmd_vel_web" not in WHITELIST
     with pytest.raises(ProtocolError):
         parse_client_message('{"type":"cmd","topic":"cmd_vel_web","value":[1,1]}')
+
+
+# --- Page « scène » : whitelist de répétition (SIM-ONLY) ---------------------
+
+# Valeurs GRAVÉES en toutes lettres (jamais recalculées depuis les constantes du
+# module testé : un test qui recalcule l'attendu avec le code ne teste rien).
+WHITELIST_BASE_GRAVEE = {
+    "animation", "face", "audio", "robot_lights",
+    "relay", "neck", "left_eye", "right_eye", "left_arm", "right_arm", "gaze",
+    "chat", "persona", "system", "chat_text", "chat_instruction",
+}
+TOPICS_REPETITION_GRAVES = {"route", "route_speed", "rehearsal/cmd"}
+
+
+def test_whitelist_repetition_exacte_et_hors_whitelist_de_base():
+    assert WHITELIST_REPETITION == TOPICS_REPETITION_GRAVES
+    assert WHITELIST_REPETITION.isdisjoint(WHITELIST)
+
+
+def test_whitelist_de_base_gravee():
+    assert WHITELIST == WHITELIST_BASE_GRAVEE
+
+
+def test_whitelist_effective_sans_repetition_est_la_base():
+    assert effective_whitelist(False) == WHITELIST_BASE_GRAVEE
+
+
+def test_whitelist_effective_avec_repetition_ajoute_exactement_trois_topics():
+    assert effective_whitelist(True) == WHITELIST_BASE_GRAVEE | TOPICS_REPETITION_GRAVES
+
+
+def test_whitelist_effective_immuable():
+    # Le node la partage entre publishers et parseur : personne ne doit pouvoir
+    # l'élargir en cours de route.
+    assert isinstance(effective_whitelist(True), frozenset)
+
+
+@pytest.mark.parametrize("rehearsal", [False, True])
+@pytest.mark.parametrize("topic", TOPICS_INTERDITS + ["chat_state", "persona_state",
+                                                       "route_state", "chat_transcript"])
+def test_topics_interdits_et_en_lecture_seule_jamais_publiables(topic, rehearsal):
+    """Répétition activée ou non : ni les roues, ni e_stop, ni les topics d'état
+    ou de flux (lecture seule) n'entrent dans la whitelist effective."""
+    assert topic not in effective_whitelist(rehearsal)
+    with pytest.raises(ProtocolError):
+        parse_client_message('{{"type":"cmd","topic":"{}","value":1}}'.format(topic),
+                             effective_whitelist(rehearsal))
+
+
+@pytest.mark.parametrize("topic,valeur", [
+    ("route", '"on"'), ("route", '"restart"'), ("route_speed", "0.5"),
+    ("rehearsal/cmd", '"start"'),
+])
+def test_cmd_repetition_refusee_par_defaut_et_quand_desactivee(topic, valeur):
+    raw = '{{"type":"cmd","topic":"{}","value":{}}}'.format(topic, valeur)
+    # Sans whitelist passée : le défaut est la base, donc refus (oubli = côté sûr).
+    with pytest.raises(ProtocolError) as defaut:
+        parse_client_message(raw)
+    assert "topic de répétition désactivé" in defaut.value.raison
+    # Whitelist effective répétition OFF : même refus, même message clair.
+    with pytest.raises(ProtocolError) as desactive:
+        parse_client_message(raw, effective_whitelist(False))
+    assert "topic de répétition désactivé" in desactive.value.raison
+    assert topic in desactive.value.raison
+
+
+@pytest.mark.parametrize("topic,valeur,attendu", [
+    ("route", '"on"', "on"),
+    ("route", '"off"', "off"),
+    ("route", '"restart"', "restart"),
+    ("route_speed", "0.5", 0.5),
+    ("route_speed", "0", 0),
+    ("rehearsal/cmd", '"start"', "start"),
+    ("rehearsal/cmd", '"stop"', "stop"),
+])
+def test_cmd_repetition_acceptee_quand_activee(topic, valeur, attendu):
+    raw = '{{"type":"cmd","topic":"{}","value":{}}}'.format(topic, valeur)
+    assert parse_client_message(raw, effective_whitelist(True)) == {
+        "type": "cmd", "topic": topic, "value": attendu, "time": 0}
+
+
+def test_topic_inconnu_garde_son_message_hors_whitelist_meme_activee():
+    with pytest.raises(ProtocolError) as exc:
+        parse_client_message('{"type":"cmd","topic":"inconnu","value":1}', effective_whitelist(True))
+    assert "hors whitelist" in exc.value.raison
+
+
+@pytest.mark.parametrize("topic", ['["face"]', '{"a":1}', "42", "null", "true"])
+def test_cmd_topic_non_chaine_refuse_proprement(topic):
+    """Un topic JSON liste/objet n'est pas hashable : sans garde, `in` sur un
+    ensemble lève TypeError (donc PAS ProtocolError) et la connexion du client
+    tombe au lieu d'un refus. Défaut constaté avant la page « scène »."""
+    with pytest.raises(ProtocolError):
+        parse_client_message('{{"type":"cmd","topic":{},"value":1}}'.format(topic))
+
+
+@pytest.mark.parametrize("topic,valeur", [
+    ("chat_text", '"bonjour Didier"'),
+    ("chat_instruction", '"tu es pressé"'),
+    ("chat_instruction", '""'),   # "" = consigne levée : valeur vide VALIDE
+])
+def test_cmd_chat_text_et_chat_instruction_acceptes_en_prod(topic, valeur):
+    raw = '{{"type":"cmd","topic":"{}","value":{}}}'.format(topic, valeur)
+    assert parse_client_message(raw)["topic"] == topic
+
+
+@pytest.mark.parametrize("domain_id,attendu", [(43, True), (42, False), (0, False), (-1, False), (99, False)])
+def test_rehearsal_allowed_seulement_en_simulation(domain_id, attendu):
+    assert rehearsal_allowed(domain_id) is attendu
+
+
+# --- Page « scène » : lecture seule, flux et hello --------------------------------
+
+def test_topics_flux_graves_et_jamais_publiables():
+    assert TOPICS_FLUX == {"chat_transcript"}
+    assert TOPICS_FLUX.isdisjoint(WHITELIST | WHITELIST_REPETITION | TOPICS_LECTURE)
+
+
+def test_build_feed_evenement_de_conversation():
+    replique = {"role": "david", "text": "bonjour", "t_ms": 1200}
+    assert build_feed("chat_transcript", replique) == {
+        "type": "feed", "topic": "chat_transcript",
+        "msg": {"role": "david", "text": "bonjour", "t_ms": 1200}}
+
+
+def test_build_feed_charge_brute_inchangee():
+    assert build_feed("chat_transcript", "pas du json") == {
+        "type": "feed", "topic": "chat_transcript", "msg": "pas du json"}
+
+
+def test_build_hello_annonce_la_repetition():
+    hello = build_hello(43, writer=True, token_required=False, drive_enabled=False,
+                        max_linear=0.5, max_angular=1.0, rehearsal=True)
+    assert hello["rehearsal"] is True
+
+
+def test_build_hello_repetition_absente_par_defaut():
+    # Défaut = False : un appelant qui oublie le champ n'ouvre rien.
+    hello = build_hello(42, writer=False, token_required=True, drive_enabled=False,
+                        max_linear=0.5, max_angular=1.0)
+    assert hello["rehearsal"] is False
+
+
+# --- Pages statiques : contrat avec le protocole -------------------------------------
+# Le front n'a pas de test navigateur : ces gardes lisent les VRAIS fichiers et
+# attrapent les erreurs qui casseraient une page au chargement (id manquant,
+# déclaration en double entre scripts) ou qui trahiraient une règle de sécurité.
+
+def _lire(nom):
+    return (STATIC / nom).read_text(encoding="utf-8")
+
+
+def _ids_html(nom):
+    return set(re.findall(r'\bid="([^"]+)"', _lire(nom)))
+
+
+def _ids_js(*noms):
+    """Ids passés LITTÉRALEMENT à $("...") (les ids calculés échappent au test)."""
+    return {i for nom in noms for i in re.findall(r'\$\("([^"]+)"\)', _lire(nom))}
+
+
+def _declarations_globales(nom):
+    """Noms déclarés au niveau racine d'un script classique : function/const/let
+    en colonne 0. Un const déclaré par deux scripts = SyntaxError au chargement
+    du second, donc page morte."""
+    return set(re.findall(r"^(?:async\s+)?(?:function\s+(\w+)|(?:const|let|var)\s+(\w+))",
+                          _lire(nom), re.M)) and {
+        a or b for a, b in re.findall(
+            r"^(?:async\s+)?(?:function\s+(\w+)|(?:const|let|var)\s+(\w+))", _lire(nom), re.M)}
+
+
+@pytest.mark.parametrize("page,scripts", [
+    ("index.html", ("commun.js", "app.js")),
+    ("scene.html", ("commun.js", "scene.js")),
+])
+def test_page_fournit_tous_les_ids_que_ses_scripts_utilisent(page, scripts):
+    manquants = _ids_js(*scripts) - _ids_html(page)
+    assert manquants == set(), f"{page} : ids absents du HTML alors que le JS les lit : {sorted(manquants)}"
+
+
+@pytest.mark.parametrize("page,script", [("index.html", "app.js"), ("scene.html", "scene.js")])
+def test_commun_charge_avant_le_script_de_la_page(page, script):
+    sources = re.findall(r'<script src="/static/([\w.]+)"', _lire(page))
+    assert sources == ["commun.js", script]
+
+
+@pytest.mark.parametrize("script", ["app.js", "scene.js"])
+def test_script_de_page_ne_redeclare_rien_de_commun(script):
+    doublons = _declarations_globales("commun.js") & _declarations_globales(script)
+    assert doublons == set(), f"{script} redéclare des noms de commun.js : {sorted(doublons)}"
+
+
+def test_scene_ne_lit_que_les_topics_d_etat_publics():
+    """David ne voit pas le tirage : de `state`, la page scène ne lit QUE ces
+    trois topics. Jamais chat_instruction (le régisseur y publie ses consignes)
+    ni route_speed (une panne « batterie faible » y passerait)."""
+    lus = re.findall(r'valeurTopic\(msg\.topics, "([^"]+)"\)', _lire("scene.js"))
+    assert sorted(lus) == ["chat_state", "persona_state", "route_state"]
+    # Et aucun autre accès direct aux topics du message state.
+    assert len(re.findall(r"msg\.topics", _lire("scene.js"))) == len(lus)
+
+
+def test_scene_personas_graves():
+    bloc = re.search(r"const PERSONAS = \[(.*?)\n\];", _lire("scene.js"), re.S).group(1)
+    assert re.findall(r'\["(\w+)",', bloc) == ["bougon", "naif", "vantard", "mauvaisefoi"]
+
+
+def test_scene_publie_seulement_des_topics_de_la_whitelist_effective():
+    topics = set(re.findall(r'data-topic="([^"]+)"', _lire("scene.html")))
+    topics |= set(re.findall(r'envoyerSaisie\("([^"]+)"', _lire("scene.js")))
+    topics |= set(re.findall(r'creerBoutonCatalogue\("([^"]+)"', _lire("scene.js")))
+    assert topics == {"chat", "persona", "chat_text", "chat_instruction",
+                      "route", "route_speed", "rehearsal/cmd"}
+    assert topics <= effective_whitelist(True)
+
+
+def test_scene_boutons_de_repetition_masques_par_defaut():
+    """Chaque élément de répétition de scene.html (boutons route/séance, curseur
+    de vitesse) doit être sous un ancêtre `scene-repetition` portant `hidden` :
+    sur le vrai robot, la page n'en montre aucun tant que hello.rehearsal n'est
+    pas vrai."""
+    from html.parser import HTMLParser
+
+    class Analyse(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.pile = []        # (balise, protégé ?) des éléments ouverts
+            self.trouves = []     # (identifiant, protégé ?) des éléments de répétition
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            classes = (attrs.get("class") or "").split()
+            protege = "scene-repetition" in classes and "hidden" in attrs
+            if tag not in ("input", "img", "br", "meta", "link"):
+                self.pile.append((tag, protege))
+            sous_protection = any(p for _t, p in self.pile)
+            if attrs.get("data-topic") in TOPICS_REPETITION_GRAVES or attrs.get("id") == "scene-vitesse":
+                self.trouves.append((attrs.get("data-topic") or attrs.get("id"), sous_protection))
+
+        def handle_endtag(self, tag):
+            for i in range(len(self.pile) - 1, -1, -1):
+                if self.pile[i][0] == tag:
+                    del self.pile[i:]
+                    break
+
+    analyse = Analyse()
+    analyse.feed(_lire("scene.html"))
+    assert len(analyse.trouves) == 6          # 3 route + 2 séance + 1 curseur
+    assert [x for x in analyse.trouves if not x[1]] == []
+
+
+def test_robot_web_ne_cite_jamais_le_package_de_repetition():
+    """Anti-fuite étendu : test_rehearsal_contract ne lit que py/xml/yaml/sh/cfg ;
+    ici TOUS les fichiers du package (html, js, css compris). Les noms de topics
+    (route, rehearsal/cmd) sont permis -- pas le package sim-only lui-même."""
+    fuites = []
+    for chemin in PACKAGE_WEB.rglob("*"):
+        if not chemin.is_file() or "__pycache__" in chemin.parts:
+            continue
+        if "robot_rehearsal" in chemin.read_text(encoding="utf-8", errors="ignore"):
+            fuites.append(str(chemin.relative_to(PACKAGE_WEB)))
+    assert fuites == []
+
+
+# --- Le pont lui-même, rclpy simulé -----------------------------------------------------
+# web_bridge_node importe rclpy : absent sur l'hôte de CI. On le remplace par un
+# Node factice qui ENREGISTRE publishers et abonnements, le reste (aiohttp, PIL)
+# est réel -- d'où l'importorskip : sans eux, ces tests sont ignorés, pas rouges.
+
+class _Publieur:
+    def __init__(self):
+        self.messages = []
+
+    def publish(self, msg):
+        self.messages.append(msg)
+
+
+class _Journal:
+    def __init__(self):
+        self.lignes = []
+
+    def info(self, texte):
+        self.lignes.append(("info", texte))
+
+    def warning(self, texte):
+        self.lignes.append(("warning", texte))
+
+    def error(self, texte):
+        self.lignes.append(("error", texte))
+
+
+class _NodeFactice:
+    imposes = {}   # nom de paramètre -> valeur, posé par le test AVANT la construction
+
+    def __init__(self, nom):
+        self.params = {}
+        self.publishers = {}
+        self.abonnements = {}   # topic -> (qos, callback)
+        self.journal = _Journal()
+
+    def declare_parameter(self, nom, defaut):
+        self.params[nom] = self.imposes.get(nom, defaut)
+
+    def get_parameter(self, nom):
+        return types.SimpleNamespace(value=self.params[nom])
+
+    def create_publisher(self, _type, topic, _qos):
+        self.publishers[topic] = _Publieur()
+        return self.publishers[topic]
+
+    def create_subscription(self, _type, topic, callback, qos):
+        self.abonnements[topic] = (qos, callback)
+
+    def get_logger(self):
+        return self.journal
+
+    def get_node_names_and_namespaces(self):
+        return []
+
+
+class _StringTimeFactice:
+    def __init__(self, msg="", time=0, anim=False):
+        self.msg = msg
+        self.time = time
+        self.anim = anim
+
+
+class _QoSFactice:
+    def __init__(self, depth=10, durability="VOLATILE"):
+        self.depth = depth
+        self.durability = durability
+
+
+def _module(nom, **attributs):
+    module = types.ModuleType(nom)
+    module.__dict__.update(attributs)
+    return module
+
+
+@pytest.fixture
+def pont(monkeypatch):
+    """Le module web_bridge_node importé avec rclpy & co simulés ; retire le
+    module de sys.modules à la fin pour ne rien laisser derrière."""
+    pytest.importorskip("aiohttp")
+    pytest.importorskip("PIL")
+    faux = {
+        "rclpy": _module("rclpy"),
+        "rclpy.node": _module("rclpy.node", Node=_NodeFactice),
+        "rclpy.qos": _module("rclpy.qos", QoSProfile=_QoSFactice,
+                             DurabilityPolicy=types.SimpleNamespace(TRANSIENT_LOCAL="TRANSIENT_LOCAL")),
+        "ament_index_python": _module("ament_index_python"),
+        "ament_index_python.packages": _module(
+            "ament_index_python.packages", get_package_share_directory=lambda _nom: str(PACKAGE_WEB)),
+        "geometry_msgs": _module("geometry_msgs"),
+        "geometry_msgs.msg": _module("geometry_msgs.msg", Twist=type("Twist", (), {})),
+        "sensor_msgs": _module("sensor_msgs"),
+        "sensor_msgs.msg": _module("sensor_msgs.msg", CompressedImage=type("CompressedImage", (), {}),
+                                   Image=type("Image", (), {})),
+        "robot_interfaces": _module("robot_interfaces"),
+        "robot_interfaces.msg": _module("robot_interfaces.msg", StringTime=_StringTimeFactice),
+    }
+    for nom, module in faux.items():
+        monkeypatch.setitem(sys.modules, nom, module)
+    monkeypatch.delitem(sys.modules, "robot_web.web_bridge_node", raising=False)
+    module = importlib.import_module("robot_web.web_bridge_node")
+    yield module
+    sys.modules.pop("robot_web.web_bridge_node", None)
+
+
+def _creer_noeud(pont, monkeypatch, domaine="43", **params):
+    monkeypatch.setenv("ROS_DOMAIN_ID", domaine)
+    monkeypatch.setattr(_NodeFactice, "imposes", params)
+    return pont.WebBridgeNode()
+
+
+def test_pont_par_defaut_sans_topics_de_repetition(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch)
+    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE
+    assert noeud.rehearsal_enabled is False
+    assert noeud.hello_message("c1")["rehearsal"] is False
+
+
+def test_pont_repetition_activee_en_simulation(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch, rehearsal_enabled=True)
+    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE | TOPICS_REPETITION_GRAVES
+    assert noeud.hello_message("c1")["rehearsal"] is True
+    # Abonné aussi aux topics de répétition (la supervision voit les commandes).
+    assert TOPICS_REPETITION_GRAVES <= set(noeud.abonnements)
+
+
+@pytest.mark.parametrize("domaine", ["42", "0", "abc"])
+def test_pont_repetition_demandee_hors_simulation_est_ignoree_et_dite(pont, monkeypatch, domaine):
+    """Garde-fou « ne jamais mélanger » : rehearsal_enabled=true sur le domaine du
+    vrai robot (ou inconnu) n'ouvre rien, et le dit en ERROR (jamais silencieux)."""
+    noeud = _creer_noeud(pont, monkeypatch, domaine=domaine, rehearsal_enabled=True)
+    assert noeud.rehearsal_enabled is False
+    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE
+    assert noeud.hello_message("c1")["rehearsal"] is False
+    erreurs = [t for niveau, t in noeud.journal.lignes if niveau == "error"]
+    assert len(erreurs) == 1 and "rehearsal_enabled IGNORÉ" in erreurs[0]
+
+
+def test_pont_etats_latches_et_flux_sans_publisher(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch, rehearsal_enabled=True)
+    # Lecture seule : aucun publisher sur un topic d'état ni de flux.
+    assert set(noeud.publishers).isdisjoint(TOPICS_LECTURE | TOPICS_FLUX)
+    # État latché par son publieur : abonné TRANSIENT_LOCAL depth 1 (sinon le
+    # pont ne recevrait jamais l'état courant, seulement la prochaine transition).
+    for topic in TOPICS_LECTURE:
+        qos, _callback = noeud.abonnements[topic]
+        assert (qos.depth, qos.durability) == (1, "TRANSIENT_LOCAL"), topic
+    # Flux : QoS par défaut (10, volatile) -- compatible avec un publieur volatile.
+    for topic in TOPICS_FLUX:
+        qos, _callback = noeud.abonnements[topic]
+        assert qos == 10, topic
+
+
+def test_flux_avant_demarrage_de_la_boucle_est_jete_sans_erreur(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch)
+    _qos, callback = noeud.abonnements["chat_transcript"]
+    assert noeud.feed_sink is None
+    callback(_StringTimeFactice(msg=json.dumps({"role": "david", "text": "x", "t_ms": 1})))
+
+
+class _ClientFactice:
+    """Un WebSocket de client, côté serveur : n'enregistre que ce qu'on lui envoie."""
+    closed = False
+
+    def __init__(self):
+        self.recus = []
+
+    async def send_json(self, payload):
+        self.recus.append(payload)
+
+
+@pytest.mark.filterwarnings("ignore:It is recommended to use web.AppKey")
+def test_flux_diffuse_dans_l_ordre_depuis_le_thread_rclpy(pont, monkeypatch):
+    """Le piège : le callback d'abonnement tourne dans le thread rclpy, les
+    WebSockets appartiennent à la boucle asyncio. 200 répliques déposées depuis
+    un AUTRE thread doivent arriver à TOUS les clients, toutes, dans l'ordre.
+    La boucle tourne en mode DEBUG d'asyncio : il lève RuntimeError sur toute
+    opération non thread-safe venue d'un autre thread (ex. queue.put_nowait
+    direct depuis le callback) -- sans lui, le réveil de la boucle par ses
+    minuteurs masquerait la faute."""
+    noeud = _creer_noeud(pont, monkeypatch)
+    _qos, callback = noeud.abonnements["chat_transcript"]
+    clients = {"c1": _ClientFactice(), "c2": _ClientFactice()}
+    total = 200
+
+    async def scenario():
+        app = pont.web.Application()
+        app["node"] = noeud
+        app["clients"] = clients
+        boucles = pont._background_loops_ctx(app)
+        await boucles.__anext__()          # démarre les boucles : feed_sink posé
+        assert noeud.feed_sink is not None
+        # Laisse le consommateur arriver à son `queue.get()` : c'est le getter en
+        # attente qu'un dépôt non thread-safe tenterait de réveiller (et que le
+        # mode debug sanctionne). Sans cette pause, la file se remplit avant que
+        # personne n'attende et la faute passe inaperçue.
+        await asyncio.sleep(0.05)
+
+        def depuis_rclpy():
+            for i in range(total):
+                callback(_StringTimeFactice(
+                    msg=json.dumps({"role": "didier", "text": str(i), "t_ms": i})))
+
+        fil = threading.Thread(target=depuis_rclpy)
+        fil.start()
+        for _ in range(200):               # 2 s max
+            if all(len(c.recus) == total for c in clients.values()):
+                break
+            await asyncio.sleep(0.01)
+        fil.join()
+        with pytest.raises(StopAsyncIteration):
+            await boucles.__anext__()      # arrêt propre : boucles annulées
+        assert noeud.feed_sink is None     # alimentation coupée en premier
+
+    asyncio.run(scenario(), debug=True)
+    attendu = [build_feed("chat_transcript", {"role": "didier", "text": str(i), "t_ms": i})
+               for i in range(total)]
+    assert clients["c1"].recus == attendu
+    assert clients["c2"].recus == attendu
+
+
+def test_flux_charge_non_json_transmise_brute(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch)
+    _qos, callback = noeud.abonnements["chat_transcript"]
+    recus = []
+    noeud.feed_sink = recus.append
+    callback(_StringTimeFactice(msg="pas du json"))
+    assert recus == [build_feed("chat_transcript", "pas du json")]
+
+
+@pytest.mark.filterwarnings("ignore:It is recommended to use web.AppKey")
+def test_pont_de_bout_en_bout_scene_cmd_et_flux(pont, monkeypatch):
+    """Vrai serveur aiohttp, vrai WebSocket : /scene est servie, le hello annonce
+    la répétition, une cmd `route` est publiée (valeur nue en JSON), une cmd de
+    répétition est refusée quand elle est désactivée, et un feed poussé depuis un
+    autre thread arrive au client."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    noeud = _creer_noeud(pont, monkeypatch, rehearsal_enabled=True)
+    _qos, callback = noeud.abonnements["chat_transcript"]
+
+    async def lire(ws, type_attendu):
+        for _ in range(10):
+            msg = await asyncio.wait_for(ws.receive_json(), timeout=2)
+            if msg["type"] == type_attendu:
+                return msg
+        raise AssertionError("message {!r} jamais reçu".format(type_attendu))
+
+    async def scenario():
+        async with TestServer(pont.build_app(noeud)) as serveur, TestClient(serveur) as client:
+            page = await client.get("/scene")
+            assert page.status == 200
+            assert "<title>Didier -- scène</title>" in await page.text()
+            assert (await client.get("/static/scene.js")).status == 200
+            assert (await client.get("/static/commun.js")).status == 200
+
+            ws = await client.ws_connect("/ws")
+            assert (await lire(ws, "hello"))["rehearsal"] is True
+            await ws.send_json({"type": "auth", "token": None})
+            assert (await lire(ws, "hello"))["writer"] is True
+
+            await ws.send_json({"type": "cmd", "topic": "route", "value": "on"})
+            assert (await lire(ws, "ack"))["topic"] == "route"
+            assert [m.msg for m in noeud.publishers["route"].messages] == ['"on"']
+            await ws.send_json({"type": "cmd", "topic": "route_speed", "value": 0.35})
+            await lire(ws, "ack")
+            assert [m.msg for m in noeud.publishers["route_speed"].messages] == ["0.35"]
+
+            threading.Thread(target=callback, args=(_StringTimeFactice(
+                msg=json.dumps({"role": "david", "text": "salut", "t_ms": 7})),)).start()
+            assert await lire(ws, "feed") == build_feed(
+                "chat_transcript", {"role": "david", "text": "salut", "t_ms": 7})
+            await ws.close()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.filterwarnings("ignore:It is recommended to use web.AppKey")
+def test_pont_de_bout_en_bout_repetition_desactivee_refuse_route(pont, monkeypatch):
+    from aiohttp.test_utils import TestClient, TestServer
+
+    noeud = _creer_noeud(pont, monkeypatch)   # rehearsal_enabled par défaut : false
+
+    async def scenario():
+        async with TestServer(pont.build_app(noeud)) as serveur, TestClient(serveur) as client:
+            ws = await client.ws_connect("/ws")
+            assert (await ws.receive_json())["rehearsal"] is False
+            await ws.send_json({"type": "auth", "token": None})
+            await ws.receive_json()
+            await ws.send_json({"type": "cmd", "topic": "route", "value": "on"})
+            refus = await ws.receive_json()
+            assert refus["type"] == "err" and "topic de répétition désactivé" in refus["reason"]
+            # Et un topic de liste (défaut TypeError d'avant) est un refus, pas une chute.
+            await ws.send_json({"type": "cmd", "topic": ["route"], "value": "on"})
+            assert (await ws.receive_json())["type"] == "err"
+            assert not ws.closed
+            await ws.close()
+
+    asyncio.run(scenario())
+    assert "route" not in noeud.publishers

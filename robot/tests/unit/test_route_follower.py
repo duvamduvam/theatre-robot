@@ -33,6 +33,16 @@ def test_load_route_valide():
                     "pois": [{"name": "banc", "x": 1, "y": 2, "radius": 0.5}]})
     assert r.waypoints == ((0.0, 0.0), (1.0, 2.5))
     assert r.pois == (Poi("banc", 1.0, 2.0, 0.5),)
+    assert (r.pois[0].lubie, r.pois[0].fermeture) == ("", "")      # optionnels (lot R3)
+
+
+def test_load_route_lubie_et_fermeture():
+    r = load_route({"name": "x", "waypoints": [[0, 0], [1, 0]],
+                    "pois": [{"name": "banc", "x": 1, "y": 2, "radius": 0.5,
+                              "lubie": "Un banc : tu veux t'asseoir.", "fermeture": "raison absurde"},
+                             {"name": "flaque", "x": 3, "y": 0, "radius": 1, "lubie": "Une flaque."}]})
+    assert r.pois == (Poi("banc", 1.0, 2.0, 0.5, "Un banc : tu veux t'asseoir.", "raison absurde"),
+                      Poi("flaque", 3.0, 0.0, 1.0, "Une flaque.", ""))
 
 
 @pytest.mark.parametrize("data, fragment", [
@@ -44,6 +54,10 @@ def test_load_route_valide():
     ({"name": "x", "waypoints": [[0, 0], [1, 1]],
       "pois": [{"name": "p", "x": 0, "y": 0, "radius": 1}, {"name": "p", "x": 1, "y": 0, "radius": 1}]}, "double"),
     ({"name": "x", "waypoints": [[0, 0], [1, 1]], "pois": [{"name": "p", "x": float("nan"), "y": 0, "radius": 1}]}, "fini"),
+    ({"name": "x", "waypoints": [[0, 0], [1, 1]], "pois": [{"name": "p", "x": 0, "y": 0, "radius": 1, "lubie": 3}]},
+     "pois[0].lubie"),
+    ({"name": "x", "waypoints": [[0, 0], [1, 1]], "pois": [{"name": "p", "x": 0, "y": 0, "radius": 1,
+                                                            "fermeture": ["a"]}]}, "pois[0].fermeture"),
 ])
 def test_load_route_refuse_explicitement(data, fragment):
     with pytest.raises(RouteError) as exc:

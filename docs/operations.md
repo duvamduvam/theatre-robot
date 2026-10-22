@@ -63,8 +63,11 @@
 
 Créé pendant l'immobilisation du robot (Pi 4 fumé le 12/09, convertisseurs
 24V→5V en commande) : la perception et la conversation tournent avec le VRAI
-code du Pi 5 sur le PC (webcam USB + Scarlett 4i4), le corps est le Didier de
-Gazebo. Tout est sur `ROS_DOMAIN_ID=43` : rien ne peut atteindre le vrai robot.
+code du Pi 5 sur le PC (webcam USB ; **micro = le ReSpeaker du robot branché
+sur le PC, sortie = casque Bluetooth de retour**, cf. `asound-pc.conf` du dépôt
+vision — câblage du 13/09 au soir, corrigé ici le 14/10 : le texte parlait
+encore de la Scarlett), le corps est le Didier de Gazebo. Tout est sur
+`ROS_DOMAIN_ID=43` : rien ne peut atteindre le vrai robot.
 
 ⚠️ Ce banc ne REMPLACE pas le protocole physique chat_node V2 (chantier 0) :
 les seuils audio sont absolus et dépendent de la machine (le gate calibré ici
@@ -101,11 +104,17 @@ CHAT=true docker compose -f docker-compose-x86.yml up -d
   et `/vision/person_box` (suivi roues) ; `CHAT=true` lance `chat_node`
   (micro → whisper → OpenRouter → piper → sortie audio).
 - Les alias ALSA `casque_mic`/`mixette` sont fournis par `asound-pc.conf`
-  (monté dans le conteneur, pointé sur la Scarlett) : AUCUN paramètre du code
-  ne change entre le Pi et le banc.
-- ⚠️ « Device or resource busy » sur le micro/la sortie : PipeWire tient la
-  Scarlett côté hôte — fermer les applis audio, ou
-  `systemctl --user stop wireplumber pipewire` le temps de la séance.
+  (monté dans le conteneur) : `casque_mic` = ReSpeaker en `hw:Array` (direct,
+  sans PipeWire, pour mesurer la même chose que le robot), `mixette` = casque
+  Bluetooth via le plugin `pulse` (nœud bluez par adresse MAC). AUCUN
+  paramètre du code ne change entre le Pi et le banc.
+- ⚠️ Ne PAS arrêter PipeWire : c'est lui qui sert le casque Bluetooth (la
+  sortie). Si le casque n'est pas connecté, `aplay` échoue et le tour est
+  abandonné proprement (le texte reste visible sur la page scène, §Séance).
+  « Device or resource busy » sur le micro = une appli hôte tient le ReSpeaker.
+- Sans ReSpeaker branché, le micro est « mort » (backoff 5 s en boucle, log
+  WARNING) mais le **clavier de la page scène** (`chat_text`) fonctionne quand
+  même : c'est le mode de secours pour travailler le texte sans matériel.
 - ⚠️ Clé requise : `openrouter_key` dans `conf/secret` du dépôt vision
   (déjà en place sur le PC de dev).
 - ⚠️ Bug REPO_ROOT (le même que sur le Pi, cf. CLAUDE.md vision) : en install
@@ -114,11 +123,78 @@ CHAT=true docker compose -f docker-compose-x86.yml up -d
   space (persistant, c'est le workspace monté ; à REFAIRE si un colcon build
   les efface — symptôme : chat meurt sur « Secret LLM manquant ») :
   `docker exec dadou-vision-x86-container bash -c 'sp=/home/ros2_ws/install/vision/lib/python3.12/site-packages; ln -sfn /home/ros2_ws/src/vision/conf $sp/conf; ln -sfn /home/ros2_ws/src/vision/medias $sp/medias'`
+- ⚠️ **Le code qui tourne est celui de `workspace/install`, pas des sources
+  montées** (ament_python COPIE les sources au build) : après tout changement
+  de `vision/`, poser la sentinelle `touch dadou_vision_ros/vision/CHANGE` puis
+  redémarrer le conteneur (vécu le 14/10 : chat_node tournait avec le code du
+  13/09 malgré les sources à jour). Et **après un rebuild d'IMAGE**
+  (`build-x86.sh`), vider `workspace/{build,install,log}` avant de relancer :
+  le `build/` de l'ancienne image référence des libs qui n'existent plus
+  (`libfastcdr.so.2.2.7` → `robot_interfaces` échoue, chat_node reste
+  l'ancien). Puis refaire les symlinks ci-dessus.
 
 **Ce qu'on voit alors** : on se place devant la webcam → le Didier de Gazebo
 tourne la tête (gaze) et pivote/avance (suivi, si activé) ; on parle dans le
 micro → réponse dans les enceintes, gestes « parle » dans Gazebo
 (`ANIMATIONS=true` requis), didascalies sur l'aperçu visage 8766.
+
+## Séance « Chantiers » — répétition simulée complète (lot R3, 14/10)
+
+Le trajet des Nefs à la grue Titan grise (`docs/etude-repetition-simulee.md`
+§13) : Didier chemine seul, 20 bugs réels tombent au hasard, 30 objets du
+chemin déclenchent ses lubies, David joue au casque et à la page scène.
+Tout sur le domaine **43**.
+
+**1. Le corps + la régie** (`conf/docker/sim/`, HEADLESS recommandé) :
+```bash
+WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower'
+```
+- `REHEARSAL=true` : la page scène obtient les boutons route / vitesse /
+  séance (SIM-ONLY, jamais sur le robot). `seed:=N` sur le launch rehearsal
+  pour rejouer exactement la même séance (même tirage de bugs et de lubies).
+
+**2. La tête** (`../dadou_vision_ros/conf/docker/x86/`) :
+`CHAT=true docker compose -f docker-compose-x86.yml up -d` — puis, depuis la
+page scène, persona **mauvaisefoi**.
+
+**3. La page scène** : http://localhost:8765/scene — caméra de Didier, visage
+LED en direct, conversation (ce que Didier a *compris* et ce qu'il dit), un
+champ texte pour lui parler au clavier, une consigne de jeu à la main. Puis
+**route on**, vitesse au slider (ou au fader de la vraie télécommande en
+`ROS_DOMAIN_ID=43 SLIDERS_PROFILE=repetition`), **séance start**. La page
+n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
+- Deux bugs demandent une **réaction de David** : après un *reboot sans
+  reprise* (Didier reste planté, route OFF après le respawn), c'est lui qui
+  relance (**route on**) — et tant que la route est OFF, un reboot suivant ne
+  relance pas non plus (politique du régisseur : jamais contre une route OFF).
+  Une lubie se ferme en **bougeant** le fader/slider (une valeur identique ne
+  ferme rien), ou en attendant (60 s).
+
+**4. Après** : le journal JSONL de la séance est dans
+`/home/ros2_ws/log/rehearsal/` du conteneur sim (ce qui a été tiré, quand) ;
+`conf/scripts/rehearsal/carte_seance.py` en fait la carte.
+
+**Vérification technique rejouable** (sans la tête, dans le conteneur, étapes 1
+faites, route OFF) : `docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-chantiers.sh`
+(≈ 10 min : arrivée au pied de la Titan, POI dans l'ordre, lubies tirées =
+journal, fermeture au fader, pannes chat publiées, couverture des 20 bugs).
+
+**Vue 3D à la demande** : `docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && gz sim -g'`
+(clic droit sur Didier → Follow ; ne pas fermer la fenêtre pendant la séance).
+
+⚠️ **Piège du PC de dev (14/10) : le CLI `ros2` est capricieux, les nodes non.**
+Avec ~50 conteneurs et autant d'interfaces, FastDDS logue des erreurs
+multicast (`Error setting socket option (IP_ADD_MEMBERSHIP)`) et un
+`ros2 topic pub -1` / `ros2 topic echo --once` lancé à la main part souvent
+AVANT d'être découvert : `route on` perdu, Didier immobile, `ros2 topic list`
+incomplet — alors que les nodes entre eux (régisseur, route_driver, chat_node,
+pont web) se parlent sans perte. Règles : commander la séance depuis la **page
+scène** ou la télécommande (publieurs longue durée), pas au CLI ; dans un
+script, envoyer des **salves** (`-t 10 -r 2`) de commandes idempotentes et
+vérifier **par l'effet** (odométrie, journal), jamais par un `echo --once`.
 
 ## Salle de répétition simulée — Didier chemine seul dans la rue (lot R1, 2026-10-07)
 

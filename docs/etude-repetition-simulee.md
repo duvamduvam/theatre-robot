@@ -687,21 +687,37 @@ contrat bridge LED, cf. `rue.sdf`), itinéraire
 `robot_rehearsal/config/chantiers.yaml`. `rue.sdf`/`rue.yaml` restent
 intacts (V-R1/V-R2 les rejouent).
 
-**Géographie (sources : relevé web du 14/10, §13.10)** : le Parc des Chantiers
-est une esplanade ouverte le long de la Loire, pas un canyon. Le monde est
-donc : une **dalle d'esplanade** (bitume/dalles, z = 0) large de ~12 m,
-**la Loire** côté y < 0 (plan d'eau 1 m plus bas, bleu, derrière un **quai**
-avec un ressaut de 12 cm puis une bande de 2 m — tomber à l'eau est possible
-si David pousse Didier dedans à la télécommande : la séance s'arrête, c'est
-voulu), **les bâtiments** côté y > 0 (les Nefs = grand hangar, puis des
-façades basses), des **rails** affleurants (visuels, 1 mm, sans collision),
-et au bout **la grue Titan grise** (portique + flèche, gris) qui ferme le
-trajet. La **grue jaune** est posée loin derrière, hors trajet (décor).
+**Géographie (relevé web du 14/10, §13.10 — ⚠️ il a renversé l'hypothèse de
+départ)** : la grue **grise** est à la **pointe ouest** de l'île (quai des
+Antilles, à côté du Hangar à Bananes), la **jaune** est dans le Parc des
+Chantiers près des Nefs. Le trajet demandé est donc le **long** : Nefs →
+**Mail des Chantiers** (518 m, béton, éclairé) → **quai des Antilles**
+(633 m, dalles) → pointe ouest → Titan grise, **1 247 m** au routage OSM
+piéton. Sur le chemin, dans l'ordre : le parvis des Nefs (Éléphant), le
+Carrousel loin à droite, des terrasses à gauche, la **grue jaune** à droite
+(≈ 57 m), les **cales** des anciens chantiers à droite, des rails désaffectés,
+les **Anneaux de Buren** SUR le quai, la Cantine du Voyage, la façade de bars
+du **Hangar à Bananes** à gauche, le belvédère de la pointe, la Titan grise.
+La Loire est **à droite tout du long** (bras de la Madeleine, puis le quai
+lui-même).
 
-**Échelle** : le trajet réel fait plusieurs centaines de mètres (§13.10) ; à
-0,25 m/s (fader à 50 %) ce serait > 30 min. Le monde est **compressé à
-~140 m de polyligne**, trajet ≈ 9 min à 50 %, ≈ 5 min à 100 %. Les 30 objets
-s'y répartissent tous les ~4-5 m, en quinconce (gauche/droite), rayon 2-3 m.
+Le monde est donc : une **esplanade** (z = 0, béton puis dalles — visuel
+seulement), **la Loire à droite** (repère direct, x = sens de la marche, z
+vertical ⇒ la droite du marcheur est **y < 0** — l'implémentation a relevé
+que la première rédaction disait l'inverse, corrigé le 14/10 : plan d'eau
+1 m plus bas derrière un ressaut de quai de 12 cm — tomber à l'eau est
+possible si David pousse Didier à la télécommande : la séance s'arrête,
+c'est voulu), **les bâtiments à gauche** (y > 0 : les Nefs au départ,
+façades basses, le Hangar à Bananes en fin de parcours), des **rails**
+affleurants (visuels, 1 mm, sans collision), la **grue jaune** à droite au
+tiers du trajet (décor, loin), et au bout **la grue Titan grise** (portique +
+flèche, gris) qui ferme le trajet. Une **coudée** de +35° (vers la gauche,
+y > 0) marque le passage du Mail au quai, comme en vrai (WSW → SSW).
+
+**Échelle** : 1 247 m réels ; à 0,25 m/s (fader à 50 %) ce serait 83 min.
+Le monde est **compressé à ~160 m de polyligne** (18 points, ≈ 1:7,8), trajet
+≈ 11 min à 50 %, ≈ 5,5 min à 100 %. Les 30 objets s'y répartissent tous les ~4-5 m, en
+quinconce (gauche/droite), rayon 2-3 m, **dans l'ordre réel** de la marche.
 
 **Primitives seulement** (boîtes, cylindres, sphères), aucune mesh, aucun
 Fuel : même règle que `rue.sdf`. Chaque objet est un `<model static>` nommé
@@ -731,36 +747,40 @@ expire).
 
 | # | POI (`name`) | Objet dans le monde | Lubie (consigne) | Fermeture suggérée |
 |---|---|---|---|---|
-| 1 | `elephant` | grande boîte grise + 4 pieds + trompe (cylindre) | L'Éléphant mécanique est ton cousin. Tu veux lui parler de famille et tu refuses d'avancer tant qu'il n'a pas répondu. | contagion : David fait la voix de l'éléphant |
-| 2 | `nefs` | hangar long, toit bleu | Le grand hangar est ton usine natale, tu en es sûr. Tu veux rentrer pointer, tu as peur d'être en retard de dix ans. | raison absurde : « c'est fermé le mardi » |
-| 3 | `carrousel` | cylindre bas rayé + toit cône | Le carrousel : tu veux faire un tour. Tu réclames un ticket, tu n'as pas de monnaie, tu proposes de payer en boulons. | télécommande |
-| 4 | `rails` | deux bandes métal au sol (visuel) | Les rails : tu es persuadé d'être un train. Tu veux rouler dessus, tu demandes l'horaire du prochain départ. | raison absurde : « les trains sont en grève » |
-| 5 | `cale` | plan incliné vers l'eau | La cale de lancement : tu veux être lancé comme un navire, avec une bouteille et un discours. Tu attends la bouteille. | contagion : David fait le discours |
-| 6 | `bollard` | cylindre noir court | La bitte d'amarrage : tu la trouves très belle. Tu veux t'y amarrer pour la nuit et tu demandes une corde. | raison absurde |
-| 7 | `loire` | plan d'eau bleu (POI au bord) | L'eau : tu veux savoir si tu flottes. Tu proposes d'essayer tout de suite, tu es confiant. | télécommande (urgence jouée) |
-| 8 | `grue_jaune` | portique jaune lointain | La grue jaune au loin : la rivale de la grise. Tu refuses de la regarder et tu demandes à David de se mettre entre vous. | contagion |
-| 9 | `poster_bizarre` | panneau vertical violet/vert | Un poster bizarre : un chat avec des lunettes qui te fixe. Tu es sûr qu'il te juge, tu veux le confronter d'homme à chat. | raison absurde |
-| 10 | `table_basse` | table 30 cm de haut | Une table trop basse : un scandale d'urbanisme. Tu veux lancer une pétition maintenant, tu demandes à David de signer le premier. | contagion : David signe |
-| 11 | `banc` | banc bois | Un banc : tu veux t'asseoir. Tu n'as pas de fesses. Tu demandes à David comment on fait, en détail. | raison absurde |
-| 12 | `lampadaire` | mât + sphère lumineuse | Un lampadaire : tu es amoureux. Il est grand, il éclaire, il ne parle pas. Tu veux une photo avec lui avant de partir. | télécommande |
-| 13 | `poubelle_tri` | trois bacs jaune/vert/gris | Trois poubelles de tri : tu te demandes dans laquelle tu iras. Tu veux qu'on te classe tout de suite, pour savoir. | raison absurde : « tu es consigné » |
-| 14 | `pigeon` | petite sphère grise sur pied | Un pigeon : ton ennemi juré. Tu veux le suivre jusqu'à ce qu'il parte, et il ne part pas. | contagion : David chasse le pigeon |
-| 15 | `flaque` | disque bleu sombre au sol | Une flaque : tu refuses de passer, ça rouille. Tu demandes qu'on te porte. | télécommande |
-| 16 | `panneau_info` | panneau sur deux pieds | Un panneau d'information : tu le lis à voix haute en inventant tout. Tu veux y être inscrit comme monument. | raison absurde |
-| 17 | `velo_cadenas` | cadre + 2 roues cylindres | Un vélo cadenassé : tu le crois prisonnier. Tu veux le libérer et tu demandes une pince à David. | contagion |
-| 18 | `chien` | boîte + sphère tête | Un chien en plastique : tu veux l'adopter, tu as déjà choisi son nom (Boulon). Tu refuses de le laisser. | raison absurde |
-| 19 | `terrasse` | tables + chaises | La terrasse d'un café : tu veux commander une batterie-frites. Tu attends le serveur, qui ne vient pas. | contagion : David fait le serveur |
+| 1 | `nefs` | hangar long à gauche, toit bleu (le départ) | Le grand hangar est ton usine natale, tu en es sûr. Tu veux rentrer pointer, tu as peur d'être en retard de dix ans. | raison absurde : « c'est fermé le mardi » |
+| 2 | `elephant` | grande boîte grise + 4 pieds + trompe (cylindre) | L'Éléphant mécanique est ton cousin. Tu veux lui parler de famille et tu refuses d'avancer tant qu'il n'a pas répondu. | contagion : David fait la voix de l'éléphant |
+| 3 | `carrousel` | cylindre bas rayé + toit cône, loin à droite | Le carrousel : tu veux faire un tour. Tu réclames un ticket, tu n'as pas de monnaie, tu proposes de payer en boulons. | télécommande |
+| 4 | `table_basse` | table 30 cm de haut | Une table trop basse : un scandale d'urbanisme. Tu veux lancer une pétition maintenant, tu demandes à David de signer le premier. | contagion : David signe |
+| 5 | `poster_bizarre` | panneau vertical violet/vert | Un poster bizarre : un chat avec des lunettes qui te fixe. Tu es sûr qu'il te juge, tu veux le confronter d'homme à chat. | raison absurde |
+| 6 | `poubelle_tri` | trois bacs jaune/vert/gris | Trois poubelles de tri : tu te demandes dans laquelle tu iras. Tu veux qu'on te classe tout de suite, pour savoir. | raison absurde : « tu es consigné » |
+| 7 | `pigeon` | petite sphère grise sur pied | Un pigeon : ton ennemi juré. Tu veux le suivre jusqu'à ce qu'il parte, et il ne part pas. | contagion : David chasse le pigeon |
+| 8 | `banc` | banc bois | Un banc : tu veux t'asseoir. Tu n'as pas de fesses. Tu demandes à David comment on fait, en détail. | raison absurde |
+| 9 | `flaque` | disque bleu sombre au sol, sur le chemin (sans collision) | Une flaque : tu refuses de passer, ça rouille. Tu demandes qu'on te porte. | télécommande |
+| 10 | `terrasse` | tables + chaises à gauche (les restaurants du Mail) | La terrasse d'un café : tu veux commander une batterie-frites. Tu attends le serveur, qui ne vient pas. | contagion : David fait le serveur |
+| 11 | `grue_jaune` | portique jaune à droite, haut, à ~12 m du chemin | La grue jaune : la rivale de la grise. Tu refuses de la regarder et tu demandes à David de se mettre entre vous. | contagion |
+| 12 | `cale` | plan incliné vers l'eau, à droite | La cale de lancement : tu veux être lancé comme un navire, avec une bouteille et un discours. Tu attends la bouteille. | contagion : David fait le discours |
+| 13 | `velo_cadenas` | cadre + 2 roues cylindres | Un vélo cadenassé : tu le crois prisonnier. Tu veux le libérer et tu demandes une pince à David. | contagion |
+| 14 | `panneau_info` | panneau sur deux pieds (le parcours « site des Chantiers ») | Un panneau d'information : tu le lis à voix haute en inventant tout. Tu veux y être inscrit comme monument. | raison absurde |
+| 15 | `rails` | deux bandes métal au sol (visuel) | Les rails : tu es persuadé d'être un train. Tu veux rouler dessus, tu demandes l'horaire du prochain départ. | raison absurde : « les trains sont en grève » |
+| 16 | `lampadaire` | mât + sphère lumineuse | Un lampadaire : tu es amoureux. Il est grand, il éclaire, il ne parle pas. Tu veux une photo avec lui avant de partir. | télécommande |
+| 17 | `anneaux` | trois anneaux verticaux (tores → cylindres creux), sur le quai | Les Anneaux de Buren : des bagues géantes. Tu veux en offrir un à la grue grise pour la demander en mariage, et tu demandes à David de le porter. | contagion |
+| 18 | `bollard` | cylindre noir court au bord du quai | La bitte d'amarrage : tu la trouves très belle. Tu veux t'y amarrer pour la nuit et tu demandes une corde. | raison absurde |
+| 19 | `loire` | plan d'eau bleu (POI au bord du quai) | L'eau : tu veux savoir si tu flottes. Tu proposes d'essayer tout de suite, tu es confiant. | télécommande (urgence jouée) |
 | 20 | `plot_chantier` | cône orange | Un plot de chantier : tu crois que c'est un chapeau. Tu en veux un, tout de suite, le tien. | télécommande |
-| 21 | `statue` | cylindre sur socle | Une statue : tu es sûr que c'est toi en plus jeune. Tu veux une plaque avec ton nom, et une cérémonie. | raison absurde |
-| 22 | `vitrine_miroir` | panneau gris clair brillant | Une vitrine-miroir : tu te vois, tu te trouves beau. Tu ne peux plus partir, tu décris tes boulons un par un. | télécommande |
-| 23 | `pelouse` | dalle verte | La pelouse : interdite aux robots, tu en es sûr. Tu veux y rouler par principe, pour la liberté. | contagion |
+| 21 | `chien` | boîte + sphère tête | Un chien en plastique : tu veux l'adopter, tu as déjà choisi son nom (Boulon). Tu refuses de le laisser. | raison absurde |
+| 22 | `caisse_bois` | boîte bois (la Cantine du Voyage) | Une caisse en bois : tu es sûr qu'elle contient tes pièces d'origine. Tu veux l'ouvrir, tu n'as pas de mains. | contagion : David l'ouvre « pour de faux » |
+| 23 | `hangar_bananes` | long bâtiment à gauche, façade de bars, la banane sur le toit (clin d'œil à `rue`) | Le Hangar à Bananes : ta première destination, celle de l'ancienne rue. Tu veux t'arrêter là, c'est déjà bien, pourquoi aller plus loin. | raison absurde |
 | 24 | `tas_de_sable` | demi-sphère beige | Un tas de sable : tu veux construire un château pour y vivre. Tu demandes un seau. | raison absurde |
-| 25 | `caisse_bois` | boîte bois | Une caisse en bois : tu es sûr qu'elle contient tes pièces d'origine. Tu veux l'ouvrir, tu n'as pas de mains. | contagion : David l'ouvre « pour de faux » |
-| 26 | `conteneur_rouge` | conteneur maritime rouge | Un conteneur : tu veux partir en voyage dedans, direction n'importe où. Tu demandes à David de venir, sans bagages. | télécommande |
-| 27 | `bouche_incendie` | petit cylindre rouge | Une bouche d'incendie : un petit robot timide. Tu veux lui apprendre à parler, lettre par lettre. | raison absurde |
-| 28 | `tag_mur` | panneau mural coloré | Un graffiti : tu es persuadé que c'est ton nom. Tu veux le signer en dessous, tu demandes une bombe. | contagion |
-| 29 | `horloge_arretee` | disque blanc sur mât | Une horloge arrêtée : le temps s'est arrêté, donc tu n'es jamais en retard. Tu veux attendre ici que ça reparte. | raison absurde |
-| 30 | `titan_grise` | portique gris + flèche (le but) | La grue Titan grise : c'est ELLE, le grand amour. Tu lui déclares ta flamme et tu demandes à David d'être témoin. | arrivée — pas de fermeture, c'est le final |
+| 25 | `horloge_arretee` | disque blanc sur mât | Une horloge arrêtée : le temps s'est arrêté, donc tu n'es jamais en retard. Tu veux attendre ici que ça reparte. | raison absurde |
+| 26 | `bouche_incendie` | petit cylindre rouge | Une bouche d'incendie : un petit robot timide. Tu veux lui apprendre à parler, lettre par lettre. | raison absurde |
+| 27 | `pelouse` | dalle verte | La pelouse : interdite aux robots, tu en es sûr. Tu veux y rouler par principe, pour la liberté. | contagion |
+| 28 | `conteneur_rouge` | conteneur maritime rouge | Un conteneur : tu veux partir en voyage dedans, direction n'importe où. Tu demandes à David de venir, sans bagages. | télécommande |
+| 29 | `tag_mur` | panneau mural coloré (bout de la façade) | Un graffiti : tu es persuadé que c'est ton nom. Tu veux le signer en dessous, tu demandes une bombe. | contagion |
+| 30 | `titan_grise` | portique gris + flèche (le but, barre le quai) | La grue Titan grise : c'est ELLE, le grand amour. Tu lui déclares ta flamme et tu demandes à David d'être témoin. | arrivée — pas de fermeture, c'est le final |
+
+**Ordre = ordre réel de la marche** (§13.10) ; les objets génériques (poster,
+table basse, flaque, pigeon…) sont intercalés là où il y a de la place. Le
+mémorial de la pointe ouest n'est **pas** un objet de jeu.
 
 ### 13.4 Le régisseur — ce qui s'ajoute (lot technique, revue Opus)
 
@@ -781,10 +801,16 @@ valeurs gravées + mutation** :
    `lubie` du POI dans l'itinéraire — le régisseur charge donc aussi le
    YAML d'itinéraire, paramètre `route_file`) ; si `stop` (défaut true) :
    `route_speed = 0` (Didier s'arrête devant l'objet). Au `stop` : publie
-   `""` sur `chat_instruction` (consigne levée) et `route_speed = restore`
-   (défaut 1.0, comme `speed`). Cible d'exclusion : **`speed`** (une lubie
-   et une batterie faible ne se chevauchent pas ; la seconde est sautée).
-   Durée max `FAULT_MAX_DURATION_S["lubie"] = 120`.
+   `""` sur `chat_instruction` (consigne levée) et rend la vitesse — **la
+   dernière vitesse externe vue** (fader, page), sinon le paramètre `speed`
+   du launch, sinon `restore` du scénario (revue du 14/10 : un `restore` fixe
+   doublait la vitesse de David). **Fermeture au fader** : une vitesse externe
+   qui diffère de plus de `EXTERNAL_SPEED_DELTA = 0.05` de celle d'avant la
+   lubie la termine tout de suite (`fault_stop closed_by: fader`, sans rendre
+   de vitesse) ; une ré-émission de la même valeur ne ferme rien. Cible
+   d'exclusion : **`speed`** (une lubie et une batterie faible ne se
+   chevauchent pas ; la seconde est sautée). Durée max
+   `FAULT_MAX_DURATION_S["lubie"] = 120`.
    L'ancien type `instruction` devient **borné** lui aussi (`duration_s`
    > 0 autorisé, max 120, `""` publié à la fin) — rétro-compatible : à 0 il
    reste ponctuel et ne lève rien.
@@ -796,7 +822,9 @@ valeurs gravées + mutation** :
    chien de garde** (c'est du texte, pas des roues) : la borne est tenue
    par **les deux côtés** (régisseur : `FAULT_MAX_DURATION_S["chat"]` ;
    chat_node : plafond local 60 s, cf. §13.5). Contrat JSON gravé dans les
-   tests des deux dépôts, avec les mêmes chaînes.
+   tests des deux dépôts, avec les mêmes chaînes. `phantom` a sa propre cible
+   (`chat:phantom`) et ne publie pas de `pass` (ponctuel) ; `duration_s: 0`
+   est refusé pour les autres ops (0 = plafond côté chat_node).
 
 Le topic d'instruction est renommé **`chat_instruction`** (était
 `rehearsal/instruction`, jamais consommé) : c'est une consigne de jeu
@@ -919,3 +947,19 @@ la dernière valeur toutes les 2 s) ; `TOPICS_FLUX = {"chat_transcript"}`,
 I0 (état de mission) n'est **pas** fait : la « mission » n'existe que dans le
 persona (texte). La fermeture à la voix (I1) non plus. Le passant (R5), le
 débrief outillé (R4), l'avatar (R0) : inchangés.
+
+### 13.10 Relevé géographique (agent web, 14/10 — sources dans le rapport)
+
+| Donnée | Valeur | Source |
+|---|---|---|
+| Grue Titan **grise** | pointe ouest, quai des Antilles / quai Président-Wilson ; 1966, 47 m, 60 t, classée MH 2005 ; OSM 47.19921, -1.57390 | Wikipédia « Grues Titan de Nantes », OSM nœud 305372901, Voyage à Nantes |
+| Grue Titan **jaune** | Parc des Chantiers, bd de la Prairie-au-Duc ; 1958, 43 m, 80 t, classée MH 2024 ; OSM 47.20509, -1.56975 | idem |
+| Trajet piéton Nefs → grise | **1 247 m**, ≈ 16,6 min (routage OSM piéton FOSSGIS, seule mesure) : 95 m sans nom, **Mail des Chantiers 518 m** (béton, `smoothness=excellent`, éclairé), **quai des Antilles 633 m** (dalles, béton, asphalte) | routage OSM |
+| Le long du Mail | fontaine + banc au départ, Table d'éléphant (resto) à gauche, Carrousel à droite (~105 m), crêperie « La Grue Jaune » à gauche, toilettes, panneau « La cale 3 », **grue jaune à droite (~57 m)**, cales (slipways) à droite, œuvre « Résolution des forces en présence » | OSM Overpass |
+| Le long du quai | panneau « quai d'armement », Hangar 32, **Les Anneaux (Buren/Bouchain) sur le tracé**, Invendus-Bottes, **Cantine du Voyage** (estivale), façade de bars du **Hangar à Bananes** à gauche, pump track, panneau « le hangar à bananes », belvédère « Pointe Ouest », mémorial Steve Maia Caniço, grue grise | OSM Overpass |
+| Largeur esplanade | chemins tagués `width=15` côté Nefs ; pas de valeur pour le Mail | OSM |
+| Rails | désaffectés, aucun le long du Mail dans OSM (un tronçon vers la Cantine) ; ceux de la rive sud sont hors trajet | OSM |
+
+Non tranché : année de la jaune (1958 vs 1954 selon les sources), limites du
+Parc des Chantiers (la page anglaise du VAN le fait aller jusqu'à la grise).
+Sans incidence sur le monde.

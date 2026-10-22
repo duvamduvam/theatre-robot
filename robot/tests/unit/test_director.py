@@ -2,7 +2,12 @@
 Mutation (2026-10-08) : retirer l'exclusion par cible -> test_meme_cible_sautee ;
 retirer l'arrêt à duration_s -> test_fin_de_scenario_arrete_tout ; retirer le
 re-bornage FAULT_MAX_DURATION_S -> test_duree_rebornee ; cancel() qui laisse la cible
-occupée -> test_cancel_libere_la_cible_sans_stop."""
+occupée -> test_cancel_libere_la_cible_sans_stop.
+Lot R3 (2026-10-14) : déclencheurs POI (trigger) et messages JSON partagés avec
+chat_node (messages) — mutations listées dans le rapport du lot.
+Revue adversariale R3 (2026-10-14) : abort avant start inerte, close_active
+(fermeture au fader), restore explicite, phantom sans « pass », vitesse en
+vigueur — mutations listées dans le rapport ; le node : test_director_node.py."""
 from robot_rehearsal.director import Director
 from robot_rehearsal.scenario import Fault, Scenario
 
@@ -137,3 +142,211 @@ def test_etat_latche_arme_et_confirme_sans_annuler():
     assert p.due(6.0, True) == (True, [])
     assert p.note_state("on", 6.3) == ["k"]
     assert p.note_state("n'importe quoi", 7.0) == [] and p.route_on is True
+
+
+# --- Lot R3 : déclencheurs POI (trigger) ---------------------------------------
+
+def _lubie(fid, poi, d=60.0, **params):
+    pr = {"poi": poi, "text": None, "stop": True, "restore": 1.0}
+    pr.update(params)
+    return Fault(fid, "lubie", None, d, pr, "speed", trigger_poi=poi, draw_p=0.4)
+
+
+def _speed(fid, t, d, value=0.4):
+    return Fault(fid, "speed", t, d, {"value": value, "restore": 1.0}, "speed")
+
+
+def test_tick_ne_demarre_jamais_un_declencheur_poi():
+    d = Director(_sc(_lubie("l", "banc"))); d.start(0.0)
+    assert d.tick(0.0) == [] and d.tick(50.0) == []
+    assert d.status() == {"l": "pending"}
+
+
+def test_trigger_demarre_et_arrete_a_duree_apres_l_enter():
+    d = Director(_sc(_lubie("l", "banc"), _lubie("m", "flaque"))); d.start(100.0)
+    assert d.trigger("lampadaire", 105.0) == []              # POI sans déclencheur : rien
+    assert _kinds(d.trigger("banc", 110.0)) == [("start", "l")]
+    assert d.status() == {"l": "active", "m": "pending"}     # seul le POI visé part
+    assert d.tick(169.9) == []                               # rel 10 + 60 = 70
+    assert _kinds(d.tick(170.0)) == [("stop", "l")]
+
+
+def test_trigger_une_seule_fois_par_seance():
+    d = Director(_sc(_lubie("l", "banc"))); d.start(0.0)
+    assert _kinds(d.trigger("banc", 5.0)) == [("start", "l")]
+    assert d.trigger("banc", 6.0) == []                      # 2e enter pendant la lubie
+    d.tick(65.0)
+    assert d.status() == {"l": "done"}
+    assert d.trigger("banc", 70.0) == []                     # Didier repoussé en arrière : rien
+
+
+def test_exclusion_speed_contre_lubie_sans_seconde_chance():
+    d = Director(_sc(_speed("batterie", 0.0, 20.0), _lubie("l", "banc"))); d.start(0.0)
+    assert _kinds(d.tick(0.0)) == [("start", "batterie")]
+    assert _kinds(d.trigger("banc", 5.0)) == [("skip", "l")]
+    assert d.status() == {"batterie": "active", "l": "skipped"}
+    d.tick(20.0)                                             # cible libre…
+    assert d.trigger("banc", 30.0) == []                     # …mais pas de seconde chance
+    # et dans l'autre sens : lubie active -> le bug speed est sauté
+    e = Director(_sc(_lubie("l", "banc"), _speed("batterie", 10.0, 20.0))); e.start(0.0)
+    e.trigger("banc", 1.0)
+    assert _kinds(e.tick(10.0)) == [("skip", "batterie")]
+
+
+def test_trigger_libere_d_abord_les_arrets_echus():
+    d = Director(_sc(_speed("batterie", 0.0, 10.0), _lubie("l", "banc"))); d.start(0.0)
+    d.tick(0.0)
+    # enter à 10.0 pile, AVANT le tick : la batterie est échue, la lubie part
+    assert _kinds(d.trigger("banc", 10.0)) == [("stop", "batterie"), ("start", "l")]
+
+
+def test_trigger_avant_start_ou_apres_la_fin():
+    d = Director(_sc(_lubie("l", "banc"), duration=20.0))
+    assert d.trigger("banc", 0.0) == [] and d.status() == {"l": "pending"}
+    d.start(0.0)
+    assert d.trigger("banc", 20.0) == []                     # durée atteinte, avant le tick de fin
+    assert _kinds(d.tick(20.0)) == [("end", None)]
+    assert d.status() == {"l": "skipped"}                    # jamais atteint -> skipped
+    assert d.trigger("banc", 21.0) == []
+
+
+def test_lubie_rebornee_a_120():
+    d = Director(_sc(_lubie("l", "banc", d=999.0), duration=1000.0)); d.start(0.0)
+    d.trigger("banc", 10.0)
+    assert d.tick(129.9) == []
+    assert _kinds(d.tick(130.0)) == [("stop", "l")]
+
+
+def test_abort_saute_les_poi_jamais_atteints():
+    d = Director(_sc(_lubie("l", "banc"), _lubie("m", "flaque"))); d.start(0.0)
+    d.trigger("banc", 1.0)
+    assert _kinds(d.abort(2.0)) == [("stop", "l"), ("end", None)]
+    assert d.status() == {"l": "done", "m": "skipped"}
+
+
+# --- Lot R3 : messages EXACTS (contrats partagés avec chat_node) ----------------
+import pytest
+
+from robot_rehearsal.director import messages
+
+
+def test_messages_lubie():
+    f = _lubie("l", "banc", restore=0.6)
+    assert messages(f, "start", "Un banc : tu veux t'asseoir.") == [
+        ("chat_instruction", '"Un banc : tu veux t\'asseoir."'),
+        ("route_speed", "0"),
+    ]
+    assert messages(f, "stop") == [("chat_instruction", '""'), ("route_speed", "0.6")]
+    g = _lubie("g", "banc", stop=False)
+    assert messages(g, "start", "Éléphant") == [("chat_instruction", '"Éléphant"')]
+    assert messages(g, "stop") == [("chat_instruction", '""')]     # vitesse jamais prise, jamais rendue
+
+
+def test_messages_instruction_bornee_ou_ponctuelle():
+    bornee = Fault("i", "instruction", 0.0, 30.0, {"text": "tu boudes"}, "instruction")
+    assert messages(bornee, "start") == [("chat_instruction", '"tu boudes"')]
+    assert messages(bornee, "stop") == [("chat_instruction", '""')]
+    ponctuelle = Fault("j", "instruction", 0.0, 0.0, {"text": "tu boudes"}, "instruction")
+    assert messages(ponctuelle, "stop") == []                       # R2 : rien à lever
+
+
+def test_messages_chat_json_grave():
+    delay = Fault("d", "chat", 0.0, 40.0, {"op": "delay", "params": {"delay_ms": 6000}}, "chat")
+    assert messages(delay, "start") == [
+        ("rehearsal/chat_fault", '{"op": "delay", "params": {"delay_ms": 6000}, "until_ms": 40000}')]
+    assert messages(delay, "stop") == [
+        ("rehearsal/chat_fault", '{"op": "pass", "params": {}, "until_ms": null}')]
+    phantom = Fault("p", "chat", 0.0, 0.0, {"op": "phantom", "params": {"text": "communauté d'Amara.org"}}, "chat")
+    assert messages(phantom, "start") == [
+        ("rehearsal/chat_fault", '{"op": "phantom", "params": {"text": "communauté d\'Amara.org"}, "until_ms": 0}')]
+    # re-borné à 60 s même si le scénario (non validé) en demandait plus : pas de chien de garde
+    long = Fault("l", "chat", 0.0, 999.0, {"op": "deaf", "params": {}}, "chat")
+    assert messages(long, "start") == [
+        ("rehearsal/chat_fault", '{"op": "deaf", "params": {}, "until_ms": 60000}')]
+
+
+def test_messages_refuse_un_type_non_messager():
+    with pytest.raises(ValueError):
+        messages(_pause("a", 0.0, 5.0), "start")
+
+
+# --- Revue adversariale R3 (2026-10-14) ---------------------------------------------
+from robot_rehearsal.director import fader_moved, speed_factor, speed_in_effect
+from robot_rehearsal.scenario import load_scenario
+
+
+def test_abort_avant_start_ne_fait_rien_et_la_seance_part_ensuite():
+    """Défaut : un STOP avant START sautait toute la timeline (pending ->
+    skipped) et le START suivant jouait une séance vide."""
+    d = Director(_sc(_pause("a", 1.0, 5.0), _lubie("l", "banc")))
+    assert d.abort(0.0) == []
+    assert d.status() == {"a": "pending", "l": "pending"}
+    assert (d.started, d.ended) == (False, False)
+    d.start(10.0)
+    assert _kinds(d.tick(11.0)) == [("start", "a")]
+    assert _kinds(d.trigger("banc", 12.0)) == [("start", "l")]
+
+
+def test_close_active_ferme_une_lubie_et_libere_la_cible():
+    d = Director(_sc(_lubie("l", "banc"), _speed("batterie", 10.0, 5.0))); d.start(0.0)
+    d.trigger("banc", 2.0)
+    assert _kinds(d.close_active("speed", 3.0)) == [("stop", "l")]
+    assert d.status() == {"l": "done", "batterie": "pending"} and d.active() == []
+    assert _kinds(d.tick(10.0)) == [("start", "batterie")]       # cible libérée : pas sautée
+    assert _kinds(d.tick(62.0)) == [("stop", "batterie")]       # l (échéance 62) : jamais de 2e stop
+    assert d.close_active("lubie-inconnue", 63.0) == []
+
+
+def test_close_active_ne_ferme_que_le_type_demande():
+    """Une batterie faible (speed, MÊME cible) ne se ferme pas au fader."""
+    d = Director(_sc(_speed("batterie", 0.0, 20.0))); d.start(0.0)
+    d.tick(0.0)
+    assert d.close_active("speed", 1.0) == [] and d.active() == ["batterie"]
+    assert _kinds(d.close_active("speed", 1.0, only_type="speed")) == [("stop", "batterie")]
+
+
+def test_messages_lubie_restore_explicite_ou_aucun():
+    f = _lubie("l", "banc", restore=0.6)
+    assert messages(f, "stop", "x", restore_value=0.35) == [
+        ("chat_instruction", '""'), ("route_speed", "0.35")]                 # vitesse en vigueur
+    assert messages(f, "stop", "x", restore_value=None) == [("chat_instruction", '""')]   # fermée au fader
+    g = _lubie("g", "banc", stop=False)
+    assert messages(g, "stop", "x", restore_value=0.35) == [("chat_instruction", '""')]   # jamais prise
+
+
+def test_phantom_ne_leve_rien_et_ne_bloque_ni_n_est_bloque():
+    sc = load_scenario({"name": "t", "duration_s": 100, "faults": [
+        {"id": "g", "type": "chat", "op": "garble", "t": 0, "duration_s": 30},
+        {"id": "p", "type": "chat", "op": "phantom", "params": {"text": "Amara.org"}, "t": 5},
+        {"id": "d", "type": "chat", "op": "delay", "params": {"delay_ms": 6000}, "t": 6, "duration_s": 10},
+    ]})
+    phantom = next(f for f in sc.faults if f.id == "p")
+    assert messages(phantom, "stop") == []           # un « pass » couperait le garble en cours
+    d = Director(sc); d.start(0.0)
+    assert _kinds(d.tick(0.0)) == [("start", "g")]
+    assert _kinds(d.tick(5.0)) == [("start", "p"), ("stop", "p")]   # pas sauté par le garble
+    assert _kinds(d.tick(6.0)) == [("skip", "d")]                    # delay/garble : même cible chat
+    assert d.active() == ["g"]
+
+
+def test_vitesse_en_vigueur_ordre_de_priorite():
+    assert speed_in_effect(0.7, 0.3, 1.0) == 0.7     # le fader de David d'abord
+    assert speed_in_effect(None, 0.3, 1.0) == 0.3    # sinon la vitesse du launch
+    assert speed_in_effect(None, None, 1.0) == 1.0   # sinon restore du scénario
+    assert speed_in_effect(0.0, 0.3, 1.0) == 0.0     # fader à zéro : une valeur, pas « inconnue »
+
+
+def test_fader_moved_seuil_strict_a_0_05():
+    assert fader_moved(0.5, 0.5) is False            # ré-émission du boîtier
+    assert fader_moved(0.55, 0.5) is False           # 0,05 pile (0.05000000000000004 en flottant)
+    assert fader_moved(0.45, 0.5) is False
+    assert fader_moved(0.551, 0.5) is True
+    assert fader_moved(0.0, 0.5) is True
+
+
+def test_speed_factor_decode_comme_route_driver():
+    assert speed_factor("0.7") == 0.7
+    assert speed_factor('"0.7"') == 0.7              # chaîne JSON
+    assert speed_factor("1.5") == 1.0 and speed_factor("-2") == 0.0   # borné, jamais refusé
+    assert speed_factor("abc") is None and speed_factor("NaN") is None
+    assert speed_factor(0.25) == 0.25                # paramètre ROS (déjà un nombre)

@@ -19,7 +19,8 @@ services:
       - HEADLESS=${HEADLESS:-false}
       # Monde Gazebo : fichier worlds/<WORLD>.sdf de robot_sim (`stage` = le
       # plateau nu historique, `rue` = la salle de répétition, étude
-      # docs/etude-repetition-simulee.md §12). Le NOM interne du monde reste
+      # docs/etude-repetition-simulee.md §12, `chantiers` = des Nefs à la grue
+      # Titan grise, 20 bugs + 30 lubies, §13). Le NOM interne du monde reste
       # `stage` dans les deux (contrat bridge LED), seul le fichier change.
       - WORLD=${WORLD:-stage}
       # animations_node (rejeu des séquences JSON, cf. commentaire des volumes
@@ -39,6 +40,13 @@ services:
       # (drive.launch.py) dans le conteneur pour que cmd_vel_web bouge Gazebo
       # (voir operations.md). Rien de ce lot ne s'active sur le vrai robot.
       - WEB_DRIVE=${WEB_DRIVE:-false}
+      # SÉCURITÉ (SIM-ONLY) : boutons de répétition de la page /scene du pont web
+      # (route on/off/restart, vitesse, séance start/stop). OFF par défaut, même
+      # prudence que WEB_DRIVE (REHEARSAL=true docker compose ... up). N'a aucun
+      # effet sans WEB=true et ne LANCE rien : la route et le régisseur se lancent
+      # à la main dans le conteneur. Le pont ignore de toute façon ce drapeau hors
+      # du domaine 43 : la sim ne peut PAS commander le vrai Didier (domaine 42).
+      - REHEARSAL=${REHEARSAL:-false}
       # face_sim (paquet "robot", aperçu web du visage LED -- les matrices LED
       # n'ont aucun rendu dans Gazebo) : même prudence qu'ANIMATIONS/WEB, OFF
       # par défaut. http://localhost:8766 une fois lancé (FACE=true).
@@ -72,6 +80,8 @@ services:
       # V-R1 : protocole de vérification du cheminement (robot_rehearsal/README.md).
       - ../../scripts/validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro
       - ../../scripts/validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
+      # V-R3 : séance « chantiers » (monde chantiers, 20 bugs + 30 lubies), étude §13.8.
+      - ../../scripts/validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
       - ../../../json:/home/ros2_ws/json

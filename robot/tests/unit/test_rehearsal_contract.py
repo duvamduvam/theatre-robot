@@ -7,7 +7,10 @@ Trois garanties :
  2. ANTI-FUITE : le package sim-only n'est référencé nulle part dans le code
     embarqué (robot/, robot_bringup, robot_drive, robot_web) ;
  3. l'itinéraire livré (config/rue.yaml) est valide, reste sur le trottoir du
-    monde rue.sdf, et ses POI sont exactement ceux attendus.
+    monde rue.sdf, et ses POI sont exactement ceux attendus ;
+ 4. lot R3 « chantiers » : itinéraire (30 POI dans l'ordre de la marche, étude
+    §13.3) et scénario (20 bugs du §13.5, 30 lubies) gravés, topics et bornes
+    partagés avec chat_node gravés.
 """
 import pathlib
 
@@ -110,7 +113,7 @@ def test_scenarios_livres_valides():
     cible que des processus/relais des listes blanches — par construction."""
     from robot_rehearsal.scenario import load_scenario
     files = sorted((PKG / "config" / "scenarios").glob("*.yaml"))
-    assert [f.name for f in files] == ["demo.yaml"]
+    assert [f.name for f in files] == ["chantiers.yaml", "demo.yaml"]
     for f in files:
         sc = load_scenario(yaml.safe_load(f.read_text(encoding="utf-8")))
         assert sc.faults, f.name
@@ -137,8 +140,10 @@ def test_garde_fou_domaine():
         with pytest.raises(RuntimeError) as exc:
             check_domain(env)
         assert "42 est le vrai robot" in str(exc.value)
+    # Gravé COMPLET (lot R3 : instruction 0 -> 120, lubie 120, chat 60 — étude §13.4).
     assert contracts.FAULT_MAX_DURATION_S == {"relay": 60.0, "pause": 30.0, "kill": 0.0,
-                                              "speed": 120.0, "instruction": 0.0}
+                                              "speed": 120.0, "instruction": 120.0,
+                                              "lubie": 120.0, "chat": 60.0}
 
 
 def test_launch_off_par_defaut():
@@ -148,3 +153,109 @@ def test_launch_off_par_defaut():
     assert 'DeclareLaunchArgument("autostart", default_value="false"' in launch
     # route_driver publie vers l'amont du relais (remap), jamais directement
     assert '("cmd_vel_follow", "cmd_vel_follow_raw")' in launch
+
+
+# --- Lot R3 « chantiers » (étude §13) ---------------------------------------------
+
+# Ordre RÉEL de la marche Nefs -> Mail -> quai des Antilles -> Titan (§13.3).
+CHANTIERS_POI = (
+    "nefs", "elephant", "carrousel", "table_basse", "poster_bizarre", "poubelle_tri",
+    "pigeon", "banc", "flaque", "terrasse", "grue_jaune", "cale", "velo_cadenas",
+    "panneau_info", "rails", "lampadaire", "anneaux", "bollard", "loire", "plot_chantier",
+    "chien", "caisse_bois", "hangar_bananes", "tas_de_sable", "horloge_arretee",
+    "bouche_incendie", "pelouse", "conteneur_rouge", "tag_mur", "titan_grise",
+)
+
+# Les 20 bugs du §13.5 : id -> (type, durée, params validés). Recopiés du tableau.
+CHANTIERS_BUGS = {
+    "liaison": ("pause", 5.0, {"process": "route_driver"}),
+    "arret_net": ("relay", 6.0, {"relay": "cmd_vel_follow", "op": "zero"}),
+    "pause_syndicale": ("relay", 4.0, {"relay": "cmd_vel_follow", "op": "freeze"}),
+    "acoups": ("relay", 10.0, {"relay": "cmd_vel_follow", "op": "drop", "p": 0.7}),
+    "retard": ("relay", 10.0, {"relay": "cmd_vel_follow", "op": "delay", "delay_ms": 1500}),
+    "batterie": ("speed", 20.0, {"value": 0.4, "restore": 1.0}),
+    "fader_mort": ("speed", 8.0, {"value": 0.0, "restore": 1.0}),
+    "emballement": ("speed", 6.0, {"value": 1.0, "restore": 1.0}),
+    "visage_fige": ("pause", 6.0, {"process": "face_sim"}),
+    "ruban_noir": ("pause", 6.0, {"process": "leds_sim_node"}),
+    "bras_en_greve": ("pause", 8.0, {"process": "servos_sim_node"}),
+    "sequence_bloquee": ("pause", 8.0, {"process": "animations_node"}),
+    "regard_fige": ("pause", 8.0, {"process": "gaze_follower"}),
+    "reboot": ("kill", 0.0, {"process": "route_driver", "reenable": True}),
+    "reboot_sans_reprise": ("kill", 0.0, {"process": "route_driver", "reenable": False}),
+    "latence_pi": ("chat", 40.0, {"op": "delay", "params": {"delay_ms": 6000}}),
+    "contresens": ("chat", 30.0, {"op": "garble", "params": {}}),
+    "sourd": ("chat", 20.0, {"op": "deaf", "params": {}}),
+    "muet": ("chat", 20.0, {"op": "mute", "params": {}}),
+    "parle_au_bus": ("chat", 0.0, {"op": "phantom",
+                                   "params": {"text": "Sous-titres réalisés par la communauté d'Amara.org"}}),
+}
+
+
+def _yaml(*parts):
+    return yaml.safe_load((PKG.joinpath(*parts)).read_text(encoding="utf-8"))
+
+
+def test_topics_et_ops_partages_avec_chat_node():
+    assert contracts.INSTRUCTION_TOPIC == "chat_instruction"
+    assert contracts.CHAT_FAULT_TOPIC == "rehearsal/chat_fault"
+    assert contracts.CHAT_FAULT_OPS == ("pass", "delay", "garble", "deaf", "mute", "phantom")
+    assert contracts.POI_EVENT_TOPIC == "rehearsal/poi_event"
+
+
+def test_itineraire_chantiers():
+    route = load_route(_yaml("config", "chantiers.yaml"))
+    assert route.name == "nefs-titan-grise"
+    assert tuple(p.name for p in route.pois) == CHANTIERS_POI
+    for p in route.pois:
+        assert p.lubie.strip(), p.name                   # la consigne part telle quelle au chat
+        assert p.fermeture.strip(), p.name
+    # le but : la polyligne finit au pied de la Titan grise (dans son rayon)
+    titan = route.pois[-1]
+    x, y = route.waypoints[-1]
+    assert titan.radius == 6.0 and (x - titan.x) ** 2 + (y - titan.y) ** 2 < titan.radius ** 2
+
+
+def test_scenario_chantiers_20_bugs_et_30_lubies():
+    from robot_rehearsal.scenario import load_scenario
+    data = _yaml("config", "scenarios", "chantiers.yaml")
+    assert (data["name"], data["seed"], data["duration_s"]) == ("chantiers", 0, 900)
+    raw_bugs = [f for f in data["faults"] if f["type"] != "lubie"]
+    raw_lubies = [f for f in data["faults"] if f["type"] == "lubie"]
+    assert [f["id"] for f in raw_bugs] == list(CHANTIERS_BUGS)
+    assert all(f["t"] == "random" for f in raw_bugs)
+    assert len(raw_lubies) == 30
+    # une lubie par POI, dans l'ordre de la marche, id = lubie_<poi>
+    assert [f["poi"] for f in raw_lubies] == list(CHANTIERS_POI)
+    for f in raw_lubies:
+        assert f["id"] == f"lubie_{f['poi']}" and f["t"] == "poi" and "text" not in f
+        if f["poi"] == "titan_grise":
+            assert (f["p"], f["duration_s"], f["stop"]) == (1.0, 90, True)   # le final, toujours
+        else:
+            assert (f["p"], f["duration_s"]) == (0.4, 60)
+    # chargé CONTRE l'itinéraire du même nom : chaque POI existe, chaque lubie a un texte
+    route = load_route(_yaml("config", "chantiers.yaml"))
+    sc = load_scenario(data, pois={p.name: p.lubie for p in route.pois})
+    bugs = {f.id: (f.type, f.duration_s, f.params) for f in sc.faults if f.type != "lubie"}
+    assert bugs == CHANTIERS_BUGS
+    tirees = {f.id for f in sc.faults if f.type == "lubie"}
+    assert tirees | set(sc.undrawn) == {f"lubie_{n}" for n in CHANTIERS_POI}
+    assert not tirees & set(sc.undrawn)
+    assert "lubie_titan_grise" in tirees
+
+
+def test_launch_passe_l_itineraire_au_regisseur():
+    launch = (PKG / "launch" / "rehearsal.launch.py").read_text(encoding="utf-8")
+    director = launch.split('executable="director"')[1]
+    assert '"route_file": route_file' in director
+
+
+def test_launch_passe_la_vitesse_initiale_au_regisseur_et_seuil_du_fader():
+    """Revue R3 (14/10) : le régisseur rend la vitesse du launch tant qu'aucun
+    fader n'a parlé — la MÊME substitution que route_driver, sinon les deux
+    divergent dès `speed:=0.3`. Seuil de fermeture au fader gravé."""
+    launch = (PKG / "launch" / "rehearsal.launch.py").read_text(encoding="utf-8")
+    route_driver, director = launch.split('executable="route_driver"')[1].split('executable="director"')
+    attendu = '"speed": ParameterValue(LaunchConfiguration("speed"), value_type=float)'
+    assert attendu in route_driver and attendu in director
+    assert contracts.EXTERNAL_SPEED_DELTA == 0.05

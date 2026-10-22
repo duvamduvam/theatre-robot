@@ -203,7 +203,8 @@ input {
   display: none;
 }
 
-#btn-video-refresh {
+#btn-video-refresh,
+#scene-visage-refresh {
   position: absolute;
   top: 0.4rem;
   right: 0.4rem;
@@ -519,4 +520,162 @@ footer {
   font-size: 0.85rem;
   color: #ff9a92;
   padding-left: 1.2rem;
+}
+
+
+/* --- Page « scène » (scene.html) ---------------------------------------- */
+/* Classes préfixées scene- : elles n'existent que sur cette page. Le bandeau,
+   les badges, les cartes vidéo et les chips .bouton-catalogue sont ceux de la
+   console (règles ci-dessus). */
+
+.scene-lien {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.scene-lien:hover {
+  text-decoration: underline;
+}
+
+/* Barre de contrôle : groupes côte à côte, qui passent à la ligne. */
+.scene-barre {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  align-items: flex-start;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--bord);
+  background: var(--bg-carte);
+}
+
+.scene-groupe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+
+.scene-groupe h2 {
+  margin: 0;
+}
+
+/* PIÈGE déjà vécu sur .video-placeholder : un display:flex d'auteur ÉCRASE le
+   display:none de l'attribut hidden. Sans cette règle, les groupes de
+   répétition resteraient visibles sur le vrai robot. */
+.scene-groupe[hidden] {
+  display: none;
+}
+
+.scene-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.scene-vitesse {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--texte-doux);
+}
+
+.scene-vitesse b {
+  color: var(--texte);
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-vitesse input[type="range"] {
+  width: 10rem;
+  accent-color: var(--accent);
+}
+
+/* Trois colonnes : caméra | visage | conversation (une seule sur téléphone). */
+.scene-colonnes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 1700px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1000px) {
+  .scene-colonnes {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+}
+
+.scene-colonne {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;   /* autorise le rétrécissement en grid */
+}
+
+.scene-colonne h2 {
+  margin: 0;
+}
+
+/* Le visage LED est une matrice de gros pixels : pas de lissage. */
+.scene-visage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* Fil de conversation : défile, le plus récent en bas. */
+.scene-fil {
+  list-style: none;
+  margin: 0;
+  padding: 0.6rem;
+  height: 22rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--bg-carte);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+  color-scheme: dark;   /* barre de défilement sombre, comme le reste */
+}
+
+.scene-msg {
+  max-width: 88%;
+  padding: 0.4rem 0.7rem;
+  border-radius: 12px;
+  background: var(--bg-carte-2);
+  overflow-wrap: anywhere;
+}
+
+/* David = ce que Didier a ENTENDU (à droite), Didier = sa voix (à gauche). */
+.scene-msg-david {
+  align-self: flex-end;
+  background: #1c3358;
+}
+
+.scene-msg-didier {
+  align-self: flex-start;
+}
+
+.scene-msg-role {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--texte-doux);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.scene-saisie {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.scene-saisie input {
+  flex: 1;
+  min-width: 0;
 }

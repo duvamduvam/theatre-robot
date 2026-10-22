@@ -23,6 +23,7 @@ def generate_launch_description():
     drive_enabled = ParameterValue(LaunchConfiguration("drive_enabled"), value_type=bool)
     max_linear = ParameterValue(LaunchConfiguration("max_linear"), value_type=float)
     max_angular = ParameterValue(LaunchConfiguration("max_angular"), value_type=float)
+    rehearsal_enabled = ParameterValue(LaunchConfiguration("rehearsal_enabled"), value_type=bool)
 
     return LaunchDescription([
         DeclareLaunchArgument("web_port", default_value="8765",
@@ -40,6 +41,13 @@ def generate_launch_description():
                               description="Plafond DUR vitesse linéaire (m/s) appliqué serveur"),
         DeclareLaunchArgument("max_angular", default_value="1.0",
                               description="Plafond DUR vitesse angulaire (rad/s) appliqué serveur"),
+        # SÉCURITÉ (SIM-ONLY) : boutons de répétition de la page /scene (route,
+        # vitesse, séance). Défaut false ; même true, le node les ignore hors du
+        # domaine ROS 43 (simulation) -- le vrai robot (42) ne les a jamais.
+        DeclareLaunchArgument("rehearsal_enabled", default_value="false",
+                              description="SÉCURITÉ (SIM-ONLY) : true = le pont accepte les topics de"
+                                           " répétition (route, route_speed, rehearsal/cmd) pour la"
+                                           " page /scene. Ignoré hors domaine 43. Défaut false."),
         DeclareLaunchArgument("camera_topic", default_value="camera/image_raw",
                               description="Topic sensor_msgs/Image de la caméra embarquée (retour vidéo)"),
         DeclareLaunchArgument("camera_compressed", default_value="false",
@@ -58,6 +66,7 @@ def generate_launch_description():
                 "drive_enabled": drive_enabled,
                 "max_linear": max_linear,
                 "max_angular": max_angular,
+                "rehearsal_enabled": rehearsal_enabled,
                 "camera_topic": LaunchConfiguration("camera_topic"),
                 "camera_compressed": ParameterValue(
                     LaunchConfiguration("camera_compressed"), value_type=bool),

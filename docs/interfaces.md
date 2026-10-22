@@ -30,6 +30,10 @@ Invalid payloads are rejected with an explicit ERROR log naming the topic
 | `neck`, `left_eye`, `right_eye`, `left_arm`, `right_arm` | one `servo_node` each | `50`, `"up"`, `{"mode": "random", ...}`, `"stop"` | Servo targets (0-99), reached through a linear ramp; random mode self-paces. |
 | `wheels` | `wheels_bridge` (robot_drive) | `[0.5, 0.5]` pairs in [-1, 1] | Legacy wheels input, converted to Twist (see drive chain). |
 | `gaze` | `gaze_follower_node` | `"on"` / `"off"` | Enables the neck person-following (OFF by default, launched manually). |
+| `chat_text` | `chat_node` (vision Pi) | `"bonjour Didier"` | Text « heard » WITHOUT mic nor STT (régie keyboard, web `/scene`) : served at the next turn, interrupts a listening in progress. Prod-generic (2026-10-14). |
+| `chat_instruction` | `chat_node` (vision Pi) | `"tu es amoureux du lampadaire"`, `""` (lifted) | Current stage direction, injected as a second system message every turn ; local expiry 120 s. Published by the sim régisseur (lubies) or by the régie. **Masked** in the web `state` (David must not see the draw). |
+| `rehearsal/chat_fault` | `chat_node` (vision Pi) | `{"op": "delay", "params": {"delay_ms": 6000}, "until_ms": 40000}`, `{"op": "pass"}` | Conversation fault from the sim régisseur (`delay`/`garble`/`deaf`/`mute`/`phantom`) ; `until_ms` = duration, capped locally at 60 s. No publisher on the real robot. |
+| `chat_transcript` | `chat_node` (vision Pi) | `{"role": "david", "text": "...", "t_ms": 1760...}` | **Flow** (volatile, depth 10) : what Didier understood (`david`, after garble) and each sentence he says (`didier`). Never directions nor faults. Relayed by the web bridge as `feed`. |
 | `animation_state` | `animations_node` | `"parle"`, `""` (idle) | **State topic** (not an actuator track), latched (`TRANSIENT_LOCAL`, depth 1 — subscribers MUST use the same durability or they miss the latch): current sequence name or `""` at rest. Published on transition AND on every sequence (re)start (same name included) with `time = remaining_ms`, so subscribers can arm a deadman-style expiry (remaining + 2 s) in case `animations_node` dies mid-sequence. Actuator-arbitration upstream (lot B, [`etude-arbitrage-actionneurs.md`](etude-arbitrage-actionneurs.md)): `gaze_follower_node` (robot) and `chat_node` (vision Pi) subscribe and go silent on face/head while a sequence has the hand. |
 
 Other inputs: `/vision/person` (`PointStamped`, from the vision Pi) feeds
@@ -96,13 +100,23 @@ source (W1 à venir).
 **Whitelist** (`robot_web.web_protocol.WHITELIST`, seuls topics publiables) :
   - spectacle : `animation`, `face`, `audio`, `robot_lights`
   - technique : `relay`, `neck`, `left_eye`, `right_eye`, `left_arm`,
-    `right_arm`, `gaze`, `chat`, `persona`, `system` (`chat` = toggle on/off
+    `right_arm`, `gaze`, `chat`, `persona`, `system`, `chat_text`,
+    `chat_instruction` (2026-10-14 : souffler un texte « entendu » / poser une
+    consigne de jeu, cf. tableau des topics) (`chat` = toggle on/off
     de la parole IA, consommé par chat_node sur le Pi vision — même contrat
     que `gaze` ; `persona` = sélection de la personnalité de Didier, payload
-    `"bougon"`/`"naif"`/`"vantard"`, cf. `vision.ai.personas` — nouvelle
-    session de conversation à chaque changement)
+    `"bougon"`/`"naif"`/`"vantard"`/`"mauvaisefoi"`, cf. `vision.ai.personas` —
+    nouvelle session de conversation à chaque changement)
+  - **répétition** (`WHITELIST_REPETITION`, SIM-ONLY) : `route`, `route_speed`,
+    `rehearsal/cmd` — dans la whitelist EFFECTIVE seulement si le node a
+    `rehearsal_enabled` (launch `rehearsal:=true`, env `REHEARSAL=true`) ET
+    tourne en domaine 43 (`rehearsal_allowed`) ; annoncés par `hello.rehearsal`.
+    Sur le vrai robot : refusés comme un topic inconnu.
+  - **masqués** (`TOPICS_MASQUES`) : `chat_instruction` et `route_speed` sont
+    publiables mais leur dernière valeur n'apparaît JAMAIS dans `state` (la
+    lubie en cours, la batterie faible = le tirage que David ignore).
   - lecture seule (`TOPICS_LECTURE`, jamais publiables depuis le web) :
-    `chat_state` et `persona_state`, topics d'ÉTAT latchés publiés par
+    `chat_state`, `persona_state` et `route_state`, topics d'ÉTAT latchés publiés par
     chat_node (Pi vision) — pilotent la surbrillance verte `en-cours` des
     boutons Parole/Personnalité de la console (chat_node absent = aucun
     bouton vert). Le groupe Gaze, lui, est surligné d'après le DERNIER ORDRE
@@ -116,7 +130,7 @@ source (W1 à venir).
 | `hb` | `t: int` (ms client) | Heartbeat du writer ; répond `hb_ack` avec le même `t` (mesure RTT côté client). |
 | `cmd` | `topic: str` (whitelist), `value: any`, `time: int` (ms, défaut 0) | Publie sur le topic ROS (writer seulement). |
 | `take_control` | — | Reprise d'écriture explicite (toujours autorisée pour un client authentifié). |
-| `stop_all` | — | Bouton STOP : publie dans l'ordre `animation=false`, `audio="stop"`, `face="stop"`, `stop` sur les 5 servos, ET un Twist nul sur `cmd_vel_web`. |
+| `stop_all` | — | Bouton STOP : publie dans l'ordre `animation=false`, `audio="stop"`, `face="stop"`, `stop` sur les 5 servos, ET un Twist nul sur `cmd_vel_web` ; répétition activée : puis `route="off"` et `rehearsal/cmd="stop"` (la route est un mode latché, la séance se termine, le régisseur révoque ses pannes). |
 | `drive` | `x: float`, `z: float` (∈ [-1, 1]) | **SIM-ONLY.** Consigne de pilotage roues normalisée (x = linéaire avant/arrière, z = angulaire). Voir bloc pilotage ci-dessous. |
 
 **Pilotage roues (`drive`, SIM-ONLY, W3)** — canal SÉPARÉ des `cmd` (ne passe
@@ -142,11 +156,22 @@ PAS par la whitelist ; `cmd_vel_web` n'y figure jamais) :
 `SIMULATION`/`ROBOT RÉEL`/`INCONNU` selon `ROS_DOMAIN_ID` 43/42/autre,
 `writer`, `token_required`, + `drive_enabled`, `max_linear`, `max_angular` pour
 que l'UI verrouille le pad et affiche les plafonds), `hb_ack` (`t` échoté),
+`rehearsal` (bool : boutons route/vitesse/séance de `/scene`)), `feed`
+(`topic`, `msg` — UN message par événement d'un topic de FLUX, `TOPICS_FLUX =
+{chat_transcript}`, diffusé immédiatement à tous les clients, sans historique),
 `ack` (`topic` — non émis pour `drive` : 15 Hz spammerait le fil), `err`
 (`reason` — connexion JAMAIS fermée sur un message invalide, motif du
 décodage StringTime commun), `state` (toutes les 2 s : dernier payload +
 âge par topic, liste des nodes ROS vivants, nombre de clients, écriture
 détenue ou non).
+
+**Pages** : `/` = console de régie ; `/scene` (2026-10-14) = la scène de
+répétition : caméra (`/video`), visage LED (flux MJPEG de `face_sim`, URL
+modifiable), conversation en direct (`feed`), clavier (`chat_text`), consigne
+(`chat_instruction`), Parole/persona, et — si `hello.rehearsal` — route
+on/off/restart, slider `route_speed`, séance start/stop. La scène ignore la
+cible mémorisée de la console (jamais de bascule silencieuse vers le vrai
+Didier) et n'affiche ni pannes ni consignes.
 
 **Session / heartbeat** : écriture EXCLUSIVE — le premier client authentifié
 l'obtient, les suivants sont lecteurs (`take_control` la reprend

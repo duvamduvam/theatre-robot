@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<!--
+  Page « scène » de Didier -- caméra, visage LED et conversation côte à côte,
+  avec les commandes de la répétition. Servie par le pont web (GET /scene), même
+  WebSocket et mêmes sessions que la console de régie (/). Vanilla JS, zéro
+  dépendance externe (aucun CDN). La liaison (WebSocket, auth, bandeau, flux
+  MJPEG) vient de commun.js ; ce qui est propre à la scène est dans scene.js.
+
+  Ce que la page n'affiche JAMAIS : les pannes ni les consignes injectées par le
+  régisseur de la répétition (David ne voit pas le tirage). Elle ne lit donc que
+  chat_state, persona_state, route_state et le flux chat_transcript.
+
+  SÉCURITÉ : le groupe « Répétition » (route, vitesse, séance) n'est affiché que
+  si le serveur l'annonce (hello.rehearsal, SIM-ONLY, domaine 43) ; le serveur
+  refuse de toute façon ces topics sinon. Aucun accès aux roues par cette page.
+-->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Didier -- scène</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="scene-page">
+
+  <!-- Même bandeau que la console (ids communs, pilotés par commun.js) : mode
+       robot/sim, connexion, RTT, écriture, prise de main, token. "On doit
+       TOUJOURS savoir à qui on parle". Pas de sélecteur de cible ici : la page
+       reste sur le pont qui la sert. -->
+  <header id="bandeau">
+    <span class="marque">Didier · scène</span>
+    <a class="scene-lien" href="/">← Régie</a>
+    <span id="badge-mode" class="badge badge-inconnu">INCONNU</span>
+    <span id="badge-connexion" class="badge badge-off">déconnecté</span>
+    <span id="rtt">RTT -- ms</span>
+    <span id="badge-ecriture" class="badge badge-off">lecture seule</span>
+    <button id="btn-prendre-main" type="button">Prendre la main</button>
+    <span id="token-box" hidden>
+      <input id="token-input" type="password" placeholder="token" autocomplete="off">
+      <button id="btn-token" type="button">Connexion</button>
+    </span>
+  </header>
+
+  <!-- Barre de contrôle. Les boutons .bouton-catalogue (data-topic/data-value)
+       sont servis par l'écouteur délégué de commun.js, comme dans la console. -->
+  <section class="scene-barre">
+
+    <div class="scene-groupe">
+      <h2>Parole</h2>
+      <!-- id groupe-chat : surbrillance pilotée par chat_state (l'ÉTAT RÉEL, pas le
+           dernier clic) ; chat_node pas lancé = aucun bouton vert. -->
+      <span id="groupe-chat" class="scene-boutons">
+        <button class="bouton-catalogue" type="button" data-topic="chat" data-value="on">Parole ON</button>
+        <button class="bouton-catalogue" type="button" data-topic="chat" data-value="off">Parole OFF</button>
+      </span>
+      <span id="scene-etat-chat" class="badge badge-off" title="état de la conversation (chat_state)">—</span>
+    </div>
+
+    <div class="scene-groupe">
+      <h2>Personnalité</h2>
+      <!-- Boutons générés par scene.js depuis une liste GRAVÉE (le catalogue du
+           pont ne connaît pas les personas, qui vivent côté Pi vision).
+           Surbrillance pilotée par persona_state. -->
+      <span id="groupe-persona" class="scene-boutons"></span>
+    </div>
+
+    <!-- Groupes de répétition (classe scene-repetition) : MASQUÉS tant que
+         hello.rehearsal n'est pas vrai (sur le vrai robot, ils n'existent pas). -->
+    <div class="scene-groupe scene-repetition" hidden>
+      <h2>Route</h2>
+      <span id="groupe-route" class="scene-boutons">
+        <button class="bouton-catalogue" type="button" data-topic="route" data-value="on">Route ON</button>
+        <button class="bouton-catalogue" type="button" data-topic="route" data-value="off">Route OFF</button>
+        <button class="bouton-catalogue" type="button" data-topic="route" data-value="restart">Recommencer</button>
+      </span>
+      <span id="scene-etat-route" class="badge badge-off" title="état du cheminement (route_state)">—</span>
+      <label class="scene-vitesse" title="Consigne envoyée au relâchement. Pas de relecture : la page ne montre pas la vitesse réelle.">
+        <span>Vitesse <b id="scene-vitesse-val">50 %</b></span>
+        <input id="scene-vitesse" type="range" min="0" max="1" step="0.05" value="0.5">
+      </label>
+    </div>
+
+    <div class="scene-groupe scene-repetition" hidden>
+      <h2>Séance</h2>
+      <span id="groupe-seance" class="scene-boutons">
+        <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="start">Séance START</button>
+        <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="stop">Séance STOP</button>
+      </span>
+    </div>
+
+  </section>
+
+  <main class="scene-colonnes">
+
+    <!-- ===================== COLONNE 1 : caméra de Didier ===================== -->
+    <section class="scene-colonne">
+      <h2>Caméra de Didier</h2>
+      <div class="carte carte-video">
+        <div class="video-wrap">
+          <img id="video" alt="flux caméra embarquée">
+          <div id="video-placeholder" class="video-placeholder">pas de vidéo</div>
+          <button id="btn-video-refresh" type="button" title="Recharger le flux">⟳</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= COLONNE 2 : visage LED ======================== -->
+    <section class="scene-colonne">
+      <h2>Visage</h2>
+      <!-- Flux MJPEG de face_sim, servi sur SON port (8766), pas par le pont :
+           l'adresse est modifiable et mémorisée. -->
+      <div class="carte carte-video">
+        <div class="video-wrap">
+          <img id="scene-visage" class="scene-visage" alt="visage LED de Didier">
+          <div id="scene-visage-placeholder" class="video-placeholder">pas de visage</div>
+          <button id="scene-visage-refresh" type="button" title="Recharger le flux">⟳</button>
+        </div>
+      </div>
+      <form id="scene-form-visage" class="scene-saisie">
+        <input id="scene-visage-url" type="text" aria-label="Adresse du flux visage"
+               spellcheck="false" autocomplete="off">
+        <button type="submit">Charger</button>
+      </form>
+    </section>
+
+    <!-- ======================= COLONNE 3 : conversation ====================== -->
+    <section class="scene-colonne">
+      <h2>Conversation</h2>
+      <!-- Fil en direct : le texte que Didier A ENTENDU (david) et ce qu'il dit
+           (didier), un message par événement du flux chat_transcript. -->
+      <ol id="scene-fil" class="scene-fil" aria-live="polite"></ol>
+
+      <!-- Texte « entendu » SANS micro ni STT : servi à Didier au prochain tour. -->
+      <form id="scene-form-texte" class="scene-saisie">
+        <input id="scene-texte" type="text" placeholder="Souffler un texte à Didier…"
+               autocomplete="off" aria-label="Texte entendu par Didier">
+        <button type="submit">Souffler</button>
+      </form>
+
+      <!-- Consigne de jeu courante (jamais prononcée) ; « Lever » envoie "".
+           Péremption locale côté Didier si on l'oublie. Le champ garde le texte
+           posé : c'est la mémoire de ce qui est actif. -->
+      <form id="scene-form-consigne" class="scene-saisie">
+        <input id="scene-consigne" type="text" placeholder="Consigne de jeu…"
+               autocomplete="off" aria-label="Consigne de mise en scène">
+        <button type="submit">Poser</button>
+        <button id="scene-consigne-lever" type="button">Lever</button>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- Journal des 5 dernières erreurs (visible partout). -->
+  <footer>
+    <h2>Erreurs récentes</h2>
+    <ul id="journal-erreurs"></ul>
+  </footer>
+
+  <script src="/static/commun.js"></script>
+  <script src="/static/scene.js"></script>
+</body>
+</html>

@@ -5,7 +5,8 @@ test_web_protocol.py, même motif que wheels_payload.py).
 Trois responsabilités :
  - la WHITELIST des topics publiables (contrat de sécurité W0 : wheels/
    cmd_vel_* et e_stop ne DOIVENT jamais y figurer -- voir CLAUDE.md/
-   docs/etude-interface-web.md, W0 = supervision + contenus, pas les roues) ;
+   docs/etude-interface-web.md, W0 = supervision + contenus, pas les roues),
+   plus son extension SIM-ONLY de répétition (effective_whitelist) ;
  - le parsing/validation des messages client -> serveur (parse_client_message) ;
  - la session d'écriture exclusive + heartbeat (WebSession/SessionManager).
 
@@ -32,8 +33,51 @@ WHITELIST_SPECTACLE = {"animation", "face", "audio", "robot_lights"}
 # (payload = nom de variante "bougon"/"naif"/"vantard", cf. vision.ai.personas
 # côté Pi vision) — même nature que "chat" : une commande de configuration du
 # chat_node, pas un actionneur.
-WHITELIST_TECHNIQUE = {"relay", "neck", "left_eye", "right_eye", "left_arm", "right_arm", "gaze", "chat", "persona", "system"}
+# "chat_text" / "chat_instruction" (2026-10-14, page « scène ») : la régie
+# souffle à Didier un texte « entendu » SANS micro ni STT (chat_text), ou pose
+# une consigne de jeu (chat_instruction, "" = levée) -- consommés par chat_node
+# sur le Pi vision. Même nature que "chat"/"persona" : de la conversation, pas
+# un actionneur. Utile en prod aussi (la régie peut souffler à Didier).
+# PIÈGE : en répétition simulée, le régisseur de pannes publie lui aussi sur
+# chat_instruction -- le pont ne peut pas distinguer la consigne de la régie de
+# celle du régisseur ; la page « scène » ne doit donc JAMAIS afficher ce topic
+# (David ne voit pas le tirage).
+WHITELIST_TECHNIQUE = {"relay", "neck", "left_eye", "right_eye", "left_arm", "right_arm", "gaze", "chat", "persona", "system",
+                       "chat_text", "chat_instruction"}
 WHITELIST = WHITELIST_SPECTACLE | WHITELIST_TECHNIQUE
+
+# Topics de RÉPÉTITION SIMULÉE (page « scène », 2026-10-14) : cheminement de
+# Didier dans la rue (route on/off/restart, route_speed 0..1) et commande de
+# séance du régisseur (rehearsal/cmd start/stop). SIM-ONLY : volontairement
+# HORS de WHITELIST -- ils n'entrent dans la whitelist EFFECTIVE que si le node
+# a rehearsal_enabled ET tourne en domaine 43 (rehearsal_allowed). Sur le vrai
+# robot (domaine 42) ils sont refusés comme n'importe quel topic inconnu :
+# aucun client web ne peut lancer une route.
+WHITELIST_REPETITION = {"route", "route_speed", "rehearsal/cmd"}
+
+# Topics MASQUÉS dans le message `state` (2026-10-14, étude §13.1 « David ne
+# voit pas le tirage ») : publiables depuis le web (ils restent dans la
+# whitelist), mais leur DERNIÈRE VALEUR n'est jamais diffusée aux clients --
+# `chat_instruction` porte la lubie en cours, `route_speed` trahit « batterie
+# faible » et l'arrêt devant un objet. La page scène ne les lit pas ; la
+# console `/` (tableau État, trames WS brutes) les verrait sans ce filtre.
+TOPICS_MASQUES = frozenset({"chat_instruction", "route_speed"})
+
+
+def snapshot_visible(topics: dict) -> dict:
+    """Instantané des derniers payloads SANS les topics masqués -- appliqué par
+    le node AVANT build_state : le filtre est pur et testable."""
+    return {topic: info for topic, info in topics.items() if topic not in TOPICS_MASQUES}
+
+
+def effective_whitelist(rehearsal_enabled: bool) -> frozenset:
+    """Whitelist réellement appliquée par le node : WHITELIST, plus les topics
+    de répétition SEULEMENT si le node les a activés. Passée au parseur
+    (parse_client_message) ET utilisée pour créer les publishers : un topic
+    absent d'ici n'a ni publisher ni chemin de parsing."""
+    if rehearsal_enabled:
+        return frozenset(WHITELIST | WHITELIST_REPETITION)
+    return frozenset(WHITELIST)
 
 # Topics d'ÉTAT observés en LECTURE SEULE (2026-07-13) : publiés latchés
 # (TRANSIENT_LOCAL) par chat_node sur le Pi vision — le pont s'y abonne pour
@@ -42,7 +86,15 @@ WHITELIST = WHITELIST_SPECTACLE | WHITELIST_TECHNIQUE
 # impossibles à publier depuis le web (un client qui forgerait un cmd
 # "chat_state" est rejeté par la validation whitelist comme n'importe quel
 # topic inconnu).
-TOPICS_LECTURE = {"chat_state", "persona_state"}
+# route_state (2026-10-14, page « scène ») : état on/off du cheminement,
+# latché par son publieur comme chat_state -- même abonnement TRANSIENT_LOCAL.
+TOPICS_LECTURE = {"chat_state", "persona_state", "route_state"}
+
+# Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
+# clients (message "feed"), contrairement à `state` qui ne porte que la
+# dernière valeur toutes les 2 s -- une conversation perdrait des répliques.
+# Lecture seule, comme TOPICS_LECTURE : pas de publisher, pas dans la whitelist.
+TOPICS_FLUX = {"chat_transcript"}
 
 # Session d'écriture : silence du writer au-delà de ce délai -> écriture
 # libérée (personne ne la récupère automatiquement, cf. §2 du protocole).
@@ -110,9 +162,14 @@ def _parse_hb(msg: dict) -> dict:
     return {"type": "hb", "t": t}
 
 
-def _parse_cmd(msg: dict) -> dict:
+def _parse_cmd(msg: dict, whitelist) -> dict:
     topic = msg.get("topic")
-    if topic not in WHITELIST:
+    # isinstance d'abord : un topic JSON liste/objet n'est pas hashable, `in`
+    # sur un ensemble lèverait TypeError (donc hors ProtocolError : la
+    # connexion du client tomberait au lieu d'un refus propre).
+    if not isinstance(topic, str) or topic not in whitelist:
+        if isinstance(topic, str) and topic in WHITELIST_REPETITION:
+            raise ProtocolError("topic de répétition désactivé : {!r}".format(topic))
         raise ProtocolError("topic hors whitelist : {!r}".format(topic))
     if "value" not in msg:
         raise ProtocolError("cmd.value manquant")
@@ -159,22 +216,24 @@ def drive_to_twist(x: float, z: float, max_linear: float, max_angular: float) ->
 
 # Dispatch par type : chaque entrée valide/normalise son propre message
 # (dict -> dict), les types sans champ additionnel se contentent de le
-# renvoyer tel quel. Table plutôt qu'une cascade de if/elif : c'est ce qui
+# renvoyer tel quel ("cmd" est traité à part, cf. parse_client_message).
+# Table plutôt qu'une cascade de if/elif : c'est ce qui
 # tenait parse_client_message() sous le seuil de complexité cyclomatique du
 # linter (S3776) tout en gardant chaque règle isolée et testable.
 _PARSERS = {
     "auth": _parse_auth,
     "hb": _parse_hb,
-    "cmd": _parse_cmd,
     "drive": _parse_drive,
     "take_control": lambda msg: {"type": "take_control"},
     "stop_all": lambda msg: {"type": "stop_all"},
 }
 
 
-def parse_client_message(raw: str) -> dict:
+def parse_client_message(raw: str, whitelist=WHITELIST) -> dict:
     """JSON brut reçu sur le WebSocket -> dict validé et normalisé (defaults
-    appliqués, ex. cmd.time). Lève ProtocolError sur toute entrée invalide."""
+    appliqués, ex. cmd.time). Lève ProtocolError sur toute entrée invalide.
+    `whitelist` = celle du node (effective_whitelist) ; par défaut la base
+    WHITELIST, donc SANS topic de répétition : l'oubli est du côté sûr."""
     try:
         msg = json.loads(raw)
     except (TypeError, ValueError) as e:
@@ -187,6 +246,11 @@ def parse_client_message(raw: str) -> dict:
     if msg_type is None:
         raise ProtocolError("champ 'type' manquant")
 
+    if msg_type == "cmd":
+        # Seul parseur qui dépend du contexte (whitelist du node) : il sort de
+        # la table _PARSERS pour ne pas imposer un paramètre inutilisé aux autres.
+        return _parse_cmd(msg, whitelist)
+
     parser = _PARSERS.get(msg_type)
     if parser is None:
         raise ProtocolError("type de message inconnu : {!r}".format(msg_type))
@@ -195,10 +259,15 @@ def parse_client_message(raw: str) -> dict:
 
 # --- Bouton STOP CONTENUS ---------------------------------------------------
 
-def stop_all_commands() -> list:
+def stop_all_commands(rehearsal_enabled: bool = False) -> list:
     """Liste EXACTE (topic, valeur_python) publiée par le bouton STOP CONTENUS,
-    dans cet ordre. Pas de roues en W0 ; le verrou e_stop viendra en W1."""
-    return [
+    dans cet ordre. Pas de roues en W0 ; le verrou e_stop viendra en W1.
+    Répétition activée (SIM-ONLY) : STOP coupe AUSSI le cheminement (`route off`
+    -- la route est un mode latché, comme `follow` : sans ça, un STOP en pleine
+    séance laisserait Didier continuer sa rue) et termine la séance
+    (`rehearsal/cmd stop` : le régisseur révoque toutes ses pannes, SIGCONT
+    compris). Le deadman reste derrière dans tous les cas."""
+    commands = [
         ("animation", False),
         ("audio", "stop"),
         ("face", "stop"),
@@ -208,6 +277,9 @@ def stop_all_commands() -> list:
         ("left_arm", "stop"),
         ("right_arm", "stop"),
     ]
+    if rehearsal_enabled:
+        commands += [("route", "off"), ("rehearsal/cmd", "stop")]
+    return commands
 
 
 # --- Mode robot / sim (sécurité : toujours savoir à qui on parle) ----------
@@ -223,14 +295,25 @@ def mode_from_domain_id(domain_id: int) -> str:
     return "INCONNU"
 
 
+def rehearsal_allowed(domain_id: int) -> bool:
+    """Les topics de répétition ne s'activent qu'en SIMULATION (domaine 43) :
+    garde-fou structurel, même règle que le refus hors 43 du package de
+    répétition lui-même. rehearsal_enabled=true sur le domaine 42 (ou un
+    domaine inconnu) est donc ignoré par le node -- 'ne jamais mélanger'."""
+    return mode_from_domain_id(domain_id) == "SIMULATION"
+
+
 # --- Messages serveur -> client (constructeurs purs) ------------------------
 
 def build_hello(domain_id: int, writer: bool, token_required: bool,
-                drive_enabled: bool, max_linear: float, max_angular: float) -> dict:
+                drive_enabled: bool, max_linear: float, max_angular: float,
+                rehearsal: bool = False) -> dict:
     # drive_enabled/max_linear/max_angular : l'UI affiche les plafonds et
     # VERROUILLE le pad de pilotage si drive_enabled=false (WEB_DRIVE=false),
     # elle n'a donc pas à les deviner. Le plafond DUR reste appliqué serveur
     # (drive_to_twist) -- l'UI ne fait que refléter et éviter d'émettre pour rien.
+    # rehearsal : la page « scène » n'AFFICHE les boutons de répétition (route,
+    # vitesse, séance) que si le serveur les accepte ; défaut False = sûr.
     return {
         "type": "hello",
         "domain_id": domain_id,
@@ -240,6 +323,7 @@ def build_hello(domain_id: int, writer: bool, token_required: bool,
         "drive_enabled": drive_enabled,
         "max_linear": max_linear,
         "max_angular": max_angular,
+        "rehearsal": rehearsal,
     }
 
 
@@ -253,6 +337,13 @@ def build_ack(topic: str) -> dict:
 
 def build_err(reason: str) -> dict:
     return {"type": "err", "reason": reason}
+
+
+def build_feed(topic: str, msg) -> dict:
+    """Un événement d'un topic de FLUX (TOPICS_FLUX), diffusé tel quel à tous
+    les clients dès sa réception -- pas de regroupement, pas d'âge : le client
+    horodate et empile. `msg` = payload décodé (JSON) ou chaîne brute."""
+    return {"type": "feed", "topic": topic, "msg": msg}
 
 
 def build_state(topics: dict, nodes: list, clients: int, writer_present: bool) -> dict:

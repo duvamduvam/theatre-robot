@@ -33,7 +33,7 @@ CMD_VEL_TOPIC = "cmd_vel_follow"
 ODOM_TOPIC = "/ground_truth/odom"
 # Événements de proximité aux points d'intérêt : StringTime JSON
 # {"poi": nom, "event": "enter"|"exit", "distance": m}. Consommés par le
-# régisseur (lot R2) qui les traduit en instruction de jeu.
+# régisseur : un « enter » déclenche les éléments de scénario `t: poi` (R3).
 POI_EVENT_TOPIC = "rehearsal/poi_event"
 
 # --- Plafonds ABSOLUS (m/s, rad/s) -------------------------------------------
@@ -59,9 +59,18 @@ HEARTBEAT_TIMEOUT_MS = 1000
 # Ordres aux relais : StringTime JSON {"relay": nom, "op": ..., "params": {...},
 # "until_ms": durée}. Un relais n'obéit qu'aux ordres qui portent son nom.
 RELAY_CMD_TOPIC = "rehearsal/relay_cmd"
-# Canal JOUÉ (instruction de jeu vers le chat — consommateur au lot R3) : le
-# régisseur publie ici et journalise ; personne ne l'écoute encore.
-INSTRUCTION_TOPIC = "rehearsal/instruction"
+# Canal JOUÉ : consigne de jeu GÉNÉRIQUE, consommée par chat_node (dépôt
+# vision) — StringTime, payload chaîne JSON, "" = consigne levée. Pas préfixé
+# rehearsal/ : en prod, la régie pourra souffler à Didier par le même topic
+# (étude §13.4 ; était "rehearsal/instruction", jamais consommé).
+INSTRUCTION_TOPIC = "chat_instruction"
+# Pannes de CONVERSATION, exécutées par chat_node : StringTime JSON
+# {"op": ..., "params": {...}, "until_ms": durée | null}. Ce canal n'a PAS de
+# chien de garde (du texte, pas des roues) : la borne est tenue des DEUX côtés
+# (FAULT_MAX_DURATION_S["chat"] ici, plafond local 60 s dans chat_node). Les
+# chaînes sont un contrat partagé avec le dépôt vision (gravées des deux côtés).
+CHAT_FAULT_TOPIC = "rehearsal/chat_fault"
+CHAT_FAULT_OPS = ("pass", "delay", "garble", "deaf", "mute", "phantom")
 
 # Points de relais : nom -> (topic amont, topic aval, type). LISTE FERMÉE.
 # Le producteur est lancé par rehearsal.launch.py avec un remap vers l'amont ;
@@ -83,8 +92,20 @@ KILLABLE = ("route_driver",)
 
 # Durée MAXIMALE d'une panne par type (s) : au-delà, le régisseur la révoque
 # même si le scénario en demandait plus. Une panne infinie n'existe pas.
+# 0 = ponctuelle seulement. `instruction` est passée de 0 à 120 au lot R3
+# (consigne bornée, levée par "" à la fin) — rétro-compatible : à 0 elle reste
+# ponctuelle. 120 = la péremption locale de chat_node pour une consigne.
 FAULT_MAX_DURATION_S = {"relay": 60.0, "pause": 30.0, "kill": 0.0, "speed": 120.0,
-                        "instruction": 0.0}
+                        "instruction": 120.0, "lubie": 120.0, "chat": 60.0}
+
+# Fermeture d'une lubie AU FADER (revue adversariale R3) : pendant une lubie
+# qui a arrêté Didier, une consigne route_speed EXTERNE (fader du boîtier,
+# page scène) qui s'écarte de PLUS de ce seuil de la vitesse en vigueur avant
+# la lubie = David a bougé le fader -> la lubie se termine. Un seuil et pas
+# l'égalité stricte : le boîtier de faders peut ré-émettre en continu sa
+# position, avec le jitter de son ADC — une ré-émission n'est pas un geste
+# (la page, elle, n'envoie qu'au changement).
+EXTERNAL_SPEED_DELTA = 0.05
 
 # --- Garde-fou DOMAINE ROS (revue adversariale du 2026-10-08, défaut n°6) -------
 # Ce package ne doit JAMAIS tourner sur le domaine du vrai robot (42) : un shell

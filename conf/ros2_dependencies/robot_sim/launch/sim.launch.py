@@ -49,6 +49,10 @@ def generate_launch_description():
     # conduite en sim demande de la lancer À LA MAIN dans le conteneur (cf.
     # operations.md) -- on ne veut pas de mouvement automatique au démarrage.
     web_drive = ParameterValue(LaunchConfiguration("web_drive"), value_type=bool)
+    # Même coercition bool. SÉCURITÉ (SIM-ONLY) : n'ouvre au pont web QUE les
+    # boutons de répétition de la page /scene ; ne lance rien d'autre (la route
+    # et le régisseur se lancent À LA MAIN, cf. README du package de répétition).
+    rehearsal = ParameterValue(LaunchConfiguration("rehearsal"), value_type=bool)
 
     robot_description = ParameterValue(
         Command([
@@ -78,7 +82,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument("world", default_value="stage",
                               description="Monde gz : nom du fichier SANS extension dans worlds/"
-                                           " (stage = scène de théâtre, rue = rue de la répétition"
+                                           " (stage = scène de théâtre, rue = rue de la répétition, chantiers = Nefs → Titan grise"
                                            " simulée). Le nom interne du monde reste `stage`."),
         DeclareLaunchArgument("headless", default_value="false",
                               description="true = serveur gz seul, sans GUI"),
@@ -100,6 +104,12 @@ def generate_launch_description():
                                            " false. La chaîne roues (drive.launch.py) doit être"
                                            " lancée À LA MAIN pour conduire en sim (voir operations.md)."
                                            " Rien ici ne s'active sur le vrai robot (protocole caméra)."),
+        DeclareLaunchArgument("rehearsal", default_value="false",
+                              description="SÉCURITÉ (SIM-ONLY) : true = le pont web accepte les topics de"
+                                           " répétition (route, route_speed, rehearsal/cmd) et la page"
+                                           " /scene affiche ses boutons de route et de séance. Défaut"
+                                           " false. NE LANCE PAS la route ni le régisseur (à la main)."
+                                           " Sans effet sans web:=true."),
         DeclareLaunchArgument("face", default_value="false",
                               description="true = lance face_sim (paquet robot, aperçu web du visage"
                                            " LED -- les matrices LED n'ont aucun rendu dans Gazebo)."
@@ -205,9 +215,11 @@ def generate_launch_description():
             executable="web_bridge",
             name="web_bridge_node",
             output="screen",
-            # drive_enabled = web_drive : SIM-ONLY, défaut false. camera_topic
-            # laissé au défaut du node ("camera/image_raw", bridgé depuis gz).
-            parameters=[{"web_port": web_port, "drive_enabled": web_drive}],
+            # drive_enabled = web_drive et rehearsal_enabled = rehearsal : SIM-ONLY,
+            # défauts false. camera_topic laissé au défaut du node
+            # ("camera/image_raw", bridgé depuis gz).
+            parameters=[{"web_port": web_port, "drive_enabled": web_drive,
+                         "rehearsal_enabled": rehearsal}],
             condition=IfCondition(web),
         ),
     ])

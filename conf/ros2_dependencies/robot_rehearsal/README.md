@@ -35,7 +35,7 @@ dernière consigne, zero = arrêt net, drop = à-coups, delay = réagit en retar
 `pause` (visage figé, servos muets, route coupée → deadman), `kill` de
 `route_driver` (respawn par le launch après 5 s, puis `route on` = le
 reboot-prétexte), `speed` (batterie faible), `instruction` (canal joué,
-publié sur `rehearsal/instruction` — consommateur au lot R3).
+publié sur `chat_instruction` depuis le lot R3 — ex-`rehearsal/instruction`).
 
 Commandes : `rehearsal/cmd` = `start` | `stop` | `abort`. Le journal de la
 séance est la **source de vérité du débrief** (ce qui a été tiré, quand) — à
@@ -44,6 +44,36 @@ lire **après**, jamais pendant (étude §4.3).
 **Vérification V-R2** : `docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-faults.sh`
 (start, chien de garde en gelant le régisseur pendant un `zero`, reboot →
 respawn → `route on`, couverture du scénario au journal).
+
+## Lot R3 — « chantiers » : 20 bugs, 30 lubies (étude §13)
+
+| Nouveauté | Contrat |
+|---|---|
+| déclencheur POI | `t: poi` + `poi: <nom>` : part sur l'`enter` du POI (`rehearsal/poi_event`), **une seule fois** (sauté pour cible occupée = pas de seconde chance). `p` (0..1) = tirage **au chargement** avec la graine, après les `t: random` ; les écartés sont listés `undrawn` dans `scenario_loaded`. Jamais atteint = `skipped` à la fin |
+| type `lubie` | `{poi, text?, stop?: true, restore?: 1.0}`, cible `speed`, max 120 s : consigne sur `chat_instruction` (`text`, sinon champ `lubie` du POI) + `route_speed` 0 ; à la fin `""` + la vitesse en vigueur (seulement si `stop`, voir plus bas) |
+| type `chat` | `{op: delay\|garble\|deaf\|mute\|phantom, params}`, cible `chat`, max 60 s (`phantom` ponctuel) : JSON `{"op", "params", "until_ms"}` sur `rehearsal/chat_fault`, `{"op": "pass"}` à la fin (sauf `phantom` : ponctuel, cible propre `chat:phantom`, rien à lever). Durée 0 refusée hors phantom (0 = plafond 60 s côté chat_node). Pas de chien de garde : chat_node borne aussi à 60 s |
+| `instruction` | bornée (max 120 s) : `""` publié à la fin si durée > 0 ; à 0, ponctuelle comme en R2 |
+| `route_file` (régisseur) | le MÊME itinéraire que `route_driver` : un POI inconnu ou une lubie sans texte = refus au démarrage, tirés ou non |
+
+Les messages EXACTS (instruction, lubie, chat) sortent de `director.messages()`,
+pur et gravé par test — mêmes chaînes que les tests du dépôt vision.
+
+**Fermeture au fader, vitesse rendue, reset** (revue adversariale du 14/10, tests `test_director_node.py`) :
+- Pendant une lubie `stop`, une consigne `route_speed` EXTERNE (fader, page) qui s'écarte de plus de 0,05 de la vitesse d'avant la lubie la **ferme aussitôt** : `fault_stop` avec `closed_by: fader`, consigne levée, vitesse **non rendue** (David vient de la fixer). Ré-émissions du boîtier et jitter ≤ 0,05 ne ferment rien ; le régisseur reconnaît l'écho de ses propres publications.
+- Fin d'un `speed` ou d'une lubie : la vitesse rendue est la dernière consigne externe, sinon `speed:=` du launch, sinon `restore` du scénario (dernier recours).
+- `stop`/`abort` avant `start` ne fait rien ; `start` après la fin **rejoue** la séance (même timeline, `scenario_reset` au journal).
+- POI franchi hors séance : journalisé `poi_enter_ignored` (`before_start`/`ended`), pas mémorisé — envoyer `start` AVANT `route on`.
+
+`config/chantiers.yaml` : 30 POI dans l'ordre réel de la marche (Nefs → Titan
+grise), chacun avec `lubie` (envoyée telle quelle au chat) et `fermeture` (pour
+David au débrief, lue par personne en machine). ⚠️ Positions **provisoires**
+(polyligne droite) : le lot monde (`chantiers.sdf`) les recale.
+`config/scenarios/chantiers.yaml` : les 20 bugs du §13.5 en `t: random` + une
+lubie `t: poi` par POI (`p: 0.4`, la Titan grise toujours).
+
+```bash
+ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers
+```
 
 ## Regarder une séance en direct
 

@@ -2,6 +2,7 @@
 
     ros2 launch robot_rehearsal rehearsal.launch.py                 # route OFF, scénario demo chargé, en attente de « start »
     ros2 launch robot_rehearsal rehearsal.launch.py speed:=0.3 scenario:=demo seed:=42
+    ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers   # lot R3
     # partir :      ros2 topic pub -1 route robot_interfaces/msg/StringTime '{msg: "on"}'
     # régisseur :   ros2 topic pub -1 rehearsal/cmd robot_interfaces/msg/StringTime '{msg: "start"}'   (stop | abort)
 
@@ -64,11 +65,17 @@ def generate_launch_description():
             output="screen", parameters=[{"relay": "cmd_vel_follow"}],
             respawn=True, respawn_delay=2.0,   # relais mort = mux sans entrée = deadman ; il renaît passant
         ),
-        # Régisseur : charge le scénario, attend « start ».
+        # Régisseur : charge le scénario, attend « start ». Il lit le MÊME
+        # itinéraire que route_driver (noms de POI, textes des lubies) : un
+        # scénario qui référence un POI absent de `route` est refusé au démarrage.
+        # Et la MÊME vitesse initiale : c'est celle qu'il rend à la fin d'un
+        # speed / d'une lubie tant qu'aucun fader n'a parlé.
         Node(
             package="robot_rehearsal", executable="director", name="director", output="screen",
             parameters=[{
                 "scenario_file": scenario_file,
+                "route_file": route_file,
+                "speed": ParameterValue(LaunchConfiguration("speed"), value_type=float),
                 "seed": ParameterValue(LaunchConfiguration("seed"), value_type=int),
                 "autostart": ParameterValue(LaunchConfiguration("autostart"), value_type=bool),
             }],
