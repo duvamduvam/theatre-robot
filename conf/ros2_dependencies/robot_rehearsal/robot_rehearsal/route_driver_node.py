@@ -6,6 +6,10 @@ SÉCURITÉ (cf. CLAUDE.md — ce node publie une consigne roues) :
    twist_mux — structurellement SOUS la télécommande (100) et le web (50) ;
    le twist_deadman (400 ms) reste derrière. Jamais e_stop/wheels/cmd_vel.
  - Démarre DÉSACTIVÉ ; activation à chaud par le topic `route` ("on"/"off").
+ - Publie, latchés, l'ÉTAT de la route (`route_state`) et sa CAUSE
+   (`route_state_cause` : "boot" au démarrage, "cmd" à chaque extinction par
+   commande) : le régisseur ne relance à la voix qu'une route éteinte par un
+   REBOOT, jamais par David (revue adversariale I1, 22/10).
  - Zéro FRANC dès qu'une condition manque (désactivé, odométrie périmée,
    arrivé), puis silence : le mux retombe sur les autres entrées.
  - Le suivi de personne (person_follower) doit être OFF pendant la route :
@@ -33,8 +37,8 @@ from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 
 from robot_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
-                                       ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_TOPIC,
-                                       check_domain)
+                                       ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
+                                       ROUTE_STATE_TOPIC, check_domain)
 
 # Latché : un abonné arrivé après coup (régisseur relancé) reçoit l'état courant.
 LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -107,10 +111,15 @@ class RouteDriverNode(Node):
         self.cmd_pub = self.create_publisher(Twist, CMD_VEL_TOPIC, 10)
         self.poi_pub = self.create_publisher(StringTime, POI_EVENT_TOPIC, 10)
         self.state_pub = self.create_publisher(StringTime, ROUTE_STATE_TOPIC, LATCHED)
+        self.cause_pub = self.create_publisher(StringTime, ROUTE_STATE_CAUSE_TOPIC, LATCHED)
         self.create_subscription(Odometry, ODOM_TOPIC, self._on_odom, 10)
         self.create_subscription(StringTime, ROUTE_CMD_TOPIC, self._on_route_cmd, 10)
         self.create_subscription(StringTime, ROUTE_SPEED_TOPIC, self._on_speed, 10)
 
+        # Cause AVANT l'état : un abonné qui lit l'état « off » doit déjà
+        # trouver sa cause. "boot" même si enabled=True (la cause ne sert
+        # qu'à qualifier un état OFF).
+        self._publish_cause("boot")
         self._publish_state()
         tick_hz = float(self.get_parameter("tick_hz").value)
         self.create_timer(1.0 / tick_hz, self._tick)
@@ -122,6 +131,9 @@ class RouteDriverNode(Node):
 
     def _publish_state(self):
         self.state_pub.publish(StringTime(msg="on" if self.follower.enabled else "off", time=0, anim=False))
+
+    def _publish_cause(self, cause: str):
+        self.cause_pub.publish(StringTime(msg=json.dumps(cause), time=0, anim=False))
 
     def _on_odom(self, msg: Odometry):
         p = msg.pose.pose.position
@@ -141,6 +153,9 @@ class RouteDriverNode(Node):
             self.get_logger().info("route ON : cheminement activé")
         elif value in ("off", False, 0, "0"):
             self.follower.set_enabled(False)
+            # À CHAQUE extinction par commande, quel que soit son format : c'est
+            # ce qui interdit au régisseur de relancer à la voix contre David.
+            self._publish_cause("cmd")
             self._publish_state()
             self.get_logger().info("route OFF : cheminement désactivé (zéro publié)")
         elif value == "restart":

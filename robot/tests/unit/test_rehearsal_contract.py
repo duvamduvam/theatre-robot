@@ -40,6 +40,9 @@ def test_sortie_sur_le_creneau_du_suivi_jamais_cmd_vel_final():
     assert contracts.CMD_VEL_TOPIC != "cmd_vel"
     assert contracts.ODOM_TOPIC == "/ground_truth/odom"
     assert contracts.ROUTE_STATE_TOPIC == "route_state"
+    # Revue I1 (22/10) : cause latchée de l'état, "boot" | "cmd".
+    assert contracts.ROUTE_STATE_CAUSE_TOPIC == "route_state_cause"
+    assert contracts.ROUTE_STATE_CAUSES == ("boot", "cmd")
 
 
 def test_verite_terrain_declaree_dans_le_xacro_et_le_bridge():
@@ -201,6 +204,8 @@ def test_topics_et_ops_partages_avec_chat_node():
     assert contracts.CHAT_FAULT_TOPIC == "rehearsal/chat_fault"
     assert contracts.CHAT_FAULT_OPS == ("pass", "delay", "garble", "deaf", "mute", "phantom")
     assert contracts.POI_EVENT_TOPIC == "rehearsal/poi_event"
+    # Lot I1 : même littéral que CHAT_MOVE_TOPIC de chat_node (dépôt vision).
+    assert contracts.CHAT_MOVE_TOPIC == "rehearsal/chat_move"
 
 
 def test_itineraire_chantiers():

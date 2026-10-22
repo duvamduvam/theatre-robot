@@ -75,6 +75,39 @@ lubie `t: poi` par POI (`p: 0.4`, la Titan grise toujours).
 ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers
 ```
 
+## Lot I1 — mouvement à la voix (étude §13.11, 22/10)
+
+Didier peut demander à repartir ou à s'arrêter : la clé `"marche": "go"|"stop"`
+de son JSON de fin part de `chat_node` (dépôt vision, seulement si
+`CHAT_MOUVEMENT` est posé — banc de répétition) sur **`rehearsal/chat_move`**
+(StringTime, `json.dumps("go"|"stop")`). Le régisseur est le **seul**
+consommateur ; il décide (`director.VoiceMove`, pur) et agit par `route` /
+`route_speed`, comme pour les lubies. Tout ordre est journalisé `voice_move`
+(`effect` : `close_lubie` | `resume` | `relaunch` | `hold` | `ignored` + `reason`).
+
+- **go** : ferme la lubie active (`closed_by: "voix"`, la vitesse en vigueur
+  EST rendue), sinon lève l'arrêt vocal (vitesse d'avant, plafonnée), sinon
+  relance une route OFF **par reboot** — `route_state` latché `off` ET
+  `route_state_cause` latchée `boot` (salve de 3 `on`, confirmée par
+  `route_state`). **Jamais** après une extinction par commande (cause `cmd`,
+  ou `off`/`false`/`0` vu sur `route`) : `route_off_par_david` ; cause jamais
+  reçue : `cause_inconnue`. Hors séance : ignoré. Anti-rebond 2 s.
+- **stop** : `route_speed 0` **toujours** republié (même hors séance, même
+  pendant une lubie), arrêt vocal **toujours** posé sans jamais écraser une
+  vitesse déjà retenue ; pas d'anti-rebond.
+- **Règle générale** (défaut trouvé en sim le 22/10) : tant qu'un arrêt vocal
+  est posé, le régisseur ne publie **jamais** de vitesse non nulle, sauf par
+  « go » ou levée au fader — une lubie qui finit ne rend rien, une panne
+  `speed` ne publie rien (`"suppressed_by": "voice_hold"` au journal).
+- Vitesse en vigueur : celle d'une panne `speed` active, sinon le fader.
+  Le fader lève l'arrêt vocal sans rien publier ; abort / fin de séance aussi
+  (Didier reste à l'arrêt) et annulent une salve de relance.
+
+`route_driver` publie `route_state_cause` (latché, JSON `"boot"` | `"cmd"`) :
+`boot` au démarrage, `cmd` à chaque extinction par commande, tout format.
+
+Tests : `test_director.py` (logique pure) et `test_director_node.py` (node), section I1.
+
 ## Regarder une séance en direct
 
 - **Vue 3D** : la sim tourne en headless ; on y branche une fenêtre à chaud,

@@ -945,7 +945,8 @@ la dernière valeur toutes les 2 s) ; `TOPICS_FLUX = {"chat_transcript"}`,
 ### 13.9 Hors lot, à dire
 
 I0 (état de mission) n'est **pas** fait : la « mission » n'existe que dans le
-persona (texte). La fermeture à la voix (I1) non plus. Le passant (R5), le
+persona (texte). La fermeture à la voix (I1) non plus — faite depuis au
+lot I1 du 22/10 (§13.11). Le passant (R5), le
 débrief outillé (R4), l'avatar (R0) : inchangés.
 
 ### 13.10 Relevé géographique (agent web, 14/10 — sources dans le rapport)
@@ -963,3 +964,130 @@ débrief outillé (R4), l'avatar (R0) : inchangés.
 Non tranché : année de la jaune (1958 vs 1954 selon les sources), limites du
 Parc des Chantiers (la page anglaise du VAN le fait aller jusqu'à la grise).
 Sans incidence sur le monde.
+
+### 13.11 Lot I1 — mouvement à la voix (22/10)
+
+**Besoin (David, 22/10)** : « Il faut qu'il se mette en mouvement quand
+nécessaire. » Avant I1, une lubie arrêtait Didier (`route_speed 0`) et ne se
+fermait qu'au fader ou au bout de sa durée ; la parole n'avait aucun effet
+sur le mouvement.
+
+**Décisions de David** : (1) Didier bouge sur demande de David ET peut
+décider seul de repartir (fin de sa lubie) ; (2) la voix peut relancer une
+route OFF **seulement après un reboot** (route_driver respawné éteint),
+**jamais** après un `off` envoyé sur `route` (David, page, STOP).
+
+**Architecture — une seule voie, aucun Twist** :
+
+```
+LLM ─ JSON de fin {"emotion": …, "marche": "go"|"stop"}
+  → chat_node (vision, si CHAT_MOUVEMENT posé — banc seulement)
+  → rehearsal/chat_move (StringTime, json.dumps("go"|"stop"))
+  → director (SIM-ONLY, domaine 43, SEUL consommateur)
+  → route / route_speed (comme les lubies)
+```
+
+Sur le vrai robot il n'y a pas de régisseur : le topic est sans effet.
+chat_node ne publie jamais `route`, `route_speed` ni `cmd_vel` (test AST côté
+vision). Côté vision : `personas.MOVE_TEMPLATE` (ajouté en dernier au prompt,
+après le partenaire), `ConversationEngine(on_move=…)` (None = historique),
+`vision_config.move_enabled_from_env` (1/true/on/oui ; absente = off ; autre
+valeur = refus au démarrage). Pendant une panne `mute`, l'ordre part quand
+même (seule la voix est coupée).
+
+**Règles du régisseur** (`director.VoiceMove`, pure, gravée par test —
+révisées par la revue adversariale du 22/10, décisions D1-D7 du coordinateur) :
+
+| Ordre | Situation | Effet (`voice_move`) |
+|---|---|---|
+| autre que go/stop | — | `ignored` / `invalide` |
+| go reçu < 2 s après un go | — | `ignored` / `rebond` (`VOICE_MOVE_DEBOUNCE_S`) — **jamais** sur « stop » |
+| stop | toujours (même HORS séance, même pendant une lubie stop) | `hold` : `route_speed 0` **republié** (idempotent) ; arrêt vocal TOUJOURS posé s'il n'y en a pas (même pendant une lubie) — la vitesse déjà retenue n'est jamais écrasée |
+| go | hors séance (avant START, après la fin) | `ignored` / `hors_seance` |
+| go | lubie active (cible `speed`) | `close_lubie` : fermée `closed_by: "voix"`, la vitesse EN VIGUEUR est rendue (le fader, lui, ne rend rien) ; avec un arrêt vocal, il tombe aussi et UNE seule vitesse part, min(retenue, en vigueur) |
+| go | arrêt vocal | `resume` : la vitesse retenue, plafonnée à la vitesse en vigueur |
+| go | route OFF, `route_state` latché « off » ET `route_state_cause` latchée « boot » | `relaunch` : salve de 3 « on » à 0,5 s, `voice_relaunch_confirmed` seulement à l'état latché « on », `voice_relaunch_expired` après 3 s |
+| go | route OFF, cause « cmd » ou `off` vu sur `route` | `ignored` / `route_off_par_david` |
+| go | route OFF, cause jamais reçue / état latché pas « off » | `ignored` / `cause_inconnue` / `etat_inconnu` |
+| go | en route, rien d'arrêté | `ignored` / `deja_en_marche` |
+
+**Cause latchée (D1)** : route_driver publie `route_state_cause`
+(TRANSIENT_LOCAL des deux côtés, JSON `"boot"` | `"cmd"`) — « boot » au
+démarrage du node, « cmd » à CHAQUE extinction par commande, quel que soit le
+format accepté (`off`, `false`, `0`, `"0"`). Le régisseur ne se fie plus à son
+écoute de `route` (un `off` peut lui échapper, un régisseur relancé l'oublie) ;
+`ReenablePolicy.off_by_cmd` reste en CEINTURE (refus si la cause OU l'écoute
+dit « commande » ; l'écoute décode désormais `route` comme route_driver,
+`director.route_cmd_kind`). Accepté : au démarrage la cause est « boot », donc
+« go » lance une route que personne n'a encore lancée.
+
+**Vitesse en vigueur (D2)** : si une panne `speed` (batterie) est active, SA
+valeur est la vitesse en vigueur — retenue au « stop », plafond au « go »
+(fader 0,9, batterie 0,4 : stop puis go → `0.4`, `0`, `0.4`).
+
+**Défaut trouvé en sim le 22/10 (vérification du lot)** : lubie stop
+`lubie_nefs` démarrée (20:21:02) → Didier dit « stop » (`voice_move` hold,
+20:21:35) → la lubie finit par sa DURÉE (`fault_stop` 20:22:02.997) et REND la
+vitesse → Didier repart contre l'ordre de David → « go » à 20:22:04 ignoré
+`deja_en_marche`. Cause : « stop » ne posait pas d'arrêt vocal pendant une
+lubie, et la fin de lubie ne regardait pas l'arrêt vocal.
+
+**RÈGLE GÉNÉRALE (remplace les cas particuliers)** : tant qu'un arrêt vocal
+est posé, le régisseur ne publie **JAMAIS** de vitesse non nulle, sauf par
+« go » (voix) ou levée au fader (David). Concrètement :
+1. « stop » pose TOUJOURS l'arrêt vocal s'il n'y en a pas, même pendant une
+   lubie stop (qui reste intacte) ; vitesse retenue = vitesse en vigueur
+   (jamais notre propre 0 ; la `value` d'une panne `speed` active, D2) ;
+2. fin d'une lubie (durée ; pas l'abort) pendant un arrêt vocal : `""` publié
+   sur `chat_instruction`, AUCUNE vitesse rendue, l'arrêt reste posé ;
+3. début d'une lubie stop pendant un arrêt vocal : elle publie son 0, l'arrêt
+   n'est PAS levé, sa référence de fermeture au fader = la vitesse retenue ;
+4. panne `speed` (début ET fin) pendant un arrêt vocal : rien publié,
+   `fault_start` / `fault_stop` journalisés `"suppressed_by": "voice_hold"` ;
+   la panne reste active logiquement (sa `value` plafonne le « go ») ;
+5. « go » pendant lubie + arrêt vocal : ferme la lubie (`closed_by: "voix"`)
+   ET lève l'arrêt ; UNE seule publication = min(retenue, en vigueur) ;
+6. fader externe (> seuil vs vitesse retenue) : lève l'arrêt sans publier, et
+   ferme une lubie stop active (comportement fader existant) ;
+7. abort / fin de séance : lèvent l'arrêt sans republier, annulent la salve.
+   ⚠️ À l'ABORT, la lubie révoquée rend ensuite sa vitesse comme avant I1
+   (lecture littérale de « abort exclu », gravée par
+   `test_abort_pendant_lubie_et_arret_la_lubie_rend_sa_vitesse`, à confirmer) ;
+   à la fin par DURÉE, la lubie est arrêtée pendant que l'arrêt tient
+   encore : rien n'est rendu.
+
+Un `off` sur `route` ou un « stop » annule aussi une salve de relance. Un
+« 0 » dont la publication échoue ne pose pas d'arrêt vocal fantôme (un arrêt
+déjà posé, lui, reste).
+
+**Côté vision (D7)** : le mouvement n'est actif que si `ROS_DOMAIN_ID` vaut
+43 — sinon forcé à False avec un warning au démarrage du chat, même avec
+`CHAT_MOUVEMENT=true`. Les variables du banc (`CHAT_VAD_FACTOR`,
+`CHAT_WHISPER_MODEL`, `CHAT_MOUVEMENT`, `CHAT_PARTENAIRE`) ne sont plus lues à
+l'import de `vision_config` (une valeur invalide tuait TOUS les nodes vision)
+mais au démarrage de chat_node (`chat_env_overrides`) : valeur invalide =
+refus de démarrer du chat seul, avec message explicite.
+
+**Sécurité** : la voix n'agit que par `route` / `route_speed` (jamais de
+Twist), ne publie jamais une vitesse au-dessus de la vitesse en vigueur ni
+une vitesse inventée (vitesse inconnue → 0), ne relance jamais contre un `off`
+de David. « stop » est toujours appliqué et toujours republié. Garde-fou
+domaine 43 des deux côtés. Rien ne change dans robot_drive, twist_mux ou le
+deadman.
+
+**Limites connues (documentées, acceptées)** :
+- une exception TTS sur la DERNIÈRE phrase abandonne le tour avant
+  l'événement `Emotion` : le JSON de fin, donc un « go »/« stop », est perdu
+  (D7c) ;
+- « go » pendant une lubie stop=false la ferme aussi (la règle vise toute
+  lubie de cible `speed`) ;
+- pendant une batterie, la vitesse retenue est 0,4 : une ré-émission du
+  boîtier à 0,9 s'en écarte de plus du seuil et lève l'arrêt vocal ;
+- le boîtier qui ré-émet sa position SOUS le seuil est appliqué par
+  route_driver (défaut préexistant, déjà vrai pour les lubies) ;
+- `vad_replay` (outil CLI) ne voit plus `CHAT_VAD_FACTOR` (lu au démarrage du
+  chat seulement).
+
+Statut : **code fait le 22/10** (tests gravés + mutations dans les deux
+dépôts) ; **à vérifier en sim** avec le banc complet (régisseur + chat_node
+`CHAT_MOUVEMENT=true`).

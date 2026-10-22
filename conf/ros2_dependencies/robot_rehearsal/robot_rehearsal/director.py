@@ -18,6 +18,8 @@ pour les types purement messagers du lot R3, les messages EXACTS à publier
 (contrats partagés avec chat_node, gravés par test). speed_factor /
 speed_in_effect / fader_moved : la vitesse de cheminement telle que le
 régisseur la raisonne (rendue à la fin, référence de la fermeture au fader).
+VoiceMove (lot I1) : les ordres de marche demandés par Didier (« go » /
+« stop »), décidés ici, exécutés par le node via route / route_speed.
 """
 from __future__ import annotations
 
@@ -27,7 +29,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
-                                       INSTRUCTION_TOPIC, ROUTE_SPEED_TOPIC)
+                                       INSTRUCTION_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES)
 from robot_rehearsal.scenario import Fault, Scenario
 
 
@@ -62,6 +64,12 @@ class Director:
 
     def active(self) -> List[str]:
         return sorted(self._active_targets.values())
+
+    def active_fault(self, target: str) -> Fault | None:
+        """Panne active sur `target`, ou None (mouvement à la voix : y a-t-il
+        une lubie à fermer sur la cible `speed` ?)."""
+        fid = self._active_targets.get(target)
+        return None if fid is None else next(f for f in self.scenario.faults if f.id == fid)
 
     # --- transitions --------------------------------------------------------------
     def start(self, now_s: float) -> None:
@@ -258,6 +266,22 @@ def speed_factor(raw) -> float | None:
     return min(1.0, max(0.0, value))
 
 
+def route_cmd_kind(raw: str) -> str | None:
+    """Payload du topic `route` -> "on" | "off" | None, avec EXACTEMENT les
+    formats que route_driver accepte (JSON sinon brut ; on/true/1/"1",
+    off/false/0/"0"). Revue I1 : le régisseur ne reconnaissait que "off" —
+    un `false` de David lui échappait."""
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        value = raw
+    if value in ("on", True, 1, "1"):
+        return "on"
+    if value in ("off", False, 0, "0"):
+        return "off"
+    return None
+
+
 def speed_in_effect(external: float | None, initial: float | None, fallback: float) -> float:
     """Vitesse EN VIGUEUR côté route : la dernière consigne EXTERNE (fader,
     page) si connue, sinon la vitesse initiale du launch, sinon `fallback`
@@ -311,11 +335,52 @@ class ReenablePolicy:
         self.max_delay_s = float(max_delay_s)
         self.retry_s = float(retry_s)
         self._route_on = False
+        # Le dernier ordre vu sur `route` est-il un `off` (David, page, STOP
+        # contenus) ? CEINTURE de la cause latchée ci-dessous (revue I1) : un
+        # `off` peut échapper à l'écoute et un régisseur relancé l'oublie,
+        # mais quand il a été vu, il interdit la relance vocale même après
+        # un reboot. Inchangé par note_state.
+        self._off_by_cmd = False
+        # BRETELLES (revue I1, 22/10) : état et cause LATCHÉS publiés par
+        # route_driver (None = jamais reçus). Seuls « off » + « boot » (route
+        # éteinte par un respawn) autorisent la relance vocale.
+        self._latched_state: str | None = None
+        self._cause: str | None = None
         self._pending: List[Reenable] = []
 
     @property
     def route_on(self) -> bool:
         return self._route_on
+
+    @property
+    def off_by_cmd(self) -> bool:
+        return self._off_by_cmd
+
+    @property
+    def cause(self) -> str | None:
+        return self._cause
+
+    def note_cause(self, cause) -> None:
+        """Cause latchée de l'état (route_state_cause) ; valeur hors
+        ROUTE_STATE_CAUSES ignorée (la dernière connue tient)."""
+        if cause in ROUTE_STATE_CAUSES:
+            self._cause = cause
+
+    def voice_relaunch_refusal(self) -> str | None:
+        """La voix (« go ») peut-elle relancer la route ? -> None si oui,
+        sinon la raison du refus. Seulement si l'état latché est « off » ET
+        sa cause latchée « boot » (respawn), et qu'aucun `off` n'a été vu sur
+        `route` : jamais de « route on » vocal contre l'ordre de David."""
+        if self._off_by_cmd or self._cause == "cmd":
+            return "route_off_par_david"
+        if self._cause is None:
+            return "cause_inconnue"
+        if self._latched_state != "off":
+            return "etat_inconnu"
+        return None
+
+    def voice_may_relaunch(self) -> bool:
+        return self.voice_relaunch_refusal() is None
 
     def note_state(self, state: str, now_s: float) -> List[str]:
         """État latché de route_driver. « on » reçu après not_before CONFIRME
@@ -323,6 +388,7 @@ class ReenablePolicy:
         qui démarre éteint) n'annule RIEN."""
         if state not in ("on", "off"):
             return []
+        self._latched_state = state
         self._route_on = state == "on"
         if state != "on":
             return []
@@ -334,8 +400,10 @@ class ReenablePolicy:
         """Commande vue sur `route` : seul un `off` ANNULE les relances."""
         if cmd == "on":
             self._route_on = True
+            self._off_by_cmd = False
         elif cmd == "off":
             self._route_on = False
+            self._off_by_cmd = True
             self._pending.clear()
 
     def arm(self, fault_id: str, now_s: float) -> bool:
@@ -365,3 +433,186 @@ class ReenablePolicy:
                     send = True
                     r.last_sent_s = now_s
         return send, expired
+
+
+# --- Mouvement à la voix (lot I1, 22/10, étude §13.11) ------------------------------
+
+# Anti-rebond : un ordre IDENTIQUE au précédent reçu il y a moins de ce délai
+# est ignoré (le LLM peut redire « go » au tour suivant, une salve de test
+# peut doubler un message).
+VOICE_MOVE_DEBOUNCE_S = 2.0
+# Relance vocale de la route : salve de VOICE_RELAUNCH_SENDS « on » espacés
+# de VOICE_RELAUNCH_PERIOD_S (un message DDS unique peut se perdre, vécu le
+# 08/10), confirmée SEULEMENT par l'état latché « on » ; sans confirmation
+# VOICE_RELAUNCH_CONFIRM_S après le premier envoi, elle EXPIRE (journalisé).
+VOICE_RELAUNCH_SENDS = 3
+VOICE_RELAUNCH_PERIOD_S = 0.5
+VOICE_RELAUNCH_CONFIRM_S = 3.0
+
+VOICE_COMMANDS = ("go", "stop")
+
+
+@dataclass(frozen=True)
+class VoiceDecision:
+    effect: str                  # "close_lubie" | "resume" | "relaunch" | "hold" | "ignored"
+    reason: str | None = None    # pourquoi « ignored »
+    speed: float | None = None   # route_speed à publier (hold : 0, resume : vitesse d'avant)
+
+
+class VoiceMove:
+    """Ordres de marche demandés par Didier (« go »/« stop », topic
+    rehearsal/chat_move) — logique PURE ; le node publie. La voix n'agit QUE
+    par route / route_speed, comme le reste du régisseur. Règles (gravées
+    par test) :
+     - ordre hors {"go","stop"} -> ignoré (« invalide ») ; « go » reçu moins
+       de debounce_s après un « go » -> ignoré (« rebond ») — JAMAIS
+       d'anti-rebond sur « stop » (revue I1) ;
+     - hors séance : « go » ignoré (« hors_seance »), « stop » APPLIQUÉ —
+       s'arrêter est toujours sûr ;
+     - RÈGLE GÉNÉRALE (défaut trouvé en sim le 22/10 : une lubie qui finissait
+       par sa durée rendait la vitesse et Didier repartait contre l'ordre de
+       David) : tant qu'un ARRÊT VOCAL est posé, le régisseur ne publie
+       JAMAIS de vitesse non nulle, sauf par « go » (voix) ou levée au fader
+       (David). Le node l'applique aux lubies et aux pannes `speed` ;
+     - « stop » : route_speed 0 TOUJOURS republié (idempotent, revue I1 :
+       un 0 perdu ou écrasé ne doit pas rendre « stop » inopérant). Pose
+       TOUJOURS l'ARRÊT VOCAL s'il n'y en a pas, même pendant une lubie stop
+       (qui reste intacte) — vitesse retenue = vitesse en vigueur, jamais
+       notre propre 0 ; la vitesse déjà retenue n'est jamais écrasée. Annule
+       une relance vocale en cours ;
+     - « go », dans cet ordre : lubie active -> la fermer (closed_by
+       « voix ») ; sans arrêt vocal, la lubie rend la vitesse EN VIGUEUR ;
+       avec un arrêt vocal, il est levé aussi et `speed` porte l'UNIQUE
+       vitesse à publier, min(retenue, en vigueur) ; sinon arrêt vocal -> rendre
+       la vitesse retenue (jamais plus que la vitesse en vigueur) ; sinon
+       route OFF -> relance « route on » si `relaunch_refusal` est None (état
+       latché off + cause latchée boot), sinon ignoré avec cette raison
+       (« route_off_par_david », « cause_inconnue », « etat_inconnu ») ;
+       sinon « deja_en_marche ». Jamais de vitesse inventée ;
+     - le fader reste maître : une consigne externe qui s'écarte de plus de
+       EXTERNAL_SPEED_DELTA de la vitesse retenue LÈVE l'arrêt vocal sans
+       rien publier (le node ferme aussi une lubie stop active) ; abort / fin
+       de séance le lèvent sans republier (abort). Le scénario (lubie,
+       `speed`) ne le lève JAMAIS.
+    """
+
+    def __init__(self, *, debounce_s: float = VOICE_MOVE_DEBOUNCE_S):
+        self.debounce_s = float(debounce_s)
+        self._last: Tuple[str, float] | None = None   # (ordre, instant) du dernier ordre valide
+        self._hold_before: float | None = None        # vitesse retenue par l'arrêt vocal, None = pas d'arrêt
+        self._relaunch_since: float | None = None     # premier envoi de la salve, None = pas de relance
+        self._relaunch_sent = 0
+        self._relaunch_last: float | None = None
+
+    @property
+    def hold_before(self) -> float | None:
+        return self._hold_before
+
+    @property
+    def relaunching(self) -> bool:
+        return self._relaunch_since is not None
+
+    def decide(self, cmd, now_s: float, *, in_session: bool, lubie_active: bool,
+               route_on: bool, relaunch_refusal: str | None,
+               speed_in_effect: float) -> VoiceDecision:
+        """Décide l'effet d'un ordre et met l'état à jour (arrêt vocal posé
+        ou levé, salve de relance armée). `lubie_active` : une lubie tient la
+        cible `speed`. Le node exécute : close_lubie -> close_active +
+        fermeture « voix » (+ `speed` publiée seule si non None) ; hold /
+        resume -> route_speed `speed` ; relance -> relaunch_due()."""
+        if cmd not in VOICE_COMMANDS:
+            return VoiceDecision("ignored", "invalide")
+        if (cmd == "go" and self._last is not None and self._last[0] == "go"
+                and now_s - self._last[1] < self.debounce_s):
+            return VoiceDecision("ignored", "rebond")
+        self._last = (cmd, now_s)
+        if cmd == "stop":
+            # Un « stop » coupe toute relance vocale en vol : jamais de
+            # « route on » qui suivrait un ordre d'arrêt.
+            self._cancel_relaunch()
+            if self._hold_before is None:
+                self._hold_before = speed_in_effect
+            # 0 entier : même texte « 0 » que l'arrêt d'une lubie.
+            return VoiceDecision("hold", speed=0)
+        if not in_session:
+            return VoiceDecision("ignored", "hors_seance")
+        if lubie_active:
+            if self._hold_before is None:
+                return VoiceDecision("close_lubie")
+            # Lubie ET arrêt vocal : les deux tombent, UNE seule vitesse part.
+            speed = min(self._hold_before, speed_in_effect)
+            self._hold_before = None
+            return VoiceDecision("close_lubie", speed=speed)
+        if self._hold_before is not None:
+            # Jamais plus vite que la vitesse en vigueur : le jitter du boîtier
+            # (sous le seuil, donc arrêt maintenu) a pu la baisser un peu.
+            speed = min(self._hold_before, speed_in_effect)
+            self._hold_before = None
+            return VoiceDecision("resume", speed=speed)
+        if not route_on:
+            if relaunch_refusal is not None:
+                return VoiceDecision("ignored", relaunch_refusal)
+            if self._relaunch_since is None:
+                self._relaunch_since = now_s
+                self._relaunch_sent = 0
+                self._relaunch_last = None
+            return VoiceDecision("relaunch")
+        return VoiceDecision("ignored", "deja_en_marche")
+
+    def release_hold(self) -> float | None:
+        """Lève l'arrêt vocal SANS rien publier -> la vitesse qu'il retenait
+        (None s'il n'y en avait pas). Appelé à l'abort / la fin, et par le
+        node si le « 0 » d'un « stop » n'a pas pu partir."""
+        held, self._hold_before = self._hold_before, None
+        return held
+
+    def fader(self, value: float) -> bool:
+        """Consigne route_speed EXTERNE : -> True si elle LÈVE l'arrêt vocal
+        (geste de David, même seuil que la fermeture d'une lubie au fader).
+        Rien n'est publié : David vient de fixer la vitesse."""
+        if self._hold_before is None or not fader_moved(value, self._hold_before):
+            return False
+        self._hold_before = None
+        return True
+
+    def note_route_cmd(self, cmd: str) -> bool:
+        """Un `off` vu sur `route` annule la salve : jamais de « on » contre
+        David. -> True si une relance a été annulée (le journal le dit)."""
+        if cmd != "off" or self._relaunch_since is None:
+            return False
+        self._cancel_relaunch()
+        return True
+
+    def note_state(self, state: str) -> bool:
+        """État latché « on » reçu pendant la salve -> True : relance CONFIRMÉE."""
+        if state != "on" or self._relaunch_since is None:
+            return False
+        self._cancel_relaunch()
+        return True
+
+    def relaunch_due(self, now_s: float) -> Tuple[bool, bool]:
+        """-> (envoyer « on » maintenant ?, relance expirée ?). Au plus
+        VOICE_RELAUNCH_SENDS envois, espacés de VOICE_RELAUNCH_PERIOD_S."""
+        if self._relaunch_since is None:
+            return False, False
+        if now_s - self._relaunch_since >= VOICE_RELAUNCH_CONFIRM_S:
+            self._cancel_relaunch()
+            return False, True
+        if self._relaunch_sent < VOICE_RELAUNCH_SENDS and (
+                self._relaunch_last is None or now_s - self._relaunch_last >= VOICE_RELAUNCH_PERIOD_S):
+            self._relaunch_sent += 1
+            self._relaunch_last = now_s
+            return True, False
+        return False, False
+
+    def abort(self) -> Tuple[float | None, bool]:
+        """Abort / fin de séance : lève l'arrêt vocal SANS republier de
+        vitesse et annule la salve -> (vitesse qui était retenue, relance annulée ?)."""
+        relaunching = self._relaunch_since is not None
+        self._cancel_relaunch()
+        return self.release_hold(), relaunching
+
+    def _cancel_relaunch(self) -> None:
+        self._relaunch_since = None
+        self._relaunch_sent = 0
+        self._relaunch_last = None

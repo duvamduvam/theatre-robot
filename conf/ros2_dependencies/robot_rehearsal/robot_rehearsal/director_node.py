@@ -21,6 +21,35 @@ sur rehearsal/cmd (autostart false par défaut), puis exécute la timeline :
   chat        -> panne de conversation sur rehearsal/chat_fault, « pass » à la
                  fin (sauf phantom, ponctuel : rien à lever) ;
 et JOURNALISE tout (robot.diagnostic.journal, JSONL) : la frise du débrief.
+MOUVEMENT À LA VOIX (lot I1, étude §13.11) : les ordres de marche que
+Didier demande (rehearsal/chat_move, "go"/"stop", publiés par chat_node)
+sont décidés par director.VoiceMove et journalisés `voice_move` :
+  close_lubie -> « go » pendant une lubie : fermée, closed_by « voix », la
+                 vitesse EN VIGUEUR est rendue (contrairement au fader) ;
+                 avec un arrêt vocal, il tombe aussi et UNE seule vitesse
+                 part : min(retenue, en vigueur) ;
+  resume      -> « go » pendant un arrêt vocal : la vitesse retenue revient ;
+  relaunch    -> « go », route OFF par RESPAWN : état latché route_state
+                 « off » ET cause latchée route_state_cause « boot » (jamais
+                 « cmd » = un `off` de David, ni cause inconnue) : salve de
+                 « route on », confirmée par l'état latché ;
+  hold        -> « stop » : route_speed 0 TOUJOURS republié, arrêt vocal
+                 TOUJOURS posé, même pendant une lubie (la vitesse en
+                 vigueur — celle d'une panne `speed` active le cas échéant —
+                 est retenue, jamais écrasée) ; appliqué même hors séance,
+                 jamais filtré par l'anti-rebond ;
+  ignored     -> avec sa raison (invalide, rebond — « go » seulement —,
+                 hors_seance, route_off_par_david, cause_inconnue,
+                 etat_inconnu, deja_en_marche).
+RÈGLE GÉNÉRALE (défaut trouvé en sim le 22/10 : une lubie finie par sa
+durée rendait la vitesse, Didier repartait contre l'ordre de David) : tant
+qu'un arrêt vocal est posé, le régisseur ne publie JAMAIS de vitesse non
+nulle, sauf par « go » ou levée au fader. Une lubie qui finit ne rend rien
+(« "" » part quand même) ; une lubie stop qui démarre publie son 0 sans
+lever l'arrêt ; une panne `speed` ne publie rien (journalisée
+`"suppressed_by": "voice_hold"`, active logiquement). Le fader de David
+lève l'arrêt vocal sans rien publier (et ferme une lubie stop active) ;
+abort / fin de séance aussi (et annulent une salve de relance).
 Les éléments `t: poi` partent sur l'« enter » du POI (rehearsal/poi_event) ;
 un « enter » hors séance (avant START, après la fin) est journalisé
 `poi_enter_ignored` et PAS mémorisé : START doit précéder `route on`.
@@ -31,7 +60,10 @@ en passant (chien de garde côté relais, pas ici).
 SÉCURITÉ : ce node ne publie JAMAIS de Twist. Ses seuls effets sur le
 mouvement passent par le relais de cmd_vel_follow (sous la télécommande, au-
 dessus du deadman) et par route/route_speed (le cheminement). Il n'est jamais
-dans le bringup du robot.
+dans le bringup du robot. La VOIX n'agit que par ces mêmes route /
+route_speed : jamais de vitesse au-dessus de la vitesse en vigueur, jamais
+de vitesse inventée, jamais de « route on » contre un `off` de David (même
+après un reboot de route_driver) ; « stop » est toujours appliqué.
 """
 import json
 import logging
@@ -47,12 +79,12 @@ from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 
 from robot.diagnostic.journal import JournalWriter, make_event
-from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, DIRECTOR_CMD_TOPIC,
+from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_TOPIC, DIRECTOR_CMD_TOPIC,
                                        HEARTBEAT_TOPIC, INSTRUCTION_TOPIC, POI_EVENT_TOPIC,
                                        RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC,
-                                       ROUTE_STATE_TOPIC, check_domain)
-from robot_rehearsal.director import (MESSAGE_TYPES, Director, ReenablePolicy, fader_moved, messages,
-                                      speed_factor, speed_in_effect)
+                                       ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC, check_domain)
+from robot_rehearsal.director import (MESSAGE_TYPES, Director, ReenablePolicy, VoiceMove, fader_moved,
+                                      messages, route_cmd_kind, speed_factor, speed_in_effect)
 from robot_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from robot_rehearsal.route import RouteError, load_route
 from robot_rehearsal.scenario import ScenarioError, load_scenario
@@ -121,6 +153,9 @@ class DirectorNode(Node):
         self._own_speed = deque(maxlen=16)
         self._external_speed = None
         self._speed_before_lubie = None
+        # Ordres de marche de Didier (lot I1) : arrêt vocal, anti-rebond et
+        # salve de relance vivent dans la logique pure.
+        self.voice = VoiceMove()
 
         journal_dir = str(self.get_parameter("journal_dir").value)
         os.makedirs(journal_dir, exist_ok=True)
@@ -149,6 +184,13 @@ class DirectorNode(Node):
         # une relance (QoS TRANSIENT_LOCAL des DEUX côtés, sinon pas de latch).
         self.create_subscription(StringTime, ROUTE_STATE_TOPIC, self._on_route_state,
                                  QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        # CAUSE latchée de cet état ("boot" | "cmd", revue I1) : seule source
+        # qui dise si une route OFF l'est par reboot ou par David — même QoS.
+        self.create_subscription(StringTime, ROUTE_STATE_CAUSE_TOPIC, self._on_route_cause,
+                                 QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        # Ordres de marche demandés par Didier (chat_node). VOLATILE : un
+        # ordre ancien rejoué au démarrage ferait repartir Didier.
+        self.create_subscription(StringTime, CHAT_MOVE_TOPIC, self._on_chat_move, 10)
         self.create_timer(0.2, lambda: self.pub_heartbeat.publish(StringTime(msg="1", time=0, anim=False)))
         self.create_timer(1.0 / float(self.get_parameter("tick_hz").value), self._tick)
 
@@ -201,13 +243,32 @@ class DirectorNode(Node):
         self.log("scenario_start", {"name": self.scenario.name, "seed": self.scenario.seed})
 
     def _on_route_state(self, msg: StringTime):
-        confirmed = self.reenable.note_state(msg.msg.strip().strip('"'), time.monotonic())
+        state, now = msg.msg.strip().strip('"'), time.monotonic()
+        confirmed = self.reenable.note_state(state, now)
         if confirmed:
             # Journalisé SEULEMENT sur confirmation par l'état latché.
             self.log("route_reenable", {"after_kill": confirmed})
+        if self.voice.note_state(state):
+            # Relance VOCALE : même règle, confirmée par l'état latché seulement.
+            self.log("voice_relaunch_confirmed", {})
 
     def _on_route_cmd(self, msg: StringTime):
-        self.reenable.note_route_cmd(msg.msg.strip().strip('"'))
+        # Décodé comme route_driver le décode (off = "off"/false/0/"0") :
+        # un `false` de David doit annuler les relances comme un "off".
+        cmd = route_cmd_kind(msg.msg)
+        if cmd is None:
+            return
+        self.reenable.note_route_cmd(cmd)
+        if self.voice.note_route_cmd(cmd):
+            self.log("voice_relaunch_cancelled", {"by": "route_off"})
+
+    def _on_route_cause(self, msg: StringTime):
+        """Contrat route_driver : json.dumps("boot"|"cmd") ; brut toléré."""
+        try:
+            cause = json.loads(msg.msg)
+        except (ValueError, TypeError):
+            cause = msg.msg.strip()
+        self.reenable.note_cause(cause)
 
     def _on_route_speed(self, msg: StringTime):
         """route_speed vu sur le topic. NOS publications (speed, lubie) sont
@@ -225,6 +286,10 @@ class DirectorNode(Node):
         if value is None:
             return   # illisible : route_driver l'ignore aussi
         self._external_speed = value
+        if self.voice.fader(value):
+            # Le fader reste maître : David vient de fixer la vitesse, l'arrêt
+            # vocal est levé SANS rien publier (même seuil que la lubie).
+            self.log("voice_hold_released", {"by": "fader", "value": value})
         if self._speed_before_lubie is None or not fader_moved(value, self._speed_before_lubie):
             return
         try:
@@ -262,9 +327,89 @@ class DirectorNode(Node):
         else:
             self.get_logger().warning(f"poi_event : événement inconnu {kind!r}")
 
+    def _on_chat_move(self, msg: StringTime):
+        """Ordre de marche demandé par Didier (lot I1). Contrat chat_node :
+        json.dumps("go"|"stop") ; le brut est toléré (salve de test à la
+        main). Tout est journalisé `voice_move`, ignorés compris."""
+        try:
+            raw = msg.msg.strip()
+            try:
+                cmd = json.loads(raw)
+            except (ValueError, TypeError):
+                cmd = raw
+            self._voice_move(cmd)
+        except Exception as e:   # un callback qui lève tue le node : jamais ici
+            self.get_logger().error(f"chat_move {msg.msg!r} : {e!r}")
+
+    def _voice_move(self, cmd):
+        now = time.monotonic()
+        lubie = self.director.active_fault("speed")
+        relaunching = self.voice.relaunching
+        had_hold = self.voice.hold_before is not None
+        if lubie is not None and lubie.type == "speed":
+            # Panne `speed` (batterie) active : SA valeur est la vitesse en
+            # vigueur — retenue au « stop », plafond au « go » (revue I1 :
+            # sinon « go » rendait le fader, au-dessus de la batterie).
+            in_effect = lubie.params["value"]
+        else:
+            # Vitesse inconnue (aucune consigne, paramètre `speed` illisible) :
+            # 0 — jamais de vitesse inventée.
+            in_effect = self._speed_in_effect(0.0)
+        decision = self.voice.decide(
+            cmd, now, in_session=self.director.started and not self.director.ended,
+            lubie_active=lubie is not None and lubie.type == "lubie",
+            route_on=self.reenable.route_on, relaunch_refusal=self.reenable.voice_relaunch_refusal(),
+            speed_in_effect=in_effect)
+        payload = {"cmd": cmd, "effect": decision.effect}
+        if decision.reason is not None:
+            payload["reason"] = decision.reason
+        self.log("voice_move", payload)
+        if relaunching and not self.voice.relaunching and decision.effect != "relaunch":
+            self.log("voice_relaunch_cancelled", {"by": "stop"})
+        if decision.effect == "close_lubie":
+            # Comme le fader, mais Didier repart : sans arrêt vocal, la lubie
+            # rend la vitesse en vigueur (_apply) ; avec un arrêt vocal (levé
+            # par decide), elle ne rend RIEN et on publie l'UNIQUE vitesse
+            # décidée — min(retenue, en vigueur).
+            self._execute(self.director.close_active("speed", now, only_type="lubie"), closed_by="voix",
+                          give_back=decision.speed is None)
+            if decision.speed is not None:
+                self._publish(ROUTE_SPEED_TOPIC, json.dumps(decision.speed))
+        elif decision.effect in ("hold", "resume"):
+            try:
+                self._publish(ROUTE_SPEED_TOPIC, json.dumps(decision.speed))
+            except Exception:
+                if decision.effect == "hold" and not had_hold:
+                    # « 0 » jamais parti : pas d'arrêt vocal fantôme posé par
+                    # CET ordre (un « go » suivant rendrait une vitesse alors
+                    # que Didier n'a jamais été arrêté). Un arrêt déjà posé
+                    # avant, lui, reste.
+                    self.voice.release_hold()
+                raise
+        elif decision.effect == "relaunch":
+            self._voice_relaunch_step(now)   # premier « on » tout de suite, la suite au tick
+
+    def _voice_relaunch_step(self, now: float):
+        """Salve de relance vocale : envoie « on » quand c'est dû, journalise l'expiration."""
+        send, expired = self.voice.relaunch_due(now)
+        if send:
+            self.pub_route.publish(StringTime(msg="on", time=0, anim=False))
+            self.get_logger().info("relance vocale : « on » envoyé")
+        if expired:
+            self.log("voice_relaunch_expired", {})
+
     def _abort(self, reason: str):
         """Tout révoquer, en une fois : pannes actives, relances armées,
         processus gelés (ceinture : le gardien détaché fera aussi SIGCONT)."""
+        # Voix d'abord (sinon l'action « end » ci-dessous la lèverait sous
+        # l'étiquette « fin ») : arrêt vocal levé SANS republier de vitesse
+        # (abort = tout révoquer, Didier reste où il est jusqu'au fader),
+        # salve de relance annulée.
+        held, relaunching = self.voice.abort()
+        if held is not None:
+            self.log("voice_hold_released", {"by": "abort", "held": held})
+        if relaunching:
+            self.log("voice_relaunch_cancelled", {"by": "abort"})
         self._execute(self.director.abort(time.monotonic()))
         dropped = self.reenable.abort()
         for proc in list(self._paused):
@@ -294,13 +439,27 @@ class DirectorNode(Node):
             self.get_logger().info(f"relance route : « on » envoyé {self.reenable.pending()}")
         if expired:
             self.log("route_reenable_expired", {"after_kill": expired})
+        try:
+            self._voice_relaunch_step(now)
+        except Exception as e:   # un timer qui lève tue le node : jamais ici
+            self.get_logger().error(f"relance vocale : {e!r}")
 
     # --- exécution des actions ---------------------------------------------
-    def _execute(self, actions, closed_by=None):
-        """`closed_by` ("fader") : les stops viennent d'une fermeture par
-        David — journalisés avec, et la vitesse n'est PAS rendue."""
+    def _execute(self, actions, closed_by=None, give_back=True):
+        """`closed_by` : les stops viennent d'une fermeture — journalisés
+        avec. "fader" (David) : la vitesse n'est PAS rendue ; "voix" (Didier
+        repart, lot I1) : la vitesse en vigueur EST rendue (cf. _apply), sauf
+        arrêt vocal (cf. _voice_move). Panne `speed` pendant un arrêt vocal :
+        rien publié, journalisée `"suppressed_by": "voice_hold"`."""
         for a in actions:
             if a.kind == "end":
+                # Fin de séance (durée, ou abort qui l'a déjà fait) : comme
+                # _abort — arrêt vocal levé sans republier, salve annulée.
+                held, relaunching = self.voice.abort()
+                if held is not None:
+                    self.log("voice_hold_released", {"by": "fin", "held": held})
+                if relaunching:
+                    self.log("voice_relaunch_cancelled", {"by": "fin"})
                 self.log("scenario_end", {"status": self.director.status()})
                 continue
             f = a.fault
@@ -313,8 +472,10 @@ class DirectorNode(Node):
                 continue
             if a.kind == "stop" and closed_by is not None:
                 payload["closed_by"] = closed_by
+            if f.type == "speed" and self.voice.hold_before is not None:
+                payload["suppressed_by"] = "voice_hold"   # cf. _apply, règle générale
             try:
-                self._apply(a.kind, f, closed_by)
+                self._apply(a.kind, f, closed_by, give_back)
                 self.log(f"fault_{a.kind}", payload)
             except Exception as e:   # ProcessFaultError, RuntimeError, OSError (pgrep absent, PID…)
                 self.log("fault_error", dict(payload, error=repr(e)))
@@ -322,7 +483,9 @@ class DirectorNode(Node):
                     # Jamais de fault_stop pour une panne jamais appliquée.
                     self.director.cancel(f.id, time.monotonic())
 
-    def _apply(self, kind: str, f, closed_by=None):
+    def _apply(self, kind: str, f, closed_by=None, give_back=True):
+        """`give_back` False : une lubie qui finit ne rend PAS de vitesse
+        (« go » pendant un arrêt vocal : _voice_move publie la seule vitesse)."""
         p = f.params
         if f.type == "relay":
             if kind == "start":
@@ -352,7 +515,12 @@ class DirectorNode(Node):
         elif f.type == "speed":
             # Fin : la vitesse EN VIGUEUR (le fader de David), pas le restore figé.
             value = p["value"] if kind == "start" else self._speed_in_effect(p["restore"])
-            self._publish(ROUTE_SPEED_TOPIC, json.dumps(value))
+            # RÈGLE GÉNÉRALE (défaut vécu en sim le 22/10) : pendant un arrêt
+            # vocal, AUCUNE vitesse non nulle du scénario — Didier reste
+            # arrêté. La panne reste active logiquement : sa `value` compte
+            # comme vitesse en vigueur pour le « go » (_voice_move).
+            if self.voice.hold_before is None:
+                self._publish(ROUTE_SPEED_TOPIC, json.dumps(value))
         elif f.type in MESSAGE_TYPES:
             # instruction / lubie / chat : messages calculés par la logique pure
             # (director.messages, gravée par test) — ici on publie, rien d'autre.
@@ -360,9 +528,19 @@ class DirectorNode(Node):
             restore = in_effect = None
             if f.type == "lubie":
                 # Vitesse en vigueur : rendue au stop, sauf fermeture AU FADER
-                # (David vient de la fixer : la lui rendre l'écraserait).
+                # (David vient de la fixer : la lui rendre l'écraserait). La
+                # fermeture À LA VOIX (closed_by "voix") la rend : Didier repart.
                 in_effect = self._speed_in_effect(p["restore"])
-                restore = None if closed_by == "fader" else in_effect
+                held = self.voice.hold_before
+                if held is not None:
+                    # Lubie stop qui DÉMARRE pendant un arrêt vocal : elle publie
+                    # son 0, l'arrêt reste posé, et sa référence de fermeture
+                    # au fader est la vitesse retenue.
+                    in_effect = held
+                # RÈGLE GÉNÉRALE (défaut vécu en sim le 22/10) : une lubie qui
+                # FINIT pendant un arrêt vocal (durée, fader) ne rend RIEN —
+                # sinon Didier repartait contre l'ordre. "" part quand même.
+                restore = None if closed_by == "fader" or held is not None or not give_back else in_effect
             for topic, payload in messages(f, kind, text, restore_value=restore):
                 self._publish(topic, payload)
             if f.type == "lubie" and p["stop"]:

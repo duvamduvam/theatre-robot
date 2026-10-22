@@ -350,3 +350,186 @@ def test_speed_factor_decode_comme_route_driver():
     assert speed_factor("1.5") == 1.0 and speed_factor("-2") == 0.0   # borné, jamais refusé
     assert speed_factor("abc") is None and speed_factor("NaN") is None
     assert speed_factor(0.25) == 0.25                # paramètre ROS (déjà un nombre)
+
+
+# --- Lot I1 (22/10) : mouvement à la voix — logique pure -------------------------
+# Règles révisées par la revue adversariale I1 (D1 cause latchée, D3 « stop »
+# toujours republié, D5 pas d'anti-rebond sur « stop »). Mutations listées
+# dans le rapport du lot ; le node : test_director_node.py.
+from robot_rehearsal.director import VoiceDecision, VoiceMove, route_cmd_kind
+
+# Contexte par défaut : en séance, en route, rien d'arrêté, vitesse en vigueur 0.7.
+_EN_ROUTE = dict(in_session=True, lubie_active=False,
+                 route_on=True, relaunch_refusal="route_off_par_david", speed_in_effect=0.7)
+_RELANCABLE = dict(route_on=False, relaunch_refusal=None)
+
+
+def _ctx(**over):
+    return dict(_EN_ROUTE, **over)
+
+
+HOLD = VoiceDecision("hold", speed=0)
+
+
+def test_voix_ordre_invalide_ignore():
+    v = VoiceMove()
+    for cmd in ("recule", "GO", "", None, 1, ["go"]):
+        assert v.decide(cmd, 0.0, **_ctx()) == VoiceDecision("ignored", "invalide")
+    assert v.hold_before is None
+
+
+def test_voix_anti_rebond_2_s_sur_go_seulement():
+    v = VoiceMove()
+    assert v.decide("stop", 10.0, **_ctx()) == HOLD
+    assert v.decide("stop", 10.1, **_ctx()) == HOLD          # « stop » : JAMAIS filtré
+    assert v.decide("go", 10.5, **_ctx()) == VoiceDecision("resume", speed=0.7)
+    assert v.decide("go", 12.49, **_ctx()) == VoiceDecision("ignored", "rebond")
+    assert v.decide("go", 12.5, **_ctx()) == VoiceDecision("ignored", "deja_en_marche")
+    # Un « stop » entre deux « go » : le second n'est plus « identique au précédent ».
+    w = VoiceMove()
+    w.decide("go", 0.0, **_ctx()); w.decide("stop", 0.5, **_ctx())
+    assert w.decide("go", 1.0, **_ctx()) == VoiceDecision("resume", speed=0.7)
+
+
+def test_voix_hors_seance_go_ignore_stop_applique():
+    v = VoiceMove()
+    assert v.decide("go", 0.0, **_ctx(in_session=False, lubie_active=True)) == \
+        VoiceDecision("ignored", "hors_seance")
+    assert v.decide("stop", 5.0, **_ctx(in_session=False)) == HOLD
+    assert v.hold_before == 0.7
+
+
+def test_voix_stop_toujours_republie_et_garde_la_vitesse_retenue():
+    v = VoiceMove()
+    assert v.decide("stop", 5.0, **_ctx(speed_in_effect=0.4)) == HOLD
+    assert v.decide("stop", 6.0, **_ctx(speed_in_effect=0.9)) == HOLD
+    assert v.hold_before == 0.4      # la 1re vitesse retenue, jamais écrasée
+
+
+def test_voix_stop_pose_l_arret_meme_pendant_une_lubie():
+    # Défaut vécu en sim le 22/10 : pendant une lubie stop, « stop » ne posait
+    # pas d'arrêt vocal — la fin de la lubie rendait la vitesse.
+    v = VoiceMove()
+    assert v.decide("stop", 0.0, **_ctx(lubie_active=True, speed_in_effect=0.6)) == HOLD
+    assert v.hold_before == 0.6
+
+
+def test_voix_go_lubie_et_arret_une_seule_vitesse():
+    v = VoiceMove(); v.decide("stop", 0.0, **_ctx(lubie_active=True, speed_in_effect=0.7))
+    assert v.decide("go", 5.0, **_ctx(lubie_active=True, speed_in_effect=0.6)) == \
+        VoiceDecision("close_lubie", speed=0.6)                 # min(retenue 0.7, en vigueur 0.6)
+    assert v.hold_before is None
+
+
+def test_voix_go_ordre_des_regles():
+    # a. lubie active : fermée, AVANT même un arrêt vocal (levé avec elle)
+    assert VoiceMove().decide("go", 0.0, **_ctx(lubie_active=True)) == VoiceDecision("close_lubie")
+    v = VoiceMove(); v.decide("stop", 0.0, **_ctx())
+    assert v.decide("go", 5.0, **_ctx(lubie_active=True)) == VoiceDecision("close_lubie", speed=0.7)
+    # b. arrêt vocal : vitesse retenue rendue, arrêt levé
+    v.decide("stop", 6.0, **_ctx())
+    assert v.decide("go", 10.0, **_ctx()) == VoiceDecision("resume", speed=0.7)
+    assert v.hold_before is None
+    # c. route OFF : relance si aucun refus, sinon la raison du refus telle quelle
+    assert v.decide("go", 15.0, **_ctx(**_RELANCABLE)) == VoiceDecision("relaunch")
+    for refus in ("route_off_par_david", "cause_inconnue", "etat_inconnu"):
+        w = VoiceMove()
+        assert w.decide("go", 0.0, **_ctx(route_on=False, relaunch_refusal=refus)) == \
+            VoiceDecision("ignored", refus)
+        assert not w.relaunching
+    # d. en route, rien d'arrêté
+    assert VoiceMove().decide("go", 5.0, **_ctx()) == VoiceDecision("ignored", "deja_en_marche")
+
+
+def test_voix_go_jamais_plus_vite_que_la_vitesse_en_vigueur():
+    v = VoiceMove(); v.decide("stop", 0.0, **_ctx(speed_in_effect=0.7))
+    # Jitter du boîtier sous le seuil : arrêt maintenu, mais vitesse en vigueur 0.68.
+    assert v.decide("go", 5.0, **_ctx(speed_in_effect=0.68)) == VoiceDecision("resume", speed=0.68)
+
+
+def test_voix_fader_leve_l_arret_au_dela_du_seuil_seulement():
+    v = VoiceMove()
+    assert v.fader(0.9) is False                 # pas d'arrêt vocal : rien à lever
+    v.decide("stop", 0.0, **_ctx(speed_in_effect=0.5))
+    assert v.fader(0.55) is False and v.hold_before == 0.5   # écart 0,05 : ré-émission
+    assert v.fader(0.8) is True and v.hold_before is None
+    assert v.decide("go", 5.0, **_ctx()) == VoiceDecision("ignored", "deja_en_marche")
+
+
+def test_voix_release_hold_et_abort():
+    v = VoiceMove(); v.decide("stop", 0.0, **_ctx(speed_in_effect=0.6))
+    assert v.release_hold() == 0.6 and v.release_hold() is None
+    v.decide("stop", 5.0, **_ctx(speed_in_effect=0.3))
+    assert v.abort() == (0.3, False) and v.hold_before is None
+    w = VoiceMove(); w.decide("go", 0.0, **_ctx(**_RELANCABLE))
+    assert w.abort() == (None, True) and not w.relaunching
+
+
+def test_voix_salve_de_relance_3_envois_puis_expiration():
+    v = VoiceMove()
+    assert v.relaunch_due(0.0) == (False, False)          # rien d'armé
+    v.decide("go", 100.0, **_ctx(**_RELANCABLE))
+    assert v.relaunch_due(100.0) == (True, False)
+    assert v.relaunch_due(100.2) == (False, False)
+    assert v.relaunch_due(100.5) == (True, False)
+    assert v.relaunch_due(101.0) == (True, False)
+    assert v.relaunch_due(101.5) == (False, False)        # 3 envois, pas un de plus
+    assert v.relaunch_due(102.9) == (False, False)
+    assert v.relaunch_due(103.0) == (False, True)         # jamais confirmée : expirée, dite
+    assert not v.relaunching and v.relaunch_due(104.0) == (False, False)
+
+
+def test_voix_relance_confirmee_par_l_etat_latche_seulement():
+    v = VoiceMove()
+    assert v.note_state("on") is False                    # rien d'armé : pas une confirmation
+    v.decide("go", 10.0, **_ctx(**_RELANCABLE))
+    assert v.note_state("off") is False
+    assert v.note_state("on") is True and not v.relaunching
+
+
+def test_voix_relance_annulee_par_off_ou_par_stop():
+    v = VoiceMove()
+    assert v.note_route_cmd("off") is False               # rien à annuler
+    v.decide("go", 0.0, **_ctx(**_RELANCABLE))
+    assert v.note_route_cmd("on") is False and v.relaunching
+    assert v.note_route_cmd("off") is True and v.relaunch_due(0.5) == (False, False)
+    w = VoiceMove()
+    w.decide("go", 0.0, **_ctx(**_RELANCABLE))
+    w.decide("stop", 0.3, **_ctx(route_on=False))
+    assert not w.relaunching and w.relaunch_due(0.5) == (False, False)
+
+
+@pytest.mark.parametrize("raw,attendu", [
+    ("on", "on"), ('"on"', "on"), ("true", "on"), ("1", "on"), ('"1"', "on"),
+    ("off", "off"), ('"off"', "off"), ("false", "off"), ("0", "off"), ('"0"', "off"),
+    ("restart", None), ("OFF", None), (" off ", None), ("2", None), ("", None)])
+def test_route_cmd_kind_memes_formats_que_route_driver(raw, attendu):
+    assert route_cmd_kind(raw) == attendu
+
+
+def test_reenable_relance_vocale_seulement_sur_off_latche_par_boot():
+    p = ReenablePolicy()
+    assert p.voice_relaunch_refusal() == "cause_inconnue"            # rien reçu : refus
+    p.note_state("off", 0.0)
+    assert p.voice_relaunch_refusal() == "cause_inconnue"            # état sans cause : refus
+    p.note_cause("boot")
+    assert p.voice_relaunch_refusal() is None and p.voice_may_relaunch()   # démarrage / respawn
+    p.note_cause("n'importe quoi")                                   # ignorée : la dernière tient
+    assert p.cause == "boot"
+    p.note_state("on", 1.0)
+    assert p.voice_relaunch_refusal() == "etat_inconnu"              # pas OFF au latch
+    p.note_cause("cmd"); p.note_state("off", 2.0)                    # David coupe (n'importe quel format)
+    assert p.voice_relaunch_refusal() == "route_off_par_david"
+
+
+def test_reenable_ceinture_off_vu_sur_route_tient_apres_un_reboot():
+    p = ReenablePolicy()
+    p.note_route_cmd("on"); p.note_cause("boot"); p.note_state("on", 0.0)
+    p.note_route_cmd("off")                                          # off VU, cause pas (encore) reçue
+    assert (p.off_by_cmd, p.voice_relaunch_refusal()) == (True, "route_off_par_david")
+    p.note_cause("boot"); p.note_state("off", 9.0)                   # reboot : la cause redit « boot »…
+    assert p.voice_relaunch_refusal() == "route_off_par_david"       # …la ceinture tient
+    p.note_route_cmd("on")                                           # seul un « on » efface
+    assert p.off_by_cmd is False
+    p.note_state("off", 12.0)                                        # respawn après kill
+    assert p.voice_relaunch_refusal() is None

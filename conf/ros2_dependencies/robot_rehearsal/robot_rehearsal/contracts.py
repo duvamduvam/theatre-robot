@@ -21,6 +21,16 @@ ROUTE_SPEED_TOPIC = "route_speed"
 # du régisseur (bug vécu le 2026-10-08 : il déduisait l'état d'un unique
 # message `route on` volatile, raté sous charge → reboot sans relance).
 ROUTE_STATE_TOPIC = "route_state"
+# CAUSE du dernier état, publiée par route_driver en TRANSIENT_LOCAL (latché,
+# des DEUX côtés) : StringTime, payload JSON "boot" (au démarrage du node : la
+# route est éteinte faute d'ordre) | "cmd" (à CHAQUE extinction par commande,
+# quel que soit le format accepté : "off", false, 0, "0"). Revue adversariale
+# I1 (22/10) : le régisseur ne se fie plus à son ÉCOUTE du topic `route` (un
+# `off` peut lui échapper, un régisseur relancé l'oublie) pour savoir si la
+# route est OFF « par David » — la voix ne relance que sur state "off" ET
+# cause "boot" ; cause jamais reçue = refus.
+ROUTE_STATE_CAUSE_TOPIC = "route_state_cause"
+ROUTE_STATE_CAUSES = ("boot", "cmd")
 # Sortie roues : créneau du suivi de personne dans le twist_mux (prio 20).
 # Le suivi de personne doit être OFF quand la route est ON (même créneau).
 CMD_VEL_TOPIC = "cmd_vel_follow"
@@ -71,6 +81,14 @@ INSTRUCTION_TOPIC = "chat_instruction"
 # chaînes sont un contrat partagé avec le dépôt vision (gravées des deux côtés).
 CHAT_FAULT_TOPIC = "rehearsal/chat_fault"
 CHAT_FAULT_OPS = ("pass", "delay", "garble", "deaf", "mute", "phantom")
+# Mouvement à la voix (lot I1, 22/10) : ordre de marche demandé par Didier,
+# StringTime, payload JSON "go" | "stop". PRODUCTEUR : chat_node (dépôt
+# vision, seulement si CHAT_MOUVEMENT est posé — banc de répétition) ;
+# CONSOMMATEUR : le régisseur SEUL, qui décide et agit par route /
+# route_speed (jamais au-dessus de la vitesse en vigueur, jamais contre un
+# `off` de David). Sur le vrai robot il n'y a pas de régisseur : sans effet.
+# Chaîne gravée des deux côtés (CHAT_MOVE_TOPIC de chat_node).
+CHAT_MOVE_TOPIC = "rehearsal/chat_move"
 
 # Points de relais : nom -> (topic amont, topic aval, type). LISTE FERMÉE.
 # Le producteur est lancé par rehearsal.launch.py avec un remap vers l'amont ;
