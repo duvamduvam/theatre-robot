@@ -44,12 +44,10 @@
   </gazebo>
 
   <!-- ======== Caméra embarquée (SIM-ONLY, retour vidéo du pont web W3) ========
-       Petit link fixe à l'avant de la tête (tambour neck), regardant vers +x
-       (l'avant du robot) : la caméra suit donc le regard du cou, comme le fera
-       la webcam vision sur le vrai robot. preserveFixedJoint pour que camera_link
-       ne soit PAS fusionné dans head_link à la conversion URDF vers SDF (même
-       piège que les LED) ; sinon la référence gazebo du capteur ne trouverait
-       plus son link et la caméra ne serait pas montée. -->
+       Petit link fixe regardant vers +x (l'avant du robot). preserveFixedJoint
+       pour que camera_link ne soit PAS fusionné dans son parent à la conversion
+       URDF vers SDF (même piège que les LED) ; sinon la référence gazebo du
+       capteur ne trouverait plus son link et la caméra ne serait pas montée. -->
   <link name="camera_link">
     <visual>
       <geometry><box size="0.03 0.05 0.03"/></geometry>
@@ -58,15 +56,17 @@
     <xacro:box_inertial m="0.05" x="0.03" y="0.05" z="0.03"/>
   </link>
   <joint name="camera_joint" type="fixed">
-    <parent link="head_link"/>
+    <!-- FIXÉE AU BUSTE (torso_link), PAS à la tête : sur le vrai robot la
+         webcam est sur un support du buste, devant la bouche, et ne tourne PAS
+         avec le servo neck (établi par David le 2026-09-14, cf.
+         docs/hardware/overview.md §Vision & camera). Jusqu'au 22/10 la sim la
+         montait sur head_link : l'image tournait avec chaque animation de
+         cou (« parle »), ce que le robot réel ne fait pas. Position : bord
+         avant du haut du buste, juste au-dessus du plateau (tête de rayon
+         0,11 < demi-profondeur du buste 0,14 : pas de collision visuelle). -->
+    <parent link="torso_link"/>
     <child link="camera_link"/>
-    <!-- SUR LE DESSUS de la tête, légèrement en avant : la face avant du tambour
-         est maintenant occupée par la matrice LED "bouche" (mouth_leds_link), et
-         c'est aussi là qu'est la vraie caméra du robot (posée sur la tête, cf.
-         validation du gaze du 2026-07-12). Elle regarde toujours vers +x et suit
-         donc le cou. Seul consommateur : le retour vidéo web — le suivi de
-         personne, lui, consomme /vision/person_box, pas cette image. -->
-    <origin xyz="${head_radius/2} 0 ${head_height + 0.025}"/>
+    <origin xyz="${torso_length/2 + 0.015} 0 ${torso_height + 0.03}"/>
   </joint>
   <gazebo reference="camera_joint">
     <preserveFixedJoint>true</preserveFixedJoint>
