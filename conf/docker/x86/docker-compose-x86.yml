@@ -43,6 +43,11 @@ services:
       # (max_utterance_ms) et noyait la vraie phrase -> STT ''. Vide = défaut
       # 1,3 du robot (à remettre si le ReSpeaker, au plancher stable, revient).
       - CHAT_VAD_FACTOR=${CHAT_VAD_FACTOR:-6}
+      # Partenaire de scène que Didier CONNAÎT (cf. personas.PARTNER_TEMPLATE) :
+      # le banc sert à répéter, la personne au casque est David — pas un
+      # passant à découvrir. Jamais posé sur le Pi (en rue, Didier ne sait pas
+      # qui parle). Vide = aucun partenaire.
+      - CHAT_PARTENAIRE=${CHAT_PARTENAIRE:-David}
     network_mode: "host"
     # ipc host OBLIGATOIRE : FastDDS passe les DONNÉES en mémoire partagée
     # entre participants du même hôte (la découverte, elle, passe en UDP —

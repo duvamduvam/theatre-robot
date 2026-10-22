@@ -71,3 +71,22 @@ def test_nom_inconnu_leve_valueerror_avec_la_liste():
     # Le message doit lister les variantes disponibles : c'est lui que le
     # node logge quand la console envoie un nom inconnu (diagnostic direct).
     assert "bougon" in str(excinfo.value)
+
+
+# --- Partenaire connu (répétition, 22/10) -------------------------------------
+
+def test_sans_partenaire_le_prompt_est_inchange():
+    # Le Pi ne pose pas CHAT_PARTENAIRE : son prompt doit rester EXACTEMENT
+    # celui d'avant (aucun bloc de répétition qui fuirait en rue).
+    assert personas.compose_system_prompt("bougon") == personas.compose_system_prompt("bougon", None)
+    assert "Contexte de répétition" not in personas.compose_system_prompt("bougon", "")
+
+
+def test_partenaire_connu_ajoute_en_dernier_avec_son_prenom():
+    prompt = personas.compose_system_prompt("mauvaisefoi", "David")
+    assert "C'est David, qui t'a construit" in prompt
+    assert "ne lui demande jamais son nom" in prompt
+    # EN DERNIER : il doit primer sur « essaie de connaître le nom de ton
+    # interlocuteur » (ai_static) et suivre la personnalité du jour.
+    assert prompt.index("Contexte de répétition") > prompt.index(personas.PERSONAS["mauvaisefoi"])
+    assert prompt.endswith("ta personnalité du jour avec David.\n")

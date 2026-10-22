@@ -553,7 +553,7 @@ class ChatNode(Node):
         # YAML doit se voir tout de suite, pas au premier tour de parole
         # avec un Didier sans personnage) -------------------------------------
         try:
-            persona_prompt = personas.compose_system_prompt(persona_name)
+            persona_prompt = personas.compose_system_prompt(persona_name, config["chat_partner"])
         except ValueError as exc:
             self.get_logger().error(f"Paramètre persona invalide : {exc}")
             raise ChatStartupError("personnalité inconnue") from exc
@@ -813,7 +813,7 @@ class ChatNode(Node):
         self.get_logger().info(
             f"chat démarré (llm_model={llm_model}, whisper_model={whisper_model}, "
             f"mic_device={mic_device}, out_device={out_device}, "
-            f"persona={persona_name}) -> topics {FACE}/{ANIMATION}, toggle sur "
+            f"persona={persona_name}, partenaire={config['chat_partner']}) -> topics {FACE}/{ANIMATION}, toggle sur "
             f"'{CHAT_CMD_TOPIC}' (on/off), persona sur '{PERSONA_TOPIC}' "
             f"({'/'.join(personas.persona_names())}), état publié sur "
             f"'{CHAT_STATE_TOPIC}' (latché), régie sur '{CHAT_TEXT_TOPIC}'/"
@@ -864,7 +864,7 @@ class ChatNode(Node):
             self.get_logger().info(f"persona {name!r} déjà active — rien à faire")
             return
         try:
-            prompt = personas.compose_system_prompt(name)
+            prompt = personas.compose_system_prompt(name, config["chat_partner"])
         except ValueError as exc:
             self.get_logger().warning(f"commande persona refusée : {exc}")
             return

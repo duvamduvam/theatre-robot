@@ -70,3 +70,12 @@ def test_vad_variable_posee_remplace_le_facteur_seulement():
 def test_vad_variable_invalide_ou_trop_basse_refusee(raw):
     with pytest.raises(ValueError, match="CHAT_VAD_FACTOR"):
         vision_config.vad_config_from_env({"CHAT_VAD_FACTOR": raw})
+
+
+def test_partenaire_absent_ou_vide_donne_none():
+    assert vision_config.partner_from_env({}) is None
+    assert vision_config.partner_from_env({"CHAT_PARTENAIRE": "  "}) is None
+
+
+def test_partenaire_pose_est_nettoye():
+    assert vision_config.partner_from_env({"CHAT_PARTENAIRE": " David "}) == "David"

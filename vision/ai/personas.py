@@ -26,6 +26,8 @@ histoires d'origine sont des propositions d'atelier, pas un canon gravé.
 """
 from __future__ import annotations
 
+from typing import Optional
+
 from vision.ai.ai_static import AI_INSTRUCTIONS, AI_REALTIME_RULES
 
 # Socle de personnage commun à TOUTES les variantes — les quatre décisions
@@ -93,7 +95,20 @@ def persona_names() -> list:
     return sorted(PERSONAS)
 
 
-def compose_system_prompt(name: str) -> str:
+# Partenaire CONNU (22/10, demande de David en répétition : « je ne suis pas
+# un passant lambda, Didier ne peut pas me découvrir, ce n'est pas logique »).
+# AI_INSTRUCTIONS pose « amuser les gens dans la rue » et « essaie de
+# connaître le nom de ton interlocuteur » : sans ce bloc, Didier traite son
+# créateur en inconnu. Ajouté EN DERNIER (après la personnalité) pour primer
+# sur la consigne de demander le nom. Réservé à la RÉPÉTITION : en rue, Didier
+# ne sait pas qui parle (désignation au bouton du gant = chantier à part).
+PARTNER_TEMPLATE = """
+Contexte de répétition : la personne qui te parle n'est PAS un passant. C'est {name}, qui t'a construit et qui joue avec toi sur scène : vous vous connaissez très bien.
+Appelle-la par son prénom, ne lui demande jamais son nom, ne fais pas comme si vous vous rencontriez. Tu restes entièrement dans ta personnalité du jour avec {name}.
+"""
+
+
+def compose_system_prompt(name: str, partner: Optional[str] = None) -> str:
     """System prompt complet pour la variante `name` : contrat technique
     (AI_INSTRUCTIONS + AI_REALTIME_RULES, inchangés — JSON d'émotion,
     didascalies, rythme) puis socle de personnage puis personnalité du jour.
@@ -101,9 +116,15 @@ def compose_system_prompt(name: str) -> str:
     corps), le personnage ensuite (c'est lui qui remplit les répliques).
     Lève ValueError sur un nom inconnu — l'appelant décide s'il en fait un
     échec de démarrage (paramètre ROS) ou un simple warning (topic à chaud,
-    cf. chat_node._on_persona)."""
+    cf. chat_node._on_persona).
+
+    `partner` (prénom, None/vide = aucun) : ajoute PARTNER_TEMPLATE — Didier
+    connaît son interlocuteur (répétition)."""
     if name not in PERSONAS:
         raise ValueError(
             f"personnalité inconnue : {name!r} — disponibles : {persona_names()}"
         )
-    return AI_INSTRUCTIONS + AI_REALTIME_RULES + PERSONA_SOCLE + PERSONAS[name]
+    prompt = AI_INSTRUCTIONS + AI_REALTIME_RULES + PERSONA_SOCLE + PERSONAS[name]
+    if partner:
+        prompt += PARTNER_TEMPLATE.format(name=partner)
+    return prompt

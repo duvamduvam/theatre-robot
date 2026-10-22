@@ -48,6 +48,18 @@ def vad_config_from_env(environ=os.environ):
     return VadConfig(threshold_factor=factor)
 
 
+# Variable d'environnement du BANC de répétition (docker-compose-x86.yml) :
+# prénom du partenaire de scène que Didier CONNAÎT (cf. personas.
+# PARTNER_TEMPLATE). Jamais posée sur le Pi : en rue, Didier ne sait pas qui
+# lui parle. Vide = aucun partenaire (comportement historique).
+PARTNER_ENV = "CHAT_PARTENAIRE"
+
+
+def partner_from_env(environ=os.environ):
+    """Prénom du partenaire connu, ou None si la variable est absente/vide."""
+    return environ.get(PARTNER_ENV, "").strip() or None
+
+
 def load_secrets(path):
     """Parse un fichier clé=valeur tolérant (commentaires '#', lignes vides).
 
@@ -172,6 +184,9 @@ config = {
     # Seul champ surchargeable : threshold_factor, par CHAT_VAD_FACTOR (cf.
     # vad_config_from_env) — réservé au BANC, jamais posé sur le Pi.
     "chat_vad": vad_config_from_env(),
+
+    # Partenaire de scène connu (répétition seulement, cf. partner_from_env).
+    "chat_partner": partner_from_env(),
 
     # Gate « source audio vivante » (vision/audio/live_audio_gate.py, lot du
     # 2026-08-30, half-duplex élargi) : instance LiveAudioGateConfig avec ses
