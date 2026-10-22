@@ -120,6 +120,18 @@ class FakeStt:
         return self._text
 
 
+class FakeSttQuiLeve:
+    """STT qui lève à CHAQUE appel (erreur de dépendance, fichier
+    temporaire illisible…) : le tour doit être abandonné proprement, jamais
+    propager (cf. garde ajoutée le 22/10 dans run_once)."""
+    def __init__(self, timeline):
+        self._timeline = timeline
+
+    def transcribe(self, pcm, sample_rate):
+        self._timeline.append(("stt_transcribe", pcm, sample_rate))
+        raise TypeError("open() got an unexpected keyword argument 'metadata_errors'")
+
+
 class FakeBrain:
     """Brain scripté : stream_reply() yield une séquence FIXE de deltas
     (indépendante du texte reçu, qui est quand même noté dans la timeline
@@ -1487,3 +1499,32 @@ def test_callback_on_transcript_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
     assert result is True
     assert ("tts_synthesize", "Salut.") in timeline
     assert any("on_transcript" in record.message for record in caplog.records)
+
+
+def test_erreur_stt_abandonne_le_tour_sans_tuer_le_moteur(timeline):
+    """Une exception du STT (22/10 : PyAV 19 vs faster-whisper 1.2.1) ne doit
+    PAS remonter de run_once : le tour est abandonné comme un STT
+    inexploitable (thinking puis idle, micro relancé), le LLM n'est jamais
+    appelé, et le tour SUIVANT se déroule normalement — sans cette garde, le
+    thread run_forever mourait et Didier restait sourd jusqu'au redémarrage."""
+    frames, events = _speech_frames_and_events()
+    engine = _make_engine(
+        timeline, frames=frames, vad_events=events,
+        stt_text="jamais utilisé", brain_deltas=["ne doit jamais être utilisé"],
+    )
+    engine._stt = FakeSttQuiLeve(timeline)
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+    assert result is False
+    tags = [event[0] for event in timeline]
+    assert "stt_transcribe" in tags
+    assert "brain_stream_reply" not in tags
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    assert publishes == [
+        RosMessage(FACE, json.dumps("reflechit")),
+        RosMessage(FACE, json.dumps("stop")),  # idle() : le visage ne reste pas sur « réfléchit »
+    ]
+    # Le micro est relancé pour le tour suivant (mic_start APRÈS mic_stop).
+    assert tags.index("mic_stop") < len(tags) - 1 - tags[::-1].index("mic_start")

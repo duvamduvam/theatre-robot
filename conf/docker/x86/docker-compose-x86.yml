@@ -35,6 +35,12 @@ services:
       # en Bluetooth : aucune carte ALSA ne le représente, cf. asound-pc.conf).
       # La socket est celle de la session graphique de l'hôte, montée ci-dessous.
       - PULSE_SERVER=unix:/run/pulse/native
+      # Facteur VAD du BANC (cf. vision_config.vad_config_from_env) : 3 pour le
+      # micro du casque BT, dont le bruit de fond fluctue (mesuré le 22/10 :
+      # médiane ~10, p99 ~15 après l'atténuation d'asound-pc.conf) — à 1,3 la
+      # VAD ne détecte jamais la fin de phrase. Vide = défaut 1,3 du robot
+      # (à remettre si le ReSpeaker, au plancher stable, revient sur le banc).
+      - CHAT_VAD_FACTOR=${CHAT_VAD_FACTOR:-3}
     network_mode: "host"
     # ipc host OBLIGATOIRE : FastDDS passe les DONNÉES en mémoire partagée
     # entre participants du même hôte (la découverte, elle, passe en UDP —

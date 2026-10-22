@@ -58,6 +58,11 @@ scipy
 # ci-dessus) — à vérifier au premier build du conteneur V2, pas testé en CI
 # (requirements-test.txt ne l'installe pas, import différé dans stt.py).
 faster-whisper
+# PyAV ÉPINGLÉ (22/10) : faster-whisper 1.2.1 appelle av.open(...,
+# metadata_errors=) — mot-clé SUPPRIMÉ par PyAV 15 ; l'image rebâtie le 14/10
+# avait tiré av 19 → TypeError à chaque transcription, thread de conversation
+# mort (Didier sourd). Lever l'épingle seulement quand faster-whisper l'exige.
+av>=14,<15
 
 # V2 streaming : TTS local, voix DÉDIÉE à Didier (vision/ai/tts_piper.py,
 # PiperTts) — même logique que faster-whisper ci-dessus : local, pas de

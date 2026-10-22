@@ -439,7 +439,18 @@ class ConversationEngine:
         # stt_ms mesuré autour de l'appel bloquant (cf. on_timing) : c'est la
         # durée RÉELLE payée par ce tour, pas une estimation.
         stt_started_at = time.monotonic()
-        text = self._stt.transcribe(speech_bytes, self._mic.sample_rate)
+        try:
+            text = self._stt.transcribe(speech_bytes, self._mic.sample_rate)
+        except Exception:
+            # Une erreur STT (vécu le 22/10 : PyAV 19 incompatible avec
+            # faster-whisper → TypeError à CHAQUE transcription) ne doit pas
+            # tuer run_forever : sans cette garde, le thread de conversation
+            # mourait et Didier restait sourd jusqu'au redémarrage du node,
+            # sans rien d'autre qu'une trace dans le log. Même philosophie
+            # que l'erreur LLM/TTS de _speak_reply : on abandonne CE tour,
+            # le spectacle continue.
+            logging.exception("Erreur STT — tour abandonné, retour à l'écoute.")
+            text = None
         stt_ms = (time.monotonic() - stt_started_at) * 1000
 
         if not has_usable_text(text):

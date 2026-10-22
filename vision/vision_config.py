@@ -21,6 +21,33 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_FILE = os.path.join(REPO_ROOT, "conf", "secret")
 
 
+# Variable d'environnement du BANC PC (docker-compose-x86.yml) : facteur VAD
+# (seuil = plancher de bruit × facteur). POURQUOI (22/10) : le micro d'un
+# casque Bluetooth en HFP a un bruit de fond qui FLUCTUE (13 % des trames
+# au-dessus de 1,3 × la médiane, mesuré) — la VAD ne voit jamais 600 ms de
+# silence continu, croit la parole sans fin, coupe à max_utterance_ms et
+# whisper reçoit 12 s de souffle (STT ''). Le ReSpeaker du robot a un plancher
+# stable : le Pi garde la valeur par défaut validée, la variable n'y est pas posée.
+VAD_FACTOR_ENV = "CHAT_VAD_FACTOR"
+
+
+def vad_config_from_env(environ=os.environ):
+    """VadConfig par défaut, sauf threshold_factor si CHAT_VAD_FACTOR est
+    posée. Valeur invalide ou ≤ 1 = erreur EXPLICITE au démarrage (un facteur
+    ≤ 1 déclencherait sur le bruit de fond lui-même — mieux vaut un crash
+    clair qu'un Didier qui « entend des voix »)."""
+    raw = environ.get(VAD_FACTOR_ENV, "").strip()
+    if not raw:
+        return VadConfig()
+    try:
+        factor = float(raw)
+    except ValueError as exc:
+        raise ValueError(f"{VAD_FACTOR_ENV}={raw!r} : nombre attendu") from exc
+    if factor <= 1.0:
+        raise ValueError(f"{VAD_FACTOR_ENV}={raw!r} : doit être > 1")
+    return VadConfig(threshold_factor=factor)
+
+
 def load_secrets(path):
     """Parse un fichier clé=valeur tolérant (commentaires '#', lignes vides).
 
@@ -142,7 +169,9 @@ config = {
     # défaut déjà validées (cf. docstring de VadConfig) — un objet complet
     # plutôt que des clés de config éclatées, pour rester la source unique de
     # vérité si VadConfig gagne de nouveaux champs un jour.
-    "chat_vad": VadConfig(),
+    # Seul champ surchargeable : threshold_factor, par CHAT_VAD_FACTOR (cf.
+    # vad_config_from_env) — réservé au BANC, jamais posé sur le Pi.
+    "chat_vad": vad_config_from_env(),
 
     # Gate « source audio vivante » (vision/audio/live_audio_gate.py, lot du
     # 2026-08-30, half-duplex élargi) : instance LiveAudioGateConfig avec ses
