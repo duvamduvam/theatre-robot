@@ -407,3 +407,68 @@ def test_on_chat_fault_passe_le_until_ms_decode_a_set_fault():
                  if isinstance(node, ast.Name) and node.id == until_ms
                  and isinstance(node.ctx, ast.Store)]
     assert len(ecritures) == 1
+
+
+# ---------------------------------------------------------------------------
+# Mouvement à la voix (lot I1, 2026-10-22, dadou_robot_ros/docs/
+# etude-repetition-simulee.md §13.11). CONTRAT PARTAGÉ : "rehearsal/chat_move"
+# est aussi gravé côté robot (CHAT_MOVE_TOPIC de robot_rehearsal/contracts.py,
+# test_rehearsal_contract.py). Et la vision ne commande JAMAIS le mouvement
+# directement : aucun publisher route / route_speed / cmd_vel dans ce node.
+# ---------------------------------------------------------------------------
+
+def test_topic_de_marche_a_la_valeur_du_contrat():
+    assert _module_string_constants(_chat_node_tree()).get("CHAT_MOVE_TOPIC") == "rehearsal/chat_move"
+
+
+def test_chat_node_ne_publie_jamais_sur_un_topic_de_mouvement():
+    tree = _chat_node_tree()
+    publies = _publisher_topics(tree, _module_string_constants(tree))
+
+    assert "rehearsal/chat_move" in publies  # ancre : le publisher de marche est bien vu
+    assert not {"route", "route_speed", "cmd_vel", "/cmd_vel", "cmd_vel_follow",
+                "cmd_vel_remote", "wheels"} & set(publies)
+
+
+def test_publish_move_publie_par_le_publisher_dedie_et_journalise():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_publish_move")
+
+    assert [c for c in calls if c.endswith(".publish")] == ["self._move_pub.publish"]
+    assert "json.dumps" in calls
+    assert "self.get_logger().info" in calls
+
+
+def test_publisher_de_marche_conditionne_et_branche_sur_on_move():
+    init_source = ast.unparse(_chat_node_method(_chat_node_tree(), "__init__"))
+
+    # Créé SEULEMENT si le mouvement est activé (rien ne fuit hors du banc)…
+    assert ("self._move_pub = self.create_publisher(StringTime, CHAT_MOVE_TOPIC, 10) "
+            "if config['chat_move_enabled'] else None") in init_source
+    # …et le moteur ne reçoit le callback que dans ce cas.
+    assert "on_move=self._publish_move if self._move_pub is not None else None" in init_source
+
+
+@pytest.mark.parametrize("methode", ["__init__", "_on_persona"])
+def test_les_deux_compositions_du_prompt_passent_move(methode):
+    source = ast.unparse(_chat_node_method(_chat_node_tree(), methode))
+    composes = [line for line in source.splitlines() if "compose_system_prompt" in line]
+
+    assert len(composes) == 1, composes
+    assert "move=config['chat_move_enabled']" in composes[0]
+
+
+def test_surcharges_d_env_lues_au_demarrage_avant_les_parametres_ros():
+    # Revue adversariale I1 (22/10) : l'env n'est plus lu à l'import de
+    # vision_config — chat_node l'applique en TÊTE de constructeur, dans un
+    # try qui transforme ValueError en ChatStartupError, et AVANT
+    # default_chat_parameters() (le whisper du banc reste le défaut ROS).
+    init = _chat_node_method(_chat_node_tree(), "__init__")
+    essais = [node for node in ast.walk(init) if isinstance(node, ast.Try)
+              and "chat_env_overrides()" in ast.unparse(node.body)]
+    assert len(essais) == 1
+    gestionnaire = ast.unparse(essais[0].handlers[0])
+    assert "except ValueError" in gestionnaire and "raise ChatStartupError" in gestionnaire
+    source = ast.unparse(init)
+    assert (source.index("chat_env_overrides()") < source.index("config.update(overrides)")
+            < source.index("default_chat_parameters()"))
+    assert "self.get_logger().warning(warning)" in source

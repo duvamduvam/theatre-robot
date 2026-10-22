@@ -108,7 +108,22 @@ Appelle-la par son prénom, ne lui demande jamais son nom, ne fais pas comme si 
 """
 
 
-def compose_system_prompt(name: str, partner: Optional[str] = None) -> str:
+# Mouvement à la voix (lot I1, 22/10, demande de David : « il faut qu'il se
+# mette en mouvement quand nécessaire »). Didier ne pilote RIEN lui-même : la
+# clé "marche" de son JSON de fin part sur rehearsal/chat_move, et le SEUL
+# consommateur est le régisseur de la répétition simulée, qui décide (route /
+# route_speed, jamais plus vite que la vitesse en vigueur, jamais contre un
+# `off` de David). Ajouté APRÈS le bloc partenaire : c'est un contrat
+# technique de répétition, il ne doit pas être noyé par le personnage.
+MOVE_TEMPLATE = """
+Mouvement (répétition) : tu marches seul sur un itinéraire. Tu peux demander à repartir ou à t'arrêter en ajoutant au JSON de fin "marche": "go" ou "marche": "stop" (ex. {"emotion": "happy", "marche": "go"}).
+- "go" : quand on te demande d'avancer, de repartir, de continuer, ou quand TOI tu décides que ta lubie est finie et qu'il est temps de reprendre la route.
+- "stop" : quand on te demande de t'arrêter, d'attendre, ou quand quelque chose mérite vraiment que tu t'arrêtes.
+- Sinon, n'ajoute PAS la clé "marche". N'évoque jamais ce JSON à voix haute.
+"""
+
+
+def compose_system_prompt(name: str, partner: Optional[str] = None, move: bool = False) -> str:
     """System prompt complet pour la variante `name` : contrat technique
     (AI_INSTRUCTIONS + AI_REALTIME_RULES, inchangés — JSON d'émotion,
     didascalies, rythme) puis socle de personnage puis personnalité du jour.
@@ -119,7 +134,10 @@ def compose_system_prompt(name: str, partner: Optional[str] = None) -> str:
     cf. chat_node._on_persona).
 
     `partner` (prénom, None/vide = aucun) : ajoute PARTNER_TEMPLATE — Didier
-    connaît son interlocuteur (répétition)."""
+    connaît son interlocuteur (répétition).
+
+    `move` (False par défaut = prompt inchangé) : ajoute MOVE_TEMPLATE en
+    DERNIER — Didier peut demander à repartir / s'arrêter (répétition)."""
     if name not in PERSONAS:
         raise ValueError(
             f"personnalité inconnue : {name!r} — disponibles : {persona_names()}"
@@ -127,4 +145,7 @@ def compose_system_prompt(name: str, partner: Optional[str] = None) -> str:
     prompt = AI_INSTRUCTIONS + AI_REALTIME_RULES + PERSONA_SOCLE + PERSONAS[name]
     if partner:
         prompt += PARTNER_TEMPLATE.format(name=partner)
+    if move:
+        # Pas de .format() : le texte contient des accolades JSON littérales.
+        prompt += MOVE_TEMPLATE
     return prompt

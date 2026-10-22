@@ -207,7 +207,7 @@ class FakeGate:
 def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
                   brain_raises=False, beeps=True, on_state=None,
                   initial_state=None, gate=None, show_audio_active=None,
-                  on_meter=None, on_timing=None):
+                  on_meter=None, on_timing=None, on_move=None):
     """Assemble un ConversationEngine avec des fakes câblés sur la même
     timeline — factorise le câblage répété par les tests ci-dessous.
     L'appelant est responsable de _cleanup_beeps(engine) en fin de test.
@@ -234,6 +234,7 @@ def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
         show_audio_active=show_audio_active,
         on_meter=on_meter,
         on_timing=on_timing,
+        on_move=on_move,
     )
 
 
@@ -1170,7 +1171,8 @@ class FakeMicAvecRegie(FakeMic):
 
 def _make_stage_engine(timeline, stage, *, brain_deltas, frames=(), vad_events=(),
                        stt_text="jamais utilisé", mic=None, on_state=None,
-                       on_transcript=None, on_timing=None, dead_mic_backoff_s=0.0):
+                       on_transcript=None, on_timing=None, dead_mic_backoff_s=0.0,
+                       on_move=None):
     """Factory dédiée aux tests de régie (la factory historique reste
     intacte) : renvoie (engine, brain) pour lire brain.extra_systems."""
     brain = FakeStageBrain(timeline, brain_deltas)
@@ -1190,6 +1192,7 @@ def _make_stage_engine(timeline, stage, *, brain_deltas, frames=(), vad_events=(
         on_timing=on_timing,
         stage=stage,
         on_transcript=on_transcript,
+        on_move=on_move,
     )
     return engine, brain
 
@@ -1528,3 +1531,96 @@ def test_erreur_stt_abandonne_le_tour_sans_tuer_le_moteur(timeline):
     ]
     # Le micro est relancé pour le tour suivant (mic_start APRÈS mic_stop).
     assert tags.index("mic_stop") < len(tags) - 1 - tags[::-1].index("mic_start")
+
+
+# --------------------------------------------------------------------------
+# Mouvement à la voix (lot I1, 2026-10-22, dadou_robot_ros/docs/
+# etude-repetition-simulee.md §13.11) : la clé "marche" du JSON de fin part
+# sur on_move, normalisée, et RIEN d'autre que "go"/"stop" ne passe.
+# --------------------------------------------------------------------------
+
+def _tour_avec_marche(timeline, deltas, on_move):
+    frames, events = _speech_frames_and_events()
+    engine = _make_engine(timeline, frames=frames, vad_events=events,
+                          stt_text="avance", brain_deltas=deltas, on_move=on_move)
+    try:
+        return engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+
+def test_marche_go_appelle_on_move_une_fois(timeline):
+    ordres = []
+    assert _tour_avec_marche(timeline, ['On y va. {"emotion": "happy", "marche": "go"}'],
+                             ordres.append) is True
+    assert ordres == ["go"]
+    # L'émotion joue toujours : la clé en plus ne gêne pas le visage.
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    assert publishes[-1] == RosMessage(FACE, json.dumps("joie"))
+
+
+def test_marche_normalisee_casse_et_espaces(timeline):
+    ordres = []
+    _tour_avec_marche(timeline, ['Halte. {"emotion": "neutral", "marche": "STOP "}'], ordres.append)
+    assert ordres == ["stop"]
+
+
+@pytest.mark.parametrize("valeur", ['"recule"', '"vas-y"', '""', "true", "1", "null",
+                                    '["go"]', "3.5"])
+def test_marche_autre_valeur_ignoree_avec_warning(timeline, caplog, valeur):
+    ordres = []
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        result = _tour_avec_marche(
+            timeline, ['Bof. {"emotion": "neutral", "marche": ' + valeur + '}'], ordres.append)
+    assert result is True
+    assert ordres == []
+    assert any("marche" in record.message for record in caplog.records)
+
+
+def test_sans_cle_marche_rien_n_est_appele(timeline, caplog):
+    ordres = []
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        _tour_avec_marche(timeline, ['Salut. {"emotion": "happy"}'], ordres.append)
+    assert ordres == []
+    assert not any("marche" in record.message for record in caplog.records)
+
+
+def test_on_move_none_aucun_effet(timeline, caplog):
+    # Comportement historique : la clé n'est même pas lue (pas de warning,
+    # même sur une valeur invalide), le tour est identique.
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _tour_avec_marche(timeline, ['Ok. {"emotion": "happy", "marche": "recule"}'],
+                                 None) is True
+    assert not any("marche" in record.message for record in caplog.records)
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    assert publishes[-1] == RosMessage(FACE, json.dumps("joie"))
+
+
+def test_on_move_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
+    def on_move(_cmd):
+        raise RuntimeError("publisher cassé (test)")
+
+    with caplog.at_level("ERROR", logger="vision.ai.conversation"):
+        result = _tour_avec_marche(
+            timeline, ['On y va. {"emotion": "happy", "marche": "go"}'], on_move)
+    assert result is True
+    assert ("tts_synthesize", "On y va.") in timeline
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    assert publishes[-2:] == [SPEAKING_STOP, JOIE]   # le tour s'est fini normalement
+    assert any("on_move" in record.message for record in caplog.records)
+
+
+def test_marche_part_meme_pendant_une_panne_mute(timeline):
+    stage = StageState()
+    stage.set_fault("mute", {}, 20000, time.monotonic())
+    stage.push_text("repars")
+    ordres = []
+    engine, _brain = _make_stage_engine(
+        timeline, stage, brain_deltas=['Je repars. {"emotion": "happy", "marche": "go"}'],
+        on_move=ordres.append)
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert "tts_synthesize" not in [event[0] for event in timeline]   # la voix est coupée…
+    assert ordres == ["go"]                                         # …pas les jambes

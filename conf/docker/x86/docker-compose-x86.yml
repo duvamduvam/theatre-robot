@@ -48,6 +48,16 @@ services:
       # passant à découvrir. Jamais posé sur le Pi (en rue, Didier ne sait pas
       # qui parle). Vide = aucun partenaire.
       - CHAT_PARTENAIRE=${CHAT_PARTENAIRE:-David}
+      # Modèle whisper du BANC (cf. vision_config.whisper_model_from_env) :
+      # « small » — « base » confondait chien/chat (séance du 22/10) ; ~1,2 s
+      # de STT pour 6 s de parole sur ce PC. Le Pi reste en « base ».
+      - CHAT_WHISPER_MODEL=${CHAT_WHISPER_MODEL:-small}
+      # Mouvement à la voix (lot I1, cf. vision_config.move_enabled_from_env) :
+      # Didier peut demander « go »/« stop » au régisseur de la répétition
+      # (rehearsal/chat_move). BANC DE RÉPÉTITION SEULEMENT, jamais sur le Pi.
+      # 1/true/on/oui = actif, 0/false/off/non = coupé (CHAT_MOUVEMENT=false
+      # docker compose ... up -d) ; toute autre valeur = refus au démarrage.
+      - CHAT_MOUVEMENT=${CHAT_MOUVEMENT:-true}
     network_mode: "host"
     # ipc host OBLIGATOIRE : FastDDS passe les DONNÉES en mémoire partagée
     # entre participants du même hôte (la découverte, elle, passe en UDP —

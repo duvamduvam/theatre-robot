@@ -96,6 +96,17 @@ POURQUOI les topics de RÉGIE (lot R3 « Chantiers », 2026-10-14, spec fermée
        pourquoi l'argument « affectation atomique sous le GIL » d'
        _animation_state ne suffit pas là). CHAT_TRANSCRIPT est publié depuis
        le thread de conversation (callback on_transcript), comme _publish.
+POURQUOI CHAT_MOVE_TOPIC (lot I1 « mouvement à la voix », 2026-10-22, spec
+       fermée dadou_robot_ros/docs/etude-repetition-simulee.md §13.11) :
+       Didier peut demander à repartir / s'arrêter par la clé "marche" de son
+       JSON de fin. Ce node publie l'ordre ("go"/"stop") et RIEN d'autre --
+       jamais route, route_speed ni cmd_vel (cf. CLAUDE.md : la vision ne
+       commande jamais les moteurs). Seul consommateur : le régisseur de la
+       répétition simulée (domaine 43), qui décide. Publisher créé SEULEMENT
+       si config["chat_move_enabled"] (CHAT_MOUVEMENT, banc de répétition,
+       ET ROS_DOMAIN_ID=43 — forcé à False avec un warning sinon, cf.
+       vision_config.chat_env_overrides) : sur le Pi, ni bloc de prompt, ni
+       topic.
 """
 import asyncio
 import json
@@ -126,7 +137,7 @@ from vision.audio.playback import AudioPlayer
 from vision.audio.vad import EnergyVad
 from vision.nodes._chat_wiring import (decode_persona_command, default_chat_parameters,
                                        ros_message_to_string_time_kwargs)
-from vision.vision_config import config, get_secret
+from vision.vision_config import chat_env_overrides, config, get_secret
 
 # Durée d'une trame micro (ms) : DOIT être identique côté MicCapture (qui
 # découpe le flux arecord en trames de cette taille) et côté EnergyVad (qui
@@ -220,6 +231,13 @@ CHAT_FAULT_TOPIC = "rehearsal/chat_fault"
 # Jamais les consignes ni les pannes (David ignore le tirage, §13.1). Pas
 # latché : c'est un FLUX (la page l'affiche au fil de l'eau), pas un état.
 CHAT_TRANSCRIPT_TOPIC = "chat_transcript"
+
+# Ordre de marche demandé par Didier (lot I1, cf. docstring de module) :
+# StringTime, payload json.dumps("go"|"stop"). Le nom `rehearsal/…` EST le
+# contrat du régisseur (CHAT_MOVE_TOPIC de robot_rehearsal/contracts.py,
+# dadou_robot_ros, gravé des deux côtés). Sans régisseur (vrai robot) : sans
+# effet, personne n'écoute.
+CHAT_MOVE_TOPIC = "rehearsal/chat_move"
 
 
 # --- Serveur de diagnostic web (vumètre + latences, cf. docstring de module
@@ -512,6 +530,23 @@ class ChatNode(Node):
     def __init__(self):
         super().__init__("chat")
 
+        # --- Surcharges du BANC (CHAT_VAD_FACTOR, CHAT_WHISPER_MODEL,
+        # CHAT_PARTENAIRE, CHAT_MOUVEMENT) : lues ICI et pas à l'import de
+        # vision_config (revue adversariale I1 : une valeur invalide tuait
+        # TOUS les nodes vision). Valeur invalide = échec de démarrage
+        # EXPLICITE du chat seul. Fusionnées dans `config` AVANT
+        # default_chat_parameters() : le modèle whisper du banc devient le
+        # défaut du paramètre ROS, comme avant. --------------------------------
+        try:
+            overrides, env_warnings = chat_env_overrides()
+        except ValueError as exc:
+            self.get_logger().error(f"Variable d'environnement invalide : {exc}")
+            raise ChatStartupError("variable d'environnement invalide") from exc
+        config.update(overrides)
+        for warning in env_warnings:
+            # Ex. CHAT_MOUVEMENT posé hors du domaine 43 : forcé à False.
+            self.get_logger().warning(warning)
+
         # Paramètres ROS déclarés avec défauts (issus de vision_config.config
         # via _chat_wiring.default_chat_parameters — jamais dupliqués en
         # dur ici) : modifiables par YAML/CLI sans toucher au code, ex.
@@ -553,7 +588,8 @@ class ChatNode(Node):
         # YAML doit se voir tout de suite, pas au premier tour de parole
         # avec un Didier sans personnage) -------------------------------------
         try:
-            persona_prompt = personas.compose_system_prompt(persona_name, config["chat_partner"])
+            persona_prompt = personas.compose_system_prompt(
+                persona_name, config["chat_partner"], move=config["chat_move_enabled"])
         except ValueError as exc:
             self.get_logger().error(f"Paramètre persona invalide : {exc}")
             raise ChatStartupError("personnalité inconnue") from exc
@@ -700,6 +736,12 @@ class ChatNode(Node):
         # un flux de lignes, pas un état (un abonné tardif n'a pas à recevoir
         # une réplique d'il y a dix minutes comme si elle venait d'être dite).
         self._transcript_pub = self.create_publisher(StringTime, CHAT_TRANSCRIPT_TOPIC, 10)
+        # Ordre de marche (cf. CHAT_MOVE_TOPIC) : publisher créé SEULEMENT si
+        # le mouvement à la voix est activé -- sinon le topic n'existe même
+        # pas (rien ne doit fuir hors du banc de répétition). QoS VOLATILE :
+        # un ordre périmé rejoué à un abonné tardif ferait repartir Didier.
+        self._move_pub = (self.create_publisher(StringTime, CHAT_MOVE_TOPIC, 10)
+                          if config["chat_move_enabled"] else None)
 
         # --- Régie du chat (cf. docstring de module POURQUOI les topics de
         # RÉGIE) : créé AVANT ConversationEngine, qui le reçoit en kwarg.
@@ -736,6 +778,9 @@ class ChatNode(Node):
             # se déroule comme avant (seules les lignes du transcript
             # s'ajoutent ; le backoff micro mort garde sa durée, en sondant).
             stage=self._stage, on_transcript=self._publish_transcript,
+            # Mouvement à la voix (cf. CHAT_MOVE_TOPIC) : None si désactivé
+            # = comportement historique (la clé "marche" n'est pas lue).
+            on_move=self._publish_move if self._move_pub is not None else None,
         )
         self._mic = mic
         self._player = player
@@ -813,7 +858,8 @@ class ChatNode(Node):
         self.get_logger().info(
             f"chat démarré (llm_model={llm_model}, whisper_model={whisper_model}, "
             f"mic_device={mic_device}, out_device={out_device}, "
-            f"persona={persona_name}, partenaire={config['chat_partner']}) -> topics {FACE}/{ANIMATION}, toggle sur "
+            f"persona={persona_name}, partenaire={config['chat_partner']}, "
+            f"mouvement={config['chat_move_enabled']}) -> topics {FACE}/{ANIMATION}, toggle sur "
             f"'{CHAT_CMD_TOPIC}' (on/off), persona sur '{PERSONA_TOPIC}' "
             f"({'/'.join(personas.persona_names())}), état publié sur "
             f"'{CHAT_STATE_TOPIC}' (latché), régie sur '{CHAT_TEXT_TOPIC}'/"
@@ -864,7 +910,8 @@ class ChatNode(Node):
             self.get_logger().info(f"persona {name!r} déjà active — rien à faire")
             return
         try:
-            prompt = personas.compose_system_prompt(name, config["chat_partner"])
+            prompt = personas.compose_system_prompt(
+                name, config["chat_partner"], move=config["chat_move_enabled"])
         except ValueError as exc:
             self.get_logger().warning(f"commande persona refusée : {exc}")
             return
@@ -942,6 +989,15 @@ class ChatNode(Node):
         process. PAS d'arbitrage : ce n'est pas un actionneur."""
         payload = stage.encode_transcript(role, text, int(time.time() * 1000))
         self._transcript_pub.publish(StringTime(msg=payload, time=0, anim=False))
+
+    def _publish_move(self, cmd: str) -> None:
+        """Callback `on_move` de ConversationEngine (thread de conversation) :
+        "go"/"stop" déjà validé par le moteur, publié en JSON sur
+        CHAT_MOVE_TOPIC. Journalisé : c'est la trace qui dit, au débrief, que
+        l'ordre venait de Didier. PAS d'arbitrage : ce n'est pas un
+        actionneur, c'est une DEMANDE au régisseur."""
+        self._move_pub.publish(StringTime(msg=json.dumps(cmd), time=0, anim=False))
+        self.get_logger().info(f"ordre de marche publié : {cmd}")
 
     def _on_animation_state(self, ros_msg):
         """Callback du topic ANIMATION_STATE (latché, publié par

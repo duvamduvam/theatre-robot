@@ -60,6 +60,93 @@ def partner_from_env(environ=os.environ):
     return environ.get(PARTNER_ENV, "").strip() or None
 
 
+# Variable d'environnement du BANC de répétition (docker-compose-x86.yml) :
+# Didier peut demander à repartir / s'arrêter par la clé "marche" de son JSON
+# de fin (lot I1 « mouvement à la voix », 22/10, cf. personas.MOVE_TEMPLATE).
+# chat_node publie alors rehearsal/chat_move, consommé par le SEUL régisseur
+# de la répétition simulée (domaine 43). Jamais posée sur le Pi : absente =
+# aucun bloc de prompt, aucun publisher (comportement historique).
+MOVE_ENV = "CHAT_MOUVEMENT"
+_MOVE_TRUE = ("1", "true", "on", "oui")
+_MOVE_FALSE = ("0", "false", "off", "non")
+
+
+def move_enabled_from_env(environ=os.environ):
+    """True ssi CHAT_MOUVEMENT vaut 1/true/on/oui (casse et espaces
+    ignorés) ; 0/false/off/non, absente ou vide = False (« false » doit
+    pouvoir couper le mouvement sur le banc). Toute AUTRE valeur = erreur
+    EXPLICITE au démarrage (même patron que vad_config_from_env) : une
+    faute de frappe ne doit pas désactiver le mouvement en silence."""
+    raw = environ.get(MOVE_ENV, "").strip().lower()
+    if not raw:
+        return False
+    if raw in _MOVE_TRUE:
+        return True
+    if raw in _MOVE_FALSE:
+        return False
+    raise ValueError(f"{MOVE_ENV}={raw!r} : attendu {'/'.join(_MOVE_TRUE)} (actif) "
+                     f"ou {'/'.join(_MOVE_FALSE)} (coupé), ou absente")
+
+
+# Domaine ROS de la SIMULATION : le seul où le mouvement à la voix a le droit
+# d'exister (revue adversariale I1, 22/10). Même valeur que SIM_DOMAIN_ID de
+# robot_rehearsal (dadou_robot_ros) ; 42 = le vrai robot.
+MOVE_DOMAIN_ID = "43"
+
+
+# Variable d'environnement du BANC PC : modèle whisper (faster-whisper).
+# POURQUOI (22/10) : en séance au casque, « base » entendait « chat » pour
+# « chien » et « groutitant » pour « grue Titan » ; « small » transcrit juste
+# en ~1,2 s pour 6 s de parole sur le PC (32 cœurs, mesuré). Le Pi garde
+# « base » (CPU bien plus faible) : la variable n'y est pas posée.
+WHISPER_MODEL_ENV = "CHAT_WHISPER_MODEL"
+_WHISPER_MODELS = ("tiny", "base", "small", "medium")
+
+
+def whisper_model_from_env(environ=os.environ):
+    """Modèle whisper : "base" par défaut, sinon CHAT_WHISPER_MODEL s'il est
+    dans la liste connue ; toute autre valeur = erreur EXPLICITE au
+    démarrage (un nom inconnu déclencherait un téléchargement hasardeux)."""
+    raw = environ.get(WHISPER_MODEL_ENV, "").strip().lower()
+    if not raw:
+        return "base"
+    if raw not in _WHISPER_MODELS:
+        raise ValueError(f"{WHISPER_MODEL_ENV}={raw!r} : attendu {'/'.join(_WHISPER_MODELS)}")
+    return raw
+
+
+def chat_env_overrides(environ=os.environ):
+    """Surcharges du BANC lues dans l'environnement (CHAT_VAD_FACTOR,
+    CHAT_WHISPER_MODEL, CHAT_PARTENAIRE, CHAT_MOUVEMENT) -> (dict à fusionner
+    dans `config`, warnings à journaliser).
+
+    POURQUOI pas à l'import (revue adversariale I1, 22/10) : une valeur
+    invalide levait pendant l'IMPORT de ce module — donc dans TOUS les nodes
+    vision (person_tracker compris), pas seulement le chat. Ici, c'est
+    chat_node qui l'appelle à son démarrage et transforme ValueError en
+    échec de démarrage EXPLICITE ; `config` garde les défauts du robot.
+
+    Mouvement à la voix : actif SEULEMENT si ROS_DOMAIN_ID vaut 43 (la
+    simulation) — sinon forcé à False avec un warning, même si
+    CHAT_MOUVEMENT est posé (une variable oubliée ne doit jamais rejoindre
+    le domaine du vrai robot)."""
+    overrides = {
+        "chat_vad": vad_config_from_env(environ),
+        "chat_whisper_model": whisper_model_from_env(environ),
+        "chat_partner": partner_from_env(environ),
+    }
+    warnings = []
+    move = move_enabled_from_env(environ)
+    domain = environ.get("ROS_DOMAIN_ID", "").strip()
+    if move and domain != MOVE_DOMAIN_ID:
+        warnings.append(
+            f"{MOVE_ENV} IGNORÉ : ROS_DOMAIN_ID={domain!r}, le mouvement à la voix est "
+            f"réservé au domaine {MOVE_DOMAIN_ID} (simulation) — mouvement=False")
+        move = False
+    overrides["chat_move_enabled"] = move
+    return overrides, warnings
+
+
 def load_secrets(path):
     """Parse un fichier clé=valeur tolérant (commentaires '#', lignes vides).
 
@@ -135,6 +222,8 @@ config = {
     # si le Pi 5 peine en charge réelle sur une séquence de spectacle complète
     # (plus rapide, plus d'erreurs de transcription) — à arbitrer après un
     # test scénique en conditions réelles, pas en atelier.
+    # Surchargeable au BANC par CHAT_WHISPER_MODEL (cf. chat_env_overrides,
+    # appliqué au démarrage de chat_node, jamais à l'import).
     "chat_whisper_model": "base",
 
     # Voix Piper de Didier (vision/ai/tts_piper.py) : modèle .onnx rangé dans
@@ -183,10 +272,17 @@ config = {
     # vérité si VadConfig gagne de nouveaux champs un jour.
     # Seul champ surchargeable : threshold_factor, par CHAT_VAD_FACTOR (cf.
     # vad_config_from_env) — réservé au BANC, jamais posé sur le Pi.
-    "chat_vad": vad_config_from_env(),
+    # Défauts du ROBOT ici et pour les trois clés suivantes : l'environnement
+    # n'est lu qu'au démarrage de chat_node (chat_env_overrides) — une
+    # valeur invalide ne doit jamais faire échouer l'import de ce module.
+    "chat_vad": VadConfig(),
 
     # Partenaire de scène connu (répétition seulement, cf. partner_from_env).
-    "chat_partner": partner_from_env(),
+    "chat_partner": None,
+
+    # Mouvement à la voix (répétition seulement, domaine 43 seulement, cf.
+    # move_enabled_from_env et chat_env_overrides).
+    "chat_move_enabled": False,
 
     # Gate « source audio vivante » (vision/audio/live_audio_gate.py, lot du
     # 2026-08-30, half-duplex élargi) : instance LiveAudioGateConfig avec ses

@@ -93,6 +93,15 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        message system. `on_transcript(role, texte)` reçoit ce que Didier a
        compris ("david", après garble) et chaque phrase qu'il dit ("didier")
        -- jamais les consignes ni les pannes (David ignore le tirage).
+
+       MOUVEMENT (2026-10-22, lot I1 « mouvement à la voix », dadou_robot_ros/
+       docs/etude-repetition-simulee.md §13.11) : kwarg OPTIONNEL `on_move`,
+       défaut None = comportement HISTORIQUE inchangé (même clause de
+       réversibilité). Branché, il reçoit "go" ou "stop" quand le JSON de fin
+       porte la clé "marche" (cf. personas.MOVE_TEMPLATE) ; toute autre valeur
+       est ignorée (warning). Pendant une panne `mute`, l'ordre part quand
+       même. Cette brique ne sait RIEN du mouvement : chat_node publie,
+       le régisseur de la répétition décide.
 """
 from __future__ import annotations
 
@@ -156,7 +165,8 @@ class ConversationEngine:
                  on_meter: Optional[Callable[[float, float, bool, bool], None]] = None,
                  on_timing: Optional[Callable[[dict], None]] = None,
                  stage: Optional[StageState] = None,
-                 on_transcript: Optional[Callable[[str, str], None]] = None):
+                 on_transcript: Optional[Callable[[str, str], None]] = None,
+                 on_move: Optional[Callable[[str], None]] = None):
         self._mic = mic
         self._vad = vad
         # Gate « source audio vivante » (half-duplex élargi, cf.
@@ -185,6 +195,10 @@ class ConversationEngine:
         self._stage = stage
         # Transcript (même lot) : None = personne n'écoute.
         self._on_transcript = on_transcript
+        # Mouvement à la voix (lot I1, cf. docstring de module MOUVEMENT) :
+        # None = comportement historique STRICTEMENT inchangé (la clé
+        # "marche" n'est même pas lue).
+        self._on_move = on_move
         self._stt = stt
         self._brain = brain
         self._tts = tts
@@ -303,6 +317,25 @@ class ConversationEngine:
             logger.warning("Callback on_transcript en échec (ligne %r perdue).", role,
                            exc_info=True)
 
+    def _notify_move(self, params) -> None:
+        """Clé "marche" du JSON de fin -> `on_move("go"|"stop")` (cf.
+        docstring de module MOUVEMENT). Normalisée (str, strip, lower) : le
+        LLM écrit parfois "Go" ou "stop ". Toute autre valeur ou type =
+        ignorée avec un warning — jamais d'exception, jamais d'ordre deviné
+        (« recule » n'est PAS un stop). Callback qui lève = tour préservé :
+        un ordre perdu vaut mieux qu'un Didier muet."""
+        if self._on_move is None or not isinstance(params, dict) or "marche" not in params:
+            return
+        raw = params["marche"]
+        cmd = raw.strip().lower() if isinstance(raw, str) else None
+        if cmd not in ("go", "stop"):
+            logger.warning("Clé \"marche\" ignorée : %r (attendu \"go\" ou \"stop\").", raw)
+            return
+        try:
+            self._on_move(cmd)
+        except Exception:
+            logger.exception("Callback on_move en échec (ordre %r perdu).", cmd)
+
     def _publish_all(self, messages) -> None:
         """publish() ne prend qu'UN SEUL message à la fois (contrat du
         constructeur) ; les fonctions de vision.ai.performance renvoient des
@@ -368,6 +401,9 @@ class ConversationEngine:
             return emotion_params
 
         if isinstance(event, Emotion):
+            # Indépendant de `mute` : une panne de voix ne coupe pas les
+            # jambes (seule la synthèse est muette, cf. ci-dessus).
+            self._notify_move(event.params)
             return event.params
 
         return emotion_params

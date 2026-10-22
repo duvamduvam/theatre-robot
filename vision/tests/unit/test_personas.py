@@ -90,3 +90,29 @@ def test_partenaire_connu_ajoute_en_dernier_avec_son_prenom():
     # interlocuteur » (ai_static) et suivre la personnalité du jour.
     assert prompt.index("Contexte de répétition") > prompt.index(personas.PERSONAS["mauvaisefoi"])
     assert prompt.endswith("ta personnalité du jour avec David.\n")
+
+
+# --- Mouvement à la voix (lot I1, 22/10) ----------------------------------------
+
+def test_sans_mouvement_le_prompt_est_inchange():
+    # Le Pi ne pose pas CHAT_MOUVEMENT : son prompt doit rester EXACTEMENT
+    # celui d'avant, partenaire ou non.
+    assert personas.compose_system_prompt("bougon") == personas.compose_system_prompt("bougon", move=False)
+    assert (personas.compose_system_prompt("naif", "David")
+            == personas.compose_system_prompt("naif", "David", move=False))
+    assert "Mouvement (répétition)" not in personas.compose_system_prompt("bougon", "David")
+
+
+def test_mouvement_ajoute_en_dernier_apres_le_partenaire():
+    prompt = personas.compose_system_prompt("mauvaisefoi", "David", move=True)
+    # Texte GRAVÉ (spec I1) : la clé et ses deux seules valeurs.
+    assert ('ajoutant au JSON de fin "marche": "go" ou "marche": "stop" '
+            '(ex. {"emotion": "happy", "marche": "go"}).') in prompt
+    assert prompt.index("Mouvement (répétition)") > prompt.index("Contexte de répétition")
+    assert prompt.endswith("N'évoque jamais ce JSON à voix haute.\n")
+
+
+def test_mouvement_sans_partenaire_suit_la_personnalite():
+    prompt = personas.compose_system_prompt("bougon", move=True)
+    assert "Contexte de répétition" not in prompt
+    assert prompt.endswith(personas.PERSONAS["bougon"] + personas.MOVE_TEMPLATE)

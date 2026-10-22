@@ -6,6 +6,9 @@ pour que le résultat soit le même en local et en CI (où conf/secret n'existe
 pas, puisque gitignoré).
 """
 import os
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -79,3 +82,113 @@ def test_partenaire_absent_ou_vide_donne_none():
 
 def test_partenaire_pose_est_nettoye():
     assert vision_config.partner_from_env({"CHAT_PARTENAIRE": " David "}) == "David"
+
+
+# --- Mouvement à la voix (CHAT_MOUVEMENT, lot I1, 22/10) -----------------------
+
+@pytest.mark.parametrize("env", [{}, {"CHAT_MOUVEMENT": ""}, {"CHAT_MOUVEMENT": "   "}])
+def test_mouvement_absent_ou_vide_desactive(env):
+    # Le Pi ne pose pas la variable : aucun bloc de prompt, aucun publisher.
+    assert vision_config.move_enabled_from_env(env) is False
+
+
+@pytest.mark.parametrize("raw", ["true", "1", " Oui ", "ON", "True"])
+def test_mouvement_valeurs_admises(raw):
+    assert vision_config.move_enabled_from_env({"CHAT_MOUVEMENT": raw}) is True
+
+
+@pytest.mark.parametrize("raw", ["false", " 0 ", "Off", "non"])
+def test_mouvement_coupe_explicitement(raw):
+    # CHAT_MOUVEMENT=false doit COUPER le mouvement sur le banc (22/10 : la
+    # 1re version refusait le démarrage — couper obligeait à éditer le compose).
+    assert vision_config.move_enabled_from_env({"CHAT_MOUVEMENT": raw}) is False
+
+
+@pytest.mark.parametrize("raw", ["peut-être", "yes", "vrai", "2"])
+def test_mouvement_toute_autre_valeur_refusee_au_demarrage(raw):
+    # Une faute de frappe ne doit jamais couper (ou allumer) le mouvement en
+    # silence : refus explicite au démarrage.
+    with pytest.raises(ValueError, match="CHAT_MOUVEMENT"):
+        vision_config.move_enabled_from_env({"CHAT_MOUVEMENT": raw})
+
+
+# --- Modèle whisper surchargeable au banc (CHAT_WHISPER_MODEL, 22/10) ---------
+
+def test_whisper_defaut_base_pour_le_pi():
+    assert vision_config.whisper_model_from_env({}) == "base"
+
+
+def test_whisper_small_au_banc():
+    assert vision_config.whisper_model_from_env({"CHAT_WHISPER_MODEL": " Small "}) == "small"
+
+
+@pytest.mark.parametrize("raw", ["large-v3", "petit", "smal"])
+def test_whisper_modele_inconnu_refuse(raw):
+    with pytest.raises(ValueError, match="CHAT_WHISPER_MODEL"):
+        vision_config.whisper_model_from_env({"CHAT_WHISPER_MODEL": raw})
+
+
+# --- Revue adversariale I1 (22/10) : env lu au démarrage du chat, jamais à l'import
+
+_ENV_INVALIDES = {"CHAT_VAD_FACTOR": "abc", "CHAT_WHISPER_MODEL": "géant",
+                  "CHAT_MOUVEMENT": "peut-être", "CHAT_PARTENAIRE": "David"}
+
+
+def test_import_de_la_config_ne_leve_jamais_sur_un_env_invalide():
+    # L'import tuait TOUS les nodes vision (person_tracker compris) : il doit
+    # réussir et garder les défauts du ROBOT, quoi que contienne l'env.
+    racine = Path(vision_config.__file__).resolve().parents[1]
+    code = ("import vision.vision_config as v; c = v.config; "
+            "print(c['chat_vad'].threshold_factor, c['chat_whisper_model'], "
+            "c['chat_partner'], c['chat_move_enabled'])")
+    sortie = subprocess.run([sys.executable, "-c", code], cwd=racine, capture_output=True, text=True,
+                            env=dict(os.environ, **_ENV_INVALIDES))
+    assert sortie.returncode == 0, sortie.stderr
+    assert sortie.stdout.strip() == "1.3 base None False"
+
+
+@pytest.mark.parametrize("var,valeur", [("CHAT_VAD_FACTOR", "abc"), ("CHAT_WHISPER_MODEL", "géant"),
+                                        ("CHAT_MOUVEMENT", "peut-être")])
+def test_surcharges_invalides_levent_au_demarrage_avec_le_nom(var, valeur):
+    with pytest.raises(ValueError, match=var):
+        vision_config.chat_env_overrides({var: valeur, "ROS_DOMAIN_ID": "43"})
+
+
+def test_message_mouvement_liste_les_valeurs_vraies_et_fausses():
+    with pytest.raises(ValueError) as exc:
+        vision_config.move_enabled_from_env({"CHAT_MOUVEMENT": "peut-être"})
+    assert "1/true/on/oui" in str(exc.value) and "0/false/off/non" in str(exc.value)
+
+
+def test_surcharges_du_banc_appliquees():
+    overrides, warnings = vision_config.chat_env_overrides({
+        "CHAT_VAD_FACTOR": "6", "CHAT_WHISPER_MODEL": "small", "CHAT_PARTENAIRE": " David ",
+        "CHAT_MOUVEMENT": "true", "ROS_DOMAIN_ID": "43"})
+    assert overrides["chat_vad"].threshold_factor == 6.0
+    assert (overrides["chat_whisper_model"], overrides["chat_partner"],
+            overrides["chat_move_enabled"]) == ("small", "David", True)
+    assert warnings == []
+
+
+def test_sans_env_les_defauts_du_robot():
+    overrides, warnings = vision_config.chat_env_overrides({})
+    assert overrides["chat_vad"].threshold_factor == 1.3
+    assert (overrides["chat_whisper_model"], overrides["chat_partner"],
+            overrides["chat_move_enabled"]) == ("base", None, False)
+    assert warnings == []                        # mouvement non demandé : rien à dire
+
+
+@pytest.mark.parametrize("domaine", [None, "42", "0", " 43x", ""])
+def test_mouvement_force_a_false_hors_du_domaine_43(domaine):
+    env = {"CHAT_MOUVEMENT": "true"}
+    if domaine is not None:
+        env["ROS_DOMAIN_ID"] = domaine
+    overrides, warnings = vision_config.chat_env_overrides(env)
+    assert overrides["chat_move_enabled"] is False
+    assert len(warnings) == 1
+    assert "CHAT_MOUVEMENT IGNORÉ" in warnings[0] and "domaine 43" in warnings[0]
+
+
+def test_mouvement_actif_en_domaine_43_espaces_toleres():
+    overrides, _ = vision_config.chat_env_overrides({"CHAT_MOUVEMENT": "oui", "ROS_DOMAIN_ID": " 43 "})
+    assert overrides["chat_move_enabled"] is True
