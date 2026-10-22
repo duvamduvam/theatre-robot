@@ -62,7 +62,10 @@ faster-whisper
 # metadata_errors=) — mot-clé SUPPRIMÉ par PyAV 15 ; l'image rebâtie le 14/10
 # avait tiré av 19 → TypeError à chaque transcription, thread de conversation
 # mort (Didier sourd). Lever l'épingle seulement quand faster-whisper l'exige.
-av>=14,<15
+# Version EXACTE 14.2.0 : « >=14,<15 » tirait 14.4.0, publiée SANS roue
+# (sources seules) -> compilation contre libav*, absentes de l'image -> build
+# en échec (22/10). 14.2.0 a ses roues cp312 x86_64 ET aarch64 (Pi).
+av==14.2.0
 
 # V2 streaming : TTS local, voix DÉDIÉE à Didier (vision/ai/tts_piper.py,
 # PiperTts) — même logique que faster-whisper ci-dessus : local, pas de
