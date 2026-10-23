@@ -1,7 +1,8 @@
 # Étude — Niveaux de réflexion : parler du tac au tac ET analyser (caméra, mouvement, instructions)
 
-> **Statut : ÉTUDE ÉCRITE le 2026-10-23 ; 4 décisions de David le même jour
-> (§10, ne pas re-trancher).** Le §3 bis (faire avancer l'histoire) est né de
+> **Statut : CODE FAIT le 2026-10-23** (vision 640f270 : N1-N4 + I0, revue
+> adversariale corrigée, banc réel + test de fumée ROS) — **reste la séance
+> avec David**. 4 décisions de David le même jour (§10, ne pas re-trancher). Le §3 bis (faire avancer l'histoire) est né de
 > sa réponse. Les chiffres du §1 sont MESURÉS
 > (bancs OpenRouter du 22-23/10), pas estimés.
 
@@ -245,10 +246,10 @@ du 22/10.
 | Intentions JSON → régisseur, liste blanche, jamais contre `off` | ✅ existe (I1, clé `marche`) |
 | MediaPipe local, trames `CompressedImage` publiées | ✅ existe |
 | Expression `reflechit` + bips de calcul | ✅ existe (proto v9) |
-| Arrêt vocal **déterministe** avant LLM | ❌ manque (aujourd'hui via LLM, en fin de réplique) |
-| Tableau de situation (topic latché + composition + TTL) | ❌ manque |
-| Nœud de réflexion (boucle 2) | ❌ manque |
-| Tour de parole déclenché par un événement | ❌ manque — **décision de doctrine** |
+| Arrêt vocal **déterministe** avant LLM | ✅ FAIT 23/10 (`vision/ai/emergency.py`) |
+| Tableau de situation (topic + composition + TTL) | ✅ FAIT 23/10 (`chat_situation`, `vision/ai/situation.py`) |
+| Nœud de réflexion (boucle 2) | ✅ FAIT 23/10 (`reflection_node`, état de mission I0) |
+| Tour de parole déclenché par un événement | ✅ FAIT 23/10 (`chat_prompt`, garde-fous gravés) |
 | Identification de David parmi les voix | ❌ chantier à part (étude identification) |
 
 ## 9. Plan proposé (lots)
