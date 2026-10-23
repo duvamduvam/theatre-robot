@@ -192,3 +192,36 @@ def test_mouvement_force_a_false_hors_du_domaine_43(domaine):
 def test_mouvement_actif_en_domaine_43_espaces_toleres():
     overrides, _ = vision_config.chat_env_overrides({"CHAT_MOUVEMENT": "oui", "ROS_DOMAIN_ID": " 43 "})
     assert overrides["chat_move_enabled"] is True
+
+
+# --- CHAT_REFLEXION (metteur en scène intérieur, 23/10/2026) ---------------
+
+def test_reflexion_absente_ou_fausse_vaut_false():
+    from vision.vision_config import reflection_enabled_from_env
+    assert reflection_enabled_from_env({}) is False
+    assert reflection_enabled_from_env({"CHAT_REFLEXION": " Non "}) is False
+
+
+def test_reflexion_vraie_sans_garde_de_domaine():
+    # Pas de garde ROS_DOMAIN_ID : la réflexion ne commande pas le corps.
+    from vision.vision_config import chat_env_overrides
+    overrides, warnings = chat_env_overrides({"CHAT_REFLEXION": "1", "ROS_DOMAIN_ID": "42"})
+    assert overrides["chat_reflection_enabled"] is True
+    assert warnings == []
+
+
+def test_reflexion_invalide_leve():
+    import pytest
+    from vision.vision_config import reflection_enabled_from_env
+    with pytest.raises(ValueError):
+        reflection_enabled_from_env({"CHAT_REFLEXION": "peut-être"})
+
+
+def test_config_reflexion_valeurs_gravees():
+    from vision.vision_config import config
+    assert config["chat_reflection_enabled"] is False
+    assert config["reflection_model"] == "anthropic/claude-haiku-5.5"
+    assert config["reflection_deep_model"] == "anthropic/claude-sonnet-5.5"
+    assert config["reflection_extra_body"] == {"reasoning": {"effort": "medium"}}
+    assert config["reflection_max_tokens"] == 3000
+    assert config["reflection_use_image"] is True

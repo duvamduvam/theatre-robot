@@ -115,9 +115,29 @@ def whisper_model_from_env(environ=os.environ):
     return raw
 
 
+# Variable d'environnement : branche la PAROLE sur le metteur en scène
+# intérieur (reflection_node, étude dadou_robot_ros/docs/etude-niveaux-
+# reflexion.md) — chat_node lit le tableau de situation, accepte les tours
+# spontanés et peut demander une réflexion (clé "reflechir"). Pas de garde de
+# domaine : rien de tout ça ne commande le corps (le mouvement reste derrière
+# CHAT_MOUVEMENT, domaine 43). Absente = comportement historique.
+REFLECTION_ENV = "CHAT_REFLEXION"
+
+
+def reflection_enabled_from_env(environ=os.environ):
+    """True ssi CHAT_REFLEXION vaut 1/true/on/oui ; False si absente/vide ou
+    0/false/off/non ; ValueError sinon (même tolérance que CHAT_MOUVEMENT)."""
+    raw = environ.get(REFLECTION_ENV, "").strip().lower()
+    if raw == "" or raw in _MOVE_FALSE:
+        return False
+    if raw in _MOVE_TRUE:
+        return True
+    raise ValueError(f"{REFLECTION_ENV}={raw!r} : attendu {'/'.join(_MOVE_TRUE + _MOVE_FALSE)}")
+
+
 def chat_env_overrides(environ=os.environ):
     """Surcharges du BANC lues dans l'environnement (CHAT_VAD_FACTOR,
-    CHAT_WHISPER_MODEL, CHAT_PARTENAIRE, CHAT_MOUVEMENT) -> (dict à fusionner
+    CHAT_WHISPER_MODEL, CHAT_PARTENAIRE, CHAT_MOUVEMENT, CHAT_REFLEXION) -> (dict à fusionner
     dans `config`, warnings à journaliser).
 
     POURQUOI pas à l'import (revue adversariale I1, 22/10) : une valeur
@@ -134,6 +154,7 @@ def chat_env_overrides(environ=os.environ):
         "chat_vad": vad_config_from_env(environ),
         "chat_whisper_model": whisper_model_from_env(environ),
         "chat_partner": partner_from_env(environ),
+        "chat_reflection_enabled": reflection_enabled_from_env(environ),
     }
     warnings = []
     move = move_enabled_from_env(environ)
@@ -298,6 +319,32 @@ config = {
     # Mouvement à la voix (répétition seulement, domaine 43 seulement, cf.
     # move_enabled_from_env et chat_env_overrides).
     "chat_move_enabled": False,
+
+    # Parole branchée sur le metteur en scène intérieur (cf.
+    # reflection_enabled_from_env et vision/ai/reflection_contract.py).
+    "chat_reflection_enabled": False,
+
+    # --- Metteur en scène intérieur (reflection_node) ---------------------
+    # Étude dadou_robot_ros/docs/etude-niveaux-reflexion.md (23/10/2026) :
+    # boucle LENTE, asynchrone, jamais sur le chemin de la parole. Chiffres
+    # du banc du 23/10 (image 640×480) : Haiku 5.5 effort medium 5,9-6,8 s,
+    # ~0,0003 $ l'appel ; Sonnet 5.5 effort medium 5,0-6,5 s, ~0,005 $.
+    # Réflexion ordinaire (événements + battement de fond) : Haiku, peu cher.
+    "reflection_model": "anthropic/claude-haiku-5.5",
+    "reflection_extra_body": {"reasoning": {"effort": "medium"}},
+    # Demande explicite de Didier (clé "reflechir" = instruction complexe de
+    # David) : rare, c'est là que l'intelligence compte → Sonnet.
+    "reflection_deep_model": "anthropic/claude-sonnet-5.5",
+    "reflection_deep_extra_body": {"reasoning": {"effort": "medium"}},
+    # ⚠️ La réflexion compte dans max_tokens (panne « Didier muet » du 22/10) :
+    # budget LARGE, la sortie utile ne fait que ~150 tokens.
+    "reflection_max_tokens": 3000,
+    # Images de la caméra envoyées au LLM : DÉCIDÉ par David le 23/10 (oui,
+    # y compris en rue). Seule une trame de moins de 3 s est jointe.
+    "reflection_use_image": True,
+    # But de la déambulation (note de création : ils cherchent le paradis).
+    # Surchargé par paramètre ROS pour une répétition (ex. le Titan gris).
+    "reflection_destination": "le paradis",
 
     # Gate « source audio vivante » (vision/audio/live_audio_gate.py, lot du
     # 2026-08-30, half-duplex élargi) : instance LiveAudioGateConfig avec ses
