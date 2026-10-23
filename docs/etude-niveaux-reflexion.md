@@ -253,6 +253,8 @@ du 22/10.
 
 ## 9. Plan proposé (lots)
 
+> **Spec fermée d'implémentation (23/10)** : [`spec-metteur-en-scene.md`](spec-metteur-en-scene.md) — lots P (parole : N1 + tableau + tour spontané + `reflechir`) et R (réflexion : `reflection_node`, mission I0, politique de parole), lancés le 23/10.
+
 Chaque lot a de la valeur seul ; l'ordre va du moins risqué au plus neuf.
 
 - **N1 — Arrêt vocal déterministe** (classe A). Filtre de mots-clés sur la
