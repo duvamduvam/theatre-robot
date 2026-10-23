@@ -35,6 +35,10 @@ setup(
             # expressions faciales (OFF par défaut dans le launch, cf.
             # conf/ros2/launch/vision.launch.py argument chat_enabled).
             'chat = vision.nodes.chat_node:main',
+            # Metteur en scène intérieur : réflexion LLM asynchrone -> tableau
+            # de situation + tours spontanés pour chat (OFF par défaut dans le
+            # launch, argument reflection_enabled).
+            'reflection = vision.nodes.reflection_node:main',
         ],
     },
 )

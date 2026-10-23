@@ -116,3 +116,31 @@ def test_mouvement_sans_partenaire_suit_la_personnalite():
     prompt = personas.compose_system_prompt("bougon", move=True)
     assert "Contexte de répétition" not in prompt
     assert prompt.endswith(personas.PERSONAS["bougon"] + personas.MOVE_TEMPLATE)
+
+
+# --- Demande de réflexion (lot P4 du metteur en scène, 23/10) -------------------
+# Revue adversariale du 23/10 (I5) : REFLECT_TEMPLATE ne vit plus dans le
+# system prompt (Didier promettait une réponse même réflexion morte) — il est
+# accroché au tableau de situation frais par StreamingBrain(situation_suffix),
+# cf. test_llm_stream.py.
+
+def test_le_prompt_systeme_ne_promet_jamais_de_reflexion():
+    for name in personas.persona_names():
+        for partner in (None, "David"):
+            for move in (False, True):
+                prompt = personas.compose_system_prompt(name, partner, move=move)
+                assert "Réflexion :" not in prompt
+                assert "reflechir" not in prompt
+    with pytest.raises(TypeError):
+        personas.compose_system_prompt("bougon", reflect=True)
+
+
+def test_texte_de_reflexion_grave():
+    template = personas.REFLECT_TEMPLATE
+    # Texte GRAVÉ (spec P4) : la clé et sa forme.
+    assert ('ajoute au JSON de fin "reflechir": "<la demande en une phrase>". '
+            "Tu reprendras la parole de toi-même quand tu auras la réponse.") in template
+    assert template.startswith("\nRéflexion : un metteur en scène intérieur t'aide à "
+                               "faire avancer l'histoire.")
+    assert template.endswith("Sinon, n'ajoute PAS la clé \"reflechir\". "
+                             "N'évoque jamais ce JSON à voix haute.\n")

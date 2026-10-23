@@ -102,15 +102,38 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        est ignorée (warning). Pendant une panne `mute`, l'ordre part quand
        même. Cette brique ne sait RIEN du mouvement : chat_node publie,
        le régisseur de la répétition décide.
+
+       METTEUR EN SCÈNE INTÉRIEUR (2026-10-23, lot P, dadou_robot_ros/docs/
+       spec-metteur-en-scene.md, étude etude-niveaux-reflexion.md) : la
+       bouche (ce moteur) ne pense pas, elle LIT ce que la réflexion
+       (reflection_node, autre process) a compris — jamais elle ne l'attend.
+       Quatre ajouts, tous inertes tant que rien n'est branché/publié :
+       - ARRÊT D'URGENCE vocal (vision.ai.emergency) : sur ce que le STT a
+         VRAIMENT produit, AVANT les pannes deaf/garble et le LLM —
+         on_move("stop") part dès la fin du STT, puis le tour continue
+         (Didier joue l'arrêt en personnage).
+       - TABLEAU DE SITUATION (StageState.situation, TTL) : relu à chaque
+         tour, envoyé comme message system (llm_stream.SITUATION_PREFIX).
+       - TOUR SPONTANÉ (StageState.pop_prompt) : servi pendant une écoute
+         SILENCIEUSE d'au moins SPONTANEOUS_MIN_SILENCE_S — jamais pendant
+         que quelqu'un parle (in_speech), jamais pendant que Didier parle ni
+         chat OFF (le micro est coupé : aucune trame, aucun sondage), jamais
+         moins de SPONTANEOUS_MIN_GAP_S après le précédent. Il n'émet
+         JAMAIS "go" (seul un humain remet Didier en route) ; tout énoncé de
+         David vide l'emplacement (direction devenue caduque).
+       - DEMANDE DE RÉFLEXION : clé "reflechir" du JSON de fin ->
+         `on_reflect(texte)` (kwarg optionnel, None = rien).
 """
 from __future__ import annotations
 
 import logging
 import threading
 import time
+from dataclasses import dataclass
 from typing import Callable, Optional, Union
 
 from vision.ai import performance
+from vision.ai.emergency import is_emergency_stop
 from vision.ai.stage import ROLE_DAVID, ROLE_DIDIER, StageState, garble_text
 from vision.ai.stream_parser import Didascalie, Emotion, Sentence, StreamPerformanceParser
 
@@ -135,6 +158,35 @@ DEAD_MIC_BACKOFF_S = 0.5
 # le backoff à l'aveugle le retarderait pour rien. 50 ms : imperceptible
 # pour la régie, négligeable en CPU.
 STAGE_POLL_S = 0.05
+
+# Silence d'écoute minimal (s) avant de servir un tour spontané : compté
+# depuis le DÉBUT de l'écoute (le micro vient d'être rouvert). Sans lui,
+# Didier enchaînerait sa relance juste après sa propre réplique, sans laisser
+# à David le temps de répondre — c'est une relance, pas une interruption.
+SPONTANEOUS_MIN_SILENCE_S = 3.0
+
+# Écart minimal (s) entre deux tours spontanés SERVIS, mesuré côté PAROLE.
+# Revue adversariale du 23/10 (M5) : le seul garde-fou de fréquence vivait
+# dans reflection_node (SpontaneousPolicy, 12 s) — un autre éditeur de
+# chat_prompt, ou un node relancé (état perdu), faisait enchaîner Didier
+# relance sur relance. Trop tôt, la direction n'est PAS consommée : elle
+# reste dans l'emplacement et se périme (PROMPT_TTL_S) si l'écart n'est pas
+# atteint à temps.
+SPONTANEOUS_MIN_GAP_S = 10.0
+
+# Texte « user » d'un tour spontané (texte fixé par la spec P3). Il entre dans
+# ChatDB comme tour user : VOULU — Haiku 5.5 exige l'alternance user/assistant
+# (pas de prefill assistant), et l'historique garde trace du silence.
+SPONTANEOUS_USER_TEXT = "(Silence. Personne ne te parle : c'est à toi de relancer la scène.)"
+
+
+@dataclass(frozen=True)
+class SpontaneousPrompt:
+    """Troisième type de retour de _listen_for_utterance (avec bytes = énoncé
+    et str = texte tapé) : une direction de tour spontané à servir. Une
+    dataclass et pas une str : run_once distingue les cas par isinstance,
+    une str serait confondue avec un texte tapé (servi comme parole de David)."""
+    direction: str
 
 
 def has_usable_text(text: Optional[str]) -> bool:
@@ -166,7 +218,8 @@ class ConversationEngine:
                  on_timing: Optional[Callable[[dict], None]] = None,
                  stage: Optional[StageState] = None,
                  on_transcript: Optional[Callable[[str, str], None]] = None,
-                 on_move: Optional[Callable[[str], None]] = None):
+                 on_move: Optional[Callable[[str], None]] = None,
+                 on_reflect: Optional[Callable[[str], None]] = None):
         self._mic = mic
         self._vad = vad
         # Gate « source audio vivante » (half-duplex élargi, cf.
@@ -199,6 +252,12 @@ class ConversationEngine:
         # None = comportement historique STRICTEMENT inchangé (la clé
         # "marche" n'est même pas lue).
         self._on_move = on_move
+        # Demande de réflexion (cf. docstring de module METTEUR EN SCÈNE) :
+        # None = la clé "reflechir" n'est pas lue.
+        self._on_reflect = on_reflect
+        # Début du dernier tour spontané servi (horloge monotone), cf.
+        # SPONTANEOUS_MIN_GAP_S ; None = aucun encore.
+        self._last_spontaneous_at: Optional[float] = None
         self._stt = stt
         self._brain = brain
         self._tts = tts
@@ -317,13 +376,19 @@ class ConversationEngine:
             logger.warning("Callback on_transcript en échec (ligne %r perdue).", role,
                            exc_info=True)
 
-    def _notify_move(self, params) -> None:
+    def _notify_move(self, params, spontaneous: bool = False) -> None:
         """Clé "marche" du JSON de fin -> `on_move("go"|"stop")` (cf.
         docstring de module MOUVEMENT). Normalisée (str, strip, lower) : le
         LLM écrit parfois "Go" ou "stop ". Toute autre valeur ou type =
         ignorée avec un warning — jamais d'exception, jamais d'ordre deviné
         (« recule » n'est PAS un stop). Callback qui lève = tour préservé :
-        un ordre perdu vaut mieux qu'un Didier muet."""
+        un ordre perdu vaut mieux qu'un Didier muet.
+
+        `spontaneous` (tour spontané, cf. _serve_prompt) : seul "stop" passe.
+        Revue adversariale du 23/10 (B1, bloquant) : une direction du metteur
+        en scène (« reprends la route ») faisait écrire "go" au LLM — Didier
+        se remettait en marche sans qu'aucun humain l'ait demandé, y compris
+        juste après un « stop » de David."""
         if self._on_move is None or not isinstance(params, dict) or "marche" not in params:
             return
         raw = params["marche"]
@@ -331,10 +396,42 @@ class ConversationEngine:
         if cmd not in ("go", "stop"):
             logger.warning("Clé \"marche\" ignorée : %r (attendu \"go\" ou \"stop\").", raw)
             return
+        if spontaneous and cmd == "go":
+            logger.warning("Clé \"marche\" : go ignoré : tour spontané "
+                           "(aucun humain ne l'a demandé).")
+            return
+        self._emit_move(cmd)
+
+    def _emit_move(self, cmd: str) -> None:
+        """Seul point d'émission d'une intention de marche — partagé par la
+        clé "marche" (fin de réplique) et l'arrêt d'urgence vocal (avant le
+        LLM). `on_move` None = mouvement désactivé : rien, sans erreur.
+        Callback qui lève = ordre perdu, JAMAIS le tour : une publication en
+        échec ne doit pas rendre Didier muet (et le deadman reste l'arrêt
+        effectif, cf. vision.ai.emergency)."""
+        if self._on_move is None:
+            return
         try:
             self._on_move(cmd)
         except Exception:
             logger.exception("Callback on_move en échec (ordre %r perdu).", cmd)
+
+    def _notify_reflect(self, params) -> None:
+        """Clé "reflechir" du JSON de fin -> `on_reflect(demande)` (cf.
+        personas.REFLECT_TEMPLATE). Seule une chaîne non vide passe (rognée) ;
+        tout autre type est ignoré en silence — la clé est facultative et le
+        LLM n'a rien d'autre à y mettre. Même garde que _emit_move."""
+        if self._on_reflect is None or not isinstance(params, dict):
+            return
+        demande = params.get("reflechir")
+        if not isinstance(demande, str) or not demande.strip():
+            return
+        demande = demande.strip()
+        logger.info("Demande de réflexion : %r", demande)
+        try:
+            self._on_reflect(demande)
+        except Exception:
+            logger.exception("Callback on_reflect en échec (demande %r perdue).", demande)
 
     def _publish_all(self, messages) -> None:
         """publish() ne prend qu'UN SEUL message à la fois (contrat du
@@ -345,7 +442,8 @@ class ConversationEngine:
         for message in messages:
             self._publish(message)
 
-    def _handle_event(self, event, emotion_params, timing_marks: dict, mute: bool = False):
+    def _handle_event(self, event, emotion_params, timing_marks: dict, mute: bool = False,
+                      spontaneous: bool = False):
         """Traduit UN événement du parseur de flux (Sentence/Didascalie/
         Emotion) en effet de bord (publish + synthèse/lecture), et retourne
         les params d'émotion à retenir (inchangés sauf si `event` EST
@@ -362,7 +460,9 @@ class ConversationEngine:
         `mute` (panne de régie, cf. docstring de module RÉGIE) : la Sentence
         n'est ni synthétisée ni jouée — tout le reste part normalement
         (transcript, bouche "parle", didascalies, émotion) : c'est le bug
-        réel simulé, « texte sans voix » (audio muet en silence)."""
+        réel simulé, « texte sans voix » (audio muet en silence).
+
+        `spontaneous` : tour spontané, transmis à _notify_move (jamais de "go")."""
         if isinstance(event, Sentence):
             if timing_marks["first_sentence_at"] is None:
                 # Horodaté AVANT même la synthèse TTS qui suit (elle peut
@@ -402,8 +502,10 @@ class ConversationEngine:
 
         if isinstance(event, Emotion):
             # Indépendant de `mute` : une panne de voix ne coupe pas les
-            # jambes (seule la synthèse est muette, cf. ci-dessus).
-            self._notify_move(event.params)
+            # jambes (seule la synthèse est muette, cf. ci-dessus) — ni la
+            # tête : la demande de réflexion part aussi.
+            self._notify_move(event.params, spontaneous)
+            self._notify_reflect(event.params)
             return event.params
 
         return emotion_params
@@ -427,6 +529,10 @@ class ConversationEngine:
             # Texte tapé arrivé PENDANT l'écoute (cf. _listen_for_utterance,
             # qui a déjà coupé le micro et jeté l'énoncé partiel).
             return self._serve_typed_text(speech_bytes)
+        if isinstance(speech_bytes, SpontaneousPrompt):
+            # Direction du metteur en scène servie en plein silence (cf.
+            # _listen_for_utterance, qui a déjà coupé le micro).
+            return self._serve_prompt(speech_bytes.direction)
         if speech_bytes is None:
             if self._enabled is not None and not self._enabled.is_set():
                 # Coupure VOLONTAIRE (toggle chat OFF pendant l'écoute, cf.
@@ -539,18 +645,62 @@ class ConversationEngine:
         logger.info("Texte tapé : %r", text)
         return self._reply_with_stage(text)
 
+    def _serve_prompt(self, direction: str) -> bool:
+        """Tour SPONTANÉ : Didier relance la scène sur une direction du
+        metteur en scène, sans que personne ne lui ait parlé. Visage
+        "reflechit" et état "thinking" comme un tour normal, mais SANS bips :
+        il ne « calcule » pas une réponse, il a une idée. Pas de ligne
+        transcript "david" (David n'a rien dit) ; pas de panne deaf/garble
+        (rien n'a été entendu) — seule `mute` s'applique (la voix est en
+        panne, quoi qu'il dise). Jamais de "go" (B1, cf. _notify_move)."""
+        self._last_spontaneous_at = time.monotonic()
+        self._mic.stop()
+        self._publish_all(self._perf.thinking())
+        self._set_state("thinking")
+        op, _params = (self._stage.fault(time.monotonic()) if self._stage is not None
+                       else ("pass", {}))
+        logger.info("Tour spontané, direction : %r", direction)
+        return self._speak_reply(SPONTANEOUS_USER_TEXT, direction=direction,
+                                 mute=(op == "mute"), spontaneous=True)
+
     def _reply_with_stage(self, text: str, *, stt_ms: float = 0.0,
                           speech_end_at: Optional[float] = None) -> bool:
-        """Applique la PANNE de régie courante au texte compris (STT ou texte
-        tapé), publie la ligne "david" du transcript, puis répond. Sans
-        `stage` : panne "pass" -> appel _speak_reply strictement historique.
-        La panne est lue UNE fois par tour (instantané) : une échéance qui
-        tombe en pleine réplique ne la coupe pas à moitié."""
-        op, params = (self._stage.fault(time.monotonic()) if self._stage is not None
-                      else ("pass", {}))
+        """Teste l'arrêt d'urgence sur l'énoncé ENTENDU, applique la PANNE de
+        régie courante au texte compris (STT ou texte tapé), publie la ligne
+        "david" du transcript, puis répond. Sans `stage` : panne "pass" ->
+        appel _speak_reply strictement historique. La panne est lue UNE fois
+        par tour (instantané) : une échéance qui tombe en pleine réplique ne
+        la coupe pas à moitié."""
+        if self._stage is not None:
+            # Revue adversariale du 23/10 (I7) : David vient de parler — une
+            # direction de tour spontané calculée AVANT cette réplique est
+            # caduque (elle répondait à une scène qui n'existe plus).
+            self._stage.clear_prompt()
         # stt_text du dict on_timing = ce que le STT a VRAIMENT produit (la
         # console de diagnostic dit la vérité technique, même sous garble).
         stt_text = text
+        if is_emergency_stop(stt_text):
+            # Arrêt d'urgence vocal (cf. docstring de module METTEUR EN
+            # SCÈNE) : AVANT tout le reste — pannes, transcript, delay, LLM.
+            # Sur stt_text, PAS sur le texte compris : revue adversariale du
+            # 23/10 (I3) — une panne de régie (deaf, garble) simule
+            # l'INCOMPRÉHENSION de la conversation, jamais la surdité à
+            # l'urgence ; « Stop ! » crié pendant une panne deaf de 60 s ne
+            # partait pas. Le tour continue ensuite normalement : le LLM joue
+            # l'arrêt en personnage ; s'il ajoute aussi "marche": "stop", le
+            # régisseur est idempotent.
+            if self._on_move is None:
+                # Mouvement à la voix désactivé (vrai robot : aucun régisseur)
+                # — le dire dans le log, pour qu'un essai réel ne fasse jamais
+                # croire que la voix arrête quoi que ce soit (le deadman et la
+                # télécommande restent les arrêts effectifs).
+                logger.warning("ARRÊT D'URGENCE vocal entendu mais NON transmis "
+                               "(mouvement à la voix désactivé) : %r", stt_text)
+            else:
+                logger.warning("ARRÊT D'URGENCE vocal : %r", stt_text)
+                self._emit_move("stop")
+        op, params = (self._stage.fault(time.monotonic()) if self._stage is not None
+                      else ("pass", {}))
         if op == "deaf":
             # Énoncé jeté, comme un STT inexploitable (même sortie : idle()
             # avant de relancer le micro, cf. correctif du 2026-07-12) —
@@ -577,14 +727,18 @@ class ConversationEngine:
         return self._speak_reply(text, stt_ms=stt_ms, stt_text=stt_text,
                                  speech_end_at=speech_end_at, mute=(op == "mute"))
 
-    def _listen_for_utterance(self) -> Union[bytes, str, None]:
+    def _listen_for_utterance(self) -> Union[bytes, str, SpontaneousPrompt, None]:
         """Boucle micro -> VAD jusqu'à détecter la fin d'un énoncé. Retourne
         les octets PCM accumulés depuis le pré-roll, ou None si le flux
         micro est mort avant la fin de l'énoncé — ou une `str` (régie) : un
-        texte tapé arrivé pendant l'écoute, qui l'INTERROMPT (bytes et str
-        sont des types disjoints : run_once les distingue par isinstance)."""
+        texte tapé arrivé pendant l'écoute, qui l'INTERROMPT — ou un
+        SpontaneousPrompt (metteur en scène) : une direction servie pendant
+        un silence (bytes, str et SpontaneousPrompt sont des types
+        disjoints : run_once les distingue par isinstance)."""
         speech_bytes = b""
         in_speech = False
+        # Début d'écoute : base du silence minimal du tour spontané.
+        listen_started_at = time.monotonic()
 
         while True:
             frame = self._mic.read_frame()
@@ -602,6 +756,29 @@ class ConversationEngine:
                 return typed
             if frame is None:
                 return None
+            # Tour spontané : APRÈS le texte tapé (la régie passe d'abord) et
+            # APRÈS le test de flux mort (chat OFF coupe le micro : pas de
+            # trame, donc jamais de tour spontané — la direction se périme).
+            # Jamais en pleine parole (in_speech) : David a la priorité.
+            # pop_prompt n'est même pas appelé avant le silence minimal : la
+            # direction attend, elle n'est pas consommée pour rien.
+            # Jamais non plus pendant un son de SPECTACLE (show_audio_active,
+            # le signal même qu'utilise le gate) : Didier parlerait par-dessus
+            # sa propre séquence (décision du 23/10, revue du lot P).
+            # Ni moins de SPONTANEOUS_MIN_GAP_S après le précédent (M5) : la
+            # direction n'est pas consommée, elle attend ou se périme.
+            show_audio_now = (self._show_audio_active() if self._show_audio_active
+                              is not None else False)
+            now = time.monotonic()
+            gap_ok = (self._last_spontaneous_at is None
+                      or now - self._last_spontaneous_at >= SPONTANEOUS_MIN_GAP_S)
+            if (self._stage is not None and not in_speech and not show_audio_now and gap_ok
+                    and now - listen_started_at >= SPONTANEOUS_MIN_SILENCE_S):
+                direction = self._stage.pop_prompt(time.monotonic())
+                if direction is not None:
+                    self._mic.stop()
+                    self._vad.reset()
+                    return SpontaneousPrompt(direction)
 
             level = self._mic.frame_rms(frame)
 
@@ -669,7 +846,8 @@ class ConversationEngine:
                 return speech_bytes
 
     def _speak_reply(self, text: str, *, stt_ms: float = 0.0, stt_text: str = "",
-                      speech_end_at: Optional[float] = None, mute: bool = False) -> bool:
+                      speech_end_at: Optional[float] = None, mute: bool = False,
+                      direction: Optional[str] = None, spontaneous: bool = False) -> bool:
         """Génère et joue la réponse du LLM pour `text` déjà transcrit ;
         retourne True si le tour est allé jusqu'au bout, False sur erreur
         LLM/TTS (log + retour à l'écoute, le spectacle continue).
@@ -680,7 +858,13 @@ class ConversationEngine:
         méthode — cette méthode n'a besoin de mesurer QUE ce qui se passe à
         partir d'ici (latence LLM, latence premier son).
 
-        `mute` : panne de régie, transmise à _handle_event (cf. son docstring)."""
+        `mute` : panne de régie, transmise à _handle_event (cf. son docstring).
+
+        `direction` : direction de jeu d'un tour spontané (cf. _serve_prompt),
+        transmise au brain avec le tableau de situation — ignorée sans `stage`.
+
+        `spontaneous` : tour spontané (cf. _serve_prompt) — la clé "marche"
+        n'y transmet que "stop" (B1, cf. _notify_move)."""
         parser = StreamPerformanceParser()
         emotion_params = None
         # Horodatage de départ pour llm_first_ms/audio_first_ms (relatifs au
@@ -695,16 +879,20 @@ class ConversationEngine:
             if self._stage is None:
                 deltas = self._brain.stream_reply(text)
             else:
-                # Consigne de jeu courante (None si aucune, levée ou périmée,
-                # cf. StageState.instruction) relue à CHAQUE tour.
+                # Consigne de jeu courante et tableau de situation (None si
+                # absents, levés ou périmés, cf. StageState) relus à CHAQUE
+                # tour, sur le MÊME instant.
+                now = time.monotonic()
                 deltas = self._brain.stream_reply(
-                    text, extra_system=self._stage.instruction(time.monotonic()))
+                    text, extra_system=self._stage.instruction(now),
+                    situation=self._stage.situation(now), direction=direction)
             for delta in deltas:
                 for event in parser.feed(delta):
                     emotion_params = self._handle_event(
-                        event, emotion_params, timing_marks, mute)
+                        event, emotion_params, timing_marks, mute, spontaneous)
             for event in parser.flush():
-                emotion_params = self._handle_event(event, emotion_params, timing_marks, mute)
+                emotion_params = self._handle_event(
+                    event, emotion_params, timing_marks, mute, spontaneous)
         except Exception:
             # Le spectacle continue : une panne LLM/TTS ponctuelle ne doit
             # jamais arrêter la conversation, seulement ce tour-ci.

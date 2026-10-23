@@ -54,7 +54,8 @@ Cerveau perceptif du robot de théâtre Didier, sur Pi 5 « vision » (alias ssh
   /etc/asound.conf du Pi — le casque Logitech est débranché). Pipeline
   VAD→whisper base→Haiku (OpenRouter)→piper→mixette. LLM = Haiku 5.5
   depuis le 2026-10-22, RÉFLEXION COUPÉE obligatoire (`chat_llm_extra_body`,
-  sinon réponses vides = Didier muet). Toggle à chaud :
+  sinon réponses vides = Didier muet). Metteur en scène intérieur (23/10) :
+  `reflection_node` + `CHAT_REFLEXION=1` (cf. ARCHITECTURE.md). Toggle à chaud :
   topic StringTime `chat` "on"/"off" (même contrat que `gaze` côté robot) —
   ON au démarrage du node, OFF coupe le micro et met la boucle en pause
   (whisper/piper restent chargés, reprise instantanée). Tours journalisés

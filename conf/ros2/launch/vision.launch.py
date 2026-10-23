@@ -55,6 +55,7 @@ def generate_launch_description():
     ema_alpha = LaunchConfiguration("ema_alpha")
     video_fps = LaunchConfiguration("video_fps")
     chat_enabled = LaunchConfiguration("chat_enabled")
+    reflection_enabled = LaunchConfiguration("reflection_enabled")
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -82,6 +83,13 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "chat_enabled", default_value="false",
             description="Active le node de conversation temps réel (micro -> LLM -> voix) — OFF par défaut, cf. docstring de module",
+        ),
+        DeclareLaunchArgument(
+            "reflection_enabled", default_value="false",
+            description="Active le metteur en scène intérieur (reflection : réflexion LLM asynchrone,"
+                        " tableau de situation, tours spontanés) — OFF par défaut comme chat_enabled"
+                        " (budget LLM + images vers le cloud) ; la parole ne l'écoute que si"
+                        " CHAT_REFLEXION est aussi posé",
         ),
 
         # V0 : heartbeat, preuve de vie ROS bout-en-bout (déjà validé sur le
@@ -117,5 +125,16 @@ def generate_launch_description():
             executable="chat",
             name="chat",
             condition=IfCondition(chat_enabled),
+        ),
+
+        # Metteur en scène intérieur (boucle de réflexion, étude dadou_robot_ros
+        # docs/etude-niveaux-reflexion.md) : lancé UNIQUEMENT si
+        # reflection_enabled:=true. Ne commande jamais le corps. Défauts
+        # (destination, modèles) : vision_config.config, comme pour chat.
+        Node(
+            package="vision",
+            executable="reflection",
+            name="reflection",
+            condition=IfCondition(reflection_enabled),
         ),
     ])

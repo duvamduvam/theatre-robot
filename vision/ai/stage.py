@@ -13,6 +13,12 @@ QUOI : StageState porte les trois choses qu'une régie peut imposer à la
          deaf, mute, phantom.
        Plus les décodeurs JSON de ces trois topics et l'encodage du
        transcript, pour que chat_node reste un node FIN (I/O seulement).
+       Depuis le 2026-10-23 (metteur en scène intérieur, lot P,
+       dadou_robot_ros/docs/spec-metteur-en-scene.md) : le TABLEAU DE
+       SITUATION (topic chat_situation, relu à chaque tour, périmé en
+       SITUATION_TTL_S) et la DIRECTION du tour spontané (topic chat_prompt,
+       un seul emplacement, périmée en PROMPT_TTL_S) — même verrou, mêmes
+       bornes tenues côté consommateur.
 POURQUOI un module PUR (aucun rclpy) : même règle que _chat_wiring et
        arbitration — les bornes de sécurité de ce canal (plafond 60 s de la
        panne, péremption 120 s de la consigne, phantom ponctuel) doivent être
@@ -38,6 +44,16 @@ import random
 import threading
 from collections import deque
 from typing import Optional, Sequence, Tuple
+
+from vision.ai.reflection_contract import SITUATION_TTL_S
+
+# Péremption de la direction d'un tour SPONTANÉ (s, topic chat_prompt, lot
+# P3 du metteur en scène intérieur) : la direction est servie quand l'écoute
+# a duré au moins 3 s sans parole (SPONTANEOUS_MIN_SILENCE_S, conversation) —
+# au-delà de 8 s d'attente (Didier parlait, quelqu'un parlait, chat OFF), la
+# scène a bougé : une vieille direction ferait relancer Didier à contretemps.
+# Elle se périme, la réflexion en proposera une neuve.
+PROMPT_TTL_S = 8.0
 
 # Péremption LOCALE de la consigne (s) : la lubie la plus longue du régisseur
 # dure 120 s (FAULT_MAX_DURATION_S["lubie"], §13.4) — au-delà, une consigne
@@ -157,6 +173,14 @@ class StageState:
         self._fault_op = "pass"
         self._fault_params: dict = {}
         self._fault_deadline_s: Optional[float] = None
+        # Tableau de situation (topic chat_situation) : texte + heure de
+        # RÉCEPTION (horloge locale — l'horodatage du payload vient d'une
+        # autre machine, cf. reflection_contract).
+        self._situation: Optional[str] = None
+        self._situation_at_s = 0.0
+        # Tour spontané (topic chat_prompt) : UN seul emplacement, cf. push_prompt.
+        self._prompt: Optional[str] = None
+        self._prompt_at_s = 0.0
         # Tirage des contresens (garble) : utilisé par le SEUL thread de
         # conversation, d'où l'absence de verrou dessus.
         self.rng = rng if rng is not None else random.Random()
@@ -204,6 +228,59 @@ class StageState:
             if self._instruction is not None and now_s >= self._instruction_deadline_s:
                 self._instruction = None
             return self._instruction
+
+    # --- Tableau de situation (topic chat_situation, metteur en scène) -----
+
+    def set_situation(self, text: str, now_s: float) -> None:
+        """Range le dernier tableau reçu. Vide = tableau vide (la réflexion
+        n'a rien à dire) : la parole retire le bloc du prompt."""
+        text = (text or "").strip()
+        with self._lock:
+            self._situation = text or None
+            self._situation_at_s = now_s
+
+    def situation(self, now_s: float) -> Optional[str]:
+        """Tableau en vigueur, ou None (vide, jamais reçu, ou reçu il y a plus
+        de SITUATION_TTL_S). La réflexion republie toutes les secondes : un
+        tableau qui vieillit signifie qu'elle est morte — Didier parle alors
+        sans, jamais avec une vision du monde figée (une personne partie
+        depuis 30 s dont il parlerait encore)."""
+        with self._lock:
+            if self._situation is None or now_s - self._situation_at_s > SITUATION_TTL_S:
+                return None
+            return self._situation
+
+    # --- Tour spontané (topic chat_prompt, metteur en scène) ---------------
+
+    def push_prompt(self, direction: str, now_s: float) -> None:
+        """Pose la direction du prochain tour spontané. UN SEUL emplacement :
+        la plus récente REMPLACE l'ancienne (une vieille direction n'a plus
+        de valeur, et deux tours spontanés d'affilée n'ont pas de sens).
+        Vide = ValueError (même règle que push_text : rien à faire avancer)."""
+        direction = (direction or "").strip()
+        if not direction:
+            raise ValueError("direction de tour spontané vide ignorée")
+        with self._lock:
+            self._prompt = direction
+            self._prompt_at_s = now_s
+
+    def pop_prompt(self, now_s: float) -> Optional[str]:
+        """Consomme la direction en attente, ou None (vide, ou plus vieille
+        que PROMPT_TTL_S — auquel cas elle est jetée pour de bon)."""
+        with self._lock:
+            direction, self._prompt = self._prompt, None
+            if direction is None or now_s - self._prompt_at_s > PROMPT_TTL_S:
+                return None
+            return direction
+
+    def clear_prompt(self) -> None:
+        """Vide l'emplacement du tour spontané. Appelé dès qu'un énoncé de
+        David est servi (ConversationEngine._reply_with_stage). Revue
+        adversariale du 23/10 (I7) : une direction calculée AVANT sa
+        dernière réplique (« demande-lui son prénom ») était jouée APRÈS,
+        à contretemps — David venait justement de le donner."""
+        with self._lock:
+            self._prompt = None
 
     # --- Panne de conversation (topic rehearsal/chat_fault) ----------------
 

@@ -227,3 +227,77 @@ def test_garble_texts_non_vides_et_distincts():
 def test_encode_transcript_payload_grave():
     assert encode_transcript("didier", "C'est prévu.", 1760436000123) == (
         '{"role": "didier", "text": "C\'est prévu.", "t_ms": 1760436000123}')
+
+
+# ---------------------------------------------------------------------------
+# Metteur en scène intérieur (lot P, 2026-10-23, dadou_robot_ros/docs/
+# spec-metteur-en-scene.md) : tableau de situation (TTL 5 s, constante du
+# contrat partagé) et emplacement UNIQUE du tour spontané (TTL 8 s).
+# ---------------------------------------------------------------------------
+
+def test_constantes_du_metteur_en_scene():
+    assert stage.PROMPT_TTL_S == 8.0
+    assert stage.SITUATION_TTL_S == 5.0   # importée du contrat, pas recopiée
+
+
+def test_situation_absente_par_defaut():
+    assert StageState().situation(T0) is None
+
+
+def test_situation_presente_a_4_9_s_absente_a_5_1_s():
+    state = StageState()
+    state.set_situation("  David à ta gauche.  ", T0)
+    assert state.situation(T0 + 4.9) == "David à ta gauche."
+    assert state.situation(T0 + 5.1) is None
+
+
+def test_situation_vide_retire_le_tableau():
+    state = StageState()
+    state.set_situation("Personne en vue.", T0)
+    state.set_situation("", T0 + 1)
+    assert state.situation(T0 + 1) is None
+
+
+def test_nouvelle_situation_rearme_la_peremption():
+    state = StageState()
+    state.set_situation("ancienne", T0)
+    state.set_situation("neuve", T0 + 4)
+    assert state.situation(T0 + 8) == "neuve"
+    assert state.situation(T0 + 9.1) is None
+
+
+def test_prompt_absent_par_defaut():
+    assert StageState().pop_prompt(T0) is None
+
+
+def test_prompt_consomme_une_seule_fois():
+    state = StageState()
+    state.push_prompt("Demande à la dame en rouge.", T0)
+    assert state.pop_prompt(T0 + 1) == "Demande à la dame en rouge."
+    assert state.pop_prompt(T0 + 1) is None
+
+
+def test_prompt_present_a_7_9_s_perime_a_8_1_s():
+    state = StageState()
+    state.push_prompt("Relance.", T0)
+    assert state.pop_prompt(T0 + 7.9) == "Relance."
+    state.push_prompt("Relance.", T0)
+    assert state.pop_prompt(T0 + 8.1) is None
+    # Périmée = jetée pour de bon, pas gardée pour plus tard.
+    assert state.pop_prompt(T0 + 8.1) is None
+
+
+def test_prompt_emplacement_unique_le_plus_recent_remplace():
+    state = StageState()
+    state.push_prompt("vieille direction", T0)
+    state.push_prompt("direction neuve", T0 + 2)
+    assert state.pop_prompt(T0 + 9) == "direction neuve"   # 7 s après la NEUVE
+    assert state.pop_prompt(T0 + 9) is None
+
+
+@pytest.mark.parametrize("direction", ["", "   ", None])
+def test_prompt_vide_refuse(direction):
+    state = StageState()
+    with pytest.raises(ValueError):
+        state.push_prompt(direction, T0)
+    assert state.pop_prompt(T0) is None

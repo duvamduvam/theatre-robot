@@ -78,6 +78,31 @@ câblage dans `chat_node`. Tous en `robot_interfaces/StringTime` :
 | `rehearsal/chat_fault` | sub | Panne publiée par le régisseur de la répétition simulée : JSON `{"op": pass\|delay\|garble\|deaf\|mute\|phantom, "params": {...}, "until_ms": n}`, `until_ms` = DURÉE en ms (même convention que les ordres relais). **Plafond local 60 s** (None/absurde = 60 s). `delay` (`delay_ms` 1..60000) = sommeil avant le LLM ; `garble` = texte compris remplacé par un contresens (liste gravée ou `params.texts`) ; `deaf` = énoncés jetés ; `mute` = répliques non synthétisées (texte publié quand même) ; `phantom` (`params.text`) = ponctuel, servi comme un énoncé entendu. Sans effet en prod tant que personne ne publie. |
 | `chat_transcript` | pub | Flux (QoS volatile, depth 10) : JSON `{"role": "david"\|"didier", "text", "t_ms"}` (`t_ms` = epoch ms). `david` = ce que Didier a compris (après garble), `didier` = chaque phrase. Jamais les consignes ni les pannes. |
 
+### Metteur en scène intérieur (23/10)
+
+Étude `../dadou_robot_ros/docs/etude-niveaux-reflexion.md`, spec fermée
+`../dadou_robot_ros/docs/spec-metteur-en-scene.md`. Deux boucles qui ne
+s'attendent JAMAIS : la parole (`chat_node`, Haiku 5.5 réflexion coupée) et la
+réflexion (`reflection_node`, Haiku 5.5 effort medium ; Sonnet 5.5 sur demande).
+Contrat partagé : `vision/ai/reflection_contract.py`. Un seul interrupteur :
+`CHAT_REFLEXION` (chat_node le lit ; `launch-ros-in-docker.sh` en déduit
+`reflection_enabled`). Tous en `robot_interfaces/StringTime` :
+
+| Topic | Sens | Contrat |
+|---|---|---|
+| `chat_situation` | reflection → chat | JSON `{"text", "t_ms"}` : tableau de situation (perception, direction, mission, compris ; ≤ 700 car.). Republié chaque seconde ; **péremption côté parole 5 s** (réflexion morte = tableau absent). Envoyé au LLM comme message system à chaque tour, jamais historisé. |
+| `chat_prompt` | reflection → chat | JSON `{"direction", "raison"}` : demande de tour SPONTANÉ. Emplacement unique (le plus récent gagne), **TTL 8 s**, servi seulement après 3 s d'écoute silencieuse, jamais en pleine parole, ni pendant un son de spectacle, ni chat OFF. |
+| `chat_reflect` | chat → reflection | JSON `{"demande"}` : clé `reflechir` du JSON de fin (instruction complexe) → réflexion PROFONDE immédiate, réponse toujours renvoyée en `chat_prompt`. |
+| `mission_state` | reflection → (console) | Latché : état de mission I0 (5 critères love/tenderness/friendship/speed/strong, guides, dernière indication). |
+
+reflection_node s'abonne aussi à `chat_transcript`, `chat_state` (latché),
+`chat_instruction`, `rehearsal/poi_event`, `route_state` (latché),
+`/vision/person_box` et `camera/image_raw/compressed` (trame ≤ 3 s jointe au
+LLM, décision de David du 23/10). **Arrêt d'urgence vocal** (`vision/ai/emergency.py`) :
+une phrase faite UNIQUEMENT de mots d'arrêt (« Stop ! », « Arrête-toi ! »…)
+publie `"stop"` sur `rehearsal/chat_move` AVANT le LLM (sans régisseur : loggé
+« NON transmis », aucun effet).
+
 Test à la main (domaine 43) :
 `ros2 topic pub --once chat_text robot_interfaces/msg/StringTime "{msg: 'bonjour Didier'}"`.
 

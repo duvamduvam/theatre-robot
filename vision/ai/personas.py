@@ -123,7 +123,26 @@ Mouvement (répétition) : tu marches seul sur un itinéraire. Tu peux demander 
 """
 
 
-def compose_system_prompt(name: str, partner: Optional[str] = None, move: bool = False) -> str:
+# Demande de réflexion (lot P4 du metteur en scène intérieur, 23/10 — texte
+# EXACT de dadou_robot_ros/docs/spec-metteur-en-scene.md). Instructions
+# complexes de David (classe C, étude niveaux-réflexion §5) : la bouche
+# (Haiku réflexion coupée) n'a ni l'image ni le temps de penser — elle accuse
+# réception en personnage et délègue par la clé "reflechir", que chat_node
+# publie sur chat_reflect ; la réponse revient par un tour spontané.
+# N'entre PLUS dans le system prompt (revue adversariale du 23/10, I5 :
+# réflexion morte, Didier promettait quand même une réponse qui ne venait
+# jamais) : chat_node le passe à StreamingBrain(situation_suffix=…), qui
+# l'accroche au tableau de situation — présent seulement si un tableau FRAIS
+# prouve que la réflexion est vivante.
+REFLECT_TEMPLATE = """
+Réflexion : un metteur en scène intérieur t'aide à faire avancer l'histoire. Ce que tu sais de la scène t'est donné à chaque réplique.
+Quand on te demande quelque chose qui demande de regarder ou de réfléchir (ce que tu vois, aller demander quelque chose à quelqu'un, un plan pour plus tard), réponds tout de suite en une phrase, en personnage (*réfléchit*), et ajoute au JSON de fin "reflechir": "<la demande en une phrase>". Tu reprendras la parole de toi-même quand tu auras la réponse.
+Sinon, n'ajoute PAS la clé "reflechir". N'évoque jamais ce JSON à voix haute.
+"""
+
+
+def compose_system_prompt(name: str, partner: Optional[str] = None,
+                          move: bool = False) -> str:
     """System prompt complet pour la variante `name` : contrat technique
     (AI_INSTRUCTIONS + AI_REALTIME_RULES, inchangés — JSON d'émotion,
     didascalies, rythme) puis socle de personnage puis personnalité du jour.
@@ -137,7 +156,9 @@ def compose_system_prompt(name: str, partner: Optional[str] = None, move: bool =
     connaît son interlocuteur (répétition).
 
     `move` (False par défaut = prompt inchangé) : ajoute MOVE_TEMPLATE en
-    DERNIER — Didier peut demander à repartir / s'arrêter (répétition)."""
+    DERNIER — Didier peut demander à repartir / s'arrêter (répétition).
+
+    REFLECT_TEMPLATE n'est JAMAIS ajouté ici (cf. son commentaire)."""
     if name not in PERSONAS:
         raise ValueError(
             f"personnalité inconnue : {name!r} — disponibles : {persona_names()}"

@@ -58,6 +58,13 @@ services:
       # 1/true/on/oui = actif, 0/false/off/non = coupé (CHAT_MOUVEMENT=false
       # docker compose ... up -d) ; toute autre valeur = refus au démarrage.
       - CHAT_MOUVEMENT=${CHAT_MOUVEMENT:-true}
+      # Metteur en scène intérieur (étude dadou_robot_ros/docs/etude-niveaux-
+      # reflexion.md) : lance reflection_node ET branche chat_node dessus
+      # (tableau de situation, tours spontanés, clé "reflechir"). Coût LLM en
+      # plus (~0,0003 $ par réflexion Haiku, une toutes les 4-20 s quand la
+      # scène est engagée). Ne commande pas le corps : pas de garde de domaine.
+      # CHAT_REFLEXION=false docker compose ... up -d pour le couper.
+      - CHAT_REFLEXION=${CHAT_REFLEXION:-true}
     network_mode: "host"
     # ipc host OBLIGATOIRE : FastDDS passe les DONNÉES en mémoire partagée
     # entre participants du même hôte (la découverte, elle, passe en UDP —

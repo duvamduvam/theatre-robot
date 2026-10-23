@@ -207,7 +207,7 @@ class FakeGate:
 def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
                   brain_raises=False, beeps=True, on_state=None,
                   initial_state=None, gate=None, show_audio_active=None,
-                  on_meter=None, on_timing=None, on_move=None):
+                  on_meter=None, on_timing=None, on_move=None, on_reflect=None):
     """Assemble un ConversationEngine avec des fakes câblés sur la même
     timeline — factorise le câblage répété par les tests ci-dessous.
     L'appelant est responsable de _cleanup_beeps(engine) en fin de test.
@@ -235,6 +235,7 @@ def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
         on_meter=on_meter,
         on_timing=on_timing,
         on_move=on_move,
+        on_reflect=on_reflect,
     )
 
 
@@ -1142,14 +1143,18 @@ JOIE = RosMessage(FACE, json.dumps("joie"))
 class FakeStageBrain(FakeBrain):
     """FakeBrain qui accepte `extra_system` (consigne de régie) et le note à
     part, dans l'ordre des appels — la timeline garde le même tuple
-    ("brain_stream_reply", texte) que les tests historiques."""
+    ("brain_stream_reply", texte) que les tests historiques.
+    `**kwargs` (metteur en scène, lot P) : situation/direction notés dans
+    `calls` (un dict par appel) pour les tests qui les lisent."""
 
     def __init__(self, timeline, deltas, raise_error=False):
         super().__init__(timeline, deltas, raise_error=raise_error)
         self.extra_systems = []
+        self.calls = []
 
-    def stream_reply(self, user_text, extra_system=None):
+    def stream_reply(self, user_text, extra_system=None, **kwargs):
         self.extra_systems.append(extra_system)
+        self.calls.append(dict(kwargs, user_text=user_text, extra_system=extra_system))
         yield from super().stream_reply(user_text)
 
 
@@ -1172,7 +1177,7 @@ class FakeMicAvecRegie(FakeMic):
 def _make_stage_engine(timeline, stage, *, brain_deltas, frames=(), vad_events=(),
                        stt_text="jamais utilisé", mic=None, on_state=None,
                        on_transcript=None, on_timing=None, dead_mic_backoff_s=0.0,
-                       on_move=None):
+                       on_move=None, on_reflect=None):
     """Factory dédiée aux tests de régie (la factory historique reste
     intacte) : renvoie (engine, brain) pour lire brain.extra_systems."""
     brain = FakeStageBrain(timeline, brain_deltas)
@@ -1193,6 +1198,7 @@ def _make_stage_engine(timeline, stage, *, brain_deltas, frames=(), vad_events=(
         stage=stage,
         on_transcript=on_transcript,
         on_move=on_move,
+        on_reflect=on_reflect,
     )
     return engine, brain
 
@@ -1624,3 +1630,538 @@ def test_marche_part_meme_pendant_une_panne_mute(timeline):
         _cleanup_beeps(engine)
     assert "tts_synthesize" not in [event[0] for event in timeline]   # la voix est coupée…
     assert ordres == ["go"]                                         # …pas les jambes
+
+
+# --------------------------------------------------------------------------
+# Metteur en scène intérieur (lot P, 2026-10-23, dadou_robot_ros/docs/
+# spec-metteur-en-scene.md) : arrêt d'urgence vocal AVANT le LLM, tableau de
+# situation relu à chaque tour, tour spontané pendant un silence, demande de
+# réflexion par la clé "reflechir".
+# --------------------------------------------------------------------------
+
+SPONTANE = "(Silence. Personne ne te parle : c'est à toi de relancer la scène.)"
+
+
+def test_texte_user_du_tour_spontane_grave():
+    assert conversation_module.SPONTANEOUS_USER_TEXT == SPONTANE
+    assert conversation_module.SPONTANEOUS_MIN_SILENCE_S == 3.0
+
+
+# --- P1 : arrêt d'urgence vocal ---------------------------------------------
+
+def _move_dans_la_timeline(timeline):
+    return lambda cmd: timeline.append(("move", cmd))
+
+
+def test_urgence_emise_avant_le_llm_puis_le_tour_continue(timeline):
+    frames, events = _speech_frames_and_events()
+    engine = _make_engine(timeline, frames=frames, vad_events=events,
+                          stt_text="Didier, stop !",
+                          brain_deltas=['Bon, bon, je m\'arrête. {"emotion": "neutral"}'],
+                          on_move=_move_dans_la_timeline(timeline))
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    tags = [event[0] for event in timeline]
+    # L'intention part APRÈS le STT et AVANT le premier appel LLM…
+    assert timeline.index(("move", "stop")) < tags.index("brain_stream_reply")
+    assert tags.index("stt_transcribe") < timeline.index(("move", "stop"))
+    # …une seule fois, et le tour va jusqu'au bout (Didier joue l'arrêt).
+    assert timeline.count(("move", "stop")) == 1
+    assert ("brain_stream_reply", "Didier, stop !") in timeline
+    assert ("tts_synthesize", "Bon, bon, je m'arrête.") in timeline
+
+
+def test_urgence_avant_la_ligne_david_du_transcript(timeline):
+    stage = StageState()
+    stage.push_text("Arrête !")
+    engine, _brain = _make_stage_engine(
+        timeline, stage, brain_deltas=["D'accord."],
+        on_move=_move_dans_la_timeline(timeline))
+    engine._on_transcript = lambda role, text: timeline.append(("transcript", role, text))
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert (timeline.index(("move", "stop"))
+            < timeline.index(("transcript", "david", "Arrête !"))
+            < [e[0] for e in timeline].index("brain_stream_reply"))
+
+
+def test_phrase_avec_contexte_ne_declenche_pas_l_urgence(timeline, caplog):
+    ordres = []
+    frames, events = _speech_frames_and_events()
+    engine = _make_engine(timeline, frames=frames, vad_events=events,
+                          stt_text="Arrête de râler", brain_deltas=["Je ne râle pas."],
+                          on_move=ordres.append)
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == []
+    assert not any("URGENCE" in record.message for record in caplog.records)
+
+
+def test_urgence_puis_marche_stop_du_llm_emet_deux_fois(timeline):
+    # Le régisseur est idempotent (hold republié) : pas de dédup ici.
+    ordres = []
+    _tour = _make_engine(timeline, frames=_speech_frames_and_events()[0],
+                         vad_events=_speech_frames_and_events()[1], stt_text="Stop !",
+                         brain_deltas=['Je stoppe. {"emotion": "neutral", "marche": "stop"}'],
+                         on_move=ordres.append)
+    try:
+        assert _tour.run_once() is True
+    finally:
+        _cleanup_beeps(_tour)
+    assert ordres == ["stop", "stop"]
+
+
+def test_urgence_avec_on_move_qui_leve_le_tour_continue(timeline, caplog):
+    def on_move(_cmd):
+        raise RuntimeError("publisher cassé (test)")
+
+    frames, events = _speech_frames_and_events()
+    engine = _make_engine(timeline, frames=frames, vad_events=events, stt_text="Halte !",
+                          brain_deltas=['Halte. {"emotion": "neutral"}'], on_move=on_move)
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+    assert result is True
+    assert ("brain_stream_reply", "Halte !") in timeline
+    assert ("tts_synthesize", "Halte.") in timeline
+    messages = [record.message for record in caplog.records]
+    assert "ARRÊT D'URGENCE vocal : 'Halte !'" in messages
+    assert any("on_move" in message for message in messages)
+
+
+def test_urgence_sans_on_move_loggue_non_transmis(timeline, caplog):
+    # Révisé le 23/10 : sans régisseur (vrai robot), l'arrêt vocal n'agit
+    # pas — le log doit le DIRE (sinon un essai réel ferait croire l'inverse).
+    frames, events = _speech_frames_and_events()
+    engine = _make_engine(timeline, frames=frames, vad_events=events, stt_text="Stop !",
+                          brain_deltas=["Bien."])
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert [record.message for record in caplog.records] == [
+        "ARRÊT D'URGENCE vocal entendu mais NON transmis "
+        "(mouvement à la voix désactivé) : 'Stop !'"]
+
+
+def test_urgence_testee_sur_le_stt_avant_la_panne_garble(timeline):
+    # Revue adversariale du 23/10 (I3) : l'urgence est testée sur ce que le
+    # STT a VRAIMENT produit, AVANT garble — la panne simule l'incompréhension
+    # de la conversation, jamais la surdité à l'urgence. Avant : « Stop ! »
+    # garblé en contresens n'arrêtait pas Didier.
+    stage = StageState()
+    stage.set_fault("garble", {"texts": ["Tu as dit banane ?"]}, 30000, time.monotonic())
+    stage.push_text("Stop !")
+    lines, on_transcript = _transcript_recorder()
+    engine, _brain = _make_stage_engine(timeline, stage, brain_deltas=["Banane ?"],
+                                        on_move=_move_dans_la_timeline(timeline),
+                                        on_transcript=on_transcript)
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    # L'intention part AVANT le LLM, qui reçoit quand même le contresens.
+    assert timeline.count(("move", "stop")) == 1
+    assert (timeline.index(("move", "stop"))
+            < timeline.index(("brain_stream_reply", "Tu as dit banane ?")))
+    assert lines[0] == ("david", "Tu as dit banane ?")
+
+
+def test_contresens_garble_qui_ressemble_a_un_stop_n_arrete_pas(timeline):
+    # Corollaire (I3) : seul l'énoncé ENTENDU compte — un contresens tiré par
+    # la régie n'invente pas un ordre que personne n'a crié.
+    stage = StageState()
+    stage.set_fault("garble", {"texts": ["Arrête-toi !"]}, 30000, time.monotonic())
+    stage.push_text("Bonjour Didier")
+    ordres = []
+    engine, _brain = _make_stage_engine(timeline, stage, brain_deltas=["Quoi ?"],
+                                        on_move=ordres.append)
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == []
+    assert ("brain_stream_reply", "Arrête-toi !") in timeline
+
+
+def test_urgence_transmise_sous_panne_deaf_puis_enonce_jete(timeline):
+    # Revue adversariale du 23/10 (I3), réécrit (gravait l'inverse) : sous
+    # panne deaf, l'intention stop PART, puis l'énoncé est jeté comme avant
+    # (aucun LLM, aucune ligne de transcript, idle puis micro relancé).
+    stage = StageState()
+    stage.set_fault("deaf", {}, 30000, time.monotonic())
+    stage.push_text("Stop !")
+    lines, on_transcript = _transcript_recorder()
+    engine, _brain = _make_stage_engine(timeline, stage, brain_deltas=["jamais"],
+                                        on_move=_move_dans_la_timeline(timeline),
+                                        on_transcript=on_transcript)
+    try:
+        assert engine.run_once() is False
+    finally:
+        _cleanup_beeps(engine)
+    assert timeline.count(("move", "stop")) == 1
+    assert "brain_stream_reply" not in [event[0] for event in timeline]
+    assert lines == []
+    assert timeline.index(("move", "stop")) < timeline.index(("publish", IDLE))
+    assert timeline[-1] == ("mic_start",)
+
+
+# --- P2 : tableau de situation relu à chaque tour ---------------------------
+
+def test_situation_transmise_au_brain(timeline):
+    stage = StageState()
+    stage.set_situation("Une dame en rouge à ta droite.", time.monotonic())
+    stage.push_text("Tu vois quelqu'un ?")
+    engine, brain = _make_stage_engine(timeline, stage, brain_deltas=["Oui."])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls == [{"user_text": "Tu vois quelqu'un ?", "extra_system": None,
+                            "situation": "Une dame en rouge à ta droite.", "direction": None}]
+
+
+def test_situation_perimee_n_est_pas_transmise(timeline):
+    stage = StageState()
+    stage.set_situation("Deux enfants devant toi.", time.monotonic() - 5.1)
+    stage.push_text("Et maintenant ?")
+    engine, brain = _make_stage_engine(timeline, stage, brain_deltas=["Rien."])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls[0]["situation"] is None
+
+
+# --- P3 : tour spontané -----------------------------------------------------
+
+class FakeClock:
+    """Horloge monotone simulée, avancée par le micro (cf. FakeMicHorloge) :
+    chaque lecture de trame « dure » `step` secondes."""
+
+    def __init__(self, start=100.0):
+        self.t = start
+
+    def monotonic(self):
+        return self.t
+
+
+class FakeMicHorloge(FakeMic):
+    """FakeMic qui avance l'horloge de `step` s à CHAQUE read_frame (y
+    compris quand le flux est épuisé -> None : micro coupé par chat OFF)."""
+
+    def __init__(self, timeline, frames, clock, step):
+        super().__init__(timeline, frames)
+        self._clock = clock
+        self._step = step
+
+    def read_frame(self):
+        self._clock.t += self._step
+        return super().read_frame()
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    # On remplace la référence `time` DU MODULE conversation seulement (pas le
+    # module time global) : le moteur lit cette horloge, le reste du process non.
+    fake = FakeClock()
+    monkeypatch.setattr(conversation_module, "time",
+                        type("FakeTime", (), {"monotonic": staticmethod(fake.monotonic),
+                                              "sleep": staticmethod(lambda _s: None)}))
+    return fake
+
+
+def _spontane_engine(timeline, stage, clock, *, frames, vad_events=(), step=1.0,
+                     stt_text="jamais utilisé", brain_deltas=("Alors, on y va ?",)):
+    mic = FakeMicHorloge(timeline, frames, clock, step)
+    return _make_stage_engine(timeline, stage, brain_deltas=list(brain_deltas), frames=frames,
+                              vad_events=vad_events, stt_text=stt_text, mic=mic)
+
+
+def test_tour_spontane_servi_en_silence_apres_3_s(timeline, clock):
+    stage = StageState()
+    stage.push_prompt("Demande à la dame en rouge si elle connaît le Titan.", clock.t)
+    states = []
+    lines, on_transcript = _transcript_recorder()
+    engine, brain = _spontane_engine(timeline, stage, clock,
+                                     frames=[b"f0", b"f1", b"f2", b"f3", b"f4"])
+    engine._on_state = states.append
+    engine._on_transcript = on_transcript
+    try:
+        result = engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+    assert result is True
+    # 3 trames lues (t = +1, +2, +3 s) : servi à la 3e, pas avant.
+    assert engine._mic._frames == [b"f3", b"f4"]
+    # Micro coupé + VAD remise à zéro, puis thinking SANS bips, puis la réplique.
+    assert timeline == [
+        ("mic_start",),
+        ("mic_stop",),
+        ("vad_reset",),
+        ("mic_stop",),
+        ("publish", THINKING),
+        ("brain_stream_reply", SPONTANE),
+        ("publish", PARLE),
+        ("tts_synthesize", "Alors, on y va ?"),
+        ("player_play", b"PCM:Alors, on y va ?", 22050),
+        ("player_drain",),
+        ("publish", SPEAKING_STOP),
+        ("publish", IDLE),
+        ("mic_start",),
+    ]
+    assert brain.calls[0]["direction"] == "Demande à la dame en rouge si elle connaît le Titan."
+    assert states == ["listening", "thinking", "speaking", "listening"]
+    # Pas de ligne "david" : personne n'a parlé.
+    assert lines == [("didier", "Alors, on y va ?")]
+    assert stage.pop_prompt(clock.t) is None   # consommé
+
+
+def test_tour_spontane_non_servi_avant_3_s_d_ecoute(timeline, clock):
+    stage = StageState()
+    stage.push_prompt("Relance.", clock.t)
+    # 2 trames (t = +1, +2 s) puis flux épuisé (t = +3 s, None) : l'écoute
+    # n'a jamais atteint 3 s AVEC une trame.
+    engine, brain = _spontane_engine(timeline, stage, clock, frames=[b"f0", b"f1"])
+    try:
+        assert engine.run_once() is False
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls == []
+    assert stage.pop_prompt(clock.t) == "Relance."   # pas consommée pour rien
+
+
+def test_tour_spontane_jamais_quand_le_micro_est_coupe(timeline, clock):
+    # Chat OFF : mic.stop() -> read_frame() rend None. Même avec 5 s
+    # écoulées, aucune direction n'est servie (elle attendra ou se périmera).
+    stage = StageState()
+    stage.push_prompt("Relance.", clock.t)
+    engine, brain = _spontane_engine(timeline, stage, clock, frames=[], step=5.0)
+    try:
+        assert engine.run_once() is False
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls == []
+    assert stage.pop_prompt(clock.t) == "Relance."
+
+
+def test_tour_spontane_non_servi_pendant_que_quelqu_un_parle(timeline, clock):
+    stage = StageState()
+    stage.push_prompt("Relance.", clock.t)
+    frames = [b"f0", b"f1", b"f2", b"f3", b"f4", b"f5"]
+    events = [VadEvent(kind="speech_start", preroll_frames=2), None, None, None, None,
+              VadEvent(kind="speech_end", reason="silence")]
+    engine, brain = _spontane_engine(timeline, stage, clock, frames=frames,
+                                     vad_events=events, stt_text="je te parle")
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    # La parole de David est servie, pas la direction (6 s d'écoute pourtant).
+    assert brain.calls[0]["user_text"] == "je te parle"
+    assert brain.calls[0]["direction"] is None
+    # Réécrit (revue adversariale du 23/10, I7) : l'énoncé de David a VIDÉ
+    # l'emplacement — la direction, calculée avant, ne sera pas jouée après.
+    assert stage.pop_prompt(clock.t) is None
+
+
+def test_tour_spontane_perime_n_est_pas_servi(timeline, clock):
+    stage = StageState()
+    stage.push_prompt("Vieille direction.", clock.t - 5.5)   # âgée de 8,5 s à la 3e trame
+    engine, brain = _spontane_engine(timeline, stage, clock, frames=[b"f0", b"f1", b"f2"])
+    try:
+        assert engine.run_once() is False   # flux épuisé, rien servi
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls == []
+    assert stage.pop_prompt(clock.t) is None   # jetée
+
+
+def test_tour_spontane_sous_panne_mute_sans_voix(timeline, clock):
+    stage = StageState()
+    stage.set_fault("mute", {}, 20000, clock.t)
+    stage.push_prompt("Relance.", clock.t)
+    engine, _brain = _spontane_engine(timeline, stage, clock, frames=[b"f0", b"f1", b"f2"])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert "tts_synthesize" not in [event[0] for event in timeline]
+
+
+# --- P4 : demande de réflexion ----------------------------------------------
+
+def _tour_reflechir(timeline, deltas, on_reflect, stage=None):
+    if stage is None:
+        stage = StageState()
+    stage.push_text("Va demander à la dame en rouge si elle connaît le Titan")
+    engine, _brain = _make_stage_engine(timeline, stage, brain_deltas=deltas,
+                                        on_reflect=on_reflect)
+    try:
+        return engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+
+def test_reflechir_appelle_on_reflect(timeline):
+    demandes = []
+    assert _tour_reflechir(
+        timeline, ['Hmm. *réfléchit* {"emotion": "neutral", '
+                   '"reflechir": " Demander le Titan à la dame en rouge. "}'],
+        demandes.append) is True
+    assert demandes == ["Demander le Titan à la dame en rouge."]
+
+
+@pytest.mark.parametrize("valeur", ['""', '"   "', "null", "42", '["x"]', "true"])
+def test_reflechir_vide_ou_non_chaine_ignore(timeline, valeur):
+    demandes = []
+    assert _tour_reflechir(
+        timeline, ['Bof. {"emotion": "neutral", "reflechir": ' + valeur + '}'],
+        demandes.append) is True
+    assert demandes == []
+
+
+def test_sans_cle_reflechir_rien(timeline):
+    demandes = []
+    _tour_reflechir(timeline, ['Salut. {"emotion": "happy"}'], demandes.append)
+    assert demandes == []
+
+
+def test_reflechir_part_meme_sous_panne_mute(timeline):
+    stage = StageState()
+    stage.set_fault("mute", {}, 20000, time.monotonic())
+    demandes = []
+    assert _tour_reflechir(
+        timeline, ['Je regarde. {"emotion": "neutral", "reflechir": "Regarder."}'],
+        demandes.append, stage=stage) is True
+    assert "tts_synthesize" not in [event[0] for event in timeline]
+    assert demandes == ["Regarder."]
+
+
+def test_on_reflect_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
+    def on_reflect(_demande):
+        raise RuntimeError("publisher cassé (test)")
+
+    with caplog.at_level("ERROR", logger="vision.ai.conversation"):
+        result = _tour_reflechir(
+            timeline, ['Hmm. {"emotion": "happy", "reflechir": "Regarder."}'], on_reflect)
+    assert result is True
+    assert [e[1] for e in timeline if e[0] == "publish"][-2:] == [SPEAKING_STOP, JOIE]
+    assert any("on_reflect" in record.message for record in caplog.records)
+
+
+def test_tour_spontane_jamais_pendant_un_son_de_spectacle(timeline, clock):
+    # Décision du 23/10 (revue du lot P) : une séquence joue du son → Didier
+    # ne prend pas la parole de lui-même par-dessus, même après 3 s.
+    stage = StageState()
+    stage.push_prompt("Relance.", clock.t)
+    engine, brain = _spontane_engine(timeline, stage, clock, frames=[b"f0", b"f1", b"f2", b"f3"])
+    engine._show_audio_active = lambda: True
+    try:
+        assert engine.run_once() is False
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls == []
+    # Toujours en attente : elle sera servie après le son, ou se périmera.
+    assert stage.pop_prompt(clock.t) == "Relance."
+
+
+# --------------------------------------------------------------------------
+# Revue adversariale du 23/10 : corrections B1 (jamais de "go" spontané), I7
+# (un énoncé de David vide l'emplacement), M5 (écart minimal côté parole).
+# --------------------------------------------------------------------------
+
+def test_tour_spontane_n_emet_jamais_go(timeline, clock, caplog):
+    # B1 (bloquant), scénario : la direction « reprends la route » fait écrire
+    # "marche": "go" au LLM — Didier repartait sans qu'aucun humain l'ait
+    # demandé, y compris juste après un « stop » de David.
+    stage = StageState()
+    stage.push_prompt("Reprends la route.", clock.t)
+    ordres = []
+    engine, _brain = _spontane_engine(
+        timeline, stage, clock, frames=[b"f0", b"f1", b"f2"],
+        brain_deltas=['On repart ! {"emotion": "happy", "marche": "go"}'])
+    engine._on_move = ordres.append
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == []
+    assert [r.message for r in caplog.records] == [
+        "Clé \"marche\" : go ignoré : tour spontané (aucun humain ne l'a demandé)."]
+    # Le reste du tour est intact (la réplique est dite, l'émotion jouée).
+    assert ("tts_synthesize", "On repart !") in timeline
+    assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
+
+
+def test_tour_spontane_transmet_stop(timeline, clock):
+    # B1 : seul "stop" passe d'un tour spontané (s'arrêter n'est jamais dangereux).
+    stage = StageState()
+    stage.push_prompt("Arrête-toi devant la vitrine.", clock.t)
+    ordres = []
+    engine, _brain = _spontane_engine(
+        timeline, stage, clock, frames=[b"f0", b"f1", b"f2"],
+        brain_deltas=['Oh, une vitrine. {"emotion": "happy", "marche": " Stop"}'])
+    engine._on_move = ordres.append
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == ["stop"]
+
+
+def test_enonce_de_david_vide_l_emplacement_du_tour_spontane(timeline):
+    # I7, scénario : la réflexion propose « demande-lui son prénom », David
+    # le donne entre-temps — la direction ne doit pas être jouée APRÈS.
+    stage = StageState()
+    stage.push_prompt("Demande-lui son prénom.", time.monotonic())
+    stage.push_text("Je m'appelle Marie.")
+    engine, brain = _make_stage_engine(timeline, stage, brain_deltas=["Enchanté, Marie."])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls[0]["direction"] is None
+    assert stage.pop_prompt(time.monotonic()) is None
+
+
+def test_ecart_minimal_entre_deux_tours_spontanes_cote_parole(timeline, clock):
+    # M5, scénario : un second éditeur de chat_prompt (ou un reflection_node
+    # relancé, état perdu) pousse une direction juste après la précédente —
+    # Didier enchaînait relance sur relance.
+    assert conversation_module.SPONTANEOUS_MIN_GAP_S == 10.0
+    stage = StageState()
+    stage.push_prompt("Première relance.", clock.t)
+    engine, brain = _spontane_engine(timeline, stage, clock, frames=[b"f0", b"f1", b"f2"])
+    try:
+        assert engine.run_once() is True               # servi à t = 103
+        assert len(brain.calls) == 1
+        # Trop tôt : 3 s de silence à t = 106, mais 3 s seulement depuis le
+        # précédent — pas servie, et PAS consommée (elle reste, puis se périme).
+        stage.push_prompt("Deuxième relance.", clock.t)
+        engine._mic._frames = [b"g0", b"g1", b"g2"]
+        assert engine.run_once() is False              # flux épuisé, rien servi
+        assert len(brain.calls) == 1
+        assert stage.pop_prompt(clock.t) == "Deuxième relance."
+        # Pile 10 s après le précédent (t = 113) : servie.
+        clock.t = 110.0
+        stage.push_prompt("Troisième relance.", clock.t)
+        engine._mic._frames = [b"h0", b"h1", b"h2"]
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert [c["direction"] for c in brain.calls] == ["Première relance.", "Troisième relance."]

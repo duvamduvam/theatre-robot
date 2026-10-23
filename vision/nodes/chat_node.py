@@ -107,6 +107,20 @@ POURQUOI CHAT_MOVE_TOPIC (lot I1 « mouvement à la voix », 2026-10-22, spec
        ET ROS_DOMAIN_ID=43 — forcé à False avec un warning sinon, cf.
        vision_config.chat_env_overrides) : sur le Pi, ni bloc de prompt, ni
        topic.
+POURQUOI les topics du METTEUR EN SCÈNE INTÉRIEUR (lot P, 2026-10-23, spec
+       fermée dadou_robot_ros/docs/spec-metteur-en-scene.md) : la parole
+       relit le tableau de situation (SITUATION_TOPIC) à chaque tour, sert
+       les tours spontanés (PROMPT_TOPIC) et délègue les demandes complexes
+       (REFLECT_TOPIC, clé "reflechir"). Noms et payloads dans
+       vision.ai.reflection_contract (jamais recopiés ici). Abonnements,
+       publisher et bloc « reflechir » (accroché au tableau de situation
+       frais, jamais au system prompt — StreamingBrain(situation_suffix),
+       revue adversariale du 23/10, I5) créés SEULEMENT si
+       config["chat_reflection_enabled"] (CHAT_REFLEXION) : sinon le chat est
+       strictement celui d'avant. QoS VOLATILE partout : le tableau est
+       republié toutes les secondes (un abonné tardif l'a en ≤ 1 s, et une
+       souscription volatile reste compatible avec un publisher latché), et un
+       prompt ou une demande rejoués à un abonné tardif seraient périmés.
 """
 import asyncio
 import json
@@ -124,7 +138,7 @@ from robot_interfaces.msg import StringTime
 
 from dadou_utils_ros.utils_static import ANIMATION, ANIMATION_STATE, FACE
 
-from vision.ai import arbitration, personas, stage
+from vision.ai import arbitration, personas, reflection_contract, stage
 from vision.ai.conversation import ConversationEngine
 from vision.ai.llm_stream import StreamingBrain
 from vision.ai.performance import RosMessage
@@ -665,6 +679,13 @@ class ChatNode(Node):
                 api_key_name=LLM_API_KEY_NAME, system_prompt=persona_prompt,
                 max_tokens=config["chat_llm_max_tokens"],
                 extra_body=config["chat_llm_extra_body"],
+                # Demande de réflexion (clé "reflechir") : accrochée au
+                # tableau de situation, donc proposée SEULEMENT quand un
+                # tableau frais prouve que reflection_node est vivant (revue
+                # adversariale du 23/10, I5 — réflexion morte, Didier
+                # promettait une réponse qui ne venait jamais).
+                situation_suffix=(personas.REFLECT_TEMPLATE
+                                  if config["chat_reflection_enabled"] else ""),
             )
         except Exception as exc:  # noqa: BLE001
             self.get_logger().error(
@@ -744,6 +765,12 @@ class ChatNode(Node):
         # un ordre périmé rejoué à un abonné tardif ferait repartir Didier.
         self._move_pub = (self.create_publisher(StringTime, CHAT_MOVE_TOPIC, 10)
                           if config["chat_move_enabled"] else None)
+        # Demandes de réflexion (cf. docstring de module, metteur en scène) :
+        # créé SEULEMENT si la réflexion est activée, comme le bloc de prompt
+        # qui apprend la clé "reflechir" au LLM.
+        self._reflect_pub = (
+            self.create_publisher(StringTime, reflection_contract.REFLECT_TOPIC, 10)
+            if config["chat_reflection_enabled"] else None)
 
         # --- Régie du chat (cf. docstring de module POURQUOI les topics de
         # RÉGIE) : créé AVANT ConversationEngine, qui le reçoit en kwarg.
@@ -783,6 +810,9 @@ class ChatNode(Node):
             # Mouvement à la voix (cf. CHAT_MOVE_TOPIC) : None si désactivé
             # = comportement historique (la clé "marche" n'est pas lue).
             on_move=self._publish_move if self._move_pub is not None else None,
+            # Demande de réflexion : None si désactivée (la clé "reflechir"
+            # n'est pas lue).
+            on_reflect=self._publish_reflect if self._reflect_pub is not None else None,
         )
         self._mic = mic
         self._player = player
@@ -807,6 +837,14 @@ class ChatNode(Node):
         self.create_subscription(
             StringTime, CHAT_INSTRUCTION_TOPIC, self._on_chat_instruction, 10)
         self.create_subscription(StringTime, CHAT_FAULT_TOPIC, self._on_chat_fault, 10)
+        # Metteur en scène intérieur (cf. docstring de module) : rien n'est
+        # écouté si la réflexion est désactivée — StageState reste vide,
+        # aucun tableau ni tour spontané ne peut atteindre la parole.
+        if config["chat_reflection_enabled"]:
+            self.create_subscription(
+                StringTime, reflection_contract.SITUATION_TOPIC, self._on_situation, 10)
+            self.create_subscription(
+                StringTime, reflection_contract.PROMPT_TOPIC, self._on_prompt, 10)
 
         # --- Arbitrage amont (2026-07-12, cf. docstring de module POURQUOI) :
         # None = jamais reçu (topic ANIMATION_STATE absent ou robot pas encore
@@ -861,7 +899,8 @@ class ChatNode(Node):
             f"chat démarré (llm_model={llm_model}, whisper_model={whisper_model}, "
             f"mic_device={mic_device}, out_device={out_device}, "
             f"persona={persona_name}, partenaire={config['chat_partner']}, "
-            f"mouvement={config['chat_move_enabled']}) -> topics {FACE}/{ANIMATION}, toggle sur "
+            f"mouvement={config['chat_move_enabled']}, "
+            f"réflexion={config['chat_reflection_enabled']}) -> topics {FACE}/{ANIMATION}, toggle sur "
             f"'{CHAT_CMD_TOPIC}' (on/off), persona sur '{PERSONA_TOPIC}' "
             f"({'/'.join(personas.persona_names())}), état publié sur "
             f"'{CHAT_STATE_TOPIC}' (latché), régie sur '{CHAT_TEXT_TOPIC}'/"
@@ -1000,6 +1039,37 @@ class ChatNode(Node):
         actionneur, c'est une DEMANDE au régisseur."""
         self._move_pub.publish(StringTime(msg=json.dumps(cmd), time=0, anim=False))
         self.get_logger().info(f"ordre de marche publié : {cmd}")
+
+    def _on_situation(self, ros_msg):
+        """Tableau de situation (reflection_contract.SITUATION_TOPIC) : rangé
+        avec l'heure de RÉCEPTION locale (le TTL se compte ici). Pas de log
+        info à chaque message : republié toutes les secondes, il noierait le
+        journal des tours."""
+        text = reflection_contract.decode_situation(ros_msg.msg)
+        if text is None:
+            self.get_logger().warning(f"tableau de situation refusé : {ros_msg.msg!r}")
+            return
+        self._stage.set_situation(text, time.monotonic())
+
+    def _on_prompt(self, ros_msg):
+        """Direction de tour spontané (reflection_contract.PROMPT_TOPIC) :
+        SEULEMENT rangée (un seul emplacement, cf. StageState.push_prompt).
+        Même règle que _on_chat_text : jamais de mic.stop() depuis ce thread,
+        c'est le moteur qui la sert pendant une écoute silencieuse."""
+        direction = reflection_contract.decode_prompt(ros_msg.msg)
+        if direction is None:
+            self.get_logger().warning(f"tour spontané refusé : {ros_msg.msg!r}")
+            return
+        self._stage.push_prompt(direction, time.monotonic())
+        self.get_logger().info(f"tour spontané en attente : {direction!r}")
+
+    def _publish_reflect(self, demande: str) -> None:
+        """Callback `on_reflect` de ConversationEngine (thread de
+        conversation) : demande de réflexion publiée sur REFLECT_TOPIC.
+        Journalisée : au débrief, c'est la trace de ce que Didier a délégué."""
+        self._reflect_pub.publish(
+            StringTime(msg=reflection_contract.encode_reflect(demande), time=0, anim=False))
+        self.get_logger().info(f"demande de réflexion publiée : {demande!r}")
 
     def _on_animation_state(self, ros_msg):
         """Callback du topic ANIMATION_STATE (latché, publié par

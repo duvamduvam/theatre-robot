@@ -29,4 +29,15 @@ source /home/ros2_ws/install/setup.bash
 # CHAT (env du compose, défaut false) → chat_enabled : le node de
 # conversation ne démarre que sur activation explicite (micro physique +
 # budget LLM payant), même règle sur le Pi et sur le banc PC x86.
-ros2 launch vision vision.launch.py chat_enabled:=${CHAT:-false}
+# CHAT_REFLEXION (env du compose, défaut absent = false) → reflection_enabled :
+# UN SEUL interrupteur pour les deux moitiés du metteur en scène intérieur —
+# chat_node le lit lui-même (vision_config.reflection_enabled_from_env) et ce
+# script en déduit le lancement de reflection_node. Normalisé ici en
+# true/false : IfCondition du launch n'accepte que ces deux mots, alors que la
+# variable tolère 1/on/oui (une valeur invalide fera échouer chat_node, pas ce
+# script).
+case "$(echo "${CHAT_REFLEXION:-}" | tr '[:upper:]' '[:lower:]' | xargs)" in
+    1|true|on|oui) REFLECTION_ENABLED=true ;;
+    *) REFLECTION_ENABLED=false ;;
+esac
+ros2 launch vision vision.launch.py chat_enabled:=${CHAT:-false} reflection_enabled:=${REFLECTION_ENABLED}

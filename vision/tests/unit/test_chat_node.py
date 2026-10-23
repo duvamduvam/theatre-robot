@@ -455,6 +455,18 @@ def test_les_deux_compositions_du_prompt_passent_move(methode):
 
     assert len(composes) == 1, composes
     assert "move=config['chat_move_enabled']" in composes[0]
+    # Revue adversariale du 23/10 (I5) : la demande de réflexion n'entre plus
+    # dans le system prompt (ni au démarrage, ni au changement de persona).
+    assert "reflect" not in composes[0]
+
+
+def test_demande_de_reflexion_accrochee_au_tableau_de_situation():
+    # Même revue (I5) : REFLECT_TEMPLATE passe par StreamingBrain(
+    # situation_suffix=…), seulement si la réflexion est activée — la bouche
+    # ne le lit qu'avec un tableau frais (cf. test_llm_stream.py).
+    init_source = ast.unparse(_chat_node_method(_chat_node_tree(), "__init__"))
+    assert ("situation_suffix=personas.REFLECT_TEMPLATE "
+            "if config['chat_reflection_enabled'] else ''") in init_source
 
 
 def test_surcharges_d_env_lues_au_demarrage_avant_les_parametres_ros():
@@ -472,3 +484,70 @@ def test_surcharges_d_env_lues_au_demarrage_avant_les_parametres_ros():
     assert (source.index("chat_env_overrides()") < source.index("config.update(overrides)")
             < source.index("default_chat_parameters()"))
     assert "self.get_logger().warning(warning)" in source
+
+
+# ---------------------------------------------------------------------------
+# Metteur en scène intérieur (lot P, 2026-10-23, dadou_robot_ros/docs/
+# spec-metteur-en-scene.md). Noms de topics : constantes du contrat partagé
+# (vision.ai.reflection_contract, gravées par test_reflection_contract.py) —
+# ici on vérifie qu'elles sont BRANCHÉES, et seulement si la réflexion est
+# activée (sinon le chat doit rester strictement celui d'avant).
+# ---------------------------------------------------------------------------
+
+def _if_reflexion(init):
+    blocs = [node for node in ast.walk(init) if isinstance(node, ast.If)
+             and ast.unparse(node.test) == "config['chat_reflection_enabled']"]
+    assert len(blocs) == 1, "bloc `if config['chat_reflection_enabled']:` absent ou en double"
+    return blocs[0]
+
+
+def test_abonnements_reflexion_conditionnes_et_bien_branches():
+    init = _chat_node_method(_chat_node_tree(), "__init__")
+    attendus = [("StringTime", "reflection_contract.SITUATION_TOPIC", "self._on_situation"),
+                ("StringTime", "reflection_contract.PROMPT_TOPIC", "self._on_prompt")]
+    # Les deux abonnements vivent DANS le bloc conditionnel…
+    assert _subscriptions(_if_reflexion(init)) == attendus
+    # …et nulle part ailleurs (pas de copie inconditionnelle).
+    tous = _subscriptions(init)
+    assert [a for a in tous if a[1].startswith("reflection_contract.")] == attendus
+
+
+def test_publisher_de_reflexion_conditionne_et_branche_sur_on_reflect():
+    init_source = ast.unparse(_chat_node_method(_chat_node_tree(), "__init__"))
+    assert ("self._reflect_pub = self.create_publisher(StringTime, "
+            "reflection_contract.REFLECT_TOPIC, 10) "
+            "if config['chat_reflection_enabled'] else None") in init_source
+    assert ("on_reflect=self._publish_reflect if self._reflect_pub is not None else None"
+            in init_source)
+    # Jamais de publication sur ses ENTRÉES de réflexion (Didier se servirait
+    # ses propres tableaux / tours spontanés).
+    tree = _chat_node_tree()
+    publies = _publisher_topics(tree, _module_string_constants(tree))
+    assert "reflection_contract.REFLECT_TOPIC" in publies   # ancre
+    assert not {"reflection_contract.SITUATION_TOPIC", "reflection_contract.PROMPT_TOPIC",
+                "chat_situation", "chat_prompt"} & set(publies)
+
+
+def test_publish_reflect_encode_et_publie_par_le_publisher_dedie():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_publish_reflect")
+    assert "reflection_contract.encode_reflect" in calls
+    assert [c for c in calls if c.endswith(".publish")] == ["self._reflect_pub.publish"]
+    assert "self.get_logger().info" in calls
+
+
+def test_on_situation_decode_refuse_ou_range():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_on_situation")
+    assert "reflection_contract.decode_situation" in calls
+    assert "self._stage.set_situation" in calls
+    assert "self.get_logger().warning" in calls
+    source = ast.unparse(_chat_node_method(_chat_node_tree(), "_on_situation"))
+    assert "tableau de situation refusé" in source
+
+
+def test_on_prompt_decode_refuse_ou_range_sans_toucher_au_micro():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_on_prompt")
+    assert "reflection_contract.decode_prompt" in calls
+    assert "self._stage.push_prompt" in calls
+    assert "self.get_logger().warning" in calls
+    # Même règle que _on_chat_text : le moteur sert la direction depuis SON thread.
+    assert not any("_mic" in call for call in calls)
