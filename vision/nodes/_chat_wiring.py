@@ -57,6 +57,8 @@ def default_chat_parameters() -> Dict[str, Any]:
         "llm_model": config["chat_llm_model"],
         "llm_base_url": config["chat_llm_base_url"],
         "whisper_model": config["chat_whisper_model"],
+        "stt_backend": config["chat_stt_backend"],
+        "stt_remote_model": config["chat_stt_remote_model"],
         "piper_voice": config["chat_piper_voice"],
         "mic_device": config["chat_mic_device"],
         "out_device": config["chat_out_device"],

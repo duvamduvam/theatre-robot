@@ -78,6 +78,18 @@ câblage dans `chat_node`. Tous en `robot_interfaces/StringTime` :
 | `rehearsal/chat_fault` | sub | Panne publiée par le régisseur de la répétition simulée : JSON `{"op": pass\|delay\|garble\|deaf\|mute\|phantom, "params": {...}, "until_ms": n}`, `until_ms` = DURÉE en ms (même convention que les ordres relais). **Plafond local 60 s** (None/absurde = 60 s). `delay` (`delay_ms` 1..60000) = sommeil avant le LLM ; `garble` = texte compris remplacé par un contresens (liste gravée ou `params.texts`) ; `deaf` = énoncés jetés ; `mute` = répliques non synthétisées (texte publié quand même) ; `phantom` (`params.text`) = ponctuel, servi comme un énoncé entendu. Sans effet en prod tant que personne ne publie. |
 | `chat_transcript` | pub | Flux (QoS volatile, depth 10) : JSON `{"role": "david"\|"didier", "text", "t_ms"}` (`t_ms` = epoch ms). `david` = ce que Didier a compris (après garble), `didier` = chaque phrase. Jamais les consignes ni les pannes. |
 
+### STT distant (23/10)
+
+`vision/ai/stt.py` : `OpenRouterStt` (Voxtral `mistralai/voxtral-mini-transcribe`,
+`/audio/transcriptions` d'OpenRouter, même clé que le LLM) enveloppé dans
+`FallbackStt` → repli sur `FasterWhisperStt` local (toujours chargé) à la
+moindre exception ; 2 échecs de suite = local seul 60 s. Paramètre ROS
+`stt_backend` (`openrouter` | `local`), timeout 4 s, aucun nouvel essai.
+Banc du 23/10 (enregistrements de David, voix de ventriloque — biais connu) :
+Voxtral 0,3-1,8 s, phrases complètes, `""` sur l'inintelligible ;
+whisper-large-v3 hallucine sur le bruit ; whisper base local 3,6-5,2 s sur Pi 5
+et nettement moins juste. **À re-mesurer sur la voix NORMALE de David en séance.**
+
 ### Metteur en scène intérieur (23/10)
 
 Étude `../dadou_robot_ros/docs/etude-niveaux-reflexion.md`, spec fermée

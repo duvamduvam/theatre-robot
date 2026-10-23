@@ -70,6 +70,8 @@ def test_default_chat_parameters_reprend_la_config_unique():
     assert defaults["llm_model"] == config["chat_llm_model"]
     assert defaults["llm_base_url"] == config["chat_llm_base_url"]
     assert defaults["whisper_model"] == config["chat_whisper_model"]
+    assert defaults["stt_backend"] == config["chat_stt_backend"]
+    assert defaults["stt_remote_model"] == config["chat_stt_remote_model"]
     assert defaults["piper_voice"] == config["chat_piper_voice"]
     assert defaults["mic_device"] == config["chat_mic_device"]
     assert defaults["out_device"] == config["chat_out_device"]
@@ -85,7 +87,7 @@ def test_default_chat_parameters_couvre_exactement_les_parametres_ros():
     # découvert au runtime sur le robot. ("persona" ajouté au lot D3,
     # atelier du 2026-07-13 ; "beep_amplitude" ajouté le 2026-09-13.)
     assert set(default_chat_parameters().keys()) == {
-        "llm_model", "llm_base_url", "whisper_model", "piper_voice",
+        "llm_model", "llm_base_url", "whisper_model", "stt_backend", "stt_remote_model", "piper_voice",
         "mic_device", "out_device", "refresh_ms", "beep_seconds",
         "beep_amplitude", "persona",
     }

@@ -262,6 +262,16 @@ config = {
     # appliqué au démarrage de chat_node, jamais à l'import).
     "chat_whisper_model": "base",
 
+    # STT DISTANT (vision/ai/stt.py, OpenRouterStt + FallbackStt, 23/10) :
+    # "openrouter" = Voxtral via OpenRouter, repli automatique sur le
+    # faster-whisper local ci-dessus (toujours chargé) ; "local" = whisper
+    # seul (comportement historique). Banc du 23/10 : Voxtral plus juste et
+    # 0,5-1,8 s, contre 3,6-5,2 s pour whisper base sur la Pi 5.
+    "chat_stt_backend": "openrouter",
+    "chat_stt_remote_model": "mistralai/voxtral-mini-transcribe",
+    # Au-delà, l'énoncé est retranscrit en local (le pire cas reste borné).
+    "chat_stt_timeout_s": 4.0,
+
     # Voix Piper de Didier (vision/ai/tts_piper.py) : modèle .onnx rangé dans
     # medias/voices/ comme les autres assets propres au personnage (cohérent
     # avec pictures_folder ci-dessus — medias/ = données du personnage,

@@ -142,7 +142,7 @@ from vision.ai import arbitration, personas, reflection_contract, stage
 from vision.ai.conversation import ConversationEngine
 from vision.ai.llm_stream import StreamingBrain
 from vision.ai.performance import RosMessage
-from vision.ai.stt import FasterWhisperStt
+from vision.ai.stt import FallbackStt, FasterWhisperStt, OpenRouterStt
 from vision.ai.tts_piper import PiperTts
 from vision.audio.beeps import build_thinking_beeps
 from vision.audio.live_audio_gate import LiveAudioGate, LiveAudioGateConfig
@@ -569,6 +569,8 @@ class ChatNode(Node):
         self.declare_parameter("llm_model", defaults["llm_model"])
         self.declare_parameter("llm_base_url", defaults["llm_base_url"])
         self.declare_parameter("whisper_model", defaults["whisper_model"])
+        self.declare_parameter("stt_backend", defaults["stt_backend"])
+        self.declare_parameter("stt_remote_model", defaults["stt_remote_model"])
         self.declare_parameter("piper_voice", defaults["piper_voice"])
         self.declare_parameter("mic_device", defaults["mic_device"])
         self.declare_parameter("out_device", defaults["out_device"])
@@ -588,6 +590,8 @@ class ChatNode(Node):
         llm_model = self.get_parameter("llm_model").value
         llm_base_url = self.get_parameter("llm_base_url").value
         whisper_model = self.get_parameter("whisper_model").value
+        stt_backend = self.get_parameter("stt_backend").value
+        stt_remote_model = self.get_parameter("stt_remote_model").value
         piper_voice = self.get_parameter("piper_voice").value
         mic_device = self.get_parameter("mic_device").value
         out_device = self.get_parameter("out_device").value
@@ -668,6 +672,20 @@ class ChatNode(Node):
                 "l'image (Dockerfile-arm, pour un fonctionnement hors ligne)."
             )
             raise ChatStartupError("échec init STT") from exc
+        # STT distant (23/10, « être compris correctement ») : le whisper local
+        # ci-dessus reste chargé et sert de REPLI (réseau coupé, quota…).
+        # Valeur inconnue = échec de démarrage EXPLICITE plutôt qu'un repli
+        # muet sur le local (on croirait tester le distant).
+        if stt_backend == "openrouter":
+            stt = FallbackStt(
+                OpenRouterStt(model=stt_remote_model, base_url=llm_base_url,
+                              api_key_name=LLM_API_KEY_NAME,
+                              timeout_s=config["chat_stt_timeout_s"]),
+                stt)
+        elif stt_backend != "local":
+            self.get_logger().error(
+                f"stt_backend={stt_backend!r} inconnu : attendu 'openrouter' ou 'local'")
+            raise ChatStartupError("stt_backend inconnu")
 
         # --- Cerveau LLM streamé (OpenRouter) -----------------------------
         try:
@@ -896,7 +914,8 @@ class ChatNode(Node):
             self._diag_server.start()
 
         self.get_logger().info(
-            f"chat démarré (llm_model={llm_model}, whisper_model={whisper_model}, "
+            f"chat démarré (llm_model={llm_model}, stt={stt_backend}"
+            f"{'/' + stt_remote_model if stt_backend == 'openrouter' else ''}, whisper_model={whisper_model}, "
             f"mic_device={mic_device}, out_device={out_device}, "
             f"persona={persona_name}, partenaire={config['chat_partner']}, "
             f"mouvement={config['chat_move_enabled']}, "
