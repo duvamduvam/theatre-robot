@@ -1,7 +1,8 @@
 # Étude — Niveaux de réflexion : parler du tac au tac ET analyser (caméra, mouvement, instructions)
 
-> **Statut : ÉTUDE ÉCRITE le 2026-10-23, rien d'acté.** Les décisions à
-> prendre par David sont regroupées au §9. Les chiffres du §1 sont MESURÉS
+> **Statut : ÉTUDE ÉCRITE le 2026-10-23 ; 4 décisions de David le même jour
+> (§10, ne pas re-trancher).** Le §3 bis (faire avancer l'histoire) est né de
+> sa réponse. Les chiffres du §1 sont MESURÉS
 > (bancs OpenRouter du 22-23/10), pas estimés.
 
 ## 0. La question
@@ -102,6 +103,55 @@ Règles du tableau (à graver en tests) :
   David, état de route) y écrit **sans LLM** ; la boucle 2 y ajoute le sens.
   Le tableau a donc de la valeur **avant même que la boucle 2 existe**.
 
+## 3 bis. Faire avancer l'histoire — le vrai rôle de la boucle 2
+
+David, 23/10 : *« c'est un peu bizarre d'être juste dans la blague, il faut
+quand même que l'histoire avance et utiliser le contexte, donc il faut allier
+vitesse et réflexion. »*
+
+C'est le défaut de la boucle 1 seule : réflexion coupée, elle **réagit** à la
+dernière phrase — elle fait de l'esprit, elle ne construit rien. La boucle 2
+ne sert donc pas d'abord à « voir » : elle tient **le fil dramatique**, et le
+tableau de situation porte, en plus de ce qui est vu, **une direction de jeu
+pour les prochaines répliques** :
+
+```text
+[Situation, il y a 3 s] David à ta gauche, une femme en manteau rouge à 2 m
+qui sourit. Arrêtés devant la boulangerie.
+[Fil] Mission : trouver le chemin du Titan. Critère en jeu : « tenderness »,
+pas encore validé. Indices obtenus : aucun.
+[Direction, pour tes 2-3 prochaines répliques] Demande à la dame en rouge si
+elle connaît le Titan. Quoi qu'elle réponde, prends-le comme une indication
+précieuse (« oui, et ») et remercie-la en lui donnant un grade.
+```
+
+Partage des rôles, net :
+
+| | Boucle 1 — la bouche | Boucle 2 — le metteur en scène intérieur |
+|---|---|---|
+| Horizon | la phrase en cours | la scène, la mission, les 5 critères |
+| Sait | la dernière réplique + le tableau | la transcription récente, l'image, l'état de mission, la jauge |
+| Décide | **comment** le dire (le personnage, le rythme, la blague) | **quoi** faire avancer (but de scène, prochain pas, quand clore) |
+| Écrit | la réplique + intentions simples | le tableau (situation, fil, direction) + intentions de mission |
+
+L'état de mission — destination, critères validés, indices, noms des guides —
+est **le lot I0 d'`etude-interaction.md` (§3.2 « cinq cases et des noms »,
+§9)**. Les deux chantiers se rejoignent : la boucle 2 en est le gardien et
+l'auteur, la boucle 1 le lecteur. Concrètement, I0 et la boucle 2 se font
+ensemble.
+
+Règles de la direction (à graver en tests) :
+
+- **Une direction, pas une réplique** : la boucle 2 ne dicte jamais de texte
+  à prononcer (même règle que les consignes du régisseur, « à jouer, jamais à
+  prononcer ») — sinon on perd le personnage et la réactivité.
+- **La réplique en cours prime** : si le passant vient de dire quelque chose
+  d'inattendu, la boucle 1 y répond d'abord ; la direction revient au tour
+  suivant. C'est la règle du « oui, et » appliquée à la mise en scène.
+- **Durée de vie** : une direction est périmée dès qu'un nouvel événement
+  (nouvelle personne, réponse obtenue, critère validé) la rend caduque — la
+  boucle 2 est relancée sur cet événement et la remplace.
+
 ## 4. La caméra : qui regarde quoi
 
 | Besoin | Où | Pourquoi |
@@ -136,12 +186,14 @@ C'est là que se joue la question « en jeu, sans sortir du personnage »
 
 | Classe | Exemples | Chemin | Latence visée |
 |---|---|---|---|
-| **A — ordres réflexes** | « stop », « arrête », « attends », « pas bouger » | **boucle 0** : mots-clés sur le texte du STT, AVANT le LLM → intention `stop` immédiate. La boucle 1 répond ensuite en personnage (« bon, bon, je m'arrête… ») | STT + < 50 ms |
+| **A — urgence seulement** [DÉCIDÉ 23/10] | « stop ! », « arrête ! » dits en urgence — PAS « attends », « on se pose » (classe B) | **boucle 0** : mots-clés sur le texte du STT, AVANT le LLM → intention `stop` immédiate. La boucle 1 répond ensuite en personnage (« bon, bon, je m'arrête… ») | STT + < 50 ms |
 | **B — ordres de jeu simples** | « avance », « on repart », « regarde-le », « suis-moi » | **boucle 1** : clés du JSON de fin (`marche` existe déjà ; `regard`, `suivi` à venir) | ~1,5-2 s après STT |
 | **C — instructions complexes** | « va demander à la dame en rouge si elle connaît le Titan », « regarde ce qu'il a dans la main », « quand on arrive au pont, fais ta chanson » | **boucle 1 accuse réception tout de suite** en personnage (*réfléchit*, expression `reflechit` + bips — existent) et pose `"reflechir": "<consigne>"` ; la **boucle 2** traite, met à jour le tableau de situation et la mission ; la réponse sort au tour suivant | 1 s pour l'accusé, 3-8 s pour la suite |
 
 Points durs :
 
+- **[DÉCIDÉ 23/10] Des mots-clés pour l'urgence seulement** — tout le
+  reste passe par le LLM (boucle 1 ou 2), qui comprend le contexte.
 - **Classe A en mots-clés = moins malin qu'un LLM, et c'est voulu.** Un
   « arrête de râler » arrêtera Didier. Faux positif bénin (il s'arrête, la
   boucle 1 le joue) contre faux négatif grave (il ne s'arrête pas). La liste
@@ -151,8 +203,8 @@ Points durs :
   purement réactif (« réactif d'abord », décidé le 12/07) : il ne parle que
   si on lui parle. Pour livrer le résultat de la boucle 2 sans attendre la
   phrase suivante de David, il faut qu'un événement puisse **déclencher un
-  tour** (« tu as trouvé : dis-le maintenant »). C'est un changement de
-  doctrine, pas un détail technique → décision David (§9).
+  tour** (« tu as trouvé : dis-le maintenant »). **[DÉCIDÉ 23/10 : oui]**
+  — garde-fous au §10.
 - **Qui est David ?** Une instruction de classe C venant d'un passant
   (« va là-bas ») ne doit pas avoir le même poids. Aujourd'hui rien ne
   distingue les voix (cf. `etude-identification-acteur.md`, bouton du gant
@@ -163,7 +215,7 @@ Points durs :
 
 | Boucle | Recommandation | Alternative à essayer | Écarté |
 |---|---|---|---|
-| 1 — parole | **Haiku 5.5, réflexion coupée** (en place) | Sonnet 5.5 effort `low` en séance avec David : jeu plus riche, même TTFT mesuré — mais latence non garantie (réflexion non coupable) | GLM / DeepSeek : orientés raisonnement, persona française non éprouvée |
+| 1 — parole | **Haiku 5.5, réflexion coupée** (en place) | — [DÉCIDÉ 23/10 : l'intelligence va dans la boucle 2, pas dans la bouche ; Sonnet 5.5 `low` écarté pour la parole, latence non garantie] | GLM / DeepSeek : orientés raisonnement, persona française non éprouvée |
 | 2 — réflexion, fond périodique | **Haiku 5.5, effort `medium`** (6 s, ~0,0003 $) | Haiku 5.5 sans réflexion (3-4 s) si la scène est simple | — |
 | 2 — instruction complexe de David | **Sonnet 5.5, effort `medium`** (5-6,5 s) : c'est rare, et c'est là que l'intelligence compte | — | Fable/Opus : trop lents pour un acteur qui attend |
 
@@ -199,7 +251,7 @@ du 22/10.
 | Tour de parole déclenché par un événement | ❌ manque — **décision de doctrine** |
 | Identification de David parmi les voix | ❌ chantier à part (étude identification) |
 
-## 9. Plan proposé (lots) et décisions à prendre
+## 9. Plan proposé (lots)
 
 Chaque lot a de la valeur seul ; l'ordre va du moins risqué au plus neuf.
 
@@ -215,16 +267,30 @@ Chaque lot a de la valeur seul ; l'ordre va du moins risqué au plus neuf.
   sim-only au départ) : sur événement, trame + transcription récente +
   tableau → Haiku 5.5 `medium` → enrichit le tableau. Mesure en séance :
   la parole a-t-elle gardé son TTFT ? les répliques sont-elles plus justes ?
-- **N4 — Instructions complexes (classe C)** : clé `reflechir`, traitement
-  Sonnet 5.5, et — si David le décide — tour de parole déclenché.
+- **N4 — Instructions complexes (classe C) + tour spontané** : clé
+  `reflechir`, traitement Sonnet 5.5, tour de parole déclenché par la
+  boucle 2 (autorisé, §10).
 
-**Décisions demandées à David :**
+## 10. Décisions de David — 2026-10-23 (ne pas re-trancher)
 
-1. **Tour spontané** : Didier peut-il prendre la parole de lui-même quand sa
-   réflexion aboutit (fin du « réactif d'abord » pour ce cas) ?
-2. **Images de passants dans le cloud** en rue : interdit / répétition
-   seulement / fournisseur UE ?
-3. **Liste des mots d'arrêt** de classe A (et accepter qu'« arrête de
-   râler » l'arrête).
-4. **Sonnet 5.5 pour la parole** : l'essayer en séance contre Haiku 5.5,
-   oui / non.
+1. **[DÉCIDÉ] Tour spontané : oui.** Didier prend la parole de lui-même
+   quand sa réflexion aboutit — et plus largement pour faire avancer
+   l'histoire (§3 bis). Garde-fous techniques proposés (à graver en tests) :
+   jamais pendant que quelqu'un parle (le gate half-duplex le sait déjà) ;
+   jamais pendant que Didier parle ; intervalle minimal entre deux tours
+   spontanés (ex. 8 s, à caler en séance) ; jamais quand le micro est coupé
+   (`chat off`) ni moteur en mouvement si la règle « micro à l'arrêt » de
+   l'étude déclenchement s'applique.
+2. **[DÉCIDÉ] Images vers le cloud : oui**, y compris en rue. (Reste à
+   vérifier le cadre droit à l'image avant les représentations — c'est une
+   question de production, pas un verrou technique.)
+3. **[DÉCIDÉ] Mots-clés pour l'urgence seulement.** Tout le reste passe par
+   le LLM, qui comprend le contexte.
+4. **[DÉCIDÉ] Deux niveaux plutôt qu'un gros modèle** : réponse rapide +
+   réflexion en arrière-plan (c'est l'architecture de cette étude). Sonnet
+   n'est pas essayé pour la parole ; il est candidat pour la boucle 2.
+
+**Conséquence sur le plan** : N1 (urgence) reste en tête, petit. **N2 + N3
+fusionnent avec I0** : tableau de situation + boucle 2 + état de mission =
+un seul chantier, « le metteur en scène intérieur », à spécifier ensemble.
+N4 (tour spontané + instructions complexes) suit, autorisé.
