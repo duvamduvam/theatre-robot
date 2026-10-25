@@ -11,6 +11,7 @@ This repository contains the runtime for the Dadou theatrical robot (wood/metal,
 - [`etude-interface-web.md`](etude-interface-web.md): web tele-presence plan (decided 2026-07-11, French).
 - [`etude-telediagnostic.md`](etude-telediagnostic.md): AI-agent remote diagnostics study (proposal 2026-07-12, French).
 - [`etude-arbitrage-actionneurs.md`](etude-arbitrage-actionneurs.md): face LED + head servos arbitration study (analysis 2026-07-12, French).
+- [`etude-tronc.md`](etude-tronc.md): articulated trunk study, pitch + roll ±10-15° (2026-10-25, French).
 - [`outils/README.md`](outils/README.md): workshop utilities — printable millimeter grid (PDF) used as a scale background when photographing hardware.
 - [`../README.md`](../README.md): repository quickstart (tests, simulation, deployment).
 - [`../CLAUDE.md`](../CLAUDE.md): working state and next steps (French, for AI sessions).

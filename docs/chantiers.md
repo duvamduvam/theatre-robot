@@ -1198,6 +1198,15 @@ coup-de-poing) ne bougent pas : la sim ne qualifie rien côté sécurité.
 
 ## Pistes en veille (pas urgentes, pas oubliées)
 
+- **TRONC ARTICULÉ (tangage + roulis ±10-15°) — étude du 2026-10-25, rien d'acté** :
+  [`etude-tronc.md`](etude-tronc.md). Recommandation : cardan + **2 vérins 24 V à
+  potentiomètre, autobloquants** (100 € pièce, 300 N à 40 mm/s, lus le 25/10), commandés par
+  le MDDS30 de rechange + un RP2040 ; ressorts de centrage en appoint ; respiration par un
+  servo à part sur le PCA9685. Écartés : essuie-glaces (jeu, prix), servos et moteurs sans
+  balais (réversibles : le buste tombe à la coupure), câbles/colonne souple (aucune preuve
+  à 10-20 kg), pneumatique. **Prochaine action : peser le haut du corps** et repérer où
+  couper la structure (le robot est démonté).
+
 - **COBOT DU COMMERCE SUR DIDIER — évalué le 2026-09-26, ÉCARTÉ.** Né d'une
   annonce AliExpress (bras collaboratif 6 axes, 5 kg, affiché **90,69 €**) que
   David a fait instruire « pour comprendre ». ⚠️ **Les 90,69 € sont un
