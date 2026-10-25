@@ -1211,7 +1211,9 @@ coup-de-poing) ne bougent pas : la sim ne qualifie rien côté sécurité.
   l'étude** : vérins électriques trop lents pour l'expressivité (~25°/s contre 60-104°/s
   pour un humain détendu) → **2 moteurs réversibles rapides sur les axes du cardan +
   ressorts de centrage** (recommandé), ou vérins à gaz + 3 câbles (option, apporte la
-  hauteur/respiration). Reste : mesurer le bruit d'un moteur au banc.
+  hauteur/respiration). **A RETENUE par David le 25/10** (mouvement > respiration) :
+  schéma `pictures/tronc-v2-moteurs.svg` (colonne fixe, courroies 1:4, 4 ressorts,
+  GO-M8010-6 ou Robstride 03). Reste : mesurer le bruit d'un moteur au banc.
 
 - **COBOT DU COMMERCE SUR DIDIER — évalué le 2026-09-26, ÉCARTÉ.** Né d'une
   annonce AliExpress (bras collaboratif 6 axes, 5 kg, affiché **90,69 €**) que

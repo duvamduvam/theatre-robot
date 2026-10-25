@@ -259,17 +259,36 @@ coupure doit donc être traité mécaniquement (voir plus bas).
 
 ### 10.4 Deux architectures, et mon avis
 
-**A — 2 moteurs directement sur les axes du cardan + ressorts de centrage (RECOMMANDÉE).**
-- Un moteur par axe (tangage, roulis), en prise sur le cardan (réducteur intégré, ou
-  courroie si l'encombrement l'exige).
-- Des **ressorts de centrage** dont la raideur vaut un peu plus que `m·g·h` (§5)
-  annulent la gravité. Le moteur ne fournit alors que l'accélération : 20 rad/s² sur
-  ~2,5 kg·m² (20 kg à 35 cm) ≈ **50 N·m de pointe**, soit la classe Robstride 03 ou
-  Damiao J8009 (40-60 N·m en crête).
-- **À la coupure, les ressorts ramènent le buste au centre** : c'est la sécurité la
-  plus simple possible, sans frein et sans logiciel.
-- La colonne devient fixe (plus de hauteur pilotée) et **les vérins à gaz deviennent
-  inutiles**. Ça simplifie le concept : 2 actionneurs au lieu de 3.
+**A — 2 moteurs sur les axes du cardan + ressorts de centrage (RETENUE le 25/10 par
+David : « le mouvement est plus important », la respiration reste un bonus).**
+
+Schéma : `docs/pictures/tronc-v2-moteurs.svg`, généré par
+`docs/outils/schema_tronc_v2_moteurs.py`, qui fait aussi le calcul ci-dessous. Le
+schéma `tronc-v2-verins.svg` du §0 est **périmé**.
+
+- **Colonne FIXE** et cardan. M1 (roulis) est fixé à la colonne ; M2 (tangage) est
+  fixé sous le corps. Chacun attaque son axe par une **courroie HTD 1:4**, silencieuse,
+  la même technologie que les anneaux tournants.
+- **4 ressorts de centrage** en croix (r130) entre un plateau fixe sur la colonne et le
+  dessous du corps. La raideur visée vaut 1,2 × `m·g·h` = 82 N·m/rad, soit
+  ~2,4 N/mm par ressort et ~34 mm de flèche à 15°. À 15°, le moteur ne tient plus que
+  **3,8 N·m**.
+- **Dynamique** (hypothèses : 20 kg, centre de gravité à 35 cm) :
+  - inertie ≈ 3,2 kg·m² ;
+  - 20 rad/s² demandent **67 N·m de pointe à l'axe**. Le chiffre de ~50 N·m écrit plus
+    tôt était sous-estimé : il oubliait l'inertie propre du cylindre ;
+  - avec la courroie 1:4, cela fait **17 N·m et 8,4 rad/s au moteur** pour 120 °/s.
+    La courroie 1:3 a été écartée : il faudrait 22 N·m, collé aux 23,7 N·m de crête
+    du GO-M8010-6.
+- **Moteurs** : Unitree GO-M8010-6 (23,7 N·m en crête, marge ×1,4, 30 rad/s,
+  313,95 €), ou Robstride 03 (60 N·m en crête, large ; vitesse non lue).
+- **À la coupure, les ressorts ramènent le buste au centre** : la sécurité la plus
+  simple possible, sans frein et sans logiciel. Des butées caoutchouc arrêtent à ±17°.
+- **Ce que ça simplifie dans le concept** :
+  - plus de vérins ni de colonne télescopique : 2 actionneurs au lieu de 3 ;
+  - **l'enveloppe basse des bras (z≈672) disparaît**, puisqu'elle venait de la
+    traversée des vérins ;
+  - la respiration (bonus) passe par un panneau de poitrine et un petit servo (§6).
 
 **B — Vérins à gaz qui poussent + 3 câbles qui tirent (l'idée de David).**
 - Les vérins à gaz portent le poids et **tendent les câbles en permanence** (une
@@ -292,7 +311,7 @@ coupure doit donc être traité mécaniquement (voir plus bas).
     treuils, ou des ressorts de centrage comme en A ;
   - le frottement des joints des vérins à gaz peut gâcher les tout petits gestes.
 
-**Mon avis** : partir sur **A**. Même vitesse et même souplesse que B, avec moins de
+**Mon avis (confirmé par le choix de David)** : partir sur **A**. Même vitesse et même souplesse que B, avec moins de
 pièces, et une sécurité à la coupure que les ressorts assurent seuls. B se justifie
 si la respiration par la hauteur devient un vrai désir de mise en scène : c'est le seul
 gain que A ne donne pas (A peut toujours confier la respiration à un petit servo, §6).
