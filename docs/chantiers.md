@@ -1204,8 +1204,10 @@ coup-de-poing) ne bougent pas : la sim ne qualifie rien côté sécurité.
   le MDDS30 de rechange + un RP2040 ; ressorts de centrage en appoint ; respiration par un
   servo à part sur le PCA9685. Écartés : essuie-glaces (jeu, prix), servos et moteurs sans
   balais (réversibles : le buste tombe à la coupure), câbles/colonne souple (aucune preuve
-  à 10-20 kg), pneumatique. **Prochaine action : peser le haut du corps** et repérer où
-  couper la structure (le robot est démonté).
+  à 10-20 kg), pneumatique. **Cible = la v2 (concept triangle)** : ses 3 ancrages de
+  vérins sous le cardan sont motorisés (3 vérins 100 mm à 110 €, étage élastique en série,
+  ancrage bas z445→z468), schéma `pictures/tronc-v2-verins.svg`. ⚠️ Rouvre la décision
+  « vérins à gaz passifs » du 16/07 — à trancher.
 
 - **COBOT DU COMMERCE SUR DIDIER — évalué le 2026-09-26, ÉCARTÉ.** Né d'une
   annonce AliExpress (bras collaboratif 6 axes, 5 kg, affiché **90,69 €**) que

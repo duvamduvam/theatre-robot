@@ -6,6 +6,55 @@
 > viennent que d'un extrait de moteur de recherche sont marqués *(extrait)* et ne
 > doivent pas entrer dans une commande sans relecture.
 
+## 0. Cible : la PROCHAINE version (Didier v2, concept « robot triangle »)
+
+> Précisé par David le 25/10 : l'étude vise la **v2**, pas le Didier actuel. Les §4.2,
+> 4.3 et 9 ci-dessous (2 vérins sur un cardan, MDDS30 de rechange, peser/couper le
+> torse actuel) sont **remplacés** par cette section. Le reste (familles écartées,
+> ressorts, respiration, sécurité) tient toujours.
+
+**Schéma** : `docs/pictures/tronc-v2-verins.svg`, généré par
+`docs/outils/schema_tronc_v2.py` (cotes copiées du concept, cinématique calculée —
+relancer le script si le concept change).
+
+**La v2 a déjà la place.** Le concept (`~/Nextcloud/dev/didier/plans/concepts/triangle-3roues`)
+pose le corps sur une **colonne télescopique** (±40 mm) terminée par un **cardan Ø110**,
+avec **3 ancrages de vérins** entre les pointes du caisson (r405) et le dessous du corps
+(r215, z705). Il n'y a rien à inventer, seulement à **motoriser ces 3 vérins** :
+
+- **3 vérins = 3 mouvements** : hauteur (les 3 ensemble), tangage (V0 avant contre
+  V120 + V240), roulis (V120 contre V240) ;
+- ⚠️ **Ça rouvre une décision du 16/07.** Le concept a acté des vérins **à gaz,
+  passifs**, parce qu'un vérin électrique autobloquant n'a aucune souplesse et se
+  fait marteler par les chocs de la scène (seuils, appuis). Le plan-de-route avait
+  posé la condition d'un retour à l'actif : **un étage élastique en série**
+  (silentbloc ou ressort précontraint à l'ancrage), **jamais le vérin seul**. La
+  proposition la respecte ;
+- le **vérin** : 24 V, **course 100 mm**, potentiomètre 10 kΩ, autobloquant, IP65,
+  modèle 0041502-2 — **110,00 €** (alu), lu le 25/10 :
+  <https://verinelectrique.fr/products/verin-electrique-2000n-100mm-actionneur-lineaire-avec-potentiometre>.
+  Entraxe des œils : **235 mm rentré / 335 mm sorti**, œils Ø6. Expédié de **Hong
+  Kong** (3 à 7 jours ouvrés) ; la page annonce **~20 % de droits à l'import**.
+  Choisir la variante **300 N à 40 mm/s** au moment de la commande ;
+- **cinématique** (calculée par le script) : entre les ancrages actuels il y a
+  322 mm, soit le vérin **presque à fond**. Il faut donc monter l'ancrage bas de
+  **z445 à z468**, ce qui centre dans la course la plage utilisée à ±15°. Résultat :
+  à ±15°, le vérin va de 241 à 329 mm, et il reste ±6 mm pour la hauteur ; à ±10°,
+  il va de 252 à 311 mm, et il reste ±17 mm. La hauteur ±40 du concept et la
+  pleine inclinaison ne sont **pas cumulables** : le logiciel bornera la somme ;
+- la version **150 mm** (285/435, 115,00 €) a été essayée : son ancrage bas
+  tomberait à z370, **sous le dessus du caisson** (z440). Elle ne loge pas ;
+- **effort** : la colonne ne porte que le cisaillement et la torsion. Le **poids du
+  corps** (10-20 kg) passe donc **par les vérins**. Avec ~190 N répartis sur 3 vérins
+  inclinés d'environ 36°, plus le couple de bascule repris sur 21,5 cm, on reste
+  sous ~200 N par vérin au pire (ordre de grandeur, à refaire au bilan de masse),
+  pour 300 N disponibles ;
+- **commande** : 3 canaux de pont en H (le MDDS30 n'en a que 2 ⇒ un driver de plus,
+  à choisir) et 3 entrées ADC (RP2040). Un nœud `torso` à deadman, comme la note
+  sécurité des anneaux tournants l'exige pour tout actionneur de cette classe ;
+- **budget vérins** : 3 × 110,00 € = 330 € + droits, contre 45 à 105 € pour les vérins
+  à gaz du plan-de-route.
+
 ## 1. Cahier des charges (David, 25/10)
 
 | Critère | Valeur |
@@ -139,13 +188,15 @@ possible avec les vérins, ponctuellement (quelques degrés, pas en boucle).
 | Driver + microcontrôleur | 0 € (stock — mais coûte la rechange MDDS30) |
 | Cardan, 4 rotules, ressorts, butées, soufflet | **non relevé** |
 
-## 9. Ce qui reste à lever, dans l'ordre
+## 9. Ce qui reste à lever, dans l'ordre (v2)
 
-1. **Peser le haut du corps et situer son centre de gravité** (pèse-personne + équilibre
-   sur une arête) : conditionne les ressorts et confirme la marge du vérin.
-2. **Regarder où couper** : la structure du torse (montants bois) permet-elle une
-   coupure horizontale avec un pivot ? Le robot est démonté en ce moment — c'est le
-   moment de mesurer.
-3. Encombrement rétracté du vérin et pays d'expédition (relire la page).
-4. Choisir le cardan (prix à lire à la source).
-5. Écrire la spec fermée (nœud `torso`, URDF, deadman, règle roues).
+1. **Trancher actif/passif** pour la v2 (décision du 16/07 à rouvrir ou non, §0).
+2. **Choisir l'étage élastique** de l'ancrage bas (silentbloc, ressort précontraint) :
+   raideur assez forte pour ne pas faire tanguer le corps, assez souple pour
+   absorber un seuil.
+3. **Reporter l'ancrage bas z468** dans `caisson.py` (chape de vérin) et
+   `robot_triangle.py`, puis vérifier l'enveloppe basse des bras (contrainte
+   z≈672, qui dépend de la trajectoire des vérins).
+4. **Driver 3 voies** et budget actionneurs (le concept compte déjà 11 actionneurs).
+5. Spec fermée : nœud `torso`, mélange hauteur/tangage/roulis, bornes logicielles,
+   deadman, règle « pas d'inclinaison pleine en roulant ».
