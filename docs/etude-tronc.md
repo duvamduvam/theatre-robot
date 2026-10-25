@@ -6,6 +6,12 @@
 > viennent que d'un extrait de moteur de recherche sont marqués *(extrait)* et ne
 > doivent pas entrer dans une commande sans relecture.
 
+> ⚠️ **RÉVISION du 25/10 (soir) — lire d'abord le §10.** Les vérins électriques des
+> §0 et §4 sont **déclassés pour l'expressivité** : ~25°/s, quand un buste humain
+> détendu se penche à 60-104°/s. Le §10 les remplace par des moteurs rapides et
+> réversibles. La construction est prévue dans ~2 ans : on optimise l'expressivité,
+> pas le prix d'aujourd'hui.
+
 ## 0. Cible : la PROCHAINE version (Didier v2, concept « robot triangle »)
 
 > Précisé par David le 25/10 : l'étude vise la **v2**, pas le Didier actuel. Les §4.2,
@@ -200,3 +206,104 @@ possible avec les vérins, ponctuellement (quelques degrés, pas en boucle).
 4. **Driver 3 voies** et budget actionneurs (le concept compte déjà 11 actionneurs).
 5. Spec fermée : nœud `torso`, mélange hauteur/tangage/roulis, bornes logicielles,
    deadman, règle « pas d'inclinaison pleine en roulant ».
+
+## 10. Expressivité d'abord (révision du 25/10, soir)
+
+### 10.1 Le cahier des charges chiffré
+
+| Référence | Vitesse du buste | Source |
+|---|---|---|
+| Humain, flexion avant **confortable** | 60 à 104 °/s | PMC11253345 (lu ; 12 hommes de ~66 ans, donc borne basse) |
+| Humain, flexion avant **maximale** | 137 à 200 °/s | idem |
+| Révérence debout (descente) | ~50 °/s en moyenne (60° en 1,2 s) | Kawabata et al. (lu, vitesse calculée) |
+| Quori (robot social, taille 1 axe) | < 1 rad/s (< 57 °/s), < 1 rad/s² | arXiv 2109.00662 (lu) — jugé posé, pas vif |
+| Vérins électriques du §0 | **~25 °/s** | calcul §4.2 |
+| Moteurs de jambe Disney BDX | 20-30 rad/s, 24-34 N·m en crête | arXiv 2501.05204 (lu) |
+
+**Objectif retenu : ~120 °/s en pointe et ~20 rad/s² d'accélération** sur de petits
+angles. Ça couvre l'humain détendu avec de la marge et permet un sursaut, un rebond, un
+dépassement suivi d'un retour. À noter (Hirose 2020, PMC7500322, lu) : un mouvement
+**légèrement moins lisse** que la trajectoire mathématiquement idéale paraît plus
+naturel. Il ne faut donc pas tout filtrer.
+
+Aucune donnée n'a été trouvée sur le sursaut, l'inclinaison d'écoute, le rire ou la
+respiration : ce seront des réglages de scène.
+
+### 10.2 Ce que font les robots expressifs
+
+- **Keepon** (Kozima, page lue) : l'inclinaison passe par **2 cardans reliés par
+  4 fils**, avec les moteurs en bas. C'est l'idée « câbles » de David, en miniature
+  (tilt ±40°, side ±25°, Maxon 1,5 W).
+- **Blossom** (Cornell/Google, Spectrum 2017, lu) : structure tendue par câbles, et
+  « la souplesse donne un mouvement imparfait, vivant ».
+- **Quori** (lu) : **compensation de gravité par contrepoids** (16 → 2,5 N·m), moteur
+  de lève-vitre, patins de friction contre le jeu. C'est la preuve que compenser divise
+  le moteur par six, mais avec un moteur lent : posé, pas vif.
+- **Disney BDX** (lu) : moteurs quasi directs (faible réduction, réversibles) partout
+  où le mouvement doit vivre ; « un design simple qui sert l'intention créative ».
+
+### 10.3 Les moteurs rapides et réversibles (prix lus le 25/10)
+
+| Moteur | Couple nominal / crête | Vitesse | Prix lu |
+|---|---|---|---|
+| Robstride 02 | 6 / 17 N·m | 410 tr/min à vide | A$328,12 TTC (Pakronics) |
+| Unitree GO-M8010-6 | ? / 23,7 N·m | 30 rad/s à 24 V | 313,95 € (OpenElab) |
+| Robstride 03 | 20 / 60 N·m | — | A$509,15 TTC (Pakronics, rupture) |
+| Damiao J8009P | 20 / 40 N·m | 160 tr/min (24 V), 320 (48 V) | 450,40 € (OpenElab) |
+| CubeMars AK80-9 | 9 / 18 N·m | 390 tr/min nominal | 479,90 $ (site officiel) — **55 dB à 65 cm**, seul bruit chiffré |
+
+Ils sont **réversibles** : un choc fait reculer le moteur au lieu de marteler une vis.
+C'est ce qui lève l'objection du 16/07 sans étage élastique ajouté, et leur raideur se
+règle en logiciel. **Leur défaut** : sans courant, ils ne tiennent rien. Le cas de
+coupure doit donc être traité mécaniquement (voir plus bas).
+
+### 10.4 Deux architectures, et mon avis
+
+**A — 2 moteurs directement sur les axes du cardan + ressorts de centrage (RECOMMANDÉE).**
+- Un moteur par axe (tangage, roulis), en prise sur le cardan (réducteur intégré, ou
+  courroie si l'encombrement l'exige).
+- Des **ressorts de centrage** dont la raideur vaut un peu plus que `m·g·h` (§5)
+  annulent la gravité. Le moteur ne fournit alors que l'accélération : 20 rad/s² sur
+  ~2,5 kg·m² (20 kg à 35 cm) ≈ **50 N·m de pointe**, soit la classe Robstride 03 ou
+  Damiao J8009 (40-60 N·m en crête).
+- **À la coupure, les ressorts ramènent le buste au centre** : c'est la sécurité la
+  plus simple possible, sans frein et sans logiciel.
+- La colonne devient fixe (plus de hauteur pilotée) et **les vérins à gaz deviennent
+  inutiles**. Ça simplifie le concept : 2 actionneurs au lieu de 3.
+
+**B — Vérins à gaz qui poussent + 3 câbles qui tirent (l'idée de David).**
+- Les vérins à gaz portent le poids et **tendent les câbles en permanence** (une
+  précharge d'environ 100 N par câble évite tout mou).
+- Trois treuils en bas, dans le caisson, avec des moteurs de la classe
+  Robstride 02 / Unitree GO-M8010. Chiffres pour un tambour de Ø40 :
+  - pencher de 15° demande 56 mm de câble ;
+  - à 120 °/s, le câble défile à ~0,45 m/s, soit ~22 rad/s au tambour (le GO-M8010
+    fait 30 rad/s) ;
+  - en pointe, ~230 N par câble, soit ~4,6 N·m (17 à 23,7 N·m disponibles).
+- **Ce que B a en plus** : la **hauteur pilotée**, donc la respiration et le
+  « gonflement » du corps, et des moteurs bas et protégés dans le caisson.
+- **Ce que B coûte** :
+  - 3 moteurs au lieu de 2 ;
+  - des câbles d'acier (pas de Dyneema, qui s'allonge) à surveiller et à changer ;
+  - un **courant de maintien permanent** pour tenir la précharge (~2 N·m par
+    moteur) ;
+  - à la coupure, les câbles se détendent : le corps monte en butée et le cardan
+    reste libre. Il faut donc des **freins qui se serrent à la coupure** sur les
+    treuils, ou des ressorts de centrage comme en A ;
+  - le frottement des joints des vérins à gaz peut gâcher les tout petits gestes.
+
+**Mon avis** : partir sur **A**. Même vitesse et même souplesse que B, avec moins de
+pièces, et une sécurité à la coupure que les ressorts assurent seuls. B se justifie
+si la respiration par la hauteur devient un vrai désir de mise en scène : c'est le seul
+gain que A ne donne pas (A peut toujours confier la respiration à un petit servo, §6).
+
+### 10.5 Ce qui reste à lever
+
+1. **Bruit** : une seule mesure (55 dB à 65 cm, AK80-9). C'est le critère de théâtre le
+   moins documenté. Mesurer un moteur au banc avant de choisir.
+2. **Ressorts de centrage** : forme (torsion sur les axes du cardan, ou compression en
+   croix) et réglage sur la masse **réelle** de la v2.
+3. **Les prix bougent vite** (écarts de 189 à 328 « dollars » pour le même Robstride
+   selon le revendeur) : tout relire au moment de l'achat, dans ~2 ans.
+4. **Lire le préprint arXiv 2608.30832** (un seul vérin à gaz partagé pour tangage et
+   roulis, sur des chevilles d'humanoïde), téléchargé mais illisible par l'outil.
