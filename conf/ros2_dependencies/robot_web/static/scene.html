@@ -9,7 +9,7 @@
   Ce que la page n'affiche JAMAIS : les pannes ni les consignes injectées par le
   régisseur de la répétition (David ne voit pas le tirage). Elle ne lit donc que
   chat_state, persona_state, route_state, rehearsal/state (séance + arrêt vocal :
-  deux booléens-ou-presque, aucune panne), camera_state et le flux chat_transcript.
+  deux booléens-ou-presque, aucune panne), camera_state, camera_source_state, camera_sources et le flux chat_transcript.
 
   SÉCURITÉ : le groupe « Répétition » (route, vitesse, séance) n'est affiché que
   si le serveur l'annonce (hello.rehearsal, SIM-ONLY, domaine 43) ; le serveur
@@ -98,12 +98,18 @@
     </div>
 
     <div class="scene-groupe scene-repetition" hidden>
-      <h2>Webcam</h2>
+      <h2>Vision</h2>
       <span id="groupe-camera" class="scene-boutons">
         <button class="bouton-catalogue" type="button" data-topic="camera_enable" data-value="on">Webcam ON</button>
         <button class="bouton-catalogue" type="button" data-topic="camera_enable" data-value="off">Webcam OFF</button>
       </span>
       <span id="scene-etat-camera" class="badge badge-off" title="état de la webcam de perception (camera_state)">—</span>
+      <!-- Source des images de la perception (camera_source / camera_source_state). Le bouton
+           Gazebo reste masqué tant que la vision n'annonce pas "gazebo" (camera_sources). -->
+      <span id="groupe-source" class="scene-boutons">
+        <button class="bouton-catalogue" type="button" data-topic="camera_source" data-value="webcam">Webcam PC</button>
+        <button id="bouton-source-gazebo" class="bouton-catalogue" type="button" data-topic="camera_source" data-value="gazebo" hidden>Caméra Gazebo</button>
+      </span>
     </div>
 
   </section>
@@ -124,14 +130,14 @@
            (en sim, la webcam du PC) et sur laquelle le LLM de réflexion raisonne.
            Masqué tant que le serveur n'annonce pas hello.perception. -->
       <div id="scene-perception" class="scene-perception" hidden>
-        <h2>Ce que Didier voit (webcam)</h2>
+        <h2>Ce que Didier voit <span id="perception-source">(webcam)</span></h2>
         <div class="carte carte-video">
           <div class="video-wrap">
             <img id="perception" alt="image analysée par la perception de Didier">
             <div id="perception-placeholder" class="video-placeholder">pas de vidéo</div>
             <!-- Recouvre l'image (opaque) quand camera_state = off : sinon la dernière frame
                  resterait figée à l'écran comme si la webcam tournait encore. -->
-            <div id="perception-coupee" class="video-placeholder" hidden>webcam coupée</div>
+            <div id="perception-coupee" class="video-placeholder" hidden>caméra coupée</div>
             <button id="btn-perception-refresh" type="button" title="Recharger le flux">⟳</button>
           </div>
         </div>

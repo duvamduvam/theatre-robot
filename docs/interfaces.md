@@ -42,6 +42,9 @@ Invalid payloads are rejected with an explicit ERROR log naming the topic
 | `rehearsal/state` (**SIM-ONLY**) | `director` (robot_rehearsal) | `{"seance": "attente"\|"en_cours"\|"terminee", "arret_vocal": true\|false}` | **Latched** (`TRANSIENT_LOCAL`, depth 1, both sides) state of the rehearsal session for the scene page : published at start-up and at EVERY change (start, end by duration/stop/abort, voice hold set or released by voice/fader/abort/end), never repeated. `arret_vocal` = Didier held by a spoken « stop » (route_speed 0 retained). Carries NO fault/lubie information (the page must not reveal the draw). Read-only for the web bridge (`TOPICS_LECTURE`). |
 | `camera_enable` | web scene page (**SIM-ONLY**, `WHITELIST_REPETITION`) | `"on"`, `"off"` | Switches the perception webcam on/off (consumed on the vision side). Writable from the web only when `rehearsal_enabled`, never on the real robot. |
 | `camera_state` | vision (perception webcam) | `"on"`, `"off"` | **Latched** (`TRANSIENT_LOCAL`) real state of the webcam, answer to `camera_enable`. Read-only for the web bridge (`TOPICS_LECTURE`) ; when `off` the scene page shows « webcam coupée » instead of a frozen image. |
+| `camera_source` | web scene page (**SIM-ONLY**, `WHITELIST_REPETITION`) | `"webcam"`, `"gazebo"` | Selects, live, the image SOURCE of the perception (PC webcam or Gazebo camera ; consumed by `person_tracker` on the vision side). Writable from the web only when `rehearsal_enabled`, never on the real robot. |
+| `camera_source_state` | vision (`person_tracker`) | `"webcam"`, `"gazebo"` | **Latched** (`TRANSIENT_LOCAL`) source actually in use, answer to `camera_source`. Read-only for the web bridge (`TOPICS_LECTURE`) ; the scene page highlights the button and shows the source in the « Ce que Didier voit » title. |
+| `camera_sources` | vision (`person_tracker`) | JSON list, e.g. `["webcam"]` or `["webcam","gazebo"]` | **Latched** (`TRANSIENT_LOCAL`) sources AVAILABLE. Read-only for the web bridge (`TOPICS_LECTURE`) ; the scene page hides « Caméra Gazebo » until `"gazebo"` is listed. |
 | `route_state_cause` (published by `route_driver`, **SIM-ONLY**) | `director` | `"boot"`, `"cmd"` | **Latched** (`TRANSIENT_LOCAL`, depth 1, both sides) cause of the route state : `"boot"` at node start, `"cmd"` at EVERY switch-off by command (`off`/`false`/`0`/`"0"`). The régisseur relaunches by voice only on state `off` + cause `boot` ; unknown cause = refused. |
 | `animation_state` | `animations_node` | `"parle"`, `""` (idle) | **State topic** (not an actuator track), latched (`TRANSIENT_LOCAL`, depth 1 — subscribers MUST use the same durability or they miss the latch): current sequence name or `""` at rest. Published on transition AND on every sequence (re)start (same name included) with `time = remaining_ms`, so subscribers can arm a deadman-style expiry (remaining + 2 s) in case `animations_node` dies mid-sequence. Actuator-arbitration upstream (lot B, [`etude-arbitrage-actionneurs.md`](etude-arbitrage-actionneurs.md)): `gaze_follower_node` (robot) and `chat_node` (vision Pi) subscribe and go silent on face/head while a sequence has the hand. |
 
@@ -124,7 +127,7 @@ source (W1 à venir).
     `"bougon"`/`"naif"`/`"vantard"`/`"mauvaisefoi"`, cf. `vision.ai.personas` —
     nouvelle session de conversation à chaque changement)
   - **répétition** (`WHITELIST_REPETITION`, SIM-ONLY) : `route`, `route_speed`,
-    `rehearsal/cmd`, `camera_enable` — dans la whitelist EFFECTIVE seulement si le node a
+    `rehearsal/cmd`, `camera_enable`, `camera_source` — dans la whitelist EFFECTIVE seulement si le node a
     `rehearsal_enabled` (launch `rehearsal:=true`, env `REHEARSAL=true`) ET
     tourne en domaine 43 (`rehearsal_allowed`) ; annoncés par `hello.rehearsal`.
     Sur le vrai robot : refusés comme un topic inconnu.
@@ -133,7 +136,7 @@ source (W1 à venir).
     lubie en cours, la batterie faible = le tirage que David ignore).
   - lecture seule (`TOPICS_LECTURE`, jamais publiables depuis le web) :
     `chat_state`, `persona_state`, `route_state`, `chat_audio_chain`, `rehearsal/state`
-    (séance + arrêt vocal, sans info de panne) et `camera_state`, topics d'ÉTAT latchés publiés par
+    (séance + arrêt vocal, sans info de panne), `camera_state`, `camera_source_state` et `camera_sources`, topics d'ÉTAT latchés publiés par
     chat_node (Pi vision) — pilotent la surbrillance verte `en-cours` des
     boutons Parole/Personnalité de la console (chat_node absent = aucun
     bouton vert). Le groupe Gaze, lui, est surligné d'après le DERNIER ORDRE

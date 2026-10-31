@@ -205,10 +205,14 @@ n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
   séance, d'où un Didier figé sous un « route en marche » trompeur. Il se lève
   en bougeant le curseur, par un « avance » en séance, ou à la fin/abort de la
   séance. Ces badges ne portent jamais d'info de panne ni de lubie.
-- **Webcam (31/10)** : groupe « Webcam » (sim seulement) — boutons ON/OFF
+- **Vision (31/10)** : groupe « Vision » (sim seulement) — boutons Webcam ON/OFF
   (`camera_enable`) et badge d'état réel (`camera_state`, latché par la tête
-  vision). Webcam coupée : le panneau « Ce que Didier voit » affiche « webcam
-  coupée » au lieu d'une image figée.
+  vision). Caméra coupée : le panneau « Ce que Didier voit » affiche « caméra
+  coupée » au lieu d'une image figée. **Source des images** : boutons « Webcam
+  PC » / « Caméra Gazebo » (`camera_source`, à chaud), surlignage d'après la
+  source réellement utilisée (`camera_source_state`) ; le bouton Gazebo n'apparaît
+  que si la vision annonce « gazebo » (`camera_sources`, ex. `["webcam","gazebo"]`).
+  Le titre du panneau indique la source courante : « (webcam) » ou « (Gazebo) ».
 - Deux bugs demandent une **réaction de David** : après un *reboot sans
   reprise* (Didier reste planté, route OFF après le respawn), c'est lui qui
   relance (**route on**) — et tant que la route est OFF, un reboot suivant ne

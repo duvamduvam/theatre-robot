@@ -56,7 +56,11 @@ WHITELIST = WHITELIST_SPECTACLE | WHITELIST_TECHNIQUE
 # camera_enable (2026-10-31) : bouton « Webcam ON/OFF » de la page scène,
 # StringTime "on"/"off" consommé côté vision ; sim seulement par construction
 # (jamais écrivable sur le vrai robot, où la webcam n'est pas ce bouton-là).
-WHITELIST_REPETITION = {"route", "route_speed", "rehearsal/cmd", "camera_enable"}
+# camera_source (2026-10-31) : sélecteur de SOURCE d'images de la perception,
+# StringTime "webcam" | "gazebo", consommé côté vision (person_tracker) ; même
+# raison que camera_enable : sim seulement, jamais écrivable sur le vrai robot.
+WHITELIST_REPETITION = {"route", "route_speed", "rehearsal/cmd", "camera_enable",
+                        "camera_source"}
 
 # Topics MASQUÉS dans le message `state` (2026-10-14, étude §13.1 « David ne
 # voit pas le tirage ») : publiables depuis le web (ils restent dans la
@@ -99,8 +103,13 @@ def effective_whitelist(rehearsal_enabled: bool) -> frozenset:
 # panne ni de lubie n'y passe (contrat : rehearsal_state.py) ; lecture seule.
 # camera_state (2026-10-31) : "on"/"off" de la webcam de perception, latché
 # côté vision en réponse à camera_enable -- l'ÉTAT RÉEL, pas le dernier clic.
+# camera_source_state (2026-10-31) : "webcam"/"gazebo", source RÉELLEMENT utilisée,
+# latchée côté vision en réponse à camera_source. camera_sources : JSON liste des
+# sources DISPONIBLES (["webcam"] ou ["webcam","gazebo"]), latchée aussi ; la page
+# masque « Caméra Gazebo » tant que "gazebo" n'y figure pas.
 TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chain",
-                  "rehearsal/state", "camera_state"}
+                  "rehearsal/state", "camera_state", "camera_source_state",
+                  "camera_sources"}
 
 # Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
 # clients (message "feed"), contrairement à `state` qui ne porte que la

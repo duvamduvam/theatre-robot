@@ -12,7 +12,7 @@
  *  - de `state` (toutes les 2 s) on ne lit que chat_state, persona_state,
  *    route_state, chat_audio_chain (branchement du son, 31/10), rehearsal/state
  *    (séance + arrêt vocal, 31/10 : le régisseur n'y met AUCUNE panne) et
- *    camera_state ; JAMAIS chat_instruction (le régisseur publie sur le même
+ *    camera_state, camera_source_state et camera_sources ; JAMAIS chat_instruction (le régisseur publie sur le même
  *    topic que la consigne posée ici) ni route_speed (une panne « batterie
  *    faible » y passerait) ;
  *  - le curseur de vitesse est une CONSIGNE sans relecture : il ne se recale
@@ -61,6 +61,12 @@ const LIBELLE_ETAT_SEANCE = {
 const LIBELLE_ETAT_CAMERA = {
   on: "webcam allumée",
   off: "webcam coupée",
+};
+
+// camera_source_state (latché côté vision) -> mot affiché dans le titre du panneau.
+const LIBELLE_SOURCE = {
+  webcam: "(webcam)",
+  gazebo: "(Gazebo)",
 };
 
 // Qui parle dans chat_transcript : david = le texte que Didier a ENTENDU,
@@ -154,9 +160,29 @@ function afficherEtatScene(msg) {
   const camera = valeurTopic(msg.topics, "camera_state");
   majBadgeEtat("scene-etat-camera", LIBELLE_ETAT_CAMERA, camera, camera === "on");
   surlignerGroupe("groupe-camera", camera);
-  // Coupée : texte « webcam coupée » par-dessus, au lieu de la dernière image figée.
+  // Coupée : texte « caméra coupée » par-dessus, au lieu de la dernière image figée.
   // État inconnu (null) : on ne masque rien, la webcam n'a pas dit qu'elle était coupée.
   $("perception-coupee").hidden = camera !== "off";
+
+  afficherSourceCamera(valeurTopic(msg.topics, "camera_source_state"),
+                       valeurTopic(msg.topics, "camera_sources"));
+}
+
+// Source des images de la perception : surbrillance d'après l'état RÉEL, titre du panneau,
+// et bouton Gazebo visible seulement si la vision annonce "gazebo". Liste absente ou
+// illisible = webcam seule (on ne propose jamais une source que personne n'a annoncée).
+function afficherSourceCamera(source, brutSources) {
+  let sources = [];
+  try {
+    const lue = brutSources === null ? [] : JSON.parse(brutSources);
+    sources = Array.isArray(lue) ? lue : [];
+  } catch (e) {
+    logErreur("sources de caméra illisibles");
+  }
+  $("bouton-source-gazebo").hidden = !sources.includes("gazebo");
+  surlignerGroupe("groupe-source", source);
+  // Source inconnue (null) : titre historique « (webcam) », la vision n'a rien dit d'autre.
+  $("perception-source").textContent = LIBELLE_SOURCE[source] || LIBELLE_SOURCE.webcam;
 }
 
 // rehearsal/state : JSON {"seance", "arret_vocal"} du régisseur. Illisible ou absent
