@@ -83,11 +83,24 @@ def test_en_vol_attente_puis_une_seule_relance():
     assert sched.next_job(12.0, False) is None          # UNE relance, pas trois
 
 
-def test_reflect_attend_aussi_la_fin_du_vol():
+def test_reflect_devance_un_ordinaire_en_vol():
+    # 01/11 : la demande ne fait plus la queue derrière un ordinaire (4-9 s).
     sched = ReflectionScheduler()
     sched.notify("reflect", 0.0)
-    assert sched.next_job(1.0, True) is None
+    assert sched.next_job(1.0, True, deep_in_flight=False) == Job(deep=True, reason="reflect")
+
+
+def test_reflect_attend_la_fin_d_un_profond_en_vol():
+    sched = ReflectionScheduler()
+    sched.notify("reflect", 0.0)
+    assert sched.next_job(1.0, True, deep_in_flight=True) is None
     assert sched.next_job(2.0, False) == Job(deep=True, reason="reflect")
+
+
+def test_ordinaire_jamais_pendant_un_profond_en_vol():
+    sched = ReflectionScheduler()
+    sched.notify("poi", 0.0)
+    assert sched.next_job(10.0, True, deep_in_flight=True) is None
 
 
 def test_battement_seulement_si_engage():
@@ -297,3 +310,43 @@ def test_demande_plus_recente_prime_sur_le_nouvel_essai():
     assert deep.failed("a", was_retry=False) is False    # "a" abandonnée, "b" attend
     assert deep.take() == ("b", False)
     assert deep.failed(None, was_retry=False) is False   # job profond sans demande
+
+
+# --- Flights : ordinaire devancé par une demande profonde (01/11) ---
+
+def test_flights_ordinaire_devance_par_un_profond():
+    from vision.ai.reflection_policy import Flights
+    f = Flights()
+    ordinaire, profond = Job(deep=False, reason="david"), Job(deep=True, reason="reflect")
+    t_ord = f.start(ordinaire)
+    assert f.any and not f.deep
+    t_deep = f.start(profond)                 # part PENDANT l'ordinaire
+    assert f.deep
+    assert f.superseded(profond, t_deep) is False
+    f.finish(profond)
+    f.finish(ordinaire)
+    assert f.superseded(ordinaire, t_ord) is True      # jeté
+    assert not f.any
+
+
+def test_flights_ordinaire_seul_n_est_pas_devance():
+    from vision.ai.reflection_policy import Flights
+    f = Flights()
+    profond = Job(deep=True, reason="reflect")
+    f.start(profond)
+    f.finish(profond)
+    ordinaire = Job(deep=False, reason="david")
+    t_ord = f.start(ordinaire)                # profond fini AVANT son départ
+    f.finish(ordinaire)
+    assert f.superseded(ordinaire, t_ord) is False
+
+
+def test_flights_refuse_les_doublons():
+    import pytest
+    from vision.ai.reflection_policy import Flights
+    f = Flights()
+    f.start(Job(deep=True, reason="reflect"))
+    with pytest.raises(ValueError):
+        f.start(Job(deep=True, reason="reflect"))
+    with pytest.raises(ValueError):
+        f.start(Job(deep=False, reason="david"))

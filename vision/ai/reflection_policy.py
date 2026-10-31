@@ -77,17 +77,23 @@ class ReflectionScheduler:
     def _interval_ok(self, now_s: float) -> bool:
         return self._last_start is None or now_s - self._last_start >= self._min_interval_s
 
-    def next_job(self, now_s: float, in_flight: bool) -> Optional[Job]:
-        """Le prochain appel à lancer, ou None. Lancer un job consomme TOUS les
-        événements en attente (il voit la transcription entière) ; ceux qui
-        arrivent pendant un vol restent en attente → UNE seule relance après."""
+    def next_job(self, now_s: float, in_flight: bool,
+                 deep_in_flight: bool = False) -> Optional[Job]:
+        """Le prochain appel à lancer, ou None. `in_flight` : un appel (quel
+        qu'il soit) est en vol ; `deep_in_flight` : c'est un appel PROFOND.
+        Lancer un job consomme TOUS les événements en attente (il voit la
+        transcription entière) ; ceux qui arrivent pendant un vol restent en
+        attente → UNE seule relance après."""
+        if self._reflect_pending and not deep_in_flight:
+            # Demande explicite de Didier : un acteur attend, on ignore
+            # intervalle minimal, debounce ET l'appel ordinaire en vol
+            # (01/11 : la demande attendait la fin d'un ordinaire Haiku de
+            # 4-9 s — réponse « regarde ça » à 7-10 s au lieu de 3). Le node
+            # jette le résultat de l'ordinaire devancé (cf. reflection_node).
+            return self._start(now_s, deep=True, reason="reflect")
+
         if in_flight:
             return None
-
-        if self._reflect_pending:
-            # Demande explicite de Didier : un acteur attend, on ignore
-            # intervalle minimal et debounce.
-            return self._start(now_s, deep=True, reason="reflect")
 
         if not self._interval_ok(now_s):
             return None
@@ -112,6 +118,53 @@ class ReflectionScheduler:
         self._pending.clear()
         self._reflect_pending = False
         return Job(deep=deep, reason=reason)
+
+
+class Flights:
+    """Appels de réflexion en vol : au plus UN ordinaire et UN profond en même
+    temps (01/11 : la demande profonde devance l'ordinaire, cf. next_job).
+    Un ordinaire parti AVANT un profond est « devancé » : son résultat décrit
+    une scène que le profond a déjà relue — le publier ferait un second tour
+    spontané, en retard et en contradiction avec la réponse attendue.
+    Non thread-safe : le verrou est celui du node."""
+
+    def __init__(self):
+        self._ordinary = False
+        self._deep = False
+        self._deep_epoch = 0   # incrémenté à chaque départ profond
+
+    @property
+    def any(self) -> bool:
+        return self._ordinary or self._deep
+
+    @property
+    def deep(self) -> bool:
+        return self._deep
+
+    def start(self, job: Job) -> int:
+        """Marque le job en vol ; rend son jeton (époque profonde au départ).
+        Démarrer un job dont le créneau est pris = ValueError (bug d'appelant :
+        next_job ne doit jamais le proposer)."""
+        if job.deep:
+            if self._deep:
+                raise ValueError("appel profond déjà en vol")
+            self._deep = True
+            self._deep_epoch += 1
+        else:
+            if self.any:
+                raise ValueError("appel en vol : pas d'ordinaire en parallèle")
+            self._ordinary = True
+        return self._deep_epoch
+
+    def finish(self, job: Job) -> None:
+        if job.deep:
+            self._deep = False
+        else:
+            self._ordinary = False
+
+    def superseded(self, job: Job, token: int) -> bool:
+        """Vrai si `job` est un ordinaire devancé par un profond parti après lui."""
+        return not job.deep and token != self._deep_epoch
 
 
 class DeepRequests:

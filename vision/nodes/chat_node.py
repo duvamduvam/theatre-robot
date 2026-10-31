@@ -151,6 +151,7 @@ from vision.ai.llm_stream import StreamingBrain
 from vision.ai.performance import RosMessage
 from vision.ai import hearing
 from vision.ai.stt import FallbackStt, FasterWhisperStt, OpenRouterStt
+from vision.ai.thinking_show import ThinkingShow
 from vision.ai.tts_piper import PiperTts
 from vision.audio.beeps import build_thinking_beeps
 from vision.audio.live_audio_gate import LiveAudioGate, LiveAudioGateConfig
@@ -226,6 +227,9 @@ PERSONA_STATE_TOPIC = "persona_state"
 # ci-dessus (ce topic n'a de sens que côté chat, aucune raison de le
 # mutualiser dans la lib partagée).
 CHAT_STATE_TOPIC = "chat_state"
+# Jeu de réflexion : une demande armée plus vieille que ça au retour en écoute
+# n'est plus jouée (cf. ChatNode._thinking_on_state).
+THINKING_ARM_MAX_S = 8.0
 
 # --- Topics de RÉGIE du chat (lot R3, cf. docstring de module) -------------
 # Texte « entendu » SANS micro ni STT (clavier de la régie, page « scène » du
@@ -844,6 +848,19 @@ class ChatNode(Node):
         self._reflect_pub = (
             self.create_publisher(StringTime, reflection_contract.REFLECT_TOPIC, 10)
             if config["chat_reflection_enabled"] else None)
+        # Jeu de réflexion (vision/ai/thinking_show.py, David 01/11) : pendant
+        # l'attente de la réponse à une demande « reflechir », visage pensif +
+        # coups d'œil tirés au hasard. ARMÉ par la demande (publiée PENDANT la
+        # réplique « laisse-moi voir ») et DÉMARRÉ au retour en écoute — sinon
+        # la fin de réplique écraserait le visage. Coupé dès que le chat quitte
+        # l'écoute (David parle, tour spontané servi) ou à l'arrivée de la
+        # réponse. Verrou : états (thread de conversation), réponse et minuterie
+        # (thread rclpy) s'y croisent.
+        self._thinking = ThinkingShow()
+        self._thinking_lock = threading.Lock()
+        self._thinking_armed_s = None   # heure de la demande, None = rien d'armé
+        if self._reflect_pub is not None:
+            self.create_timer(0.1, self._thinking_tick)
 
         # --- Régie du chat (cf. docstring de module POURQUOI les topics de
         # RÉGIE) : créé AVANT ConversationEngine, qui le reçoit en kwarg.
@@ -1200,6 +1217,10 @@ class ChatNode(Node):
             return
         self._stage.push_prompt(direction, time.monotonic())
         self.get_logger().info(f"tour spontané en attente : {direction!r}")
+        # La réponse est là : fin du jeu de réflexion (le tour posera son visage).
+        with self._thinking_lock:
+            self._thinking_armed_s = None
+            self._thinking.stop()
 
     def _publish_reflect(self, demande: str) -> None:
         """Callback `on_reflect` de ConversationEngine (thread de
@@ -1208,6 +1229,8 @@ class ChatNode(Node):
         self._reflect_pub.publish(
             StringTime(msg=reflection_contract.encode_reflect(demande), time=0, anim=False))
         self.get_logger().info(f"demande de réflexion publiée : {demande!r}")
+        with self._thinking_lock:
+            self._thinking_armed_s = time.monotonic()
 
     def _on_animation_state(self, ros_msg):
         """Callback du topic ANIMATION_STATE (latché, publié par
@@ -1298,6 +1321,37 @@ class ChatNode(Node):
         self._chat_state_pub.publish(StringTime(msg=state, time=0, anim=False))
         if self._diag is not None:
             self._diag.on_state(state)
+        self._thinking_on_state(state)
+
+    # -- jeu de réflexion (cf. __init__ et vision/ai/thinking_show.py) --------
+
+    def _thinking_on_state(self, state: str) -> None:
+        now = time.monotonic()
+        with self._thinking_lock:
+            if state == "listening" and self._thinking_armed_s is not None:
+                armed, self._thinking_armed_s = self._thinking_armed_s, None
+                # Demande trop vieille (réplique interminable) : la réponse est
+                # sans doute déjà là ou perdue, pas de jeu à contretemps.
+                actions = ([] if now - armed > THINKING_ARM_MAX_S
+                           else self._thinking.start(now))
+            else:
+                if state != "listening":
+                    self._thinking.stop()
+                actions = []
+        self._thinking_play(actions)
+
+    def _thinking_tick(self) -> None:
+        with self._thinking_lock:
+            actions = self._thinking.tick(time.monotonic())
+        self._thinking_play(actions)
+
+    def _thinking_play(self, actions) -> None:
+        """Hors verrou : publier peut prendre le verrou d'arbitrage."""
+        for kind, payload in actions:
+            if kind == "face":
+                self._publish(RosMessage(FACE, json.dumps(payload)))
+            elif kind == "look" and self._look_pub is not None:
+                self._publish_look(payload)
 
     def destroy_node(self):
         # Arrêt propre : stop_event débloque la boucle run_forever DÈS que le

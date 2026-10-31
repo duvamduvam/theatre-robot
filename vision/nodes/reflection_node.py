@@ -38,7 +38,7 @@ from sensor_msgs.msg import CompressedImage
 
 from vision.ai import reflection, reflection_contract as contract
 from vision.ai.mission import MissionState
-from vision.ai.reflection_policy import DeepRequests, ReflectionScheduler, SpontaneousPolicy
+from vision.ai.reflection_policy import DeepRequests, Flights, ReflectionScheduler, SpontaneousPolicy
 from vision.ai.situation import (SituationBoard, decode_poi_event, decode_speed,
                                  decode_transcript_line, persona_changed)
 from vision.ai.stage import decode_text_payload
@@ -123,14 +123,16 @@ class ReflectionNode(Node):
         self._last_transcript_s = None
         self._last_spontaneous_s = None
         self._pending_pois = []        # objets ENTRÉS depuis le dernier job, dans l'ordre
-        self._in_flight = False
+        # Au plus un ordinaire + un profond en vol (cf. reflection_policy.Flights).
+        self._flights = Flights()
         self._last_published = None    # (texte, heure) du dernier tableau publié
 
         self._reflector = reflection.Reflector(
             model=config["reflection_model"], base_url=config["chat_llm_base_url"],
             extra_body=config["reflection_extra_body"],
             max_tokens=config["reflection_max_tokens"])
-        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="reflection")
+        # 2 fils : une demande profonde part pendant un ordinaire en vol (01/11).
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="reflection")
 
         self._situation_pub = self.create_publisher(StringTime, contract.SITUATION_TOPIC, 10)
         self._prompt_pub = self.create_publisher(StringTime, contract.PROMPT_TOPIC, 10)
@@ -282,10 +284,11 @@ class ReflectionNode(Node):
         now = time.monotonic()
         job = inputs = None
         with self._lock:
-            job = self._scheduler.next_job(now, self._in_flight)
+            job = self._scheduler.next_job(now, self._flights.any, self._flights.deep)
             if job is not None:
-                self._in_flight = True
+                token = self._flights.start(job)
                 inputs = self._snapshot(now, job)
+                inputs["flight_token"] = token
             text = self._board.compose(now, self._mission.summary())
             last = self._last_published
             due = (last is None and text != "") or (
@@ -352,7 +355,7 @@ class ReflectionNode(Node):
             self._deep_failed(job, inputs)
         finally:
             with self._lock:
-                self._in_flight = False
+                self._flights.finish(job)
 
     def _deep_failed(self, job, inputs):
         """Job profond en échec (exception ou résultat None) : demande remise
@@ -372,6 +375,13 @@ class ReflectionNode(Node):
 
     def _apply_result(self, job, inputs, result, duration):
         now = time.monotonic()
+        with self._lock:
+            superseded = self._flights.superseded(job, inputs["flight_token"])
+        if superseded:
+            self.get_logger().info(
+                f"réflexion ({job.reason}) devancée par une demande profonde : "
+                f"résultat jeté ({duration:.1f} s)")
+            return
         with self._lock:
             # Appel parti sous l'ANCIENNE persona et revenu après le changement :
             # son « compris »/sa direction décrivent l'ancien personnage, on les jette.
