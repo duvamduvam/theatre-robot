@@ -131,6 +131,9 @@ def regisseur(monkeypatch):
                              DurabilityPolicy=types.SimpleNamespace(TRANSIENT_LOCAL="TRANSIENT_LOCAL")),
         "robot_interfaces": _module("robot_interfaces"),
         "robot_interfaces.msg": _module("robot_interfaces.msg", StringTime=_StringTime),
+        # Lot M1 « aller voir » : le régisseur lit la pose (borne de distance).
+        "nav_msgs": _module("nav_msgs"),
+        "nav_msgs.msg": _module("nav_msgs.msg", Odometry=object),
     }
     for nom, module in faux.items():
         monkeypatch.setitem(sys.modules, nom, module)

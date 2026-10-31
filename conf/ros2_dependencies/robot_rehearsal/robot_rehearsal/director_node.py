@@ -50,6 +50,19 @@ lever l'arrêt ; une panne `speed` ne publie rien (journalisée
 `"suppressed_by": "voice_hold"`, active logiquement). Le fader de David
 lève l'arrêt vocal sans rien publier (et ferme une lubie stop active) ;
 abort / fin de séance aussi (et annulent une salve de relance).
+« ALLER VOIR » (lot M1, spec-aller-voir.md) : au démarrage, le vocabulaire
+d'objets de l'itinéraire part LATCHÉ sur rehearsal/objects ([{name, desc}]).
+Un {"cmd": "aller_voir", "objet": …} sur rehearsal/chat_move est arbitré par
+director.decide_goto et journalisé `aller_voir` (effect accepted | unknown |
+route_off_by_david | no_pose | too_far — la pose vient de /ground_truth/odom,
+SIM-ONLY). Accepté (en séance ou hors séance) : l'arrêt vocal est levé à la
+vitesse du « go », une lubie active est fermée (closed_by « voix »), puis
+l'ordre part sur route_goto — route_driver seul produit le Twist. « stop »
+vocal et abort publient « cancel » sur route_goto (zéro franc immédiat côté
+route_driver). Issue journalisée d'après l'état latché : goto_arrived,
+goto_cancelled, goto_abort. Reprise : « go » ou geste du fader quand Didier
+est arrêté par la manœuvre -> salve « route on » (GotoPolicy, jamais contre
+un `off` de David).
 Les éléments `t: poi` partent sur l'« enter » du POI (rehearsal/poi_event) ;
 un « enter » hors séance (avant START, après la fin) est journalisé
 `poi_enter_ignored` et PAS mémorisé : START doit précéder `route on`.
@@ -74,21 +87,24 @@ from datetime import datetime
 
 import rclpy
 import yaml
+from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 
 from robot.diagnostic.journal import JournalWriter, make_event
-from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_TOPIC, DIRECTOR_CMD_TOPIC,
-                                       HEARTBEAT_TOPIC, INSTRUCTION_TOPIC, POI_EVENT_TOPIC,
-                                       REHEARSAL_STATE_TOPIC, RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC,
-                                       ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC,
-                                       check_domain)
-from robot_rehearsal.director import (MESSAGE_TYPES, Director, ReenablePolicy, VoiceMove, fader_moved,
-                                      messages, route_cmd_kind, speed_factor, speed_in_effect)
+from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_GOTO_CMD, CHAT_MOVE_TOPIC,
+                                       DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC,
+                                       OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
+                                       RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL,
+                                       ROUTE_GOTO_RESULT_TOPIC, ROUTE_GOTO_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
+                                       ROUTE_STATE_TOPIC, check_domain)
+from robot_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
+                                      decide_goto, fader_moved, goto_order, messages, objects_payload,
+                                      route_cmd_kind, speed_factor, speed_in_effect)
 from robot_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from robot_rehearsal.rehearsal_state import rehearsal_state
-from robot_rehearsal.route import RouteError, load_route
+from robot_rehearsal.route import RouteConfig, RouteError, load_route
 from robot_rehearsal.scenario import ScenarioError, load_scenario
 
 
@@ -122,6 +138,7 @@ class DirectorNode(Node):
             raise RuntimeError("scenario_file manquant")
         route_file = str(self.get_parameter("route_file").value)
         self._poi_lubie = {}   # nom de POI -> champ lubie de l'itinéraire
+        self._pois = ()        # POI de l'itinéraire : vocabulaire d'« aller voir » (lot M1)
         if route_file:
             with open(route_file, encoding="utf-8") as f:
                 try:
@@ -129,6 +146,7 @@ class DirectorNode(Node):
                 except RouteError as e:
                     raise RuntimeError(f"itinéraire invalide ({route_file}) : {e}") from e
             self._poi_lubie = {p.name: p.lubie for p in route.pois}
+            self._pois = route.pois
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         seed = int(self.get_parameter("seed").value)
@@ -158,6 +176,11 @@ class DirectorNode(Node):
         # Ordres de marche de Didier (lot I1) : arrêt vocal, anti-rebond et
         # salve de relance vivent dans la logique pure.
         self.voice = VoiceMove()
+        # « Aller voir » (lot M1) : la manœuvre que nous avons ordonnée, et la
+        # dernière pose vérité terrain (x, y, instant monotone) pour la borne
+        # de distance — refus si plus vieille que le seuil du suivi.
+        self.goto_policy = GotoPolicy()
+        self._pose = None
 
         journal_dir = str(self.get_parameter("journal_dir").value)
         os.makedirs(journal_dir, exist_ok=True)
@@ -174,6 +197,13 @@ class DirectorNode(Node):
         self.pub_route = self.create_publisher(StringTime, ROUTE_CMD_TOPIC, 10)
         self.pub_speed = self.create_publisher(StringTime, ROUTE_SPEED_TOPIC, 10)
         self.pub_chat_fault = self.create_publisher(StringTime, CHAT_FAULT_TOPIC, 10)
+        # Ordres de manœuvre à route_driver. VOLATILE (un vieil ordre ne doit
+        # pas rejouer) ; jamais de Twist ici.
+        self.pub_goto = self.create_publisher(StringTime, ROUTE_GOTO_TOPIC, 10)
+        # Vocabulaire d'objets pour chat_node : LATCHÉ (chat_node relancé après
+        # nous le reçoit quand même).
+        self.pub_objects = self.create_publisher(
+            StringTime, OBJECTS_TOPIC, QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
         # État de séance pour la page scène : LATCHÉ (TRANSIENT_LOCAL, depth 1) pour
         # qu'une page ouverte APRÈS le START voie quand même l'état courant.
         self.pub_state = self.create_publisher(
@@ -199,6 +229,10 @@ class DirectorNode(Node):
         # Ordres de marche demandés par Didier (chat_node). VOLATILE : un
         # ordre ancien rejoué au démarrage ferait repartir Didier.
         self.create_subscription(StringTime, CHAT_MOVE_TOPIC, self._on_chat_move, 10)
+        # Pose vérité terrain (SIM-ONLY) : seulement pour la borne de distance d'« aller voir ».
+        self.create_subscription(Odometry, ODOM_TOPIC, self._on_odom, 10)
+        # Issue détaillée d'une manœuvre (raison d'abandon) : journal seulement.
+        self.create_subscription(StringTime, ROUTE_GOTO_RESULT_TOPIC, self._on_goto_result, 10)
         self.create_timer(0.2, lambda: self.pub_heartbeat.publish(StringTime(msg="1", time=0, anim=False)))
         self.create_timer(1.0 / float(self.get_parameter("tick_hz").value), self._tick)
 
@@ -215,6 +249,7 @@ class DirectorNode(Node):
                                f"{len(self.scenario.faults)} pannes ({len(self.scenario.undrawn)} écartées "
                                f"au tirage), journal {self.journal_path}")
         self._publish_state()   # état initial (« attente ») latché dès le démarrage
+        self.pub_objects.publish(StringTime(msg=objects_payload(self._pois), time=0, anim=False))
         if bool(self.get_parameter("autostart").value):
             self._start()
 
@@ -261,6 +296,9 @@ class DirectorNode(Node):
         if self.voice.note_state(state):
             # Relance VOCALE : même règle, confirmée par l'état latché seulement.
             self.log("voice_relaunch_confirmed", {})
+        event = self.goto_policy.note_state(state, self._speed_in_effect(0.0))
+        if event is not None:
+            self.log(*event)
 
     def _on_route_cmd(self, msg: StringTime):
         # Décodé comme route_driver le décode (off = "off"/false/0/"0") :
@@ -271,6 +309,9 @@ class DirectorNode(Node):
         self.reenable.note_route_cmd(cmd)
         if self.voice.note_route_cmd(cmd):
             self.log("voice_relaunch_cancelled", {"by": "route_off"})
+        event = self.goto_policy.note_route_cmd(cmd)
+        if event is not None:
+            self.log(*event)
 
     def _on_route_cause(self, msg: StringTime):
         """Contrat route_driver : json.dumps("boot"|"cmd") ; brut toléré."""
@@ -279,6 +320,19 @@ class DirectorNode(Node):
         except (ValueError, TypeError):
             cause = msg.msg.strip()
         self.reenable.note_cause(cause)
+        # Boot ou `off` par commande : la manœuvre n'est plus la nôtre (GotoPolicy).
+        self.goto_policy.note_cause()
+
+    def _on_goto_result(self, msg: StringTime):
+        """Contrat route_driver : JSON {name, result, reason, travelled} -> journal `goto_result`."""
+        try:
+            self.log("goto_result", json.loads(msg.msg))
+        except (ValueError, TypeError):
+            self.get_logger().warning(f"route_goto_result illisible : {msg.msg!r}")
+
+    def _on_odom(self, msg):
+        p = msg.pose.pose.position
+        self._pose = (p.x, p.y, time.monotonic())
 
     def _on_route_speed(self, msg: StringTime):
         """route_speed vu sur le topic. NOS publications (speed, lubie) sont
@@ -301,6 +355,11 @@ class DirectorNode(Node):
             # vocal est levé SANS rien publier (même seuil que la lubie).
             self.log("voice_hold_released", {"by": "fader", "value": value})
             self._publish_state()
+        if self.goto_policy.fader_rejoins(value, self.reenable.latched_state, self.reenable.off_by_cmd):
+            # Didier arrêté devant l'objet, David bouge le fader : il rejoint la route.
+            self.log("goto_rejoin", {"by": "fader", "value": value})
+            self.voice.arm_relaunch(time.monotonic())
+            self._voice_relaunch_step(time.monotonic())
         if self._speed_before_lubie is None or not fader_moved(value, self._speed_before_lubie):
             return
         try:
@@ -329,6 +388,13 @@ class DirectorNode(Node):
                 self.log("poi_enter_ignored", {"poi": poi, "reason": reason})
                 return
             self.log("poi_enter", payload)
+            if self.goto_policy.is_target(poi, self.reenable.latched_state):
+                # Lot M1 : l'objet qu'on VA VOIR — sa lubie arrêterait la
+                # manœuvre à 1 m du but (standoff < rayon). Les AUTRES
+                # déclencheurs de ce POI et les autres lubies restent possibles.
+                skipped = self.director.skip_poi(poi)
+                if skipped:
+                    self.log("lubie_skipped", {"poi": poi, "ids": skipped, "reason": "goto_target"})
             try:
                 self._execute(self.director.trigger(poi, time.monotonic()))
             except Exception as e:   # un callback qui lève tue le node : jamais ici
@@ -348,38 +414,59 @@ class DirectorNode(Node):
                 cmd = json.loads(raw)
             except (ValueError, TypeError):
                 cmd = raw
-            self._voice_move(cmd)
+            if isinstance(cmd, dict) and cmd.get("cmd") == CHAT_MOVE_GOTO_CMD:
+                self._aller_voir(cmd.get("objet"))
+            else:
+                self._voice_move(cmd)   # tout autre objet JSON : « invalide », journalisé
         except Exception as e:   # un callback qui lève tue le node : jamais ici
             self.get_logger().error(f"chat_move {msg.msg!r} : {e!r}")
         # Y compris après un échec de publication : l'arrêt vocal a pu être
         # posé, relâché ou conservé -- l'état publié suit le VRAI état.
         self._publish_state()
 
-    def _voice_move(self, cmd):
-        now = time.monotonic()
-        lubie = self.director.active_fault("speed")
-        relaunching = self.voice.relaunching
-        had_hold = self.voice.hold_before is not None
-        if lubie is not None and lubie.type == "speed":
+    def _voice_context(self):
+        """-> (lubie active ?, vitesse EN VIGUEUR) telles que la voix et
+        l'acceptation d'un « aller voir » les raisonnent."""
+        fault = self.director.active_fault("speed")
+        if fault is not None and fault.type == "speed":
             # Panne `speed` (batterie) active : SA valeur est la vitesse en
             # vigueur — retenue au « stop », plafond au « go » (revue I1 :
             # sinon « go » rendait le fader, au-dessus de la batterie).
-            in_effect = lubie.params["value"]
-        else:
-            # Vitesse inconnue (aucune consigne, paramètre `speed` illisible) :
-            # 0 — jamais de vitesse inventée.
-            in_effect = self._speed_in_effect(0.0)
+            return False, fault.params["value"]
+        # Vitesse inconnue (aucune consigne, paramètre `speed` illisible) :
+        # 0 — jamais de vitesse inventée.
+        return fault is not None and fault.type == "lubie", self._speed_in_effect(0.0)
+
+    def _voice_move(self, cmd):
+        now = time.monotonic()
+        relaunching = self.voice.relaunching
+        had_hold = self.voice.hold_before is not None
+        lubie_active, in_effect = self._voice_context()
+        latched = self.reenable.latched_state
         decision = self.voice.decide(
             cmd, now, in_session=self.director.started and not self.director.ended,
-            lubie_active=lubie is not None and lubie.type == "lubie",
-            route_on=self.reenable.route_on, relaunch_refusal=self.reenable.voice_relaunch_refusal(),
-            speed_in_effect=in_effect)
+            lubie_active=lubie_active,
+            # Manœuvre en cours : Didier est déjà en marche (« go » sans effet).
+            route_on=self.reenable.route_on or latched == "goto",
+            relaunch_refusal=self.reenable.voice_relaunch_refusal(),
+            speed_in_effect=in_effect,
+            rejoin=self.goto_policy.rejoin_allowed(latched, self.reenable.off_by_cmd))
         payload = {"cmd": cmd, "effect": decision.effect}
         if decision.reason is not None:
             payload["reason"] = decision.reason
+        if decision.rejoin:
+            payload["rejoin"] = True
         self.log("voice_move", payload)
         if relaunching and not self.voice.relaunching and decision.effect != "relaunch":
             self.log("voice_relaunch_cancelled", {"by": "stop"})
+        if decision.effect == "hold":
+            # « stop » abandonne aussi toute manœuvre « aller voir » : cancel
+            # TOUJOURS publié, AVANT le 0 (zéro franc immédiat côté route_driver,
+            # idempotent sans manœuvre — l'état latché peut avoir du retard).
+            self.goto_policy.cancel("stop")
+            self.pub_goto.publish(StringTime(msg=json.dumps(ROUTE_GOTO_CANCEL), time=0, anim=False))
+        if decision.rejoin:
+            self._voice_relaunch_step(now)   # premier « on » tout de suite, la suite au tick
         if decision.effect == "close_lubie":
             # Comme le fader, mais Didier repart : sans arrêt vocal, la lubie
             # rend la vitesse en vigueur (_apply) ; avec un arrêt vocal (levé
@@ -403,6 +490,41 @@ class DirectorNode(Node):
         elif decision.effect == "relaunch":
             self._voice_relaunch_step(now)   # premier « on » tout de suite, la suite au tick
 
+    def _aller_voir(self, objet):
+        """« Aller voir » (lot M1) : arbitré, journalisé `aller_voir`, puis
+        exécuté — arrêt vocal levé / lubie fermée, ordre sur route_goto."""
+        now = time.monotonic()
+        pose = None
+        if self._pose is not None and (now - self._pose[2]) * 1000.0 <= RouteConfig.odom_timeout_ms:
+            pose = self._pose[:2]
+        latched = self.reenable.latched_state
+        decision = decide_goto(objet, pois=self._pois, pose=pose,
+                               off_by_david=self.goto_policy.off_by_david(
+                                   latched, self.reenable.cause, self.reenable.off_by_cmd))
+        payload = {"objet": objet, "effect": decision.effect}
+        if decision.poi is not None:
+            payload["name"] = decision.poi.name
+        if decision.distance is not None:
+            payload["distance"] = round(decision.distance, 2)
+        self.log("aller_voir", payload)
+        if decision.effect != "accepted":
+            return
+        relaunching = self.voice.relaunching
+        lubie_active, in_effect = self._voice_context()
+        voice = self.voice.accept_goto(lubie_active=lubie_active, speed_in_effect=in_effect)
+        if relaunching:
+            self.log("voice_relaunch_cancelled", {"by": "aller_voir"})
+        if voice.effect == "close_lubie":
+            # Comme « go » : sans arrêt vocal, la lubie rend la vitesse en vigueur ;
+            # avec, elle ne rend rien et l'UNIQUE vitesse décidée part ci-dessous.
+            self._execute(self.director.close_active("speed", now, only_type="lubie"), closed_by="voix",
+                          give_back=voice.speed is None)
+        if voice.speed is not None:
+            self.log("voice_hold_released", {"by": "aller_voir", "speed": voice.speed})
+            self._publish(ROUTE_SPEED_TOPIC, json.dumps(voice.speed))
+        self.goto_policy.accept(decision.poi.name)
+        self.pub_goto.publish(StringTime(msg=goto_order(decision.poi), time=0, anim=False))
+
     def _voice_relaunch_step(self, now: float):
         """Salve de relance vocale : envoie « on » quand c'est dû, journalise l'expiration."""
         send, expired = self.voice.relaunch_due(now)
@@ -424,6 +546,13 @@ class DirectorNode(Node):
             self.log("voice_hold_released", {"by": "abort", "held": held})
         if relaunching:
             self.log("voice_relaunch_cancelled", {"by": "abort"})
+        # Toute manœuvre « aller voir » tombe aussi (Didier s'arrête) : cancel
+        # TOUJOURS publié — un régisseur relancé ne sait pas s'il en a ordonné une.
+        self.goto_policy.cancel("abort")
+        try:
+            self.pub_goto.publish(StringTime(msg=json.dumps(ROUTE_GOTO_CANCEL), time=0, anim=False))
+        except Exception as e:   # l'abort doit aller au bout (pannes à révoquer)
+            self.get_logger().error(f"route_goto cancel : {e!r}")
         self._execute(self.director.abort(time.monotonic()))
         dropped = self.reenable.abort()
         for proc in list(self._paused):

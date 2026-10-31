@@ -108,6 +108,51 @@ consommateur ; il décide (`director.VoiceMove`, pur) et agit par `route` /
 
 Tests : `test_director.py` (logique pure) et `test_director_node.py` (node), section I1.
 
+## Lot M1 — « aller voir » (spec `docs/spec-aller-voir.md`, 31/10)
+
+« Va voir les anneaux » : Didier roule jusqu'à ~1,5 m de l'objet (demi-tour
+s'il l'a dépassé), pivote face à lui, s'arrête. SIM-ONLY (vérité terrain).
+
+- **Vocabulaire** : au démarrage, le régisseur publie LATCHÉ
+  `rehearsal/objects` = `[{"name", "desc"}]` (ordre de l'itinéraire). Champs
+  YAML par POI : `desc` (≤ 6 mots, ce qu'on voit ; absent = le nom) et `alias`
+  (mots de David). Un nom/alias normalisé (minuscules, sans accents ni
+  article de tête) ne désigne qu'UN POI : refus au chargement sinon.
+- **Demande** : `rehearsal/chat_move` porte aussi `{"cmd": "aller_voir",
+  "objet": …}`. Arbitrage journalisé `aller_voir` : `accepted` | `unknown` |
+  `route_off_by_david` | `no_pose` (pose vérité terrain > 600 ms) |
+  `too_far` (> 40 m). Accepté en séance comme hors séance ; l'arrêt vocal
+  est levé à la vitesse du « go » (jamais au-dessus du fader ni d'une
+  batterie), une lubie active est fermée (`closed_by: "voix"`).
+- **Ordre** : `route_goto` (`{"name","x","y","standoff"}` ou `"cancel"`).
+  `route_driver` reste la SEULE sortie Twist (`cmd_vel_follow`, prio 20) :
+  il suspend le suivi et joue `robot_rehearsal/goto.py` (ALIGN -> DRIVE ->
+  FACE -> ARRIVED, pivots ≤ 0,6 rad/s, v ≤ fader × la croisière du suivi
+  (0,4 m/s), abandon à 60 s, à 1,5 × la distance initiale ou au CALAGE
+  (consigne > 0,1 m/s sans 5 cm de déplacement en 2 s), zéro si odométrie
+  périmée, pose non finie ou fader à 0). Standoff accepté : 0,8 à 40 m. Le
+  même objet redemandé pendant la manœuvre : rien (le délai ne repart pas).
+  `route_state` : `on` / `off` / `goto` / `arrived`.
+- **Fader à 0** (manœuvre ET suivi d'itinéraire) : zéro franc, aucun pivot,
+  publié à chaque tick (le créneau 20 du mux reste tenu).
+- **Lubie de la cible** : son « enter » arrive pendant l'approche (standoff <
+  rayon) ; pendant la manœuvre et à l'arrivée, le régisseur la SAUTE
+  (`lubie_skipped`, `reason: goto_target`) — Didier joue l'objet lui-même.
+  Les autres lubies restent possibles.
+- **Arrêt** : « stop » vocal et abort publient `cancel` ; `cancel`,
+  `route off`, `route on` -> zéro franc immédiat. Ceinture : route_driver
+  refuse aussi un ordre tant que la route est OFF par David.
+- **Reprise** : « go », Route ON ou geste du fader devant l'objet -> la route
+  repart vers le waypoint le plus proche DEVANT (le long du chemin).
+- Journal : `goto_arrived`, `goto_cancelled` (`by`), `goto_abort` (d'après
+  l'état latché), `goto_result` (détail publié par route_driver sur
+  `route_goto_result` : `timeout`, `max_travel`, `stalled`, `cancelled`…),
+  `goto_rejoin`.
+
+Tests : `test_goto.py`, `test_route_objects.py`, `test_director_goto.py`
+(purs), `test_route_driver_goto.py`, `test_director_node_goto.py` (nodes,
+rclpy simulé). Passe de mutation listée en tête de chaque fichier.
+
 ## Regarder une séance en direct
 
 - **Vue 3D** : la sim tourne en headless ; on y branche une fenêtre à chaud,

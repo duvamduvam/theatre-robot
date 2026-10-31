@@ -18,9 +18,18 @@ SÉCURITÉ (cf. CLAUDE.md — ce node publie une consigne roues) :
  - Ce package n'est JAMAIS dans robot_bringup (test anti-fuite). La pose
    consommée ici (/ground_truth/odom, vérité terrain gz) n'existe que dans
    Gazebo : sur le vrai robot, ce node n'aurait aucune pose et resterait à zéro.
+ - Lot M1 « aller voir » (spec-aller-voir.md) : un ordre `route_goto` du
+   régisseur SUSPEND le suivi (zéro franc) et lance une manœuvre bornée
+   (robot_rehearsal.goto) sur la MÊME sortie unique. État "goto" puis
+   "arrived" (ou "off" si abandonnée). `cancel`, `route off`, `route on`
+   l'abandonnent avec un zéro franc IMMÉDIAT (publié dans le callback, sans
+   attendre le tick). Ceinture : un ordre est refusé ici aussi tant que la
+   route est OFF par David (dernière commande `route` = off). Après une
+   manœuvre, la reprise (`route on`) vise le waypoint le plus proche DEVANT
+   (RouteFollower.rejoin).
 
 Node volontairement FIN : I/O seulement, toute la logique est dans
-robot_rehearsal.route (pure, testée sans ROS).
+robot_rehearsal.route et robot_rehearsal.goto (pures, testées sans ROS).
 """
 
 import json
@@ -37,8 +46,11 @@ from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 
 from robot_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
-                                       ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
+                                       ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL, ROUTE_GOTO_RESULT_TOPIC,
+                                       ROUTE_GOTO_TOPIC,
+                                       ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
+from robot_rehearsal.goto import ARRIVED, GotoConfig, GotoError, GotoManeuver, parse_order
 
 # Latché : un abonné arrivé après coup (régisseur relancé) reçoit l'état courant.
 LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -107,14 +119,29 @@ class RouteDriverNode(Node):
         )
         self.pois = PoiWatcher(route.pois)
         self._last_reason = None
+        # Manœuvre « aller voir » (lot M1) : None = suivi d'itinéraire seul.
+        self.goto = None
+        self._arrived = None        # nom de l'objet devant lequel Didier est arrêté
+        self._goto_dirty = False    # une manœuvre a déplacé Didier : rejoin() au prochain `on`
+        self._off_by_david = False  # dernière commande `route` = off (ceinture du régisseur)
+        self._last_pose = None      # (x, y, yaw, ms) : amorce la manœuvre sans attendre /odom
 
         self.cmd_pub = self.create_publisher(Twist, CMD_VEL_TOPIC, 10)
         self.poi_pub = self.create_publisher(StringTime, POI_EVENT_TOPIC, 10)
         self.state_pub = self.create_publisher(StringTime, ROUTE_STATE_TOPIC, LATCHED)
         self.cause_pub = self.create_publisher(StringTime, ROUTE_STATE_CAUSE_TOPIC, LATCHED)
+        self.goto_result_pub = self.create_publisher(StringTime, ROUTE_GOTO_RESULT_TOPIC, 10)
+        # Manœuvre : jamais plus vite que la croisière CONFIGURÉE du suivi
+        # (max_lin / max_ang du node), en plus de ses propres plafonds.
+        goto_defaults = GotoConfig()
+        self.goto_config = GotoConfig(**{**goto_defaults.__dict__,
+                                         "max_lin": min(goto_defaults.max_lin, self.follower.config.max_lin),
+                                         "max_ang": min(goto_defaults.max_ang, self.follower.config.max_ang)})
         self.create_subscription(Odometry, ODOM_TOPIC, self._on_odom, 10)
         self.create_subscription(StringTime, ROUTE_CMD_TOPIC, self._on_route_cmd, 10)
         self.create_subscription(StringTime, ROUTE_SPEED_TOPIC, self._on_speed, 10)
+        # VOLATILE : un ordre ancien rejoué au démarrage ferait partir Didier.
+        self.create_subscription(StringTime, ROUTE_GOTO_TOPIC, self._on_goto, 10)
 
         # Cause AVANT l'état : un abonné qui lit l'état « off » doit déjà
         # trouver sa cause. "boot" même si enabled=True (la cause ne sert
@@ -129,8 +156,15 @@ class RouteDriverNode(Node):
             f"-> {CMD_VEL_TOPIC} (mux prio 20)"
         )
 
+    def _state(self) -> str:
+        if self.goto is not None:
+            return "goto"
+        if self._arrived is not None:
+            return "arrived"
+        return "on" if self.follower.enabled else "off"
+
     def _publish_state(self):
-        self.state_pub.publish(StringTime(msg="on" if self.follower.enabled else "off", time=0, anim=False))
+        self.state_pub.publish(StringTime(msg=self._state(), time=0, anim=False))
 
     def _publish_cause(self, cause: str):
         self.cause_pub.publish(StringTime(msg=json.dumps(cause), time=0, anim=False))
@@ -138,7 +172,11 @@ class RouteDriverNode(Node):
     def _on_odom(self, msg: Odometry):
         p = msg.pose.pose.position
         q = msg.pose.pose.orientation
-        self.follower.update_pose(p.x, p.y, yaw_from_quaternion(q.x, q.y, q.z, q.w), _now_ms())
+        yaw, now = yaw_from_quaternion(q.x, q.y, q.z, q.w), _now_ms()
+        self.follower.update_pose(p.x, p.y, yaw, now)
+        if self.goto is not None:
+            self.goto.update_pose(p.x, p.y, yaw, now)
+        self._last_pose = (p.x, p.y, yaw, now)
         # Les POI sont dans le repère MONDE : la vérité terrain l'est aussi.
         for ev in self.pois.update(p.x, p.y):
             payload = {"poi": ev.poi, "event": ev.event, "distance": round(ev.distance, 2)}
@@ -148,10 +186,23 @@ class RouteDriverNode(Node):
     def _on_route_cmd(self, msg: StringTime):
         value = _decode(msg.msg)
         if value in ("on", True, 1, "1"):
+            # Route ON pendant une manœuvre : David reprend la main, elle tombe.
+            self._abandon_goto("route_on")
+            self._arrived = None
+            self._off_by_david = False
+            if self._goto_dirty:
+                # Didier a quitté le chemin (aller voir) : reprise vers le
+                # waypoint le plus proche DEVANT, pas l'ancien index.
+                self.follower.rejoin()
+                self._goto_dirty = False
+                self.get_logger().info(f"route : reprise au waypoint {self.follower.waypoint_index}")
             self.follower.set_enabled(True)
             self._publish_state()
             self.get_logger().info("route ON : cheminement activé")
         elif value in ("off", False, 0, "0"):
+            self._abandon_goto("route_off")
+            self._arrived = None
+            self._off_by_david = True
             self.follower.set_enabled(False)
             # À CHAQUE extinction par commande, quel que soit son format : c'est
             # ce qui interdit au régisseur de relancer à la voix contre David.
@@ -164,6 +215,75 @@ class RouteDriverNode(Node):
         else:
             self.get_logger().warning(f"route : commande ignorée {msg.msg!r}")
 
+    def _halt(self, reason: str):
+        """Zéro franc IMMÉDIAT (dans le callback, pas au tick suivant) si une
+        consigne non nulle était en cours ; le tick reste ensuite silencieux."""
+        if self._last_reason == "ok":
+            self.cmd_pub.publish(Twist())
+        if reason != self._last_reason:
+            self.get_logger().info(f"route : {reason}")
+            self._last_reason = reason
+
+    def _goto_result(self, result: str, reason: str):
+        """Issue de la manœuvre courante : log + route_goto_result (journal du régisseur)."""
+        payload = {"name": self.goto.order.name, "result": result, "reason": reason,
+                   "travelled": round(self.goto.travelled, 2)}
+        text = json.dumps(payload)
+        if result == "arrived":
+            self.get_logger().info(f"goto_arrived {text}")
+        else:
+            self.get_logger().warning(f"goto_abort {text}")
+        self.goto_result_pub.publish(StringTime(msg=text, time=0, anim=False))
+
+    def _abandon_goto(self, by: str) -> bool:
+        """Abandonne la manœuvre en cours (stop, cancel, route on/off) :
+        zéro franc immédiat. -> True s'il y en avait une. L'appelant publie l'état."""
+        if self.goto is None:
+            return False
+        self.goto.cancel()
+        self._goto_result("aborted", by)
+        self.goto = None
+        self._halt("cancelled")
+        return True
+
+    def _on_goto(self, msg: StringTime):
+        """Ordre du régisseur (lot M1) : JSON {name, x, y, standoff} ou "cancel"."""
+        value = _decode(msg.msg)
+        if value == ROUTE_GOTO_CANCEL:
+            if self._abandon_goto("cancel"):
+                self._publish_state()
+            return
+        if self._off_by_david:
+            # Ceinture du refus du régisseur : jamais de mouvement contre un `off` de David.
+            self.get_logger().warning(f"route_goto refusé (route OFF par David) : {msg.msg!r}")
+            return
+        try:
+            order = parse_order(value)
+        except GotoError as e:
+            self.get_logger().warning(f"route_goto refusé : {e}")
+            return
+        if self.goto is not None and self.goto.order.name == order.name:
+            # MÊME objet redemandé (le LLM le redit au tour suivant) : rien —
+            # ni arrêt franc, ni délai remis à zéro (la borne de 60 s tient).
+            self.get_logger().info(f"route_goto : « {order.name} » déjà en cours, ignoré")
+            return
+        self._abandon_goto("goto_suivant")
+        # Le suivi s'efface (zéro franc) : UNE seule consigne sur la sortie.
+        was_on = self.follower.enabled
+        self.follower.set_enabled(False)
+        if was_on:
+            self._halt("goto")
+        now = _now_ms()
+        self.goto = GotoManeuver(order, now, self.goto_config)
+        if self._last_pose is not None:
+            # Dernière pose connue, avec SON horodatage : périmée, elle le reste.
+            self.goto.update_pose(*self._last_pose)
+        self._arrived = None
+        self._goto_dirty = True
+        self._publish_state()
+        self.get_logger().info(f"route_goto : vers « {order.name} » ({order.x:.2f}, {order.y:.2f}), "
+                               f"arrêt à {order.standoff:g} m")
+
     def _on_speed(self, msg: StringTime):
         before = self.follower.speed
         self.follower.set_speed(_decode(msg.msg))
@@ -171,8 +291,20 @@ class RouteDriverNode(Node):
             self.get_logger().info(f"route_speed = {self.follower.speed:.2f}")
 
     def _tick(self):
-        out = self.follower.tick(_now_ms())
-        if out.reason == "ok":
+        if self.goto is not None:
+            out = self.goto.tick(_now_ms(), self.follower.speed)
+            if self.goto.finished:
+                arrived = self.goto.phase == ARRIVED
+                self._goto_result("arrived" if arrived else "aborted", out.reason)
+                if arrived:
+                    self._arrived = self.goto.order.name
+                self.goto = None
+                self._publish_state()
+        else:
+            out = self.follower.tick(_now_ms())
+        if out.reason in ("ok", "held"):
+            # "held" (facteur 0) : zéro PUBLIÉ à chaque tick — le créneau 20 du
+            # mux reste tenu (une lubie stop n'ouvre pas les roues à l'animation).
             self.cmd_pub.publish(Twist(linear=_v3(out.lin), angular=_v3z(out.ang)))
         elif self._last_reason == "ok":
             # Transition ok -> arrêt : UN zéro franc, puis silence (le mux

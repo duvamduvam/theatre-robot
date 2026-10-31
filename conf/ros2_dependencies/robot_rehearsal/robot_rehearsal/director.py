@@ -20,6 +20,11 @@ speed_in_effect / fader_moved : la vitesse de cheminement telle que le
 régisseur la raisonne (rendue à la fin, référence de la fermeture au fader).
 VoiceMove (lot I1) : les ordres de marche demandés par Didier (« go » /
 « stop »), décidés ici, exécutés par le node via route / route_speed.
+« Aller voir » (lot M1, spec-aller-voir.md) : objects_payload (vocabulaire
+latché pour chat_node), decide_goto (arbitrage : objet inconnu, route OFF par
+David, trop loin), goto_order (l'ordre à route_driver), GotoPolicy (la
+manœuvre que NOUS avons ordonnée, ce que la voix et le fader peuvent en
+faire), VoiceMove.accept_goto (l'arrêt vocal levé à l'acceptation).
 """
 from __future__ import annotations
 
@@ -29,7 +34,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
-                                       INSTRUCTION_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES)
+                                       GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
+                                       ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES)
+from robot_rehearsal.route import Poi, normalize_name
 from robot_rehearsal.scenario import Fault, Scenario
 
 
@@ -166,6 +173,20 @@ class Director:
             if f.trigger_poi == poi_name and self._status[f.id] == "pending":
                 actions.extend(self._begin(f, now_s, rel))
         return actions
+
+    def skip_poi(self, poi_name: str, only_type: str = "lubie") -> List[str]:
+        """Saute (« skipped », définitif) les déclencheurs `t: poi` de ce POI
+        encore pending et du type `only_type` -> leurs ids. Lot M1 : la lubie
+        de l'objet qu'on VA VOIR ne part pas (son « enter » arrive pendant
+        l'approche, standoff < rayon) — Didier joue l'objet lui-même à
+        l'arrivée. Hors séance : rien (comme trigger)."""
+        if not self._started or self._ended:
+            return []
+        ids = [f.id for f in self.scenario.faults
+               if f.trigger_poi == poi_name and f.type == only_type and self._status[f.id] == "pending"]
+        for fid in ids:
+            self._status[fid] = "skipped"
+        return ids
 
     def tick(self, now_s: float) -> List[Action]:
         if not self._started or self._ended:
@@ -360,6 +381,10 @@ class ReenablePolicy:
     def cause(self) -> str | None:
         return self._cause
 
+    @property
+    def latched_state(self) -> str | None:
+        return self._latched_state
+
     def note_cause(self, cause) -> None:
         """Cause latchée de l'état (route_state_cause) ; valeur hors
         ROUTE_STATE_CAUSES ignorée (la dernière connue tient)."""
@@ -385,8 +410,10 @@ class ReenablePolicy:
     def note_state(self, state: str, now_s: float) -> List[str]:
         """État latché de route_driver. « on » reçu après not_before CONFIRME
         les relances en attente (-> leurs ids). « off » (route_driver respawné
-        qui démarre éteint) n'annule RIEN."""
-        if state not in ("on", "off"):
+        qui démarre éteint) n'annule RIEN. « goto » / « arrived » (lot M1) :
+        mémorisés, la route n'est PAS on (un kill pendant une manœuvre n'arme
+        aucune relance : Didier reste arrêté)."""
+        if state not in ROUTE_STATES:
             return []
         self._latched_state = state
         self._route_on = state == "on"
@@ -454,9 +481,15 @@ VOICE_COMMANDS = ("go", "stop")
 
 @dataclass(frozen=True)
 class VoiceDecision:
-    effect: str                  # "close_lubie" | "resume" | "relaunch" | "hold" | "ignored"
+    # "close_lubie" | "resume" | "relaunch" | "hold" | "ignored" ; lot M1 :
+    # "rejoin" (« go » après une manœuvre, rien d'autre à lever) | "goto"
+    # (acceptation d'un « aller voir », cf. accept_goto)
+    effect: str
     reason: str | None = None    # pourquoi « ignored »
     speed: float | None = None   # route_speed à publier (hold : 0, resume : vitesse d'avant)
+    # Lot M1 : en PLUS de l'effet, relancer la route (salve « on », comme
+    # relaunch) — « go » après une manœuvre « aller voir » terminée.
+    rejoin: bool = False
 
 
 class VoiceMove:
@@ -489,6 +522,10 @@ class VoiceMove:
        latché off + cause latchée boot), sinon ignoré avec cette raison
        (« route_off_par_david », « cause_inconnue », « etat_inconnu ») ;
        sinon « deja_en_marche ». Jamais de vitesse inventée ;
+     - lot M1 : `rejoin` (le node le calcule par GotoPolicy.rejoin_allowed :
+       Didier arrêté par une manœuvre que nous avons ordonnée, jamais contre
+       un `off` de David) -> « go » relance AUSSI la route (salve), en plus
+       de la lubie fermée / de l'arrêt vocal levé ; seul, effet « rejoin » ;
      - le fader reste maître : une consigne externe qui s'écarte de plus de
        EXTERNAL_SPEED_DELTA de la vitesse retenue LÈVE l'arrêt vocal sans
        rien publier (le node ferme aussi une lubie stop active) ; abort / fin
@@ -514,7 +551,7 @@ class VoiceMove:
 
     def decide(self, cmd, now_s: float, *, in_session: bool, lubie_active: bool,
                route_on: bool, relaunch_refusal: str | None,
-               speed_in_effect: float) -> VoiceDecision:
+               speed_in_effect: float, rejoin: bool = False) -> VoiceDecision:
         """Décide l'effet d'un ordre et met l'état à jour (arrêt vocal posé
         ou levé, salve de relance armée). `lubie_active` : une lubie tient la
         cible `speed`. Le node exécute : close_lubie -> close_active +
@@ -536,28 +573,55 @@ class VoiceMove:
             return VoiceDecision("hold", speed=0)
         if not in_session:
             return VoiceDecision("ignored", "hors_seance")
+        if rejoin:
+            self._arm_relaunch(now_s)
         if lubie_active:
             if self._hold_before is None:
-                return VoiceDecision("close_lubie")
+                return VoiceDecision("close_lubie", rejoin=rejoin)
             # Lubie ET arrêt vocal : les deux tombent, UNE seule vitesse part.
             speed = min(self._hold_before, speed_in_effect)
             self._hold_before = None
-            return VoiceDecision("close_lubie", speed=speed)
+            return VoiceDecision("close_lubie", speed=speed, rejoin=rejoin)
         if self._hold_before is not None:
             # Jamais plus vite que la vitesse en vigueur : le jitter du boîtier
             # (sous le seuil, donc arrêt maintenu) a pu la baisser un peu.
             speed = min(self._hold_before, speed_in_effect)
             self._hold_before = None
-            return VoiceDecision("resume", speed=speed)
+            return VoiceDecision("resume", speed=speed, rejoin=rejoin)
+        if rejoin:
+            return VoiceDecision("rejoin", rejoin=True)
         if not route_on:
             if relaunch_refusal is not None:
                 return VoiceDecision("ignored", relaunch_refusal)
-            if self._relaunch_since is None:
-                self._relaunch_since = now_s
-                self._relaunch_sent = 0
-                self._relaunch_last = None
+            self._arm_relaunch(now_s)
             return VoiceDecision("relaunch")
         return VoiceDecision("ignored", "deja_en_marche")
+
+    def accept_goto(self, *, lubie_active: bool, speed_in_effect: float) -> VoiceDecision:
+        """« Aller voir » ACCEPTÉ par le régisseur (lot M1, spec §3) : comme un
+        « go » pour ce qui retient Didier — l'arrêt vocal est levé avec la
+        MÊME vitesse que « go » (min(retenue, en vigueur) : jamais au-dessus
+        du fader ni d'une panne batterie) et une lubie active est fermée
+        (« close_lubie », closed_by « voix ») ; sinon effet « goto ». Une salve
+        de relance en vol est ANNULÉE : son « route on » abandonnerait la
+        manœuvre. Pas d'anti-rebond, pas de condition de séance : c'est David
+        qui le demande (spec §3)."""
+        self._cancel_relaunch()
+        speed = None
+        if self._hold_before is not None:
+            speed = min(self._hold_before, speed_in_effect)
+            self._hold_before = None
+        return VoiceDecision("close_lubie" if lubie_active else "goto", speed=speed)
+
+    def arm_relaunch(self, now_s: float) -> None:
+        """Arme la salve de relance (reprise au fader après une manœuvre, lot M1)."""
+        self._arm_relaunch(now_s)
+
+    def _arm_relaunch(self, now_s: float) -> None:
+        if self._relaunch_since is None:
+            self._relaunch_since = now_s
+            self._relaunch_sent = 0
+            self._relaunch_last = None
 
     def release_hold(self) -> float | None:
         """Lève l'arrêt vocal SANS rien publier -> la vitesse qu'il retenait
@@ -616,3 +680,167 @@ class VoiceMove:
         self._relaunch_since = None
         self._relaunch_sent = 0
         self._relaunch_last = None
+
+
+# --- « Aller voir » (lot M1, spec-aller-voir.md) -------------------------------------
+
+def objects_payload(pois) -> str:
+    """Payload LATCHÉ de rehearsal/objects (spec §2.1) : JSON liste
+    [{"name", "desc"}] dans l'ordre de l'itinéraire, desc = nom si absente.
+    Les alias n'y sont PAS : ils servent à la résolution ici, pas au prompt."""
+    return json.dumps([{"name": p.name, "desc": p.shown_desc} for p in pois])
+
+
+def resolve_object(text, pois) -> Poi | None:
+    """Texte dit (ou nom renvoyé par la bouche) -> POI, par correspondance
+    NORMALISÉE exacte (normalize_name) sur le nom et les alias. load_route
+    garantit qu'une clé ne désigne qu'un POI. Rien de flou : un objet mal
+    compris est refusé (« unknown »), jamais deviné."""
+    key = normalize_name(text)
+    if not key:
+        return None
+    for p in pois:
+        if key == normalize_name(p.name) or any(key == normalize_name(a) for a in p.alias):
+            return p
+    return None
+
+
+@dataclass(frozen=True)
+class GotoDecision:
+    effect: str                  # "accepted" | "unknown" | "route_off_by_david" | "no_pose" | "too_far"
+    poi: Poi | None = None
+    distance: float | None = None
+
+
+def decide_goto(objet, *, pois, pose, off_by_david: bool) -> GotoDecision:
+    """Arbitrage d'un « aller voir » (spec §3), dans cet ordre : objet
+    inconnu -> « unknown » ; route OFF par David -> « route_off_by_david »
+    (jamais de mouvement contre lui) ; pas de pose fraîche -> « no_pose »
+    (on ne sait pas mesurer la distance : refus, jamais deviné) ; distance
+    pose -> objet > GOTO_MAX_DISTANCE_M -> « too_far ». `pose` : (x, y) ou None."""
+    poi = resolve_object(objet, pois)
+    if poi is None:
+        return GotoDecision("unknown")
+    if off_by_david:
+        return GotoDecision("route_off_by_david", poi)
+    if pose is None:
+        return GotoDecision("no_pose", poi)
+    distance = math.hypot(poi.x - pose[0], poi.y - pose[1])
+    if distance > GOTO_MAX_DISTANCE_M:
+        return GotoDecision("too_far", poi, distance)
+    return GotoDecision("accepted", poi, distance)
+
+
+def goto_order(poi: Poi, standoff: float = GOTO_STANDOFF_M) -> str:
+    """Payload route_goto (spec §2.3), positions de l'itinéraire telles quelles."""
+    return json.dumps({"name": poi.name, "x": poi.x, "y": poi.y, "standoff": standoff})
+
+
+class GotoPolicy:
+    """La manœuvre « aller voir » que NOUS avons ordonnée — logique PURE.
+    Sert à trois choses :
+     - journaliser son issue d'après l'état LATCHÉ de route_driver :
+       « arrived » -> goto_arrived ; « goto » puis « off » -> goto_cancelled
+       (par notre cancel : stop, abort) ou goto_abort (route_driver l'a
+       abandonnée seul : délai, distance — la raison est dans son log) ;
+     - autoriser la REPRISE (« go », fader) d'un Didier arrêté par elle :
+       rejoin_allowed, qui ne vaut JAMAIS contre un `off` de David ;
+     - lever l'ambiguïté de la cause latchée : « cmd » peut dater d'un `off`
+       de David suivi d'un `on` ; un état « off » qui SUIT notre manœuvre
+       n'est pas un `off` de David (off_by_david).
+    La manœuvre cesse d'être « la nôtre » (release) dès que David reprend la
+    main (commande `route` on/off vue), que la route repart (état « on »),
+    ou qu'une cause est publiée (route_driver la publie au boot et à CHAQUE
+    `off` par commande : un `off` qui nous aurait échappé tombe ici)."""
+
+    def __init__(self):
+        self._name: str | None = None
+        self._seen_goto = False
+        self._cancel_by: str | None = None
+        self._arrival_speed: float | None = None
+
+    @property
+    def owned(self) -> str | None:
+        """Nom de l'objet de la manœuvre ordonnée, None si aucune."""
+        return self._name
+
+    def accept(self, name: str) -> None:
+        self._reset(name)
+
+    def cancel(self, by: str) -> None:
+        """Nous envoyons « cancel » (stop vocal, abort) : l'issue sera goto_cancelled."""
+        if self._name is not None and self._cancel_by is None:
+            self._cancel_by = by
+
+    def release(self) -> None:
+        self._reset(None)
+
+    def _reset(self, name: str | None) -> None:
+        self._name = name
+        self._seen_goto = False
+        self._cancel_by = None
+        self._arrival_speed = None
+
+    def note_state(self, state: str, speed_in_effect: float):
+        """État latché de route_driver -> (type, payload) à journaliser, ou None."""
+        if self._name is None:
+            return None
+        if state == "goto":
+            self._seen_goto = True
+            return None
+        if state == "arrived":
+            self._seen_goto = False
+            # Référence de la reprise au fader : la vitesse en vigueur à l'arrivée.
+            self._arrival_speed = speed_in_effect
+            return "goto_arrived", {"name": self._name}
+        if state == "off" and self._seen_goto:
+            self._seen_goto = False
+            if self._cancel_by is not None:
+                return "goto_cancelled", {"name": self._name, "by": self._cancel_by}
+            return "goto_abort", {"name": self._name}
+        if state == "on":
+            self.release()
+        return None
+
+    def note_route_cmd(self, cmd: str):
+        """Commande `route` vue (David, page, notre salve) : la manœuvre n'est
+        plus la nôtre. -> (type, payload) si elle était en cours, sinon None."""
+        if self._name is None or cmd not in ("on", "off"):
+            return None
+        event = None
+        if self._seen_goto:
+            event = "goto_cancelled", {"name": self._name, "by": f"route_{cmd}"}
+        self.release()
+        return event
+
+    def note_cause(self) -> None:
+        self.release()
+
+    def is_target(self, poi_name: str, latched_state: str | None) -> bool:
+        """`poi_name` est-il l'objet de NOTRE manœuvre, en cours ou atteint
+        (état latché « goto » / « arrived ») ? Sa lubie ne doit pas partir."""
+        return self._name == poi_name and latched_state in ("goto", "arrived")
+
+    def rejoin_allowed(self, latched_state: str | None, off_by_cmd: bool) -> bool:
+        """« go » / fader peuvent-ils relancer la route ? Seulement si Didier
+        est arrêté par NOTRE manœuvre (arrivé, ou abandonnée -> « off ») et
+        qu'aucun `off` de David n'a été vu depuis."""
+        return self._name is not None and latched_state in ("arrived", "off") and not off_by_cmd
+
+    def off_by_david(self, latched_state: str | None, cause: str | None, off_by_cmd: bool) -> bool:
+        """Refus « route_off_by_david » (spec §3) : `off` vu sur `route`, ou
+        état latché « off » de cause « cmd » qui ne fait pas suite à notre
+        manœuvre. Route « on », « goto », « arrived » : jamais refusé."""
+        if off_by_cmd:
+            return True
+        return latched_state == "off" and cause == "cmd" and self._name is None
+
+    def fader_rejoins(self, value: float, latched_state: str | None, off_by_cmd: bool) -> bool:
+        """Consigne EXTERNE du fader pendant que Didier est ARRIVÉ devant
+        l'objet : un geste (fader_moved, même seuil que la fermeture des
+        lubies) vers une vitesse > 0 relance la route (spec §1 « ou curseur »)."""
+        if latched_state != "arrived" or not self.rejoin_allowed(latched_state, off_by_cmd):
+            return False
+        if self._arrival_speed is None or value <= 0.0:
+            return False
+        return fader_moved(value, self._arrival_speed)

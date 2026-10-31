@@ -17,10 +17,14 @@ ROUTE_CMD_TOPIC = "route"
 # télécommande (profil « répétition », étude §4.5). Hors bornes -> borné.
 ROUTE_SPEED_TOPIC = "route_speed"
 # ÉTAT de la route, publié par route_driver en TRANSIENT_LOCAL (latché) :
-# "on"/"off" à chaque changement et au démarrage. C'est la SOURCE DE VÉRITÉ
-# du régisseur (bug vécu le 2026-10-08 : il déduisait l'état d'un unique
+# à chaque changement et au démarrage. C'est la SOURCE DE VÉRITÉ du
+# régisseur (bug vécu le 2026-10-08 : il déduisait l'état d'un unique
 # message `route on` volatile, raté sous charge → reboot sans relance).
+# Lot M1 « aller voir » (spec-aller-voir.md §2.4) : + "goto" (manœuvre en
+# cours) et "arrived" (arrêté face à l'objet). Payload BRUT (pas de JSON),
+# lu tel quel par le régisseur et la page scène.
 ROUTE_STATE_TOPIC = "route_state"
+ROUTE_STATES = ("on", "off", "goto", "arrived")
 # CAUSE du dernier état, publiée par route_driver en TRANSIENT_LOCAL (latché,
 # des DEUX côtés) : StringTime, payload JSON "boot" (au démarrage du node : la
 # route est éteinte faute d'ordre) | "cmd" (à CHAQUE extinction par commande,
@@ -95,6 +99,45 @@ CHAT_FAULT_OPS = ("pass", "delay", "garble", "deaf", "mute", "phantom")
 # `off` de David). Sur le vrai robot il n'y a pas de régisseur : sans effet.
 # Chaîne gravée des deux côtés (CHAT_MOVE_TOPIC de chat_node).
 CHAT_MOVE_TOPIC = "rehearsal/chat_move"
+# Lot M1 (spec-aller-voir.md §2.2) : même topic, payload JSON OBJET
+# {"cmd": "aller_voir", "objet": "<texte>"} en plus de "go"/"stop". Chaîne
+# gravée des deux côtés.
+CHAT_MOVE_GOTO_CMD = "aller_voir"
+
+# --- « Aller voir » (lot M1, spec-aller-voir.md) — SIM-ONLY -----------------------
+# Vocabulaire d'objets (régisseur -> chat_node) : StringTime LATCHÉ (TRANSIENT_
+# LOCAL depth 1, des DEUX côtés), publié au démarrage du régisseur, JSON liste
+# [{"name", "desc"}] dans l'ordre de l'itinéraire. Gravé des deux côtés.
+OBJECTS_TOPIC = "rehearsal/objects"
+# Ordre de manœuvre (régisseur -> route_driver) : StringTime JSON
+# {"name", "x", "y", "standoff"} ou "cancel". Le régisseur ORDONNE ; seul
+# route_driver produit le Twist (sortie UNIQUE cmd_vel_follow, prio 20).
+ROUTE_GOTO_TOPIC = "route_goto"
+ROUTE_GOTO_CANCEL = "cancel"
+# Issue d'une manœuvre (route_driver -> régisseur, revue M1) : StringTime JSON
+# {"name", "result": "arrived"|"aborted", "reason", "travelled"}, VOLATILE —
+# le DÉTAIL (timeout, max_travel, stalled, cancelled…) pour le journal ; la
+# source de vérité de l'état reste route_state (latché).
+ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
+# Distance de jeu : Didier s'arrête à ce rayon de l'objet (m).
+GOTO_STANDOFF_M = 1.5
+# Plancher du standoff accepté par route_driver (revue M1) : en dessous, les
+# 50 kg viendraient au contact de l'objet (pas d'évitement, spec §5).
+GOTO_MIN_STANDOFF_M = 0.8
+# Bornes de sûreté (spec §3-§4, tests gravés + mutation) :
+#  - refus au-delà de cette distance pose -> objet (régisseur ET route_driver) ;
+GOTO_MAX_DISTANCE_M = 40.0
+#  - abandon au-delà de cette durée de manœuvre ;
+GOTO_TIMEOUT_S = 60.0
+#  - abandon au-delà de ce multiple de la distance initiale parcouru (détour,
+#    oscillation, Didier poussé par la télécommande). Un Didier BLOQUÉ contre
+#    un objet ne fait PAS grimper cette distance (la pose vérité terrain ne
+#    bouge pas, même roues qui patinent) : c'est le détecteur de calage de
+#    goto.py (raison « stalled ») qui l'arrête ;
+GOTO_MAX_TRAVEL_FACTOR = 1.5
+#  - rotation max des pivots ALIGN / FACE (et du cap corrigé en DRIVE), SOUS
+#    ABS_MAX_ANG : un pivot sur place de 50 kg, plus doux que le suivi.
+GOTO_MAX_ANG = 0.6
 
 # Points de relais : nom -> (topic amont, topic aval, type). LISTE FERMÉE.
 # Le producteur est lancé par rehearsal.launch.py avec un remap vers l'amont ;

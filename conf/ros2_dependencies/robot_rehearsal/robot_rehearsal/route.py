@@ -7,7 +7,10 @@ Trois objets, aucun ROS :
     à ZÉRO FRANC dès que quelque chose manque (désactivé, pas de pose,
     odométrie périmée, arrivé) ;
   - PoiWatcher : événements enter/exit à hystérésis autour des points
-    d'intérêt (lampadaire, boulangerie, hangar...) — la matière des lubies.
+    d'intérêt (lampadaire, boulangerie, hangar...) — la matière des lubies ;
+  - normalize_name / nearest_ahead_index (lot M1 « aller voir ») : la clé de
+    correspondance des objets nommés par David, et l'index de REPRISE de
+    l'itinéraire après une manœuvre.
 
 POURQUOI un suivi de waypoints et pas un pure pursuit : la polyligne d'un
 trottoir est douce, le robot roule à 0,4 m/s, et la simplicité se teste
@@ -17,6 +20,7 @@ se bloquer sur le chien ou la terrasse EST une scène (étude §2).
 from __future__ import annotations
 
 import math
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -38,6 +42,43 @@ class Poi:
     # = indice de mise en scène, lu par PERSONNE en machine (débrief, écriture).
     lubie: str = ""
     fermeture: str = ""
+    # Lot M1 « aller voir », optionnels : `desc` = ce qu'on VOIT (≤ DESC_MAX_WORDS
+    # mots, envoyé à chat_node dans rehearsal/objects ; vide = le nom, cf.
+    # Poi.shown_desc) ; `alias` = mots que David peut dire pour le désigner.
+    desc: str = ""
+    alias: Tuple[str, ...] = ()
+
+    @property
+    def shown_desc(self) -> str:
+        """Description publiée : `desc`, sinon le nom (spec §2.1 « absent ->
+        desc = nom »). Stockée vide pour qu'un POI sans desc reste égal à
+        Poi(name, x, y, radius) — l'absence est une information."""
+        return self.desc or self.name
+
+
+# Plafond de mots d'une `desc` (spec §2.1) : elle part dans le prompt de
+# chat_node pour CHAQUE objet, trente fois — une phrase longue le noierait.
+DESC_MAX_WORDS = 6
+
+# Articles retirés EN TÊTE par normalize_name (« les anneaux », « la flaque »,
+# « l'eau », « de la flaque ») — jamais au milieu (« anneaux de buren »).
+_ARTICLES = frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "au", "aux"))
+
+
+def normalize_name(text: str) -> str:
+    """Clé de correspondance d'un objet nommé (spec §3) : minuscules, sans
+    accents, ponctuation et `_` en espaces, articles de tête retirés.
+    « Les Anneaux ! » -> "anneaux" ; "table_basse" -> "table basse" ;
+    « l'eau » -> "eau". Non-chaîne -> "" (jamais d'exception : le payload
+    vient d'un LLM)."""
+    if not isinstance(text, str):
+        return ""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    plain = "".join(c for c in decomposed if not unicodedata.combining(c))
+    words = "".join(c if c.isalnum() else " " for c in plain).split()
+    while words and words[0] in _ARTICLES:
+        words.pop(0)
+    return " ".join(words)
 
 
 @dataclass(frozen=True)
@@ -59,7 +100,10 @@ def _finite(value, where: str) -> float:
 def load_route(data: dict) -> Route:
     """dict (YAML déjà chargé) -> Route validée. Clés : name (str), waypoints
     (liste de [x, y], au moins 2), pois (liste de {name, x, y, radius > 0,
-    lubie?: str, fermeture?: str}, noms uniques ; optionnelle)."""
+    lubie?: str, fermeture?: str, desc?: str ≤ DESC_MAX_WORDS mots,
+    alias?: [str]}, noms uniques ; optionnelle). Lot M1 : les noms ET alias
+    normalisés (normalize_name) désignent UN SEUL POI — un mot partagé par
+    deux objets enverrait Didier au hasard, refusé ici."""
     if not isinstance(data, dict):
         raise RouteError("itinéraire : un dictionnaire est attendu à la racine")
     name = data.get("name")
@@ -80,6 +124,7 @@ def load_route(data: dict) -> Route:
         raise RouteError("pois : liste attendue")
     pois: List[Poi] = []
     seen = set()
+    owner: Dict[str, str] = {}   # clé normalisée -> POI qu'elle désigne (nom ou alias)
     for i, p in enumerate(raw_pois):
         if not isinstance(p, dict):
             raise RouteError(f"pois[{i}] : dictionnaire {{name, x, y, radius}} attendu")
@@ -100,10 +145,49 @@ def load_route(data: dict) -> Route:
             if not isinstance(value, str):
                 raise RouteError(f"pois[{i}].{key} : chaîne attendue, reçu {value!r}")
             texts[key] = value
+        desc = p.get("desc", "")
+        if not isinstance(desc, str):
+            raise RouteError(f"pois[{i}].desc : chaîne attendue, reçu {desc!r}")
+        if len(desc.split()) > DESC_MAX_WORDS:
+            raise RouteError(f"pois[{i}].desc : {DESC_MAX_WORDS} mots au plus, reçu « {desc} »")
+        raw_alias = p.get("alias", [])
+        if not isinstance(raw_alias, list):
+            raise RouteError(f"pois[{i}].alias : liste de chaînes attendue, reçu {raw_alias!r}")
+        for j, a in enumerate(raw_alias):
+            if not isinstance(a, str) or not normalize_name(a):
+                raise RouteError(f"pois[{i}].alias[{j}] : mot non vide attendu, reçu {a!r}")
+        for word in [pname] + raw_alias:
+            key = normalize_name(word)
+            if owner.setdefault(key, pname) != pname:
+                raise RouteError(f"pois[{i}] : « {word} » désigne déjà « {owner[key]} » (nom ou alias)")
         pois.append(Poi(pname, _finite(p.get("x"), f"pois[{i}].x"),
-                        _finite(p.get("y"), f"pois[{i}].y"), radius, **texts))
+                        _finite(p.get("y"), f"pois[{i}].y"), radius, **texts,
+                        desc=desc, alias=tuple(raw_alias)))
 
     return Route(name=name, waypoints=tuple(waypoints), pois=tuple(pois))
+
+
+def nearest_ahead_index(waypoints: Sequence[Tuple[float, float]], x: float, y: float) -> int:
+    """Index de REPRISE de l'itinéraire depuis une pose quelconque (lot M1,
+    spec §4 : après une manœuvre « aller voir », vers le waypoint le plus
+    proche DEVANT, pas vers l'ancien index s'il est derrière). « Devant » =
+    le long de l'itinéraire, pas selon le cap : Didier, face à l'objet, est
+    de travers sur le chemin. Méthode : le segment le plus proche de la pose
+    (projection bornée, premier en cas d'égalité) ; on vise sa FIN. Seule
+    exception : avant le départ (projection au début du 1er segment) -> 0.
+    RouteFollower.tick avance ensuite l'index s'il est déjà atteint."""
+    best_d, best_i, best_t = math.inf, 0, 0.0
+    for i in range(len(waypoints) - 1):
+        (ax, ay), (bx, by) = waypoints[i], waypoints[i + 1]
+        dx, dy = bx - ax, by - ay
+        length2 = dx * dx + dy * dy
+        t = 0.0 if length2 == 0.0 else max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / length2))
+        d = math.hypot(ax + t * dx - x, ay + t * dy - y)
+        if d < best_d:
+            best_d, best_i, best_t = d, i, t
+    if best_i == 0 and best_t == 0.0:
+        return 0
+    return best_i + 1
 
 
 def yaw_from_quaternion(x: float, y: float, z: float, w: float) -> float:
@@ -146,7 +230,9 @@ class RouteOutput:
     lin: float
     ang: float
     finished: bool
-    reason: str  # "ok" | "disabled" | "no_pose" | "odom_stale" | "finished"
+    # "ok" | "held" (facteur 0 : zéro, PUBLIÉ par le node) | "disabled" |
+    # "no_pose" | "odom_stale" | "finished"
+    reason: str
 
 
 class RouteFollower:
@@ -216,6 +302,14 @@ class RouteFollower:
         """Reprend l'itinéraire depuis le premier point (nouvelle séance)."""
         self._index = 0
 
+    def rejoin(self) -> None:
+        """Après une manœuvre (lot M1) : vise le waypoint le plus proche
+        DEVANT la pose courante (nearest_ahead_index) — y compris EN ARRIÈRE
+        de l'ancien index (demi-tour vers un objet dépassé : on ne saute pas
+        le bout de chemin qui reste). Sans pose : index inchangé."""
+        if self._pose is not None:
+            self._index = nearest_ahead_index(self.route.waypoints, self._pose[0], self._pose[1])
+
     # --- sortie ------------------------------------------------------------
     def _zero(self, reason: str, finished: bool = False) -> RouteOutput:
         self._lin = 0.0
@@ -258,6 +352,12 @@ class RouteFollower:
             break
         if self._index >= len(wps):
             return self._zero("finished", finished=True)
+        if self._speed == 0.0:
+            # Fader à zéro (arrêt vocal, lubie stop, David) : zéro FRANC, pas
+            # même un pivot vers le waypoint (revue M1 : après rejoin(), Didier
+            # pivotait à 0,8 rad/s fader en bas). Le node PUBLIE ce zéro à
+            # chaque tick : le créneau 20 du mux reste tenu, comme avant.
+            return self._zero("held")
 
         tx, ty = wps[self._index]
         err = wrap_angle(math.atan2(ty - y, tx - x) - yaw)
