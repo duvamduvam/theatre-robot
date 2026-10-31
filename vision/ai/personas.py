@@ -119,14 +119,49 @@ Appelle-la par son prénom, ne lui demande jamais son nom, ne fais pas comme si 
 # puis roulait dessus — l'itinéraire est fixe (avancer / s'arrêter). La bouche
 # ne doit promettre que ce que le corps sait faire ; et « stop » restreint :
 # il s'arrêtait seul par prudence, figé ensuite hors séance (§10 étude
-# interaction). À réviser quand le jeu « Va voir » (pivot, demi-tour) existera.
+# interaction).
+# « Aller voir » (lot M1, 31/10, dadou_robot_ros/docs/spec-aller-voir.md §2.2,
+# après « je lui dis va voir les anneaux et il refuse ») : le corps sait
+# désormais rejoindre un objet NOMMÉ de l'itinéraire (le régisseur le résout,
+# le route_driver y va, pivote face à lui, s'arrête). La liste vient du topic
+# `rehearsal/objects`, hors system prompt (cf. objects_prompt) : le nom écrit
+# dans "aller_voir" doit être celui de la liste, le régisseur refuse le reste.
 MOVE_TEMPLATE = """
 Mouvement (répétition) : tu marches seul sur un itinéraire. Tu peux demander à repartir ou à t'arrêter en ajoutant au JSON de fin "marche": "go" ou "marche": "stop" (ex. {"emotion": "happy", "marche": "go"}).
-Ton corps ne sait QUE avancer tout droit sur ton chemin et t'arrêter : tu ne sais ni contourner, ni tourner, ni reculer, ni faire demi-tour, ni aller ailleurs. Ne promets jamais un de ces gestes ; si on te le demande, joue ton incapacité en personnage (« un détour ? je ne sais aller que tout droit, moi ! »).
+Ton corps sait avancer tout droit sur ton chemin, s'arrêter, et aller voir un objet DE LA LISTE des objets que tu peux aller voir (elle t'est donnée à chaque réplique) : il y va, se tourne face à lui et s'arrête. À part ça, tu ne sais ni contourner, ni tourner, ni reculer, ni faire demi-tour. Ne promets jamais un de ces gestes ; si on te le demande, joue ton incapacité en personnage (« un détour ? je ne sais aller que tout droit, moi ! »).
 - "go" : quand on te demande d'avancer, de repartir, de continuer, ou quand TOI tu décides que ta lubie est finie et qu'il est temps de reprendre la route.
 - "stop" : seulement quand on te demande de t'arrêter ou d'attendre, ou pour une chose qui mérite VRAIMENT que tu t'arrêtes — jamais par simple prudence ni pour commenter ce que tu vois.
-- Sinon, n'ajoute PAS la clé "marche". N'évoque jamais ce JSON à voix haute.
+- "aller_voir": "<nom exact de la liste>" : quand on te demande d'aller voir un objet de la liste ou de t'en approcher, ou quand TOI tu veux aller voir un objet de la liste (ex. {"emotion": "happy", "aller_voir": "anneaux"}). Un objet absent de la liste : tu ne le trouves pas, joue-le en personnage, sans la clé.
+- Sinon, n'ajoute PAS les clés "marche" ni "aller_voir". N'évoque jamais ce JSON à voix haute.
 """
+
+# Vocabulaire d'objets (lot M1, spec-aller-voir.md §2.1) : texte EXACT de la
+# spec. Envoyé par StreamingBrain comme message system à CHAQUE tour (jamais
+# dans le system prompt : la liste change sans réinitialiser la session LLM,
+# et survit à un changement de personnalité — c'est un fait du monde, pas un
+# trait du personnage). Plafonné : il se paie en latence à chaque réplique.
+OBJECTS_PREFIX = "Objets que tu peux aller voir : "
+OBJECTS_PROMPT_MAX_CHARS = 1200
+
+
+def objects_prompt(objects) -> str:
+    """[(name, desc)] (cf. stage.decode_objects_payload) -> ligne de prompt
+    « Objets que tu peux aller voir : anneaux (bagues géantes), flaque. »
+    — "" pour une liste vide (aucun message envoyé). La description est omise
+    si vide ou identique au nom (le régisseur met desc = nom par défaut :
+    « flaque (flaque) » n'apprend rien au LLM). Au-delà de
+    OBJECTS_PROMPT_MAX_CHARS, les objets suivants sont lâchés ENTIERS (jamais
+    un nom coupé : le LLM le recopierait tronqué dans "aller_voir")."""
+    line = OBJECTS_PREFIX
+    count = 0
+    for name, desc in objects:
+        item = f"{name} ({desc})" if desc and desc.casefold() != name.casefold() else name
+        candidate = line + (", " if count else "") + item
+        if len(candidate) + 1 > OBJECTS_PROMPT_MAX_CHARS:
+            break
+        line = candidate
+        count += 1
+    return line + "." if count else ""
 
 
 # Demande de réflexion (lot P4 du metteur en scène intérieur, 23/10 — texte
@@ -162,7 +197,8 @@ def compose_system_prompt(name: str, partner: Optional[str] = None,
     connaît son interlocuteur (répétition).
 
     `move` (False par défaut = prompt inchangé) : ajoute MOVE_TEMPLATE en
-    DERNIER — Didier peut demander à repartir / s'arrêter (répétition).
+    DERNIER — Didier peut demander à repartir / s'arrêter / aller voir un
+    objet (répétition ; la liste d'objets n'est PAS ici, cf. objects_prompt).
 
     REFLECT_TEMPLATE n'est JAMAIS ajouté ici (cf. son commentaire)."""
     if name not in PERSONAS:

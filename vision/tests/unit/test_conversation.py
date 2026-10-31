@@ -2819,3 +2819,163 @@ def test_source_stt_du_tour_dans_le_dict_de_timing(timeline):
     finally:
         _cleanup_beeps(engine)
     assert timings[0]["stt_source"] == "distant"
+
+
+# --------------------------------------------------------------------------
+# « Aller voir » (lot M1, 31/10, dadou_robot_ros/docs/spec-aller-voir.md
+# §2.2) : la clé "aller_voir" part sur on_move en dict du contrat ; c'est une
+# MISE EN MOUVEMENT (jamais en spontané, barrière et verrou de la garde
+# comme "go") ; stop > aller_voir > go.
+# --------------------------------------------------------------------------
+
+ANNEAUX = {"cmd": "aller_voir", "objet": "anneaux"}
+
+
+def test_aller_voir_emis_rogne_au_format_du_contrat(timeline):
+    ordres = []
+    assert _tour_avec_marche(
+        timeline, ['J\'y vais ! {"emotion": "happy", "aller_voir": "  anneaux "}'],
+        ordres.append) is True
+    assert ordres == [ANNEAUX]
+    # Payload publié par chat_node (json.dumps de l'intention) : GRAVÉ, c'est
+    # la chaîne que le régisseur décode.
+    assert json.dumps(ordres[0]) == '{"cmd": "aller_voir", "objet": "anneaux"}'
+    assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
+
+
+def test_aller_voir_garde_la_casse(timeline):
+    # La résolution (minuscules, accents, articles) est l'affaire du régisseur.
+    ordres = []
+    _tour_avec_marche(timeline, ['Allons. {"emotion": "happy", "aller_voir": "La Grue"}'],
+                      ordres.append)
+    assert ordres == [{"cmd": "aller_voir", "objet": "La Grue"}]
+
+
+def test_aller_voir_et_stop_le_stop_gagne(timeline, caplog):
+    ordres = []
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        _tour_avec_marche(
+            timeline, ['Euh. {"emotion": "neutral", "marche": "stop", "aller_voir": "anneaux"}'],
+            ordres.append)
+    assert ordres == ["stop"]
+    assert any("aller_voir" in r.message and "stop" in r.message for r in caplog.records)
+
+
+def test_aller_voir_gagne_sur_go_un_seul_ordre(timeline):
+    ordres = []
+    _tour_avec_marche(
+        timeline, ['Hop. {"emotion": "happy", "marche": "go", "aller_voir": "anneaux"}'],
+        ordres.append)
+    assert ordres == [ANNEAUX]
+
+
+# (Pas d'objet imbriqué : le parseur d'émotion refuse déjà le bloc JSON entier.)
+@pytest.mark.parametrize("valeur", ['""', '"   "', "null", "42", "true", '["anneaux"]'])
+def test_aller_voir_vide_ou_non_chaine_ignore_avec_warning(timeline, caplog, valeur):
+    ordres = []
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _tour_avec_marche(
+            timeline, ['Bof. {"emotion": "neutral", "aller_voir": ' + valeur + '}'],
+            ordres.append) is True
+    assert ordres == []
+    assert any("aller_voir" in r.message for r in caplog.records)
+
+
+def test_aller_voir_invalide_laisse_passer_le_go(timeline):
+    ordres = []
+    _tour_avec_marche(timeline, ['Hop. {"emotion": "happy", "marche": "go", "aller_voir": ""}'],
+                      ordres.append)
+    assert ordres == ["go"]
+
+
+def test_aller_voir_sans_on_move_aucun_effet(timeline, caplog):
+    # Vrai robot (mouvement à la voix non branché) : la clé n'est pas lue.
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _tour_avec_marche(
+            timeline, ['Ok. {"emotion": "happy", "aller_voir": "anneaux"}'], None) is True
+    assert caplog.records == []
+    assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
+
+
+def test_tour_spontane_n_emet_jamais_aller_voir(timeline, clock, caplog):
+    # Revue B1 du 23/10 : un tour spontané ne met jamais Didier en mouvement.
+    stage = StageState()
+    stage.push_prompt("Va voir les anneaux.", clock.t)
+    ordres = []
+    engine, _brain = _spontane_engine(
+        timeline, stage, clock, frames=[b"f0", b"f1", b"f2"],
+        brain_deltas=['Les anneaux ! {"emotion": "happy", "marche": "go", '
+                      '"aller_voir": "anneaux"}'])
+    engine._on_move = ordres.append
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == []
+    assert [r.message for r in caplog.records] == [
+        "Clé \"aller_voir\" : 'anneaux' ignoré : tour spontané (aucun humain ne l'a demandé)."]
+
+
+def test_tour_spontane_stop_avec_aller_voir_transmet_stop(timeline, clock):
+    stage = StageState()
+    stage.push_prompt("Arrête-toi.", clock.t)
+    ordres = []
+    engine, _brain = _spontane_engine(
+        timeline, stage, clock, frames=[b"f0", b"f1", b"f2"],
+        brain_deltas=['Halte. {"emotion": "happy", "marche": "stop", "aller_voir": "grue"}'])
+    engine._on_move = ordres.append
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == ["stop"]
+
+
+def test_aller_voir_jamais_emis_apres_une_interruption_de_la_meme_replique(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    engine, *_ = _guard_engine(timeline, stt=GuardStt(), on_move=on_move)
+    interrupted = threading.Event()
+    interrupted.set()
+    engine._guard = types.SimpleNamespace(lock=threading.Lock(), interrupted=interrupted)
+    engine._notify_move({"aller_voir": "anneaux"})
+    engine._notify_move({"marche": "stop"})
+    assert ordres == ["stop"]
+
+
+def test_aller_voir_pris_sous_le_verrou_de_la_garde(timeline):
+    # L'urgence émet stop PUIS lève interrupted sous guard.lock : l'ordre ne
+    # doit pas pouvoir partir tant que le verrou est tenu.
+    ordres, on_move = _ordres_thread_safe()
+    engine, *_ = _guard_engine(timeline, stt=GuardStt(), on_move=on_move)
+    guard = types.SimpleNamespace(lock=threading.Lock(), interrupted=threading.Event())
+    engine._guard = guard
+    with guard.lock:
+        worker = threading.Thread(target=engine._notify_move,
+                                  args=({"aller_voir": "anneaux"},), daemon=True)
+        worker.start()
+        time.sleep(0.1)
+        assert ordres == []                      # bloqué derrière le verrou
+        guard.interrupted.set()                  # l'urgence tombe entre-temps
+    worker.join(WAIT_S)
+    assert ordres == []
+
+
+def test_garde_stop_tardif_part_avant_l_aller_voir_du_tour_suivant(timeline):
+    # Même barrière que pour "go" (B1, GUARD_LATE_GO_WAIT_S).
+    deltas = ["Première phrase. ", 'Deuxième phrase. {"emotion": "happy", "aller_voir": "anneaux"}']
+    ordres, on_move = _ordres_thread_safe()
+    hold = threading.Event()
+    stt = GuardStt("Stop !", hold=hold)
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move, deltas=deltas,
+                               pause=lambda: stt.entered.wait(timeout=WAIT_S))
+    assert engine.run_once() is True             # tour 1 : aller_voir, stop en attente
+    engine._stage.push_text("Va voir les anneaux !")
+    timer = threading.Timer(0.3, hold.set)       # le STT tardif rend PENDANT le tour 2
+    timer.start()
+    try:
+        assert engine.run_once() is True
+    finally:
+        timer.cancel()
+        hold.set()
+    assert ordres == [ANNEAUX, "stop", ANNEAUX]  # la nouvelle intention de David gagne

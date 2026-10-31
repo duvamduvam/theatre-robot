@@ -7,6 +7,7 @@ la fonction testée ne teste rien) — bornes à la seconde près, tirages seed�
 écrits en clair. Ce sont ces tests qui doivent rougir si un garde-fou
 (plafond 60 s, péremption 120 s, phantom ponctuel) est retiré.
 """
+import json
 import random
 
 import pytest
@@ -301,3 +302,42 @@ def test_prompt_vide_refuse(direction):
     with pytest.raises(ValueError):
         state.push_prompt(direction, T0)
     assert state.pop_prompt(T0) is None
+
+
+# --- Vocabulaire d'objets « aller voir » (lot M1, 31/10, dadou_robot_ros/docs/
+# spec-aller-voir.md §2.1) : décodage TOLÉRANT élément par élément, payload
+# illisible = ValueError (le node garde la liste précédente).
+
+def test_objets_contrat_du_regisseur():
+    raw = ('[{"name": "anneaux", "desc": "bagues géantes"}, '
+           '{"name": " flaque ", "desc": " eau sale "}]')
+    assert stage.decode_objects_payload(raw) == [("anneaux", "bagues géantes"),
+                                                 ("flaque", "eau sale")]
+
+
+def test_objets_elements_invalides_sautes_desc_absente_vide():
+    raw = ('[{"name": "grue"}, 42, {"desc": "sans nom"}, {"name": "  "}, '
+           '{"name": 7}, {"name": "titan", "desc": 3}, "anneaux"]')
+    assert stage.decode_objects_payload(raw) == [("grue", ""), ("titan", "")]
+
+
+def test_objets_liste_vide_valable():
+    assert stage.decode_objects_payload("[]") == []
+
+
+@pytest.mark.parametrize("raw", ["", "pas du json", '{"name": "anneaux"}', '"anneaux"',
+                                 "null", "[42, {\"desc\": \"x\"}]", None])
+def test_objets_payload_illisible_refuse(raw):
+    with pytest.raises(ValueError):
+        stage.decode_objects_payload(raw)
+
+
+def test_objets_bornes_longueurs_et_nombre():
+    long_name, long_desc = "n" * 100, "d" * 100
+    raw = json.dumps([{"name": long_name, "desc": long_desc}]
+                     + [{"name": f"o{i}"} for i in range(60)])
+    objets = stage.decode_objects_payload(raw)
+    # Valeurs GRAVÉES (et pas relues dans le module) : 40 objets, 40 / 60 car.
+    assert len(objets) == 40
+    assert objets[0] == ("n" * 40, "d" * 60)
+    assert objets[-1] == ("o38", "")

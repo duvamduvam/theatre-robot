@@ -99,7 +99,10 @@ POURQUOI les topics de RÉGIE (lot R3 « Chantiers », 2026-10-14, spec fermée
 POURQUOI CHAT_MOVE_TOPIC (lot I1 « mouvement à la voix », 2026-10-22, spec
        fermée dadou_robot_ros/docs/etude-repetition-simulee.md §13.11) :
        Didier peut demander à repartir / s'arrêter par la clé "marche" de son
-       JSON de fin. Ce node publie l'ordre ("go"/"stop") et RIEN d'autre --
+       JSON de fin — et, depuis le 31/10 (lot M1, dadou_robot_ros/docs/
+       spec-aller-voir.md), aller voir un objet NOMMÉ par la clé "aller_voir"
+       (vocabulaire reçu sur REHEARSAL_OBJECTS_TOPIC, latché). Ce node
+       publie l'intention ("go"/"stop"/aller_voir) et RIEN d'autre --
        jamais route, route_speed ni cmd_vel (cf. CLAUDE.md : la vision ne
        commande jamais les moteurs). Seul consommateur : le régisseur de la
        répétition simulée (domaine 43), qui décide. Publisher créé SEULEMENT
@@ -259,6 +262,14 @@ ASOUND_CONF = "/etc/asound.conf"
 # dadou_robot_ros, gravé des deux côtés). Sans régisseur (vrai robot) : sans
 # effet, personne n'écoute.
 CHAT_MOVE_TOPIC = "rehearsal/chat_move"
+
+# Vocabulaire d'objets « aller voir » (lot M1, dadou_robot_ros/docs/
+# spec-aller-voir.md §2.1) : StringTime LATCHÉ (TRANSIENT_LOCAL depth 1, des
+# DEUX côtés — publié une fois au démarrage du régisseur, un chat_node lancé
+# après doit quand même le recevoir), JSON [{"name", "desc"}, …]. Écouté
+# SEULEMENT si le mouvement à la voix est branché (même condition que
+# CHAT_MOVE_TOPIC). Nom gravé des deux côtés (contracts.py du régisseur).
+REHEARSAL_OBJECTS_TOPIC = "rehearsal/objects"
 
 
 # --- Serveur de diagnostic web (vumètre + latences, cf. docstring de module
@@ -887,6 +898,13 @@ class ChatNode(Node):
         self.create_subscription(
             StringTime, CHAT_INSTRUCTION_TOPIC, self._on_chat_instruction, 10)
         self.create_subscription(StringTime, CHAT_FAULT_TOPIC, self._on_chat_fault, 10)
+        # Vocabulaire d'objets (cf. REHEARSAL_OBJECTS_TOPIC) : rien n'est
+        # écouté sans mouvement à la voix — le prompt ne propose alors aucun
+        # objet (et MOVE_TEMPLATE n'est pas dans le system prompt non plus).
+        if config["chat_move_enabled"]:
+            self.create_subscription(
+                StringTime, REHEARSAL_OBJECTS_TOPIC, self._on_objects,
+                QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
         # Metteur en scène intérieur (cf. docstring de module) : rien n'est
         # écouté si la réflexion est désactivée — StageState reste vide,
         # aucun tableau ni tour spontané ne peut atteindre la parole.
@@ -1105,12 +1123,27 @@ class ChatNode(Node):
         """Callback `on_move` de ConversationEngine (thread de conversation,
         OU thread STT de l'écoute garde pour un "stop" crié pendant une
         réplique — publish rclpy est sûr entre threads) :
-        "go"/"stop" déjà validé par le moteur, publié en JSON sur
-        CHAT_MOVE_TOPIC. Journalisé : c'est la trace qui dit, au débrief, que
+        "go"/"stop" (ou le dict {"cmd": "aller_voir", "objet": …}, lot M1)
+        déjà validé par le moteur, publié en JSON sur CHAT_MOVE_TOPIC. Journalisé : c'est la trace qui dit, au débrief, que
         l'ordre venait de Didier. PAS d'arbitrage : ce n'est pas un
         actionneur, c'est une DEMANDE au régisseur."""
         self._move_pub.publish(StringTime(msg=json.dumps(cmd), time=0, anim=False))
         self.get_logger().info(f"ordre de marche publié : {cmd}")
+
+    def _on_objects(self, ros_msg):
+        """Vocabulaire d'objets (cf. REHEARSAL_OBJECTS_TOPIC) : décodé par
+        vision.ai.stage (ValueError -> warning, liste précédente GARDÉE), mis
+        en forme par personas.objects_prompt et remis au cerveau — sans
+        reconfigure : la session LLM n'est pas réinitialisée (spec §2.1)."""
+        try:
+            objects = stage.decode_objects_payload(ros_msg.msg)
+        except ValueError as exc:
+            self.get_logger().warning(f"{REHEARSAL_OBJECTS_TOPIC} refusé : {exc}")
+            return
+        self._brain.set_objects_prompt(personas.objects_prompt(objects))
+        self.get_logger().info(
+            f"objets à aller voir : {len(objects)} reçus "
+            f"({', '.join(name for name, _desc in objects)})")
 
     def _on_situation(self, ros_msg):
         """Tableau de situation (reflection_contract.SITUATION_TOPIC) : rangé

@@ -463,3 +463,65 @@ def test_sans_tableau_frais_aucune_mention_de_reflechir(tmp_path):
     list(brain.stream_reply("Et alors ?", situation=stage.situation(4.9)))
     envoye = " ".join(str(m["content"]) for m in client.completions.last_call["messages"])
     assert '"reflechir"' in envoye
+
+
+# --------------------------------------------------------------------------
+# Vocabulaire d'objets « aller voir » (lot M1, 31/10, dadou_robot_ros/docs/
+# spec-aller-voir.md §2.1) : message system juste après le prompt, remplacé
+# sans réinitialiser la session, jamais historisé.
+# --------------------------------------------------------------------------
+
+OBJETS = "Objets que tu peux aller voir : anneaux (bagues géantes), flaque."
+
+
+def test_objets_envoyes_juste_apres_le_prompt_avant_la_consigne(tmp_path):
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Bon."])
+    brain = StreamingBrain(model="m", base_url="https://x", system_prompt="Tu es Didier.",
+                           client_factory=lambda: client)
+    brain.set_objects_prompt(OBJETS)
+    list(brain.stream_reply("Va voir les anneaux", extra_system="Tu boudes."))
+    assert client.completions.last_call["messages"] == [
+        {"role": "system", "content": "Tu es Didier."},
+        {"role": "system", "content": OBJETS},
+        {"role": "system",
+         "content": "Consigne de mise en scène (à jouer, jamais à prononcer) : Tu boudes."},
+        {"role": "user", "content": "Va voir les anneaux"},
+    ]
+
+
+def test_objets_remplaces_sans_nouvelle_session_ni_historique(tmp_path):
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Un."])
+    brain = StreamingBrain(model="m", base_url="https://x", system_prompt="Tu es Didier.",
+                           client_factory=lambda: client)
+    brain.set_objects_prompt(OBJETS)
+    list(brain.stream_reply("Premier"))
+    brain.set_objects_prompt("Objets que tu peux aller voir : grue.")
+    client.completions._deltas = ["Deux."]
+    list(brain.stream_reply("Second"))
+    # L'historique du premier tour est toujours là (pas de reconfigure), la
+    # liste est la NOUVELLE, l'ancienne n'a laissé aucune trace.
+    assert client.completions.last_call["messages"] == [
+        {"role": "system", "content": "Tu es Didier."},
+        {"role": "system", "content": "Objets que tu peux aller voir : grue."},
+        {"role": "user", "content": "Premier"},
+        {"role": "assistant", "content": "Un."},
+        {"role": "user", "content": "Second"},
+    ]
+
+
+def test_objets_vides_aucun_message_et_survivent_au_changement_de_persona(tmp_path):
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Oui."])
+    brain = StreamingBrain(model="m", base_url="https://x", system_prompt="Tu es Didier.",
+                           client_factory=lambda: client)
+    list(brain.stream_reply("Salut"))
+    assert [m["role"] for m in client.completions.last_call["messages"]] == ["system", "user"]
+    brain.set_objects_prompt(OBJETS)
+    brain.reconfigure("Tu es un autre Didier.")
+    list(brain.stream_reply("Re"))
+    assert client.completions.last_call["messages"][:2] == [
+        {"role": "system", "content": "Tu es un autre Didier."},
+        {"role": "system", "content": OBJETS},
+    ]

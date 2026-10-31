@@ -144,3 +144,44 @@ def test_texte_de_reflexion_grave():
                                "faire avancer l'histoire.")
     assert template.endswith("Sinon, n'ajoute PAS la clé \"reflechir\". "
                              "N'évoque jamais ce JSON à voix haute.\n")
+
+
+# --- « Aller voir » (lot M1, 31/10, dadou_robot_ros/docs/spec-aller-voir.md) ---
+
+def test_mouvement_apprend_la_cle_aller_voir():
+    template = personas.MOVE_TEMPLATE
+    # Textes GRAVÉS (spec §2.2) : la clé, sa valeur, ce que fait le corps,
+    # et l'objet absent joué en personnage.
+    assert '"aller_voir": "<nom exact de la liste>"' in template
+    assert "il y va, se tourne face à lui et s'arrête" in template
+    assert "Un objet absent de la liste : tu ne le trouves pas" in template
+    # Les limites restantes du corps sont toujours dites…
+    assert "tu ne sais ni contourner, ni tourner, ni reculer, ni faire demi-tour" in template
+    # …mais plus l'interdit d'aller ailleurs, que la clé contredirait.
+    assert "ni aller ailleurs" not in template
+    assert template.endswith("N'évoque jamais ce JSON à voix haute.\n")
+
+
+def test_ligne_d_objets_texte_de_la_spec():
+    assert personas.objects_prompt([("anneaux", "bagues géantes"), ("flaque", "")]) == (
+        "Objets que tu peux aller voir : anneaux (bagues géantes), flaque.")
+
+
+def test_ligne_d_objets_desc_egale_au_nom_omise():
+    # Le régisseur met desc = nom par défaut : « flaque (flaque) » n'apprend rien.
+    assert personas.objects_prompt([("Flaque", "flaque")]) == (
+        "Objets que tu peux aller voir : Flaque.")
+
+
+def test_ligne_d_objets_vide_sans_objet():
+    assert personas.objects_prompt([]) == ""
+
+
+def test_ligne_d_objets_plafonnee_sans_couper_un_nom():
+    objets = [(f"objet{i:02d}", "d" * 50) for i in range(40)]
+    ligne = personas.objects_prompt(objets)
+    # Plafond GRAVÉ : 1200 caractères, point final compris.
+    assert len(ligne) <= 1200
+    assert ligne.endswith(")."), ligne[-20:]   # dernier objet ENTIER, puis le point
+    # 32 (préfixe) + n × 60 (« objetNN (d×50) ») + (n-1) × 2 + 1 ≤ 1200 -> n = 18.
+    assert ligne.count("objet") == 18

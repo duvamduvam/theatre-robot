@@ -83,6 +83,8 @@ class StreamingBrain:
         self._max_tokens = max_tokens
         self._extra_body = extra_body
         self._situation_suffix = situation_suffix
+        # Vocabulaire d'objets (lot M1, cf. set_objects_prompt) : "" = rien.
+        self._objects_prompt = ""
         self._client_factory = client_factory
         self._client = None  # créé PARESSEUSEMENT, cf. _get_client
 
@@ -110,6 +112,19 @@ class StreamingBrain:
         le tour SUIVANT repart proprement sur le nouveau prompt."""
         self._system_prompt = system_prompt
         self._history_entry = ChatDB.create({})
+
+    def set_objects_prompt(self, text: str) -> None:
+        """Remplace la ligne « objets que tu peux aller voir » (lot M1,
+        dadou_robot_ros/docs/spec-aller-voir.md §2.1 ; texte composé par
+        personas.objects_prompt, "" = aucun objet). Envoyée à CHAQUE tour comme
+        message system juste APRÈS le system prompt (elle complète le bloc
+        MOVE_TEMPLATE qui le termine), jamais historisée : la liste se remplace
+        sans toucher à la session ChatDB (la spec l'exige), et reconfigure() la
+        laisse en place (un changement de personnalité ne déplace pas les
+        objets de la rue). Thread-safety : même analyse que reconfigure — une
+        affectation de référence depuis le thread rclpy.spin, atomique sous le
+        GIL ; un tour en cours lit l'ancienne ou la nouvelle, jamais un mélange."""
+        self._objects_prompt = text
 
     def _get_client(self):
         """Construit le client OpenAI (SDK officiel, pointé vers OpenRouter
@@ -164,6 +179,10 @@ class StreamingBrain:
         # par défaut retenue).
         history = self._history_entry.get_history()[-self._history_limit:]
         messages = [{"role": "system", "content": self._system_prompt}]
+        # Lu UNE fois (référence locale) : cf. set_objects_prompt.
+        objects_prompt = self._objects_prompt
+        if objects_prompt:
+            messages.append({"role": "system", "content": objects_prompt})
         if extra_system:
             messages.append(
                 {"role": "system", "content": STAGE_INSTRUCTION_PREFIX + extra_system})

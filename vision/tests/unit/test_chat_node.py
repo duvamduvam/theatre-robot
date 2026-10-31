@@ -450,6 +450,39 @@ def test_publisher_de_marche_conditionne_et_branche_sur_on_move():
     assert "on_move=self._publish_move if self._move_pub is not None else None" in init_source
 
 
+# --- « Aller voir » (lot M1, 31/10, dadou_robot_ros/docs/spec-aller-voir.md
+# §2.1) : "rehearsal/objects" est gravé côté robot aussi (contracts.py du
+# régisseur). LATCHÉ des deux côtés : publié une seule fois au démarrage du
+# régisseur, un abonné VOLATILE démarré après ne le recevrait jamais.
+
+def test_topic_d_objets_a_la_valeur_du_contrat():
+    assert (_module_string_constants(_chat_node_tree()).get("REHEARSAL_OBJECTS_TOPIC")
+            == "rehearsal/objects")
+
+
+def test_abonnement_objets_conditionne_au_mouvement_et_latche():
+    init = _chat_node_method(_chat_node_tree(), "__init__")
+    blocs = [node for node in ast.walk(init) if isinstance(node, ast.If)
+             and ast.unparse(node.test) == "config['chat_move_enabled']"]
+    assert len(blocs) == 1, "bloc `if config['chat_move_enabled']:` absent ou en double"
+    attendu = [("StringTime", "REHEARSAL_OBJECTS_TOPIC", "self._on_objects")]
+    assert _subscriptions(blocs[0]) == attendu
+    assert [a for a in _subscriptions(init) if a[1] == "REHEARSAL_OBJECTS_TOPIC"] == attendu
+    assert ("self.create_subscription(StringTime, REHEARSAL_OBJECTS_TOPIC, self._on_objects, "
+            "QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))"
+            in ast.unparse(blocs[0]))
+
+
+def test_on_objects_decode_refuse_ou_remplace_sans_nouvelle_session():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_on_objects")
+    assert "stage.decode_objects_payload" in calls
+    assert "personas.objects_prompt" in calls
+    assert "self._brain.set_objects_prompt" in calls
+    assert "self.get_logger().warning" in calls
+    # La spec l'exige : la session LLM n'est PAS réinitialisée.
+    assert "self._brain.reconfigure" not in calls
+
+
 @pytest.mark.parametrize("methode", ["__init__", "_on_persona"])
 def test_les_deux_compositions_du_prompt_passent_move(methode):
     source = ast.unparse(_chat_node_method(_chat_node_tree(), methode))

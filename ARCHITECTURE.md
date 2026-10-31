@@ -127,6 +127,16 @@ vient de dire lui-même dans la réplique est ignoré (faux négatif accepté si
 la même forme). « Stooop », « Arrrête », « freiner », « stoppes » reconnus (les deux
 critères).
 Sans régisseur (vrai robot) : micro coupé pendant la réplique, comme avant.
+**« Aller voir »** (31/10, lot M1, dadou_robot_ros `docs/spec-aller-voir.md`) :
+quand le mouvement à la voix est branché, chat_node écoute `rehearsal/objects`
+(latché, JSON `[{"name", "desc"}]`, publié par le régisseur ; illisible = warning,
+liste gardée) et envoie au LLM, à chaque tour, « Objets que tu peux aller voir :
+anneaux (bagues géantes), … » (message system après le prompt, ≤ 1 200 car., sans
+réinitialiser la session). La clé de fin `"aller_voir": "<nom>"` publie
+`{"cmd": "aller_voir", "objet": "<nom>"}` sur `rehearsal/chat_move` : mise en
+mouvement traitée comme `"go"` (jamais en tour spontané, verrou et barrière de
+l'écoute garde) ; `"marche": "stop"` dans la même réplique gagne, sinon
+`aller_voir` remplace un `"go"`.
 
 Test à la main (domaine 43) :
 `ros2 topic pub --once chat_text robot_interfaces/msg/StringTime "{msg: 'bonjour Didier'}"`.

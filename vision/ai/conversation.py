@@ -102,8 +102,11 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        défaut None = comportement HISTORIQUE inchangé (même clause de
        réversibilité). Branché, il reçoit "go" ou "stop" quand le JSON de fin
        porte la clé "marche" (cf. personas.MOVE_TEMPLATE) ; toute autre valeur
-       est ignorée (warning). Pendant une panne `mute`, l'ordre part quand
-       même. Cette brique ne sait RIEN du mouvement : chat_node publie,
+       est ignorée (warning). Depuis le 2026-10-31 (lot M1 « Aller voir »,
+       dadou_robot_ros/docs/spec-aller-voir.md §2.2) : la clé "aller_voir"
+       lui passe le dict {"cmd": "aller_voir", "objet": …} (cf. _notify_move
+       pour la préséance stop > aller_voir > go). Pendant une panne `mute`,
+       l'ordre part quand même. Cette brique ne sait RIEN du mouvement : chat_node publie,
        le régisseur de la répétition décide.
 
        METTEUR EN SCÈNE INTÉRIEUR (2026-10-23, lot P, dadou_robot_ros/docs/
@@ -549,7 +552,7 @@ class ConversationEngine:
                  on_timing: Optional[Callable[[dict], None]] = None,
                  stage: Optional[StageState] = None,
                  on_transcript: Optional[Callable[[str, str], None]] = None,
-                 on_move: Optional[Callable[[str], None]] = None,
+                 on_move: Optional[Callable[[Union[str, dict]], None]] = None,
                  on_reflect: Optional[Callable[[str], None]] = None,
                  guard_vad=None):
         self._mic = mic
@@ -743,44 +746,85 @@ class ConversationEngine:
         Revue adversariale du 23/10 (B1, bloquant) : une direction du metteur
         en scène (« reprends la route ») faisait écrire "go" au LLM — Didier
         se remettait en marche sans qu'aucun humain l'ait demandé, y compris
-        juste après un « stop » de David."""
-        if self._on_move is None or not isinstance(params, dict) or "marche" not in params:
+        juste après un « stop » de David.
+
+        Clé "aller_voir" (lot M1, 31/10, dadou_robot_ros/docs/
+        spec-aller-voir.md §2.2) : chaîne non vide, rognée (la casse est
+        GARDÉE : la résolution de l'objet est l'affaire du régisseur) ->
+        `on_move({"cmd": "aller_voir", "objet": …})`, payload du contrat tel
+        quel. Mêmes règles que "go" (c'est une MISE EN MOUVEMENT) : jamais en
+        tour spontané, barrière des stops tardifs, verrou de la garde. Les
+        deux clés dans la même réplique : "stop" gagne toujours (aller_voir
+        jeté), sinon aller_voir gagne sur "go" (un seul ordre émis)."""
+        if self._on_move is None or not isinstance(params, dict):
             return
-        raw = params["marche"]
-        cmd = raw.strip().lower() if isinstance(raw, str) else None
-        if cmd not in ("go", "stop"):
-            logger.warning("Clé \"marche\" ignorée : %r (attendu \"go\" ou \"stop\").", raw)
+        cmd = None
+        if "marche" in params:
+            raw = params["marche"]
+            cmd = raw.strip().lower() if isinstance(raw, str) else None
+            if cmd not in ("go", "stop"):
+                logger.warning("Clé \"marche\" ignorée : %r (attendu \"go\" ou \"stop\").", raw)
+                cmd = None
+        objet = None
+        if "aller_voir" in params:
+            raw = params["aller_voir"]
+            objet = raw.strip() if isinstance(raw, str) else None
+            if not objet:
+                logger.warning("Clé \"aller_voir\" ignorée : %r (attendu un nom d'objet).", raw)
+                objet = None
+        if cmd == "stop":
+            if objet is not None:
+                logger.warning("Clé \"aller_voir\" : %r ignoré : la même réplique "
+                               "demande \"stop\" (le stop gagne toujours).", objet)
+            self._emit_move("stop")
             return
-        if spontaneous and cmd == "go":
+        if objet is not None:
+            if cmd == "go":
+                logger.info("Clé \"marche\" : go remplacé par aller_voir %r.", objet)
+            if spontaneous:
+                logger.warning("Clé \"aller_voir\" : %r ignoré : tour spontané "
+                               "(aucun humain ne l'a demandé).", objet)
+                return
+            self._emit_start({"cmd": "aller_voir", "objet": objet},
+                             f"Clé \"aller_voir\" : {objet!r}")
+            return
+        if cmd != "go":
+            return
+        if spontaneous:
             logger.warning("Clé \"marche\" : go ignoré : tour spontané "
                            "(aucun humain ne l'a demandé).")
             return
-        if cmd == "go":
-            # Un stop TARDIF de la réplique précédente (B1) doit partir AVANT
-            # ce "go" : sinon il annulerait la nouvelle intention de David.
-            closed = self._closed_guard
-            if closed is not None and not closed.join_transcriber(GUARD_LATE_GO_WAIT_S):
-                logger.warning("Écoute garde précédente encore en cours après %.0f s : go "
-                               "émis quand même (un stop tardif l'annulerait).",
-                               GUARD_LATE_GO_WAIT_S)
-        guard = self._guard
-        if cmd == "go" and guard is not None:
-            # Sous le verrou de la garde : l'urgence (stop émis PUIS
-            # interrupted levé, atomiquement) et ce "go" ne peuvent pas se
-            # croiser — jamais de "go" APRÈS un arrêt vocal de la même réplique.
-            with guard.lock:
-                if guard.interrupted.is_set():
-                    logger.warning("Clé \"marche\" : go ignoré : réplique interrompue "
-                                   "par un arrêt d'urgence vocal.")
-                    return
-                self._emit_move(cmd)
-            return
-        self._emit_move(cmd)
+        self._emit_start("go", "Clé \"marche\" : go")
 
-    def _emit_move(self, cmd: str) -> None:
+    def _emit_start(self, intent, label: str) -> None:
+        """Émet un ordre de MISE EN MOUVEMENT ("go" ou aller_voir) en
+        respectant l'écoute garde (cf. docstring de module ÉCOUTE GARDE).
+        `label` (« Clé "marche" : go ») ne sert qu'aux journaux."""
+        # Un stop TARDIF de la réplique précédente (B1) doit partir AVANT cet
+        # ordre : sinon il annulerait la nouvelle intention de David.
+        closed = self._closed_guard
+        if closed is not None and not closed.join_transcriber(GUARD_LATE_GO_WAIT_S):
+            logger.warning("Écoute garde précédente encore en cours après %.0f s : %s "
+                           "émis quand même (un stop tardif l'annulerait).",
+                           GUARD_LATE_GO_WAIT_S, label)
+        guard = self._guard
+        if guard is None:
+            self._emit_move(intent)
+            return
+        # Sous le verrou de la garde : l'urgence (stop émis PUIS interrupted
+        # levé, atomiquement) et cet ordre ne peuvent pas se croiser — jamais
+        # de mise en mouvement APRÈS un arrêt vocal de la même réplique.
+        with guard.lock:
+            if guard.interrupted.is_set():
+                logger.warning("%s ignoré : réplique interrompue par un arrêt "
+                               "d'urgence vocal.", label)
+                return
+            self._emit_move(intent)
+
+    def _emit_move(self, cmd) -> None:
         """Seul point d'émission d'une intention de marche — partagé par la
-        clé "marche" (fin de réplique) et l'arrêt d'urgence vocal (avant le
-        LLM). `on_move` None = mouvement désactivé : rien, sans erreur.
+        clé "marche" (fin de réplique), la clé "aller_voir" (`cmd` est alors
+        le dict du contrat) et l'arrêt d'urgence vocal (avant le LLM). `on_move` None = mouvement désactivé : rien, sans erreur.
         Callback qui lève = ordre perdu, JAMAIS le tour : une publication en
         échec ne doit pas rendre Didier muet (et le deadman reste l'arrêt
         effectif, cf. vision.ai.emergency)."""

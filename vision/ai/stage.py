@@ -18,7 +18,9 @@ QUOI : StageState porte les trois choses qu'une régie peut imposer à la
        SITUATION (topic chat_situation, relu à chaque tour, périmé en
        SITUATION_TTL_S) et la DIRECTION du tour spontané (topic chat_prompt,
        un seul emplacement, périmée en PROMPT_TTL_S) — même verrou, mêmes
-       bornes tenues côté consommateur.
+       bornes tenues côté consommateur. Depuis le 2026-10-31 (lot M1 « Aller
+       voir ») : le décodeur du vocabulaire d'objets (`rehearsal/objects`),
+       sans état ici — la liste formatée vit dans StreamingBrain.
 POURQUOI un module PUR (aucun rclpy) : même règle que _chat_wiring et
        arbitration — les bornes de sécurité de ce canal (plafond 60 s de la
        panne, péremption 120 s de la consigne, phantom ponctuel) doivent être
@@ -356,6 +358,50 @@ def decode_fault_command(raw) -> Tuple[str, dict, object]:
     if not isinstance(params, dict):
         raise ValueError(f"panne chat {op} : params doit être un objet, reçu {params!r}")
     return op, params, value.get("until_ms")
+
+
+# Bornes du vocabulaire d'objets (topic `rehearsal/objects`, lot M1 « Aller
+# voir », dadou_robot_ros/docs/spec-aller-voir.md §2.1). Ce texte part au LLM à
+# CHAQUE tour (cf. personas.objects_prompt) : chaque caractère se paie en
+# latence. Le régisseur promet desc ≤ 6 mots ; ces plafonds tiennent même si
+# l'itinéraire grossit ou si un YAML déraille (l'itinéraire « Chantiers »
+# compte une trentaine de POI au 31/10).
+OBJECTS_MAX = 40
+OBJECT_NAME_MAX_CHARS = 40
+OBJECT_DESC_MAX_CHARS = 60
+
+
+def decode_objects_payload(raw) -> list:
+    """Payload de `rehearsal/objects` -> [(name, desc)], dans l'ordre reçu.
+    Contrat (§2.1) : liste JSON [{"name": "anneaux", "desc": "bagues
+    géantes"}, …]. TOLÉRANT élément par élément : un élément sans `name`
+    chaîne non vide est sauté ; `desc` absente ou non chaîne = "" (le prompt
+    n'affiche alors que le nom). Champs rognés puis tronqués, liste tronquée
+    à OBJECTS_MAX. ValueError (le node garde sa liste précédente et loggue)
+    si le payload n'est pas une liste JSON, ou si une liste NON vide ne
+    contient aucun élément valable — un vocabulaire illisible ne doit pas
+    effacer celui qui marchait. [] est valable : plus aucun objet."""
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"objets illisibles (liste JSON attendue) : {raw!r}") from exc
+    if not isinstance(value, list):
+        raise ValueError(f"objets : liste JSON attendue, reçu {value!r}")
+    objects = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        desc = item.get("desc")
+        desc = desc.strip() if isinstance(desc, str) else ""
+        objects.append((name.strip()[:OBJECT_NAME_MAX_CHARS], desc[:OBJECT_DESC_MAX_CHARS]))
+        if len(objects) == OBJECTS_MAX:
+            break
+    if value and not objects:
+        raise ValueError(f"objets : aucun élément valable (\"name\" manquant) : {raw!r}")
+    return objects
 
 
 def encode_transcript(role: str, text: str, t_ms: int) -> str:
