@@ -171,6 +171,12 @@ page scène, persona **mauvaisefoi**.
   --break-system-packages --only-binary=:all: "av>=14,<15"` puis
   `docker restart dadou-vision-x86-container`.
 
+**Depuis un téléphone ou une tablette** : `python3 conf/scripts/rehearsal/publier_nom_sim.py`
+(sur le PC, laisser tourner) publie **`didier-sim.local`** → la page devient
+http://didier-sim.local:8765/scene sur tout le réseau. Sans sudo ni avahi-utils
+(D-Bus direct vers le démon avahi). ⚠️ Jamais `didier.local` : c'est le nom du
+VRAI robot (alias publié par le Pi, visé par la télécommande) — le script le refuse.
+
 **3. La page scène** : http://localhost:8765/scene — caméra de Didier, visage
 LED en direct, conversation (ce que Didier a *compris* et ce qu'il dit), un
 champ texte pour lui parler au clavier, une consigne de jeu à la main. Puis
