@@ -239,3 +239,23 @@ def test_camera_is_partner_faux_hors_simulation():
 def test_camera_is_partner_faux_sans_partenaire():
     for partner in ("", "  ", None):
         assert vision_config.camera_is_partner_from_env({"ROS_DOMAIN_ID": "43"}, partner) is False
+
+
+# --- CHAT_LLM_MODEL (essai Sonnet pour la bouche, 31/10) ---
+
+def test_llm_model_absent_garde_la_config():
+    assert vision_config.llm_model_from_env({}) is None
+    assert vision_config.llm_model_from_env({"CHAT_LLM_MODEL": "  "}) is None
+    assert "chat_llm_model" not in vision_config.chat_env_overrides({})[0]
+
+
+def test_llm_model_sonnet_accepte_et_fusionne():
+    env = {"CHAT_LLM_MODEL": " Anthropic/Claude-Sonnet-5.5 "}
+    assert vision_config.llm_model_from_env(env) == "anthropic/claude-sonnet-5.5"
+    assert vision_config.chat_env_overrides(env)[0]["chat_llm_model"] == "anthropic/claude-sonnet-5.5"
+
+
+def test_llm_model_inconnu_refuse():
+    import pytest
+    with pytest.raises(ValueError):
+        vision_config.llm_model_from_env({"CHAT_LLM_MODEL": "openai/gpt-5"})

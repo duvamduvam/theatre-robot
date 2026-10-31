@@ -103,6 +103,27 @@ WHISPER_MODEL_ENV = "CHAT_WHISPER_MODEL"
 _WHISPER_MODELS = ("tiny", "base", "small", "medium")
 
 
+# Modèle LLM de la BOUCHE, surchargeable sur le banc (31/10, demande de David :
+# « peut-on faire un essai avec Sonnet ? » — le 23/10 Sonnet avait été écarté
+# pour la parole à cause de la latence, cf. étude niveaux-réflexion §10 ;
+# l'essai sert à comparer compréhension ET temps au premier mot). Liste
+# FERMÉE : un nom libre partirait tel quel chez OpenRouter et un nom faux
+# rendrait Didier muet en pleine séance. Absente = défaut de config (Haiku).
+LLM_MODEL_ENV = "CHAT_LLM_MODEL"
+_LLM_MODELS = ("anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5")
+
+
+def llm_model_from_env(environ=os.environ):
+    """Modèle de la bouche : None si CHAT_LLM_MODEL est absente/vide (garder la
+    config), sinon le nom s'il est dans la liste fermée ; ValueError sinon."""
+    raw = environ.get(LLM_MODEL_ENV, "").strip().lower()
+    if not raw:
+        return None
+    if raw not in _LLM_MODELS:
+        raise ValueError(f"{LLM_MODEL_ENV}={raw!r} : attendu {' / '.join(_LLM_MODELS)}")
+    return raw
+
+
 def whisper_model_from_env(environ=os.environ):
     """Modèle whisper : "base" par défaut, sinon CHAT_WHISPER_MODEL s'il est
     dans la liste connue ; toute autre valeur = erreur EXPLICITE au
@@ -148,7 +169,7 @@ def camera_is_partner_from_env(environ, partner):
 
 def chat_env_overrides(environ=os.environ):
     """Surcharges du BANC lues dans l'environnement (CHAT_VAD_FACTOR,
-    CHAT_WHISPER_MODEL, CHAT_PARTENAIRE, CHAT_MOUVEMENT, CHAT_REFLEXION) -> (dict à fusionner
+    CHAT_WHISPER_MODEL, CHAT_PARTENAIRE, CHAT_MOUVEMENT, CHAT_REFLEXION, CHAT_LLM_MODEL) -> (dict à fusionner
     dans `config`, warnings à journaliser).
 
     POURQUOI pas à l'import (revue adversariale I1, 22/10) : une valeur
@@ -167,6 +188,9 @@ def chat_env_overrides(environ=os.environ):
         "chat_partner": partner_from_env(environ),
         "chat_reflection_enabled": reflection_enabled_from_env(environ),
     }
+    llm_model = llm_model_from_env(environ)
+    if llm_model is not None:
+        overrides["chat_llm_model"] = llm_model
     warnings = []
     move = move_enabled_from_env(environ)
     domain = environ.get("ROS_DOMAIN_ID", "").strip()

@@ -65,6 +65,11 @@ services:
       # scène est engagée). Ne commande pas le corps : pas de garde de domaine.
       # CHAT_REFLEXION=false docker compose ... up -d pour le couper.
       - CHAT_REFLEXION=${CHAT_REFLEXION:-true}
+      # Modèle LLM de la bouche (31/10, essai demandé par David) : vide = défaut
+      # de config (Haiku 5.5) ; CHAT_LLM_MODEL=anthropic/claude-sonnet-5.5
+      # docker compose ... up -d pour l'essai Sonnet (liste fermée, cf.
+      # vision_config.llm_model_from_env).
+      - CHAT_LLM_MODEL=${CHAT_LLM_MODEL:-}
       # Source d'images à chaud de la perception (topic camera_source) : propose
       # la caméra du robot simulé (Gazebo, sensor_msgs/Image rgb8) en plus de la
       # webcam du PC, qui reste le défaut. BANC PC SEULEMENT : jamais posé dans
