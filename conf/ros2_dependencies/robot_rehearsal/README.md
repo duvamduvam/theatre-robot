@@ -153,6 +153,31 @@ Tests : `test_goto.py`, `test_route_objects.py`, `test_director_goto.py`
 (purs), `test_route_driver_goto.py`, `test_director_node_goto.py` (nodes,
 rclpy simulé). Passe de mutation listée en tête de chaque fichier.
 
+## Lot M2 — gestes chiffrés (spec `docs/spec-aller-voir.md` §7, 31/10)
+
+Décision de David : des gestes GÉNÉRAUX CHIFFRÉS (composables plus tard par
+un planificateur), angle **+ = gauche** (ROS). Même canal que M1.
+
+- **Intentions** (`rehearsal/chat_move`) : `{"cmd": "tourner", "angle_deg": a}`
+  (0 < |a| ≤ 180, compat `"sens"` gauche/droite/demi_tour = +90/−90/+180) ;
+  `{"cmd": "avancer", "metres": m}` (0,1 ≤ m ≤ 5, négatif refusé : pas de recul).
+  Journal `tourner` / `avancer` (`accepted`, `invalid` + `reason`
+  illisible|hors_bornes|recul, `route_off_by_david`, `no_pose`).
+- **Acceptation** : exactement celle d'« aller voir » (arrêt vocal levé, lubie
+  fermée, salve annulée, `stop`/abort -> `cancel`, reprise au « go »).
+- **Ordres** `route_goto` : `{"turn_rad"}` (pivot seul, rotation intégrée,
+  15 s, translation ≤ 1 m, calage en rotation) et `{"forward_m"}` (DRIVE à
+  cap tenu, arrivée à la projection, sans FACE, 10 s + 4 s/m, ≤ 1,5 × m
+  parcourus, calage 2 s). Pivots (y compris ceux d'« aller voir ») : |ω| ≤
+  0,6 × fader, plancher 0,15. Un geste redemandé = nouvel ordre (pas de cumul). Noms d'état
+  communs aux deux nodes : `pivot +90°`, `avancer 2 m` (`goto.turn_name` /
+  `forward_name`).
+- « Regarder » (tête) n'est PAS ici : topic `look`, consommé par
+  `gaze_follower_node` (prod, `robot/nodes`).
+
+Tests : `test_goto_gestes.py`, `test_director_gestes.py`,
+`test_route_driver_gestes.py` ; regarder : `robot/tests/unit/test_gaze_look.py`.
+
 ## Regarder une séance en direct
 
 - **Vue 3D** : la sim tourne en headless ; on y branche une fenêtre à chaud,

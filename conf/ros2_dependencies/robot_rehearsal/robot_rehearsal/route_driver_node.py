@@ -27,6 +27,11 @@ SÉCURITÉ (cf. CLAUDE.md — ce node publie une consigne roues) :
    route est OFF par David (dernière commande `route` = off). Après une
    manœuvre, la reprise (`route on`) vise le waypoint le plus proche DEVANT
    (RouteFollower.rejoin).
+ - Lot M2 (spec-aller-voir.md §7.2-§7.3) : MÊME canal, gestes chiffrés
+   {"turn_rad"} (pivot seul) et {"forward_m"} (ligne droite sur le cap,
+   jamais de recul), validés et bornés dans goto.parse_order / GotoManeuver
+   (délais propres, croisière, fader, calage) ; mêmes abandons, même état
+   "goto" -> "arrived".
 
 Node volontairement FIN : I/O seulement, toute la logique est dans
 robot_rehearsal.route et robot_rehearsal.goto (pures, testées sans ROS).
@@ -50,7 +55,8 @@ from robot_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPI
                                        ROUTE_GOTO_TOPIC,
                                        ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
-from robot_rehearsal.goto import ARRIVED, GotoConfig, GotoError, GotoManeuver, parse_order
+from robot_rehearsal.goto import (ARRIVED, ForwardOrder, GotoConfig, GotoError, GotoManeuver, GotoOrder,
+                                   TurnOrder, parse_order)
 
 # Latché : un abonné arrivé après coup (régisseur relancé) reçoit l'état courant.
 LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -247,7 +253,8 @@ class RouteDriverNode(Node):
         return True
 
     def _on_goto(self, msg: StringTime):
-        """Ordre du régisseur (lot M1) : JSON {name, x, y, standoff} ou "cancel"."""
+        """Ordre du régisseur : JSON {name, x, y, standoff} (M1), {turn_rad} /
+        {forward_m} (M2) ou "cancel"."""
         value = _decode(msg.msg)
         if value == ROUTE_GOTO_CANCEL:
             if self._abandon_goto("cancel"):
@@ -262,9 +269,15 @@ class RouteDriverNode(Node):
         except GotoError as e:
             self.get_logger().warning(f"route_goto refusé : {e}")
             return
-        if self.goto is not None and self.goto.order.name == order.name:
+        if isinstance(order, GotoOrder) and self.goto is not None and self.goto.order.name == order.name:
             # MÊME objet redemandé (le LLM le redit au tour suivant) : rien —
             # ni arrêt franc, ni délai remis à zéro (la borne de 60 s tient).
+            # Un GESTE (pivot, ligne droite) redemandé, lui, est un NOUVEL
+            # ordre (revue M2, choix le plus simple et sûr) : « tourne à
+            # gauche, encore » = encore 90°, comptés depuis la pose courante ;
+            # l'ancien tombe avec un zéro franc (abandon « goto_suivant »),
+            # chaque ordre garde ses propres bornes. Pas de cumul : un cumul
+            # demanderait de rebudgéter délai et translation à la volée.
             self.get_logger().info(f"route_goto : « {order.name} » déjà en cours, ignoré")
             return
         self._abandon_goto("goto_suivant")
@@ -281,8 +294,13 @@ class RouteDriverNode(Node):
         self._arrived = None
         self._goto_dirty = True
         self._publish_state()
-        self.get_logger().info(f"route_goto : vers « {order.name} » ({order.x:.2f}, {order.y:.2f}), "
-                               f"arrêt à {order.standoff:g} m")
+        if isinstance(order, TurnOrder):
+            what = f"{order.turn_rad:+.4f} rad, sur place"
+        elif isinstance(order, ForwardOrder):
+            what = "ligne droite sur le cap courant"
+        else:
+            what = f"vers ({order.x:.2f}, {order.y:.2f}), arrêt à {order.standoff:g} m"
+        self.get_logger().info(f"route_goto : « {order.name} » {what}")
 
     def _on_speed(self, msg: StringTime):
         before = self.follower.speed

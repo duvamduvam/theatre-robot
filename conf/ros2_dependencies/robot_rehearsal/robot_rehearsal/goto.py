@@ -29,15 +29,40 @@ est (0, 0) :
   - facteur de vitesse 0 (fader en bas, arrêt vocal, lubie stop) : zéro en
     TOUTE phase, pivots compris — un fader à zéro ne laisse rien tourner.
 Pas d'évitement d'obstacle (spec §5) : ligne droite, SIM-ONLY.
+
+GESTES CHIFFRÉS (lot M2, spec §7.2-§7.3) — même machine, mêmes bornes :
+  TurnOrder    pivot seul : démarre en FACE, cap visé = cap de la première
+               pose fraîche + turn_rad (+ = gauche, ROS). La rotation est
+               INTÉGRÉE pas à pas (somme des wrap(Δyaw)), pas recalculée par
+               wrap(cible − cap) : un demi-tour (π) aurait sinon un sens
+               choisi au bruit de la pose près. Délai TURN_TIMEOUT_S ;
+               translation bornée à min_travel_m (poussé = abandon).
+               Calage propre (revue M2) : |ω| consigné > stall_ang_rads et
+               rotation < stall_turn_rad pendant stall_window_ms -> « stalled ».
+  ForwardOrder ligne droite : démarre en DRIVE en TENANT le cap de la
+               première pose fraîche ; ARRIVED dès que la PROJECTION du
+               déplacement sur ce cap atteint m (à forward_tol_m près) — pas
+               de FACE, et jamais de pivot de retour s'il dépasse (revue
+               M2 : viser un point P le faisait s'arrêter 0,3 m avant, et
+               faire demi-tour au-delà). Délai FORWARD_TIMEOUT_BASE_S +
+               FORWARD_TIMEOUT_PER_M_S × m ; distance parcourue ≤
+               GOTO_MAX_TRAVEL_FACTOR × m ; calage, fader, croisière : ceux
+               du DRIVE. Jamais de recul (m ≥ FORWARD_MIN_M).
+Pivots (ALIGN, FACE, TurnOrder) : |ω| ≤ max_ang × facteur du fader, avec un
+plancher pivot_min_ang dès que le facteur est > 0 (un pivot trop lent cale
+sur le frottement) — revue M2.
 """
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
-from robot_rehearsal.contracts import (ABS_MAX_ANG, ABS_MAX_LIN, GOTO_MAX_ANG, GOTO_MAX_DISTANCE_M,
-                                       GOTO_MAX_TRAVEL_FACTOR, GOTO_MIN_STANDOFF_M, GOTO_TIMEOUT_S)
+from robot_rehearsal.contracts import (ABS_MAX_ANG, ABS_MAX_LIN, FORWARD_MAX_M, FORWARD_MIN_M,
+                                       FORWARD_TIMEOUT_BASE_S,
+                                       FORWARD_TIMEOUT_PER_M_S, GOTO_MAX_ANG, GOTO_MAX_DISTANCE_M,
+                                       GOTO_MAX_TRAVEL_FACTOR, GOTO_MIN_STANDOFF_M, GOTO_TIMEOUT_S,
+                                       TURN_MAX_DEG, TURN_TIMEOUT_S)
 from robot_rehearsal.route import RouteConfig, wrap_angle
 
 ALIGN = "align"
@@ -61,6 +86,36 @@ class GotoOrder:
     standoff: float
 
 
+@dataclass(frozen=True)
+class TurnOrder:
+    name: str
+    turn_rad: float
+
+
+@dataclass(frozen=True)
+class ForwardOrder:
+    name: str
+    metres: float
+
+
+Order = Union[GotoOrder, TurnOrder, ForwardOrder]
+
+# Tolérance de la borne du pivot : radians(180) arrondi par le producteur
+# (3.1416 > π) ne doit pas être refusé ; un tour complet, si.
+_TURN_MAX_RAD = math.radians(TURN_MAX_DEG) + 1e-3
+
+
+def turn_name(turn_rad: float) -> str:
+    """Nom d'un pivot (journal, état, déduplication) — MÊME texte des deux
+    côtés : le régisseur l'utilise pour reconnaître l'issue de son ordre."""
+    return f"pivot {math.degrees(turn_rad):+.0f}°"
+
+
+def forward_name(metres: float) -> str:
+    """Nom d'une ligne droite, même usage que turn_name."""
+    return f"avancer {metres:g} m"
+
+
 def _finite(value, where: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise GotoError(f"{where} : nombre attendu, reçu {value!r}")
@@ -70,12 +125,29 @@ def _finite(value, where: str) -> float:
     return value
 
 
-def parse_order(value) -> GotoOrder:
-    """Payload route_goto DÉJÀ décodé (dict) -> GotoOrder validé. Refus
-    explicite (GotoError), jamais de valeur devinée : un ordre faux ne roule
-    pas. standoff dans [GOTO_MIN_STANDOFF_M, GOTO_MAX_DISTANCE_M]."""
+def parse_order(value) -> Order:
+    """Payload route_goto DÉJÀ décodé (dict) -> ordre validé. Refus explicite
+    (GotoError), jamais de valeur devinée ni saturée : un ordre faux ne roule
+    pas. Trois formes EXCLUSIVES :
+      {name, x, y, standoff}  standoff dans [GOTO_MIN_STANDOFF_M, GOTO_MAX_DISTANCE_M] ;
+      {turn_rad}              0 < |turn_rad| ≤ radians(TURN_MAX_DEG) ;
+      {forward_m}             FORWARD_MIN_M ≤ forward_m ≤ FORWARD_MAX_M (négatif : on ne recule pas)."""
     if not isinstance(value, dict):
         raise GotoError(f"ordre : objet JSON {{name, x, y, standoff}} attendu, reçu {value!r}")
+    kinds = [k for k in ("x", "turn_rad", "forward_m") if k in value]
+    if len(kinds) > 1:
+        raise GotoError(f"ordre ambigu : {kinds} (une seule forme à la fois)")
+    if kinds == ["turn_rad"]:
+        turn = _finite(value["turn_rad"], "turn_rad")
+        if not 0.0 < abs(turn) <= _TURN_MAX_RAD:
+            raise GotoError(f"turn_rad : 0 < |a| ≤ {TURN_MAX_DEG:g}° attendu, reçu {turn}")
+        return TurnOrder(turn_name(turn), turn)
+    if kinds == ["forward_m"]:
+        metres = _finite(value["forward_m"], "forward_m")
+        if not FORWARD_MIN_M <= metres <= FORWARD_MAX_M:
+            raise GotoError(f"forward_m : {FORWARD_MIN_M:g} ≤ m ≤ {FORWARD_MAX_M:g} attendu (pas de recul), "
+                            f"reçu {metres}")
+        return ForwardOrder(forward_name(metres), metres)
     name = value.get("name")
     if not isinstance(name, str) or not name:
         raise GotoError("name : chaîne non vide attendue")
@@ -121,6 +193,14 @@ class GotoConfig:
     stall_lin_ms: float = 0.1
     stall_dist_m: float = 0.05
     stall_window_ms: int = 2000
+    # Calage d'un PIVOT (TurnOrder) : |ω| consigné au-dessus de ce seuil
+    # (rad/s) et rotation sous stall_turn_rad pendant stall_window_ms.
+    stall_ang_rads: float = 0.2
+    stall_turn_rad: float = 0.05
+    # Pivots : plancher du plafond |ω| au fader (rad/s), si facteur > 0.
+    pivot_min_ang: float = 0.15
+    # Ligne droite : arrivée quand il reste moins que ça à parcourir (m).
+    forward_tol_m: float = 0.05
 
 
 @dataclass
@@ -137,16 +217,28 @@ class GotoManeuver:
     """Instancier à l'ordre ; update_pose() à chaque /odom, tick() à cadence
     fixe (10 Hz). Toute sortie non « ok » est (0, 0)."""
 
-    def __init__(self, order: GotoOrder, now_ms: int, config: GotoConfig = GotoConfig()):
+    def __init__(self, order: Order, now_ms: int, config: GotoConfig = GotoConfig()):
         self.order = order
+        # Délai propre au geste (spec §7) : jamais au-dessus de celui de la config.
+        timeout_s = config.timeout_s
+        if isinstance(order, TurnOrder):
+            timeout_s = min(timeout_s, TURN_TIMEOUT_S)
+        elif isinstance(order, ForwardOrder):
+            timeout_s = min(timeout_s, FORWARD_TIMEOUT_BASE_S + FORWARD_TIMEOUT_PER_M_S * order.metres)
         # Plafonds absolus AU CONSTRUCTEUR (même garantie que RouteFollower) :
         # un paramètre trop grand ne peut pas les franchir.
         self.config = GotoConfig(
             **{**config.__dict__,
                "max_lin": min(config.max_lin, ABS_MAX_LIN),
-               "max_ang": min(config.max_ang, GOTO_MAX_ANG, ABS_MAX_ANG)})
+               "max_ang": min(config.max_ang, GOTO_MAX_ANG, ABS_MAX_ANG),
+               "timeout_s": timeout_s})
         self._start_ms = int(now_ms)
-        self._phase = ALIGN
+        # Pivot : FACE seul ; ligne droite : DRIVE seul ; aller voir : dès ALIGN.
+        self._phase = (FACE if isinstance(order, TurnOrder)
+                       else DRIVE if isinstance(order, ForwardOrder) else ALIGN)
+        self._turned = 0.0   # pivot : rotation intégrée depuis la première pose fraîche
+        self._turn_stall_ref: Optional[Tuple[int, float]] = None   # pivot : (instant, _turned)
+        self._origin: Optional[Tuple[float, float, float]] = None   # ligne droite : pose de départ
         self._reason = "ok"
         self._pose: Optional[Tuple[float, float, float]] = None
         self._pose_ms: Optional[int] = None
@@ -194,6 +286,8 @@ class GotoManeuver:
             # une poussée la font grimper. Un Didier BLOQUÉ, non (sa pose ne
             # bouge pas) : c'est le détecteur de calage qui le voit.
             self._travelled += math.hypot(x - self._pose[0], y - self._pose[1])
+            # Rotation intégrée pas à pas (|Δyaw| ≪ π entre deux poses à 10+ Hz).
+            self._turned += wrap_angle(yaw - self._pose[2])
         self._pose = (x, y, yaw)
         self._pose_ms = int(now_ms)
 
@@ -221,8 +315,22 @@ class GotoManeuver:
 
     def _first_pose(self) -> None:
         """Fixe P et la borne de distance à la première pose."""
-        x, y, _yaw = self._pose
+        x, y, yaw = self._pose
         o, c = self.order, self.config
+        if isinstance(o, TurnOrder):
+            # Sur place : P = ici, translation tolérée = le plancher (tremblement).
+            self._stop = (x, y)
+            self._travel_max = c.min_travel_m
+            self._travelled = self._turned = 0.0
+            return
+        if isinstance(o, ForwardOrder):
+            # Cap et origine FIXÉS sur cette pose fraîche ; P (droit devant)
+            # n'est plus qu'indicatif (stop_point), l'arrivée se juge à la projection.
+            self._origin = (x, y, yaw)
+            self._stop = (x + o.metres * math.cos(yaw), y + o.metres * math.sin(yaw))
+            self._travel_max = max(c.max_travel_factor * o.metres, c.min_travel_m)
+            self._travelled = 0.0
+            return
         d = math.hypot(o.x - x, o.y - y)
         if d > GOTO_MAX_DISTANCE_M:
             self._end(ABORTED, "too_far")   # ceinture : le régisseur refuse déjà
@@ -270,12 +378,16 @@ class GotoManeuver:
 
         x, y, yaw = self._pose
         px, py = self._stop
+        # Plafond |ω| des pivots au fader, plancher pour ne pas caler.
+        pivot_cap = min(c.max_ang, max(c.max_ang * factor, c.pivot_min_ang))
+        if isinstance(self.order, ForwardOrder):
+            return self._forward(now_ms, factor)
         if self._phase == ALIGN:
             err = wrap_angle(math.atan2(py - y, px - x) - yaw)
             if abs(err) < c.heading_tol_rad:
                 self._phase = DRIVE
             else:
-                return self._out(0.0, err)
+                return self._out(0.0, err, pivot_cap)
         if self._phase == DRIVE:
             dist = math.hypot(px - x, py - y)
             if dist < c.arrive_tol_m:
@@ -292,11 +404,50 @@ class GotoManeuver:
                 return out
         self._stall_ref = None   # pivots : aucune consigne linéaire, pas de calage
         # FACE
-        err = wrap_angle(math.atan2(self.order.y - y, self.order.x - x) - yaw)
+        if isinstance(self.order, TurnOrder):
+            # Reste à tourner, NON replié dans ]-π, π] (cf. docstring de module).
+            err = self.order.turn_rad - self._turned
+        else:
+            err = wrap_angle(math.atan2(self.order.y - y, self.order.x - x) - yaw)
         if abs(err) < c.heading_tol_rad:
             self._end(ARRIVED, "arrived")
             return self._zero("arrived")
-        return self._out(0.0, err)
+        out = self._out(0.0, err, pivot_cap)
+        if isinstance(self.order, TurnOrder) and self._turn_stalled(now_ms, out.ang):
+            self._end(ABORTED, "stalled")
+            return self._zero("stalled")
+        return out
+
+    def _forward(self, now_ms: int, factor: float) -> GotoOutput:
+        """Ligne droite (DRIVE seul) : cap initial TENU, arrivée à la projection."""
+        c, (x0, y0, yaw0) = self.config, self._origin
+        x, y, yaw = self._pose
+        progress = (x - x0) * math.cos(yaw0) + (y - y0) * math.sin(yaw0)
+        remaining = self.order.metres - progress
+        if remaining <= c.forward_tol_m:
+            # Atteint OU dépassé : arrêt, jamais de retour en arrière.
+            self._end(ARRIVED, "arrived")
+            return self._zero("arrived")
+        err = wrap_angle(yaw0 - yaw)
+        heading_factor = max(0.0, 1.0 - abs(err) / c.heading_slow_rad)
+        lin = min(c.max_lin * factor, c.approach_gain * remaining) * heading_factor
+        out = self._out(lin, err)
+        if self._stalled(now_ms, out.lin):
+            self._end(ABORTED, "stalled")
+            return self._zero("stalled")
+        return out
+
+    def _turn_stalled(self, now_ms: int, ang: float) -> bool:
+        """Pivot : |ω| consigné > stall_ang_rads sans rotation de stall_turn_rad
+        depuis stall_window_ms ? (Didier coincé : la pose ne tourne plus.)"""
+        c = self.config
+        if abs(ang) <= c.stall_ang_rads:
+            self._turn_stall_ref = None
+            return False
+        if self._turn_stall_ref is None or abs(self._turned - self._turn_stall_ref[1]) >= c.stall_turn_rad:
+            self._turn_stall_ref = (int(now_ms), self._turned)
+            return False
+        return now_ms - self._turn_stall_ref[0] >= c.stall_window_ms
 
     def _stalled(self, now_ms: int, lin: float) -> bool:
         """Consigne v > stall_lin_ms sans déplacement de stall_dist_m depuis
@@ -311,9 +462,10 @@ class GotoManeuver:
             return False
         return now_ms - self._stall_ref[0] >= c.stall_window_ms
 
-    def _out(self, lin_target: float, err: float) -> GotoOutput:
+    def _out(self, lin_target: float, err: float, ang_cap: Optional[float] = None) -> GotoOutput:
         c = self.config
-        ang_target = max(-c.max_ang, min(c.max_ang, c.ang_gain * err))
+        cap = c.max_ang if ang_cap is None else min(c.max_ang, ang_cap)
+        ang_target = max(-cap, min(cap, c.ang_gain * err))
         self._lin = self._slew(self._lin, lin_target, c.lin_slew)
         self._ang = self._slew(self._ang, ang_target, c.ang_slew)
         # Ceinture finale : jamais au-delà des plafonds absolus, quoi qu'il arrive au-dessus.

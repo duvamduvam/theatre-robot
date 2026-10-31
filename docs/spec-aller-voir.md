@@ -104,39 +104,90 @@ arrivée (rejoint la route). Revue adversariale avant déploiement.
 
 ---
 
-## 7. Lot M2 — « regarder » et « tourner » (31/10, même soirée)
+## 7. Lot M2 — gestes chiffrés « regarder », « tourner », « avancer » (31/10)
 
 David : « je lui propose de regarder à droite, il me dit qu'il ne peut pas ».
-Deux gestes DISTINCTS, parce que la caméra est fixée au BUSTE (pas à la
-tête, cf. mémoire suivi de personne 14/09) : tourner la tête est du jeu,
-seul le corps qui pivote fait VOIR ailleurs.
+Décision de David (même soirée) : **pas de cas figés, des GESTES GÉNÉRAUX
+CHIFFRÉS**, composables plus tard par un planificateur. Les noms
+(gauche/droite/demi-tour) restent acceptés en compat. Convention commune :
+angle **+ = gauche** (ROS, REP 103, z vers le haut).
+
+« Regarder » et « tourner » sont DISTINCTS parce que la caméra est fixée au
+BUSTE (pas à la tête, cf. mémoire suivi de personne 14/09) : tourner la tête
+est du jeu, seul le corps qui pivote fait VOIR ailleurs.
 
 ### 7.1 « Regarder » — tête (cou + yeux), PROD-compatible
 
-- Bouche : clé de fin `"regarder": "gauche" | "droite" | "devant"`.
-- chat_node publie sur le nouveau topic `look` : StringTime JSON
-  `{"dir": "gauche"|"droite"|"devant", "hold_ms": 4000}` (hold borné
-  1000-8000 ms côté consommateur).
-- Consommateur : `gaze_follower_node` (robot/nodes, PROD). À réception, il
-  pose le cou (et les yeux en mode robot) à la consigne de la direction
-  (gauche/droite = ±70 % de sa course utile, devant = centre), la TIENT
-  `hold_ms` en ignorant les personnes, puis reprend le suivi s'il était actif
-  (sinon revient au centre). Respecte l'arbitrage existant : silencieux tant
-  qu'une animation a la main (`animation_state`). Rampe/amorti existants
-  inchangés (ne pas monter le gain). Pas de roues.
+- chat_node publie sur le topic `look` : StringTime JSON
+  `{"angle_deg": <float, + = gauche>, "hold_ms": <int>}`. Compat :
+  `{"dir": "gauche"|"droite"|"devant"}` (= +course, −course, 0).
+- Consommateur : `gaze_follower_node` (robot/nodes, PROD), logique pure dans
+  `robot/move/gaze_control.py` (`parse_look`, état `LOOK`).
+- Angle -> azimut ÉQUIVALENT (celui d'une personne vue sous cet angle), puis
+  le MÊME mapping que le suivi : sens et gains validés le 12/07, cou et yeux
+  (miroir) du bon côté sans nouveau réglage. Échelle = course utile du COU
+  (± gain consignes = gain × 180/99 °, soit ±36,4° au gain 20) : le cou
+  atteint l'angle demandé ; au-delà, **saturé** à la course et journalisé
+  (±90° -> ±36,4°). Les yeux font ce qu'ils font pour une personne sous cet
+  angle (gain propre).
+- `hold_ms` borné 1000-8000 côté consommateur (absent/illisible -> 4000).
+  La tenue court à partir de l'ARRIVÉE sur la consigne ; les personnes sont
+  ignorées pendant la tenue. Puis retour lent au centre, interrompu par la
+  première détection si le suivi est ON (reprise du suivi). Marche suivi ON
+  comme OFF. « gaze off » EXPLICITE coupe le geste (la télécommande prime) ;
+  une republication d'`animation_state` au repos, non.
+- Anti-flux (revue M2) : au plus 3 réarmements de suite sans retour au
+  suivi / au repos ; au-delà, la tenue en cours est coupée et tout `look`
+  est ignoré 4 s.
+- Payload hostile (entier géant, imbrication profonde) : refus journalisé,
+  jamais fatal ; `gain <= 0` refusé au démarrage du node.
+- Arbitrage existant : ordre ignoré tant qu'une animation a la main
+  (`animation_state`), geste coupé net quand une séquence démarre. Rampe /
+  amorti / gains inchangés. Pas de roues. Mode sim (`/neck/position`) et
+  robot (`neck` + yeux).
 - Autorisé aussi en tour spontané (aucun déplacement).
 
 ### 7.2 « Tourner » — pivot du corps, SIM-ONLY
 
-- Bouche : clé `"tourner": "gauche" | "droite" | "demi_tour"`.
-- Intention sur `rehearsal/chat_move` : `{"cmd": "tourner", "sens": ...}`.
-- Régisseur : mêmes refus que `aller_voir` (route OFF par David, pas de pose) ;
-  accepté hors séance ; lève l'arrêt vocal comme go ; stop/abort → cancel.
-- route_driver : ordre `route_goto` `{"turn_rad": +1.5708|-1.5708|3.1416}`
-  → manœuvre PIVOT seule (réutilise FACE de goto.py : cap cible = cap
-  courant + turn_rad, ω ≤ 0,6 rad/s, fader 0 = rien, timeout 15 s, pose non
-  finie/périmée = zéro, stop/off/cancel = zéro immédiat) → `arrived`.
+- Intention sur `rehearsal/chat_move` : `{"cmd": "tourner", "angle_deg":
+  <float signé, + = gauche>}`, 0 < |a| ≤ 180 (sinon refus `invalid`
+  `hors_bornes`, jamais saturé). Compat `{"sens": "gauche"|"droite"|
+  "demi_tour"}` = +90 / −90 / +180 (demi-tour par la gauche).
+- Régisseur : mêmes refus que `aller_voir` (route OFF par David, pas de
+  pose), journal `tourner` ; accepté hors séance ; lève l'arrêt vocal comme
+  go ; stop/abort -> cancel.
+- route_driver : `route_goto` `{"turn_rad": radians(a)}` -> pivot seul (FACE
+  de goto.py) : rotation INTÉGRÉE depuis la première pose fraîche (pas de
+  repli ±π : le sens d'un demi-tour ne dépend pas du bruit), |ω| ≤ 0,6 ×
+  facteur du fader (plancher 0,15 rad/s si facteur > 0 ; s'applique aussi
+  aux pivots d'« aller voir »), fader 0 = rien, timeout 15 s, translation
+  ≤ 1 m (poussé = abandon), calage (|ω| > 0,2 et rotation < 0,05 rad sur
+  2 s -> `stalled`), pose non finie/périmée = zéro, stop/off/cancel = zéro
+  immédiat -> `arrived`.
+- Un geste redemandé pendant un geste (« encore à gauche ») est un NOUVEL
+  ordre compté depuis la pose courante : l'ancien tombe (zéro franc,
+  `goto_suivant`), chacun garde ses bornes. Pas de cumul. (Le même OBJET
+  d'« aller voir » redemandé reste ignoré.)
 - Jamais en tour spontané (mise en mouvement, revue B1).
+
+### 7.3 « Avancer » — ligne droite, SIM-ONLY
+
+- Intention : `{"cmd": "avancer", "metres": <float>}`, 0,1 ≤ m ≤ 5. Négatif
+  refusé (`invalid` `recul` : on ne recule pas), < 0,1 ou > 5 -> `hors_bornes`.
+- Régisseur : comme « tourner » (journal `avancer`).
+- route_driver : `route_goto` `{"forward_m": m}` -> DRIVE de goto.py en
+  TENANT le cap de la première pose fraîche, sans FACE ; `arrived` dès que la
+  projection du déplacement sur ce cap atteint m (à 0,05 m près) — jamais de
+  pivot de retour s'il dépasse (revue M2). Mêmes bornes : fader,
+  croisière, calage 2 s, distance parcourue ≤ 1,5 × m, timeout = 10 s +
+  4 s/m, pose non finie/périmée = zéro, stop/off/cancel = zéro immédiat ->
+  `arrived`. Pas d'évitement (§5).
+- Jamais en tour spontané.
+
+### 7.4 Côté vision (chat_node, hors de ce dépôt)
+
+- Clés de bouche à définir sur ce contrat (angle chiffré, mètres).
 - Prompt de marche : retirer « tu ne sais ni tourner ni faire demi-tour » ;
-  il sait aller voir un objet de la liste, tourner la tête (regarder), et
-  pivoter sur place ; il ne sait toujours ni contourner ni reculer.
+  il sait aller voir un objet de la liste, tourner la tête (regarder), pivoter
+  sur place et avancer tout droit ; il ne sait toujours ni contourner ni
+  reculer.

@@ -103,6 +103,13 @@ CHAT_MOVE_TOPIC = "rehearsal/chat_move"
 # {"cmd": "aller_voir", "objet": "<texte>"} en plus de "go"/"stop". Chaîne
 # gravée des deux côtés.
 CHAT_MOVE_GOTO_CMD = "aller_voir"
+# Lot M2 (spec-aller-voir.md §7.2-§7.3) : gestes GÉNÉRAUX CHIFFRÉS (décision
+# de David du 31/10 : composables plus tard par un planificateur, pas de cas
+# figés). {"cmd": "tourner", "angle_deg": <signé, + = gauche>} (compat
+# {"sens": clé de TURN_DEG_COMPAT}) ; {"cmd": "avancer", "metres": <m>}.
+# Chaînes gravées des deux côtés.
+CHAT_MOVE_TURN_CMD = "tourner"
+CHAT_MOVE_FORWARD_CMD = "avancer"
 
 # --- « Aller voir » (lot M1, spec-aller-voir.md) — SIM-ONLY -----------------------
 # Vocabulaire d'objets (régisseur -> chat_node) : StringTime LATCHÉ (TRANSIENT_
@@ -138,6 +145,24 @@ GOTO_MAX_TRAVEL_FACTOR = 1.5
 #  - rotation max des pivots ALIGN / FACE (et du cap corrigé en DRIVE), SOUS
 #    ABS_MAX_ANG : un pivot sur place de 50 kg, plus doux que le suivi.
 GOTO_MAX_ANG = 0.6
+# « Tourner » (lot M2, §7.2) : pivot sur place d'un angle RELATIF, ordre
+# route_goto {"turn_rad": radians(angle_deg)}. Convention ROS (REP 103, z vers
+# le haut) : angle POSITIF = rotation vers la GAUCHE. 0 < |angle| ≤
+# TURN_MAX_DEG, sinon refus (jamais saturé : un ordre faux ne tourne pas).
+# Demi-tour de la compat = +180 : par la gauche, signe déterministe.
+TURN_MAX_DEG = 180.0
+TURN_DEG_COMPAT = {"gauche": 90.0, "droite": -90.0, "demi_tour": 180.0}
+# Abandon d'un pivot au-delà de cette durée (π à 0,6 rad/s ≈ 5 s + rampes).
+TURN_TIMEOUT_S = 15.0
+# « Avancer » (lot M2, §7.3) : ligne droite sur le cap courant, ordre
+# route_goto {"forward_m": m}, FORWARD_MIN_M ≤ m ≤ FORWARD_MAX_M. Négatif
+# REFUSÉ : on ne recule pas (pas de capteur arrière, spec §5 : pas
+# d'évitement). Sous FORWARD_MIN_M : refus (revue M2 — geste illisible).
+FORWARD_MIN_M = 0.1
+FORWARD_MAX_M = 5.0
+# Abandon au-delà de FORWARD_TIMEOUT_BASE_S + FORWARD_TIMEOUT_PER_M_S × m.
+FORWARD_TIMEOUT_BASE_S = 10.0
+FORWARD_TIMEOUT_PER_M_S = 4.0
 
 # Points de relais : nom -> (topic amont, topic aval, type). LISTE FERMÉE.
 # Le producteur est lancé par rehearsal.launch.py avec un remap vers l'amont ;

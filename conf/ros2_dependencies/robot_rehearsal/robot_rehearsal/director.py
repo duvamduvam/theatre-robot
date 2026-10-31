@@ -25,6 +25,10 @@ latché pour chat_node), decide_goto (arbitrage : objet inconnu, route OFF par
 David, trop loin), goto_order (l'ordre à route_driver), GotoPolicy (la
 manœuvre que NOUS avons ordonnée, ce que la voix et le fader peuvent en
 faire), VoiceMove.accept_goto (l'arrêt vocal levé à l'acceptation).
+Gestes chiffrés (lot M2, spec §7.2-§7.3) : decide_turn (« tourner »,
+angle_deg signé + = gauche, compat « sens ») et decide_forward (« avancer »,
+metres, jamais de recul) — mêmes refus que « aller voir » (route OFF par
+David, pas de pose), même acceptation (VoiceMove.accept_goto, GotoPolicy).
 """
 from __future__ import annotations
 
@@ -34,8 +38,10 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
-                                       GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
-                                       ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES)
+                                       FORWARD_MAX_M, FORWARD_MIN_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
+                                       ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TURN_DEG_COMPAT,
+                                       TURN_MAX_DEG)
+from robot_rehearsal.goto import forward_name, turn_name
 from robot_rehearsal.route import Poi, normalize_name
 from robot_rehearsal.scenario import Fault, Scenario
 
@@ -734,6 +740,68 @@ def decide_goto(objet, *, pois, pose, off_by_david: bool) -> GotoDecision:
 def goto_order(poi: Poi, standoff: float = GOTO_STANDOFF_M) -> str:
     """Payload route_goto (spec §2.3), positions de l'itinéraire telles quelles."""
     return json.dumps({"name": poi.name, "x": poi.x, "y": poi.y, "standoff": standoff})
+
+
+@dataclass(frozen=True)
+class GestureDecision:
+    # "accepted" | "invalid" | "route_off_by_david" | "no_pose"
+    effect: str
+    reason: str | None = None   # invalid : "illisible" | "hors_bornes" | "recul"
+    name: str | None = None     # nom de la manœuvre — MÊME texte que route_driver (goto.*_name)
+    order: str | None = None    # payload route_goto, si accepté
+
+
+def _number(value) -> float | None:
+    """Nombre fini (jamais un booléen), sinon None."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        return None
+    return float(value)
+
+
+def _gesture(name: str, order: dict, *, pose_known: bool, off_by_david: bool) -> GestureDecision:
+    """Refus communs à « aller voir », dans le même ordre (spec §7.2) : route
+    OFF par David, puis pas de pose fraîche (route_driver resterait à zéro,
+    mais le refus est DIT au journal plutôt que de laisser croire qu'il part)."""
+    if off_by_david:
+        return GestureDecision("route_off_by_david", name=name)
+    if not pose_known:
+        return GestureDecision("no_pose", name=name)
+    return GestureDecision("accepted", name=name, order=json.dumps(order))
+
+
+def decide_turn(intent: dict, *, pose_known: bool, off_by_david: bool) -> GestureDecision:
+    """« Tourner » (spec §7.2) : {"angle_deg": a} signé, + = GAUCHE (ROS), ou
+    compat {"sens": "gauche"|"droite"|"demi_tour"} (= +90 / −90 / +180).
+    "angle_deg" présent fait foi (illisible -> refus, pas de repli sur "sens").
+    0 < |a| ≤ TURN_MAX_DEG, sinon refus « hors_bornes » — jamais saturé : un
+    pivot faux ne tourne pas. Ordre : {"turn_rad": radians(a)}."""
+    if "angle_deg" in intent:
+        angle = _number(intent["angle_deg"])
+    else:
+        sens = intent.get("sens")
+        angle = TURN_DEG_COMPAT.get(sens.strip().lower()) if isinstance(sens, str) else None
+    if angle is None:
+        return GestureDecision("invalid", "illisible")
+    if not 0.0 < abs(angle) <= TURN_MAX_DEG:
+        return GestureDecision("invalid", "hors_bornes")
+    rad = math.radians(angle)
+    return _gesture(turn_name(rad), {"turn_rad": rad}, pose_known=pose_known, off_by_david=off_by_david)
+
+
+def decide_forward(intent: dict, *, pose_known: bool, off_by_david: bool) -> GestureDecision:
+    """« Avancer » (spec §7.3) : {"metres": m}, FORWARD_MIN_M ≤ m ≤ FORWARD_MAX_M.
+    Négatif -> refus « recul » (on ne recule pas), sous 0,1 m ou trop loin ->
+    « hors_bornes ».
+    Ordre : {"forward_m": m}."""
+    metres = _number(intent.get("metres"))
+    if metres is None:
+        return GestureDecision("invalid", "illisible")
+    if metres < 0.0:
+        return GestureDecision("invalid", "recul")
+    if not FORWARD_MIN_M <= metres <= FORWARD_MAX_M:
+        return GestureDecision("invalid", "hors_bornes")
+    return _gesture(forward_name(metres), {"forward_m": metres}, pose_known=pose_known,
+                    off_by_david=off_by_david)
 
 
 class GotoPolicy:

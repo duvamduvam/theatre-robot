@@ -63,6 +63,13 @@ route_driver). Issue journalisée d'après l'état latché : goto_arrived,
 goto_cancelled, goto_abort. Reprise : « go » ou geste du fader quand Didier
 est arrêté par la manœuvre -> salve « route on » (GotoPolicy, jamais contre
 un `off` de David).
+GESTES CHIFFRÉS (lot M2, spec §7.2-§7.3) : {"cmd": "tourner", "angle_deg"}
+(compat "sens") et {"cmd": "avancer", "metres"} sur le même topic, arbitrés par
+director.decide_turn / decide_forward, journalisés `tourner` / `avancer`
+(effect accepted | invalid (+reason) | route_off_by_david | no_pose). Acceptés
+EXACTEMENT comme « aller voir » (hors séance compris, arrêt vocal levé, lubie
+fermée, salve annulée, GotoPolicy) ; « stop » / abort les annulent par le même
+« cancel ».
 Les éléments `t: poi` partent sur l'« enter » du POI (rehearsal/poi_event) ;
 un « enter » hors séance (avant START, après la fin) est journalisé
 `poi_enter_ignored` et PAS mémorisé : START doit précéder `route on`.
@@ -93,14 +100,16 @@ from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 
 from robot.diagnostic.journal import JournalWriter, make_event
-from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_GOTO_CMD, CHAT_MOVE_TOPIC,
+from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
+                                       CHAT_MOVE_TOPIC, CHAT_MOVE_TURN_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC,
                                        OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
                                        RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_GOTO_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
 from robot_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
-                                      decide_goto, fader_moved, goto_order, messages, objects_payload,
+                                      decide_forward, decide_goto, decide_turn, fader_moved, goto_order,
+                                      messages, objects_payload,
                                       route_cmd_kind, speed_factor, speed_in_effect)
 from robot_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from robot_rehearsal.rehearsal_state import rehearsal_state
@@ -416,6 +425,8 @@ class DirectorNode(Node):
                 cmd = raw
             if isinstance(cmd, dict) and cmd.get("cmd") == CHAT_MOVE_GOTO_CMD:
                 self._aller_voir(cmd.get("objet"))
+            elif isinstance(cmd, dict) and cmd.get("cmd") in (CHAT_MOVE_TURN_CMD, CHAT_MOVE_FORWARD_CMD):
+                self._geste(cmd)
             else:
                 self._voice_move(cmd)   # tout autre objet JSON : « invalide », journalisé
         except Exception as e:   # un callback qui lève tue le node : jamais ici
@@ -490,17 +501,22 @@ class DirectorNode(Node):
         elif decision.effect == "relaunch":
             self._voice_relaunch_step(now)   # premier « on » tout de suite, la suite au tick
 
+    def _fresh_pose(self, now: float):
+        """(x, y) si la pose a moins de RouteConfig.odom_timeout_ms, sinon None."""
+        if self._pose is not None and (now - self._pose[2]) * 1000.0 <= RouteConfig.odom_timeout_ms:
+            return self._pose[:2]
+        return None
+
+    def _off_by_david(self) -> bool:
+        return self.goto_policy.off_by_david(self.reenable.latched_state, self.reenable.cause,
+                                             self.reenable.off_by_cmd)
+
     def _aller_voir(self, objet):
         """« Aller voir » (lot M1) : arbitré, journalisé `aller_voir`, puis
         exécuté — arrêt vocal levé / lubie fermée, ordre sur route_goto."""
         now = time.monotonic()
-        pose = None
-        if self._pose is not None and (now - self._pose[2]) * 1000.0 <= RouteConfig.odom_timeout_ms:
-            pose = self._pose[:2]
-        latched = self.reenable.latched_state
-        decision = decide_goto(objet, pois=self._pois, pose=pose,
-                               off_by_david=self.goto_policy.off_by_david(
-                                   latched, self.reenable.cause, self.reenable.off_by_cmd))
+        decision = decide_goto(objet, pois=self._pois, pose=self._fresh_pose(now),
+                               off_by_david=self._off_by_david())
         payload = {"objet": objet, "effect": decision.effect}
         if decision.poi is not None:
             payload["name"] = decision.poi.name
@@ -509,21 +525,46 @@ class DirectorNode(Node):
         self.log("aller_voir", payload)
         if decision.effect != "accepted":
             return
+        self._accept_maneuver(decision.poi.name, goto_order(decision.poi), "aller_voir", now)
+
+    def _geste(self, intent: dict):
+        """Gestes chiffrés (lot M2) : « tourner » / « avancer », arbitrés,
+        journalisés sous le nom de la commande, acceptés comme « aller voir »."""
+        now = time.monotonic()
+        kind = intent["cmd"]
+        decide = decide_turn if kind == CHAT_MOVE_TURN_CMD else decide_forward
+        decision = decide(intent, pose_known=self._fresh_pose(now) is not None,
+                          off_by_david=self._off_by_david())
+        # Champs du CONTRAT seulement (le producteur est un LLM : le reste ne
+        # va pas au journal).
+        payload = {k: intent[k] for k in ("angle_deg", "sens", "metres") if k in intent}
+        payload["effect"] = decision.effect
+        if decision.reason is not None:
+            payload["reason"] = decision.reason
+        if decision.name is not None:
+            payload["name"] = decision.name
+        self.log(kind, payload)
+        if decision.effect == "accepted":
+            self._accept_maneuver(decision.name, decision.order, kind, now)
+
+    def _accept_maneuver(self, name: str, order: str, by: str, now: float):
+        """Manœuvre ACCEPTÉE (aller voir, tourner, avancer) : comme un « go »
+        pour ce qui retient Didier, puis l'ordre part sur route_goto."""
         relaunching = self.voice.relaunching
         lubie_active, in_effect = self._voice_context()
         voice = self.voice.accept_goto(lubie_active=lubie_active, speed_in_effect=in_effect)
         if relaunching:
-            self.log("voice_relaunch_cancelled", {"by": "aller_voir"})
+            self.log("voice_relaunch_cancelled", {"by": by})
         if voice.effect == "close_lubie":
             # Comme « go » : sans arrêt vocal, la lubie rend la vitesse en vigueur ;
             # avec, elle ne rend rien et l'UNIQUE vitesse décidée part ci-dessous.
             self._execute(self.director.close_active("speed", now, only_type="lubie"), closed_by="voix",
                           give_back=voice.speed is None)
         if voice.speed is not None:
-            self.log("voice_hold_released", {"by": "aller_voir", "speed": voice.speed})
+            self.log("voice_hold_released", {"by": by, "speed": voice.speed})
             self._publish(ROUTE_SPEED_TOPIC, json.dumps(voice.speed))
-        self.goto_policy.accept(decision.poi.name)
-        self.pub_goto.publish(StringTime(msg=goto_order(decision.poi), time=0, anim=False))
+        self.goto_policy.accept(name)
+        self.pub_goto.publish(StringTime(msg=order, time=0, anim=False))
 
     def _voice_relaunch_step(self, now: float):
         """Salve de relance vocale : envoie « on » quand c'est dû, journalise l'expiration."""

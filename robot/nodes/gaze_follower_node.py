@@ -25,6 +25,21 @@ TAIT (les deux GazeControl passent en enabled=False) tant qu'une animation a la
 main sur le cou/les yeux. Deux drapeaux distincts pilotent l'état effectif :
 `_user_enabled` (toggle topic `gaze` on/off) et `_animation_active` (une séquence
 joue) ; l'activation réelle est leur ET logique (cf. _apply_enabled).
+
+« REGARDER » (lot M2, docs/spec-aller-voir.md §7.1) : topic `look`, StringTime
+JSON {"angle_deg": 30, "hold_ms": 4000} (+ = gauche ; compat {"dir": "gauche"|
+"droite"|"devant"}), publié par chat_node. Cou (et yeux en mode robot) à
+l'angle — saturé à la course utile du cou, journalisé —, tenue hold_ms (bornée
+1000-8000 ms dans gaze_control) en ignorant les personnes, puis
+retour lent au centre — interrompu par la première détection si le suivi est ON
+(reprise du suivi). Fonctionne suivi ON comme OFF : c'est un geste demandé, pas
+du suivi. ARBITRAGE INCHANGÉ : ordre ignoré tant qu'une animation a la main, et
+geste coupé net quand une séquence démarre. Aucun réglage d'amorti/gain touché :
+même mapping, même slew que le suivi. Cou et yeux seulement — pas de roues.
+Revue M2 : « gaze off » explicite coupe aussi le geste (télécommande > autonome) ;
+au plus 3 réarmements de suite sans retour au suivi, au-delà tenue coupée et
+`look` ignoré 4 s ; un payload hostile est refusé, jamais fatal ; gain <= 0
+refusé au démarrage.
 """
 
 import json
@@ -37,11 +52,14 @@ from rclpy.qos import QoSProfile, DurabilityPolicy
 from std_msgs.msg import Float64
 from robot_interfaces.msg import StringTime
 
-from robot.move.gaze_control import GazeControl, consigne_to_radians
+from robot.move.gaze_control import GazeControl, LookGovernor, consigne_to_radians, look_course_deg, parse_look
 
 # Contrats de topics (ne pas dévier — interfaces existantes).
 VISION_TOPIC = "/vision/person"     # PointStamped : x=azimut, y=élévation, z=confiance
 GAZE_CMD_TOPIC = "gaze"             # StringTime "on"/"off" : activation en direct
+# StringTime JSON {"angle_deg", "hold_ms"} : « regarder » (lot M2). Littéral gravé des
+# deux côtés (LOOK_TOPIC de chat_node, dépôt vision).
+LOOK_TOPIC = "look"
 NECK_TOPIC_ROBOT = "neck"          # StringTime : consigne 0-99 (vrai robot)
 NECK_TOPIC_SIM = "/neck/position"  # Float64 en radians (JointPositionController gz)
 LEFT_EYE_TOPIC = "left_eye"        # StringTime : consigne 0-99 (servo œil gauche)
@@ -133,6 +151,14 @@ class GazeFollowerNode(Node):
         self._animation_active = False
         self._animation_expiry_ms = 0  # échéance de péremption (cf. STATE_EXPIRY_MARGIN_MS)
 
+        # gain <= 0 : refus EXPLICITE au démarrage (revue M2) — c'est l'échelle
+        # du `look` (division par la course du cou) et l'étalonnage du suivi.
+        if not self.get_parameter("gain").value > 0:
+            raise ValueError("gaze_follower : paramètre gain > 0 attendu, reçu {!r}".format(
+                self.get_parameter("gain").value))
+        # Limiteur des réarmements de `look`, commun cou + yeux (revue M2).
+        self.look_governor = LookGovernor()
+
         # Logique pure : instanciée DÉSACTIVÉE, l'état effectif est posé juste
         # après par _apply_enabled() (évite de dupliquer le calcul ET ici).
         self.gaze = GazeControl(
@@ -179,6 +205,9 @@ class GazeFollowerNode(Node):
         # --- Entrées ---
         self.create_subscription(PointStamped, VISION_TOPIC, self._on_person, 10)
         self.create_subscription(StringTime, GAZE_CMD_TOPIC, self._on_gaze_cmd, 10)
+        # VOLATILE (défaut) : un « regarde à droite » ancien rejoué à la
+        # connexion n'a plus de sens scénique.
+        self.create_subscription(StringTime, LOOK_TOPIC, self._on_look, 10)
         # Arbitrage amont : abonnement latché. PIÈGE QoS : la durabilité doit
         # être TRANSIENT_LOCAL DES DEUX CÔTÉS — un abonné VOLATILE (défaut)
         # resterait compatible mais ne recevrait PAS le dernier état à la
@@ -226,6 +255,10 @@ class GazeFollowerNode(Node):
         was_active = self._animation_active
         self._animation_active = bool(name)
         if self._animation_active:
+            # La séquence a la main : un « regarder » en vol tombe (sinon il
+            # irait au bout, set_enabled(False) le laissant finir exprès).
+            self.gaze.cancel_look()
+            self.eyes.cancel_look()
             # ros_msg.time = remaining_ms au (re)démarrage (contrat
             # animations_node). time <= 0 (producteur hors contrat) : seule la
             # marge protège — 2 s de pause au pire, jamais muet pour toujours.
@@ -264,10 +297,54 @@ class GazeFollowerNode(Node):
                 " — en pause tant que la séquence en cours a la main" if self._animation_active else ""))
         elif value in ("off", False, 0, "0"):
             self._user_enabled = False
+            # « gaze off » EXPLICITE : la télécommande prime, un « regarder » en
+            # vol tombe aussi (revue M2). set_enabled, lui, le laisse finir —
+            # exprès, pour les republications d'animation_state.
+            self.gaze.cancel_look()
+            self.eyes.cancel_look()
             self._apply_enabled()  # set_enabled(False) -> reset complet de l'état
             self.get_logger().info("gaze OFF : suivi désactivé, état réinitialisé")
         else:
             self.get_logger().warn("commande gaze inconnue : {!r}".format(raw))
+
+    def _on_look(self, ros_msg):
+        # Un callback qui lève tue le node de PROD (revue M2) : jamais ici.
+        try:
+            self._look(ros_msg)
+        except Exception as e:
+            self.get_logger().error("look {!r} : {!r}".format(ros_msg.msg, e))
+
+    def _look(self, ros_msg):
+        # Contrat : JSON {"angle_deg", "hold_ms"} (compat "dir") ; décodage
+        # tolérant, angle saturé et tenue bornée dans parse_look (pur, testé).
+        # Échelle = course du COU (cf. LOOK_DIR_AZIMUTH dans gaze_control).
+        order = parse_look(ros_msg.msg, look_course_deg(self.gaze.gain))
+        if order is None:
+            self.get_logger().warn("look : ordre illisible, ignoré : {!r}".format(ros_msg.msg))
+            return
+        if self._animation_active:
+            # Arbitrage : une séquence scriptée a la main sur cou/yeux.
+            self.get_logger().info("look ignoré : une séquence a la main")
+            return
+        now = _now_ms()
+        verdict = self.look_governor.decide(self.gaze.looking, now)
+        if verdict == "limit":
+            # Flux de look : la tenue en cours est coupée, le suivi reprend.
+            self.gaze.end_hold()
+            self.eyes.end_hold()
+            self.get_logger().warn("look ignoré : trop de réarmements de suite, retour au suivi")
+            return
+        if verdict == "locked":
+            self.get_logger().info("look ignoré : verrou anti-flux en cours")
+            return
+        if order.saturated:
+            self.get_logger().warn("look : angle au-delà de la course du cou (±{:.0f}°), saturé : {!r}".format(
+                look_course_deg(self.gaze.gain), ros_msg.msg))
+        self.gaze.look(order.azimuth, order.hold_ms, now)
+        if self.eyes_enabled:
+            self.eyes.look(order.azimuth, order.hold_ms, now)
+        self.get_logger().info("look : azimut {:+.2f} pendant {} ms, puis {}".format(
+            order.azimuth, order.hold_ms, "reprise du suivi" if self._user_enabled else "retour au centre"))
 
     def _on_tick(self):
         now = _now_ms()
