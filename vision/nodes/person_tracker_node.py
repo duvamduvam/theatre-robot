@@ -29,10 +29,12 @@ import rclpy
 from geometry_msgs.msg import PointStamped
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 from sensor_msgs.msg import CompressedImage
 
 from vision.tracking.detector import MediaPipeDetector, open_camera
+from vision.tracking.camera_switch import CAMERA_OFF, CAMERA_ON, decode_camera_enable
 from vision.tracking.target_picker import TargetPicker
 
 # Modèle téléchargé DANS L'IMAGE Docker (Dockerfile-arm, curl au build) : pas
@@ -73,6 +75,15 @@ VIDEO_JPEG_QUALITY = 70        # même qualité que _encode_jpeg côté web_brid
 # latché — contrairement à animation_state, personne n'a besoin de connaître
 # l'état de désignation au démarrage tardif d'un abonné).
 DESIGNATE_TOPIC = "designate"
+
+# Coupe-webcam (vie privée de l'acteur au PC + arrêter que Didier s'adresse à
+# lui) : commande `camera_enable` ("on"/"off"), état `camera_state` LATCHÉ.
+# "off" = le périphérique est réellement LIBÉRÉ (la LED de la webcam s'éteint)
+# et plus rien n'est publié (/vision/person, /vision/person_box, vidéo).
+CAMERA_ENABLE_TOPIC = "camera_enable"
+CAMERA_STATE_TOPIC = "camera_state"
+# Cadence du log de réessai quand la réouverture échoue (le timer tourne à 30 Hz).
+CAMERA_RETRY_LOG_S = 5.0
 
 
 class PersonTrackerStartupError(RuntimeError):
@@ -139,6 +150,14 @@ class PersonTrackerNode(Node):
             )
             raise PersonTrackerStartupError("caméra indisponible") from exc
 
+        self._camera_device = camera_device
+        # Coupe-webcam : _camera_wanted est la CONSIGNE (écrite par le callback
+        # de commande), _cap l'ÉTAT réel. Seul _on_timer ouvre/ferme la capture
+        # (une seule main sur le périphérique, jamais depuis le callback ;
+        # rclpy.spin = exécuteur mono-thread, le drapeau n'a pas de course).
+        self._camera_wanted = True
+        self._camera_state_sent = None
+        self._last_retry_log_s = 0.0
         self._picker = TargetPicker(ema_alpha=ema_alpha)
         self._publisher = self.create_publisher(PointStamped, "/vision/person", 10)
         # Suivi roues (2026-07-11) : même cible, contrat ÉTENDU sur un topic
@@ -154,6 +173,15 @@ class PersonTrackerNode(Node):
         # défaut (depth=10, VOLATILE) : c'est une commande, pas un état à
         # rattraper par un abonné tardif.
         self.create_subscription(StringTime, DESIGNATE_TOPIC, self._on_designate, 10)
+
+        # Coupe-webcam : commande VOLATILE, état LATCHÉ (TRANSIENT_LOCAL,
+        # depth 1) des DEUX côtés côté abonné — sinon la page ouverte après
+        # le démarrage ne saurait jamais si la webcam est coupée.
+        self.create_subscription(StringTime, CAMERA_ENABLE_TOPIC, self._on_camera_enable, 10)
+        self._camera_state_pub = self.create_publisher(
+            StringTime, CAMERA_STATE_TOPIC,
+            QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        self._publish_camera_state(CAMERA_ON)  # défaut : la capture est ouverte ci-dessus
 
         # Retour vidéo (cf. constantes VIDEO_*) : publisher créé SEULEMENT si
         # video_fps > 0 — même garantie structurelle que drive_enabled côté
@@ -196,6 +224,53 @@ class PersonTrackerNode(Node):
         else:
             self.get_logger().warning(f"commande designate inconnue : {raw!r}")
 
+    def _on_camera_enable(self, ros_msg) -> None:
+        """Pose la CONSIGNE caméra ; l'ouverture/fermeture réelle se fait dans
+        _on_timer. Valeur inconnue : warning, rien ne change."""
+        wanted = decode_camera_enable(ros_msg.msg)
+        if wanted is None:
+            self.get_logger().warning(f"commande camera_enable inconnue : {ros_msg.msg!r}")
+            return
+        self._camera_wanted = wanted
+
+    def _publish_camera_state(self, state: str) -> None:
+        """Publie l'état EFFECTIF (pas la consigne), seulement sur changement."""
+        if state == self._camera_state_sent:
+            return
+        self._camera_state_sent = state
+        self._camera_state_pub.publish(StringTime(msg=state, time=0, anim=False))
+        self.get_logger().info(f"caméra {state}")
+
+    def _sync_camera(self) -> bool:
+        """Met la capture en accord avec la consigne. Renvoie True si une
+        capture ouverte est disponible pour lire une frame ce tour-ci."""
+        if not self._camera_wanted:
+            if self._cap is not None:
+                self._cap.release()  # libère /dev/video0 : la LED s'éteint
+                self._cap = None
+                # Désignation relâchée ET lissage effacé : à la reprise, pas de
+                # cible fantôme ni de verrouillage hérité d'avant la coupure.
+                self._picker.release()
+                self._picker.reset()
+            self._publish_camera_state(CAMERA_OFF)
+            return False
+        if self._cap is None:
+            try:
+                self._cap = open_camera(
+                    self._camera_device, width=CAPTURE_WIDTH,
+                    height=CAPTURE_HEIGHT, fps=CAPTURE_FPS,
+                )
+            except RuntimeError as exc:
+                # Consigne « on » conservée : on réessaie à chaque tour (log
+                # throttlé). L'état publié reste « off » tant que ça échoue.
+                now = time.monotonic()
+                if now - self._last_retry_log_s >= CAMERA_RETRY_LOG_S:
+                    self._last_retry_log_s = now
+                    self.get_logger().error(f"Réouverture caméra échouée : {exc} (nouvel essai)")
+                return False
+        self._publish_camera_state(CAMERA_ON)
+        return True
+
     def _publish_video(self, frame) -> None:
         """Republie la trame courante en JPEG compressé, throttlée à video_fps.
         Publiée QUE quelqu'un regarde ou non (DDS ne transmet rien sans
@@ -217,6 +292,8 @@ class PersonTrackerNode(Node):
         self._video_pub.publish(msg)
 
     def _on_timer(self) -> None:
+        if not self._sync_camera():
+            return  # coupée (ou en cours de réouverture) : AUCUNE publication
         ok, frame = self._cap.read()
         if not ok:
             # Échec de lecture PONCTUEL (pas au démarrage) : on log et on
