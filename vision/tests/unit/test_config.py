@@ -252,7 +252,17 @@ def test_llm_model_absent_garde_la_config():
 def test_llm_model_sonnet_accepte_et_fusionne():
     env = {"CHAT_LLM_MODEL": " Anthropic/Claude-Sonnet-5.5 "}
     assert vision_config.llm_model_from_env(env) == "anthropic/claude-sonnet-5.5"
-    assert vision_config.chat_env_overrides(env)[0]["chat_llm_model"] == "anthropic/claude-sonnet-5.5"
+    overrides = vision_config.chat_env_overrides(env)[0]
+    assert overrides["chat_llm_model"] == "anthropic/claude-sonnet-5.5"
+    # Sonnet 5.5 refuse {"enabled": False} (400, Didier muet) : effort minimal.
+    assert overrides["chat_llm_extra_body"] == {"reasoning": {"effort": "minimal"}}
+    assert overrides["chat_llm_max_tokens"] == 600
+
+
+def test_llm_model_haiku_garde_la_reflexion_coupee():
+    overrides = vision_config.chat_env_overrides({"CHAT_LLM_MODEL": "anthropic/claude-haiku-5.5"})[0]
+    assert "chat_llm_extra_body" not in overrides
+    assert "chat_llm_max_tokens" not in overrides
 
 
 def test_llm_model_inconnu_refuse():

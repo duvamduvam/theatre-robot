@@ -111,6 +111,19 @@ _WHISPER_MODELS = ("tiny", "base", "small", "medium")
 # rendrait Didier muet en pleine séance. Absente = défaut de config (Haiku).
 LLM_MODEL_ENV = "CHAT_LLM_MODEL"
 _LLM_MODELS = ("anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5")
+# Réglage de réflexion PAR MODÈLE (01/11) : Sonnet 5.5 REFUSE la réflexion
+# coupée (OpenRouter 400 « Reasoning is mandatory » — Didier muet à chaque
+# réplique pendant tout l'essai du 31/10, 94 tours perdus). Banc du 01/11
+# (réplique type, persona bougon) : effort "minimal" -> premier mot 0,68 s,
+# comme Haiku ; budget de 1024 tokens de réflexion -> 2,6 s. Plafond de sortie
+# relevé (les tokens de réflexion comptent dans max_tokens, cf. le piège Haiku
+# documenté sur chat_llm_extra_body). Haiku : rien ici, la config s'applique.
+_LLM_MODEL_OVERRIDES = {
+    "anthropic/claude-sonnet-5.5": {
+        "chat_llm_extra_body": {"reasoning": {"effort": "minimal"}},
+        "chat_llm_max_tokens": 600,
+    },
+}
 
 
 def llm_model_from_env(environ=os.environ):
@@ -191,6 +204,7 @@ def chat_env_overrides(environ=os.environ):
     llm_model = llm_model_from_env(environ)
     if llm_model is not None:
         overrides["chat_llm_model"] = llm_model
+        overrides.update(_LLM_MODEL_OVERRIDES.get(llm_model, {}))
     warnings = []
     move = move_enabled_from_env(environ)
     domain = environ.get("ROS_DOMAIN_ID", "").strip()
