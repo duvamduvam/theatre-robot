@@ -59,6 +59,11 @@ def generate_launch_description():
                                            " (ex. camera/image_raw/compressed), servi en LECTURE SEULE"
                                            " sur /perception. Vide (défaut) = désactivé, aucun abonnement."),
 
+        DeclareLaunchArgument("exterior_topic", default_value="",
+                              description="Topic sensor_msgs/Image de la caméra de poursuite (sim :"
+                                           " camera_ext/image_raw), servi en LECTURE SEULE sur"
+                                           " /exterior. Vide (défaut) = désactivé, aucun abonnement."),
+
         Node(
             package="robot_web",
             executable="web_bridge",
@@ -72,6 +77,7 @@ def generate_launch_description():
                 "max_angular": max_angular,
                 "rehearsal_enabled": rehearsal_enabled,
                 "perception_topic": LaunchConfiguration("perception_topic"),
+                "exterior_topic": LaunchConfiguration("exterior_topic"),
                 "camera_topic": LaunchConfiguration("camera_topic"),
                 "camera_compressed": ParameterValue(
                     LaunchConfiguration("camera_compressed"), value_type=bool),

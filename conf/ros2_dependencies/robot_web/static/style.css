@@ -178,7 +178,8 @@ input {
 }
 
 #video,
-#perception {
+#perception,
+#exterieur {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -209,6 +210,7 @@ input {
 
 #btn-video-refresh,
 #btn-perception-refresh,
+#btn-exterieur-refresh,
 #scene-visage-refresh {
   position: absolute;
   top: 0.4rem;

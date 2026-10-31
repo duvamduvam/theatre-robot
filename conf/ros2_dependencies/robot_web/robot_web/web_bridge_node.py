@@ -120,6 +120,12 @@ class WebBridgeNode(Node):
         # (rien ne change sur le vrai robot). Jamais inscriptible : ce topic n'est
         # pas dans la whitelist, le pont n'y publie rien.
         self.declare_parameter("perception_topic", "")
+        # Troisième flux, LECTURE SEULE : « Didier vu de l'extérieur » (caméra de
+        # poursuite Gazebo, SIM-ONLY, sensor_msgs/Image BRUT encodé ici comme
+        # camera_topic). Vide (défaut) = désactivé : aucun abonnement, /exterior
+        # répond 404, hello.exterior=false (le vrai robot n'a pas cette caméra).
+        # Hors whitelist : le pont n'y publie rien.
+        self.declare_parameter("exterior_topic", "")
         # SÉCURITÉ (SIM-ONLY) : topics de répétition simulée (route, route_speed,
         # rehearsal/cmd) de la page « scène ». FALSE par défaut ; même true, ignoré
         # hors domaine 43 (cf. plus bas) -- le vrai robot n'a jamais ces topics.
@@ -135,6 +141,7 @@ class WebBridgeNode(Node):
         self.video_fps = max(1, int(self.get_parameter("video_fps").value))
         self.camera_compressed = bool(self.get_parameter("camera_compressed").value)
         self.perception_topic = str(self.get_parameter("perception_topic").value or "")
+        self.exterior_topic = str(self.get_parameter("exterior_topic").value or "")
 
         # ROS_DOMAIN_ID n'est pas exposé comme paramètre de node par rclpy :
         # c'est une variable d'environnement du PROCESSUS, lue une fois au
@@ -223,14 +230,23 @@ class WebBridgeNode(Node):
                 CompressedImage, self.perception_topic, self._on_perception,
                 QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT))
 
+        self.flux_exterieur = DerniereFrameJpeg(self.video_fps)
+        if self.exterior_topic:
+            # Même QoS que perception (best effort depth 1 : seule la dernière
+            # frame compte) ; le capteur gz publie du brut, donc encodage ici.
+            self.create_subscription(
+                Image, self.exterior_topic, self._on_exterior,
+                QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT))
+
         self.get_logger().info(
             "web_bridge_node prêt : port={} domain_id={} token_required={} json_dir={}"
             " drive_enabled={} max_linear={} max_angular={} camera_topic={}"
-            " camera_compressed={} video_fps={} rehearsal_enabled={} perception_topic={!r}".format(
+            " camera_compressed={} video_fps={} rehearsal_enabled={} perception_topic={!r}"
+            " exterior_topic={!r}".format(
                 self.web_port, self.domain_id, self.sessions.token_required, self.json_dir,
                 self.drive_enabled, self.max_linear, self.max_angular,
                 self.camera_topic, self.camera_compressed, self.video_fps,
-                self.rehearsal_enabled, self.perception_topic))
+                self.rehearsal_enabled, self.perception_topic, self.exterior_topic))
         if self.drive_enabled:
             # Trace explicite au démarrage : le pilotage roues est ACTIF (sim).
             self.get_logger().warning(
@@ -321,13 +337,22 @@ class WebBridgeNode(Node):
         """Callback abonnement caméra (thread spin). Throttle AVANT encodage :
         le Pi ne doit pas encoder de JPEG pour des frames qui seront jetées
         (au plus video_fps encodages/s). Garde la dernière frame JPEG sous lock."""
+        self._encoder_et_garder(self.flux_camera, msg)
+
+    def _on_exterior(self, msg: Image) -> None:
+        """Callback du flux « vu de l'extérieur » (thread spin) : même chemin
+        que la caméra embarquée (throttle puis encodage), lecture seule."""
+        self._encoder_et_garder(self.flux_exterieur, msg)
+
+    @staticmethod
+    def _encoder_et_garder(flux: "DerniereFrameJpeg", msg: Image) -> None:
         now = time.monotonic()
-        if not self.flux_camera.admettre(now):
+        if not flux.admettre(now):
             return  # frame excédentaire : jetée AVANT tout encodage
         jpeg = _encode_jpeg(msg)
         if jpeg is None:
             return
-        self.flux_camera.poser(jpeg, now)
+        flux.poser(jpeg, now)
 
     def _on_camera_compressed(self, msg: CompressedImage) -> None:
         """Callback abonnement caméra en mode camera_compressed (thread spin) :
@@ -382,7 +407,8 @@ class WebBridgeNode(Node):
                            drive_enabled=self.drive_enabled,
                            max_linear=self.max_linear, max_angular=self.max_angular,
                            rehearsal=self.rehearsal_enabled,
-                           perception=bool(self.perception_topic))
+                           perception=bool(self.perception_topic),
+                           exterior=bool(self.exterior_topic))
 
 
 # --- Encodage vidéo (JPEG) : fonction pure, hors du node -------------------
@@ -715,7 +741,7 @@ async def _servir_mjpeg(request: web.Request, flux: DerniereFrameJpeg) -> web.St
     du flux donné, servi à video_fps. Aucune frame fraîche (ou flux tari > VIDEO_STALE_S)
     -> 503, l'UI affiche "pas de vidéo". Chaque client a son propre rythme
     d'envoi ; l'encodage, lui, est mutualisé (fait une seule fois par frame dans
-    le callback ROS, cf. _on_camera). Partagé par /video et /perception."""
+    le callback ROS, cf. _on_camera). Partagé par /video, /perception et /exterior."""
     node = request.app["node"]
     interval = 1.0 / node.video_fps
 
@@ -756,6 +782,15 @@ async def perception_handler(request: web.Request) -> web.StreamResponse:
     return await _servir_mjpeg(request, node.flux_perception)
 
 
+async def exterior_handler(request: web.Request) -> web.StreamResponse:
+    """GET /exterior : Didier vu de l'extérieur (caméra de poursuite, SIM-ONLY),
+    LECTURE SEULE. 404 si exterior_topic est vide (flux désactivé)."""
+    node = request.app["node"]
+    if not node.exterior_topic:
+        return web.Response(status=404, text="flux extérieur désactivé")
+    return await _servir_mjpeg(request, node.flux_exterieur)
+
+
 def build_app(node: WebBridgeNode) -> web.Application:
     app = web.Application()
     app["node"] = node
@@ -779,6 +814,7 @@ def build_app(node: WebBridgeNode) -> web.Application:
     app.router.add_get("/ws", websocket_handler)
     app.router.add_get("/video", video_handler)
     app.router.add_get("/perception", perception_handler)
+    app.router.add_get("/exterior", exterior_handler)
     app.router.add_static("/static/", static_dir)
 
     app.cleanup_ctx.append(_background_loops_ctx)

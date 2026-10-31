@@ -161,6 +161,12 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
   laquelle le LLM de réflexion raisonne. Ce 2e panneau (lecture seule, paramètre
   `perception_topic`) n'apparaît que si le pont l'annonce ; en sim `sim.launch.py`
   le passe d'office.
+- Page scène, quel panneau montre quoi : « Didier vu de l'extérieur » = caméra de
+  POURSUITE Gazebo (3 m derrière, 2 m au-dessus, tourne avec lui ; `camera_ext/image_raw`,
+  `/exterior`, paramètre `exterior_topic`, SIM-ONLY, lecture seule) pour juger comment il
+  bouge ; « Caméra de Didier (Gazebo) » = ce que voit son buste (`/video`) ; « Ce que Didier
+  voit » = l'image analysée par la perception (`/perception`). Le panneau extérieur exige
+  un REDÉMARRAGE de la sim entière (le link et le capteur sont dans le robot spawné).
 
 **2. La tête** (`../dadou_vision_ros/conf/docker/x86/`) :
 `CHAT=true docker compose -f docker-compose-x86.yml up -d` — puis, depuis la

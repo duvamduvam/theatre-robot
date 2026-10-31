@@ -86,6 +86,15 @@
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS
 
+# Caméra de POURSUITE (SIM-ONLY, « Didier vu de l'extérieur » sur la page scène) :
+# derrière et au-dessus du robot, topic gz EXPLICITE comme la caméra embarquée.
+# web_bridge_node s'y abonne (paramètre exterior_topic) et l'encode en JPEG.
+- ros_topic_name: "camera_ext/image_raw"
+  gz_topic_name: "camera_ext/image_raw"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+
 # LED (leds_sim_node, package robot_sim) : le monde `stage` charge le système
 # gz UserCommands, qui expose /world/stage/material_color en écriture. Publier
 # dessus change en direct le matériau (diffuse/emissive/ambient) d'un visual

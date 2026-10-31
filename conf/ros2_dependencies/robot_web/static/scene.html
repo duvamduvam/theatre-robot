@@ -118,6 +118,19 @@
 
     <!-- ===================== COLONNE 1 : caméra de Didier ===================== -->
     <section class="scene-colonne">
+      <!-- Caméra de POURSUITE (derrière et au-dessus, tourne avec lui), LECTURE SEULE,
+           SIM-ONLY : pour juger comment Didier bouge. Placée en premier ; masquée
+           tant que le serveur n'annonce pas hello.exterior. -->
+      <div id="scene-exterieur" class="scene-exterieur" hidden>
+        <h2>Didier vu de l'extérieur</h2>
+        <div class="carte carte-video">
+          <div class="video-wrap">
+            <img id="exterieur" alt="Didier vu de l'extérieur (caméra de poursuite)">
+            <div id="exterieur-placeholder" class="video-placeholder">pas de vidéo</div>
+            <button id="btn-exterieur-refresh" type="button" title="Recharger le flux">⟳</button>
+          </div>
+        </div>
+      </div>
       <h2>Caméra de Didier (Gazebo)</h2>
       <div class="carte carte-video">
         <div class="video-wrap">

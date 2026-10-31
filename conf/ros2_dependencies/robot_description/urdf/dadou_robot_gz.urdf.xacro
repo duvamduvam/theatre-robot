@@ -98,6 +98,54 @@
     </sensor>
   </gazebo>
 
+  <!-- ======== Caméra de POURSUITE (SIM-ONLY, « Didier vu de l'extérieur ») ========
+       Pour JUGER COMMENT DIDIER BOUGE (la caméra embarquée, elle, regarde devant
+       depuis le buste). Fixée à base_link : elle suit ET tourne avec le robot.
+       Pose (repère base_link, x avant, z haut, sol à z = -0,23) : 3 m derrière,
+       2 m au-dessus, piquée de 0,45 rad (pitch>0 = l'axe +x plonge) -> vise un
+       point ~3,5 m en avant à ~0,3 m au-dessus du sol : le robot (de -0,58 en x
+       à +0,3, haut de ~1,4 m) tient en entier avec un peu de route devant.
+       Ni visuel NI collision : la caméra ne se voit pas elle-même, ne projette
+       pas d'ombre et ne gêne rien (masse/inertie minimes mais valides, donc
+       négligeables même à 3 m de bras de levier). preserveFixedJoint : même
+       piège que camera_link : sans lui le link fixe sans géométrie serait
+       fusionné dans base_link à la conversion SDF et le capteur perdrait sa pose
+       (sa référence gazebo ne trouverait plus son link). -->
+  <link name="chase_camera_link">
+    <xacro:box_inertial m="0.01" x="0.02" y="0.02" z="0.02"/>
+  </link>
+  <joint name="chase_camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="chase_camera_link"/>
+    <origin xyz="-3.0 0 2.0" rpy="0 0.45 0"/>
+  </joint>
+  <gazebo reference="chase_camera_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+
+  <!-- Capteur : <topic> EXPLICITE (camera_ext/image_raw), comme camera/image_raw,
+       pour que le bridge s'y abonne sans nom auto-généré. 10 Hz : suffit pour
+       juger un mouvement et épargne le rendu de la sim. Champ 1,2 rad. -->
+  <gazebo reference="chase_camera_link">
+    <sensor name="chase_camera" type="camera">
+      <camera>
+        <horizontal_fov>1.2</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.1</near>
+          <far>100.0</far>
+        </clip>
+      </camera>
+      <always_on>1</always_on>
+      <update_rate>10</update_rate>
+      <topic>camera_ext/image_raw</topic>
+    </sensor>
+  </gazebo>
+
   <!-- Roue folle : elle est modélisée en sphère fixe, elle doit glisser. -->
   <gazebo reference="caster_rear_link">
     <mu1>0.05</mu1>

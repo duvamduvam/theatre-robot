@@ -332,7 +332,8 @@ def rehearsal_allowed(domain_id: int) -> bool:
 
 def build_hello(domain_id: int, writer: bool, token_required: bool,
                 drive_enabled: bool, max_linear: float, max_angular: float,
-                rehearsal: bool = False, perception: bool = False) -> dict:
+                rehearsal: bool = False, perception: bool = False,
+                exterior: bool = False) -> dict:
     # drive_enabled/max_linear/max_angular : l'UI affiche les plafonds et
     # VERROUILLE le pad de pilotage si drive_enabled=false (WEB_DRIVE=false),
     # elle n'a donc pas à les deviner. Le plafond DUR reste appliqué serveur
@@ -342,6 +343,8 @@ def build_hello(domain_id: int, writer: bool, token_required: bool,
     # perception : le serveur sert /perception (second flux vidéo, LECTURE SEULE,
     # ce que voit la perception de Didier) ; la page n'affiche son panneau que
     # si c'est vrai. Défaut False = flux absent, comme sur le vrai robot.
+    # exterior : idem pour /exterior (« Didier vu de l'extérieur », caméra de
+    # poursuite Gazebo, SIM-ONLY, lecture seule). Défaut False = absent.
     return {
         "type": "hello",
         "domain_id": domain_id,
@@ -353,6 +356,7 @@ def build_hello(domain_id: int, writer: bool, token_required: bool,
         "max_angular": max_angular,
         "rehearsal": rehearsal,
         "perception": perception,
+        "exterior": exterior,
     }
 
 

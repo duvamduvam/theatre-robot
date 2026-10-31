@@ -109,6 +109,12 @@ liaison.surLiaison = () => {
   });
   // Panneau « Ce que Didier voit » : seulement si le serveur sert /perception.
   // Le flux n'est chargé qu'à la première annonce (puis relancé par ⟳).
+  // Idem pour « Didier vu de l'extérieur » (/exterior, caméra de poursuite sim).
+  $("scene-exterieur").hidden = !state.exterior;
+  if (state.exterior && !fluxExterieur.charge) {
+    fluxExterieur.charge = true;
+    fluxExterieur.charger();
+  }
   perceptionAnnoncee = Boolean(state.perception);
   majVisibilitePerception();
   if (state.perception && !fluxPerception.charge) {
@@ -415,6 +421,16 @@ let fluxVisage = null;
 // Flux perception (lecture seule) : créé ici, chargé par surLiaison à l'annonce.
 let fluxPerception = null;
 
+// Flux « vu de l'extérieur » (lecture seule) : même mécanique que la perception.
+let fluxExterieur = null;
+
+function installerExterieur() {
+  fluxExterieur = creerFluxMjpeg("exterieur", "exterieur-placeholder",
+                                 () => urlHttp("/exterior?ts=" + Date.now()));
+  fluxExterieur.charge = false;
+  $("btn-exterieur-refresh").addEventListener("click", () => fluxExterieur.charger());
+}
+
 function installerPerception() {
   fluxPerception = creerFluxMjpeg("perception", "perception-placeholder",
                                   () => urlHttp("/perception?ts=" + Date.now()));
@@ -457,6 +473,7 @@ function installerVisage() {
 construirePersonas();
 // Tout est inerte et la répétition masquée jusqu'au premier hello du serveur.
 installerPerception();
+installerExterieur();
 liaison.surLiaison();
 installerVideo();
 installerVisage();

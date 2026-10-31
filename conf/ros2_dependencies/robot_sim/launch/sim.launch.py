@@ -220,9 +220,12 @@ def generate_launch_description():
             # ("camera/image_raw", bridgé depuis gz). perception_topic : ce que
             # voit person_tracker (webcam du PC, conteneur vision, même domaine 43),
             # servi en lecture seule sur /perception -> panneau « Ce que Didier voit ».
+            # exterior_topic : caméra de poursuite gz (xacro, chase_camera_link),
+            # servie en lecture seule sur /exterior -> « Didier vu de l'extérieur ».
             parameters=[{"web_port": web_port, "drive_enabled": web_drive,
                          "rehearsal_enabled": rehearsal,
-                         "perception_topic": "camera/image_raw/compressed"}],
+                         "perception_topic": "camera/image_raw/compressed",
+                         "exterior_topic": "camera_ext/image_raw"}],
             condition=IfCondition(web),
         ),
     ])

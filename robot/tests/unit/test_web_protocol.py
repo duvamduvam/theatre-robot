@@ -286,7 +286,7 @@ def test_build_hello():
         "type": "hello", "domain_id": 43, "mode": "SIMULATION",
         "writer": True, "token_required": False,
         "drive_enabled": False, "max_linear": 0.5, "max_angular": 1.0,
-        "rehearsal": False, "perception": False}
+        "rehearsal": False, "perception": False, "exterior": False}
 
 
 def test_build_hello_expose_les_plafonds_et_l_etat_pilotage():
@@ -1034,6 +1034,50 @@ def test_pont_perception_garde_le_jpeg_tel_quel(pont, monkeypatch):
     noeud2 = _creer_noeud(pont, monkeypatch, perception_topic="p")
     noeud2.abonnements["p"][1](types.SimpleNamespace(format="png", data=b"x"))
     assert noeud2.flux_perception.snapshot()[0] is None
+
+
+def test_build_hello_annonce_l_exterieur():
+    hello = build_hello(43, writer=False, token_required=False, drive_enabled=False,
+                        max_linear=0.5, max_angular=1.0, exterior=True)
+    assert hello["exterior"] is True
+    # Défaut = False : sans exterior_topic (vrai robot), le panneau reste masqué.
+    hello = build_hello(42, writer=False, token_required=True, drive_enabled=False,
+                        max_linear=0.5, max_angular=1.0)
+    assert hello["exterior"] is False
+
+
+def test_pont_exterieur_desactive_par_defaut(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch)
+    assert noeud.exterior_topic == ""
+    assert "camera_ext/image_raw" not in noeud.abonnements
+    assert noeud.hello_message("c1")["exterior"] is False
+
+
+@pytest.mark.parametrize("domaine", ["43", "42"])
+def test_pont_exterieur_actif_lecture_seule(pont, monkeypatch, domaine):
+    noeud = _creer_noeud(pont, monkeypatch, domaine=domaine,
+                         exterior_topic="camera_ext/image_raw")
+    assert noeud.hello_message("c1")["exterior"] is True
+    qos, _callback = noeud.abonnements["camera_ext/image_raw"]
+    assert (qos.depth, qos.reliability) == (1, "BEST_EFFORT")
+    # Lecture seule : aucun publisher sur ce topic, ni dans la whitelist.
+    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE
+    for rehearsal in (False, True):
+        assert "camera_ext/image_raw" not in effective_whitelist(rehearsal)
+    with pytest.raises(ProtocolError):
+        parse_client_message(
+            '{"type":"cmd","topic":"camera_ext/image_raw","value":1}',
+            effective_whitelist(True))
+
+
+def test_pont_exterieur_encode_en_jpeg_sans_toucher_la_camera(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch, exterior_topic="camera_ext/image_raw")
+    _qos, callback = noeud.abonnements["camera_ext/image_raw"]
+    callback(types.SimpleNamespace(encoding="rgb8", width=2, height=2, data=bytes(12)))
+    jpeg, _at = noeud.flux_exterieur.snapshot()
+    assert jpeg[:2] == b"\xff\xd8"          # signature JPEG
+    assert noeud.flux_camera.snapshot()[0] is None
+    assert noeud.flux_perception.snapshot()[0] is None
 
 
 def test_derniere_frame_jpeg_throttle(pont):
