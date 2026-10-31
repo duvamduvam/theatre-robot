@@ -22,6 +22,7 @@ Module PUR (stdlib seule) : testé en CI sans ROS (test_emergency.py).
 """
 from __future__ import annotations
 
+import re
 import unicodedata
 from typing import Optional
 
@@ -31,7 +32,10 @@ from typing import Optional
 # « Arrêt ! », « Stoppez ! », « Freinez ! », « Halt! » n'arrêtaient pas Didier.
 STOP_WORDS = frozenset({"stop", "stoppe", "stopper", "arrete", "arretez", "arreter",
                         "halte", "urgence", "freine",
-                        "arretes", "arret", "stoppez", "freinez", "halt"})
+                        "arretes", "arret", "stoppez", "freinez", "halt",
+                        # Seconde revue du 31/10 (mineur 3) : infinitif et
+                        # faute d'accord courante du STT.
+                        "freiner", "stoppes"})
 
 # Mots tolérés AUTOUR d'un mot d'arrêt sans changer le sens d'urgence.
 # « s », « te » : restes de l'élision (« s'il te plaît » -> s il te plait).
@@ -53,26 +57,60 @@ FILLERS = frozenset({"didier", "toi", "tout", "de", "suite", "non", "mais", "eh"
 # justement la forme de la panique.
 MAX_WORDS = 8
 
+# Lettre répétée 3 fois ou plus (« Stooop », « Arrrête ») : le cri allongé,
+# tel que le STT l'écrit. Ramenée à UNE lettre (seconde revue du 31/10,
+# mineur 3). Seuil 3 et pas 2 : « arrête », « stoppe » ont des doubles
+# légitimes. Effet de bord accepté : « créée » -> « cree » -> « cre » (aucun
+# mot d'arrêt ni de remplissage ne peut en naître).
+_STRETCHED = re.compile(r"(.)\1{2,}")
+
+# Ramené à une lettre, « Arrrête » devient « arete » — plus « arrete ». Un mot
+# compte donc aussi comme mot d'arrêt si sa forme ÉCRASÉE (toute lettre
+# doublée ramenée à une : arrete -> arete, stoppe -> stope) est celle d'un mot
+# d'arrêt. Collision assumée, sens sûr : « arête » (de poisson) arrête Didier.
+_DOUBLED = re.compile(r"(.)\1+")
+
+
+def _squash(word: str) -> str:
+    return _DOUBLED.sub(r"\1", word)
+
+
+_STOP_SQUASHED = frozenset(_squash(word) for word in STOP_WORDS)
+
+
+def _is_stop(word: str) -> bool:
+    return word in STOP_WORDS or _squash(word) in _STOP_SQUASHED
+
 
 def _words(text: str) -> list:
     """Mots normalisés : minuscules, accents retirés (NFD puis suppression
     des marques combinantes Mn), tout ce qui n'est pas une lettre devient
-    un espace (ponctuation, tirets d'« arrête-toi », apostrophes, chiffres)."""
+    un espace (ponctuation, tirets d'« arrête-toi », apostrophes, chiffres),
+    lettres répétées ≥ 3 fois ramenées à une (cf. _STRETCHED)."""
     decomposed = unicodedata.normalize("NFD", text.lower())
     letters = "".join(" " if not ch.isalpha() else ch
                       for ch in decomposed if unicodedata.category(ch) != "Mn")
-    return letters.split()
+    return _STRETCHED.sub(r"\1", letters).split()
+
+
+def normalized_words(text: Optional[str]) -> set:
+    """Ensemble des mots normalisés de `text` (même normalisation que les
+    deux tests ci-dessous). Public pour l'écoute garde (vision.ai.conversation) :
+    elle compare un mot d'arrêt entendu aux mots que Didier vient de dire —
+    une seule normalisation dans tout le projet. Jamais d'exception."""
+    return set(_words(text or ""))
 
 
 def is_emergency_stop(text: Optional[str]) -> bool:
-    """Vrai SSI au moins un mot de STOP_WORDS, TOUS les mots dans
+    """Vrai SSI au moins un mot de STOP_WORDS (ou sa forme écrasée, cf.
+    _is_stop), TOUS les mots dans
     STOP_WORDS ∪ FILLERS, et au plus MAX_WORDS mots DISTINCTS (les
     répétitions ne comptent pas). Jamais d'exception (None ou vide -> False)."""
     words = _words(text or "")
     if not words or len(set(words)) > MAX_WORDS:
         return False
-    return (any(word in STOP_WORDS for word in words)
-            and all(word in STOP_WORDS or word in FILLERS for word in words))
+    return (any(_is_stop(word) for word in words)
+            and all(_is_stop(word) or word in FILLERS for word in words))
 
 
 def contains_stop_word(text: Optional[str]) -> bool:
@@ -86,4 +124,12 @@ def contains_stop_word(text: Optional[str]) -> bool:
     Didier qui dit lui-même « arrête » ou « l'arrêt de bus », David qui dit
     « arrête de râler » — Didier se tait et s'arrête. L'écoute NORMALE garde
     is_emergency_stop (règle stricte du 23/10). Jamais d'exception."""
-    return any(word in STOP_WORDS for word in _words(text or ""))
+    return bool(stop_words_in(text))
+
+
+def stop_words_in(text: Optional[str]) -> set:
+    """Mots d'arrêt (formes normalisées) présents dans `text` — vide si
+    aucun. Sert à l'écoute garde pour écarter l'ÉCHO de Didier : un mot
+    d'arrêt qu'il a lui-même prononcé dans la réplique en cours (seconde
+    revue du 31/10, important 1). Jamais d'exception."""
+    return {word for word in _words(text or "") if _is_stop(word)}

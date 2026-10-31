@@ -22,6 +22,7 @@ POURQUOI run_cmd injectable : permet aux tests de remplacer
 from __future__ import annotations
 
 import subprocess
+import threading
 from collections import deque
 from typing import Optional
 
@@ -89,6 +90,12 @@ class MicCapture:
         # process (stdout scripté) pour ne jamais dépendre du binaire arecord.
         self._run_cmd = run_cmd or subprocess.Popen
         self._process = None
+        # start()/stop() appelés par TROIS threads (seconde revue du 31/10) :
+        # conversation, lecteur de l'écoute garde, callback ROS chat OFF
+        # (chat_node._on_chat_cmd). Sans verrou, un stop() pouvait trouver
+        # `_process` non-None puis None entre deux lignes (AttributeError
+        # non rattrapée côté ROS) ou un start() doubler arecord.
+        self._lock = threading.Lock()
         # maxlen=preroll_frames : deque borné, les trames les plus anciennes
         # sortent automatiquement quand le tampon déborde — pas de gestion
         # manuelle de taille nécessaire.
@@ -99,6 +106,10 @@ class MicCapture:
         évite de doubler le processus si start() est appelé deux fois de
         suite, ce qui arrive dans le déroulé normal d'un tour, cf.
         vision.ai.conversation)."""
+        with self._lock:
+            self._start_locked()
+
+    def _start_locked(self) -> None:
         if self._process is not None and self._process.poll() is None:
             return  # déjà en cours
 
@@ -123,11 +134,12 @@ class MicCapture:
         de la voix de Didier elle-même, via la sortie haut-parleur captée par
         le micro). Purger à chaque stop() garantit que le pré-roll du tour
         suivant ne contient QUE de l'audio capté après le redémarrage."""
-        if self._process is not None:
-            self._process.terminate()
-            if hasattr(self._process, "wait"):
-                self._process.wait()
-            self._process = None
+        with self._lock:
+            process, self._process = self._process, None
+            if process is not None:
+                process.terminate()
+                if hasattr(process, "wait"):
+                    process.wait()
         self.purge_preroll()
 
     def purge_preroll(self) -> None:
@@ -150,10 +162,16 @@ class MicCapture:
         renvoie moins d'octets que la taille de trame attendue — cas normal
         d'un pipe bufferisé : read(n) ne renvoie moins de n qu'à l'EOF réel).
         """
-        if self._process is None or self._process.stdout is None:
+        # `_process` lu UNE seule fois (pas de verrou ici : read() bloque une
+        # trame entière, il ne doit pas retenir start/stop) — un stop()
+        # concurrent le remet à None, la copie locale reste valable et son
+        # flux rend EOF.
+        process = self._process
+        stdout = process.stdout if process is not None else None
+        if stdout is None:
             return None
 
-        data = self._process.stdout.read(self._frame_bytes)
+        data = stdout.read(self._frame_bytes)
         if not data or len(data) < self._frame_bytes:
             return None
 

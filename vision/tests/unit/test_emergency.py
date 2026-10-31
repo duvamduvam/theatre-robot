@@ -8,7 +8,7 @@ doivent rester vrais (un faux négatif = Didier qui ne s'arrête pas).
 import pytest
 
 from vision.ai.emergency import (FILLERS, MAX_WORDS, STOP_WORDS, contains_stop_word,
-                                 is_emergency_stop)
+                                 is_emergency_stop, normalized_words, stop_words_in)
 
 
 @pytest.mark.parametrize("texte", [
@@ -84,7 +84,8 @@ def test_listes_gravees():
     assert MAX_WORDS == 8
     assert STOP_WORDS == {"stop", "stoppe", "stopper", "arrete", "arretez", "arreter",
                           "halte", "urgence", "freine",
-                          "arretes", "arret", "stoppez", "freinez", "halt"}
+                          "arretes", "arret", "stoppez", "freinez", "halt",
+                          "freiner", "stoppes"}
     assert FILLERS == {"didier", "toi", "tout", "de", "suite", "non", "mais", "eh",
                        "he", "oh", "ho", "la", "attention", "s", "il", "te", "plait",
                        "vous", "maintenant",
@@ -124,3 +125,29 @@ def test_contains_stop_word_faux(texte):
 def test_contains_stop_word_ne_change_pas_is_emergency_stop():
     # Le critère strict de l'écoute NORMALE reste celui du 23/10.
     assert is_emergency_stop("et puis la boulangerie. Stop ! Je disais donc") is False
+
+
+# --------------------------------------------------------------------------
+# Seconde revue du 31/10 (mineur 3) : cri allongé et nouvelles formes, pour
+# LES DEUX critères.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("texte", ["Stooop !", "Arrrête !", "Stoooooop stop", "Freiner !",
+                                   "Stoppes !", "Arrrrêêête-toi !"])
+def test_cri_allonge_et_nouvelles_formes(texte):
+    assert is_emergency_stop(texte) is True
+    assert contains_stop_word(texte) is True
+
+
+def test_lettres_repetees_ramenees_a_une():
+    assert normalized_words("Stooop, Arrrête !") == {"stop", "arete"}
+    # Les doubles légitimes restent intacts.
+    assert normalized_words("arrête stoppe") == {"arrete", "stoppe"}
+    # Collision ASSUMÉE de la forme écrasée (sens sûr, cf. _is_stop).
+    assert contains_stop_word("une arête de poisson") is True
+
+
+def test_stop_words_in_rend_les_formes_normalisees():
+    assert stop_words_in("Bon, je m'arrête là, stop.") == {"arrete", "stop"}
+    assert stop_words_in("c'est joli") == set()
+    assert stop_words_in(None) == set()

@@ -164,12 +164,18 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
          attend que ces stops tardifs soient jugés (GUARD_LATE_GO_WAIT_S) ;
        - file STT bornée (GUARD_QUEUE_MAX, I2) : les tranches récentes
          d'abord ; la garde ne touche pas `last_source` du STT (m1).
-       ÉCHO ASSUMÉ : Didier s'entend dans le micro. Une de ses répliques
-       contenant un mot d'arrêt (« arrête », « l'arrêt de bus ») l'interrompt
-       lui-même — faux positif dans le sens SÛR (il s'arrête), accepté ; pas
-       de filtrage par comparaison au texte prononcé (complexité, faux
-       négatifs). Coût : son écho déclenche aussi des transcriptions (une par
-       tranche) pendant qu'il parle. Ce n'est PAS un arrêt de sécurité (cf. vision.ai.emergency) : le
+       ÉCHO : Didier s'entend dans le micro. Seconde revue du 31/10
+       (important 1) : un mot d'arrêt qu'il a LUI-MÊME prononcé dans la
+       réplique en cours (forme normalisée exacte) est ignoré par la garde —
+       sinon « d'accord, je m'arrête » coupait sa réplique, et un « stop » de
+       son écho suivait son propre "go". Faux négatif ACCEPTÉ et testé :
+       David qui crie la même forme que Didier vient de dire n'est pas
+       entendu par la garde. Faux positifs restants, sens sûr : l'écho d'une
+       forme qu'il n'a pas dite dans la réplique (STT qui transforme un mot).
+       Coût : son écho déclenche aussi des transcriptions (une par tranche)
+       pendant qu'il parle. Première réplique avant toute calibration de
+       l'écoute normale : seuil PLANCHER de la config (EnergyVad.floor_threshold),
+       jamais une calibration sur sa propre voix (mineur 4). Ce n'est PAS un arrêt de sécurité (cf. vision.ai.emergency) : le
        deadman et la télécommande restent les arrêts effectifs.
 """
 from __future__ import annotations
@@ -182,7 +188,7 @@ from dataclasses import dataclass
 from typing import Callable, Optional, Union
 
 from vision.ai import performance
-from vision.ai.emergency import contains_stop_word, is_emergency_stop
+from vision.ai.emergency import is_emergency_stop, normalized_words, stop_words_in
 from vision.ai.stage import ROLE_DAVID, ROLE_DIDIER, StageState, garble_text
 from vision.ai.stream_parser import Didascalie, Emotion, Sentence, StreamPerformanceParser
 
@@ -314,6 +320,9 @@ class _ReplyGuard:
         self.interrupted = threading.Event()
         # Texte entendu qui a interrompu la réplique (ligne transcript "david").
         self.heard: Optional[str] = None
+        # Mots normalisés des phrases que CETTE réplique a déjà envoyées au
+        # haut-parleur (cf. note_spoken) — sous `lock`.
+        self._spoken: set = set()
         self._stop_reading = threading.Event()
         # Levé par le lecteur APRÈS sa dernière tranche : avec une file vide,
         # c'est le signal de fin du thread STT (pas de sentinelle dans une
@@ -339,6 +348,13 @@ class _ReplyGuard:
         with self.lock:
             self.closed = True
         self._stop_reading.set()
+
+    def note_spoken(self, text: str) -> None:
+        """Phrase de Didier enfilée pour lecture (thread de conversation,
+        AVANT play() : son écho ne peut pas précéder cet appel)."""
+        words = normalized_words(text)
+        with self.lock:
+            self._spoken |= words
 
     def join_reader(self, timeout: float) -> bool:
         """True si le lecteur est bien terminé (cf. GUARD_JOIN_TIMEOUT_S)."""
@@ -461,13 +477,29 @@ class _ReplyGuard:
 
     def _handle_text(self, text) -> bool:
         """Décide sur UN texte transcrit (appelé sous `stt_lock`) ; True =
-        mot d'arrêt traité (fin du thread STT). Critère LÂCHE
-        (contains_stop_word, I1) : la tranche contient aussi l'écho de Didier."""
-        if not contains_stop_word(text):
+        mot d'arrêt traité (fin du thread STT). Critère LÂCHE (un mot d'arrêt
+        présent suffit, I1) : la tranche contient aussi l'écho de Didier.
+
+        ÉCHO ÉCARTÉ (seconde revue du 31/10, important 1) : un mot d'arrêt
+        déjà prononcé par Didier dans CETTE réplique ne compte pas — sur les
+        tours de marche, le prompt le pousse à dire « je m'arrête » /
+        « stop » (personas.MOVE_TEMPLATE) ; sans ce filtre, son propre écho
+        coupait sa réplique et émettait un stop après son "go". Comparaison
+        sur la forme normalisée EXACTE (vision.ai.emergency.normalized_words).
+        FAUX NÉGATIF ACCEPTÉ : David qui crie « Stop ! » pendant une réplique
+        où Didier a lui-même dit « stop » n'est PAS entendu par la garde (le
+        deadman et la télécommande restent les arrêts effectifs) — mais
+        « Arrêtez ! » l'est (autre forme)."""
+        heard_stops = stop_words_in(text)
+        if not heard_stops:
             if has_usable_text(text):
                 logger.info("Écoute garde : %r ignoré (pas un mot d'arrêt).", text)
             return False
         with self.lock:
+            if heard_stops <= self._spoken:
+                logger.info("Écoute garde : %r ignoré — %s déjà dit par Didier dans cette "
+                            "réplique (écho probable).", text, sorted(heard_stops))
+                return False
             # L'ORDRE D'ABORD, avant toute autre chose (log, coupure du son) :
             # c'est lui qui arrête la route — y compris après la fin de la
             # réplique (B1 : idempotent, sens sûr).
@@ -539,6 +571,8 @@ class ConversationEngine:
         # threads. Coût : le STT du tour suivant peut attendre la fin d'une
         # tranche de garde en vol.
         self._stt_lock = threading.Lock()
+        # Source STT du tour en cours (cf. run_once, _notify_timing).
+        self._turn_stt_source: Optional[str] = None
         # Gate « source audio vivante » (half-duplex élargi, cf.
         # dadou_robot_ros/docs/etude-declenchement-conversation.md §10) :
         # None = comportement HISTORIQUE inchangé à l'octet près (clause de
@@ -675,6 +709,10 @@ class ConversationEngine:
         lisible et utile, sans spammer le journal."""
         if self._on_timing is None:
             return
+        # Source du STT de CE tour (FallbackStt.last_source, lue sous
+        # _stt_lock dans run_once) : la page « Oreille de Didier » ne doit
+        # jamais afficher celle d'une tranche de l'écoute garde.
+        timing = dict(timing, stt_source=self._turn_stt_source)
         try:
             self._on_timing(timing)
         except Exception:
@@ -825,6 +863,11 @@ class ConversationEngine:
                 # Urgence tombée PENDANT la synthèse (bloquante) : cette phrase
                 # ne doit pas partir au haut-parleur.
                 return emotion_params
+            guard = self._guard
+            if guard is not None:
+                # Mots de cette phrase notés AVANT play() : son écho dans le
+                # micro ne doit pas passer pour un ordre (cf. _ReplyGuard).
+                guard.note_spoken(event.text)
             # play() enfile : la synthèse de la Sentence SUIVANTE peut se
             # faire pendant que celle-ci joue encore (pipeline N/N+1 porté
             # par AudioPlayer, cf. vision.audio.playback).
@@ -858,6 +901,9 @@ class ConversationEngine:
         LLM/TTS (le spectacle continue, cf. docstring de module)."""
         # Texte tapé en attente (régie, cf. docstring de module RÉGIE) :
         # servi SANS démarrer le micro ni passer par le STT.
+        # Source STT du tour (cf. _notify_timing) : None tant que le STT de CE
+        # tour n'a pas tourné (texte tapé, tour spontané).
+        self._turn_stt_source = None
         typed = self._stage.pop_text() if self._stage is not None else None
         if typed is not None:
             return self._serve_typed_text(typed)
@@ -925,6 +971,9 @@ class ConversationEngine:
         try:
             with self._stt_lock:
                 text = self._stt.transcribe(speech_bytes, self._mic.sample_rate)
+                # Lue SOUS le verrou, juste après : une tranche de garde ne peut
+                # pas l'avoir changée (seconde revue du 31/10, mineur 2).
+                self._turn_stt_source = getattr(self._stt, "last_source", None)
         except Exception:
             # Une erreur STT (vécu le 22/10 : PyAV 19 incompatible avec
             # faster-whisper → TypeError à CHAQUE transcription) ne doit pas
@@ -1396,7 +1445,16 @@ class ConversationEngine:
             # exposé (ou pas encore calibrée -> None) laisse la VAD de garde
             # sur son propre état. reset() : repart en IDLE (une réplique
             # précédente a pu la laisser en SPEECH).
-            self._guard_vad.adopt_threshold(getattr(self._vad, "threshold", None))
+            threshold = getattr(self._vad, "threshold", None)
+            if threshold is None:
+                # Écoute normale pas encore calibrée (1er tour tapé ou
+                # spontané) : plancher prudent plutôt qu'une calibration sur
+                # la voix de Didier (seconde revue du 31/10, mineur 4).
+                threshold = getattr(self._guard_vad, "floor_threshold", None)
+                if threshold is not None:
+                    logger.info("Écoute garde : écoute normale non calibrée — seuil "
+                                "plancher %.2f.", threshold)
+            self._guard_vad.adopt_threshold(threshold)
             self._guard_vad.reset()
             guard = _ReplyGuard(mic=self._mic, vad=self._guard_vad, stt=self._stt,
                                 stt_lock=self._stt_lock,

@@ -1080,7 +1080,11 @@ class ChatNode(Node):
         Jamais d'exception vers le moteur (ConversationEngine la loggue)."""
         if self._diag is not None:
             self._diag.on_timing(timing)
-        source = getattr(self._stt, "last_source", None) or "local"
+        # stt_source : lue par le moteur SOUS son verrou STT, juste après le STT
+        # du tour (l'écoute garde transcrit aussi, cf. vision.ai.conversation) ;
+        # repli sur l'attribut pour un tour sans STT (texte tapé).
+        source = (timing.get("stt_source") or getattr(self._stt, "last_source", None)
+                  or "local")
         payload = hearing.encode_hearing(timing, source, int(time.time() * 1000))
         self._hearing_pub.publish(StringTime(msg=payload, time=0, anim=False))
 

@@ -122,7 +122,10 @@ tranches VAD ≤ 2,5 s, même STT, et seul un mot d'arrêt PRÉSENT dans la tran
 (`contains_stop_word`, l'écho de Didier l'entoure) agit : `"stop"` immédiat, son
 coupé (`AudioPlayer.interrupt`), réplique abandonnée sans nouvel appel LLM. Un
 « Stop ! » de fin de réplique transcrit après coup émet encore `"stop"` (sans rien
-interrompre). Jamais armée chat OFF. Écho de Didier assumé (faux positif sûr).
+interrompre). Jamais armée chat OFF. Écho de Didier filtré : un mot d'arrêt qu'il
+vient de dire lui-même dans la réplique est ignoré (faux négatif accepté si David crie
+la même forme). « Stooop », « Arrrête », « freiner », « stoppes » reconnus (les deux
+critères).
 Sans régisseur (vrai robot) : micro coupé pendant la réplique, comme avant.
 
 Test à la main (domaine 43) :

@@ -88,6 +88,16 @@ class EnergyVad:
         """None pendant la calibration (pas encore de seuil déterminé)."""
         return self._threshold
 
+    @property
+    def floor_threshold(self) -> float:
+        """Seuil PLANCHER de la config (min_floor × threshold_factor) — celui
+        qu'une calibration sur un silence parfait donnerait. Plancher prudent
+        de l'écoute garde quand l'écoute normale n'a pas encore de seuil
+        (seconde revue du 31/10, mineur 4) : mieux vaut une garde trop
+        sensible (elle transcrit l'écho, sans effet hors mot d'arrêt) qu'une
+        garde calibrée sur la voix de Didier, donc sourde à David."""
+        return self._config.min_floor * self._config.threshold_factor
+
     def feed(self, level: float) -> Optional[VadEvent]:
         """Traite le niveau sonore d'UNE frame. Retourne un VadEvent si un
         changement d'état se produit (début/fin de parole), None sinon."""

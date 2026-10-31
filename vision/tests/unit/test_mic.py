@@ -3,6 +3,8 @@ lancé : run_cmd est remplacé par un faux constructeur de process (stdout =
 io.BytesIO scripté), cf. FakeProcess ci-dessous.
 """
 import io
+import threading
+import time
 
 import numpy as np
 import pytest
@@ -190,3 +192,52 @@ def test_stop_purges_the_ring_buffer():
 def test_preroll_empty_before_any_frame_read():
     mic = MicCapture("casque_mic", run_cmd=_make_run_cmd(b"", []))
     assert mic.preroll() == b""
+
+
+# --------------------------------------------------------------------------
+# Sûreté entre threads (seconde revue du 31/10) : stop() est appelé par la
+# conversation, le lecteur de l'écoute garde ET le callback ROS chat OFF.
+# --------------------------------------------------------------------------
+
+class SlowTerminateProcess(FakeProcess):
+    """terminate() lent : élargit la fenêtre où un second stop() concurrent
+    trouvait `_process` encore non-None puis None (AttributeError)."""
+
+    def __init__(self, stdout_bytes: bytes):
+        super().__init__(stdout_bytes)
+        self.terminate_calls = 0
+
+    def terminate(self):
+        self.terminate_calls += 1
+        time.sleep(0.02)
+        super().terminate()
+
+
+def test_stop_concurrents_sans_exception_et_un_seul_terminate():
+    procs = []
+
+    def run_cmd(cmd, stdout=None):
+        proc = SlowTerminateProcess(b"")
+        procs.append(proc)
+        return proc
+
+    mic = MicCapture("casque_mic", run_cmd=run_cmd)
+    mic.start()
+    errors = []
+    barrier = threading.Barrier(8)
+
+    def stopper():
+        barrier.wait()
+        try:
+            mic.stop()
+        except Exception as exc:   # noqa: BLE001 — c'est précisément ce qu'on traque
+            errors.append(exc)
+
+    threads = [threading.Thread(target=stopper) for _ in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=2.0)
+    assert errors == []
+    assert len(procs) == 1 and procs[0].terminate_calls == 1
+    assert mic.read_frame() is None

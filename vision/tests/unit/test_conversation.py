@@ -2250,6 +2250,8 @@ class GuardMic(FakeMic):
 class GuardVad(FakeVad):
     """VAD de garde scriptée + trace des seuils adoptés."""
 
+    floor_threshold = 1.3   # = VadConfig() : min_floor 1.0 × threshold_factor 1.3
+
     def __init__(self, events):
         super().__init__(events)
         self.adopted = []
@@ -2372,20 +2374,21 @@ END = VadEvent(kind="speech_end", reason="silence")
 
 def _guard_engine(timeline, *, stt, pause=lambda: None, on_move, guard=True,
                   mic=None, events=GUARD_EVENTS, player=None, tts=None,
-                  raise_after_pause=False, stage=None):
+                  raise_after_pause=False, stage=None, deltas=GUARD_DELTAS,
+                  main_threshold=7.5):
     if stage is None:
         stage = StageState()
     stage.push_text("Raconte-moi la rue.")
     mic = mic if mic is not None else GuardMic(timeline, GUARD_FRAMES)
     main_vad = FakeVad([])
-    main_vad.threshold = 7.5          # seuil calibré de l'écoute normale
+    main_vad.threshold = main_threshold   # seuil calibré de l'écoute normale
     guard_vad = GuardVad(events)
     player = player if player is not None else InterruptiblePlayer(timeline, mic)
     lines, on_transcript = _transcript_recorder()
     states = []
     engine = ConversationEngine(
         mic=mic, vad=main_vad, stt=stt,
-        brain=PausingBrain(timeline, GUARD_DELTAS, pause, raise_after_pause),
+        brain=PausingBrain(timeline, deltas, pause, raise_after_pause),
         tts=tts if tts is not None else FakeTts(timeline), player=player,
         publish=_make_publish(timeline),
         refresh_ms=REFRESH_MS, dead_mic_backoff_s=0.0, on_state=states.append,
@@ -2716,3 +2719,103 @@ def test_garde_n_ecrase_pas_la_source_stt(timeline):
     assert engine.run_once() is True
     assert len(stt.calls) == 1
     assert stt.last_source == "distant"
+
+
+
+# --- Seconde revue du 31/10 : écho de Didier, plancher VAD, source STT -------
+
+def _pause_apres_stt(stt):
+    def pause():
+        stt.returned.wait(timeout=WAIT_S)
+        time.sleep(0.2)
+    return pause
+
+
+M_ARRETE = ["D'accord, je m'arrête. ", 'Voilà. {"emotion": "happy"}']
+
+
+def test_garde_echo_de_didier_je_m_arrete_ignore(timeline, caplog):
+    # Important 1 : David a crié stop (écoute normale), Didier répond « je
+    # m'arrête » — son propre écho ne doit pas couper sa réplique.
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt("je m'arrête")
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move, deltas=M_ARRETE,
+                               pause=_pause_apres_stt(stt))
+    with caplog.at_level("INFO", logger="vision.ai.conversation"):
+        assert engine.run_once() is True
+    assert len(stt.calls) == 1
+    assert ordres == []
+    synth = [event[1] for event in timeline if event[0] == "tts_synthesize"]
+    assert synth == ["D'accord, je m'arrête.", "Voilà."]
+    assert "player_interrupt" not in _tags(timeline)
+    assert ("Écoute garde : \"je m'arrête\" ignoré — ['arrete'] déjà dit par Didier dans "
+            "cette réplique (écho probable).") in [record.message for record in caplog.records]
+
+
+def test_garde_stop_crie_pendant_une_replique_sans_stop_est_emis(timeline):
+    # Didier a dit « arrête » (forme arrete), David crie « Stop ! » : autre
+    # forme, l'ordre part et la réplique est interrompue.
+    ordres, on_move = _ordres_thread_safe()
+    holder = {}
+    engine, _mic, _vad, player, _lines, _states = _guard_engine(
+        timeline, stt=GuardStt("Stop !"), on_move=on_move, deltas=M_ARRETE,
+        pause=lambda: holder["player"].interrupted.wait(timeout=WAIT_S))
+    holder["player"] = player
+    assert engine.run_once() is False
+    assert ordres == ["stop"]
+    synth = [event[1] for event in timeline if event[0] == "tts_synthesize"]
+    assert synth == ["D'accord, je m'arrête."]
+
+
+def test_garde_stop_crie_pendant_une_replique_qui_dit_stop_ignore(timeline):
+    # FAUX NÉGATIF ACCEPTÉ ET GRAVÉ (cf. _ReplyGuard._handle_text) : Didier a
+    # lui-même dit « stop » — un « Stop ! » de David est indiscernable de son
+    # écho. Le deadman et la télécommande restent les arrêts effectifs.
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt("Stop !")
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move,
+                               deltas=["Bon, stop, je me tais. ", 'Voilà. {"emotion": "happy"}'],
+                               pause=_pause_apres_stt(stt))
+    assert engine.run_once() is True
+    assert len(stt.calls) == 1
+    assert ordres == []
+    assert "player_interrupt" not in _tags(timeline)
+
+
+def test_garde_plancher_si_ecoute_normale_non_calibree(timeline):
+    # Mineur 4 : 1er tour tapé — l'écoute normale n'a pas de seuil ; la garde
+    # prend le plancher de la config, jamais une calibration sur Didier.
+    ordres, on_move = _ordres_thread_safe()
+    engine, _mic, guard_vad, *_ = _guard_engine(
+        timeline, stt=GuardStt("bla"), on_move=on_move, main_threshold=None)
+    engine.run_once()
+    assert guard_vad.adopted == [1.3]
+
+
+class _BrainQuiChangeLaSource(FakeBrain):
+    """Simule une tranche de garde transcrite PENDANT la réplique : elle
+    réécrit last_source du STT partagé."""
+
+    def __init__(self, timeline, deltas, stt):
+        super().__init__(timeline, deltas)
+        self._stt = stt
+
+    def stream_reply(self, user_text):
+        self._stt.last_source = "repli"
+        yield from super().stream_reply(user_text)
+
+
+def test_source_stt_du_tour_dans_le_dict_de_timing(timeline):
+    # Mineur 2 : la source affichée est celle du STT de DAVID (lue sous le
+    # verrou juste après), pas celle que l'écoute garde a laissée ensuite.
+    frames, events = _speech_frames_and_events()
+    timings = []
+    engine = _make_engine(timeline, frames=frames, vad_events=events, stt_text="salut",
+                          brain_deltas=["Bonjour."], on_timing=timings.append)
+    engine._stt.last_source = "distant"
+    engine._brain = _BrainQuiChangeLaSource(timeline, ["Bonjour."], engine._stt)
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert timings[0]["stt_source"] == "distant"
