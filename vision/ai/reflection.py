@@ -90,7 +90,8 @@ def build_messages(transcript, perception: str, mission_summary: str,
                    instruction: Optional[str], demande: Optional[str],
                    image_jpeg: Optional[bytes], *, partner: Optional[str],
                    destination: str, persona: Optional[str] = None,
-                   camera_is_partner: bool = False) -> list:
+                   camera_is_partner: bool = False,
+                   passing_poi: Optional[str] = None) -> list:
     """Messages `system` + `user` de l'appel. `transcript` : liste de
     {"role": "david"|"didier", "text"} (les TRANSCRIPT_MAX_LINES dernières
     sont gardées). Sections titrées ; « Consigne du régisseur » et « Demande
@@ -99,7 +100,12 @@ def build_messages(transcript, perception: str, mission_summary: str,
     direction de jeu colle au caractère. `camera_is_partner` (banc de simulation
     seulement, cf. camera_is_partner_from_env) ajoute sous la perception que la
     personne vue EST le partenaire (sa webcam), pas un passant — le prompt
-    système, figé, ne le dit pas. Image jointe en data-URL JPEG base64."""
+    système, figé, ne le dit pas. `passing_poi` (objet dont l'ENTRÉE a
+    déclenché l'appel, Didier en marche, jamais encore commenté — cf.
+    SpontaneousPolicy) ajoute sous la perception la consigne de la remarque
+    en marche (décision de David du 31/10, étude-interaction §10.2) : une
+    seule phrase courte, arrêt réclamable. Image jointe en data-URL JPEG
+    base64."""
     lines = []
     for entry in list(transcript)[-TRANSCRIPT_MAX_LINES:]:
         label = _ROLE_LABELS.get(entry.get("role"))
@@ -109,6 +115,9 @@ def build_messages(transcript, perception: str, mission_summary: str,
     if camera_is_partner and partner:
         perception_text += (f"\nToute personne que montre la caméra est {partner}, "
                             "ton partenaire de jeu — pas un passant.")
+    if passing_poi:
+        perception_text += (f"\nDidier passe devant : {passing_poi} — s'il en parle, une "
+                            "seule phrase courte ; il peut demander à s'arrêter pour le regarder")
     sections = [
         "Transcription récente :\n" + ("\n".join(lines) if lines else "(rien de dit pour l'instant)"),
         "Perception :\n" + perception_text,

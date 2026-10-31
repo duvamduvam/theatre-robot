@@ -206,12 +206,71 @@ def test_politique_ecart_entre_tours_spontanes():
 
 
 def test_politique_pas_de_tour_ordinaire_en_marche():
-    # Revue adversariale du 23/10 (I2/M3) : règle « micro à l'arrêt » — un tour
-    # spontané en marche coupe le micro et rallonge la surdité à un « stop ».
+    # Règle « micro à l'arrêt » du 23/10 (revue I2/M3), levée le 31/10 pour
+    # la SEULE remarque sur un objet croisé (tests ci-dessous) : sans objet
+    # déclencheur, toujours muet en marche.
     assert _allow(moving=True) is False
     assert _allow(moving=False) is True
     # Le profond (réponse à une demande) passe toujours, même en marche.
     assert _allow(moving=True, deep=True) is True
+
+
+# Décision de David du 31/10 (dadou_robot_ros docs/etude-interaction.md
+# §10.2 « En marche ») : une remarque courte par objet croisé, une seule.
+
+def test_politique_en_marche_entree_poi_autorisee():
+    assert _allow(moving=True, passing_poi="anneaux") is True
+
+
+def test_politique_en_marche_battement_refuse():
+    # Le battement (et tout déclencheur sans objet) n'apporte pas de POI.
+    assert _allow(moving=True, passing_poi=None) is False
+
+
+def test_politique_en_marche_une_seule_remarque_par_objet():
+    policy = SpontaneousPolicy()
+    args = dict(result_parler=True, deep=False, chat_state="listening", now_s=100.0,
+                last_transcript_s=90.0, last_spontaneous_s=80.0, moving=True)
+    assert policy.already_remarked("anneaux") is False
+    assert policy.allow(**args, passing_poi="anneaux") is True
+    assert policy.already_remarked("anneaux") is True
+    assert policy.allow(**args, passing_poi="anneaux") is False     # 2e passage
+    assert policy.allow(**args, passing_poi="lampadaire") is True   # autre objet
+    policy.reset_remarks()                                          # route restart
+    assert policy.allow(**args, passing_poi="anneaux") is True
+
+
+def test_politique_en_marche_refus_ne_consomme_pas_l_objet():
+    # Refusé pour une autre raison (Didier parle) : l'objet reste à commenter.
+    policy = SpontaneousPolicy()
+    args = dict(result_parler=True, deep=False, now_s=100.0, last_transcript_s=90.0,
+                last_spontaneous_s=80.0, moving=True, passing_poi="anneaux")
+    assert policy.allow(**args, chat_state="speaking") is False
+    assert policy.already_remarked("anneaux") is False
+    assert policy.allow(**args, chat_state="listening") is True
+
+
+def test_politique_a_l_arret_inchange_et_sans_memoire():
+    # À l'arrêt, l'objet ne change rien et n'est pas consommé : la mémoire
+    # ne compte que les remarques EN MARCHE.
+    policy = SpontaneousPolicy()
+    args = dict(result_parler=True, deep=False, chat_state="listening", now_s=100.0,
+                last_transcript_s=90.0, last_spontaneous_s=80.0, moving=False)
+    assert policy.allow(**args, passing_poi=None) is True
+    assert policy.allow(**args, passing_poi="anneaux") is True
+    assert policy.already_remarked("anneaux") is False
+    assert _allow(moving=False, chat_state="speaking", passing_poi="anneaux") is False
+
+
+@pytest.mark.parametrize("state", ["thinking", "speaking", "off", ""])
+def test_politique_en_marche_etat_du_chat(state):
+    assert _allow(moving=True, passing_poi="anneaux", chat_state=state) is False
+
+
+def test_politique_en_marche_garde_silence_et_ecart():
+    assert _allow(moving=True, passing_poi="anneaux", last_transcript_s=96.1) is False
+    assert _allow(moving=True, passing_poi="anneaux", last_spontaneous_s=88.1) is False
+    assert _allow(moving=True, passing_poi="anneaux", result_parler=False) is False
 
 
 # -- DeepRequests -----------------------------------------------------------

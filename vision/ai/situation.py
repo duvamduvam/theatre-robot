@@ -89,7 +89,8 @@ class SituationBoard:
         Route "on" + vitesse INCONNUE = considéré EN MARCHE (révisé le 23/10) :
         route_speed est volatile, un reflection_node démarré après la dernière
         consigne ne la connaît pas — le doute doit priver de tours spontanés
-        (règle « micro à l'arrêt »), pas en accorder. Ce n'est qu'une règle de
+        (en marche : seulement la remarque sur un objet croisé, décision du
+        31/10, cf. SpontaneousPolicy), pas en accorder. Ce n'est qu'une règle de
         PAROLE : le tableau, lui, ne dit rien de la route tant que la vitesse
         est inconnue (cf. perception_text)."""
         return self._route == "on" and (self._speed is None or self._speed > 0)

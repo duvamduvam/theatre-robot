@@ -155,17 +155,34 @@ class DeepRequests:
 class SpontaneousPolicy:
     """Autorise (ou non) un tour de parole spontané après une réflexion. Le
     contrôle « personne ne parle EN CE MOMENT » est refait côté parole (P3) :
-    ici on évite seulement d'envoyer pour rien."""
+    ici on évite seulement d'envoyer pour rien.
+    Tient aussi la mémoire des objets déjà commentés EN MARCHE (une seule
+    remarque par objet, décision de David du 31/10) : vidée par
+    `reset_remarks` (restart de route), sinon valable la vie du node.
+    Non thread-safe : le verrou est celui du node."""
 
     def __init__(self, min_silence_s: float = 4.0, min_gap_s: float = 12.0):
         self._min_silence_s = min_silence_s
         self._min_gap_s = min_gap_s
+        self._remarked: set = set()     # objets déjà commentés en marche
+
+    def already_remarked(self, poi: str) -> bool:
+        return poi in self._remarked
+
+    def reset_remarks(self) -> None:
+        """Nouvelle traversée (route restart) : chaque objet redevient neuf."""
+        self._remarked.clear()
 
     def allow(self, result_parler: bool, deep: bool, chat_state: str, now_s: float,
               last_transcript_s: Optional[float],
-              last_spontaneous_s: Optional[float], *, moving: bool) -> bool:
+              last_spontaneous_s: Optional[float], *, moving: bool,
+              passing_poi: Optional[str] = None) -> bool:
         """`moving` : Didier roule VRAIMENT (SituationBoard.moving : route on
-        ET vitesse > 0)."""
+        ET vitesse > 0). `passing_poi` : objet dont l'ENTRÉE a déclenché cette
+        réflexion (None = autre déclencheur, battement compris).
+        EFFET DE BORD : un tour accordé en marche CONSOMME l'objet (plus
+        jamais de remarque en marche dessus) — l'appelant ne doit donc
+        appeler allow() que s'il a de quoi envoyer."""
         if deep:
             # Réponse à une DEMANDE de Didier (clé "reflechir") : TOUJOURS
             # envoyée, quoi qu'en dise le LLM — Didier a promis « je reprends
@@ -178,12 +195,14 @@ class SpontaneousPolicy:
             return True
         if not result_parler:
             return False
-        if moving:
-            # Revue adversariale du 23/10 (I2/M3) : règle « micro à l'arrêt »
-            # (étude §10.1). Pendant une réplique le micro est coupé : chaque
-            # tour spontané en marche rallongeait la surdité de Didier à un
-            # « stop » crié. Le profond (ci-dessus) passe quand même : une
-            # demande de Didier attend sa réponse.
+        if moving and (passing_poi is None or passing_poi in self._remarked):
+            # Décision de David du 31/10 (dadou_robot_ros docs/etude-
+            # interaction.md §10.2 « En marche ») : en roulant, Didier ne
+            # parle de lui-même QUE pour une remarque sur l'objet qu'il
+            # croise, une seule par objet. Lève la règle « micro à l'arrêt »
+            # du 23/10 (revue I2/M3 : un « stop » crié pendant la réplique
+            # était perdu) — l'écoute garde l'entend désormais (c392f12).
+            # Battement, personne apparue, consigne : toujours muets en marche.
             return False
         if chat_state != "listening":
             return False
@@ -191,4 +210,6 @@ class SpontaneousPolicy:
             return False
         if last_spontaneous_s is not None and now_s - last_spontaneous_s < self._min_gap_s:
             return False
+        if moving:
+            self._remarked.add(passing_poi)
         return True

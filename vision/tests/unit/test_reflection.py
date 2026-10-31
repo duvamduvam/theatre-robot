@@ -84,6 +84,21 @@ def test_messages_sans_persona_aucune_ligne_personnalite():
         assert content.endswith("Mission :\nMission : x.")
 
 
+def test_messages_objet_croise_en_marche():
+    # Décision de David du 31/10 (étude-interaction §10.2) : ligne gravée sous
+    # la perception ; le prompt système, figé, n'est pas touché.
+    messages = _build(passing_poi="les anneaux")
+    assert messages[1]["content"] == (
+        "Transcription récente :\n(rien de dit pour l'instant)\n\n"
+        "Perception :\nPersonne en vue.\n"
+        "Didier passe devant : les anneaux — s'il en parle, une seule phrase courte ; "
+        "il peut demander à s'arrêter pour le regarder\n\n"
+        "Mission :\nMission : x.")
+    assert messages[0]["content"] == render_system_prompt("David", "le paradis")
+    for absent in (None, ""):
+        assert "passe devant" not in _build(passing_poi=absent)[1]["content"]
+
+
 def test_messages_sections_optionnelles():
     content = _build(instruction="Tu boudes", demande="Qu'est-ce que tu vois ?")[1]["content"]
     assert content.endswith("Consigne du régisseur :\nTu boudes\n\n"

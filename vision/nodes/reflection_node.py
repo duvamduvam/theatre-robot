@@ -58,6 +58,10 @@ ROUTE_STATE_TOPIC = "route_state"
 # dernière consigne ne connaît pas la vitesse — inconnue = considéré à
 # l'arrêt (cf. SituationBoard.moving).
 ROUTE_SPEED_TOPIC = "route_speed"
+# COMMANDE de route (dadou_robot_ros robot_rehearsal, ROUTE_CMD_TOPIC) : lue
+# SEULEMENT, pour son "restart" (nouvelle traversée) qui remet à neuf la
+# mémoire des objets commentés en marche. Ce node n'y publie JAMAIS.
+ROUTE_CMD_TOPIC = "route"
 PERSON_BOX_TOPIC = "/vision/person_box"
 VIDEO_TOPIC = "camera/image_raw/compressed"
 INSTRUCTION_TOPIC = "chat_instruction"
@@ -118,6 +122,7 @@ class ReflectionNode(Node):
         self._last_person_s = None
         self._last_transcript_s = None
         self._last_spontaneous_s = None
+        self._pending_pois = []        # objets ENTRÉS depuis le dernier job, dans l'ordre
         self._in_flight = False
         self._last_published = None    # (texte, heure) du dernier tableau publié
 
@@ -135,6 +140,7 @@ class ReflectionNode(Node):
         self.create_subscription(StringTime, POI_EVENT_TOPIC, self._on_poi_event, 10)
         self.create_subscription(StringTime, ROUTE_STATE_TOPIC, self._on_route_state, LATCHED)
         self.create_subscription(StringTime, ROUTE_SPEED_TOPIC, self._on_route_speed, 10)
+        self.create_subscription(StringTime, ROUTE_CMD_TOPIC, self._on_route_cmd, 10)
         self.create_subscription(PointStamped, PERSON_BOX_TOPIC, self._on_person_box, 10)
         # BEST_EFFORT : compatible avec un éditeur fiable ou non, et une trame
         # perdue n'a aucune importance (on ne garde que la dernière).
@@ -181,6 +187,16 @@ class ReflectionNode(Node):
             # tableau à jour sans payer un appel.
             if event == "enter":
                 self._scheduler.notify("poi", now)
+                self._pending_pois.append(poi)
+
+    def _on_route_cmd(self, msg):
+        # Même tolérance que route_driver._decode (JSON ou brut) ; "on"/"off"
+        # passent par route_state, seul "restart" intéresse la réflexion.
+        if decode_text_payload(msg.msg) != "restart":
+            return
+        with self._lock:
+            self._policy.reset_remarks()
+        self.get_logger().info("route restart : objets commentés en marche oubliés")
 
     def _on_route_state(self, msg):
         with self._lock:
@@ -290,11 +306,21 @@ class ReflectionNode(Node):
                 and now - self._image[1] <= IMAGE_MAX_AGE_S:
             image, used_image = self._image[0], True
         demande, demande_retry = self._deep.take() if job.deep else (None, False)
+        # Remarque en marche (décision de David du 31/10) : l'objet le plus
+        # récemment ENTRÉ et jamais commenté, si Didier roule. Le job consomme
+        # tous les POI en attente, comme l'ordonnanceur consomme ses
+        # événements (il voit la perception entière). Profond : sans objet,
+        # il répond à une demande.
+        pois, self._pending_pois = self._pending_pois, []
+        passing_poi = None
+        if not job.deep and self._board.moving():
+            passing_poi = next(
+                (p for p in reversed(pois) if not self._policy.already_remarked(p)), None)
         return dict(
             transcript=list(self._transcript), perception=self._board.perception_text(now),
             mission_summary=self._mission.summary(), instruction=self._instruction,
             demande=demande, demande_retry=demande_retry, image=image, used_image=used_image,
-            persona=self._persona)
+            persona=self._persona, passing_poi=passing_poi)
 
     # -- thread de travail -----------------------------------------------------
 
@@ -305,7 +331,7 @@ class ReflectionNode(Node):
                 inputs["transcript"], inputs["perception"], inputs["mission_summary"],
                 inputs["instruction"], inputs["demande"], inputs["image"],
                 partner=self._partner, destination=self._destination,
-                persona=inputs["persona"],
+                persona=inputs["persona"], passing_poi=inputs["passing_poi"],
                 camera_is_partner=camera_is_partner_effective(
                     self._camera_is_partner, self._camera_source))
             if job.deep:
@@ -352,15 +378,15 @@ class ReflectionNode(Node):
             if inputs["persona"] == self._persona:
                 self._board.set_reflection(result.situation, result.direction, now)
             changes = self._mission.apply(result.mission_update)
-            speak = self._policy.allow(
+            text = result.direction or result.situation
+            # `text` D'ABORD : allow() consomme l'objet croisé quand il accorde
+            # un tour en marche — un résultat sans texte ne doit pas le brûler.
+            speak = bool(text) and self._policy.allow(
                 result.parler, job.deep, self._chat_state, now,
                 self._last_transcript_s, self._last_spontaneous_s,
-                moving=self._board.moving())
-            text = result.direction or result.situation
-            if speak and text:
+                moving=self._board.moving(), passing_poi=inputs["passing_poi"])
+            if speak:
                 self._last_spontaneous_s = now
-            else:
-                speak = False
         for change in changes:
             self.get_logger().info(f"mission : {change}")
         if changes:
@@ -368,6 +394,7 @@ class ReflectionNode(Node):
         self.get_logger().info(
             f"réflexion ({job.reason}) : {'profonde' if job.deep else 'ordinaire'}, "
             f"{duration:.1f} s, image={'oui' if inputs['used_image'] else 'non'}, "
+            f"objet croisé={inputs['passing_poi']!r}, "
             f"direction={result.direction!r}, parler={result.parler} "
             f"(envoyé={speak}, raison={result.raison!r})")
         if speak:
