@@ -576,6 +576,15 @@ une scène qui vit. Critère de réussite : **une séance en sim sans ennui**.
 | **Jeu « Va voir le… »** | David nomme un objet, Didier y va (§10.4) |
 | **Régisseur** | reste pour les **pannes** ; les lubies ne sont plus des arrêts imposés tirés au sort, ce sont les demandes de Didier ci-dessus |
 
+**En marche [DÉCIDÉ 31/10]** : Didier PEUT prendre la parole de lui-même en
+roulant — une remarque courte (une phrase) quand il croise un objet, une seule
+par objet, et il peut réclamer un arrêt (plafond ci-dessus). Lève la règle
+« micro à l'arrêt » du 23/10 pour les tours spontanés : sa raison (un « stop »
+perdu pendant la réplique) est tombée avec l'écoute garde (vision c392f12).
+Constat qui l'a motivé : en séance, il passait en silence devant les anneaux,
+et la seule chose qu'il disait venait d'une lubie tirée au sort sur un
+lampadaire hors champ (mât de 16 cm sur le côté).
+
 ### 10.3 Les mots secrets — signaux de comédien [DÉCIDÉ 31/10]
 
 Un « go » ou un « stop » s'entend : le public voit la ficelle. David dispose
