@@ -217,9 +217,12 @@ def generate_launch_description():
             output="screen",
             # drive_enabled = web_drive et rehearsal_enabled = rehearsal : SIM-ONLY,
             # défauts false. camera_topic laissé au défaut du node
-            # ("camera/image_raw", bridgé depuis gz).
+            # ("camera/image_raw", bridgé depuis gz). perception_topic : ce que
+            # voit person_tracker (webcam du PC, conteneur vision, même domaine 43),
+            # servi en lecture seule sur /perception -> panneau « Ce que Didier voit ».
             parameters=[{"web_port": web_port, "drive_enabled": web_drive,
-                         "rehearsal_enabled": rehearsal}],
+                         "rehearsal_enabled": rehearsal,
+                         "perception_topic": "camera/image_raw/compressed"}],
             condition=IfCondition(web),
         ),
     ])

@@ -56,6 +56,7 @@ const state = {
   maxLinear: 0,             // plafond serveur affiché (m/s)
   maxAngular: 0,            // plafond serveur affiché (rad/s)
   rehearsal: false,         // hello.rehearsal : topics de répétition acceptés (SIM-ONLY)
+  perception: false,        // hello.perception : le serveur sert /perception (lecture seule)
   reconnectDelayMs: RECONNECT_MIN_MS,
   rttSamples: [],           // fenêtre glissante (ms)
   hbTimer: null,
@@ -210,6 +211,8 @@ function traiterHello(msg) {
   state.maxAngular = msg.max_angular ?? 0;
   // Topics de répétition acceptés par CE serveur (absent = ancien serveur = non).
   state.rehearsal = !!msg.rehearsal;
+  // Second flux vidéo (ce que voit la perception) : absent = ancien serveur = non.
+  state.perception = !!msg.perception;
   majBadgeEcriture();
   demarrerHeartbeatSiWriter();
 

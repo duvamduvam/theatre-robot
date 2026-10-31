@@ -52,7 +52,7 @@ from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import Twist
 from PIL import Image as PILImage
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, QoSProfile
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage, Image
 
 from robot_interfaces.msg import StringTime
@@ -113,6 +113,13 @@ class WebBridgeNode(Node):
         # les octets sont servis TELS QUELS en MJPEG, zéro ré-encodage.
         # false (défaut) = sensor_msgs/Image brut à encoder ici (sim : caméra gz).
         self.declare_parameter("camera_compressed", False)
+        # Second flux vidéo, LECTURE SEULE : ce que la perception de Didier (person_tracker
+        # du conteneur vision) voit et republie en CompressedImage JPEG -- en sim, la
+        # webcam du PC, alors que camera_topic est la caméra Gazebo. Vide (défaut) =
+        # désactivé : aucun abonnement, /perception répond 404, hello.perception=false
+        # (rien ne change sur le vrai robot). Jamais inscriptible : ce topic n'est
+        # pas dans la whitelist, le pont n'y publie rien.
+        self.declare_parameter("perception_topic", "")
         # SÉCURITÉ (SIM-ONLY) : topics de répétition simulée (route, route_speed,
         # rehearsal/cmd) de la page « scène ». FALSE par défaut ; même true, ignoré
         # hors domaine 43 (cf. plus bas) -- le vrai robot n'a jamais ces topics.
@@ -127,6 +134,7 @@ class WebBridgeNode(Node):
         self.camera_topic = self.get_parameter("camera_topic").value
         self.video_fps = max(1, int(self.get_parameter("video_fps").value))
         self.camera_compressed = bool(self.get_parameter("camera_compressed").value)
+        self.perception_topic = str(self.get_parameter("perception_topic").value or "")
 
         # ROS_DOMAIN_ID n'est pas exposé comme paramètre de node par rclpy :
         # c'est une variable d'environnement du PROCESSUS, lue une fois au
@@ -197,28 +205,32 @@ class WebBridgeNode(Node):
         self.drive_flow = DriveFlow()
         self._drive_active = False  # salve en cours ? (log INFO début/fin une seule fois)
 
-        # --- Retour vidéo (caméra embarquée) ------------------------------------
-        # Dernière frame JPEG déjà encodée + son horodatage monotone, sous lock
-        # (écrite par le callback caméra thread spin, lue par l'endpoint /video
-        # thread asyncio). _last_encode_s throttle l'encodage AVANT de le faire.
-        self.video_lock = threading.Lock()
-        self.last_jpeg = None
-        self.last_jpeg_at = 0.0
-        self._last_encode_s = 0.0
+        # --- Retour vidéo (caméra embarquée + perception) ------------------------
+        # Une DerniereFrameJpeg par flux (écrite par le callback thread spin, lue par
+        # l'endpoint HTTP thread asyncio) ; le throttle y est fait AVANT encodage.
+        self.flux_camera = DerniereFrameJpeg(self.video_fps)
         if self.camera_compressed:
             self.create_subscription(
                 CompressedImage, self.camera_topic, self._on_camera_compressed, 10)
         else:
             self.create_subscription(Image, self.camera_topic, self._on_camera, 10)
 
+        self.flux_perception = DerniereFrameJpeg(self.video_fps)
+        if self.perception_topic:
+            # Best effort depth 1 : compatible avec un éditeur capteur (best effort)
+            # comme fiable ; on ne garde que la dernière frame de toute façon.
+            self.create_subscription(
+                CompressedImage, self.perception_topic, self._on_perception,
+                QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT))
+
         self.get_logger().info(
             "web_bridge_node prêt : port={} domain_id={} token_required={} json_dir={}"
             " drive_enabled={} max_linear={} max_angular={} camera_topic={}"
-            " camera_compressed={} video_fps={} rehearsal_enabled={}".format(
+            " camera_compressed={} video_fps={} rehearsal_enabled={} perception_topic={!r}".format(
                 self.web_port, self.domain_id, self.sessions.token_required, self.json_dir,
                 self.drive_enabled, self.max_linear, self.max_angular,
                 self.camera_topic, self.camera_compressed, self.video_fps,
-                self.rehearsal_enabled))
+                self.rehearsal_enabled, self.perception_topic))
         if self.drive_enabled:
             # Trace explicite au démarrage : le pilotage roues est ACTIF (sim).
             self.get_logger().warning(
@@ -310,35 +322,35 @@ class WebBridgeNode(Node):
         le Pi ne doit pas encoder de JPEG pour des frames qui seront jetées
         (au plus video_fps encodages/s). Garde la dernière frame JPEG sous lock."""
         now = time.monotonic()
-        if now - self._last_encode_s < 1.0 / self.video_fps:
+        if not self.flux_camera.admettre(now):
             return  # frame excédentaire : jetée AVANT tout encodage
-        self._last_encode_s = now
         jpeg = _encode_jpeg(msg)
         if jpeg is None:
             return
-        with self.video_lock:
-            self.last_jpeg = jpeg
-            self.last_jpeg_at = now
+        self.flux_camera.poser(jpeg, now)
 
     def _on_camera_compressed(self, msg: CompressedImage) -> None:
         """Callback abonnement caméra en mode camera_compressed (thread spin) :
         le payload est DÉJÀ du JPEG (person_tracker du Pi vision, format
-        "jpeg") — on le stocke tel quel, aucun décodage/ré-encodage. Même
-        throttle que _on_camera : inutile de garder plus de frames que servies."""
+        "jpeg") — on le stocke tel quel, aucun décodage/ré-encodage."""
+        self._garder_jpeg(self.flux_camera, msg)
+
+    def _on_perception(self, msg: CompressedImage) -> None:
+        """Callback du flux perception (thread spin) : même traitement que la
+        caméra compressée -- JPEG servi tel quel, lecture seule."""
+        self._garder_jpeg(self.flux_perception, msg)
+
+    @staticmethod
+    def _garder_jpeg(flux: "DerniereFrameJpeg", msg: CompressedImage) -> None:
         if "jpeg" not in (msg.format or "").lower():
             return  # format inattendu : on ignore (l'UI affichera "pas de vidéo")
         now = time.monotonic()
-        if now - self._last_encode_s < 1.0 / self.video_fps:
-            return
-        self._last_encode_s = now
-        with self.video_lock:
-            self.last_jpeg = bytes(msg.data)
-            self.last_jpeg_at = now
+        if flux.admettre(now):
+            flux.poser(bytes(msg.data), now)
 
     def snapshot_jpeg(self) -> tuple:
-        """(bytes JPEG | None, horodatage monotone) de la dernière frame."""
-        with self.video_lock:
-            return self.last_jpeg, self.last_jpeg_at
+        """(bytes JPEG | None, horodatage monotone) de la dernière frame caméra."""
+        return self.flux_camera.snapshot()
 
     def snapshot_topics(self) -> dict:
         """Copie protégée de last_topics, âge recalculé à l'instant présent."""
@@ -369,10 +381,39 @@ class WebBridgeNode(Node):
                            token_required=self.sessions.token_required,
                            drive_enabled=self.drive_enabled,
                            max_linear=self.max_linear, max_angular=self.max_angular,
-                           rehearsal=self.rehearsal_enabled)
+                           rehearsal=self.rehearsal_enabled,
+                           perception=bool(self.perception_topic))
 
 
 # --- Encodage vidéo (JPEG) : fonction pure, hors du node -------------------
+
+class DerniereFrameJpeg:
+    """Dernière frame JPEG d'un flux + horodatage monotone, sous lock (écrite
+    par le callback ROS, lue par l'endpoint MJPEG). `admettre` est le throttle :
+    à appeler AVANT tout encodage, pour ne rien encoder qui serait jeté."""
+
+    def __init__(self, fps: int):
+        self._intervalle_s = 1.0 / fps
+        self._lock = threading.Lock()
+        self._jpeg = None
+        self._at_s = 0.0
+        self._dernier_admis_s = 0.0
+
+    def admettre(self, now_s: float) -> bool:
+        if now_s - self._dernier_admis_s < self._intervalle_s:
+            return False
+        self._dernier_admis_s = now_s
+        return True
+
+    def poser(self, jpeg: bytes, now_s: float) -> None:
+        with self._lock:
+            self._jpeg = jpeg
+            self._at_s = now_s
+
+    def snapshot(self) -> tuple:
+        with self._lock:
+            return self._jpeg, self._at_s
+
 
 def _encode_jpeg(msg: Image) -> bytes | None:
     """sensor_msgs/Image (rgb8 ou bgr8) -> bytes JPEG qualité 70, ou None si
@@ -669,16 +710,16 @@ async def _background_loops_ctx(app: web.Application):
         task.cancel()
 
 
-async def video_handler(request: web.Request) -> web.StreamResponse:
-    """GET /video : flux MJPEG (multipart/x-mixed-replace) de la dernière frame
-    caméra, servi à video_fps. Aucune frame fraîche (ou flux tari > VIDEO_STALE_S)
+async def _servir_mjpeg(request: web.Request, flux: DerniereFrameJpeg) -> web.StreamResponse:
+    """Flux MJPEG (multipart/x-mixed-replace) de la dernière frame
+    du flux donné, servi à video_fps. Aucune frame fraîche (ou flux tari > VIDEO_STALE_S)
     -> 503, l'UI affiche "pas de vidéo". Chaque client a son propre rythme
     d'envoi ; l'encodage, lui, est mutualisé (fait une seule fois par frame dans
-    le callback caméra, cf. _on_camera)."""
+    le callback ROS, cf. _on_camera). Partagé par /video et /perception."""
     node = request.app["node"]
     interval = 1.0 / node.video_fps
 
-    jpeg, at_s = node.snapshot_jpeg()
+    jpeg, at_s = flux.snapshot()
     if jpeg is None or (time.monotonic() - at_s) > VIDEO_STALE_S:
         return web.Response(status=503, text="pas de vidéo")
 
@@ -689,7 +730,7 @@ async def video_handler(request: web.Request) -> web.StreamResponse:
     await resp.prepare(request)
     try:
         while True:
-            jpeg, at_s = node.snapshot_jpeg()
+            jpeg, at_s = flux.snapshot()
             if jpeg is None or (time.monotonic() - at_s) > VIDEO_STALE_S:
                 break  # flux tari : on ferme, le client réessaiera (bouton ⟳)
             await resp.write(
@@ -699,6 +740,20 @@ async def video_handler(request: web.Request) -> web.StreamResponse:
     except (ConnectionResetError, asyncio.CancelledError):
         pass  # client parti en cours de flux : normal, rien à logger
     return resp
+
+
+async def video_handler(request: web.Request) -> web.StreamResponse:
+    """GET /video : caméra embarquée (Gazebo en sim, Pi vision sur le robot)."""
+    return await _servir_mjpeg(request, request.app["node"].flux_camera)
+
+
+async def perception_handler(request: web.Request) -> web.StreamResponse:
+    """GET /perception : ce que voit la perception, LECTURE SEULE. 404 si le
+    paramètre perception_topic est vide (flux désactivé)."""
+    node = request.app["node"]
+    if not node.perception_topic:
+        return web.Response(status=404, text="flux perception désactivé")
+    return await _servir_mjpeg(request, node.flux_perception)
 
 
 def build_app(node: WebBridgeNode) -> web.Application:
@@ -723,6 +778,7 @@ def build_app(node: WebBridgeNode) -> web.Application:
     app.router.add_get("/api/catalog", catalog_handler)
     app.router.add_get("/ws", websocket_handler)
     app.router.add_get("/video", video_handler)
+    app.router.add_get("/perception", perception_handler)
     app.router.add_static("/static/", static_dir)
 
     app.cleanup_ctx.append(_background_loops_ctx)

@@ -99,6 +99,13 @@ source (W1 à venir).
   appartient en exclusif) servi TEL QUEL, zéro ré-encodage (~125 Ko/s réseau,
   compatible WiFi/4G). Câblé dans `robot_app.launch.py` (robot réel) et
   exposé en argument de `web.launch.py`.
+- **Second flux, perception** (paramètre `perception_topic`, 2026-10-31, défaut
+  vide = désactivé, aucun abonnement) : `GET /perception`, MJPEG LECTURE SEULE
+  d'un `CompressedImage` (QoS best effort depth 1), servi par le même code que
+  `/video` (404 si désactivé). `hello.perception` l'annonce ; la page `/scene`
+  affiche alors « Ce que Didier voit ». Posé par `sim.launch.py`
+  (`camera/image_raw/compressed`, la webcam vue par person_tracker) ; jamais sur
+  le vrai robot (`robot_app.launch.py` ne le passe pas). Topic hors whitelist.
 - **WebSocket** : `GET /ws`. Le `msg` publié sur les topics ROS est sérialisé
   EXACTEMENT comme la télécommande (`msg.msg = json.dumps(valeur)`, pas de
   ré-emballage `{topic: valeur}` sur le fil).

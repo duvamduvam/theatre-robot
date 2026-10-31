@@ -280,7 +280,7 @@ def test_build_hello():
         "type": "hello", "domain_id": 43, "mode": "SIMULATION",
         "writer": True, "token_required": False,
         "drive_enabled": False, "max_linear": 0.5, "max_angular": 1.0,
-        "rehearsal": False}
+        "rehearsal": False, "perception": False}
 
 
 def test_build_hello_expose_les_plafonds_et_l_etat_pilotage():
@@ -695,6 +695,19 @@ def test_build_hello_repetition_absente_par_defaut():
     assert hello["rehearsal"] is False
 
 
+def test_build_hello_annonce_la_perception():
+    hello = build_hello(43, writer=False, token_required=False, drive_enabled=False,
+                        max_linear=0.5, max_angular=1.0, perception=True)
+    assert hello["perception"] is True
+
+
+def test_build_hello_perception_absente_par_defaut():
+    # Défaut = False : sans perception_topic, le panneau reste masqué.
+    hello = build_hello(42, writer=False, token_required=True, drive_enabled=False,
+                        max_linear=0.5, max_angular=1.0)
+    assert hello["perception"] is False
+
+
 # --- Pages statiques : contrat avec le protocole -------------------------------------
 # Le front n'a pas de test navigateur : ces gardes lisent les VRAIS fichiers et
 # attrapent les erreurs qui casseraient une page au chargement (id manquant,
@@ -882,9 +895,10 @@ class _StringTimeFactice:
 
 
 class _QoSFactice:
-    def __init__(self, depth=10, durability="VOLATILE"):
+    def __init__(self, depth=10, durability="VOLATILE", reliability="RELIABLE"):
         self.depth = depth
         self.durability = durability
+        self.reliability = reliability
 
 
 def _module(nom, **attributs):
@@ -903,7 +917,8 @@ def pont(monkeypatch):
         "rclpy": _module("rclpy"),
         "rclpy.node": _module("rclpy.node", Node=_NodeFactice),
         "rclpy.qos": _module("rclpy.qos", QoSProfile=_QoSFactice,
-                             DurabilityPolicy=types.SimpleNamespace(TRANSIENT_LOCAL="TRANSIENT_LOCAL")),
+                             DurabilityPolicy=types.SimpleNamespace(TRANSIENT_LOCAL="TRANSIENT_LOCAL"),
+                             ReliabilityPolicy=types.SimpleNamespace(BEST_EFFORT="BEST_EFFORT")),
         "ament_index_python": _module("ament_index_python"),
         "ament_index_python.packages": _module(
             "ament_index_python.packages", get_package_share_directory=lambda _nom: str(PACKAGE_WEB)),
@@ -934,6 +949,50 @@ def test_pont_par_defaut_sans_topics_de_repetition(pont, monkeypatch):
     assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE
     assert noeud.rehearsal_enabled is False
     assert noeud.hello_message("c1")["rehearsal"] is False
+
+
+def test_pont_perception_desactivee_par_defaut(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch)
+    assert noeud.perception_topic == ""
+    assert "camera/image_raw/compressed" not in noeud.abonnements
+    assert noeud.hello_message("c1")["perception"] is False
+
+
+@pytest.mark.parametrize("domaine", ["43", "42"])
+def test_pont_perception_active_lecture_seule(pont, monkeypatch, domaine):
+    noeud = _creer_noeud(pont, monkeypatch, domaine=domaine,
+                         perception_topic="camera/image_raw/compressed")
+    assert noeud.hello_message("c1")["perception"] is True
+    qos, callback = noeud.abonnements["camera/image_raw/compressed"]
+    assert (qos.depth, qos.reliability) == (1, "BEST_EFFORT")
+    # Lecture seule : aucun publisher sur ce topic, ni dans la whitelist.
+    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE
+    for rehearsal in (False, True):
+        assert "camera/image_raw/compressed" not in effective_whitelist(rehearsal)
+    with pytest.raises(ProtocolError):
+        parse_client_message(
+            '{"type":"cmd","topic":"camera/image_raw/compressed","value":1}',
+            effective_whitelist(True))
+
+
+def test_pont_perception_garde_le_jpeg_tel_quel(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch, perception_topic="camera/image_raw/compressed")
+    _qos, callback = noeud.abonnements["camera/image_raw/compressed"]
+    callback(types.SimpleNamespace(format="jpeg", data=b"\xff\xd8abc"))
+    jpeg, _at = noeud.flux_perception.snapshot()
+    assert jpeg == b"\xff\xd8abc"
+    # Le flux caméra n'est pas touché, un format non JPEG est ignoré.
+    assert noeud.flux_camera.snapshot()[0] is None
+    noeud2 = _creer_noeud(pont, monkeypatch, perception_topic="p")
+    noeud2.abonnements["p"][1](types.SimpleNamespace(format="png", data=b"x"))
+    assert noeud2.flux_perception.snapshot()[0] is None
+
+
+def test_derniere_frame_jpeg_throttle(pont):
+    flux = pont.DerniereFrameJpeg(10)   # 10 i/s : une frame admise par 0,1 s
+    assert flux.admettre(1.0) is True
+    assert flux.admettre(1.05) is False
+    assert flux.admettre(1.1) is True
 
 
 def test_pont_repetition_activee_en_simulation(pont, monkeypatch):

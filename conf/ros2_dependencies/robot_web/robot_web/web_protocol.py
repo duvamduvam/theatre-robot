@@ -314,13 +314,16 @@ def rehearsal_allowed(domain_id: int) -> bool:
 
 def build_hello(domain_id: int, writer: bool, token_required: bool,
                 drive_enabled: bool, max_linear: float, max_angular: float,
-                rehearsal: bool = False) -> dict:
+                rehearsal: bool = False, perception: bool = False) -> dict:
     # drive_enabled/max_linear/max_angular : l'UI affiche les plafonds et
     # VERROUILLE le pad de pilotage si drive_enabled=false (WEB_DRIVE=false),
     # elle n'a donc pas à les deviner. Le plafond DUR reste appliqué serveur
     # (drive_to_twist) -- l'UI ne fait que refléter et éviter d'émettre pour rien.
     # rehearsal : la page « scène » n'AFFICHE les boutons de répétition (route,
     # vitesse, séance) que si le serveur les accepte ; défaut False = sûr.
+    # perception : le serveur sert /perception (second flux vidéo, LECTURE SEULE,
+    # ce que voit la perception de Didier) ; la page n'affiche son panneau que
+    # si c'est vrai. Défaut False = flux absent, comme sur le vrai robot.
     return {
         "type": "hello",
         "domain_id": domain_id,
@@ -331,6 +334,7 @@ def build_hello(domain_id: int, writer: bool, token_required: bool,
         "max_linear": max_linear,
         "max_angular": max_angular,
         "rehearsal": rehearsal,
+        "perception": perception,
     }
 
 

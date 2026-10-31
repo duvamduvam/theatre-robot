@@ -94,12 +94,25 @@
 
     <!-- ===================== COLONNE 1 : caméra de Didier ===================== -->
     <section class="scene-colonne">
-      <h2>Caméra de Didier</h2>
+      <h2>Caméra de Didier (Gazebo)</h2>
       <div class="carte carte-video">
         <div class="video-wrap">
           <img id="video" alt="flux caméra embarquée">
           <div id="video-placeholder" class="video-placeholder">pas de vidéo</div>
           <button id="btn-video-refresh" type="button" title="Recharger le flux">⟳</button>
+        </div>
+      </div>
+      <!-- Second flux, LECTURE SEULE : l'image que la perception de Didier analyse
+           (en sim, la webcam du PC) et sur laquelle le LLM de réflexion raisonne.
+           Masqué tant que le serveur n'annonce pas hello.perception. -->
+      <div id="scene-perception" class="scene-perception" hidden>
+        <h2>Ce que Didier voit (webcam)</h2>
+        <div class="carte carte-video">
+          <div class="video-wrap">
+            <img id="perception" alt="image analysée par la perception de Didier">
+            <div id="perception-placeholder" class="video-placeholder">pas de vidéo</div>
+            <button id="btn-perception-refresh" type="button" title="Recharger le flux">⟳</button>
+          </div>
         </div>
       </div>
     </section>

@@ -54,6 +54,10 @@ def generate_launch_description():
                               description="true = camera_topic porte du CompressedImage JPEG"
                                            " (vrai robot : flux du Pi vision), servi tel quel ;"
                                            " false = Image brut à encoder (sim : caméra gz)"),
+        DeclareLaunchArgument("perception_topic", default_value="",
+                              description="Topic sensor_msgs/CompressedImage de ce que voit la perception"
+                                           " (ex. camera/image_raw/compressed), servi en LECTURE SEULE"
+                                           " sur /perception. Vide (défaut) = désactivé, aucun abonnement."),
 
         Node(
             package="robot_web",
@@ -67,6 +71,7 @@ def generate_launch_description():
                 "max_linear": max_linear,
                 "max_angular": max_angular,
                 "rehearsal_enabled": rehearsal_enabled,
+                "perception_topic": LaunchConfiguration("perception_topic"),
                 "camera_topic": LaunchConfiguration("camera_topic"),
                 "camera_compressed": ParameterValue(
                     LaunchConfiguration("camera_compressed"), value_type=bool),

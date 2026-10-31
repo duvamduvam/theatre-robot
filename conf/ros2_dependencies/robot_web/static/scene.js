@@ -86,6 +86,13 @@ liaison.surLiaison = () => {
   document.querySelectorAll(".scene-repetition").forEach((el) => {
     el.hidden = !state.rehearsal;
   });
+  // Panneau « Ce que Didier voit » : seulement si le serveur sert /perception.
+  // Le flux n'est chargé qu'à la première annonce (puis relancé par ⟳).
+  $("scene-perception").hidden = !state.perception;
+  if (state.perception && !fluxPerception.charge) {
+    fluxPerception.charge = true;
+    fluxPerception.charger();
+  }
 };
 
 // --- État (message "state", toutes les 2 s) ---------------------------------------
@@ -328,6 +335,16 @@ function urlVisageValide(texte) {
 
 let fluxVisage = null;
 
+// Flux perception (lecture seule) : créé ici, chargé par surLiaison à l'annonce.
+let fluxPerception = null;
+
+function installerPerception() {
+  fluxPerception = creerFluxMjpeg("perception", "perception-placeholder",
+                                  () => urlHttp("/perception?ts=" + Date.now()));
+  fluxPerception.charge = false;
+  $("btn-perception-refresh").addEventListener("click", () => fluxPerception.charger());
+}
+
 function installerVisage() {
   const champ = $("scene-visage-url");
   champ.value = urlVisage();
@@ -362,6 +379,7 @@ function installerVisage() {
 
 construirePersonas();
 // Tout est inerte et la répétition masquée jusqu'au premier hello du serveur.
+installerPerception();
 liaison.surLiaison();
 installerVideo();
 installerVisage();

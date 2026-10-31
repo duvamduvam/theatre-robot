@@ -155,6 +155,12 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
 - `REHEARSAL=true` : la page scène obtient les boutons route / vitesse /
   séance (SIM-ONLY, jamais sur le robot). `seed:=N` sur le launch rehearsal
   pour rejouer exactement la même séance (même tirage de bugs et de lubies).
+- Page scène, deux caméras : « Caméra de Didier (Gazebo) » = le rendu du monde
+  simulé (`camera/image_raw`) ; « Ce que Didier voit (webcam) » = l'image que
+  person_tracker analyse (webcam du PC, `camera/image_raw/compressed`) et sur
+  laquelle le LLM de réflexion raisonne. Ce 2e panneau (lecture seule, paramètre
+  `perception_topic`) n'apparaît que si le pont l'annonce ; en sim `sim.launch.py`
+  le passe d'office.
 
 **2. La tête** (`../dadou_vision_ros/conf/docker/x86/`) :
 `CHAT=true docker compose -f docker-compose-x86.yml up -d` — puis, depuis la
