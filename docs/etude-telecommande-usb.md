@@ -236,6 +236,12 @@ d'écrire deux fois une convention de signe et d'inverser un axe sans s'en aperc
 
 ### 4.6 L'OLED : le menu vit **côté hôte**, pas dans le firmware — DÉCIDÉ (révisé)
 
+> **⏸ MIS DE CÔTÉ le 2026-11-01 (choix de David).** Pour l'instant le RP2040 ne fait que
+> **boutons + transmission** ; le menu s'affiche sur l'écran du Pi 4 de la télécommande
+> (chantier UI sans X11). Raison donnée : le code d'un Pico et celui d'un Pi sont trop
+> différents pour partager un afficheur. Le raisonnement ci-dessous reste valable si l'OLED
+> revient un jour — ne pas le rouvrir sans demande.
+
 > **Deuxième décision renversée le 14/09 au soir.** J'avais acté « OLED local seul » (l'écran
 > n'affiche que ce que le boîtier sait de lui-même). Ça tenait tant que l'écran servait à
 > afficher de l'état. **« Contrôler tous les éléments » le fait tomber** : le catalogue des
