@@ -1,7 +1,7 @@
 """Tests de vision/ai/situation.py — textes et seuils gravés en dur."""
 from vision.ai.reflection_contract import SITUATION_MAX_CHARS
 from vision.ai.situation import (SituationBoard, decode_poi_event, decode_speed,
-                                 decode_transcript_line)
+                                 decode_transcript_line, persona_changed)
 
 
 def _board_with_person(azimuth, height, now=100.0):
@@ -175,3 +175,25 @@ def test_compris_omis_faute_de_place_jamais_la_mission():
     board.set_reflection("a" * 500, "b" * 500, 0.0)
     text = board.compose(0.0, "Mission : trouver le paradis. Dernière indication : après le pont.")
     assert "[Mission] Mission : trouver le paradis. Dernière indication : après le pont." in text
+
+
+def test_reset_understanding_efface_compris_et_direction_seulement():
+    board = _board_with_person(-0.5, 0.7, now=100.0)
+    board.set_route("on")
+    board.set_speed(0.5)
+    board.set_reflection("Une dame en rouge sourit.", "Demande-lui le chemin.", 98.0)
+    board.reset_understanding()
+    # Perception (personne + marche) et mission survivent ; compris et direction non.
+    assert board.compose(100.0, "Mission : trouver le paradis.") == (
+        "[Perception] Une personne est à ta gauche, tout près. Tu marches.\n"
+        "[Mission] Mission : trouver le paradis.")
+    # Le tableau reste utilisable : une nouvelle réflexion s'installe normalement.
+    board.set_reflection("Neuf.", "Sois naïf.", 100.0)
+    assert "[Direction pour tes prochaines répliques] Sois naïf." in board.compose(100.0, "")
+
+
+def test_persona_changed_premier_message_ou_identique_nest_pas_un_changement():
+    assert persona_changed(None, "bougon") is False     # latché reçu au démarrage
+    assert persona_changed("bougon", "bougon") is False  # re-publication identique
+    assert persona_changed("bougon", "") is False        # payload vide ignoré
+    assert persona_changed("bougon", "naif") is True

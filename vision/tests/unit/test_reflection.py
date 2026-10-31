@@ -68,6 +68,22 @@ def test_messages_structure_sans_image():
         "Mission :\nMission : x.")
 
 
+def test_messages_persona_ajoutee_en_fin_si_connue():
+    messages = _build(persona="naif")
+    assert messages[1]["content"] == (
+        "Transcription récente :\n(rien de dit pour l'instant)\n\n"
+        "Perception :\nPersonne en vue.\n\n"
+        "Mission :\nMission : x.\n\n"
+        "Personnalité du jour de Didier : naif")
+
+
+def test_messages_sans_persona_aucune_ligne_personnalite():
+    for persona in (None, "", "  "):
+        content = _build(persona=persona)[1]["content"]
+        assert "Personnalité" not in content, persona
+        assert content.endswith("Mission :\nMission : x.")
+
+
 def test_messages_sections_optionnelles():
     content = _build(instruction="Tu boudes", demande="Qu'est-ce que tu vois ?")[1]["content"]
     assert content.endswith("Consigne du régisseur :\nTu boudes\n\n"
@@ -243,3 +259,19 @@ def test_client_par_defaut_borne_timeout_et_nouvelles_tentatives(monkeypatch):
     Reflector("m", "https://x", None, 100)._get_client()
     assert received == {"base_url": "https://x", "timeout": 40.0, "max_retries": 1,
                         "api_key": "cle-openrouter_key"}
+
+
+def test_messages_camera_partenaire_ligne_sous_la_perception():
+    content = _build(camera_is_partner=True)[1]["content"]
+    assert content == (
+        "Transcription récente :\n(rien de dit pour l'instant)\n\n"
+        "Perception :\nPersonne en vue.\n"
+        "Toute personne que montre la caméra est David, ton partenaire de jeu — pas un passant.\n\n"
+        "Mission :\nMission : x.")
+
+
+def test_messages_camera_partenaire_absente_sinon():
+    assert "ton partenaire de jeu" not in _build()[1]["content"]
+    assert "ton partenaire de jeu" not in _build(camera_is_partner=False)[1]["content"]
+    # drapeau actif mais aucun partenaire : pas de ligne bancale
+    assert "ton partenaire de jeu" not in _build(camera_is_partner=True, partner=None)[1]["content"]

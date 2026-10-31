@@ -225,3 +225,17 @@ def test_config_reflexion_valeurs_gravees():
     assert config["reflection_extra_body"] == {"reasoning": {"effort": "medium"}}
     assert config["reflection_max_tokens"] == 3000
     assert config["reflection_use_image"] is True
+
+
+def test_camera_is_partner_sim_et_partenaire():
+    assert vision_config.camera_is_partner_from_env({"ROS_DOMAIN_ID": "43"}, "David") is True
+
+
+def test_camera_is_partner_faux_hors_simulation():
+    assert vision_config.camera_is_partner_from_env({"ROS_DOMAIN_ID": "42"}, "David") is False
+    assert vision_config.camera_is_partner_from_env({}, "David") is False
+
+
+def test_camera_is_partner_faux_sans_partenaire():
+    for partner in ("", "  ", None):
+        assert vision_config.camera_is_partner_from_env({"ROS_DOMAIN_ID": "43"}, partner) is False

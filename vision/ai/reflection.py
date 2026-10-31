@@ -89,25 +89,37 @@ def render_system_prompt(partner: Optional[str], destination: str) -> str:
 def build_messages(transcript, perception: str, mission_summary: str,
                    instruction: Optional[str], demande: Optional[str],
                    image_jpeg: Optional[bytes], *, partner: Optional[str],
-                   destination: str) -> list:
+                   destination: str, persona: Optional[str] = None,
+                   camera_is_partner: bool = False) -> list:
     """Messages `system` + `user` de l'appel. `transcript` : liste de
     {"role": "david"|"didier", "text"} (les TRANSCRIPT_MAX_LINES dernières
     sont gardées). Sections titrées ; « Consigne du régisseur » et « Demande
-    de Didier » seulement si présentes. Image jointe en data-URL JPEG base64."""
+    de Didier » seulement si présentes. `persona` (nom de la personnalité du
+    jour, None/vide = inconnue) ajoute une ligne en fin de texte pour que la
+    direction de jeu colle au caractère. `camera_is_partner` (banc de simulation
+    seulement, cf. camera_is_partner_from_env) ajoute sous la perception que la
+    personne vue EST le partenaire (sa webcam), pas un passant — le prompt
+    système, figé, ne le dit pas. Image jointe en data-URL JPEG base64."""
     lines = []
     for entry in list(transcript)[-TRANSCRIPT_MAX_LINES:]:
         label = _ROLE_LABELS.get(entry.get("role"))
         if label and entry.get("text"):
             lines.append(f"{label} : {entry['text']}")
+    perception_text = perception or "(rien)"
+    if camera_is_partner and partner:
+        perception_text += (f"\nToute personne que montre la caméra est {partner}, "
+                            "ton partenaire de jeu — pas un passant.")
     sections = [
         "Transcription récente :\n" + ("\n".join(lines) if lines else "(rien de dit pour l'instant)"),
-        "Perception :\n" + (perception or "(rien)"),
+        "Perception :\n" + perception_text,
         "Mission :\n" + (mission_summary or "(aucune)"),
     ]
     if instruction:
         sections.append("Consigne du régisseur :\n" + instruction)
     if demande:
         sections.append("Demande de Didier :\n" + demande)
+    if persona and persona.strip():
+        sections.append("Personnalité du jour de Didier : " + persona.strip())
     text = "\n\n".join(sections)
 
     if image_jpeg:

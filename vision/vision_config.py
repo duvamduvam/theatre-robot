@@ -135,6 +135,17 @@ def reflection_enabled_from_env(environ=os.environ):
     raise ValueError(f"{REFLECTION_ENV}={raw!r} : attendu {'/'.join(_MOVE_TRUE + _MOVE_FALSE)}")
 
 
+def camera_is_partner_from_env(environ, partner):
+    """True ssi la personne vue par la caméra EST le partenaire de jeu :
+    ROS_DOMAIN_ID == MOVE_DOMAIN_ID (simulation) ET un partenaire défini.
+    POURQUOI : en sim, person_tracker lit la webcam du PC devant laquelle se
+    tient le comédien partenaire ; sans ça le metteur en scène intérieur le
+    prend pour un passant inconnu et relance Didier vers lui (31/10). Sur le
+    vrai robot (autre domaine, ou variable absente) : toujours False."""
+    domain = environ.get("ROS_DOMAIN_ID", "").strip()
+    return domain == MOVE_DOMAIN_ID and bool((partner or "").strip())
+
+
 def chat_env_overrides(environ=os.environ):
     """Surcharges du BANC lues dans l'environnement (CHAT_VAD_FACTOR,
     CHAT_WHISPER_MODEL, CHAT_PARTENAIRE, CHAT_MOUVEMENT, CHAT_REFLEXION) -> (dict à fusionner

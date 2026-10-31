@@ -114,6 +114,17 @@ class SituationBoard:
             self._direction = direction.strip()
             self._direction_t = now_s
 
+    def reset_understanding(self) -> None:
+        """Efface le « compris » et la direction de jeu, PAS la perception ni
+        la route (faits du monde, valables quel que soit le personnage).
+        POURQUOI : au changement de persona, la réflexion déduite des
+        répliques de l'ancien personnage serait réinjectée à chaque réplique
+        du nouveau (vécu en sim le 2026-10-31 : « naif » restait râleur)."""
+        self._situation = None
+        self._situation_t = 0.0
+        self._direction = None
+        self._direction_t = 0.0
+
     # -- lecture -------------------------------------------------------------
 
     def perception_text(self, now_s: float) -> str:
@@ -181,6 +192,14 @@ class SituationBoard:
             if budget > len(header) + 10:
                 sections.append(_cap(header + self._situation, budget))
         return "\n".join(sections)[:SITUATION_MAX_CHARS]
+
+
+def persona_changed(current: Optional[str], incoming: str) -> bool:
+    """Un `persona_state` reçu est-il un VRAI changement de personnage ?
+    Non si `incoming` est vide, identique à la courante, ou si `current` est
+    inconnue (premier message, typiquement le latché reçu au démarrage : il
+    ne dit pas que quoi que ce soit a changé, le transcript est alors sain)."""
+    return bool(incoming) and current is not None and incoming != current
 
 
 # -- décodeurs des payloads reçus (tolérants : None = refus, jamais d'exception)

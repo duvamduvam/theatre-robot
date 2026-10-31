@@ -23,6 +23,7 @@ THREADS : les appels LLM tournent dans UN thread de travail unique, jamais
 import collections
 import json
 import logging
+import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -39,9 +40,9 @@ from vision.ai import reflection, reflection_contract as contract
 from vision.ai.mission import MissionState
 from vision.ai.reflection_policy import DeepRequests, ReflectionScheduler, SpontaneousPolicy
 from vision.ai.situation import (SituationBoard, decode_poi_event, decode_speed,
-                                 decode_transcript_line)
+                                 decode_transcript_line, persona_changed)
 from vision.ai.stage import decode_text_payload
-from vision.vision_config import chat_env_overrides, config
+from vision.vision_config import camera_is_partner_from_env, chat_env_overrides, config
 
 # Topics consommés. Les noms `chat_*`, `rehearsal/poi_event`, `route_state`,
 # `route_speed`, `/vision/person_box` et la vidéo sont des CONTRATS d'autres
@@ -59,6 +60,9 @@ PERSON_BOX_TOPIC = "/vision/person_box"
 VIDEO_TOPIC = "camera/image_raw/compressed"
 INSTRUCTION_TOPIC = "chat_instruction"
 CHAT_STATE_TOPIC = "chat_state"
+# Personnalité ACTIVE de Didier, publiée par chat_node en TRANSIENT_LOCAL (msg
+# brut) : l'abonnement DOIT être latché lui aussi, sinon rien n'arrive.
+PERSONA_STATE_TOPIC = "persona_state"
 
 TICK_PERIOD_S = 0.5
 TRANSCRIPT_KEEP = 30
@@ -90,6 +94,8 @@ class ReflectionNode(Node):
         self.declare_parameter("partner", config["chat_partner"] or "")
         self._destination = self.get_parameter("destination").value
         self._partner = self.get_parameter("partner").value or None
+        # Calculé UNE fois : la sim (domaine 43) filme le partenaire, pas un passant.
+        self._camera_is_partner = camera_is_partner_from_env(os.environ, self._partner)
 
         self._lock = threading.Lock()
         self._board = SituationBoard()
@@ -99,6 +105,7 @@ class ReflectionNode(Node):
         self._transcript = collections.deque(maxlen=TRANSCRIPT_KEEP)
         self._instruction = None
         self._deep = DeepRequests()    # demande "reflechir" + son nouvel essai unique
+        self._persona = None           # inconnue tant que persona_state n'est pas reçu
         self._chat_state = ""          # inconnu tant que chat_node n'a rien publié
         self._image = None             # (octets JPEG, heure d'arrivée)
         self._last_person_s = None
@@ -129,12 +136,14 @@ class ReflectionNode(Node):
             QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT))
         self.create_subscription(StringTime, INSTRUCTION_TOPIC, self._on_instruction, 10)
         self.create_subscription(StringTime, CHAT_STATE_TOPIC, self._on_chat_state, LATCHED)
+        self.create_subscription(StringTime, PERSONA_STATE_TOPIC, self._on_persona_state, LATCHED)
         self.create_subscription(StringTime, contract.REFLECT_TOPIC, self._on_reflect, 10)
 
         self._publish_mission()
         self.create_timer(TICK_PERIOD_S, self._tick)
         self.get_logger().info(
             f"reflection prêt : destination={self._destination!r}, partenaire={self._partner!r}, "
+            f"caméra=partenaire:{self._camera_is_partner}, "
             f"modèle={config['reflection_model']}, images={config['reflection_use_image']}")
 
     # -- abonnements (rapides : aucun appel réseau) ---------------------------
@@ -205,6 +214,26 @@ class ReflectionNode(Node):
             # tolérance que partout ailleurs (piège vécu au banc du 23/10).
             self._chat_state = decode_text_payload(msg.msg)
 
+    def _on_persona_state(self, msg):
+        """Changement de personnage : l'ancien transcript et ce que la
+        réflexion en avait tiré (« compris », direction) sont réinjectés à
+        chaque réplique -- sans purge, le nouveau personnage joue dans le
+        sillage de l'ancien (vécu en sim le 2026-10-31). Le PREMIER message
+        (latché reçu au démarrage) n'est pas un changement : on l'adopte sans
+        rien vider. Perception, mission et consigne du régisseur ne dépendent
+        pas du personnage : conservées."""
+        name = decode_text_payload(msg.msg)
+        with self._lock:
+            changed = persona_changed(self._persona, name)
+            if name:
+                previous, self._persona = self._persona, name
+            if changed:
+                self._transcript.clear()
+                self._board.reset_understanding()
+        if changed:
+            self.get_logger().info(
+                f"persona {previous!r} -> {name!r} : transcript et direction de jeu effacés")
+
     def _on_reflect(self, msg):
         demande = contract.decode_reflect(msg.msg)
         if demande is None:
@@ -248,7 +277,8 @@ class ReflectionNode(Node):
         return dict(
             transcript=list(self._transcript), perception=self._board.perception_text(now),
             mission_summary=self._mission.summary(), instruction=self._instruction,
-            demande=demande, demande_retry=demande_retry, image=image, used_image=used_image)
+            demande=demande, demande_retry=demande_retry, image=image, used_image=used_image,
+            persona=self._persona)
 
     # -- thread de travail -----------------------------------------------------
 
@@ -258,7 +288,8 @@ class ReflectionNode(Node):
             messages = reflection.build_messages(
                 inputs["transcript"], inputs["perception"], inputs["mission_summary"],
                 inputs["instruction"], inputs["demande"], inputs["image"],
-                partner=self._partner, destination=self._destination)
+                partner=self._partner, destination=self._destination,
+                persona=inputs["persona"], camera_is_partner=self._camera_is_partner)
             if job.deep:
                 result = self._reflector.reflect(
                     messages, model=config["reflection_deep_model"],
@@ -298,7 +329,10 @@ class ReflectionNode(Node):
     def _apply_result(self, job, inputs, result, duration):
         now = time.monotonic()
         with self._lock:
-            self._board.set_reflection(result.situation, result.direction, now)
+            # Appel parti sous l'ANCIENNE persona et revenu après le changement :
+            # son « compris »/sa direction décrivent l'ancien personnage, on les jette.
+            if inputs["persona"] == self._persona:
+                self._board.set_reflection(result.situation, result.direction, now)
             changes = self._mission.apply(result.mission_update)
             speak = self._policy.allow(
                 result.parler, job.deep, self._chat_state, now,
