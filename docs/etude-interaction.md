@@ -621,6 +621,36 @@ n'a pas encore d'odométrie — rien de ceci ne passe au réel avant elle.
   spontané n'émet jamais « go ») : l'exception doit être étroite, testée, et
   repasser en revue adversariale.
 
+### 10.5 bis Principe directeur : le corps fait ce que la conversation dit [DÉCIDÉ 31/10]
+
+David, après une séance où Didier a annoncé « je vais contourner la flaque »
+puis a roulé dessus : « je veux que le mouvement reflète notre discussion —
+on dit qu'on fait le tour de la flaque, on fait le tour de la flaque ; on va
+voir un objet, on y va ». Constat : il n'y a aujourd'hui **aucun lien** entre
+parole et mouvement, hormis go/stop (la bouche ne connaît ni ce qui arrive,
+ni ce que son corps sait faire, et les roues ignorent la conversation).
+
+Conséquence : « Va voir le… » n'est que le premier cas d'une **couche
+d'intentions de mouvement** tirées de la conversation. Proposition (à
+spécifier, SIM-ONLY : pose vérité terrain + positions connues des objets) :
+
+| Intention (JSON de fin, à côté de `marche`) | Ce que fait le corps |
+|---|---|
+| `aller_voir: <objet>` | rouler jusqu'à une distance de jeu de l'objet, pivoter face à lui (demi-tour si dépassé) |
+| `tour_de: <objet>` | faire le tour de l'objet (cercle à distance de sécurité), puis rejoindre le chemin |
+| `contourner: <objet>` | passer à côté de l'objet au lieu de dessus, puis rejoindre le chemin |
+| `tourner: gauche/droite`, `demi_tour` | pivot sur place |
+| `allure: doucement/normal/vite` | moduler la vitesse SOUS le plafond du curseur de David |
+
+Règles de sûreté (non négociables, cf. CLAUDE.md) : une seule sortie, le
+créneau prio 20 du mux (sous télécommande et web) ; « stop » / mot d'arrêt
+prioritaires sur toute intention en cours ; vitesse et vitesse angulaire
+bornées ; chaque manœuvre a une durée et une distance maximales puis se
+termine à l'arrêt ; le régisseur arbitre (il refuse une intention
+impossible, objet inconnu ou hors zone) ; la bouche ne promet que ce que
+le corps a accepté (sinon elle joue l'incapacité — en place depuis le 31/10,
+vision 9f1c173). Le passage au réel attend l'odométrie et la localisation.
+
 ### 10.6 Vérification [DÉCIDÉ 31/10]
 
 Une séance « Chantiers » de 15 min jouée par David, jugée sur :
@@ -639,8 +669,9 @@ Une séance « Chantiers » de 15 min jouée par David, jugée sur :
 2. Mots secrets (vision : détection déterministe + prompt ; config du banc).
 3. Lubies réclamées et refusables, plafond 1 / 2 min (prompt + régisseur).
 4. Relance autonome à 90 s, étroite (vision + régisseur, revue adversariale).
-5. « Va voir le… » sans pivot ni demi-tour d'abord (arrêt à hauteur) — jouable
-   vite ; puis pivot, puis demi-tour (chemin roues, sim, revue).
+5. Couche d'intentions de mouvement (§10.5 bis) : spec (vocabulaire, contrôleur
+   sim-only, arbitrage régisseur, sûreté) → « aller voir » d'abord, puis
+   « tour de », « contourner », pivots, allure — chacune revue adversariale.
 6. Outil de mesure de séance sur le journal JSONL + séance de vérification.
 
 ### 10.8 Ouvert
