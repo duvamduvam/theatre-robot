@@ -98,7 +98,10 @@ def test_topics_lecture_jamais_publiables():
     # Les topics d'ÉTAT observés par le pont (surbrillance des options
     # actives, 2026-07-13) ne doivent JAMAIS entrer dans la whitelist de
     # publication : un client web ne peut pas forger l'état du chat.
-    assert TOPICS_LECTURE == {"chat_state", "persona_state", "route_state", "chat_audio_chain"}
+    # rehearsal/state (31/10) : séance + arrêt vocal du régisseur ; camera_state
+    # (31/10) : état réel de la webcam de perception.
+    assert TOPICS_LECTURE == {"chat_state", "persona_state", "route_state", "chat_audio_chain",
+                              "rehearsal/state", "camera_state"}
     assert TOPICS_LECTURE.isdisjoint(WHITELIST)
     assert TOPICS_LECTURE.isdisjoint(WHITELIST_REPETITION)
 
@@ -563,12 +566,30 @@ WHITELIST_BASE_GRAVEE = {
     "relay", "neck", "left_eye", "right_eye", "left_arm", "right_arm", "gaze",
     "chat", "persona", "system", "chat_text", "chat_instruction",
 }
-TOPICS_REPETITION_GRAVES = {"route", "route_speed", "rehearsal/cmd"}
+TOPICS_REPETITION_GRAVES = {"route", "route_speed", "rehearsal/cmd", "camera_enable"}
 
 
 def test_whitelist_repetition_exacte_et_hors_whitelist_de_base():
     assert WHITELIST_REPETITION == TOPICS_REPETITION_GRAVES
     assert WHITELIST_REPETITION.isdisjoint(WHITELIST)
+
+
+def test_camera_enable_ecrivable_seulement_en_repetition():
+    """Bouton « Webcam ON/OFF » (31/10) : jamais écrivable hors répétition simulée
+    (donc jamais sur le vrai robot) ; camera_state / rehearsal/state, eux, ne le
+    sont dans AUCUN des deux cas (lecture seule)."""
+    assert "camera_enable" not in effective_whitelist(False)
+    assert "camera_enable" in effective_whitelist(True)
+    with pytest.raises(ProtocolError):
+        parse_client_message('{"type":"cmd","topic":"camera_enable","value":"off"}',
+                             effective_whitelist(False))
+    assert parse_client_message('{"type":"cmd","topic":"camera_enable","value":"off"}',
+                                effective_whitelist(True))["topic"] == "camera_enable"
+    for rehearsal in (False, True):
+        for lecture in ("camera_state", "rehearsal/state"):
+            with pytest.raises(ProtocolError):
+                parse_client_message('{{"type":"cmd","topic":"{}","value":"on"}}'.format(lecture),
+                                     effective_whitelist(rehearsal))
 
 
 def test_whitelist_de_base_gravee():
@@ -579,7 +600,7 @@ def test_whitelist_effective_sans_repetition_est_la_base():
     assert effective_whitelist(False) == WHITELIST_BASE_GRAVEE
 
 
-def test_whitelist_effective_avec_repetition_ajoute_exactement_trois_topics():
+def test_whitelist_effective_avec_repetition_ajoute_exactement_quatre_topics():
     assert effective_whitelist(True) == WHITELIST_BASE_GRAVEE | TOPICS_REPETITION_GRAVES
 
 
@@ -591,7 +612,8 @@ def test_whitelist_effective_immuable():
 
 @pytest.mark.parametrize("rehearsal", [False, True])
 @pytest.mark.parametrize("topic", TOPICS_INTERDITS + ["chat_state", "persona_state",
-                                                       "route_state", "chat_transcript"])
+                                                       "route_state", "chat_transcript",
+                                                       "rehearsal/state", "camera_state"])
 def test_topics_interdits_et_en_lecture_seule_jamais_publiables(topic, rehearsal):
     """Répétition activée ou non : ni les roues, ni e_stop, ni les topics d'état
     ou de flux (lecture seule) n'entrent dans la whitelist effective."""
@@ -764,7 +786,8 @@ def test_scene_ne_lit_que_les_topics_d_etat_publics():
     chat_audio_chain (31/10) : le branchement du son — public, il ne porte
     aucune panne (micro, moteurs, persona)."""
     lus = re.findall(r'valeurTopic\(msg\.topics, "([^"]+)"\)', _lire("scene.js"))
-    assert sorted(lus) == ["chat_audio_chain", "chat_state", "persona_state", "route_state"]
+    assert sorted(lus) == ["camera_state", "chat_audio_chain", "chat_state", "persona_state",
+                           "rehearsal/state", "route_state"]
     # Et aucun autre accès direct aux topics du message state.
     assert len(re.findall(r"msg\.topics", _lire("scene.js"))) == len(lus)
 
@@ -779,7 +802,7 @@ def test_scene_publie_seulement_des_topics_de_la_whitelist_effective():
     topics |= set(re.findall(r'envoyerSaisie\("([^"]+)"', _lire("scene.js")))
     topics |= set(re.findall(r'creerBoutonCatalogue\("([^"]+)"', _lire("scene.js")))
     assert topics == {"chat", "persona", "chat_text", "chat_instruction",
-                      "route", "route_speed", "rehearsal/cmd"}
+                      "route", "route_speed", "rehearsal/cmd", "camera_enable"}
     assert topics <= effective_whitelist(True)
 
 
@@ -814,7 +837,7 @@ def test_scene_boutons_de_repetition_masques_par_defaut():
 
     analyse = Analyse()
     analyse.feed(_lire("scene.html"))
-    assert len(analyse.trouves) == 6          # 3 route + 2 séance + 1 curseur
+    assert len(analyse.trouves) == 8          # 3 route + 2 séance + 2 webcam + 1 curseur
     assert [x for x in analyse.trouves if not x[1]] == []
 
 

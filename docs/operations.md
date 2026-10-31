@@ -196,6 +196,19 @@ champ texte pour lui parler au clavier, une consigne de jeu à la main. Puis
 **route on**, vitesse au slider (ou au fader de la vraie télécommande en
 `ROS_DOMAIN_ID=43 SLIDERS_PROFILE=repetition`), **séance start**. La page
 n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
+- **Badges de retour (31/10)** : dans le groupe Séance, « séance : en attente /
+  en cours / terminée » (topic latché `rehearsal/state`, publié par le
+  régisseur) — inutile de recliquer START tant qu'il ne dit pas « en cours ».
+  À côté de « route en marche », un badge orange **« arrêt vocal — bouger le
+  curseur ou dire « avance » en séance »** apparaît quand un « stop » dit à voix
+  haute retient Didier (route_speed 0) : le « go » vocal est ignoré hors
+  séance, d'où un Didier figé sous un « route en marche » trompeur. Il se lève
+  en bougeant le curseur, par un « avance » en séance, ou à la fin/abort de la
+  séance. Ces badges ne portent jamais d'info de panne ni de lubie.
+- **Webcam (31/10)** : groupe « Webcam » (sim seulement) — boutons ON/OFF
+  (`camera_enable`) et badge d'état réel (`camera_state`, latché par la tête
+  vision). Webcam coupée : le panneau « Ce que Didier voit » affiche « webcam
+  coupée » au lieu d'une image figée.
 - Deux bugs demandent une **réaction de David** : après un *reboot sans
   reprise* (Didier reste planté, route OFF après le respawn), c'est lui qui
   relance (**route on**) — et tant que la route est OFF, un reboot suivant ne

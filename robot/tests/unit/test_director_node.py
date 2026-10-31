@@ -68,6 +68,7 @@ class _NodeFactice:
     def __init__(self, nom):
         self.params = {}
         self.publishers = {}
+        self.qos_publieurs = {}   # topic -> QoS demandée à create_publisher
         self.abonnements = {}   # topic -> (qos, callback)
         self.logs = _Logs()
 
@@ -77,8 +78,9 @@ class _NodeFactice:
     def get_parameter(self, nom):
         return types.SimpleNamespace(value=self.params[nom])
 
-    def create_publisher(self, _type, topic, _qos):
+    def create_publisher(self, _type, topic, qos):
         self.publishers[topic] = _Publieur()
+        self.qos_publieurs[topic] = qos
         return self.publishers[topic]
 
     def create_subscription(self, _type, topic, callback, qos):
@@ -824,3 +826,100 @@ def test_abort_pendant_lubie_et_arret_la_lubie_rend_sa_vitesse(regisseur, monkey
     _voix(n, "stop", t=1010.0)
     _cmd(n, "abort")
     assert _publie(n, "route_speed") == ["0", "0", "0.6"]
+
+
+# --- (i) rehearsal/state : séance + arrêt vocal pour la page scène (31/10) ----------
+
+SEANCE_ATTENTE = '{"seance": "attente", "arret_vocal": false}'
+SEANCE_EN_COURS = '{"seance": "en_cours", "arret_vocal": false}'
+SEANCE_EN_COURS_ARRETEE = '{"seance": "en_cours", "arret_vocal": true}'
+SEANCE_TERMINEE = '{"seance": "terminee", "arret_vocal": false}'
+
+
+def test_etat_seance_latche_et_publie_au_demarrage(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    # TRANSIENT_LOCAL depth 1 : une page ouverte APRÈS le START voit l'état courant.
+    qos = n.qos_publieurs["rehearsal/state"]
+    assert (qos.depth, qos.durability) == (1, "TRANSIENT_LOCAL")
+    assert _publie(n, "rehearsal/state") == [SEANCE_ATTENTE]
+
+
+def test_etat_seance_start_fin_par_duree_et_rejeu(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], duration_s=100)
+    _cmd(n, "start")
+    _cmd(n, "start")                               # déjà démarrée : rien de nouveau
+    _tick_a(n, 1100.0)                             # fin par durée
+    _cmd(n, "start")                               # rejeu
+    assert _publie(n, "rehearsal/state") == [SEANCE_ATTENTE, SEANCE_EN_COURS, SEANCE_TERMINEE,
+                                             SEANCE_EN_COURS]
+
+
+@pytest.mark.parametrize("cmd", ["stop", "abort"])
+def test_etat_seance_stop_et_abort_terminent(regisseur, monkeypatch, tmp_path, cmd):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _cmd(n, cmd)                                   # avant START : inerte, rien publié
+    assert _publie(n, "rehearsal/state") == [SEANCE_ATTENTE]
+    _cmd(n, "start")
+    _cmd(n, cmd)
+    assert _publie(n, "rehearsal/state") == [SEANCE_ATTENTE, SEANCE_EN_COURS, SEANCE_TERMINEE]
+
+
+def test_etat_arret_vocal_pose_par_stop_leve_par_go(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _fader(n, "0.6")
+    _cmd(n, "start")
+    _voix(n, "stop", t=1001.0)
+    _voix(n, "stop", t=1001.5)                     # 2e stop : même état, pas de doublon
+    _voix(n, "go", t=1005.0)
+    assert _publie(n, "rehearsal/state") == [SEANCE_ATTENTE, SEANCE_EN_COURS,
+                                             SEANCE_EN_COURS_ARRETEE, SEANCE_EN_COURS]
+
+
+def test_etat_arret_vocal_pose_hors_seance_puis_go_ignore(regisseur, monkeypatch, tmp_path):
+    """Le cas du 31/10 : « stop » vocal hors séance retient Didier, le « go »
+    est ignoré -- la page doit pouvoir l'afficher."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _fader(n, "0.6")
+    _voix(n, "stop", t=1001.0)
+    _voix(n, "go", t=1005.0)
+    assert _publie(n, "rehearsal/state") == [SEANCE_ATTENTE,
+                                             '{"seance": "attente", "arret_vocal": true}']
+
+
+def test_etat_arret_vocal_leve_par_le_fader(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _fader(n, "0.6")
+    _cmd(n, "start")
+    _voix(n, "stop", t=1001.0)
+    _echos(n)                                      # écho de notre « 0 » : pas un geste de David
+    _fader(n, "0.2")                               # geste de David
+    assert _publie(n, "rehearsal/state")[-2:] == [SEANCE_EN_COURS_ARRETEE, SEANCE_EN_COURS]
+
+
+def test_etat_arret_vocal_leve_par_abort(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], duration_s=100)
+    _cmd(n, "start")
+    _voix(n, "stop", t=1001.0)
+    _cmd(n, "abort")
+    assert _publie(n, "rehearsal/state")[-2:] == [SEANCE_EN_COURS_ARRETEE, SEANCE_TERMINEE]
+
+
+def test_etat_arret_vocal_leve_par_la_fin_de_seance(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], duration_s=100)
+    _cmd(n, "start")
+    _voix(n, "stop", t=1001.0)
+    _tick_a(n, 1100.0)                             # fin par durée
+    assert _publie(n, "rehearsal/state")[-2:] == [SEANCE_EN_COURS_ARRETEE, SEANCE_TERMINEE]
+
+
+def test_etat_ne_trahit_jamais_le_tirage(regisseur, monkeypatch, tmp_path):
+    """Une lubie (stop=true) puis une batterie démarrent et finissent : l'état
+    publié ne bouge pas, et aucun message n'en cite la panne."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE, BATTERIE])
+    _cmd(n, "start")
+    _poi(n, "banc", "enter")                       # lubie : route_speed 0, consigne posée
+    _tick_a(n, 1200.0)                             # batterie démarre
+    _tick_a(n, 1211.0)                             # batterie finie
+    assert _publie(n, "rehearsal/state") == [SEANCE_ATTENTE, SEANCE_EN_COURS]
+    for texte in _publie(n, "rehearsal/state"):
+        assert sorted(json.loads(texte)) == ["arret_vocal", "seance"]

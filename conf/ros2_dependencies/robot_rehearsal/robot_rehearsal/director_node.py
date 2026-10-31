@@ -81,11 +81,13 @@ from robot_interfaces.msg import StringTime
 from robot.diagnostic.journal import JournalWriter, make_event
 from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_TOPIC, DIRECTOR_CMD_TOPIC,
                                        HEARTBEAT_TOPIC, INSTRUCTION_TOPIC, POI_EVENT_TOPIC,
-                                       RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC,
-                                       ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC, check_domain)
+                                       REHEARSAL_STATE_TOPIC, RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC,
+                                       ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC,
+                                       check_domain)
 from robot_rehearsal.director import (MESSAGE_TYPES, Director, ReenablePolicy, VoiceMove, fader_moved,
                                       messages, route_cmd_kind, speed_factor, speed_in_effect)
 from robot_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
+from robot_rehearsal.rehearsal_state import rehearsal_state
 from robot_rehearsal.route import RouteError, load_route
 from robot_rehearsal.scenario import ScenarioError, load_scenario
 
@@ -172,6 +174,12 @@ class DirectorNode(Node):
         self.pub_route = self.create_publisher(StringTime, ROUTE_CMD_TOPIC, 10)
         self.pub_speed = self.create_publisher(StringTime, ROUTE_SPEED_TOPIC, 10)
         self.pub_chat_fault = self.create_publisher(StringTime, CHAT_FAULT_TOPIC, 10)
+        # État de séance pour la page scène : LATCHÉ (TRANSIENT_LOCAL, depth 1) pour
+        # qu'une page ouverte APRÈS le START voie quand même l'état courant.
+        self.pub_state = self.create_publisher(
+            StringTime, REHEARSAL_STATE_TOPIC,
+            QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        self._last_state = None   # dernier payload publié : pas de republication identique
         self.create_subscription(StringTime, DIRECTOR_CMD_TOPIC, self._on_cmd, 10)
         self.create_subscription(StringTime, POI_EVENT_TOPIC, self._on_poi_event, 10)
         # On ÉCOUTE le topic route (y compris nos propres ordres) : c'est ce qui
@@ -206,6 +214,7 @@ class DirectorNode(Node):
         self.get_logger().info(f"régisseur prêt : « {self.scenario.name} », graine {self.scenario.seed}, "
                                f"{len(self.scenario.faults)} pannes ({len(self.scenario.undrawn)} écartées "
                                f"au tirage), journal {self.journal_path}")
+        self._publish_state()   # état initial (« attente ») latché dès le démarrage
         if bool(self.get_parameter("autostart").value):
             self._start()
 
@@ -241,6 +250,7 @@ class DirectorNode(Node):
             self.log("scenario_reset", {"reason": "restart"})
         self.director.start(time.monotonic())
         self.log("scenario_start", {"name": self.scenario.name, "seed": self.scenario.seed})
+        self._publish_state()
 
     def _on_route_state(self, msg: StringTime):
         state, now = msg.msg.strip().strip('"'), time.monotonic()
@@ -290,6 +300,7 @@ class DirectorNode(Node):
             # Le fader reste maître : David vient de fixer la vitesse, l'arrêt
             # vocal est levé SANS rien publier (même seuil que la lubie).
             self.log("voice_hold_released", {"by": "fader", "value": value})
+            self._publish_state()
         if self._speed_before_lubie is None or not fader_moved(value, self._speed_before_lubie):
             return
         try:
@@ -340,6 +351,9 @@ class DirectorNode(Node):
             self._voice_move(cmd)
         except Exception as e:   # un callback qui lève tue le node : jamais ici
             self.get_logger().error(f"chat_move {msg.msg!r} : {e!r}")
+        # Y compris après un échec de publication : l'arrêt vocal a pu être
+        # posé, relâché ou conservé -- l'état publié suit le VRAI état.
+        self._publish_state()
 
     def _voice_move(self, cmd):
         now = time.monotonic()
@@ -415,6 +429,7 @@ class DirectorNode(Node):
         for proc in list(self._paused):
             self._resume(proc)
         self.log("scenario_abort", {"cmd": reason, "reenable_dropped": dropped})
+        self._publish_state()
 
     def _resume(self, proc: str):
         try:
@@ -461,6 +476,7 @@ class DirectorNode(Node):
                 if relaunching:
                     self.log("voice_relaunch_cancelled", {"by": "fin"})
                 self.log("scenario_end", {"status": self.director.status()})
+                self._publish_state()
                 continue
             f = a.fault
             payload = {"id": f.id, "type": f.type, "params": f.params}
@@ -547,6 +563,20 @@ class DirectorNode(Node):
                 # Référence de la fermeture au fader : la vitesse d'AVANT notre
                 # « 0 » ; posée APRÈS publication (un échec = pas de lubie active).
                 self._speed_before_lubie = in_effect if kind == "start" else None
+
+    def _publish_state(self) -> None:
+        """Publie rehearsal/state SEULEMENT s'il a changé (pas de timer : appelé
+        aux points où séance et arrêt vocal bougent -- start, fin, abort, voix,
+        fader). Ne doit jamais faire échouer l'appelant (révocation, voix)."""
+        try:
+            payload = rehearsal_state(self.director.started, self.director.ended,
+                                      self.voice.hold_before is not None)
+            if payload == self._last_state:
+                return
+            self.pub_state.publish(StringTime(msg=payload, time=0, anim=False))
+            self._last_state = payload
+        except Exception as e:
+            self.get_logger().error(f"rehearsal/state : {e!r}")
 
     def _publish(self, topic: str, payload: str) -> None:
         """Publie sur le publisher de SON topic ; route_speed est noté dans

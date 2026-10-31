@@ -10,7 +10,9 @@
  * régisseur de la répétition -- David ne voit pas le tirage (étude répétition
  * simulée §13.1). Conséquences de code, à ne pas « améliorer » :
  *  - de `state` (toutes les 2 s) on ne lit que chat_state, persona_state,
- *    route_state et chat_audio_chain (branchement du son, 31/10) ; JAMAIS chat_instruction (le régisseur publie sur le même
+ *    route_state, chat_audio_chain (branchement du son, 31/10), rehearsal/state
+ *    (séance + arrêt vocal, 31/10 : le régisseur n'y met AUCUNE panne) et
+ *    camera_state ; JAMAIS chat_instruction (le régisseur publie sur le même
  *    topic que la consigne posée ici) ni route_speed (une panne « batterie
  *    faible » y passerait) ;
  *  - le curseur de vitesse est une CONSIGNE sans relecture : il ne se recale
@@ -46,6 +48,19 @@ const LIBELLE_ETAT_CHAT = {
 const LIBELLE_ETAT_ROUTE = {
   on: "route en marche",
   off: "route arrêtée",
+};
+
+// rehearsal/state.seance (latché par le régisseur) -> libellé du badge.
+const LIBELLE_ETAT_SEANCE = {
+  attente: "séance : en attente",
+  en_cours: "séance : en cours",
+  terminee: "séance : terminée",
+};
+
+// camera_state (latché côté vision) -> libellé du badge.
+const LIBELLE_ETAT_CAMERA = {
+  on: "webcam allumée",
+  off: "webcam coupée",
 };
 
 // Qui parle dans chat_transcript : david = le texte que Didier a ENTENDU,
@@ -133,6 +148,30 @@ function afficherEtatScene(msg) {
 
   majBadgeEtat("scene-etat-route", LIBELLE_ETAT_ROUTE, route, route === "on");
   surlignerGroupe("groupe-route", route);
+
+  afficherEtatRegisseur(valeurTopic(msg.topics, "rehearsal/state"));
+
+  const camera = valeurTopic(msg.topics, "camera_state");
+  majBadgeEtat("scene-etat-camera", LIBELLE_ETAT_CAMERA, camera, camera === "on");
+  surlignerGroupe("groupe-camera", camera);
+  // Coupée : texte « webcam coupée » par-dessus, au lieu de la dernière image figée.
+  // État inconnu (null) : on ne masque rien, la webcam n'a pas dit qu'elle était coupée.
+  $("perception-coupee").hidden = camera !== "off";
+}
+
+// rehearsal/state : JSON {"seance", "arret_vocal"} du régisseur. Illisible ou absent
+// = badges « inconnu » (régisseur pas lancé), jamais un état inventé.
+function afficherEtatRegisseur(brut) {
+  let etat = null;
+  try {
+    etat = brut === null ? null : JSON.parse(brut);
+  } catch (e) {
+    logErreur("état de séance illisible");
+  }
+  const seance = etat !== null && typeof etat === "object" ? etat.seance : null;
+  majBadgeEtat("scene-etat-seance", LIBELLE_ETAT_SEANCE, typeof seance === "string" ? seance : null,
+               seance === "en_cours");
+  $("scene-arret-vocal").hidden = !(etat !== null && typeof etat === "object" && etat.arret_vocal === true);
 }
 
 // --- Oreille de Didier : branchement (chat_audio_chain) + entendu (chat_hearing) ---

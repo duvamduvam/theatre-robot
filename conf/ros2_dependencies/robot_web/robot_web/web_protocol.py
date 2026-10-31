@@ -53,7 +53,10 @@ WHITELIST = WHITELIST_SPECTACLE | WHITELIST_TECHNIQUE
 # a rehearsal_enabled ET tourne en domaine 43 (rehearsal_allowed). Sur le vrai
 # robot (domaine 42) ils sont refusés comme n'importe quel topic inconnu :
 # aucun client web ne peut lancer une route.
-WHITELIST_REPETITION = {"route", "route_speed", "rehearsal/cmd"}
+# camera_enable (2026-10-31) : bouton « Webcam ON/OFF » de la page scène,
+# StringTime "on"/"off" consommé côté vision ; sim seulement par construction
+# (jamais écrivable sur le vrai robot, où la webcam n'est pas ce bouton-là).
+WHITELIST_REPETITION = {"route", "route_speed", "rehearsal/cmd", "camera_enable"}
 
 # Topics MASQUÉS dans le message `state` (2026-10-14, étude §13.1 « David ne
 # voit pas le tirage ») : publiables depuis le web (ils restent dans la
@@ -91,7 +94,13 @@ def effective_whitelist(rehearsal_enabled: bool) -> frozenset:
 # chat_audio_chain (2026-10-31, « Oreille de Didier ») : le BRANCHEMENT du son
 # (micro, atténuation, détection, transcription + repli, réponse, voix,
 # sortie), latché par chat_node -- même abonnement TRANSIENT_LOCAL.
-TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chain"}
+# rehearsal/state (2026-10-31) : état de la SÉANCE du régisseur (attente /
+# en_cours / terminee) et ARRÊT VOCAL, latché par le régisseur. Aucune info de
+# panne ni de lubie n'y passe (contrat : rehearsal_state.py) ; lecture seule.
+# camera_state (2026-10-31) : "on"/"off" de la webcam de perception, latché
+# côté vision en réponse à camera_enable -- l'ÉTAT RÉEL, pas le dernier clic.
+TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chain",
+                  "rehearsal/state", "camera_state"}
 
 # Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
 # clients (message "feed"), contrairement à `state` qui ne porte que la

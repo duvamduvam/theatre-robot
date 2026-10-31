@@ -8,7 +8,8 @@
 
   Ce que la page n'affiche JAMAIS : les pannes ni les consignes injectées par le
   régisseur de la répétition (David ne voit pas le tirage). Elle ne lit donc que
-  chat_state, persona_state, route_state et le flux chat_transcript.
+  chat_state, persona_state, route_state, rehearsal/state (séance + arrêt vocal :
+  deux booléens-ou-presque, aucune panne), camera_state et le flux chat_transcript.
 
   SÉCURITÉ : le groupe « Répétition » (route, vitesse, séance) n'est affiché que
   si le serveur l'annonce (hello.rehearsal, SIM-ONLY, domaine 43) ; le serveur
@@ -74,6 +75,11 @@
         <button class="bouton-catalogue" type="button" data-topic="route" data-value="restart">Recommencer</button>
       </span>
       <span id="scene-etat-route" class="badge badge-off" title="état du cheminement (route_state)">—</span>
+      <!-- Arrêt vocal (rehearsal/state) : Didier est RETENU par un « stop » dit à voix
+           haute alors que la route est « en marche » -- sans ce badge il restait figé
+           sans explication (vécu le 31/10). Masqué tant que le régisseur ne l'annonce pas. -->
+      <span id="scene-arret-vocal" class="badge badge-alerte" hidden
+            title="route_speed 0 retenu par un « stop » vocal">arrêt vocal — bouger le curseur ou dire « avance » en séance</span>
       <label class="scene-vitesse" title="Consigne envoyée au relâchement. Pas de relecture : la page ne montre pas la vitesse réelle.">
         <span>Vitesse <b id="scene-vitesse-val">50 %</b></span>
         <input id="scene-vitesse" type="range" min="0" max="1" step="0.05" value="0.5">
@@ -86,6 +92,18 @@
         <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="start">Séance START</button>
         <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="stop">Séance STOP</button>
       </span>
+      <!-- Retour visuel du régisseur (rehearsal/state, latché) : sans lui, 5 clics sur START
+           faute de savoir s'il était pris en compte (vécu le 31/10). -->
+      <span id="scene-etat-seance" class="badge badge-off" title="état de la séance (rehearsal/state)">—</span>
+    </div>
+
+    <div class="scene-groupe scene-repetition" hidden>
+      <h2>Webcam</h2>
+      <span id="groupe-camera" class="scene-boutons">
+        <button class="bouton-catalogue" type="button" data-topic="camera_enable" data-value="on">Webcam ON</button>
+        <button class="bouton-catalogue" type="button" data-topic="camera_enable" data-value="off">Webcam OFF</button>
+      </span>
+      <span id="scene-etat-camera" class="badge badge-off" title="état de la webcam de perception (camera_state)">—</span>
     </div>
 
   </section>
@@ -111,6 +129,9 @@
           <div class="video-wrap">
             <img id="perception" alt="image analysée par la perception de Didier">
             <div id="perception-placeholder" class="video-placeholder">pas de vidéo</div>
+            <!-- Recouvre l'image (opaque) quand camera_state = off : sinon la dernière frame
+                 resterait figée à l'écran comme si la webcam tournait encore. -->
+            <div id="perception-coupee" class="video-placeholder" hidden>webcam coupée</div>
             <button id="btn-perception-refresh" type="button" title="Recharger le flux">⟳</button>
           </div>
         </div>

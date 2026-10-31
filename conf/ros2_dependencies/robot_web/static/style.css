@@ -107,6 +107,9 @@ input {
 .badge-inconnu    { background: #6e5411; color: #fff2d7; }
 .badge-on  { background: #144a24; color: #d7ffe0; }
 .badge-off { background: #2b303a; color: #c7cbd4; }
+/* Alerte orange (arrêt vocal de la page scène) : visible mais pas « erreur ». */
+.badge-alerte { background: #7a4a00; color: #ffe9c7; }
+.badge[hidden] { display: none; }
 
 #rtt {
   font-variant-numeric: tabular-nums;

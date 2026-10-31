@@ -64,6 +64,12 @@ DIRECTOR_CMD_TOPIC = "rehearsal/cmd"
 # Battement du régisseur (StringTime, ~5 Hz). Un relais qui ne l'entend plus
 # pendant HEARTBEAT_TIMEOUT_MS retombe SEUL en passant : régisseur mort =
 # aucune panne ne reste armée.
+# ÉTAT de la séance pour la page scène (2026-10-31), publié par le régisseur
+# en TRANSIENT_LOCAL (latché, depth 1, des DEUX côtés) : StringTime, payload
+# JSON {"seance": "attente"|"en_cours"|"terminee", "arret_vocal": bool}, à
+# chaque changement et au démarrage. NE PORTE JAMAIS d'info de panne/lubie
+# (David ne voit pas le tirage) : voir rehearsal_state.py.
+REHEARSAL_STATE_TOPIC = "rehearsal/state"
 HEARTBEAT_TOPIC = "rehearsal/heartbeat"
 HEARTBEAT_TIMEOUT_MS = 1000
 # Ordres aux relais : StringTime JSON {"relay": nom, "op": ..., "params": {...},
