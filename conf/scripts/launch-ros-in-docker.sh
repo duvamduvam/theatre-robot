@@ -40,4 +40,11 @@ case "$(echo "${CHAT_REFLEXION:-}" | tr '[:upper:]' '[:lower:]' | xargs)" in
     1|true|on|oui) REFLECTION_ENABLED=true ;;
     *) REFLECTION_ENABLED=false ;;
 esac
-ros2 launch vision vision.launch.py chat_enabled:=${CHAT:-false} reflection_enabled:=${REFLECTION_ENABLED}
+# VISION_SIM_CAMERA_TOPIC (env du compose x86 SEULEMENT, jamais celui du Pi) →
+# sim_camera_topic : propose la caméra Gazebo comme source d'images à chaud.
+# Argument ajouté seulement si non vide : absent = option indisponible (robot).
+SIM_CAMERA_ARG=()
+if [ -n "$(echo "${VISION_SIM_CAMERA_TOPIC:-}" | xargs)" ]; then
+    SIM_CAMERA_ARG=("sim_camera_topic:=$(echo "${VISION_SIM_CAMERA_TOPIC}" | xargs)")
+fi
+ros2 launch vision vision.launch.py chat_enabled:=${CHAT:-false} reflection_enabled:=${REFLECTION_ENABLED} "${SIM_CAMERA_ARG[@]}"

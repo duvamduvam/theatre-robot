@@ -29,11 +29,14 @@ import rclpy
 from geometry_msgs.msg import PointStamped
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, QoSProfile
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from robot_interfaces.msg import StringTime
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, Image
 
 from vision.tracking.detector import MediaPipeDetector, open_camera
+from vision.tracking.camera_source import (
+    SOURCE_GAZEBO, SOURCE_WEBCAM, available_sources, decode_camera_source,
+    image_to_bgr, resolve_source)
 from vision.tracking.camera_switch import CAMERA_OFF, CAMERA_ON, decode_camera_enable
 from vision.tracking.target_picker import TargetPicker
 
@@ -85,6 +88,17 @@ CAMERA_STATE_TOPIC = "camera_state"
 # Cadence du log de réessai quand la réouverture échoue (le timer tourne à 30 Hz).
 CAMERA_RETRY_LOG_S = 5.0
 
+# Source d'images à chaud (répétition simulée) : commande `camera_source`
+# ("webcam" | "gazebo"), état EFFECTIF `camera_source_state` latché, et
+# `camera_sources` latché = JSON des sources disponibles (["webcam"] ou
+# ["webcam","gazebo"]). « gazebo » n'existe que si le paramètre
+# sim_camera_topic est non vide (banc PC x86 seulement, jamais sur le Pi).
+CAMERA_SOURCE_TOPIC = "camera_source"
+CAMERA_SOURCE_STATE_TOPIC = "camera_source_state"
+CAMERA_SOURCES_TOPIC = "camera_sources"
+# Cadence du warning « encoding refusé » (une frame Gazebo toutes les ~30 ms).
+SIM_IMAGE_LOG_S = 5.0
+
 
 class PersonTrackerStartupError(RuntimeError):
     """Levée quand le node ne peut pas démarrer proprement (modèle ou caméra
@@ -106,12 +120,15 @@ class PersonTrackerNode(Node):
         self.declare_parameter("score_threshold", 0.4)
         self.declare_parameter("ema_alpha", 0.4)
         self.declare_parameter("video_fps", VIDEO_FPS_DEFAULT)
+        # "" = option Gazebo INDISPONIBLE (cas du robot réel).
+        self.declare_parameter("sim_camera_topic", "")
 
         camera_device = self.get_parameter("camera_device").value
         model_path = self.get_parameter("model_path").value
         score_threshold = float(self.get_parameter("score_threshold").value)
         ema_alpha = float(self.get_parameter("ema_alpha").value)
         self._video_fps = float(self.get_parameter("video_fps").value)
+        self._sim_camera_topic = str(self.get_parameter("sim_camera_topic").value or "").strip()
 
         # Échec explicite et propre si le modèle est absent : mieux vaut un
         # message clair au démarrage ("chemin X introuvable, vérifier le
@@ -158,6 +175,17 @@ class PersonTrackerNode(Node):
         self._camera_wanted = True
         self._camera_state_sent = None
         self._last_retry_log_s = 0.0
+        # Source d'images : _source_wanted = CONSIGNE (callback), _source_active
+        # = ce que le timer a réellement mis en place. Frame Gazebo : le
+        # callback ne fait que ranger le dernier message, le timer le consomme
+        # (conversion + détection dans le MÊME tick que la webcam) puis le met
+        # à None : une frame déjà traitée n'est jamais retraitée.
+        self._source_wanted = SOURCE_WEBCAM
+        self._source_active = SOURCE_WEBCAM
+        self._source_state_sent = None
+        self._sim_sub = None
+        self._sim_msg = None
+        self._last_sim_log_s = 0.0
         self._picker = TargetPicker(ema_alpha=ema_alpha)
         self._publisher = self.create_publisher(PointStamped, "/vision/person", 10)
         # Suivi roues (2026-07-11) : même cible, contrat ÉTENDU sur un topic
@@ -182,6 +210,16 @@ class PersonTrackerNode(Node):
             StringTime, CAMERA_STATE_TOPIC,
             QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
         self._publish_camera_state(CAMERA_ON)  # défaut : la capture est ouverte ci-dessus
+
+        # Source d'images : commande volatile, états latchés (même raison).
+        latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.create_subscription(StringTime, CAMERA_SOURCE_TOPIC, self._on_camera_source, 10)
+        self._source_state_pub = self.create_publisher(
+            StringTime, CAMERA_SOURCE_STATE_TOPIC, latched)
+        sources_pub = self.create_publisher(StringTime, CAMERA_SOURCES_TOPIC, latched)
+        sources_pub.publish(StringTime(
+            msg=json.dumps(available_sources(self._sim_camera_topic)), time=0, anim=False))
+        self._publish_source_state(SOURCE_WEBCAM)  # défaut : webcam, ouverte plus haut
 
         # Retour vidéo (cf. constantes VIDEO_*) : publisher créé SEULEMENT si
         # video_fps > 0 — même garantie structurelle que drive_enabled côté
@@ -233,6 +271,45 @@ class PersonTrackerNode(Node):
             return
         self._camera_wanted = wanted
 
+    def _on_camera_source(self, ros_msg) -> None:
+        """Pose la CONSIGNE de source ; l'abonnement/la libération réels se
+        font dans _sync_camera (jamais ici). Inconnue ou « gazebo » sans
+        sim_camera_topic : warning, rien ne change."""
+        requested = decode_camera_source(ros_msg.msg)
+        if requested is None:
+            self.get_logger().warning(f"commande camera_source inconnue : {ros_msg.msg!r}")
+            return
+        adopted = resolve_source(self._source_wanted, requested, self._sim_camera_topic)
+        if adopted != requested:
+            self.get_logger().warning(
+                f"camera_source {requested!r} refusée : sim_camera_topic non configuré "
+                "(source gazebo indisponible sur cette machine)")
+            return
+        self._source_wanted = adopted
+
+    def _on_sim_image(self, msg) -> None:
+        """Range la dernière frame Gazebo (le timer la consomme)."""
+        self._sim_msg = msg
+
+    def _publish_source_state(self, source: str) -> None:
+        """Publie la source EFFECTIVE, seulement sur changement."""
+        if source == self._source_state_sent:
+            return
+        self._source_state_sent = source
+        self._source_state_pub.publish(StringTime(msg=source, time=0, anim=False))
+        self.get_logger().info(f"source d'images : {source}")
+
+    def _release_inputs(self) -> None:
+        """Ferme TOUT ce qui alimente la perception : périphérique (LED éteinte)
+        et abonnement Gazebo."""
+        if self._cap is not None:
+            self._cap.release()
+            self._cap = None
+        if self._sim_sub is not None:
+            self.destroy_subscription(self._sim_sub)
+            self._sim_sub = None
+        self._sim_msg = None
+
     def _publish_camera_state(self, state: str) -> None:
         """Publie l'état EFFECTIF (pas la consigne), seulement sur changement."""
         if state == self._camera_state_sent:
@@ -242,18 +319,35 @@ class PersonTrackerNode(Node):
         self.get_logger().info(f"caméra {state}")
 
     def _sync_camera(self) -> bool:
-        """Met la capture en accord avec la consigne. Renvoie True si une
-        capture ouverte est disponible pour lire une frame ce tour-ci."""
+        """Met les entrées en accord avec les consignes (marche/arrêt ET source).
+        Renvoie True si une frame peut être lue ce tour-ci."""
+        if self._source_active != self._source_wanted:
+            # Changement de source (même caméra coupée : la source choisie
+            # s'appliquera à la reprise). On ferme l'ancienne entrée, et comme
+            # pour la coupure : désignation relâchée + lissage effacé, pas de
+            # cible fantôme d'une source à l'autre.
+            self._release_inputs()
+            self._picker.release()
+            self._picker.reset()
+            self._source_active = self._source_wanted
+            self._publish_source_state(self._source_active)
         if not self._camera_wanted:
-            if self._cap is not None:
-                self._cap.release()  # libère /dev/video0 : la LED s'éteint
-                self._cap = None
+            if self._cap is not None or self._sim_sub is not None:
+                self._release_inputs()  # libère /dev/video0 : la LED s'éteint
                 # Désignation relâchée ET lissage effacé : à la reprise, pas de
                 # cible fantôme ni de verrouillage hérité d'avant la coupure.
                 self._picker.release()
                 self._picker.reset()
             self._publish_camera_state(CAMERA_OFF)
             return False
+        if self._source_active == SOURCE_GAZEBO:
+            if self._sim_sub is None:
+                # BEST_EFFORT depth 1 : seule la dernière frame compte.
+                self._sim_sub = self.create_subscription(
+                    Image, self._sim_camera_topic, self._on_sim_image,
+                    QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT))
+            self._publish_camera_state(CAMERA_ON)
+            return True
         if self._cap is None:
             try:
                 self._cap = open_camera(
@@ -270,6 +364,29 @@ class PersonTrackerNode(Node):
                 return False
         self._publish_camera_state(CAMERA_ON)
         return True
+
+    def _read_frame(self):
+        """Une frame BGR de la source active, ou None (rien de neuf / refusée)."""
+        if self._source_active == SOURCE_GAZEBO:
+            msg, self._sim_msg = self._sim_msg, None  # consommée : jamais retraitée
+            if msg is None:
+                return None
+            try:
+                return image_to_bgr(msg.encoding, msg.width, msg.height, msg.step, msg.data)
+            except ValueError as exc:
+                now = time.monotonic()
+                if now - self._last_sim_log_s >= SIM_IMAGE_LOG_S:
+                    self._last_sim_log_s = now
+                    self.get_logger().warning(f"Image {self._sim_camera_topic} refusée : {exc}")
+                return None
+        ok, frame = self._cap.read()
+        if not ok:
+            # Échec de lecture PONCTUEL (pas au démarrage) : on log et on
+            # attend le prochain tour plutôt que de crasher le node — une
+            # webcam USB peut avoir un hoquet transitoire sans être hors service.
+            self.get_logger().warning("Échec de lecture caméra (frame ignorée)")
+            return None
+        return frame
 
     def _publish_video(self, frame) -> None:
         """Republie la trame courante en JPEG compressé, throttlée à video_fps.
@@ -294,12 +411,8 @@ class PersonTrackerNode(Node):
     def _on_timer(self) -> None:
         if not self._sync_camera():
             return  # coupée (ou en cours de réouverture) : AUCUNE publication
-        ok, frame = self._cap.read()
-        if not ok:
-            # Échec de lecture PONCTUEL (pas au démarrage) : on log et on
-            # attend le prochain tour plutôt que de crasher le node — une
-            # webcam USB peut avoir un hoquet transitoire sans être hors service.
-            self.get_logger().warning("Échec de lecture caméra (frame ignorée)")
+        frame = self._read_frame()
+        if frame is None:
             return
 
         # Retour vidéo AVANT la détection : la vidéo vit même si MediaPipe
@@ -341,6 +454,7 @@ class PersonTrackerNode(Node):
         cap = getattr(self, "_cap", None)
         if cap is not None:
             cap.release()
+            self._cap = None
         super().destroy_node()
 
 

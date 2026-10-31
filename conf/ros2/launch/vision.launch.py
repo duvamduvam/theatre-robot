@@ -46,6 +46,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -54,6 +55,7 @@ def generate_launch_description():
     score_threshold = LaunchConfiguration("score_threshold")
     ema_alpha = LaunchConfiguration("ema_alpha")
     video_fps = LaunchConfiguration("video_fps")
+    sim_camera_topic = LaunchConfiguration("sim_camera_topic")
     chat_enabled = LaunchConfiguration("chat_enabled")
     reflection_enabled = LaunchConfiguration("reflection_enabled")
 
@@ -79,6 +81,13 @@ def generate_launch_description():
             "video_fps", default_value="5.0",
             description="Cadence (i/s) du retour vidéo JPEG camera/image_raw/compressed"
                         " pour la console de régie (web_bridge) — 0 = désactivé",
+        ),
+        DeclareLaunchArgument(
+            "sim_camera_topic", default_value="",
+            description="Topic sensor_msgs/Image (rgb8) de la caméra Gazebo, proposée comme"
+                        " source d'images à chaud (topic camera_source). Vide = option"
+                        " INDISPONIBLE : défaut du robot réel ; renseigné par le seul banc PC x86"
+                        " (VISION_SIM_CAMERA_TOPIC dans docker-compose-x86.yml)",
         ),
         DeclareLaunchArgument(
             "chat_enabled", default_value="false",
@@ -109,6 +118,9 @@ def generate_launch_description():
                 "score_threshold": score_threshold,
                 "ema_alpha": ema_alpha,
                 "video_fps": video_fps,
+                # ParameterValue(str) : sans lui, launch_ros relit la chaîne comme du
+                # YAML et une valeur vide (robot réel) deviendrait None -> rejet.
+                "sim_camera_topic": ParameterValue(sim_camera_topic, value_type=str),
             }],
         ),
 

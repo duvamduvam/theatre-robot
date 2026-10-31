@@ -42,6 +42,8 @@ from vision.ai.reflection_policy import DeepRequests, ReflectionScheduler, Spont
 from vision.ai.situation import (SituationBoard, decode_poi_event, decode_speed,
                                  decode_transcript_line, persona_changed)
 from vision.ai.stage import decode_text_payload
+from vision.tracking.camera_source import (
+    SOURCE_WEBCAM, camera_is_partner_effective, decode_camera_source)
 from vision.vision_config import camera_is_partner_from_env, chat_env_overrides, config
 
 # Topics consommés. Les noms `chat_*`, `rehearsal/poi_event`, `route_state`,
@@ -63,6 +65,9 @@ CHAT_STATE_TOPIC = "chat_state"
 # Personnalité ACTIVE de Didier, publiée par chat_node en TRANSIENT_LOCAL (msg
 # brut) : l'abonnement DOIT être latché lui aussi, sinon rien n'arrive.
 PERSONA_STATE_TOPIC = "persona_state"
+# Source d'images de la perception (person_tracker, TRANSIENT_LOCAL) : la caméra
+# Gazebo ne filme pas le partenaire devant l'écran.
+CAMERA_SOURCE_STATE_TOPIC = "camera_source_state"
 
 TICK_PERIOD_S = 0.5
 TRANSCRIPT_KEEP = 30
@@ -96,6 +101,8 @@ class ReflectionNode(Node):
         self._partner = self.get_parameter("partner").value or None
         # Calculé UNE fois : la sim (domaine 43) filme le partenaire, pas un passant.
         self._camera_is_partner = camera_is_partner_from_env(os.environ, self._partner)
+        # Source courante : « webcam » tant que rien n'est reçu (défaut du tracker).
+        self._camera_source = SOURCE_WEBCAM
 
         self._lock = threading.Lock()
         self._board = SituationBoard()
@@ -137,6 +144,8 @@ class ReflectionNode(Node):
         self.create_subscription(StringTime, INSTRUCTION_TOPIC, self._on_instruction, 10)
         self.create_subscription(StringTime, CHAT_STATE_TOPIC, self._on_chat_state, LATCHED)
         self.create_subscription(StringTime, PERSONA_STATE_TOPIC, self._on_persona_state, LATCHED)
+        self.create_subscription(
+            StringTime, CAMERA_SOURCE_STATE_TOPIC, self._on_camera_source_state, LATCHED)
         self.create_subscription(StringTime, contract.REFLECT_TOPIC, self._on_reflect, 10)
 
         self._publish_mission()
@@ -214,6 +223,13 @@ class ReflectionNode(Node):
             # tolérance que partout ailleurs (piège vécu au banc du 23/10).
             self._chat_state = decode_text_payload(msg.msg)
 
+    def _on_camera_source_state(self, msg):
+        source = decode_camera_source(msg.msg)
+        if source is None:
+            self.get_logger().warning(f"camera_source_state inconnu : {msg.msg!r}")
+            return
+        self._camera_source = source  # affectation atomique, lue par le thread de travail
+
     def _on_persona_state(self, msg):
         """Changement de personnage : l'ancien transcript et ce que la
         réflexion en avait tiré (« compris », direction) sont réinjectés à
@@ -289,7 +305,9 @@ class ReflectionNode(Node):
                 inputs["transcript"], inputs["perception"], inputs["mission_summary"],
                 inputs["instruction"], inputs["demande"], inputs["image"],
                 partner=self._partner, destination=self._destination,
-                persona=inputs["persona"], camera_is_partner=self._camera_is_partner)
+                persona=inputs["persona"],
+                camera_is_partner=camera_is_partner_effective(
+                    self._camera_is_partner, self._camera_source))
             if job.deep:
                 result = self._reflector.reflect(
                     messages, model=config["reflection_deep_model"],

@@ -65,6 +65,11 @@ services:
       # scène est engagée). Ne commande pas le corps : pas de garde de domaine.
       # CHAT_REFLEXION=false docker compose ... up -d pour le couper.
       - CHAT_REFLEXION=${CHAT_REFLEXION:-true}
+      # Source d'images à chaud de la perception (topic camera_source) : propose
+      # la caméra du robot simulé (Gazebo, sensor_msgs/Image rgb8) en plus de la
+      # webcam du PC, qui reste le défaut. BANC PC SEULEMENT : jamais posé dans
+      # la config du Pi (vide = option indisponible). Vide pour la retirer.
+      - VISION_SIM_CAMERA_TOPIC=${VISION_SIM_CAMERA_TOPIC:-camera/image_raw}
     network_mode: "host"
     # ipc host OBLIGATOIRE : FastDDS passe les DONNÉES en mémoire partagée
     # entre participants du même hôte (la découverte, elle, passe en UDP —
