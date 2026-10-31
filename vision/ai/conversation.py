@@ -108,6 +108,17 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        pour la préséance stop > aller_voir > go). Pendant une panne `mute`,
        l'ordre part quand même. Cette brique ne sait RIEN du mouvement : chat_node publie,
        le régisseur de la répétition décide.
+       Lot M2 (31/10, même spec §7, GESTES CHIFFRÉS — décision de David :
+       des outils généraux plutôt que des cas figés) : la clé "tourner"
+       (pivot sur place, degrés signés, + = gauche) lui passe {"cmd":
+       "tourner", "angle_deg": …}, la clé "avancer" (mètres, jamais en
+       arrière) {"cmd": "avancer", "metres": …} — mises en mouvement,
+       préséance stop > aller_voir > tourner > avancer > go. Et kwarg
+       OPTIONNEL `on_look` (défaut None = la clé "regarder" n'est pas lue) :
+       la clé "regarder" (degrés, + = gauche, 0 = devant ; tête seule, la
+       caméra reste au buste) lui passe {"angle_deg": …, "hold_ms":
+       LOOK_HOLD_MS} — PAS une mise en mouvement : permise en tour spontané,
+       hors verrou de la garde, et émise EN PLUS d'un geste de mouvement.
 
        METTEUR EN SCÈNE INTÉRIEUR (2026-10-23, lot P, dadou_robot_ros/docs/
        spec-metteur-en-scene.md, étude etude-niveaux-reflexion.md) : la
@@ -184,6 +195,7 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
 from __future__ import annotations
 
 import logging
+import math
 import queue
 import threading
 import time
@@ -267,6 +279,41 @@ GUARD_POLL_S = 0.05
 # David). Au-delà (STT bloqué), le "go" part : si le stop arrive ensuite,
 # Didier s'arrête — sens sûr.
 GUARD_LATE_GO_WAIT_S = 5.0
+
+# Lot M2 (31/10, dadou_robot_ros/docs/spec-aller-voir.md §7) : GESTES
+# CHIFFRÉS (décision de David : des outils généraux, pas des cas figés).
+# Valeur attendue = NOMBRE JSON (int ou float fini ; un booléen n'en est pas
+# un, même si bool hérite d'int en Python). Les mots ci-dessous sont tolérés
+# pour la robustesse (le LLM écrit parfois "droite" au lieu de -60) ;
+# normalisation strip + minuscules SEULEMENT ; "demi-tour" (tiret) et
+# "demi tour" sont des graphies du MÊME mot, ajoutées le 31/10 (le LLM les
+# écrira) ; "90" (chaîne) n'est pas 90 — aucun geste n'est deviné.
+# Convention d'angle commune : degrés, + = GAUCHE (sens trigonométrique ROS).
+LOOK_WORDS = {"gauche": 60, "droite": -60, "devant": 0}
+TURN_WORDS = {"gauche": 90, "droite": -90, "demi_tour": 180, "demi-tour": 180, "demi tour": 180}
+# Pivot borné à |a| <= TURN_MAX_DEG (au-delà = ignoré, jamais rogné).
+TURN_MAX_DEG = 180
+# Avancée bornée à 0 < m <= FORWARD_MAX_M : 0 ou négatif = ignoré (Didier ne
+# recule pas), au-delà = ignoré (jamais rogné).
+FORWARD_MAX_M = 5
+# Durée de tenue du regard (ms) envoyée sur `look` (spec §7.1 ; le
+# consommateur la borne lui-même à 1000-8000 ms).
+LOOK_HOLD_MS = 4000
+
+
+def _gesture_number(raw, words=None):
+    """Valeur d'une clé de geste chiffré -> nombre, ou None si illisible :
+    int/float fini tel quel (le type est GARDÉ : 90 reste 90, 1.5 reste 1.5),
+    chaîne = mot de `words` après strip + minuscules, tout le reste (bool,
+    nan/inf, chaîne inconnue ou numérique, liste…) -> None. Les BORNES sont
+    à l'appelant (elles diffèrent par clé)."""
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, (int, float)):
+        return raw if math.isfinite(raw) else None
+    if isinstance(raw, str) and words:
+        return words.get(raw.strip().lower())
+    return None
 
 # Valeur sentinelle : le STT n'expose pas `last_source` (rien à restaurer).
 _NO_SOURCE = object()
@@ -554,7 +601,8 @@ class ConversationEngine:
                  on_transcript: Optional[Callable[[str, str], None]] = None,
                  on_move: Optional[Callable[[Union[str, dict]], None]] = None,
                  on_reflect: Optional[Callable[[str], None]] = None,
-                 guard_vad=None):
+                 guard_vad=None,
+                 on_look: Optional[Callable[[dict], None]] = None):
         self._mic = mic
         self._vad = vad
         # Écoute garde (cf. docstring de module ÉCOUTE GARDE) : une SECONDE
@@ -606,6 +654,9 @@ class ConversationEngine:
         # None = comportement historique STRICTEMENT inchangé (la clé
         # "marche" n'est même pas lue).
         self._on_move = on_move
+        # Regard (lot M2, cf. docstring de module MOUVEMENT) : None = la clé
+        # "regarder" n'est pas lue.
+        self._on_look = on_look
         # Demande de réflexion (cf. docstring de module METTEUR EN SCÈNE) :
         # None = la clé "reflechir" n'est pas lue.
         self._on_reflect = on_reflect
@@ -755,7 +806,17 @@ class ConversationEngine:
         quel. Mêmes règles que "go" (c'est une MISE EN MOUVEMENT) : jamais en
         tour spontané, barrière des stops tardifs, verrou de la garde. Les
         deux clés dans la même réplique : "stop" gagne toujours (aller_voir
-        jeté), sinon aller_voir gagne sur "go" (un seul ordre émis)."""
+        jeté), sinon aller_voir gagne sur "go" (un seul ordre émis).
+
+        Clés chiffrées (lot M2, 31/10, même spec §7.2, cf. _gesture_number) :
+        "tourner" (degrés signés, + = gauche, |a| <= TURN_MAX_DEG, mots de
+        TURN_WORDS) -> `on_move({"cmd": "tourner", "angle_deg": a})` ;
+        "avancer" (mètres, 0 < m <= FORWARD_MAX_M, Didier ne recule pas) ->
+        `on_move({"cmd": "avancer", "metres": m})`. Valeur illisible ou hors
+        bornes = warning, clé ignorée (jamais rognée). Mises en mouvement
+        comme aller_voir (mêmes règles). Préséance si plusieurs clés : stop
+        > aller_voir > tourner > avancer > go — un seul ordre émis, les clés
+        perdantes journalisées."""
         if self._on_move is None or not isinstance(params, dict):
             return
         cmd = None
@@ -765,28 +826,50 @@ class ConversationEngine:
             if cmd not in ("go", "stop"):
                 logger.warning("Clé \"marche\" ignorée : %r (attendu \"go\" ou \"stop\").", raw)
                 cmd = None
-        objet = None
+        # Gestes valides, DANS L'ORDRE DE PRÉSÉANCE : (clé, valeur, intention).
+        gestures = []
         if "aller_voir" in params:
             raw = params["aller_voir"]
             objet = raw.strip() if isinstance(raw, str) else None
-            if not objet:
+            if objet:
+                gestures.append(("aller_voir", objet, {"cmd": "aller_voir", "objet": objet}))
+            else:
                 logger.warning("Clé \"aller_voir\" ignorée : %r (attendu un nom d'objet).", raw)
-                objet = None
+        if "tourner" in params:
+            raw = params["tourner"]
+            angle = _gesture_number(raw, TURN_WORDS)
+            if angle is not None and abs(angle) <= TURN_MAX_DEG:
+                gestures.append(("tourner", angle, {"cmd": "tourner", "angle_deg": angle}))
+            else:
+                logger.warning("Clé \"tourner\" ignorée : %r (attendu des degrés signés, "
+                               "|a| <= %d, ou \"gauche\"/\"droite\"/\"demi_tour\").",
+                               raw, TURN_MAX_DEG)
+        if "avancer" in params:
+            raw = params["avancer"]
+            metres = _gesture_number(raw)
+            if metres is not None and 0 < metres <= FORWARD_MAX_M:
+                gestures.append(("avancer", metres, {"cmd": "avancer", "metres": metres}))
+            else:
+                logger.warning("Clé \"avancer\" ignorée : %r (attendu des mètres, "
+                               "0 < m <= %d : Didier ne recule pas).", raw, FORWARD_MAX_M)
         if cmd == "stop":
-            if objet is not None:
-                logger.warning("Clé \"aller_voir\" : %r ignoré : la même réplique "
-                               "demande \"stop\" (le stop gagne toujours).", objet)
+            for key, value, _intent in gestures:
+                logger.warning("Clé \"%s\" : %r ignoré : la même réplique "
+                               "demande \"stop\" (le stop gagne toujours).", key, value)
             self._emit_move("stop")
             return
-        if objet is not None:
+        if gestures:
+            key, value, intent = gestures[0]
             if cmd == "go":
-                logger.info("Clé \"marche\" : go remplacé par aller_voir %r.", objet)
+                logger.info("Clé \"marche\" : go remplacé par %s %r.", key, value)
+            for lost_key, lost_value, _intent in gestures[1:]:
+                logger.info("Clé \"%s\" : %r remplacé par %s %r.",
+                            lost_key, lost_value, key, value)
             if spontaneous:
-                logger.warning("Clé \"aller_voir\" : %r ignoré : tour spontané "
-                               "(aucun humain ne l'a demandé).", objet)
+                logger.warning("Clé \"%s\" : %r ignoré : tour spontané "
+                               "(aucun humain ne l'a demandé).", key, value)
                 return
-            self._emit_start({"cmd": "aller_voir", "objet": objet},
-                             f"Clé \"aller_voir\" : {objet!r}")
+            self._emit_start(intent, f"Clé \"{key}\" : {value!r}")
             return
         if cmd != "go":
             return
@@ -797,7 +880,8 @@ class ConversationEngine:
         self._emit_start("go", "Clé \"marche\" : go")
 
     def _emit_start(self, intent, label: str) -> None:
-        """Émet un ordre de MISE EN MOUVEMENT ("go" ou aller_voir) en
+        """Émet un ordre de MISE EN MOUVEMENT ("go", aller_voir, tourner ou
+        avancer) en
         respectant l'écoute garde (cf. docstring de module ÉCOUTE GARDE).
         `label` (« Clé "marche" : go ») ne sert qu'aux journaux."""
         # Un stop TARDIF de la réplique précédente (B1) doit partir AVANT cet
@@ -823,8 +907,8 @@ class ConversationEngine:
 
     def _emit_move(self, cmd) -> None:
         """Seul point d'émission d'une intention de marche — partagé par la
-        clé "marche" (fin de réplique), la clé "aller_voir" (`cmd` est alors
-        le dict du contrat) et l'arrêt d'urgence vocal (avant le LLM). `on_move` None = mouvement désactivé : rien, sans erreur.
+        clé "marche" (fin de réplique), les clés "aller_voir", "tourner" et
+        "avancer" (`cmd` est alors le dict du contrat) et l'arrêt d'urgence vocal (avant le LLM). `on_move` None = mouvement désactivé : rien, sans erreur.
         Callback qui lève = ordre perdu, JAMAIS le tour : une publication en
         échec ne doit pas rendre Didier muet (et le deadman reste l'arrêt
         effectif, cf. vision.ai.emergency)."""
@@ -834,6 +918,31 @@ class ConversationEngine:
             self._on_move(cmd)
         except Exception:
             logger.exception("Callback on_move en échec (ordre %r perdu).", cmd)
+
+    def _notify_look(self, params) -> None:
+        """Clé "regarder" du JSON de fin -> `on_look({"angle_deg": a,
+        "hold_ms": LOOK_HOLD_MS})` (lot M2, dadou_robot_ros/docs/
+        spec-aller-voir.md §7.1). Degrés, + = gauche, 0 = devant, ou un mot
+        de LOOK_WORDS (cf. _gesture_number) ; illisible = warning, rien
+        d'émis. AUCUNE borne ici : la course utile du cou est l'affaire du
+        consommateur (gaze_follower_node), qui la connaît. Tête seule (cou +
+        yeux, aucun déplacement) : permise en tour spontané, émise en plus
+        d'un geste de mouvement, et NI barrière NI verrou de la garde — un
+        arrêt vocal n'a pas à figer le regard. Callback qui lève = regard
+        perdu, jamais le tour (même garde que _emit_move)."""
+        if self._on_look is None or not isinstance(params, dict) or "regarder" not in params:
+            return
+        raw = params["regarder"]
+        angle = _gesture_number(raw, LOOK_WORDS)
+        if angle is None:
+            logger.warning("Clé \"regarder\" ignorée : %r (attendu des degrés, "
+                           "+ = gauche, ou \"gauche\"/\"droite\"/\"devant\").", raw)
+            return
+        payload = {"angle_deg": angle, "hold_ms": LOOK_HOLD_MS}
+        try:
+            self._on_look(payload)
+        except Exception:
+            logger.exception("Callback on_look en échec (regard %r perdu).", payload)
 
     def _notify_reflect(self, params) -> None:
         """Clé "reflechir" du JSON de fin -> `on_reflect(demande)` (cf.
@@ -933,6 +1042,8 @@ class ConversationEngine:
             # jambes (seule la synthèse est muette, cf. ci-dessus) — ni la
             # tête : la demande de réflexion part aussi.
             self._notify_move(event.params, spontaneous)
+            # Regard : tête seule, permis en tour spontané (aucun déplacement).
+            self._notify_look(event.params)
             self._notify_reflect(event.params)
             return event.params
 

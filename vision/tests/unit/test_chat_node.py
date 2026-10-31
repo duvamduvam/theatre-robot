@@ -483,6 +483,36 @@ def test_on_objects_decode_refuse_ou_remplace_sans_nouvelle_session():
     assert "self._brain.reconfigure" not in calls
 
 
+# --- « Regarder » (lot M2, 31/10, spec-aller-voir.md §7.1) : "look" est
+# gravé côté robot (gaze_follower_node). Choix prudent du lot : publié
+# SEULEMENT avec le mouvement à la voix (banc sim).
+
+def test_topic_de_regard_a_la_valeur_du_contrat():
+    assert _module_string_constants(_chat_node_tree()).get("LOOK_TOPIC") == "look"
+
+
+def test_publisher_de_regard_conditionne_au_mouvement_et_branche_sur_on_look():
+    init_source = ast.unparse(_chat_node_method(_chat_node_tree(), "__init__"))
+    assert ("self._look_pub = self.create_publisher(StringTime, LOOK_TOPIC, 10) "
+            "if config['chat_move_enabled'] else None") in init_source
+    assert "on_look=self._publish_look if self._look_pub is not None else None" in init_source
+
+
+def test_publish_look_publie_par_le_publisher_dedie_et_journalise():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_publish_look")
+    assert [c for c in calls if c.endswith(".publish")] == ["self._look_pub.publish"]
+    assert "json.dumps" in calls
+    assert "self.get_logger().info" in calls
+
+
+def test_regard_publie_mais_toujours_aucun_topic_de_roues():
+    tree = _chat_node_tree()
+    publies = _publisher_topics(tree, _module_string_constants(tree))
+    assert "look" in publies
+    assert not {"route", "route_speed", "cmd_vel", "/cmd_vel", "cmd_vel_follow",
+                "cmd_vel_remote", "wheels", "route_goto"} & set(publies)
+
+
 @pytest.mark.parametrize("methode", ["__init__", "_on_persona"])
 def test_les_deux_compositions_du_prompt_passent_move(methode):
     source = ast.unparse(_chat_node_method(_chat_node_tree(), methode))

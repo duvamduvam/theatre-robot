@@ -208,7 +208,8 @@ class FakeGate:
 def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
                   brain_raises=False, beeps=True, on_state=None,
                   initial_state=None, gate=None, show_audio_active=None,
-                  on_meter=None, on_timing=None, on_move=None, on_reflect=None):
+                  on_meter=None, on_timing=None, on_move=None, on_reflect=None,
+                  on_look=None):
     """Assemble un ConversationEngine avec des fakes câblés sur la même
     timeline — factorise le câblage répété par les tests ci-dessous.
     L'appelant est responsable de _cleanup_beeps(engine) en fin de test.
@@ -237,6 +238,7 @@ def _make_engine(timeline, *, frames, vad_events, stt_text, brain_deltas,
         on_timing=on_timing,
         on_move=on_move,
         on_reflect=on_reflect,
+        on_look=on_look,
     )
 
 
@@ -2979,3 +2981,322 @@ def test_garde_stop_tardif_part_avant_l_aller_voir_du_tour_suivant(timeline):
         timer.cancel()
         hold.set()
     assert ordres == [ANNEAUX, "stop", ANNEAUX]  # la nouvelle intention de David gagne
+
+
+# --------------------------------------------------------------------------
+# Gestes chiffrés (lot M2, 31/10, dadou_robot_ros/docs/spec-aller-voir.md
+# §7, décision de David) : "tourner" (degrés, + = gauche, |a| <= 180) et
+# "avancer" (0 < m <= 5) sont des MISES EN MOUVEMENT (on_move, jamais en
+# spontané, garde) ; préséance stop > aller_voir > tourner > avancer > go ;
+# "regarder" (degrés) part sur on_look (tête seule, permis en spontané,
+# émis EN PLUS d'un geste de mouvement).
+# --------------------------------------------------------------------------
+
+TOURNE_DROITE = {"cmd": "tourner", "angle_deg": -90}
+AVANCE_UN = {"cmd": "avancer", "metres": 1}
+REGARDE_DROITE = {"angle_deg": -60, "hold_ms": 4000}
+
+
+def _tour_avec_cles(timeline, deltas, *, on_move=None, on_look=None):
+    frames, events = _speech_frames_and_events()
+    engine = _make_engine(timeline, frames=frames, vad_events=events,
+                          stt_text="jette un œil sur ta droite", brain_deltas=deltas,
+                          on_move=on_move, on_look=on_look)
+    try:
+        return engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+
+
+def _ordre_pour(timeline, cles):
+    """Un tour dont le JSON de fin porte `cles` (texte JSON brut, sans
+    accolades) -> liste des ordres reçus par on_move."""
+    ordres = []
+    assert _tour_avec_cles(timeline, ['Hop. {"emotion": "happy", ' + cles + '}'],
+                           on_move=ordres.append) is True
+    return ordres
+
+
+# --- « Tourner » --------------------------------------------------------------
+
+@pytest.mark.parametrize("valeur, angle", [
+    ("-90", -90), ("90", 90), ("45.5", 45.5), ("180", 180), ("-180", -180), ("0", 0),
+    ('"gauche"', 90), ('"droite"', -90), ('"demi_tour"', 180),
+    ('" Droite "', -90), ('"DEMI_TOUR"', 180)])
+def test_tourner_emis_au_format_du_contrat(timeline, valeur, angle):
+    ordres = _ordre_pour(timeline, '"tourner": ' + valeur)
+    assert ordres == [{"cmd": "tourner", "angle_deg": angle}]
+    assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
+
+
+def test_tourner_payload_publie_grave(timeline):
+    # Chaîne que le régisseur décode (json.dumps de chat_node._publish_move) ;
+    # un entier reste un entier.
+    assert json.dumps(_ordre_pour(timeline, '"tourner": "droite"')[0]) == (
+        '{"cmd": "tourner", "angle_deg": -90}')
+
+
+@pytest.mark.parametrize("valeur", ["181", "-180.5", "720", "NaN", "Infinity",
+                                    '"90"', '"derriere"', '""',
+                                    "null", "true", "false", '[90]'])
+def test_tourner_illisible_ou_hors_bornes_ignore_avec_warning(timeline, caplog, valeur):
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _ordre_pour(timeline, '"tourner": ' + valeur) == []
+    assert any("tourner" in r.message for r in caplog.records)
+
+
+@pytest.mark.parametrize("graphie", ['"demi_tour"', '"demi-tour"', '" Demi Tour "'])
+def test_tourner_demi_tour_toutes_graphies(timeline, graphie):
+    assert json.dumps(_ordre_pour(timeline, '"tourner": ' + graphie)[0]) == (
+        '{"cmd": "tourner", "angle_deg": 180}')
+
+
+def test_tourner_invalide_laisse_passer_le_go(timeline):
+    assert _ordre_pour(timeline, '"marche": "go", "tourner": 400') == ["go"]
+
+
+def test_tourner_sans_on_move_aucun_effet(timeline, caplog):
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _tour_avec_cles(
+            timeline, ['Ok. {"emotion": "happy", "tourner": -90, "avancer": 2}']) is True
+    assert caplog.records == []
+
+
+# --- « Avancer » --------------------------------------------------------------
+
+@pytest.mark.parametrize("valeur, metres", [("1", 1), ("0.5", 0.5), ("5", 5), ("2.25", 2.25)])
+def test_avancer_emis_au_format_du_contrat(timeline, valeur, metres):
+    assert _ordre_pour(timeline, '"avancer": ' + valeur) == [
+        {"cmd": "avancer", "metres": metres}]
+
+
+def test_avancer_payload_publie_grave(timeline):
+    assert json.dumps(_ordre_pour(timeline, '"avancer": 1.5')[0]) == (
+        '{"cmd": "avancer", "metres": 1.5}')
+
+
+@pytest.mark.parametrize("valeur", ["0", "-1", "-0.5", "5.01", "12", "NaN", "Infinity",
+                                    '"1"', '"un peu"', '"gauche"', "null", "true", "[1]"])
+def test_avancer_illisible_nul_negatif_ou_trop_loin_ignore_avec_warning(timeline, caplog,
+                                                                          valeur):
+    # Il ne recule pas (négatif), 0 n'est pas un geste, au-delà de 5 m : refus.
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _ordre_pour(timeline, '"avancer": ' + valeur) == []
+    assert any("avancer" in r.message for r in caplog.records)
+
+
+def test_avancer_refus_explique_qu_il_ne_recule_pas(timeline, caplog):
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        _ordre_pour(timeline, '"avancer": -2')
+    assert [r.message for r in caplog.records] == [
+        "Clé \"avancer\" ignorée : -2 (attendu des mètres, 0 < m <= 5 : Didier ne recule pas)."]
+
+
+# --- Préséance stop > aller_voir > tourner > avancer > go ------------------------
+
+@pytest.mark.parametrize("cles, attendu", [
+    ('"marche": "go", "tourner": -90', TOURNE_DROITE),
+    ('"marche": "go", "avancer": 1', AVANCE_UN),
+    ('"tourner": -90, "avancer": 1', TOURNE_DROITE),
+    ('"avancer": 1, "tourner": -90', TOURNE_DROITE),          # l'ordre des clés ne compte pas
+    ('"aller_voir": "anneaux", "tourner": -90', ANNEAUX),
+    ('"avancer": 1, "aller_voir": "anneaux"', ANNEAUX),
+    ('"marche": "go", "aller_voir": "anneaux", "tourner": -90, "avancer": 1', ANNEAUX),
+    ('"marche": "go", "tourner": -90, "avancer": 1', TOURNE_DROITE),
+    ('"marche": "stop", "tourner": -90', "stop"),
+    ('"marche": "stop", "avancer": 1', "stop"),
+    ('"marche": "stop", "aller_voir": "anneaux", "tourner": -90, "avancer": 1', "stop"),
+    ('"tourner": 999, "avancer": 1', AVANCE_UN),               # perdant illisible = suivant
+])
+def test_preseance_des_gestes_un_seul_ordre(timeline, cles, attendu):
+    assert _ordre_pour(timeline, cles) == [attendu]
+
+
+def test_stop_journalise_chaque_geste_jete(timeline, caplog):
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _ordre_pour(timeline, '"marche": "stop", "tourner": -90, "avancer": 1') == ["stop"]
+    messages = [r.message for r in caplog.records]
+    assert ("Clé \"tourner\" : -90 ignoré : la même réplique demande \"stop\" "
+            "(le stop gagne toujours).") in messages
+    assert ("Clé \"avancer\" : 1 ignoré : la même réplique demande \"stop\" "
+            "(le stop gagne toujours).") in messages
+
+
+# --- Mise en mouvement : spontané, verrou et barrière de la garde --------------
+
+@pytest.mark.parametrize("cles, cle, valeur", [
+    ('"marche": "go", "tourner": -90', "tourner", "-90"),
+    ('"avancer": 2', "avancer", "2")])
+def test_tour_spontane_n_emet_jamais_tourner_ni_avancer(timeline, clock, caplog, cles, cle,
+                                                        valeur):
+    # Revue B1 du 23/10 : un tour spontané ne met jamais Didier en mouvement.
+    stage = StageState()
+    stage.push_prompt("Regarde ce qu'il y a à droite.", clock.t)
+    ordres = []
+    engine, _brain = _spontane_engine(
+        timeline, stage, clock, frames=[b"f0", b"f1", b"f2"],
+        brain_deltas=['Voyons ! {"emotion": "happy", ' + cles + '}'])
+    engine._on_move = ordres.append
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == []
+    assert [r.message for r in caplog.records] == [
+        f"Clé \"{cle}\" : {valeur} ignoré : tour spontané (aucun humain ne l'a demandé)."]
+
+
+@pytest.mark.parametrize("params", [{"tourner": -90}, {"avancer": 1}])
+def test_geste_jamais_emis_apres_une_interruption_de_la_meme_replique(timeline, params):
+    ordres, on_move = _ordres_thread_safe()
+    engine, *_ = _guard_engine(timeline, stt=GuardStt(), on_move=on_move)
+    interrupted = threading.Event()
+    interrupted.set()
+    engine._guard = types.SimpleNamespace(lock=threading.Lock(), interrupted=interrupted)
+    engine._notify_move(params)
+    engine._notify_move({"marche": "stop"})
+    assert ordres == ["stop"]
+
+
+@pytest.mark.parametrize("params", [{"tourner": 180}, {"avancer": 3}])
+def test_geste_pris_sous_le_verrou_de_la_garde(timeline, params):
+    ordres, on_move = _ordres_thread_safe()
+    engine, *_ = _guard_engine(timeline, stt=GuardStt(), on_move=on_move)
+    guard = types.SimpleNamespace(lock=threading.Lock(), interrupted=threading.Event())
+    engine._guard = guard
+    with guard.lock:
+        worker = threading.Thread(target=engine._notify_move, args=(params,), daemon=True)
+        worker.start()
+        time.sleep(0.1)
+        assert ordres == []                      # bloqué derrière le verrou
+        guard.interrupted.set()                  # l'urgence tombe entre-temps
+    worker.join(WAIT_S)
+    assert ordres == []
+
+
+@pytest.mark.parametrize("cles, ordre", [('"tourner": -90', TOURNE_DROITE),
+                                         ('"avancer": 1', AVANCE_UN)])
+def test_garde_stop_tardif_part_avant_le_geste_du_tour_suivant(timeline, cles, ordre):
+    # Même barrière que pour "go" (B1, GUARD_LATE_GO_WAIT_S).
+    deltas = ["Première phrase. ", 'Deuxième phrase. {"emotion": "happy", ' + cles + '}']
+    ordres, on_move = _ordres_thread_safe()
+    hold = threading.Event()
+    stt = GuardStt("Stop !", hold=hold)
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move, deltas=deltas,
+                               pause=lambda: stt.entered.wait(timeout=WAIT_S))
+    assert engine.run_once() is True             # tour 1 : geste, stop en attente
+    engine._stage.push_text("Encore !")
+    timer = threading.Timer(0.3, hold.set)       # le STT tardif rend PENDANT le tour 2
+    timer.start()
+    try:
+        assert engine.run_once() is True
+    finally:
+        timer.cancel()
+        hold.set()
+    assert ordres == [ordre, "stop", ordre]
+
+
+# --- « Regarder » -----------------------------------------------------------
+
+@pytest.mark.parametrize("valeur, angle", [
+    ("-60", -60), ("30", 30), ("0", 0), ("12.5", 12.5), ("-90", -90),
+    ('"gauche"', 60), ('"droite"', -60), ('"devant"', 0),
+    ('"  Gauche "', 60), ('"DEVANT"', 0)])
+def test_regarder_emis_au_format_du_contrat(timeline, valeur, angle):
+    regards = []
+    assert _tour_avec_cles(
+        timeline, ['Tiens ! {"emotion": "happy", "regarder": ' + valeur + '}'],
+        on_look=regards.append) is True
+    assert regards == [{"angle_deg": angle, "hold_ms": 4000}]
+    assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
+
+
+def test_regarder_payload_publie_grave(timeline):
+    regards = []
+    _tour_avec_cles(timeline, ['Tiens. {"emotion": "happy", "regarder": "droite"}'],
+                    on_look=regards.append)
+    # Chaîne que gaze_follower_node décode (json.dumps de chat_node._publish_look).
+    assert json.dumps(regards[0]) == '{"angle_deg": -60, "hold_ms": 4000}'
+
+
+@pytest.mark.parametrize("valeur", ['"derriere"', '"haut"', '"demi_tour"', '"-60"', '""',
+                                    "NaN", "Infinity", "null", "true", '[30]'])
+def test_regarder_illisible_ignore_avec_warning(timeline, caplog, valeur):
+    regards = []
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _tour_avec_cles(
+            timeline, ['Bof. {"emotion": "neutral", "regarder": ' + valeur + '}'],
+            on_look=regards.append) is True
+    assert regards == []
+    assert any("regarder" in r.message for r in caplog.records)
+
+
+def test_regarder_sans_on_look_aucun_effet(timeline, caplog):
+    # Mouvement à la voix non branché : la clé n'est pas lue, même avec on_move.
+    ordres = []
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _tour_avec_cles(
+            timeline, ['Ok. {"emotion": "happy", "regarder": -60}'],
+            on_move=ordres.append) is True
+    assert caplog.records == []
+    assert ordres == []
+
+
+def test_regarder_ne_passe_jamais_par_on_move(timeline):
+    ordres, regards = [], []
+    _tour_avec_cles(timeline, ['Tiens. {"emotion": "happy", "regarder": 60}'],
+                    on_move=ordres.append, on_look=regards.append)
+    assert ordres == []
+    assert regards == [{"angle_deg": 60, "hold_ms": 4000}]
+
+
+@pytest.mark.parametrize("cles, ordre", [
+    ('"tourner": -90', TOURNE_DROITE), ('"avancer": 1', AVANCE_UN),
+    ('"aller_voir": "anneaux"', ANNEAUX), ('"marche": "go"', "go"),
+    ('"marche": "stop"', "stop")])
+def test_regarder_en_plus_d_un_geste_les_deux_partent(timeline, cles, ordre):
+    ordres, regards = [], []
+    _tour_avec_cles(
+        timeline, ['Voyons. {"emotion": "happy", "regarder": "droite", ' + cles + '}'],
+        on_move=ordres.append, on_look=regards.append)
+    assert ordres == [ordre]
+    assert regards == [REGARDE_DROITE]
+
+
+def test_tour_spontane_peut_regarder(timeline, clock):
+    stage = StageState()
+    stage.push_prompt("Jette un œil à droite.", clock.t)
+    regards = []
+    engine, _brain = _spontane_engine(
+        timeline, stage, clock, frames=[b"f0", b"f1", b"f2"],
+        brain_deltas=['Tiens ? {"emotion": "happy", "regarder": "droite"}'])
+    engine._on_look = regards.append
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert regards == [REGARDE_DROITE]
+
+
+def test_regarder_emis_meme_apres_interruption_de_la_garde(timeline):
+    # Ni barrière ni verrou de garde pour la tête (cf. _notify_look).
+    regards = []
+    engine, *_ = _guard_engine(timeline, stt=GuardStt(), on_move=lambda cmd: None)
+    engine._on_look = regards.append
+    interrupted = threading.Event()
+    interrupted.set()
+    engine._guard = types.SimpleNamespace(lock=threading.Lock(), interrupted=interrupted)
+    engine._notify_look({"regarder": "devant"})
+    assert regards == [{"angle_deg": 0, "hold_ms": 4000}]
+
+
+def test_on_look_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
+    def explose(_payload):
+        raise RuntimeError("publish KO")
+    with caplog.at_level("ERROR", logger="vision.ai.conversation"):
+        assert _tour_avec_cles(
+            timeline, ['Tiens. {"emotion": "happy", "regarder": "droite"}'],
+            on_look=explose) is True
+    assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
+    assert any("on_look" in r.message for r in caplog.records)

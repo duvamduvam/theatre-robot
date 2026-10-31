@@ -137,6 +137,20 @@ réinitialiser la session). La clé de fin `"aller_voir": "<nom>"` publie
 mouvement traitée comme `"go"` (jamais en tour spontané, verrou et barrière de
 l'écoute garde) ; `"marche": "stop"` dans la même réplique gagne, sinon
 `aller_voir` remplace un `"go"`.
+**Gestes chiffrés « tourner » / « avancer » / « regarder »** (31/10, lot M2, même
+spec §7 — décision de David : des outils généraux, pas des cas figés ; la caméra
+est au BUSTE : la tête joue, seul le pivot fait voir de côté). Degrés, + = gauche.
+`"tourner": a` (|a| ≤ 180, ou "gauche"/"droite"/"demi_tour" = +90/−90/180) ->
+`{"cmd": "tourner", "angle_deg": a}` ; `"avancer": m` (0 < m ≤ 5, nombre seulement :
+il ne recule pas) -> `{"cmd": "avancer", "metres": m}`, tous deux sur
+`rehearsal/chat_move`, mêmes règles qu'`aller_voir` ; préséance stop > aller_voir >
+tourner > avancer > go. `"regarder": a` (ou "gauche"/"droite"/"devant" = +60/−60/0)
+-> topic `look` (StringTime JSON `{"angle_deg": a, "hold_ms": 4000}`, consommé par
+gaze_follower_node côté robot, qui borne la course) : tête seule, permise en tour
+spontané, hors verrou de la garde, émise EN PLUS d'un geste de mouvement. Hors
+bornes / illisible (booléen, NaN, chaîne numérique) = warning, jamais rogné.
+Choix prudent du lot : `look` n'est publié QU'avec le mouvement à la voix (banc
+sim) — à élargir au vrai robot plus tard, sur décision.
 
 Test à la main (domaine 43) :
 `ros2 topic pub --once chat_text robot_interfaces/msg/StringTime "{msg: 'bonjour Didier'}"`.

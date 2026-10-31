@@ -126,13 +126,28 @@ Appelle-la par son prénom, ne lui demande jamais son nom, ne fais pas comme si 
 # le route_driver y va, pivote face à lui, s'arrête). La liste vient du topic
 # `rehearsal/objects`, hors system prompt (cf. objects_prompt) : le nom écrit
 # dans "aller_voir" doit être celui de la liste, le régisseur refuse le reste.
+# « Regarder » / « tourner » / « avancer » (lot M2, 31/10, même spec §7,
+# après « je lui propose de regarder à droite, il me dit qu'il ne peut pas »).
+# Décision de David : des GESTES GÉNÉRAUX CHIFFRÉS que Didier combine
+# librement, plutôt que des cas figés (« que vois-tu à droite » n'est pas un
+# geste, c'est tourner -90 puis en parler). Tête et pivot sont DISTINCTS
+# parce que la caméra est fixée au BUSTE — tourner la tête est du jeu, seul
+# le pivot du corps fait VOIR de côté (la perception du tour suivant voit
+# enfin la droite). Restent impossibles : reculer, et contourner EN UN SEUL
+# geste (il peut essayer, un geste à la fois). Convention d'angle : + =
+# gauche (cf. conversation.TURN_WORDS / LOOK_WORDS, bornes FORWARD_MAX_M /
+# TURN_MAX_DEG — les nombres du prompt doivent rester dans ces bornes).
 MOVE_TEMPLATE = """
 Mouvement (répétition) : tu marches seul sur un itinéraire. Tu peux demander à repartir ou à t'arrêter en ajoutant au JSON de fin "marche": "go" ou "marche": "stop" (ex. {"emotion": "happy", "marche": "go"}).
-Ton corps sait avancer tout droit sur ton chemin, s'arrêter, et aller voir un objet DE LA LISTE des objets que tu peux aller voir (elle t'est donnée à chaque réplique) : il y va, se tourne face à lui et s'arrête. À part ça, tu ne sais ni contourner, ni tourner, ni reculer, ni faire demi-tour. Ne promets jamais un de ces gestes ; si on te le demande, joue ton incapacité en personnage (« un détour ? je ne sais aller que tout droit, moi ! »).
-- "go" : quand on te demande d'avancer, de repartir, de continuer, ou quand TOI tu décides que ta lubie est finie et qu'il est temps de reprendre la route.
+Ton corps a quelques gestes simples, des OUTILS que tu choisis librement selon ce qu'on te dit, et que tu enchaînes d'une réplique à l'autre : un seul geste de corps par réplique (tu peux y ajouter un regard). Les angles sont en degrés, positifs vers ta GAUCHE, négatifs vers ta droite. Tes yeux (ta caméra) sont fixés sur ton buste : tourner la tête ne te montre pas ce qu'il y a de côté ; pour VOIR de côté ou derrière toi, il faut pivoter. Tu ne sais pas reculer, et tu ne contournes rien en un seul geste.
+- "go" : quand on te demande de repartir, de reprendre ta route, de continuer, ou quand TOI tu décides que ta lubie est finie et qu'il est temps de reprendre la route.
 - "stop" : seulement quand on te demande de t'arrêter ou d'attendre, ou pour une chose qui mérite VRAIMENT que tu t'arrêtes — jamais par simple prudence ni pour commenter ce que tu vois.
-- "aller_voir": "<nom exact de la liste>" : quand on te demande d'aller voir un objet de la liste ou de t'en approcher, ou quand TOI tu veux aller voir un objet de la liste (ex. {"emotion": "happy", "aller_voir": "anneaux"}). Un objet absent de la liste : tu ne le trouves pas, joue-le en personnage, sans la clé.
-- Sinon, n'ajoute PAS les clés "marche" ni "aller_voir". N'évoque jamais ce JSON à voix haute.
+- "aller_voir": "<nom exact de la liste>" : quand on te demande d'aller voir un objet de la liste ou de t'en approcher, ou quand TOI tu veux aller voir un objet de la liste (ex. {"emotion": "happy", "aller_voir": "anneaux"}) : il y va, se tourne face à lui et s'arrête. Un objet absent de la liste : tu ne le trouves pas, joue-le en personnage, sans la clé.
+- "tourner": <degrés, entre -180 et 180> : pivoter sur place (ex. {"emotion": "happy", "tourner": -90} pour te tourner vers ta droite, 180 pour faire demi-tour). C'est ce qui te fait VOIR ailleurs : « jette un œil sur ta droite » -> "tourner": -90, et tu dis que tu regardes ; tu en parleras à ta réplique suivante, quand tu l'auras vu.
+- "avancer": <mètres, plus que 0 et au plus 5> : faire quelques pas tout droit puis t'arrêter (ex. « avance un peu » -> {"emotion": "happy", "avancer": 1}).
+- "regarder": <degrés> : tourner la tête un instant (ex. "regarder": 60 vers ta gauche, -60 vers ta droite, 0 devant toi) — pour jouer, pas pour voir. Il s'ajoute à un geste de corps si tu veux.
+- Quand on te demande une chose qu'aucun geste ne fait seul (« fais le tour de la flaque »), dis que tu essaies et fais-le un geste à la fois, réplique après réplique ; si c'est reculer, joue ton incapacité en personnage (« reculer ? je ne sais aller que devant moi ! »).
+- Sinon, n'ajoute PAS les clés "marche", "aller_voir", "tourner", "avancer" ni "regarder". N'évoque jamais ce JSON à voix haute.
 """
 
 # Vocabulaire d'objets (lot M1, spec-aller-voir.md §2.1) : texte EXACT de la
@@ -198,7 +213,8 @@ def compose_system_prompt(name: str, partner: Optional[str] = None,
 
     `move` (False par défaut = prompt inchangé) : ajoute MOVE_TEMPLATE en
     DERNIER — Didier peut demander à repartir / s'arrêter / aller voir un
-    objet (répétition ; la liste d'objets n'est PAS ici, cf. objects_prompt).
+    objet / pivoter / avancer de quelques mètres / tourner la tête
+    (répétition ; la liste d'objets n'est PAS ici, cf. objects_prompt).
 
     REFLECT_TEMPLATE n'est JAMAIS ajouté ici (cf. son commentaire)."""
     if name not in PERSONAS:

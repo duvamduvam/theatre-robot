@@ -110,6 +110,10 @@ POURQUOI CHAT_MOVE_TOPIC (lot I1 « mouvement à la voix », 2026-10-22, spec
        ET ROS_DOMAIN_ID=43 — forcé à False avec un warning sinon, cf.
        vision_config.chat_env_overrides) : sur le Pi, ni bloc de prompt, ni
        topic.
+       Lot M2 (31/10, spec-aller-voir.md §7, gestes CHIFFRÉS) : clés
+       "tourner" ({"cmd": "tourner", "angle_deg": …}) et "avancer" ({"cmd":
+       "avancer", "metres": …}) sur le même topic, et clé "regarder" ->
+       LOOK_TOPIC (tête seule, consommé par gaze_follower_node côté robot).
 POURQUOI les topics du METTEUR EN SCÈNE INTÉRIEUR (lot P, 2026-10-23, spec
        fermée dadou_robot_ros/docs/spec-metteur-en-scene.md) : la parole
        relit le tableau de situation (SITUATION_TOPIC) à chaque tour, sert
@@ -270,6 +274,19 @@ CHAT_MOVE_TOPIC = "rehearsal/chat_move"
 # SEULEMENT si le mouvement à la voix est branché (même condition que
 # CHAT_MOVE_TOPIC). Nom gravé des deux côtés (contracts.py du régisseur).
 REHEARSAL_OBJECTS_TOPIC = "rehearsal/objects"
+
+# Regard demandé par Didier (lot M2, dadou_robot_ros/docs/spec-aller-voir.md
+# §7.1) : StringTime, payload json.dumps({"angle_deg": <degrés, + = gauche,
+# 0 = devant>, "hold_ms": 4000}) (construit et validé par
+# ConversationEngine._notify_look ; la course du cou est bornée côté robot).
+# Consommateur : gaze_follower_node (dadou_robot_ros, PROD) — tête seule,
+# jamais de roues. Nom gravé des deux côtés. QoS VOLATILE : un regard périmé
+# rejoué à un abonné tardif tournerait la tête hors de propos.
+# CHOIX PRUDENT de ce lot : publié SEULEMENT si le mouvement à la voix est
+# branché (chat_move_enabled, banc sim, domaine 43) — le contrat est
+# PROD-compatible, mais l'ouvrir au vrai robot (condition propre, hors
+# CHAT_MOUVEMENT) est une décision à prendre plus tard, après essai réel.
+LOOK_TOPIC = "look"
 
 
 # --- Serveur de diagnostic web (vumètre + latences, cf. docstring de module
@@ -818,6 +835,9 @@ class ChatNode(Node):
         # un ordre périmé rejoué à un abonné tardif ferait repartir Didier.
         self._move_pub = (self.create_publisher(StringTime, CHAT_MOVE_TOPIC, 10)
                           if config["chat_move_enabled"] else None)
+        # Regard (cf. LOOK_TOPIC) : même condition, choix prudent du lot M2.
+        self._look_pub = (self.create_publisher(StringTime, LOOK_TOPIC, 10)
+                          if config["chat_move_enabled"] else None)
         # Demandes de réflexion (cf. docstring de module, metteur en scène) :
         # créé SEULEMENT si la réflexion est activée, comme le bloc de prompt
         # qui apprend la clé "reflechir" au LLM.
@@ -874,6 +894,9 @@ class ChatNode(Node):
             # Demande de réflexion : None si désactivée (la clé "reflechir"
             # n'est pas lue).
             on_reflect=self._publish_reflect if self._reflect_pub is not None else None,
+            # Regard (cf. LOOK_TOPIC) : None si désactivé (la clé "regarder"
+            # n'est pas lue).
+            on_look=self._publish_look if self._look_pub is not None else None,
         )
         self._mic = mic
         self._player = player
@@ -1123,12 +1146,22 @@ class ChatNode(Node):
         """Callback `on_move` de ConversationEngine (thread de conversation,
         OU thread STT de l'écoute garde pour un "stop" crié pendant une
         réplique — publish rclpy est sûr entre threads) :
-        "go"/"stop" (ou le dict {"cmd": "aller_voir", "objet": …}, lot M1)
-        déjà validé par le moteur, publié en JSON sur CHAT_MOVE_TOPIC. Journalisé : c'est la trace qui dit, au débrief, que
+        "go"/"stop" (ou le dict {"cmd": "aller_voir", "objet": …}, lot M1,
+        ou {"cmd": "tourner", "angle_deg": …} / {"cmd": "avancer",
+        "metres": …}, lot M2) déjà validé par le moteur, publié en JSON sur CHAT_MOVE_TOPIC. Journalisé : c'est la trace qui dit, au débrief, que
         l'ordre venait de Didier. PAS d'arbitrage : ce n'est pas un
         actionneur, c'est une DEMANDE au régisseur."""
         self._move_pub.publish(StringTime(msg=json.dumps(cmd), time=0, anim=False))
         self.get_logger().info(f"ordre de marche publié : {cmd}")
+
+    def _publish_look(self, payload: dict) -> None:
+        """Callback `on_look` de ConversationEngine (thread de conversation) :
+        {"angle_deg", "hold_ms"} déjà validé par le moteur, publié en JSON sur
+        LOOK_TOPIC. Journalisé comme l'ordre de marche (trace de débrief).
+        PAS d'arbitrage ici : gaze_follower_node se tait lui-même tant
+        qu'une animation a la main (animation_state)."""
+        self._look_pub.publish(StringTime(msg=json.dumps(payload), time=0, anim=False))
+        self.get_logger().info(f"regard publié : {payload}")
 
     def _on_objects(self, ros_msg):
         """Vocabulaire d'objets (cf. REHEARSAL_OBJECTS_TOPIC) : décodé par

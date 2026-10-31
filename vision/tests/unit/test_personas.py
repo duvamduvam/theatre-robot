@@ -155,8 +155,9 @@ def test_mouvement_apprend_la_cle_aller_voir():
     assert '"aller_voir": "<nom exact de la liste>"' in template
     assert "il y va, se tourne face à lui et s'arrête" in template
     assert "Un objet absent de la liste : tu ne le trouves pas" in template
-    # Les limites restantes du corps sont toujours dites…
-    assert "tu ne sais ni contourner, ni tourner, ni reculer, ni faire demi-tour" in template
+    # Les limites restantes du corps sont toujours dites (réduites au lot M2,
+    # spec §7.2 : tourner, demi-tour et avancer sont des gestes du corps)…
+    assert "Tu ne sais pas reculer, et tu ne contournes rien en un seul geste." in template
     # …mais plus l'interdit d'aller ailleurs, que la clé contredirait.
     assert "ni aller ailleurs" not in template
     assert template.endswith("N'évoque jamais ce JSON à voix haute.\n")
@@ -185,3 +186,43 @@ def test_ligne_d_objets_plafonnee_sans_couper_un_nom():
     assert ligne.endswith(")."), ligne[-20:]   # dernier objet ENTIER, puis le point
     # 32 (préfixe) + n × 60 (« objetNN (d×50) ») + (n-1) × 2 + 1 ≤ 1200 -> n = 18.
     assert ligne.count("objet") == 18
+
+
+# --- Gestes chiffrés (lot M2, 31/10, spec-aller-voir.md §7) ---
+
+def test_mouvement_apprend_les_gestes_chiffres():
+    template = personas.MOVE_TEMPLATE
+    # Clés, unités et bornes GRAVÉES (contrat avec conversation.py et le
+    # régisseur : TURN_MAX_DEG = 180, FORWARD_MAX_M = 5, + = gauche).
+    assert '"tourner": <degrés, entre -180 et 180>' in template
+    assert '"avancer": <mètres, plus que 0 et au plus 5>' in template
+    assert '"regarder": <degrés>' in template
+    assert "positifs vers ta GAUCHE, négatifs vers ta droite" in template
+    # La caméra est au buste : la tête ne fait pas voir, le pivot si.
+    assert "tourner la tête ne te montre pas ce qu'il y a de côté" in template
+    assert "pour VOIR de côté ou derrière toi, il faut pivoter" in template
+
+
+def test_mouvement_exemples_de_gestes_generaux():
+    template = personas.MOVE_TEMPLATE
+    # Les trois exemples de la décision de David, gravés.
+    assert '« jette un œil sur ta droite » -> "tourner": -90' in template
+    assert "tu en parleras à ta réplique suivante" in template
+    assert '« avance un peu » -> {"emotion": "happy", "avancer": 1}' in template
+    assert ("(« fais le tour de la flaque »), dis que tu essaies et fais-le un geste "
+            "à la fois") in template
+    # Des outils au choix, pas des cas figés.
+    assert "des OUTILS que tu choisis librement" in template
+
+
+def test_mouvement_ne_dit_plus_qu_il_ne_sait_pas_tourner():
+    template = personas.MOVE_TEMPLATE
+    assert "ni tourner" not in template
+    assert "ni faire demi-tour" not in template
+    assert "Tu ne sais pas reculer" in template
+
+
+def test_mouvement_liste_toutes_les_cles_a_ne_pas_ajouter():
+    assert personas.MOVE_TEMPLATE.endswith(
+        '- Sinon, n\'ajoute PAS les clés "marche", "aller_voir", "tourner", "avancer" '
+        'ni "regarder". N\'évoque jamais ce JSON à voix haute.\n')
