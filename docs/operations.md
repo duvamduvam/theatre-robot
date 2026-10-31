@@ -177,6 +177,13 @@ http://didier-sim.local:8765/scene sur tout le réseau. Sans sudo ni avahi-utils
 (D-Bus direct vers le démon avahi). ⚠️ Jamais `didier.local` : c'est le nom du
 VRAI robot (alias publié par le Pi, visé par la télécommande) — le script le refuse.
 
+**Son et micro de Didier** (casque Bluetooth) — voir qui est branché à quoi, et choisir :
+```bash
+python3 ../dadou_vision_ros/conf/docker/x86/audio_banc.py               # état
+python3 ../dadou_vision_ros/conf/docker/x86/audio_banc.py choisir M50   # ou un autre casque, ou « defaut »
+```
+`choisir` connecte le casque, le met en profil casque+micro, règle la tête et la redémarre.
+
 **3. La page scène** : http://localhost:8765/scene — caméra de Didier, visage
 LED en direct, conversation (ce que Didier a *compris* et ce qu'il dit), un
 champ texte pour lui parler au clavier, une consigne de jeu à la main. Puis
