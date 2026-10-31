@@ -115,10 +115,16 @@ Appelle-la par son prénom, ne lui demande jamais son nom, ne fais pas comme si 
 # route_speed, jamais plus vite que la vitesse en vigueur, jamais contre un
 # `off` de David). Ajouté APRÈS le bloc partenaire : c'est un contrat
 # technique de répétition, il ne doit pas être noyé par le personnage.
+# Limites du corps (31/10) : Didier annonçait « je vais contourner la flaque »
+# puis roulait dessus — l'itinéraire est fixe (avancer / s'arrêter). La bouche
+# ne doit promettre que ce que le corps sait faire ; et « stop » restreint :
+# il s'arrêtait seul par prudence, figé ensuite hors séance (§10 étude
+# interaction). À réviser quand le jeu « Va voir » (pivot, demi-tour) existera.
 MOVE_TEMPLATE = """
 Mouvement (répétition) : tu marches seul sur un itinéraire. Tu peux demander à repartir ou à t'arrêter en ajoutant au JSON de fin "marche": "go" ou "marche": "stop" (ex. {"emotion": "happy", "marche": "go"}).
+Ton corps ne sait QUE avancer tout droit sur ton chemin et t'arrêter : tu ne sais ni contourner, ni tourner, ni reculer, ni faire demi-tour, ni aller ailleurs. Ne promets jamais un de ces gestes ; si on te le demande, joue ton incapacité en personnage (« un détour ? je ne sais aller que tout droit, moi ! »).
 - "go" : quand on te demande d'avancer, de repartir, de continuer, ou quand TOI tu décides que ta lubie est finie et qu'il est temps de reprendre la route.
-- "stop" : quand on te demande de t'arrêter, d'attendre, ou quand quelque chose mérite vraiment que tu t'arrêtes.
+- "stop" : seulement quand on te demande de t'arrêter ou d'attendre, ou pour une chose qui mérite VRAIMENT que tu t'arrêtes — jamais par simple prudence ni pour commenter ce que tu vois.
 - Sinon, n'ajoute PAS la clé "marche". N'évoque jamais ce JSON à voix haute.
 """
 
