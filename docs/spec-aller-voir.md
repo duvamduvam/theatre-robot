@@ -101,3 +101,42 @@ Tests purs (goto.py, résolution d'objet, arbitrage, prompt) ; puis en sim :
 « va voir les anneaux » depuis 20 m avant, depuis 5 m après (demi-tour),
 « stop » en pleine manœuvre (< 1 s), objet inconnu (refus joué), « go » après
 arrivée (rejoint la route). Revue adversariale avant déploiement.
+
+---
+
+## 7. Lot M2 — « regarder » et « tourner » (31/10, même soirée)
+
+David : « je lui propose de regarder à droite, il me dit qu'il ne peut pas ».
+Deux gestes DISTINCTS, parce que la caméra est fixée au BUSTE (pas à la
+tête, cf. mémoire suivi de personne 14/09) : tourner la tête est du jeu,
+seul le corps qui pivote fait VOIR ailleurs.
+
+### 7.1 « Regarder » — tête (cou + yeux), PROD-compatible
+
+- Bouche : clé de fin `"regarder": "gauche" | "droite" | "devant"`.
+- chat_node publie sur le nouveau topic `look` : StringTime JSON
+  `{"dir": "gauche"|"droite"|"devant", "hold_ms": 4000}` (hold borné
+  1000-8000 ms côté consommateur).
+- Consommateur : `gaze_follower_node` (robot/nodes, PROD). À réception, il
+  pose le cou (et les yeux en mode robot) à la consigne de la direction
+  (gauche/droite = ±70 % de sa course utile, devant = centre), la TIENT
+  `hold_ms` en ignorant les personnes, puis reprend le suivi s'il était actif
+  (sinon revient au centre). Respecte l'arbitrage existant : silencieux tant
+  qu'une animation a la main (`animation_state`). Rampe/amorti existants
+  inchangés (ne pas monter le gain). Pas de roues.
+- Autorisé aussi en tour spontané (aucun déplacement).
+
+### 7.2 « Tourner » — pivot du corps, SIM-ONLY
+
+- Bouche : clé `"tourner": "gauche" | "droite" | "demi_tour"`.
+- Intention sur `rehearsal/chat_move` : `{"cmd": "tourner", "sens": ...}`.
+- Régisseur : mêmes refus que `aller_voir` (route OFF par David, pas de pose) ;
+  accepté hors séance ; lève l'arrêt vocal comme go ; stop/abort → cancel.
+- route_driver : ordre `route_goto` `{"turn_rad": +1.5708|-1.5708|3.1416}`
+  → manœuvre PIVOT seule (réutilise FACE de goto.py : cap cible = cap
+  courant + turn_rad, ω ≤ 0,6 rad/s, fader 0 = rien, timeout 15 s, pose non
+  finie/périmée = zéro, stop/off/cancel = zéro immédiat) → `arrived`.
+- Jamais en tour spontané (mise en mouvement, revue B1).
+- Prompt de marche : retirer « tu ne sais ni tourner ni faire demi-tour » ;
+  il sait aller voir un objet de la liste, tourner la tête (regarder), et
+  pivoter sur place ; il ne sait toujours ni contourner ni reculer.
