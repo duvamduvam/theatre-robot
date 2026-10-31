@@ -9,8 +9,8 @@
  * CE QUE LA PAGE N'AFFICHE JAMAIS : les pannes ni les consignes injectées par le
  * régisseur de la répétition -- David ne voit pas le tirage (étude répétition
  * simulée §13.1). Conséquences de code, à ne pas « améliorer » :
- *  - de `state` (toutes les 2 s) on ne lit que chat_state, persona_state et
- *    route_state ; JAMAIS chat_instruction (le régisseur publie sur le même
+ *  - de `state` (toutes les 2 s) on ne lit que chat_state, persona_state,
+ *    route_state et chat_audio_chain (branchement du son, 31/10) ; JAMAIS chat_instruction (le régisseur publie sur le même
  *    topic que la consigne posée ici) ni route_speed (une panne « batterie
  *    faible » y passerait) ;
  *  - le curseur de vitesse est une CONSIGNE sans relecture : il ne se recale
@@ -92,7 +92,12 @@ liaison.surLiaison = () => {
 
 function valeurTopic(topics, nom) {
   const info = topics[nom];
-  return info ? String(info.msg) : null;
+  if (!info) {
+    return null;
+  }
+  // Le pont DÉCODE les payloads JSON (chat_audio_chain arrive en objet) :
+  // on le resérialise plutôt que d'obtenir « [object Object] » (vécu le 31/10).
+  return typeof info.msg === "object" && info.msg !== null ? JSON.stringify(info.msg) : String(info.msg);
 }
 
 // Surbrillance verte du bouton dont la valeur est l'état RÉEL (pas le dernier
@@ -123,7 +128,76 @@ function afficherEtatScene(msg) {
   surlignerGroupe("groupe-route", route);
 }
 
-liaison.surEtat = afficherEtatScene;
+// --- Oreille de Didier : branchement (chat_audio_chain) + entendu (chat_hearing) ---
+
+// Ordre = chemin du son ; libellés lisibles. Une clé absente du message est sautée.
+const CHAINE = [
+  ["micro", "Micro"], ["attenuation_micro", "Atténuation micro"],
+  ["detection_parole", "Détection de parole"], ["transcription", "Transcription"],
+  ["repli", "Repli"], ["reponse", "Réponse"], ["voix", "Voix"], ["sortie", "Sortie"],
+];
+const ENTENDU_MAX = 8;
+let derniereChaine = null;
+
+function afficherChaine(brut) {
+  if (brut === null || brut === derniereChaine) {
+    return;
+  }
+  derniereChaine = brut;
+  let chaine;
+  try {
+    chaine = JSON.parse(brut);
+  } catch (e) {
+    logErreur("branchement illisible");
+    return;
+  }
+  const corps = $("scene-chaine");
+  corps.replaceChildren();
+  for (const [cle, libelle] of CHAINE) {
+    if (chaine[cle] === null || chaine[cle] === undefined) {
+      continue;
+    }
+    const tr = document.createElement("tr");
+    const a = document.createElement("td");
+    a.className = "label";
+    a.textContent = libelle;
+    const b = document.createElement("td");
+    b.textContent = cle === "attenuation_micro" ? "× " + chaine[cle] : String(chaine[cle]);
+    tr.append(a, b);
+    corps.appendChild(tr);
+  }
+}
+
+function ajouterEntendu(h) {
+  if (h === null || typeof h !== "object" || typeof h.entendu !== "string") {
+    logErreur("tour d'écoute illisible");
+    return;
+  }
+  const garde = h.verdict === "gardé";
+  const li = document.createElement("li");
+  li.className = "scene-entendu-" + (garde ? "garde" : "jete");
+  const tete = document.createElement("span");
+  tete.className = "scene-msg-role";
+  const duree = h.stt_ms === null || h.stt_ms === undefined ? "" : " · " + h.stt_ms + " ms";
+  tete.textContent = new Date().toLocaleTimeString() + " · " + h.moteur + duree + " · " + h.verdict;
+  const texte = document.createElement("span");
+  // textContent : le texte vient du micro, jamais interprété comme du HTML.
+  texte.textContent = h.entendu === "" ? "(rien)" : "« " + h.entendu + " »";
+  li.append(tete, texte);
+  const liste = $("scene-entendu");
+  liste.prepend(li);   // le plus récent en haut
+  while (liste.children.length > ENTENDU_MAX) {
+    liste.lastChild.remove();
+  }
+  const badge = $("scene-oreille-moteur");
+  badge.textContent = h.moteur;
+  badge.className = "badge " + (h.moteur === "distant" ? "badge-on" : "badge-off");
+}
+
+liaison.surEtat = (msg) => {
+  afficherEtatScene(msg);
+  afficherChaine(valeurTopic(msg.topics, "chat_audio_chain"));
+};
 
 // --- Conversation : flux chat_transcript ------------------------------------------
 
@@ -165,6 +239,8 @@ function ajouterReplique(replique) {
 liaison.surFeed = (msg) => {
   if (msg.topic === "chat_transcript") {
     ajouterReplique(msg.msg);
+  } else if (msg.topic === "chat_hearing") {
+    ajouterEntendu(msg.msg);
   }
 };
 

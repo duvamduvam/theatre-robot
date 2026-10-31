@@ -88,13 +88,20 @@ def effective_whitelist(rehearsal_enabled: bool) -> frozenset:
 # topic inconnu).
 # route_state (2026-10-14, page « scène ») : état on/off du cheminement,
 # latché par son publieur comme chat_state -- même abonnement TRANSIENT_LOCAL.
-TOPICS_LECTURE = {"chat_state", "persona_state", "route_state"}
+# chat_audio_chain (2026-10-31, « Oreille de Didier ») : le BRANCHEMENT du son
+# (micro, atténuation, détection, transcription + repli, réponse, voix,
+# sortie), latché par chat_node -- même abonnement TRANSIENT_LOCAL.
+TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chain"}
 
 # Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
 # clients (message "feed"), contrairement à `state` qui ne porte que la
 # dernière valeur toutes les 2 s -- une conversation perdrait des répliques.
 # Lecture seule, comme TOPICS_LECTURE : pas de publisher, pas dans la whitelist.
-TOPICS_FLUX = {"chat_transcript"}
+# chat_hearing (2026-10-31) : un message par tour -- ce que Didier a ENTENDU,
+# par quel moteur, en combien de temps, gardé ou jeté. Y compris les tours
+# jetés, que le transcript ne montre pas (c'est eux qui expliquent un Didier
+# « qui n'entend rien »).
+TOPICS_FLUX = {"chat_transcript", "chat_hearing"}
 
 # Session d'écriture : silence du writer au-delà de ce délai -> écriture
 # libérée (personne ne la récupère automatiquement, cf. §2 du protocole).

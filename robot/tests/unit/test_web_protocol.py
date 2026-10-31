@@ -98,7 +98,7 @@ def test_topics_lecture_jamais_publiables():
     # Les topics d'ÉTAT observés par le pont (surbrillance des options
     # actives, 2026-07-13) ne doivent JAMAIS entrer dans la whitelist de
     # publication : un client web ne peut pas forger l'état du chat.
-    assert TOPICS_LECTURE == {"chat_state", "persona_state", "route_state"}
+    assert TOPICS_LECTURE == {"chat_state", "persona_state", "route_state", "chat_audio_chain"}
     assert TOPICS_LECTURE.isdisjoint(WHITELIST)
     assert TOPICS_LECTURE.isdisjoint(WHITELIST_REPETITION)
 
@@ -666,7 +666,7 @@ def test_rehearsal_allowed_seulement_en_simulation(domain_id, attendu):
 # --- Page « scène » : lecture seule, flux et hello --------------------------------
 
 def test_topics_flux_graves_et_jamais_publiables():
-    assert TOPICS_FLUX == {"chat_transcript"}
+    assert TOPICS_FLUX == {"chat_transcript", "chat_hearing"}
     assert TOPICS_FLUX.isdisjoint(WHITELIST | WHITELIST_REPETITION | TOPICS_LECTURE)
 
 
@@ -746,10 +746,12 @@ def test_script_de_page_ne_redeclare_rien_de_commun(script):
 
 def test_scene_ne_lit_que_les_topics_d_etat_publics():
     """David ne voit pas le tirage : de `state`, la page scène ne lit QUE ces
-    trois topics. Jamais chat_instruction (le régisseur y publie ses consignes)
-    ni route_speed (une panne « batterie faible » y passerait)."""
+    topics. Jamais chat_instruction (le régisseur y publie ses consignes)
+    ni route_speed (une panne « batterie faible » y passerait).
+    chat_audio_chain (31/10) : le branchement du son — public, il ne porte
+    aucune panne (micro, moteurs, persona)."""
     lus = re.findall(r'valeurTopic\(msg\.topics, "([^"]+)"\)', _lire("scene.js"))
-    assert sorted(lus) == ["chat_state", "persona_state", "route_state"]
+    assert sorted(lus) == ["chat_audio_chain", "chat_state", "persona_state", "route_state"]
     # Et aucun autre accès direct aux topics du message state.
     assert len(re.findall(r"msg\.topics", _lire("scene.js"))) == len(lus)
 

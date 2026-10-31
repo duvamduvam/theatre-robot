@@ -126,6 +126,16 @@
     <!-- ======================= COLONNE 3 : conversation ====================== -->
     <section class="scene-colonne">
       <h2>Conversation</h2>
+      <!-- « Oreille de Didier » (31/10) : le BRANCHEMENT du son (chat_audio_chain,
+           latché) et, à chaque tour, ce qu'il a ENTENDU (chat_hearing) — y compris
+           les tours JETÉS, que le fil de conversation ne montre pas. -->
+      <details id="scene-oreille" class="scene-oreille" open>
+        <summary>Oreille de Didier <span id="scene-oreille-moteur" class="badge badge-off">—</span></summary>
+        <table class="scene-chaine">
+          <tbody id="scene-chaine"><tr><td colspan="2">branchement inconnu (tête éteinte ?)</td></tr></tbody>
+        </table>
+        <ol id="scene-entendu" class="scene-entendu" aria-live="polite"></ol>
+      </details>
       <!-- Fil en direct : le texte que Didier A ENTENDU (david) et ce qu'il dit
            (didier), un message par événement du flux chat_transcript. -->
       <ol id="scene-fil" class="scene-fil" aria-live="polite"></ol>
