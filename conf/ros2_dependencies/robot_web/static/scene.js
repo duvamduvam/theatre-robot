@@ -109,7 +109,8 @@ liaison.surLiaison = () => {
   });
   // Panneau « Ce que Didier voit » : seulement si le serveur sert /perception.
   // Le flux n'est chargé qu'à la première annonce (puis relancé par ⟳).
-  $("scene-perception").hidden = !state.perception;
+  perceptionAnnoncee = Boolean(state.perception);
+  majVisibilitePerception();
   if (state.perception && !fluxPerception.charge) {
     fluxPerception.charge = true;
     fluxPerception.charger();
@@ -171,7 +172,18 @@ function afficherEtatScene(msg) {
 // Source des images de la perception : surbrillance d'après l'état RÉEL, titre du panneau,
 // et bouton Gazebo visible seulement si la vision annonce "gazebo". Liste absente ou
 // illisible = webcam seule (on ne propose jamais une source que personne n'a annoncée).
+// Panneau perception masqué en source Gazebo : il répéterait exactement la caméra
+// Gazebo du dessus (remarque de David, 31/10) ; il ne sert qu'en source webcam.
+let perceptionAnnoncee = false;
+let sourceCourante = null;
+
+function majVisibilitePerception() {
+  $("scene-perception").hidden = !perceptionAnnoncee || sourceCourante === "gazebo";
+}
+
 function afficherSourceCamera(source, brutSources) {
+  sourceCourante = source;
+  majVisibilitePerception();
   let sources = [];
   try {
     const lue = brutSources === null ? [] : JSON.parse(brutSources);
