@@ -142,6 +142,7 @@ from vision.ai import arbitration, personas, reflection_contract, stage
 from vision.ai.conversation import ConversationEngine
 from vision.ai.llm_stream import StreamingBrain
 from vision.ai.performance import RosMessage
+from vision.ai import hearing
 from vision.ai.stt import FallbackStt, FasterWhisperStt, OpenRouterStt
 from vision.ai.tts_piper import PiperTts
 from vision.audio.beeps import build_thinking_beeps
@@ -245,6 +246,12 @@ CHAT_FAULT_TOPIC = "rehearsal/chat_fault"
 # Jamais les consignes ni les pannes (David ignore le tirage, §13.1). Pas
 # latché : c'est un FLUX (la page l'affiche au fil de l'eau), pas un état.
 CHAT_TRANSCRIPT_TOPIC = "chat_transcript"
+# « Oreille de Didier » (31/10, vision.ai.hearing) : le BRANCHEMENT du son
+# (latché, republié à chaque changement de persona) et, à chaque tour, ce qui a
+# été ENTENDU, par quel moteur, gardé ou jeté — affichés sur la page scène.
+CHAT_AUDIO_CHAIN_TOPIC = "chat_audio_chain"
+CHAT_HEARING_TOPIC = "chat_hearing"
+ASOUND_CONF = "/etc/asound.conf"
 
 # Ordre de marche demandé par Didier (lot I1, cf. docstring de module) :
 # StringTime, payload json.dumps("go"|"stop"). Le nom `rehearsal/…` EST le
@@ -777,6 +784,23 @@ class ChatNode(Node):
         # un flux de lignes, pas un état (un abonné tardif n'a pas à recevoir
         # une réplique d'il y a dix minutes comme si elle venait d'être dite).
         self._transcript_pub = self.create_publisher(StringTime, CHAT_TRANSCRIPT_TOPIC, 10)
+        # Oreille (cf. CHAT_AUDIO_CHAIN_TOPIC) : branchement LATCHÉ (une page
+        # ouverte après le démarrage doit le voir), entendu VOLATILE (un flux).
+        self._chain_pub = self.create_publisher(
+            StringTime, CHAT_AUDIO_CHAIN_TOPIC,
+            QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        self._hearing_pub = self.create_publisher(StringTime, CHAT_HEARING_TOPIC, 10)
+        self._stt = stt
+        try:
+            with open(ASOUND_CONF, encoding="utf-8") as f:
+                asound = hearing.asound_targets(f.read())
+        except OSError:
+            asound = {}
+        self._chain_args = dict(
+            mic_device=mic_device, out_device=out_device, asound=asound,
+            stt_backend=stt_backend, stt_remote_model=stt_remote_model,
+            whisper_model=whisper_model, vad_factor=config["chat_vad"].threshold_factor,
+            llm_model=llm_model)
         # Ordre de marche (cf. CHAT_MOVE_TOPIC) : publisher créé SEULEMENT si
         # le mouvement à la voix est activé -- sinon le topic n'existe même
         # pas (rien ne doit fuir hors du banc de répétition). QoS VOLATILE :
@@ -819,7 +843,8 @@ class ChatNode(Node):
             # ConversationEngine traite déjà None comme "comportement
             # historique inchangé", aucune condition à dupliquer ici.
             on_meter=self._diag.on_meter if self._diag is not None else None,
-            on_timing=self._diag.on_timing if self._diag is not None else None,
+            # Toujours câblé (oreille sur la page scène) ; relaie aussi au diag.
+            on_timing=self._on_timing,
             # Régie (cf. docstring de module) : toujours câblée -- sans
             # publication sur ses topics, StageState reste vide et chaque tour
             # se déroule comme avant (seules les lignes du transcript
@@ -987,6 +1012,7 @@ class ChatNode(Node):
         abonné lit `msg` directement)."""
         self._persona_state_pub.publish(
             StringTime(msg=self._persona, time=0, anim=False))
+        self._publish_chain()   # le branchement porte la persona active
 
     def _on_chat_text(self, ros_msg):
         """Texte tapé par la régie (cf. CHAT_TEXT_TOPIC) : SEULEMENT enfilé.
@@ -1040,6 +1066,20 @@ class ChatNode(Node):
                 f"panne chat : {op} {params} pour "
                 f"{stage.fault_duration_s(until_ms):.1f} s (until_ms={until_ms!r}, "
                 f"plafond {stage.FAULT_MAX_S:.0f} s)")
+
+    def _on_timing(self, timing: dict) -> None:
+        """Un tour terminé (thread de conversation) : console de diag (si
+        active) + « Oreille de Didier » (ce qui a été entendu, par qui).
+        Jamais d'exception vers le moteur (ConversationEngine la loggue)."""
+        if self._diag is not None:
+            self._diag.on_timing(timing)
+        source = getattr(self._stt, "last_source", None) or "local"
+        payload = hearing.encode_hearing(timing, source, int(time.time() * 1000))
+        self._hearing_pub.publish(StringTime(msg=payload, time=0, anim=False))
+
+    def _publish_chain(self) -> None:
+        chain = hearing.describe_chain(persona=self._persona, **self._chain_args)
+        self._chain_pub.publish(StringTime(msg=hearing.encode_chain(chain), time=0, anim=False))
 
     def _publish_transcript(self, role: str, text: str) -> None:
         """Callback `on_transcript` de ConversationEngine (thread de

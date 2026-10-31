@@ -163,10 +163,15 @@ class FallbackStt:
         self._clock = clock
         self._failures = 0
         self._cooldown_until: Optional[float] = None
+        # Qui a transcrit le DERNIER énoncé (affiché sur la page scène, panneau
+        # « Oreille de Didier », 31/10) : "distant" | "repli" (le distant a
+        # échoué sur CET énoncé) | "local-pause" (distant mis de côté, cooldown).
+        self.last_source: Optional[str] = None
 
     def transcribe(self, pcm: bytes, sample_rate: int) -> str:
         now = self._clock()
         if self._cooldown_until is not None and now < self._cooldown_until:
+            self.last_source = "local-pause"
             return self._fallback.transcribe(pcm, sample_rate)
         try:
             text = self._primary.transcribe(pcm, sample_rate)
@@ -178,9 +183,11 @@ class FallbackStt:
                                "seul pendant %.0f s.", self._failures, exc, self._cooldown_s)
             else:
                 logger.warning("STT distant en échec (%s) — repli sur le STT local.", exc)
+            self.last_source = "repli"
             return self._fallback.transcribe(pcm, sample_rate)
         if self._failures or self._cooldown_until is not None:
             logger.info("STT distant rétabli.")
         self._failures = 0
         self._cooldown_until = None
+        self.last_source = "distant"
         return text
