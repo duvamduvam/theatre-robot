@@ -541,3 +541,114 @@ d'aucune des quatre phases et il est antérieur à toutes.
 Phases **A**, **B** et **C** entièrement — corpus, détection, interaction. Seule
 la phase D attend le matériel. Autrement dit : l'immobilisation ne bloque rien
 de ce qui reste à décider.
+
+---
+
+## 10. Le rythme de la déambulation — le chemin et les arrêts [DÉCIDÉ 31/10]
+
+*Grillé avec David le 2026-10-31, après une séance « Chantiers » jouée seul à
+la page scène. Les réponses ci-dessous sont les siennes ; les mécanismes
+proposés pour les servir sont à valider au code.*
+
+### 10.1 Le constat (séance du 31/10)
+
+David : « il faut qu'on trouve l'équilibre entre le chemin et les arrêts,
+juste s'avancer n'est pas suffisant ». Les **trois défauts à la fois** :
+
+- **la marche est vide** — hors séance, Didier traverse les 30 objets sans
+  s'y intéresser (`poi_enter_ignored : before_start`) ;
+- **les arrêts sont subis** — Didier s'est arrêté de lui-même (clé `marche:
+  stop` sans limite de fréquence), puis restait figé (le « go » vocal est
+  refusé hors séance) ;
+- **David n'a aucune prise** — il ne choisit ni où Didier va, ni où il
+  s'arrête.
+
+**Principe [DÉCIDÉ 31/10] : le but n'est pas l'arrivée mais le chemin.** Un
+arrêt intéressant peut durer **15 minutes** ; aucun minuteur ne doit couper
+une scène qui vit. Critère de réussite : **une séance en sim sans ennui**.
+
+### 10.2 Qui décide d'un arrêt [DÉCIDÉ 31/10]
+
+| Source | Règle |
+|---|---|
+| **David** | arrête et relance quand il veut : « stop » en clair (urgence), Route OFF, curseur — et les **deux mots secrets** (§10.3) |
+| **Didier** (lubie) | **au plus un arrêt de lui-même toutes les 2 min** (≈ 6 sur la traversée), qu'il **réclame d'abord en mots** (« attends, le pigeon ! ») ; **refusable** : si David dit non, il râle mais continue |
+| **Jeu « Va voir le… »** | David nomme un objet, Didier y va (§10.4) |
+| **Régisseur** | reste pour les **pannes** ; les lubies ne sont plus des arrêts imposés tirés au sort, ce sont les demandes de Didier ci-dessus |
+
+### 10.3 Les mots secrets — signaux de comédien [DÉCIDÉ 31/10]
+
+Un « go » ou un « stop » s'entend : le public voit la ficelle. David dispose
+de **deux expressions secrètes**, glissées dans une phrase normale :
+
+- une **de relance** — Didier conclut son arrêt en une réplique (« bon, j'ai
+  assez vu ce chat ») puis repart ;
+- une **d'arrêt en jeu** — Didier s'arrête et trouve une raison en personnage
+  (« tiens, qu'est-ce que c'est que ça ? »).
+
+Paire retenue le 31/10 parmi trois propositions (des expressions de deux mots
+ou plus : bien plus robustes au déclenchement accidentel qu'un mot isolé).
+**Les valeurs ne sont PAS écrites ici** (dépôt public) : elles vivent dans la
+configuration locale du banc. Détection **déterministe** sur la
+transcription, comme l'arrêt d'urgence (`vision/ai/emergency.py`) — jamais
+laissée au LLM. Didier ne doit jamais les prononcer (interdit dans son
+prompt). « Stop » en clair reste l'arrêt d'urgence, inchangé.
+
+### 10.4 Le jeu « Va voir le… » — premier jeu [DÉCIDÉ 31/10]
+
+1. David nomme un objet du chemin avec ses mots (« le panneau violet »).
+2. Didier le reconnaît parmi les points d'intérêt de l'itinéraire.
+3. Il **roule jusqu'à l'objet**, s'arrête à sa hauteur, puis **pivote face à
+   lui** — la caméra (fixée au buste) le voit de face, la réflexion le
+   regarde, Didier le commente ou part dans sa lubie.
+4. Objet **déjà dépassé** : Didier **fait demi-tour** et y retourne.
+5. Au départ, il se réaligne sur le chemin.
+
+⚠️ **Pivot sur place et demi-tour sont des mouvements NOUVEAUX du chemin
+roues** : conception, revue adversariale, validation en sim. Ils sont
+**SIM-ONLY** : le cheminement lit la vérité terrain de Gazebo, le vrai robot
+n'a pas encore d'odométrie — rien de ceci ne passe au réel avant elle.
+
+### 10.5 La relance [DÉCIDÉ 31/10]
+
+- David relance quand il veut (mot de relance, « go », curseur).
+- **Didier repart de lui-même si la scène meurt : 90 s sans que David lui
+  parle** — la réflexion peut le proposer plus tôt si l'objet est épuisé,
+  mais le départ effectif attend ce seuil.
+- **Seulement après un arrêt de SON fait** (lubie, « va voir ») : après un
+  « stop » ou le mot d'arrêt de David, il reste arrêté jusqu'à une relance
+  de David. ⚠️ Cela assouplit la règle de la revue du 23/10 (B1 : un tour
+  spontané n'émet jamais « go ») : l'exception doit être étroite, testée, et
+  repasser en revue adversariale.
+
+### 10.6 Vérification [DÉCIDÉ 31/10]
+
+Une séance « Chantiers » de 15 min jouée par David, jugée sur :
+
+- **son verdict à chaud** — trois notes sur 5 : la marche (vide ?), les arrêts
+  (subis ?), sa prise sur le jeu. C'est le critère qui tranche ;
+- **les mesures du journal du régisseur** (`log/rehearsal/*.jsonl`) — part du
+  temps en marche / à l'arrêt, arrêts par source (David, Didier, va voir),
+  durée de chacun, nombre de fois où David a dû forcer (Route OFF, curseur).
+
+### 10.7 À faire, dans l'ordre
+
+1. **Prérequis livré le 31/10** : « stop » entendu pendant que Didier parle
+   (écoute garde, vision — en revue/correction ce jour), sinon aucune de ces
+   règles n'est jouable en marche.
+2. Mots secrets (vision : détection déterministe + prompt ; config du banc).
+3. Lubies réclamées et refusables, plafond 1 / 2 min (prompt + régisseur).
+4. Relance autonome à 90 s, étroite (vision + régisseur, revue adversariale).
+5. « Va voir le… » sans pivot ni demi-tour d'abord (arrêt à hauteur) — jouable
+   vite ; puis pivot, puis demi-tour (chemin roues, sim, revue).
+6. Outil de mesure de séance sur le journal JSONL + séance de vérification.
+
+### 10.8 Ouvert
+
+- Reconnaissance de l'objet nommé : liste d'alias par POI écrite à la main,
+  ou laissée à la réflexion (qui voit l'image) ? À trancher au lot 5.
+- Comportement si deux demandes se croisent (Didier réclame une lubie pendant
+  un « va voir »).
+- Le monde Chantiers n'a **aucun passant modélisé** : en source caméra
+  Gazebo, personne n'est jamais détecté (séance R0 de l'étude répétition
+  jamais faite).
