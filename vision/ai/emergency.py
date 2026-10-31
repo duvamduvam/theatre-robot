@@ -73,3 +73,17 @@ def is_emergency_stop(text: Optional[str]) -> bool:
         return False
     return (any(word in STOP_WORDS for word in words)
             and all(word in STOP_WORDS or word in FILLERS for word in words))
+
+
+def contains_stop_word(text: Optional[str]) -> bool:
+    """Vrai si AU MOINS un mot de STOP_WORDS apparaît, où que ce soit dans
+    le texte (même normalisation que is_emergency_stop). Critère LÂCHE,
+    réservé à l'écoute GARDE pendant une réplique (vision.ai.conversation,
+    revue du 31/10, I1) : la tranche captée contient aussi l'ÉCHO de Didier
+    (« … la boulangerie. Stop ! Je disais… »), que is_emergency_stop refuse à
+    raison (autres mots = phrase avec contexte). Ici, pas de LLM derrière pour
+    comprendre le contexte : on s'arrête. Faux positifs ASSUMÉS, sens sûr :
+    Didier qui dit lui-même « arrête » ou « l'arrêt de bus », David qui dit
+    « arrête de râler » — Didier se tait et s'arrête. L'écoute NORMALE garde
+    is_emergency_stop (règle stricte du 23/10). Jamais d'exception."""
+    return any(word in STOP_WORDS for word in _words(text or ""))

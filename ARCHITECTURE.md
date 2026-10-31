@@ -115,7 +115,15 @@ reflection_node s'abonne aussi à `chat_transcript`, `chat_state` (latché),
 LLM, décision de David du 23/10). **Arrêt d'urgence vocal** (`vision/ai/emergency.py`) :
 une phrase faite UNIQUEMENT de mots d'arrêt (« Stop ! », « Arrête-toi ! »…)
 publie `"stop"` sur `rehearsal/chat_move` AVANT le LLM (sans régisseur : loggé
-« NON transmis », aucun effet).
+« NON transmis », aucun effet). **Écoute garde** (31/10) : quand le mouvement à
+la voix est branché (simulation seulement), le micro reste ouvert PENDANT les
+répliques (et dès la fin du STT : panne delay, attente LLM), réduit à l'urgence —
+tranches VAD ≤ 2,5 s, même STT, et seul un mot d'arrêt PRÉSENT dans la tranche
+(`contains_stop_word`, l'écho de Didier l'entoure) agit : `"stop"` immédiat, son
+coupé (`AudioPlayer.interrupt`), réplique abandonnée sans nouvel appel LLM. Un
+« Stop ! » de fin de réplique transcrit après coup émet encore `"stop"` (sans rien
+interrompre). Jamais armée chat OFF. Écho de Didier assumé (faux positif sûr).
+Sans régisseur (vrai robot) : micro coupé pendant la réplique, comme avant.
 
 Test à la main (domaine 43) :
 `ros2 topic pub --once chat_text robot_interfaces/msg/StringTime "{msg: 'bonjour Didier'}"`.

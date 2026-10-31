@@ -11,7 +11,10 @@ POURQUOI aucun thread supplémentaire créé ici : AudioPlayer a déjà le sien
        (lecture séquentielle en tâche de fond, cf. vision.audio.playback) ;
        run_once() est de toute façon bloquant sur la boucle d'écoute micro
        (read_frame) — ajouter un thread ici n'apporterait rien, juste de la
-       complexité de synchronisation en plus.
+       complexité de synchronisation en plus. SEULE EXCEPTION (31/10) :
+       l'écoute GARDE pendant une réplique (cf. ÉCOUTE GARDE plus bas) — le
+       thread de conversation est alors pris par le LLM/TTS/drain, l'arrêt
+       vocal ne peut venir que d'ailleurs.
 
 DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        thinking() est publié JUSTE APRÈS speech_end, AVANT même de savoir si
@@ -123,17 +126,63 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
          David vide l'emplacement (direction devenue caduque).
        - DEMANDE DE RÉFLEXION : clé "reflechir" du JSON de fin ->
          `on_reflect(texte)` (kwarg optionnel, None = rien).
+
+       ÉCOUTE GARDE (2026-10-31, constaté en répétition simulée : « Stop ! »
+       crié pendant une réplique n'était JAMAIS entendu — micro coupé
+       anti-larsen — et la route continuait d'avancer) : pendant une réplique
+       (normale ET spontanée) et dès la fin du STT (_reply_with_stage : panne
+       delay et attente du LLM comprises, revue du 31/10 I3), le micro reste
+       ouvert dans une écoute réduite à l'URGENCE — décision de David :
+       Didier n'est interruptible QUE par un mot d'arrêt, toute autre parole
+       reste ignorée comme avant. Critère LÂCHE ici
+       (vision.ai.emergency.contains_stop_word, I1) : la tranche contient
+       aussi l'écho de Didier, que le critère strict de l'écoute normale
+       refuserait. Jamais armée chat OFF ; un OFF en pleine réplique la ferme
+       et recoupe le micro (I4). Active SEULEMENT si `on_move` ET `guard_vad` sont
+       branchés (chat_node : uniquement quand le mouvement à la voix l'est,
+       donc en simulation) ; sinon micro coupé pendant la réplique, comportement
+       historique à l'octet près. Mécanique (cf. _ReplyGuard) :
+       - un thread LECTEUR (micro -> VAD de garde, seuil REPRIS de l'écoute
+         normale, cf. EnergyVad.adopt_threshold) découpe des tranches de
+         parole plafonnées à GUARD_SEGMENT_MAX_S ;
+       - un thread STT les transcrit (MÊME STT que l'écoute normale, avec son
+         repli ; appels sérialisés par `_stt_lock` : FallbackStt n'est pas
+         sûr entre threads) ;
+       - urgence -> on_move("stop") D'ABORD, puis AudioPlayer.interrupt(), et
+         le thread de conversation abandonne le flux LLM à l'événement suivant
+         (visage idle, ligne transcript "david", AUCUN appel LLM : Didier se
+         tait, il ne joue pas l'arrêt) ;
+       - les pannes de régie (deaf/garble/mute) ne s'appliquent PAS à
+         l'écoute garde (revue I3 du 23/10 : une panne simule
+         l'incompréhension, jamais la surdité à l'urgence) ;
+       - fin de réplique : la garde est FERMÉE (jeton sous verrou) avant de
+         rendre le micro. Effets SÉPARÉS (revue du 31/10, B1) : un mot d'arrêt
+         capté avant la fermeture — tranche en cours comprise — émet ENCORE
+         "stop" même transcrit après coup (idempotent, sens sûr : le "go" de
+         la réplique est souvent déjà parti) ; seule l'INTERRUPTION (son,
+         réplique) est limitée à la réplique courante. Un "go" ultérieur
+         attend que ces stops tardifs soient jugés (GUARD_LATE_GO_WAIT_S) ;
+       - file STT bornée (GUARD_QUEUE_MAX, I2) : les tranches récentes
+         d'abord ; la garde ne touche pas `last_source` du STT (m1).
+       ÉCHO ASSUMÉ : Didier s'entend dans le micro. Une de ses répliques
+       contenant un mot d'arrêt (« arrête », « l'arrêt de bus ») l'interrompt
+       lui-même — faux positif dans le sens SÛR (il s'arrête), accepté ; pas
+       de filtrage par comparaison au texte prononcé (complexité, faux
+       négatifs). Coût : son écho déclenche aussi des transcriptions (une par
+       tranche) pendant qu'il parle. Ce n'est PAS un arrêt de sécurité (cf. vision.ai.emergency) : le
+       deadman et la télécommande restent les arrêts effectifs.
 """
 from __future__ import annotations
 
 import logging
+import queue
 import threading
 import time
 from dataclasses import dataclass
 from typing import Callable, Optional, Union
 
 from vision.ai import performance
-from vision.ai.emergency import is_emergency_stop
+from vision.ai.emergency import contains_stop_word, is_emergency_stop
 from vision.ai.stage import ROLE_DAVID, ROLE_DIDIER, StageState, garble_text
 from vision.ai.stream_parser import Didascalie, Emotion, Sentence, StreamPerformanceParser
 
@@ -179,6 +228,40 @@ SPONTANEOUS_MIN_GAP_S = 10.0
 # (pas de prefill assistant), et l'historique garde trace du silence.
 SPONTANEOUS_USER_TEXT = "(Silence. Personne ne te parle : c'est à toi de relancer la scène.)"
 
+# Plafond (s) d'une tranche de l'écoute garde (cf. docstring de module ÉCOUTE
+# GARDE) : un « Stop ! » est court ; sans plafond, l'écho continu de Didier
+# (VAD jamais revenue au silence) ne serait transcrit qu'en fin de réplique —
+# trop tard. Au plafond, la tranche part au STT telle quelle et la suivante
+# commence par le pré-roll (~450 ms de CHEVAUCHEMENT) : un mot à cheval sur la
+# coupure se retrouve entier dans la tranche suivante.
+GUARD_SEGMENT_MAX_S = 2.5
+
+# Attente maximale (s) de la fin du thread lecteur de l'écoute garde, à la
+# fermeture : mic.stop() le débloque (EOF d'arecord) en une trame (~30 ms) ;
+# au-delà, il est déclaré fuyant (warning) — il pourrait encore lire le micro.
+GUARD_JOIN_TIMEOUT_S = 1.0
+
+# Tranches en ATTENTE de STT gardées au plus (revue du 31/10, I2) : quand le
+# STT est plus lent que la parole (écho continu de Didier), la plus ANCIENNE
+# est remplacée — un écho vieux de 5 s n'a plus aucune valeur, le « Stop ! »
+# qui compte est le plus récent.
+GUARD_QUEUE_MAX = 2
+
+# Pas de sondage (s) du thread STT de la garde (fin du lecteur + file vide =
+# fin du thread) : imperceptible, négligeable en CPU.
+GUARD_POLL_S = 0.05
+
+# Attente maximale (s), avant d'émettre un "go", que l'écoute garde de la
+# réplique PRÉCÉDENTE ait fini de juger ses dernières tranches (revue du 31/10,
+# B1) : un « Stop ! » de fin de réplique transcrit en retard ne doit jamais
+# partir APRÈS un "go" plus récent (il annulerait la nouvelle intention de
+# David). Au-delà (STT bloqué), le "go" part : si le stop arrive ensuite,
+# Didier s'arrête — sens sûr.
+GUARD_LATE_GO_WAIT_S = 5.0
+
+# Valeur sentinelle : le STT n'expose pas `last_source` (rien à restaurer).
+_NO_SOURCE = object()
+
 
 @dataclass(frozen=True)
 class SpontaneousPrompt:
@@ -187,6 +270,222 @@ class SpontaneousPrompt:
     dataclass et pas une str : run_once distingue les cas par isinstance,
     une str serait confondue avec un texte tapé (servi comme parole de David)."""
     direction: str
+
+
+class _ReplyGuard:
+    """Écoute GARDE d'UNE réplique (cf. docstring de module ÉCOUTE GARDE) :
+    créée, démarrée puis fermée par ConversationEngine, jamais réutilisée —
+    une instance = un jeton de réplique. Deux threads démons : LECTEUR
+    (read_frame -> VAD -> tranches) et STT (tranches -> texte -> mot
+    d'arrêt), séparés pour que la lecture du micro ne s'arrête jamais pendant
+    une transcription (sinon un « Stop ! » crié pendant que la tranche
+    précédente — l'écho de Didier — se transcrit serait perdu).
+
+    DEUX EFFETS SÉPARÉS (revue du 31/10, B1) : l'ORDRE "stop" part pour tout
+    mot d'arrêt capté tant que la garde écoutait, même transcrit APRÈS la fin
+    de la réplique (idempotent, sens sûr — le "go" de la réplique est souvent
+    déjà parti) ; l'INTERRUPTION (son coupé, réplique abandonnée) ne vaut que
+    pour la réplique courante. À la fermeture, la tranche en cours part au
+    STT et le thread STT juge les tranches captées AVANT la fermeture, puis
+    s'arrête.
+
+    `lock` protège `closed` et l'ordre « stop émis PUIS interrupted levé » :
+    ConversationEngine._notify_move le prend aussi avant d'émettre un "go"
+    (sinon un "go" de fin de JSON, traité pile pendant l'urgence, pourrait
+    partir APRÈS le stop et remettre Didier en route). Ordre des verrous,
+    partout : `stt_lock` PUIS `lock` (jamais l'inverse : pas d'interblocage)."""
+
+    def __init__(self, *, mic, vad, stt, stt_lock: threading.Lock,
+                 emit_stop: Callable[[], None], interrupt_audio: Callable[[], None],
+                 should_listen: Callable[[], bool]):
+        self._mic = mic
+        self._vad = vad
+        self._stt = stt
+        self._stt_lock = stt_lock
+        self._emit_stop = emit_stop
+        self._interrupt_audio = interrupt_audio
+        # Chat ON ? (revue du 31/10, I4) : relu à CHAQUE trame — un OFF en
+        # pleine réplique ferme l'écoute et recoupe le micro.
+        self._should_listen = should_listen
+        self.lock = threading.Lock()
+        self.closed = False
+        # Event (et pas bool) : lu SANS verrou à chaque événement par le
+        # thread de conversation (cf. ConversationEngine._reply_interrupted).
+        self.interrupted = threading.Event()
+        # Texte entendu qui a interrompu la réplique (ligne transcript "david").
+        self.heard: Optional[str] = None
+        self._stop_reading = threading.Event()
+        # Levé par le lecteur APRÈS sa dernière tranche : avec une file vide,
+        # c'est le signal de fin du thread STT (pas de sentinelle dans une
+        # file bornée — elle pourrait évincer une vraie tranche).
+        self._reader_done = threading.Event()
+        self._segments: "queue.Queue" = queue.Queue(maxsize=GUARD_QUEUE_MAX)
+        # S16_LE mono : 2 octets par échantillon (cf. vision.audio.mic).
+        self._cap_bytes = int(GUARD_SEGMENT_MAX_S * mic.sample_rate) * 2
+        self._reader = threading.Thread(target=self._read_loop, daemon=True,
+                                        name="ecoute-garde-micro")
+        self._transcriber = threading.Thread(target=self._transcribe_loop, daemon=True,
+                                             name="ecoute-garde-stt")
+
+    def start(self) -> None:
+        self._reader.start()
+        self._transcriber.start()
+
+    def close(self) -> None:
+        """Ferme la garde (jeton) : plus d'INTERRUPTION possible de la
+        réplique ; le lecteur s'arrête à la trame suivante (en envoyant sa
+        tranche partielle), le thread STT finit les tranches déjà captées
+        (non attendu ici : il peut durer des secondes) puis s'arrête."""
+        with self.lock:
+            self.closed = True
+        self._stop_reading.set()
+
+    def join_reader(self, timeout: float) -> bool:
+        """True si le lecteur est bien terminé (cf. GUARD_JOIN_TIMEOUT_S)."""
+        self._reader.join(timeout)
+        return not self._reader.is_alive()
+
+    def join_transcriber(self, timeout: float) -> bool:
+        """True si le thread STT est terminé (cf. GUARD_LATE_GO_WAIT_S)."""
+        self._transcriber.join(timeout)
+        return not self._transcriber.is_alive()
+
+    def _push(self, segment: bytes) -> None:
+        """Enfile une tranche ; file pleine = la plus ANCIENNE est jetée
+        (cf. GUARD_QUEUE_MAX). Boucle : le thread STT peut vider la file
+        entre deux essais."""
+        while True:
+            try:
+                self._segments.put_nowait(segment)
+                return
+            except queue.Full:
+                try:
+                    self._segments.get_nowait()
+                    logger.debug("Écoute garde : tranche ancienne jetée (STT en retard).")
+                except queue.Empty:
+                    pass
+
+    def _read_loop(self) -> None:
+        """Thread LECTEUR. Toute exception = écoute garde perdue pour CETTE
+        réplique, jamais la réplique elle-même (log + fin du thread)."""
+        try:
+            self._read_frames()
+        except Exception:
+            if not self._stop_reading.is_set():
+                logger.warning("Écoute garde : lecture micro en échec — arrêt vocal "
+                               "indisponible jusqu'à la fin de la réplique.", exc_info=True)
+        finally:
+            self._reader_done.set()
+
+    def _read_frames(self) -> None:
+        """Même usage de la VAD que _listen_for_utterance (speech_start ->
+        pré-roll, accumulation, speech_end), SANS gate ni vumètre (leur état
+        appartient à l'écoute normale), plus le plafond GUARD_SEGMENT_MAX_S.
+        Quelle que soit la sortie (fermeture, flux mort, chat OFF), la tranche
+        EN COURS part au STT (B1) : « Stop ! » dit pile en fin de réplique."""
+        segment = b""
+        in_speech = False
+        try:
+            while not self._stop_reading.is_set():
+                if not self._should_listen():
+                    # Chat OFF en pleine réplique (I4) : la garde se ferme et
+                    # rend le micro COUPÉ (chat_node l'a peut-être déjà coupé ;
+                    # stop() est idempotent).
+                    logger.info("Écoute garde : chat OFF pendant la réplique — micro coupé.")
+                    self._stop_reading.set()
+                    self._mic.stop()
+                    return
+                frame = self._mic.read_frame()
+                if frame is None:
+                    # Fin normale (fermeture : mic.stop() -> EOF) ou flux mort.
+                    if not self._stop_reading.is_set():
+                        logger.info("Écoute garde : flux micro terminé pendant la réplique — "
+                                    "arrêt vocal indisponible jusqu'à sa fin.")
+                    return
+                event = self._vad.feed(self._mic.frame_rms(frame))
+                if not in_speech:
+                    if event is not None and event.kind == "speech_start":
+                        in_speech = True
+                        segment = self._mic.preroll()   # inclut déjà CETTE trame
+                    continue
+                segment += frame
+                if event is not None and event.kind == "speech_end":
+                    self._push(segment)
+                    segment = b""
+                    in_speech = False
+                elif len(segment) >= self._cap_bytes:
+                    # Plafond : la VAD reste en SPEECH, la tranche suivante
+                    # repart du pré-roll (chevauchement, cf. GUARD_SEGMENT_MAX_S).
+                    self._push(segment)
+                    segment = self._mic.preroll()
+        finally:
+            if in_speech and segment:
+                self._push(segment)
+
+    def _transcribe_loop(self) -> None:
+        """Thread STT : une tranche à la fois, la plus ancienne GARDÉE
+        d'abord. S'arrête sur une urgence, ou quand le lecteur est fini et la
+        file vide (toutes les tranches captées ont été jugées). Transcription
+        ET décision sous `stt_lock` : le STT de garde attend le STT principal
+        (I3), et un stop tardif part avant que le tour suivant ne transcrive."""
+        while True:
+            try:
+                segment = self._segments.get(timeout=GUARD_POLL_S)
+            except queue.Empty:
+                if self._reader_done.is_set() and self._segments.empty():
+                    return
+                continue
+            with self._stt_lock:
+                try:
+                    text = self._transcribe(segment)
+                except Exception:
+                    # Exigence : un STT en échec ne casse JAMAIS la réplique —
+                    # la tranche est perdue, la garde continue sur les suivantes.
+                    logger.warning("Écoute garde : STT en échec (tranche ignorée, la réplique "
+                                   "continue).", exc_info=True)
+                    continue
+                if self._handle_text(text):
+                    return
+
+    def _transcribe(self, segment: bytes) -> str:
+        """MÊME STT que l'écoute normale (avec son repli), sans toucher à sa
+        source affichée (revue du 31/10, m1) : `last_source` (FallbackStt,
+        page « Oreille de Didier ») décrit l'énoncé de DAVID du tour, pas une
+        tranche de garde — sauvegardée puis restaurée, sous `stt_lock`."""
+        saved = getattr(self._stt, "last_source", _NO_SOURCE)
+        try:
+            return self._stt.transcribe(segment, self._mic.sample_rate)
+        finally:
+            if saved is not _NO_SOURCE:
+                self._stt.last_source = saved
+
+    def _handle_text(self, text) -> bool:
+        """Décide sur UN texte transcrit (appelé sous `stt_lock`) ; True =
+        mot d'arrêt traité (fin du thread STT). Critère LÂCHE
+        (contains_stop_word, I1) : la tranche contient aussi l'écho de Didier."""
+        if not contains_stop_word(text):
+            if has_usable_text(text):
+                logger.info("Écoute garde : %r ignoré (pas un mot d'arrêt).", text)
+            return False
+        with self.lock:
+            # L'ORDRE D'ABORD, avant toute autre chose (log, coupure du son) :
+            # c'est lui qui arrête la route — y compris après la fin de la
+            # réplique (B1 : idempotent, sens sûr).
+            self._emit_stop()
+            if self.closed:
+                logger.warning("ARRÊT D'URGENCE vocal en fin de réplique (transcrit après "
+                               "sa fin) : %r", text)
+                return True
+            logger.warning("ARRÊT D'URGENCE vocal pendant la réplique : %r", text)
+            self.heard = text
+            self.interrupted.set()
+        self._stop_reading.set()
+        try:
+            self._interrupt_audio()
+        except Exception:
+            logger.exception("Écoute garde : coupure du son en échec (la réplique sera "
+                             "quand même abandonnée).")
+        return True
 
 
 def has_usable_text(text: Optional[str]) -> bool:
@@ -219,9 +518,27 @@ class ConversationEngine:
                  stage: Optional[StageState] = None,
                  on_transcript: Optional[Callable[[str, str], None]] = None,
                  on_move: Optional[Callable[[str], None]] = None,
-                 on_reflect: Optional[Callable[[str], None]] = None):
+                 on_reflect: Optional[Callable[[str], None]] = None,
+                 guard_vad=None):
         self._mic = mic
         self._vad = vad
+        # Écoute garde (cf. docstring de module ÉCOUTE GARDE) : une SECONDE
+        # instance de VAD (même config que `vad`), jamais la même — elle est
+        # nourrie depuis un autre thread, et la voix de Didier ne doit jamais
+        # toucher l'état de l'écoute normale. None = pas d'écoute garde.
+        self._guard_vad = guard_vad
+        # Garde de la réplique EN COURS (None hors réplique ou garde inactive).
+        self._guard: Optional[_ReplyGuard] = None
+        # Dernière garde FERMÉE : son thread STT peut encore juger des tranches
+        # de fin de réplique (B1) — un "go" attend qu'il ait fini (cf.
+        # _notify_move, GUARD_LATE_GO_WAIT_S).
+        self._closed_guard: Optional[_ReplyGuard] = None
+        # Sérialise TOUS les appels STT (écoute normale + garde) : un STT de
+        # garde peut encore tourner quand le tour suivant transcrit, et
+        # FallbackStt (compteurs d'échecs, last_source) n'est pas sûr entre
+        # threads. Coût : le STT du tour suivant peut attendre la fin d'une
+        # tranche de garde en vol.
+        self._stt_lock = threading.Lock()
         # Gate « source audio vivante » (half-duplex élargi, cf.
         # dadou_robot_ros/docs/etude-declenchement-conversation.md §10) :
         # None = comportement HISTORIQUE inchangé à l'octet près (clause de
@@ -400,6 +717,26 @@ class ConversationEngine:
             logger.warning("Clé \"marche\" : go ignoré : tour spontané "
                            "(aucun humain ne l'a demandé).")
             return
+        if cmd == "go":
+            # Un stop TARDIF de la réplique précédente (B1) doit partir AVANT
+            # ce "go" : sinon il annulerait la nouvelle intention de David.
+            closed = self._closed_guard
+            if closed is not None and not closed.join_transcriber(GUARD_LATE_GO_WAIT_S):
+                logger.warning("Écoute garde précédente encore en cours après %.0f s : go "
+                               "émis quand même (un stop tardif l'annulerait).",
+                               GUARD_LATE_GO_WAIT_S)
+        guard = self._guard
+        if cmd == "go" and guard is not None:
+            # Sous le verrou de la garde : l'urgence (stop émis PUIS
+            # interrupted levé, atomiquement) et ce "go" ne peuvent pas se
+            # croiser — jamais de "go" APRÈS un arrêt vocal de la même réplique.
+            with guard.lock:
+                if guard.interrupted.is_set():
+                    logger.warning("Clé \"marche\" : go ignoré : réplique interrompue "
+                                   "par un arrêt d'urgence vocal.")
+                    return
+                self._emit_move(cmd)
+            return
         self._emit_move(cmd)
 
     def _emit_move(self, cmd: str) -> None:
@@ -484,6 +821,10 @@ class ConversationEngine:
             if mute:
                 return emotion_params
             pcm, sample_rate = self._tts.synthesize(event.text)
+            if self._reply_interrupted():
+                # Urgence tombée PENDANT la synthèse (bloquante) : cette phrase
+                # ne doit pas partir au haut-parleur.
+                return emotion_params
             # play() enfile : la synthèse de la Sentence SUIVANTE peut se
             # faire pendant que celle-ci joue encore (pipeline N/N+1 porté
             # par AudioPlayer, cf. vision.audio.playback).
@@ -582,7 +923,8 @@ class ConversationEngine:
         # durée RÉELLE payée par ce tour, pas une estimation.
         stt_started_at = time.monotonic()
         try:
-            text = self._stt.transcribe(speech_bytes, self._mic.sample_rate)
+            with self._stt_lock:
+                text = self._stt.transcribe(speech_bytes, self._mic.sample_rate)
         except Exception:
             # Une erreur STT (vécu le 22/10 : PyAV 19 incompatible avec
             # faster-whisper → TypeError à CHAQUE transcription) ne doit pas
@@ -699,6 +1041,22 @@ class ConversationEngine:
             else:
                 logger.warning("ARRÊT D'URGENCE vocal : %r", stt_text)
                 self._emit_move("stop")
+        # Écoute garde armée DÈS ICI (revue du 31/10, I3), pas seulement au
+        # début de la réplique : la panne delay (jusqu'à 9 s) et l'attente du
+        # LLM sont des phases où Didier roule sans écouter. Fermée par
+        # _speak_reply, par la sortie deaf ci-dessous, ou sur exception.
+        guard = self._start_reply_guard()
+        try:
+            return self._apply_fault_and_reply(text, stt_text, stt_ms, speech_end_at, guard)
+        except Exception:
+            self._stop_reply_guard(guard)
+            raise
+
+    def _apply_fault_and_reply(self, text: str, stt_text: str, stt_ms: float,
+                               speech_end_at: Optional[float],
+                               guard: Optional[_ReplyGuard]) -> bool:
+        """Suite de _reply_with_stage, écoute garde déjà armée (ou None) :
+        panne de régie, ligne "david", delay, puis réplique."""
         op, params = (self._stage.fault(time.monotonic()) if self._stage is not None
                       else ("pass", {}))
         if op == "deaf":
@@ -711,6 +1069,8 @@ class ConversationEngine:
                 "total_ms": None, "stt_text": stt_text, "abandoned": True,
             })
             self._publish_all(self._perf.idle())
+            # Garde fermée avant de rendre le micro à l'écoute normale.
+            self._stop_reply_guard(guard)
             self._mic.start()
             self._set_state("listening")
             return False
@@ -723,7 +1083,12 @@ class ConversationEngine:
             # visage est sur "reflechit", l'état reste "thinking" — c'est la
             # latence du Pi 5 (4 à 9 s mesurées) rejouée telle quelle.
             logger.info("Panne delay : %d ms avant le LLM", params["delay_ms"])
-            time.sleep(params["delay_ms"] / 1000)
+            if guard is None:
+                time.sleep(params["delay_ms"] / 1000)
+            else:
+                # Un arrêt vocal ÉCOURTE l'attente : la réplique sera
+                # abandonnée dès l'entrée de _speak_reply, sans appel LLM.
+                guard.interrupted.wait(timeout=params["delay_ms"] / 1000)
         return self._speak_reply(text, stt_ms=stt_ms, stt_text=stt_text,
                                  speech_end_at=speech_end_at, mute=(op == "mute"))
 
@@ -874,6 +1239,15 @@ class ConversationEngine:
         # compte pour la latence perçue).
         reply_started_at = time.monotonic()
         timing_marks = {"first_sentence_at": None, "first_play_at": None}
+        # Écoute garde (cf. docstring de module ÉCOUTE GARDE) : déjà armée par
+        # _reply_with_stage (I3), sinon démarrée ici (tour spontané), AVANT
+        # l'appel LLM. None = inactive (vrai robot) : micro coupé comme avant.
+        guard = self._guard if self._guard is not None else self._start_reply_guard()
+        if guard is not None and guard.interrupted.is_set():
+            # « Stop ! » entendu pendant la panne delay / avant la réplique :
+            # Didier se tait, AUCUN appel LLM.
+            return self._finish_interrupted_reply(
+                guard, stt_ms, stt_text, timing_marks, reply_started_at, speech_end_at)
 
         try:
             if self._stage is None:
@@ -886,18 +1260,37 @@ class ConversationEngine:
                 deltas = self._brain.stream_reply(
                     text, extra_system=self._stage.instruction(now),
                     situation=self._stage.situation(now), direction=direction)
+            # Urgence vérifiée avant CHAQUE événement : le thread de
+            # conversation ne peut pas être interrompu en plein appel bloquant
+            # (attente du delta LLM suivant, synthèse TTS) — il s'arrête au
+            # premier point de contrôle qui suit (latence, cf. limites).
             for delta in deltas:
                 for event in parser.feed(delta):
+                    if self._reply_interrupted():
+                        break
                     emotion_params = self._handle_event(
                         event, emotion_params, timing_marks, mute, spontaneous)
-            for event in parser.flush():
-                emotion_params = self._handle_event(
-                    event, emotion_params, timing_marks, mute, spontaneous)
+                if self._reply_interrupted():
+                    break
+            if self._reply_interrupted():
+                self._close_stream(deltas)
+            else:
+                for event in parser.flush():
+                    if self._reply_interrupted():
+                        break
+                    emotion_params = self._handle_event(
+                        event, emotion_params, timing_marks, mute, spontaneous)
         except Exception:
             # Le spectacle continue : une panne LLM/TTS ponctuelle ne doit
             # jamais arrêter la conversation, seulement ce tour-ci.
             logging.exception(
                 "Erreur pendant la génération/synthèse de la réponse — tour abandonné.")
+            if guard is not None and guard.interrupted.is_set():
+                # Panne APRÈS un arrêt vocal (revue du 31/10, m3) : même sortie
+                # que l'interruption — interrupt() rejoué (un play() a pu
+                # partir pendant la course), garde fermée, micro rendu.
+                return self._finish_interrupted_reply(
+                    guard, stt_ms, stt_text, timing_marks, reply_started_at, speech_end_at)
             self._publish_all(self._perf.speaking_stop())
             # Rattrapage visage (2026-09-13, "la bouche n'est pas raccord avec
             # la parole" -- David ; cf. DÉCISION/CORRECTIF en tête de module) :
@@ -911,6 +1304,9 @@ class ConversationEngine:
             # INCONDITIONNEL ici, contrairement au chemin nominal ci-dessous
             # qui peut se permettre de retenir une émotion réellement conclue.
             self._publish_all(self._perf.idle())
+            # Garde fermée AVANT de rendre le micro à l'écoute normale (jeton
+            # périmé + lecteur arrêté : un seul lecteur du micro à la fois).
+            self._stop_reply_guard(guard)
             if self._gate is not None:
                 # Queue acoustique (C2) même sur ABANDON : le player peut
                 # encore être en train de jouer ce qui était déjà enfilé
@@ -934,7 +1330,21 @@ class ConversationEngine:
                 stt_ms, stt_text, timing_marks, reply_started_at, speech_end_at, abandoned=True))
             return False
 
+        if guard is not None and guard.interrupted.is_set():
+            return self._finish_interrupted_reply(
+                guard, stt_ms, stt_text, timing_marks, reply_started_at, speech_end_at)
+
         self._player.drain()
+        # Garde fermée APRÈS le drain (la réplique entière est surveillée) et
+        # AVANT le reste : un « Stop ! » de fin de réplique transcrit à partir
+        # d'ici émet ENCORE l'ordre stop (B1, sens sûr) mais n'interrompt plus
+        # rien — la réplique est finie.
+        self._stop_reply_guard(guard)
+        if guard is not None and guard.interrupted.is_set():
+            # Urgence tombée PENDANT le drain (dernière phrase en cours) : même
+            # sortie que ci-dessus (garde déjà fermée, fermeture idempotente).
+            return self._finish_interrupted_reply(
+                guard, stt_ms, stt_text, timing_marks, reply_started_at, speech_end_at)
         self._publish_all(self._perf.speaking_stop())
         # Rattrapage visage (2026-09-13, cf. DÉCISION/CORRECTIF en tête de
         # module pour le mécanisme complet) : self._perf.emotion(...) renvoie
@@ -961,6 +1371,121 @@ class ConversationEngine:
         self._notify_timing(self._build_timing(
             stt_ms, stt_text, timing_marks, reply_started_at, speech_end_at, abandoned=False))
         return True
+
+    def _reply_interrupted(self) -> bool:
+        """Vrai si la réplique en cours a été interrompue par un arrêt vocal
+        (cf. _ReplyGuard) — point de contrôle du thread de conversation."""
+        guard = self._guard
+        return guard is not None and guard.interrupted.is_set()
+
+    def _start_reply_guard(self) -> Optional[_ReplyGuard]:
+        """Démarre l'écoute garde de CETTE réplique, ou None si elle est
+        inactive (pas de `on_move` ou pas de `guard_vad` : vrai robot, micro
+        coupé comme avant). Le micro, coupé par l'appelant (anti-larsen),
+        est rouvert ici. Tout échec = réplique SANS écoute garde, micro coupé
+        (comportement historique), jamais une réplique perdue.
+        Jamais armée chat OFF (revue du 31/10, I4) : le micro doit RESTER
+        coupé pendant toute la pause (cf. run_forever)."""
+        if self._on_move is None or self._guard_vad is None:
+            return None
+        if not self._chat_enabled():
+            return None
+        try:
+            # Seuil de l'écoute normale (calibré sur le silence ambiant, cf.
+            # EnergyVad.adopt_threshold) ; getattr : une VAD sans `threshold`
+            # exposé (ou pas encore calibrée -> None) laisse la VAD de garde
+            # sur son propre état. reset() : repart en IDLE (une réplique
+            # précédente a pu la laisser en SPEECH).
+            self._guard_vad.adopt_threshold(getattr(self._vad, "threshold", None))
+            self._guard_vad.reset()
+            guard = _ReplyGuard(mic=self._mic, vad=self._guard_vad, stt=self._stt,
+                                stt_lock=self._stt_lock,
+                                emit_stop=lambda: self._emit_move("stop"),
+                                interrupt_audio=self._player.interrupt,
+                                should_listen=self._chat_enabled)
+            self._mic.start()
+            guard.start()
+        except Exception:
+            logger.exception("Écoute garde impossible à démarrer — réplique SANS arrêt "
+                             "vocal (micro coupé comme avant).")
+            try:
+                self._mic.stop()
+            except Exception:
+                logger.exception("Écoute garde : micro impossible à recouper.")
+            return None
+        self._guard = guard
+        return guard
+
+    def _chat_enabled(self) -> bool:
+        """Mode interactif actif ? (`_enabled` None = hors run_forever, ex.
+        tests de run_once : actif.) Lu depuis le thread lecteur de la garde."""
+        return self._enabled is None or self._enabled.is_set()
+
+    def _stop_reply_guard(self, guard: Optional[_ReplyGuard]) -> None:
+        """Ferme l'écoute garde (idempotent, None = rien) : jeton fermé
+        D'ABORD (plus d'interruption possible ; un mot d'arrêt des tranches
+        déjà captées émet encore l'ordre, cf. _ReplyGuard B1), puis mic.stop() — qui débloque le
+        lecteur (EOF d'arecord) ET rend le micro dans l'état historique de fin
+        de réplique (coupé, l'appelant le relance) — puis attente bornée du
+        lecteur, et purge du pré-roll (une trame lue par le lecteur pendant
+        l'arrêt a pu y entrer après la purge de stop() : la voix de Didier ne
+        doit jamais ouvrir le prochain énoncé). Jamais d'exception."""
+        if guard is None or self._guard is not guard:
+            return
+        self._guard = None
+        self._closed_guard = guard
+        guard.close()
+        try:
+            self._mic.stop()
+        except Exception:
+            logger.exception("Écoute garde : arrêt du micro en échec.")
+        if not guard.join_reader(GUARD_JOIN_TIMEOUT_S):
+            logger.warning("Écoute garde : lecteur micro toujours actif après %.1f s "
+                           "(thread fuyant).", GUARD_JOIN_TIMEOUT_S)
+        try:
+            self._mic.purge_preroll()
+        except Exception:
+            logger.exception("Écoute garde : purge du pré-roll en échec.")
+
+    def _finish_interrupted_reply(self, guard: _ReplyGuard, stt_ms: float, stt_text: str,
+                                  timing_marks: dict, reply_started_at: float,
+                                  speech_end_at: Optional[float]) -> bool:
+        """Sortie d'une réplique interrompue par un arrêt vocal (l'ordre
+        "stop" est DÉJÀ parti, cf. _ReplyGuard._handle_text). Didier se tait :
+        son coupé (interrupt() rejoué : un play() a pu être enfilé pendant la
+        course), bouche arrêtée, visage NEUTRE (l'émotion de fin n'a pas été
+        conclue), ligne "david" de ce qui a été entendu — comme le chemin
+        normal —, PAS d'appel LLM (il ne joue pas l'arrêt ici), micro rendu.
+        Retourne False : le tour n'est pas allé au bout (abandoned=True)."""
+        try:
+            self._player.interrupt()
+        except Exception:
+            logger.exception("Écoute garde : coupure du son en échec.")
+        self._player.drain()
+        self._stop_reply_guard(guard)
+        self._publish_all(self._perf.speaking_stop())
+        self._publish_all(self._perf.idle())
+        self._notify_transcript(ROLE_DAVID, guard.heard)
+        if self._gate is not None:
+            # Queue acoustique (C2), comme les deux autres sorties.
+            self._gate.arm_tail()
+        self._mic.start()
+        self._set_state("listening")
+        self._notify_timing(self._build_timing(
+            stt_ms, stt_text, timing_marks, reply_started_at, speech_end_at, abandoned=True))
+        return False
+
+    @staticmethod
+    def _close_stream(deltas) -> None:
+        """Abandonne le flux LLM (générateur) : close() libère la connexion
+        HTTP sans attendre la fin de la génération. Best-effort."""
+        close = getattr(deltas, "close", None)
+        if close is None:
+            return
+        try:
+            close()
+        except Exception:
+            logger.debug("Fermeture du flux LLM en échec (ignorée).", exc_info=True)
 
     @staticmethod
     def _build_timing(stt_ms: float, stt_text: str, timing_marks: dict,

@@ -219,3 +219,43 @@ def test_reset_est_un_no_op_pendant_calibrating():
     assert vad.state is VadState.CALIBRATING
     assert vad.threshold is None
     _feed_calibration(vad, config, level=1.0)  # la calibration va à son terme normalement
+
+
+# --------------------------------------------------------------------------
+# adopt_threshold() : écoute garde pendant une réplique (31/10) — la VAD de
+# garde reprend le seuil mesuré sur le silence ambiant, jamais sur la voix de
+# Didier.
+# --------------------------------------------------------------------------
+
+def test_adopt_threshold_saute_la_calibration_et_repart_en_idle():
+    vad = EnergyVad(VadConfig(), frame_ms=FRAME_MS)
+    assert vad.state is VadState.CALIBRATING
+
+    vad.adopt_threshold(6.5)
+
+    assert vad.state is VadState.IDLE
+    assert vad.threshold == 6.5
+    # Déclenche sur le seuil adopté dès la 1re trame forte (aucune trame de
+    # calibration consommée) : 3 trames au-dessus de 6.5 -> speech_start.
+    assert vad.feed(7.0) is None
+    assert vad.feed(7.0) is None
+    assert vad.feed(7.0).kind == "speech_start"
+
+
+def test_adopt_threshold_coupe_une_phrase_en_cours():
+    config = VadConfig()
+    vad, loud, _quiet = _start_speech(config)
+
+    vad.adopt_threshold(2.0)
+
+    assert vad.state is VadState.IDLE
+    assert vad.threshold == 2.0
+
+
+def test_adopt_threshold_none_ne_change_rien():
+    vad = EnergyVad(VadConfig(), frame_ms=FRAME_MS)
+
+    vad.adopt_threshold(None)
+
+    assert vad.state is VadState.CALIBRATING
+    assert vad.threshold is None

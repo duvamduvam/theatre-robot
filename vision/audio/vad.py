@@ -174,3 +174,22 @@ class EnergyVad:
         unique, cf. docstring de module)."""
         if self._state is not VadState.CALIBRATING:
             self._reset_to_idle()
+
+    def adopt_threshold(self, threshold: Optional[float]) -> None:
+        """Reprend un seuil DÉJÀ calibré par une autre instance (même config)
+        et repart en IDLE, sans calibration propre. Sert à l'écoute GARDE de
+        vision.ai.conversation (arrêt d'urgence pendant une réplique, 31/10) :
+        elle tourne PENDANT que Didier parle — calibrer sur cette fenêtre
+        mesurerait sa propre voix comme « bruit de fond » (seuil trop haut =
+        un « Stop ! » de David ignoré, sans que rien ne le signale). Le seuil
+        de l'écoute normale, mesuré sur le silence ambiant, est le bon.
+
+        None (l'autre instance n'a pas encore fini sa calibration) = no-op :
+        cette instance garde son propre état (calibration en cours ou seuil
+        déjà adopté auparavant)."""
+        if threshold is None:
+            return
+        self._threshold = threshold
+        self._calib_levels = []
+        self._calib_elapsed_ms = 0
+        self._reset_to_idle()

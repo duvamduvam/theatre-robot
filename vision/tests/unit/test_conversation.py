@@ -17,6 +17,7 @@ import os
 import random
 import threading
 import time
+import types
 
 import pytest
 
@@ -2165,3 +2166,553 @@ def test_ecart_minimal_entre_deux_tours_spontanes_cote_parole(timeline, clock):
     finally:
         _cleanup_beeps(engine)
     assert [c["direction"] for c in brain.calls] == ["Première relance.", "Troisième relance."]
+
+
+# --------------------------------------------------------------------------
+# Écoute GARDE pendant une réplique (2026-10-31, constaté en répétition
+# simulée : « Stop ! » crié pendant que Didier parlait n'était jamais entendu,
+# la route continuait d'avancer). Décision de David : pendant une réplique,
+# Didier n'est interruptible QUE par un mot d'arrêt. Revue adversariale du
+# 31/10 intégrée (B1, I1-I5, m1, m3). Les threads de la garde tournent pour
+# de vrai : les fakes se synchronisent par threading.Event (bornés, jamais
+# d'attente infinie en CI).
+# --------------------------------------------------------------------------
+
+WAIT_S = 2.0
+
+
+def _wait_until(predicate, timeout=WAIT_S):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.01)
+    return False
+
+
+class GuardMic(FakeMic):
+    """Micro lu par le thread LECTEUR de la garde (le texte est tapé, l'écoute
+    normale ne lit rien). Ne rend ses trames qu'une fois `release` levé (par
+    défaut au premier play() : la garde entend David PENDANT que Didier
+    parle ; `release_on_start` : dès l'ouverture). stop() simule l'EOF
+    d'arecord. Options : `block_when_empty` (flux vivant mais silencieux
+    jusqu'au stop), `endless` (trames sans fin), `gates` {n° de trame:
+    Event} (trame n rendue seulement une fois l'Event levé)."""
+
+    def __init__(self, timeline, frames, *, release_on_start=False, block_when_empty=False,
+                 endless=False, gates=None):
+        super().__init__(timeline, frames)
+        self.release = threading.Event()
+        self.reads = 0
+        self._stopped = threading.Event()
+        self._release_on_start = release_on_start
+        self._block_when_empty = block_when_empty
+        self._endless = endless
+        self._gates = gates or {}
+
+    def start(self):
+        # Flux neuf : il ne rend rien tant que Didier n'a pas parlé (le
+        # mic.stop() d'avant la réplique a levé `release`, cf. stop()).
+        self._stopped.clear()
+        if self._release_on_start:
+            self.release.set()
+        else:
+            self.release.clear()
+        super().start()
+
+    def stop(self):
+        self._stopped.set()
+        self.release.set()
+        super().stop()
+
+    def read_frame(self):
+        self.release.wait(timeout=WAIT_S)
+        if self._stopped.is_set():
+            return None
+        if self._endless:
+            time.sleep(0.005)
+            return b"x"
+        gate = self._gates.get(self.reads)
+        if gate is not None:
+            gate.wait(timeout=WAIT_S)
+        if not self._frames and self._block_when_empty:
+            self._stopped.wait(timeout=WAIT_S)
+            return None
+        frame = super().read_frame()
+        if frame is not None:
+            self.reads += 1
+        return frame
+
+    def purge_preroll(self):
+        pass   # hors timeline : appelée par la fermeture de la garde
+
+
+class GuardVad(FakeVad):
+    """VAD de garde scriptée + trace des seuils adoptés."""
+
+    def __init__(self, events):
+        super().__init__(events)
+        self.adopted = []
+
+    def adopt_threshold(self, threshold):
+        self.adopted.append(threshold)
+
+
+class GuardStt:
+    """STT de la garde : rend `text` (ou lève si `raises`), le PREMIER appel
+    attendant éventuellement `hold` (STT lent). `entered`/`returned` : jalons
+    de synchronisation des tests."""
+
+    def __init__(self, text="Stop !", raises=False, hold=None):
+        self.text = text
+        self.raises = raises
+        self.hold = hold
+        self.calls = []
+        self.entered = threading.Event()
+        self.returned = threading.Event()
+
+    def transcribe(self, pcm, sample_rate):
+        self.calls.append((pcm, sample_rate))
+        first = not self.entered.is_set()
+        self.entered.set()
+        try:
+            if first and self.hold is not None:
+                self.hold.wait(timeout=WAIT_S)
+            if self.raises:
+                raise RuntimeError("STT de garde cassé (test)")
+            return self.text
+        finally:
+            self.returned.set()
+
+
+class SourcedStt(GuardStt):
+    """GuardStt qui, comme FallbackStt, écrit `last_source` à chaque appel."""
+
+    def __init__(self, text):
+        super().__init__(text)
+        self.last_source = "distant"
+
+    def transcribe(self, pcm, sample_rate):
+        self.last_source = "repli"
+        return super().transcribe(pcm, sample_rate)
+
+
+class InterruptiblePlayer(FakePlayer):
+    """FakePlayer + interrupt() ; le premier play() lève `mic.release` (sauf
+    `release_on_play=False`) ; `on_drain` : appelé dans drain()."""
+
+    def __init__(self, timeline, mic, *, release_on_play=True, on_drain=None):
+        super().__init__(timeline)
+        self._mic = mic
+        self._release_on_play = release_on_play
+        self._on_drain = on_drain
+        self.interrupted = threading.Event()
+
+    def play(self, pcm, sample_rate):
+        super().play(pcm, sample_rate)
+        if self._release_on_play:
+            self._mic.release.set()
+
+    def drain(self):
+        super().drain()
+        if self._on_drain is not None:
+            self._on_drain()
+
+    def interrupt(self):
+        self._timeline.append(("player_interrupt",))
+        self.interrupted.set()
+
+
+class HookTts(FakeTts):
+    """FakeTts qui appelle hooks[texte]() PENDANT la synthèse de ce texte."""
+
+    def __init__(self, timeline, hooks):
+        super().__init__(timeline)
+        self._hooks = hooks
+
+    def synthesize(self, text):
+        result = super().synthesize(text)
+        hook = self._hooks.get(text)
+        if hook is not None:
+            hook()
+        return result
+
+
+class PausingBrain(FakeStageBrain):
+    """Brain qui streame son PREMIER delta, puis attend `pause()` (borné)
+    avant les suivants : laisse à la garde le temps d'agir en pleine réplique.
+    `raise_after_pause` : panne LLM juste après la pause."""
+
+    def __init__(self, timeline, deltas, pause, raise_after_pause=False):
+        super().__init__(timeline, deltas)
+        self._pause = pause
+        self._raise_after_pause = raise_after_pause
+
+    def stream_reply(self, user_text, extra_system=None, **kwargs):
+        self.calls.append(dict(kwargs, user_text=user_text, extra_system=extra_system))
+        self._timeline.append(("brain_stream_reply", user_text))
+        first, *rest = self._deltas
+        yield first
+        self._pause()
+        if self._raise_after_pause:
+            raise RuntimeError("panne LLM simulée après l'urgence (test)")
+        yield from rest
+
+
+# Deux phrases ; la 2e porte un "go" de fin : il ne doit JAMAIS partir après
+# un arrêt vocal de la même réplique.
+GUARD_DELTAS = ["Première phrase. ", 'Deuxième phrase. {"emotion": "happy", "marche": "go"}']
+# Une tranche : speech_start sur la 1re trame, speech_end sur la 3e.
+GUARD_FRAMES = [b"g0", b"g1", b"g2"]
+GUARD_EVENTS = [VadEvent(kind="speech_start", preroll_frames=2), None,
+                VadEvent(kind="speech_end", reason="silence")]
+START = VadEvent(kind="speech_start", preroll_frames=2)
+END = VadEvent(kind="speech_end", reason="silence")
+
+
+def _guard_engine(timeline, *, stt, pause=lambda: None, on_move, guard=True,
+                  mic=None, events=GUARD_EVENTS, player=None, tts=None,
+                  raise_after_pause=False, stage=None):
+    if stage is None:
+        stage = StageState()
+    stage.push_text("Raconte-moi la rue.")
+    mic = mic if mic is not None else GuardMic(timeline, GUARD_FRAMES)
+    main_vad = FakeVad([])
+    main_vad.threshold = 7.5          # seuil calibré de l'écoute normale
+    guard_vad = GuardVad(events)
+    player = player if player is not None else InterruptiblePlayer(timeline, mic)
+    lines, on_transcript = _transcript_recorder()
+    states = []
+    engine = ConversationEngine(
+        mic=mic, vad=main_vad, stt=stt,
+        brain=PausingBrain(timeline, GUARD_DELTAS, pause, raise_after_pause),
+        tts=tts if tts is not None else FakeTts(timeline), player=player,
+        publish=_make_publish(timeline),
+        refresh_ms=REFRESH_MS, dead_mic_backoff_s=0.0, on_state=states.append,
+        stage=stage, on_transcript=on_transcript, on_move=on_move,
+        guard_vad=guard_vad if guard else None)
+    return engine, mic, guard_vad, player, lines, states
+
+
+def _ordres_thread_safe():
+    ordres, lock = [], threading.Lock()
+
+    def on_move(cmd):
+        with lock:
+            ordres.append(cmd)
+    return ordres, on_move
+
+
+def _tags(timeline):
+    return [event[0] for event in timeline]
+
+
+# --- Cas nominaux -----------------------------------------------------------
+
+@pytest.mark.parametrize("entendu", [
+    "Stop !",
+    # I1 : la tranche contient l'écho de Didier autour du cri de David.
+    "Première phrase. Stop ! Deuxième",
+])
+def test_garde_stop_pendant_la_replique_arrete_et_interrompt(timeline, caplog, entendu):
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt(entendu)
+    holder = {}
+    engine, mic, guard_vad, player, lines, states = _guard_engine(
+        timeline, stt=stt, on_move=on_move,
+        pause=lambda: holder["player"].interrupted.wait(timeout=WAIT_S))
+    holder["player"] = player
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        result = engine.run_once()
+
+    assert result is False                       # tour interrompu, pas mené au bout
+    assert ordres == ["stop"]                    # une fois, et JAMAIS le "go" de fin
+    assert stt.calls == [(b"PREROLLg1g2", 16000)]  # même STT, tranche pré-roll + trames
+    assert guard_vad.adopted == [7.5]            # seuil de l'écoute normale repris
+    synth = [event[1] for event in timeline if event[0] == "tts_synthesize"]
+    assert synth == ["Première phrase."]         # la 2e n'est jamais dite
+    assert "player_interrupt" in _tags(timeline)
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    assert publishes[-2:] == [SPEAKING_STOP, IDLE]   # bouche arrêtée, visage neutre
+    assert lines[-1] == ("david", entendu)
+    assert _tags(timeline).count("brain_stream_reply") == 1
+    assert timeline[-1] == ("mic_start",)        # micro rendu à l'écoute normale
+    assert states[-1] == "listening"
+    assert f"ARRÊT D'URGENCE vocal pendant la réplique : {entendu!r}" in [
+        record.message for record in caplog.records]
+
+
+def test_garde_parole_quelconque_ne_coupe_rien(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt("c'est joli")
+
+    def pause():
+        # Le texte est transcrit ET traité avant la suite de la réplique.
+        stt.returned.wait(timeout=WAIT_S)
+        time.sleep(0.2)
+
+    engine, mic, _vad, player, lines, states = _guard_engine(
+        timeline, stt=stt, on_move=on_move, pause=pause)
+    assert engine.run_once() is True
+    assert len(stt.calls) == 1                   # la garde a bien entendu…
+    assert ordres == ["go"]                      # …sans rien émettre : seul le go de fin
+    synth = [event[1] for event in timeline if event[0] == "tts_synthesize"]
+    assert synth == ["Première phrase.", "Deuxième phrase."]
+    assert "player_interrupt" not in _tags(timeline)
+    assert ("david", "c'est joli") not in lines
+
+
+def test_garde_sans_on_move_micro_coupe_pendant_la_replique(timeline):
+    # Vrai robot (on_move None) : comportement historique, aucune écoute garde
+    # — même si une VAD de garde est fournie.
+    stt = GuardStt("Stop !")
+    engine, mic, guard_vad, _player, _lines, _states = _guard_engine(
+        timeline, stt=stt, on_move=None)
+    assert engine.run_once() is True
+    tags = _tags(timeline)
+    # Micro coupé avant la réplique, relancé UNE seule fois, tout à la fin.
+    assert tags[0] == "mic_stop"
+    assert tags.count("mic_start") == 1
+    assert timeline[-1] == ("mic_start",)
+    assert mic.reads == 0 and stt.calls == [] and guard_vad.adopted == []
+
+
+def test_garde_stt_qui_leve_la_replique_continue(timeline, caplog):
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt(raises=True)
+
+    def pause():
+        stt.returned.wait(timeout=WAIT_S)
+        time.sleep(0.2)
+
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move, pause=pause)
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert engine.run_once() is True
+    assert len(stt.calls) == 1
+    synth = [event[1] for event in timeline if event[0] == "tts_synthesize"]
+    assert synth == ["Première phrase.", "Deuxième phrase."]
+    assert ordres == ["go"]
+    assert any(record.message.startswith("Écoute garde : STT en échec")
+               for record in caplog.records)
+
+
+# --- B1 : stop de FIN de réplique — l'ordre part, l'interruption non --------
+
+def test_garde_stop_transcrit_apres_la_fin_de_replique_emet_quand_meme(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    hold = threading.Event()
+    stt = GuardStt("Stop !", hold=hold)
+    # La réplique ne se finit qu'une fois la tranche PARTIE au STT ; le STT,
+    # lui, ne rend qu'après la fin.
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move,
+                               pause=lambda: stt.entered.wait(timeout=WAIT_S))
+    try:
+        assert engine.run_once() is True         # réplique allée au bout
+        assert stt.entered.is_set()
+    finally:
+        hold.set()
+    assert _wait_until(lambda: len(ordres) == 2)
+    assert ordres == ["go", "stop"]              # le stop tardif PART, après le go
+    assert "player_interrupt" not in _tags(timeline)   # mais n'interrompt rien
+
+
+def test_garde_tranche_en_cours_a_la_fermeture_part_au_stt(timeline):
+    # « Stop ! » dit pile à la fin : la VAD n'a pas encore vu le silence de
+    # fin quand la réplique se ferme — la tranche partielle part quand même.
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt("Stop !")
+    mic = GuardMic(timeline, GUARD_FRAMES, block_when_empty=True)
+    engine, *_ = _guard_engine(
+        timeline, stt=stt, on_move=on_move, mic=mic, events=[START, None, None],
+        pause=lambda: _wait_until(lambda: mic.reads == 3))
+    assert engine.run_once() is True
+    assert _wait_until(lambda: len(ordres) == 2)
+    assert stt.calls == [(b"PREROLLg1g2", 16000)]
+    assert ordres == ["go", "stop"]
+    assert "player_interrupt" not in _tags(timeline)
+
+
+def test_garde_stop_tardif_part_avant_le_go_du_tour_suivant(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    hold = threading.Event()
+    stt = GuardStt("Stop !", hold=hold)
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move,
+                               pause=lambda: stt.entered.wait(timeout=WAIT_S))
+    assert engine.run_once() is True             # tour 1 : go, stop en attente de STT
+    engine._stage.push_text("Avance !")
+    timer = threading.Timer(0.3, hold.set)       # le STT tardif rend PENDANT le tour 2
+    timer.start()
+    try:
+        assert engine.run_once() is True         # tour 2 : son go attend le stop tardif
+    finally:
+        timer.cancel()
+        hold.set()
+    assert ordres == ["go", "stop", "go"]        # la nouvelle intention de David gagne
+
+
+# --- I2 : file STT bornée, les tranches récentes d'abord --------------------
+
+def test_garde_file_bornee_garde_les_tranches_recentes(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    hold = threading.Event()
+    stt = GuardStt("bla bla", hold=hold)
+    frames = [b"a0", b"a1", b"b0", b"b1", b"c0", b"c1", b"d0", b"d1"]
+    # La 2e tranche n'est lue qu'une fois la 1re entrée en STT (bloqué) :
+    # les 2e, 3e et 4e s'entassent dans une file de 2 places.
+    mic = GuardMic(timeline, frames, gates={2: stt.entered})
+
+    def pause():
+        _wait_until(lambda: mic.reads == 8)
+        time.sleep(0.05)
+        hold.set()
+        _wait_until(lambda: len(stt.calls) == 3)
+
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move, mic=mic,
+                               events=[START, END] * 4, pause=pause)
+    assert engine.run_once() is True
+    time.sleep(0.2)
+    assert [pcm for pcm, _rate in stt.calls] == [b"PREROLLa1", b"PREROLLc1", b"PREROLLd1"]
+
+
+# --- I3 : garde armée dès _reply_with_stage (panne delay, attente LLM) ------
+
+def test_garde_stop_pendant_la_panne_delay_sans_appel_llm(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    stage = StageState()
+    stage.set_fault("delay", {"delay_ms": 1500}, 30000, time.monotonic())
+    stt = GuardStt("Stop !")
+    mic = GuardMic(timeline, GUARD_FRAMES, release_on_start=True)
+    engine, _mic, _vad, _player, lines, states = _guard_engine(
+        timeline, stt=stt, on_move=on_move, mic=mic, stage=stage)
+    started = time.monotonic()
+    assert engine.run_once() is False
+    assert time.monotonic() - started < 1.0      # l'attente de 1,5 s est écourtée
+    assert ordres == ["stop"]
+    assert "brain_stream_reply" not in _tags(timeline)
+    assert lines == [("david", "Raconte-moi la rue."), ("david", "Stop !")]
+    assert states[-1] == "listening" and timeline[-1] == ("mic_start",)
+
+
+# --- I4 : chat OFF ----------------------------------------------------------
+
+def test_garde_jamais_armee_chat_off(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt("Stop !")
+    engine, mic, guard_vad, *_ = _guard_engine(timeline, stt=stt, on_move=on_move)
+    engine._enabled = threading.Event()          # toggle OFF (baissé)
+    engine.run_once()
+    assert _tags(timeline).count("mic_start") == 1   # seul le start historique de fin
+    assert mic.reads == 0 and stt.calls == [] and guard_vad.adopted == []
+
+
+def test_garde_chat_off_pendant_la_replique_recoupe_le_micro(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt("bla")
+    mic = GuardMic(timeline, [], endless=True)
+    enabled = threading.Event()
+    enabled.set()
+
+    def pause():
+        enabled.clear()                          # chat OFF en pleine réplique
+        _wait_until(lambda: _tags(timeline).count("mic_stop") >= 2)
+
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move, mic=mic,
+                               events=[], pause=pause)
+    engine._enabled = enabled
+    engine.run_once()
+    tags = _tags(timeline)
+    # Le micro est recoupé PAR LA GARDE pendant la réplique (avant le drain).
+    assert "mic_stop" in tags[tags.index("player_play"):tags.index("player_drain")]
+
+
+# --- I5 : contrôles de course ----------------------------------------------
+
+def test_go_jamais_emis_apres_une_interruption_de_la_meme_replique(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    engine, *_ = _guard_engine(timeline, stt=GuardStt(), on_move=on_move)
+    interrupted = threading.Event()
+    interrupted.set()
+    engine._guard = types.SimpleNamespace(lock=threading.Lock(), interrupted=interrupted)
+    engine._notify_move({"marche": "go"})
+    engine._notify_move({"marche": "stop"})
+    assert ordres == ["stop"]
+
+
+def test_garde_stop_pendant_la_synthese_la_phrase_n_est_pas_jouee(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt("Stop !")
+    mic = GuardMic(timeline, GUARD_FRAMES)
+    player = InterruptiblePlayer(timeline, mic, release_on_play=False)
+
+    def pendant_la_synthese():
+        mic.release.set()
+        player.interrupted.wait(timeout=WAIT_S)
+
+    engine, *_ = _guard_engine(
+        timeline, stt=stt, on_move=on_move, mic=mic, player=player,
+        tts=HookTts(timeline, {"Deuxième phrase.": pendant_la_synthese}))
+    assert engine.run_once() is False
+    assert ("tts_synthesize", "Deuxième phrase.") in timeline
+    assert _tags(timeline).count("player_play") == 1     # synthétisée, jamais jouée
+    assert ordres == ["stop"]
+
+
+def test_garde_stop_pendant_le_drain_sortie_interrompue(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt("Stop !")
+    mic = GuardMic(timeline, GUARD_FRAMES)
+    holder = {}
+
+    def pendant_le_drain():
+        mic.release.set()
+        holder["player"].interrupted.wait(timeout=WAIT_S)
+
+    player = InterruptiblePlayer(timeline, mic, release_on_play=False, on_drain=pendant_le_drain)
+    holder["player"] = player
+    engine, _mic, _vad, _player, lines, _states = _guard_engine(
+        timeline, stt=stt, on_move=on_move, mic=mic, player=player)
+    assert engine.run_once() is False
+    publishes = [event[1] for event in timeline if event[0] == "publish"]
+    assert publishes[-2:] == [SPEAKING_STOP, IDLE]       # pas l'émotion "joie" de fin
+    assert lines[-1] == ("david", "Stop !")
+    assert ordres == ["go", "stop"]                      # go déjà parti, stop après
+
+
+def test_garde_fermee_sur_le_chemin_d_exception(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    engine, *_ = _guard_engine(timeline, stt=GuardStt("bla"), on_move=on_move,
+                               raise_after_pause=True)
+    assert engine.run_once() is False
+    assert engine._guard is None
+    assert timeline[-3:] == [("publish", IDLE), ("mic_stop",), ("mic_start",)]
+
+
+def test_garde_panne_llm_apres_urgence_rejoue_interrupt(timeline):
+    # m3 : la panne tombe APRÈS l'arrêt vocal — sortie d'interruption complète.
+    ordres, on_move = _ordres_thread_safe()
+    holder = {}
+    engine, _mic, _vad, player, lines, states = _guard_engine(
+        timeline, stt=GuardStt("Stop !"), on_move=on_move, raise_after_pause=True,
+        pause=lambda: holder["player"].interrupted.wait(timeout=WAIT_S))
+    holder["player"] = player
+    assert engine.run_once() is False
+    assert _tags(timeline).count("player_interrupt") == 2   # garde + rattrapage
+    assert lines[-1] == ("david", "Stop !")
+    assert ordres == ["stop"]
+    assert states[-1] == "listening" and timeline[-1] == ("mic_start",)
+
+
+# --- m1 : la garde n'écrase pas la source STT du tour -----------------------
+
+def test_garde_n_ecrase_pas_la_source_stt(timeline):
+    ordres, on_move = _ordres_thread_safe()
+    stt = SourcedStt("c'est joli")
+
+    def pause():
+        stt.returned.wait(timeout=WAIT_S)
+        time.sleep(0.2)
+
+    engine, *_ = _guard_engine(timeline, stt=stt, on_move=on_move, pause=pause)
+    assert engine.run_once() is True
+    assert len(stt.calls) == 1
+    assert stt.last_source == "distant"

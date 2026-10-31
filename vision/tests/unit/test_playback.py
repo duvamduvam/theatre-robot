@@ -183,3 +183,73 @@ def test_stop_terminates_the_worker_thread():
     player = AudioPlayer("mixette", run_cmd=_make_run_cmd([], threading.Lock()))
     player.stop()
     assert not player._thread.is_alive()
+
+
+# --------------------------------------------------------------------------
+# interrupt() : arrêt d'urgence vocal pendant une réplique (31/10) — coupe le
+# son EN COURS, saute la file, le lecteur reste vivant.
+# --------------------------------------------------------------------------
+
+class BlockingProcess:
+    """Faux aplay qui « joue » jusqu'à ce qu'on le coupe : wait() bloque tant
+    que terminate() n'a pas été appelé (borné à 2 s pour ne jamais pendre la
+    CI si le code testé oublie de couper)."""
+
+    def __init__(self, cmd):
+        self.cmd = cmd
+        self.started = threading.Event()
+        self.terminated = threading.Event()
+        self.started.set()
+
+    def wait(self):
+        self.terminated.wait(timeout=2.0)
+        return 0
+
+    def terminate(self):
+        self.terminated.set()
+
+
+def test_interrupt_coupe_la_lecture_en_cours_et_saute_la_file():
+    procs, lock = [], threading.Lock()
+
+    def run_cmd(cmd, stdout=None):
+        proc = BlockingProcess(cmd)
+        with lock:
+            procs.append(proc)
+        return proc
+
+    player = AudioPlayer("mixette", run_cmd=run_cmd)
+    try:
+        player.play(b"N", 22050)
+        player.play(b"N+1", 22050)
+        assert _wait_until(lambda: len(procs) == 1)   # N joue, N+1 attend
+
+        started = time.monotonic()
+        player.interrupt()
+        player.drain()
+        assert time.monotonic() - started < 1.0       # pas les 2 s du garde-fou
+        with lock:
+            assert len(procs) == 1                    # N+1 jamais lancé
+            assert procs[0].terminated.is_set()
+
+        # Le lecteur survit : un play() APRÈS l'interruption joue normalement.
+        player.play(b"suite", 22050)
+        assert _wait_until(lambda: len(procs) == 2)
+        procs[1].terminate()
+        player.drain()
+    finally:
+        player.stop()
+
+
+def test_interrupt_sans_lecture_en_cours_ne_leve_pas():
+    calls, lock = [], threading.Lock()
+    player = AudioPlayer("mixette", run_cmd=_make_run_cmd(calls, lock))
+    try:
+        player.interrupt()
+        player.interrupt()   # idempotent
+        player.play(b"N", 22050)
+        player.drain()
+        with lock:
+            assert len(calls) == 1
+    finally:
+        player.stop()

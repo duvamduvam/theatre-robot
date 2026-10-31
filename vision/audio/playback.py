@@ -57,6 +57,15 @@ class AudioPlayer:
         self._device = device
         self._run_cmd = run_cmd or subprocess.Popen
         self._queue: "queue.Queue" = queue.Queue()
+        # Interruption (cf. interrupt(), 31/10) : `_epoch` est le numéro de
+        # « génération » courant — chaque fichier enfilé porte celui de son
+        # play(), le lecteur saute tout fichier d'une génération périmée.
+        # `_current` = aplay en cours (None entre deux fichiers). Les deux
+        # sous `_lock` : interrupt() est appelé depuis un AUTRE thread (écoute
+        # garde de la conversation) que le lecteur et que play().
+        self._lock = threading.Lock()
+        self._epoch = 0
+        self._current = None
         # Thread daemon : ne bloque jamais l'arrêt du process si stop()
         # n'était pas appelé explicitement (garde-fou, stop() reste la voie
         # normale de terminaison propre).
@@ -67,7 +76,9 @@ class AudioPlayer:
         """Enfile un chunk PCM à jouer (thread lecteur, wav temporaire +
         aplay) — voir docstring de module pour la sémantique pipeline N/N+1."""
         path = write_wav_tempfile(pcm, sample_rate)
-        self._queue.put(path)
+        with self._lock:
+            epoch = self._epoch
+        self._queue.put((path, epoch))
 
     def play_async_raw(self, path) -> None:
         """Fire-and-forget : lance `aplay` directement sur un fichier déjà
@@ -81,14 +92,26 @@ class AudioPlayer:
         N/N+1 — pendant que ce thread bloque sur proc.wait(), l'appelant peut
         déjà avoir enfilé le fichier N+1)."""
         while True:
-            path = self._queue.get()
-            if path is None:  # sentinelle d'arrêt posée par stop()
+            item = self._queue.get()
+            if item is None:  # sentinelle d'arrêt posée par stop()
                 self._queue.task_done()
                 break
+            path, epoch = item
             try:
-                proc = self._run_cmd(["aplay", "-q", "-D", self._device, path])
-                proc.wait()
+                # Démarrage SOUS le verrou : interrupt() ne peut pas tomber
+                # entre « génération vérifiée » et « aplay lancé » (sinon le
+                # fichier, déjà sorti de la file, jouerait en entier malgré
+                # l'interruption). Popen ne fait que fork/exec : bref.
+                with self._lock:
+                    proc = None
+                    if epoch == self._epoch:
+                        proc = self._run_cmd(["aplay", "-q", "-D", self._device, path])
+                        self._current = proc
+                if proc is not None:
+                    proc.wait()
             finally:
+                with self._lock:
+                    self._current = None
                 # Le wav de play() est temporaire (write_wav_tempfile) : on le
                 # supprime après lecture, que la lecture ait réussi ou non
                 # (OSError ignorée : fichier déjà absent n'est pas une erreur
@@ -103,6 +126,25 @@ class AudioPlayer:
         """Bloque jusqu'à ce que la file soit entièrement jouée (utilisé en
         fin de tour de conversation, après la dernière Sentence enfilée)."""
         self._queue.join()
+
+    def interrupt(self) -> None:
+        """Coupe la lecture EN COURS et abandonne tout ce qui est déjà en file
+        (arrêt d'urgence vocal pendant une réplique, cf. vision.ai.conversation
+        — 31/10). Le thread lecteur, lui, CONTINUE : un play() ultérieur joue
+        normalement. À ne pas confondre avec stop(), qui termine le lecteur
+        pour de bon APRÈS avoir tout joué (sentinelle en fin de file).
+        Les fichiers sautés sont quand même supprimés et comptés (task_done) :
+        drain() revient dès que le lecteur a vidé la file. Appelable depuis
+        n'importe quel thread, idempotent, jamais d'exception (process déjà
+        terminé = rien à couper)."""
+        with self._lock:
+            self._epoch += 1
+            proc = self._current
+            if proc is not None:
+                try:
+                    proc.terminate()
+                except (OSError, AttributeError):
+                    pass
 
     def stop(self) -> None:
         """Termine le thread lecteur proprement (sentinelle None + join)."""

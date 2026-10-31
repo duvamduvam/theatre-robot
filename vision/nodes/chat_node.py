@@ -853,6 +853,13 @@ class ChatNode(Node):
             # Mouvement à la voix (cf. CHAT_MOVE_TOPIC) : None si désactivé
             # = comportement historique (la clé "marche" n'est pas lue).
             on_move=self._publish_move if self._move_pub is not None else None,
+            # Écoute garde pendant les répliques (31/10, cf. vision.ai.conversation
+            # ÉCOUTE GARDE) : « Stop ! » entendu même quand Didier parle. Même
+            # condition que on_move (sans régisseur, un arrêt vocal n'arrête
+            # rien : micro coupé pendant la réplique, comme avant). Seconde
+            # instance, MÊME config que `vad` : jamais partagée entre threads.
+            guard_vad=(EnergyVad(config["chat_vad"], frame_ms=MIC_FRAME_MS)
+                       if self._move_pub is not None else None),
             # Demande de réflexion : None si désactivée (la clé "reflechir"
             # n'est pas lue).
             on_reflect=self._publish_reflect if self._reflect_pub is not None else None,
@@ -1091,7 +1098,9 @@ class ChatNode(Node):
         self._transcript_pub.publish(StringTime(msg=payload, time=0, anim=False))
 
     def _publish_move(self, cmd: str) -> None:
-        """Callback `on_move` de ConversationEngine (thread de conversation) :
+        """Callback `on_move` de ConversationEngine (thread de conversation,
+        OU thread STT de l'écoute garde pour un "stop" crié pendant une
+        réplique — publish rclpy est sûr entre threads) :
         "go"/"stop" déjà validé par le moteur, publié en JSON sur
         CHAT_MOVE_TOPIC. Journalisé : c'est la trace qui dit, au débrief, que
         l'ordre venait de Didier. PAS d'arbitrage : ce n'est pas un

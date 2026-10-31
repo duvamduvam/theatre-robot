@@ -7,7 +7,8 @@ doivent rester vrais (un faux négatif = Didier qui ne s'arrête pas).
 """
 import pytest
 
-from vision.ai.emergency import FILLERS, MAX_WORDS, STOP_WORDS, is_emergency_stop
+from vision.ai.emergency import (FILLERS, MAX_WORDS, STOP_WORDS, contains_stop_word,
+                                 is_emergency_stop)
 
 
 @pytest.mark.parametrize("texte", [
@@ -94,3 +95,32 @@ def test_normalisation_accents_et_ponctuation():
     # « Arrêtez, s'il vous plaît ! » : accents retirés, apostrophe = espace.
     assert is_emergency_stop("Arrêtez, s'il vous plaît !") is True
     assert is_emergency_stop("ARRÊTE… MAINTENANT !!!") is True
+
+
+# --------------------------------------------------------------------------
+# contains_stop_word : critère LÂCHE de l'écoute garde (revue du 31/10, I1) —
+# la tranche contient l'écho de Didier autour du « Stop ! » de David.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("texte", [
+    "Stop !",
+    "et puis la boulangerie. Stop ! Je disais donc",   # écho + cri
+    "Arrête de râler",                                 # contexte : sens sûr
+    "on descend à l'arrêt de bus",                     # Didier lui-même : sens sûr
+    "HALTE là",
+    "Arrêtez-vous",
+])
+def test_contains_stop_word_vrai(texte):
+    assert contains_stop_word(texte) is True
+
+
+@pytest.mark.parametrize("texte", [
+    None, "", "...", "c'est joli", "on continue tout droit", "stoppeur", "arrêtoir",
+])
+def test_contains_stop_word_faux(texte):
+    assert contains_stop_word(texte) is False
+
+
+def test_contains_stop_word_ne_change_pas_is_emergency_stop():
+    # Le critère strict de l'écoute NORMALE reste celui du 23/10.
+    assert is_emergency_stop("et puis la boulangerie. Stop ! Je disais donc") is False
