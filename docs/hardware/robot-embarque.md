@@ -142,7 +142,8 @@ lève en allant voir, pas en raisonnant.
 **Ce qui reste ouvert, et qui est plus fin qu'un danger — une question de JUSTESSE.**
 D'après Victron, l'absorption du mode `li-ion` en 24 V vaut ~**28,3-28,4 V**, valeur
 calibrée pour du **LiFePO4** (8 × ~3,55 V). Or `overview.md` décrit le pack comme des
-**18650**, typiquement du Li-ion **NMC** à 4,2 V/cellule. Selon la configuration réelle :
+**18650**, typiquement du Li-ion **NMC** à 4,2 V/cellule (**pack de 18650 confirmé par David
+le 01/11** — la chimie exacte reste à lire sur une cellule). Selon la configuration réelle :
 
 - **7S NMC** → 28,4 V ne fait que **4,05 V/cellule** : *sous-charge* (autonomie réduite),
   sans danger. C'est `high [29,4 V]` qui donnerait pile 4,2 V/cellule ;
