@@ -110,7 +110,8 @@ _WHISPER_MODELS = ("tiny", "base", "small", "medium")
 # FERMÉE : un nom libre partirait tel quel chez OpenRouter et un nom faux
 # rendrait Didier muet en pleine séance. Absente = défaut de config (Haiku).
 LLM_MODEL_ENV = "CHAT_LLM_MODEL"
-_LLM_MODELS = ("anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5")
+_LLM_MODELS = ("anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5",
+               "openai/gpt-6.1-sol")
 # Réglage de réflexion PAR MODÈLE (01/11) : Sonnet 5.5 REFUSE la réflexion
 # coupée (OpenRouter 400 « Reasoning is mandatory » — Didier muet à chaque
 # réplique pendant tout l'essai du 31/10, 94 tours perdus). Banc du 01/11
@@ -120,6 +121,13 @@ _LLM_MODELS = ("anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5")
 # documenté sur chat_llm_extra_body). Haiku : rien ici, la config s'applique.
 _LLM_MODEL_OVERRIDES = {
     "anthropic/claude-sonnet-5.5": {
+        "chat_llm_extra_body": {"reasoning": {"effort": "minimal"}},
+        "chat_llm_max_tokens": 600,
+    },
+    # Essai demandé par David (01/11). Banc : effort "minimal" accepté, 1er mot
+    # 1,38-1,54 s (texte), 1,81-1,87 s (image), 28/28 gestes, 0 tic en
+    # conversation (« mes roulements » revient souvent, à surveiller).
+    "openai/gpt-6.1-sol": {
         "chat_llm_extra_body": {"reasoning": {"effort": "minimal"}},
         "chat_llm_max_tokens": 600,
     },

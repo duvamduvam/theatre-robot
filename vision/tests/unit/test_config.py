@@ -259,6 +259,13 @@ def test_llm_model_sonnet_accepte_et_fusionne():
     assert overrides["chat_llm_max_tokens"] == 600
 
 
+def test_llm_model_sol_reflexion_minimale():
+    overrides = vision_config.chat_env_overrides({"CHAT_LLM_MODEL": "openai/gpt-6.1-sol"})[0]
+    assert overrides["chat_llm_model"] == "openai/gpt-6.1-sol"
+    assert overrides["chat_llm_extra_body"] == {"reasoning": {"effort": "minimal"}}
+    assert overrides["chat_llm_max_tokens"] == 600
+
+
 def test_llm_model_haiku_garde_la_reflexion_coupee():
     overrides = vision_config.chat_env_overrides({"CHAT_LLM_MODEL": "anthropic/claude-haiku-5.5"})[0]
     assert "chat_llm_extra_body" not in overrides
