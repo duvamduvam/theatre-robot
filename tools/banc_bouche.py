@@ -216,7 +216,11 @@ def main():
     ap.add_argument("--out", default="/tmp/banc_bouche.json")
     ap.add_argument("--models", default=",".join(CANDIDATES))
     ap.add_argument("--image", help="JPEG : passe aux questions sur image (IMAGE_SCENARIOS)")
+    ap.add_argument("--suite", action="store_true",
+                    help="conversation CONTINUE (historique gardé) : mesure des tics répétés")
     args = ap.parse_args()
+    if args.suite:
+        return _main_suite(args)
     if args.image:
         return _main_image(args)
     llm_stream.ChatDB = _MemoryChatDB  # historique en mémoire (cf. docstring)
@@ -249,6 +253,47 @@ def main():
         else:
             print(f"{model:32s} INUTILISABLE : {err}", flush=True)
         json.dump(results, open(args.out, "w"), ensure_ascii=False, indent=1)
+
+
+# Tics surveillés (personas.py, règle des tics : ≤ 1 réplique sur 5).
+TICS = ("bon sang de boulon", "contre tout", "de mon temps")
+
+
+def _main_suite(args):
+    """Les SCENARIOS enchaînés dans UNE conversation (historique gardé, comme
+    en séance), `runs` fois : part des répliques avec un tic, et nombre de
+    paires de répliques CONSÉCUTIVES qui en portent un (« jamais deux de
+    suite »)."""
+    llm_stream.ChatDB = _MemoryChatDB
+    objects = [(o["name"], o["desc"]) for o in json.load(open(args.objects))]
+    results = {}
+    for model in args.models.split(","):
+        setting, err = _pick_setting(model, objects)
+        if setting == "ÉCHEC":
+            print(f"{model:32s} SUITE INUTILISABLE : {err}", flush=True)
+            continue
+        lines, ttfts = [], []
+        for _ in range(args.runs):
+            brain = _brain(model, setting, objects)
+            tics = []
+            for phrase, _attendu, _check in SCENARIOS:
+                t0 = time.monotonic()
+                first, text = None, ""
+                for delta in brain.stream_reply(phrase, situation=SITUATION):
+                    if first is None and delta.strip():
+                        first = time.monotonic() - t0
+                    text += delta
+                ttfts.append(first)
+                spoken = _DIDASCALIE.sub("", extract_emotion_json(text)[0] or "").strip()
+                tics.append(any(t in spoken.lower() for t in TICS))
+                lines.append(spoken)
+            results.setdefault(model, []).append(tics)
+        flat = [t for run in results[model] for t in run]
+        pairs = sum(a and b for run in results[model] for a, b in zip(run, run[1:]))
+        print(f"{model:32s} SUITE tics={sum(flat)}/{len(flat)} ({100 * sum(flat) // len(flat)} %) "
+              f"deux-de-suite={pairs} 1er mot méd={statistics.median(ttfts):.2f}s", flush=True)
+        json.dump({"tics": results, "dernieres": lines}, open(args.out, "w"),
+                  ensure_ascii=False, indent=1)
 
 
 def _main_image(args):
