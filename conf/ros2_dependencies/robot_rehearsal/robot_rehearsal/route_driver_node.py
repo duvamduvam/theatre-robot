@@ -32,6 +32,11 @@ SÉCURITÉ (cf. CLAUDE.md — ce node publie une consigne roues) :
    jamais de recul), validés et bornés dans goto.parse_order / GotoManeuver
    (délais propres, croisière, fader, calage) ; mêmes abandons, même état
    "goto" -> "arrived".
+ - Lot M3 (spec-aller-voir.md §8.4) : MÊME canal, {"name", "orbit_x", "orbit_y",
+   "orbit_r", "orbit_dir"} -> approche du cercle, un tour complet, arrêt face
+   au centre (goto.OrbitOrder) ; abandon « off_track » hors du cercle. Le
+   MÊME tour redemandé (même centre, rayon, sens) est ignoré, comme le même
+   objet d'« aller voir » ; un tour dans l'autre sens est un nouvel ordre.
 
 Node volontairement FIN : I/O seulement, toute la logique est dans
 robot_rehearsal.route et robot_rehearsal.goto (pures, testées sans ROS).
@@ -56,7 +61,7 @@ from robot_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPI
                                        ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
 from robot_rehearsal.goto import (ARRIVED, ForwardOrder, GotoConfig, GotoError, GotoManeuver, GotoOrder,
-                                   TurnOrder, parse_order)
+                                   OrbitOrder, TurnOrder, parse_order)
 
 # Latché : un abonné arrivé après coup (régisseur relancé) reçoit l'état courant.
 LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -254,7 +259,7 @@ class RouteDriverNode(Node):
 
     def _on_goto(self, msg: StringTime):
         """Ordre du régisseur : JSON {name, x, y, standoff} (M1), {turn_rad} /
-        {forward_m} (M2) ou "cancel"."""
+        {forward_m} (M2), {name, orbit_*} (M3) ou "cancel"."""
         value = _decode(msg.msg)
         if value == ROUTE_GOTO_CANCEL:
             if self._abandon_goto("cancel"):
@@ -269,7 +274,11 @@ class RouteDriverNode(Node):
         except GotoError as e:
             self.get_logger().warning(f"route_goto refusé : {e}")
             return
-        if isinstance(order, GotoOrder) and self.goto is not None and self.goto.order.name == order.name:
+        if self.goto is not None and (
+                (isinstance(order, GotoOrder) and self.goto.order.name == order.name)
+                # Tour : même cercle ET même sens (le LLM redit « fais le tour »
+                # au tour suivant : ni arrêt, ni angle balayé ni délai remis à zéro).
+                or (isinstance(order, OrbitOrder) and self.goto.order == order)):
             # MÊME objet redemandé (le LLM le redit au tour suivant) : rien —
             # ni arrêt franc, ni délai remis à zéro (la borne de 60 s tient).
             # Un GESTE (pivot, ligne droite) redemandé, lui, est un NOUVEL
@@ -298,6 +307,9 @@ class RouteDriverNode(Node):
             what = f"{order.turn_rad:+.4f} rad, sur place"
         elif isinstance(order, ForwardOrder):
             what = "ligne droite sur le cap courant"
+        elif isinstance(order, OrbitOrder):
+            what = (f"autour de ({order.cx:.2f}, {order.cy:.2f}), rayon {order.radius:g} m, "
+                    f"{'gauche' if order.direction > 0 else 'droite'}")
         else:
             what = f"vers ({order.x:.2f}, {order.y:.2f}), arrêt à {order.standoff:g} m"
         self.get_logger().info(f"route_goto : « {order.name} » {what}")

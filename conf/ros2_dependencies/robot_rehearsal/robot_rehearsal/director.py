@@ -29,6 +29,9 @@ Gestes chiffrés (lot M2, spec §7.2-§7.3) : decide_turn (« tourner »,
 angle_deg signé + = gauche, compat « sens ») et decide_forward (« avancer »,
 metres, jamais de recul) — mêmes refus que « aller voir » (route OFF par
 David, pas de pose), même acceptation (VoiceMove.accept_goto, GotoPolicy).
+« Faire le tour » (lot M3, spec §8.3) : decide_tour — objet résolu comme
+« aller voir », refus « no_tour » s'il n'a pas de tour (fichier généré),
+mêmes refus ensuite, distance jugée au CENTRE du tour ; même acceptation.
 """
 from __future__ import annotations
 
@@ -39,10 +42,10 @@ from typing import Dict, List, Tuple
 
 from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
                                        FORWARD_MAX_M, FORWARD_MIN_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
-                                       ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TURN_DEG_COMPAT,
-                                       TURN_MAX_DEG)
-from robot_rehearsal.goto import forward_name, turn_name
-from robot_rehearsal.route import Poi, normalize_name
+                                       ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
+                                       TURN_DEG_COMPAT, TURN_MAX_DEG)
+from robot_rehearsal.goto import forward_name, tour_name, turn_name
+from robot_rehearsal.route import Poi, Tour, normalize_name
 from robot_rehearsal.scenario import Fault, Scenario
 
 
@@ -804,6 +807,48 @@ def decide_forward(intent: dict, *, pose_known: bool, off_by_david: bool) -> Ges
                     off_by_david=off_by_david)
 
 
+@dataclass(frozen=True)
+class TourDecision:
+    # "accepted" | "unknown" | "no_tour" | "invalid" | "route_off_by_david" | "no_pose" | "too_far"
+    effect: str
+    poi: Poi | None = None
+    reason: str | None = None     # invalid : "sens"
+    name: str | None = None       # « tour de <poi> » — MÊME texte que route_driver (goto.tour_name)
+    distance: float | None = None  # pose -> CENTRE du tour
+    order: str | None = None      # payload route_goto, si accepté
+
+
+def decide_tour(intent: dict, *, pois, tours, pose, off_by_david: bool) -> TourDecision:
+    """« Faire le tour de X » (spec §8.2-§8.3), dans cet ordre : objet
+    inconnu -> « unknown » ; connu sans tour (absent du fichier généré) ->
+    « no_tour » ; sens autre que TOUR_SENS -> « invalid » (jamais deviné ;
+    absent = TOUR_SENS_DEFAUT) ; puis comme « aller voir » : route OFF par
+    David, pas de pose fraîche, centre du tour à plus de GOTO_MAX_DISTANCE_M.
+    `tours` : {nom de POI: Tour} ; `pose` : (x, y) ou None.
+    Ordre : {"name", "orbit_x", "orbit_y", "orbit_r", "orbit_dir"}."""
+    poi = resolve_object(intent.get("objet"), pois)
+    if poi is None:
+        return TourDecision("unknown")
+    name = tour_name(poi.name)
+    tour: Tour | None = tours.get(poi.name)
+    if tour is None:
+        return TourDecision("no_tour", poi, name=name)
+    sens = intent.get("sens", TOUR_SENS_DEFAUT)
+    direction = TOUR_SENS.get(sens.strip().lower()) if isinstance(sens, str) else None
+    if direction is None:
+        return TourDecision("invalid", poi, reason="sens", name=name)
+    if off_by_david:
+        return TourDecision("route_off_by_david", poi, name=name)
+    if pose is None:
+        return TourDecision("no_pose", poi, name=name)
+    distance = math.hypot(tour.x - pose[0], tour.y - pose[1])
+    if distance > GOTO_MAX_DISTANCE_M:
+        return TourDecision("too_far", poi, name=name, distance=distance)
+    order = json.dumps({"name": name, "orbit_x": tour.x, "orbit_y": tour.y, "orbit_r": tour.radius,
+                        "orbit_dir": direction})
+    return TourDecision("accepted", poi, name=name, distance=distance, order=order)
+
+
 class GotoPolicy:
     """La manœuvre « aller voir » que NOUS avons ordonnée — logique PURE.
     Sert à trois choses :
@@ -823,6 +868,7 @@ class GotoPolicy:
 
     def __init__(self):
         self._name: str | None = None
+        self._target: str | None = None   # POI visé (aller voir, tour) — sa lubie est sautée
         self._seen_goto = False
         self._cancel_by: str | None = None
         self._arrival_speed: float | None = None
@@ -832,8 +878,11 @@ class GotoPolicy:
         """Nom de l'objet de la manœuvre ordonnée, None si aucune."""
         return self._name
 
-    def accept(self, name: str) -> None:
+    def accept(self, name: str, target: str | None = None) -> None:
+        """`target` : POI visé s'il diffère du nom (tour : « tour de X » vise
+        X) ; défaut = le nom (aller voir : le nom EST le POI)."""
         self._reset(name)
+        self._target = name if target is None else target
 
     def cancel(self, by: str) -> None:
         """Nous envoyons « cancel » (stop vocal, abort) : l'issue sera goto_cancelled."""
@@ -845,6 +894,7 @@ class GotoPolicy:
 
     def _reset(self, name: str | None) -> None:
         self._name = name
+        self._target = name
         self._seen_goto = False
         self._cancel_by = None
         self._arrival_speed = None
@@ -887,7 +937,7 @@ class GotoPolicy:
     def is_target(self, poi_name: str, latched_state: str | None) -> bool:
         """`poi_name` est-il l'objet de NOTRE manœuvre, en cours ou atteint
         (état latché « goto » / « arrived ») ? Sa lubie ne doit pas partir."""
-        return self._name == poi_name and latched_state in ("goto", "arrived")
+        return self._name is not None and self._target == poi_name and latched_state in ("goto", "arrived")
 
     def rejoin_allowed(self, latched_state: str | None, off_by_cmd: bool) -> bool:
         """« go » / fader peuvent-ils relancer la route ? Seulement si Didier

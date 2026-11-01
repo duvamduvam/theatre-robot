@@ -178,6 +178,34 @@ un planificateur), angle **+ = gauche** (ROS). Même canal que M1.
 Tests : `test_goto_gestes.py`, `test_director_gestes.py`,
 `test_route_driver_gestes.py` ; regarder : `robot/tests/unit/test_gaze_look.py`.
 
+## Lot M3 — « faire le tour de X » (spec `docs/spec-aller-voir.md` §8, 01/11)
+
+Un tour en UN geste (David : pivot + 1 m + relance à chaque réplique, « super
+laborieux »). Même canal que M1/M2.
+
+- **Géométrie** : `config/chantiers_tours.yaml`, GÉNÉRÉ — ne pas éditer.
+  Regénérer après toute retouche du monde ou de l'itinéraire (le test
+  `test_tours.py` rougit sinon) :
+  `python3 tools/compute_tours.py ../robot_sim/worlds/chantiers.sdf config/chantiers.yaml > config/chantiers_tours.yaml`.
+  Centre = milieu des collisions de l'objet (pas l'ancre du POI), rayon = rayon
+  objet + 1 m arrondi au 0,1 supérieur (1,5 à 6 m) ; pas de tour si un autre
+  objet frôle l'anneau — bordure de quai et façades comprises (seul le sol
+  `esplanade` est ignoré, `GROUND_MODELS`). Fichier frère absent (itinéraire `rue`) = aucun tour.
+- **Intention** : `{"cmd": "tour_de", "objet": "<texte>", "sens": "gauche"|"droite"}`
+  (absent = gauche = trigo, l'objet à gauche de Didier). Journal `tour_de`
+  (`accepted`, `unknown`, `no_tour`, `invalid` + `reason` sens,
+  `route_off_by_david`, `no_pose`, `too_far` jugé au CENTRE du tour).
+  Acceptation : celle d'« aller voir » (lubie de l'objet tourné sautée).
+- **Ordre** `route_goto` : `{"name": "tour de <poi>", "orbit_x", "orbit_y",
+  "orbit_r", "orbit_dir": 1|-1}` -> approche du point du cercle le plus proche
+  (ALIGN/DRIVE), ORBIT (croisière 0,35 m/s, correction radiale, angle balayé
+  intégré), FACE vers le centre. Abandons : `off_track` (|d − r| > 1 m),
+  délai 60 s + 2πr / 0,1, distance ≤ 1,5 × (approche + 2πr), calage, fader 0,
+  cancel. Le même tour (même sens) redemandé est ignoré.
+
+Tests : `test_goto_tour.py`, `test_tours.py`, `test_director_tour.py`,
+`test_route_driver_tour.py`.
+
 ## Regarder une séance en direct
 
 - **Vue 3D** : la sim tourne en headless ; on y branche une fenêtre à chaud,

@@ -110,6 +110,16 @@ CHAT_MOVE_GOTO_CMD = "aller_voir"
 # Chaînes gravées des deux côtés.
 CHAT_MOVE_TURN_CMD = "tourner"
 CHAT_MOVE_FORWARD_CMD = "avancer"
+# Lot M3 (spec-aller-voir.md §8.2) : « faire le tour de X » en UN geste
+# (David, 01/11 : pivot + 1 m + relance à chaque réplique, « super
+# laborieux »). {"cmd": "tour_de", "objet": "<texte>", "sens": "gauche"|
+# "droite"} (sens absent = "gauche"). Chaîne gravée des deux côtés.
+CHAT_MOVE_TOUR_CMD = "tour_de"
+# Sens du tour -> orbit_dir de route_goto (+1 = trigonométrique, + = gauche
+# comme TURN_DEG_COMPAT : l'objet reste à GAUCHE de Didier). Autre valeur ->
+# refus « invalid » (jamais deviné) ; absent -> TOUR_SENS_DEFAUT.
+TOUR_SENS = {"gauche": 1, "droite": -1}
+TOUR_SENS_DEFAUT = "gauche"
 
 # --- « Aller voir » (lot M1, spec-aller-voir.md) — SIM-ONLY -----------------------
 # Vocabulaire d'objets (régisseur -> chat_node) : StringTime LATCHÉ (TRANSIENT_
@@ -163,6 +173,28 @@ FORWARD_MAX_M = 5.0
 # Abandon au-delà de FORWARD_TIMEOUT_BASE_S + FORWARD_TIMEOUT_PER_M_S × m.
 FORWARD_TIMEOUT_BASE_S = 10.0
 FORWARD_TIMEOUT_PER_M_S = 4.0
+# « Faire le tour » (lot M3, §8) : orbite d'un cercle (centre, rayon) lu dans
+# config/<itinéraire>_tours.yaml, GÉNÉRÉ depuis la géométrie de COLLISION du
+# monde par tools/compute_tours.py (l'ancre d'un POI n'est pas le centre de
+# l'objet). Ordre route_goto {"name", "orbit_x", "orbit_y", "orbit_r",
+# "orbit_dir": 1 (gauche, trigo) | -1 (droite, horaire)}.
+#  - rayon de tour = rayon de l'objet + ce dégagement (0,4 m de demi-largeur
+#    de Didier + 0,6 m de marge : pas d'évitement, le cercle doit être libre) ;
+TOUR_CLEARANCE_M = 1.0
+#  - bornes du rayon (outil ET parse_order) : sous 1,5 m, l'orbite d'un 50 kg
+#    devient un pivot qui frôle l'objet ; au-delà de 6 m, ce n'est plus « le
+#    tour de l'objet » (on traverserait la rue) -> pas de tour ;
+TOUR_MIN_RADIUS_M = 1.5
+TOUR_MAX_RADIUS_M = 6.0
+#  - vitesse de croisière sur le cercle (m/s), sous celle du fader × max_lin :
+#    une courbe serrée se prend lentement ;
+TOUR_CRUISE_MS = 0.35
+#  - vitesse PLANCHER retenue pour le délai : GOTO_TIMEOUT_S + 2πr / TOUR_MIN_MS
+#    (à fader bas, le tour doit pouvoir finir ; au-delà, abandon « timeout ») ;
+TOUR_MIN_MS = 0.1
+#  - écart radial max |d − r| pendant l'orbite : au-delà, Didier n'est plus
+#    sur son cercle (poussé, bloqué, téléporté) -> abandon « off_track ».
+TOUR_MAX_DEV_M = 1.0
 
 # Points de relais : nom -> (topic amont, topic aval, type). LISTE FERMÉE.
 # Le producteur est lancé par rehearsal.launch.py avec un remap vers l'amont ;

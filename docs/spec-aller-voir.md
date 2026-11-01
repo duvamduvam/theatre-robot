@@ -216,8 +216,11 @@ de COLLISION du monde Gazebo :
   rayon objet + TOUR_CLEARANCE_M (0,4 Didier + 0,6 marge = 1,0 m), arrondi
   au 0,1 m supérieur, au moins TOUR_MIN_RADIUS_M (1,5).
 - tour IMPOSSIBLE (champ absent) si : rayon de tour > TOUR_MAX_RADIUS_M (6),
-  ou un AUTRE modèle (hors sol : modèles dont l'emprise dépasse 50 m) a une
-  collision à moins de 0,5 m de l'anneau [r − 0,6 ; r + 0,6].
+  ou un AUTRE modèle (tous sauf le sol, liste explicite `GROUND_MODELS` =
+  {"esplanade"}) a une collision, mesurée sur son emprise RÉELLE, à moins de
+  0,5 m de l'anneau [r − 0,6 ; r + 0,6]. (Tranché le 01/11, sécurité d'abord :
+  l'ancienne règle « emprise > 50 m = sol » écartait aussi la bordure de quai
+  et les façades — 5 tours passaient dans l'eau ou dans un mur.)
 - sortie : `{poi: {x, y, rayon}}` triée, en-tête « GÉNÉRÉ — ne pas éditer ».
 - test hôte `test_tours.py` : regénère depuis le SDF et compare au fichier
   (désynchronisation = rouge) ; valeurs gravées pour poubelle_tri.

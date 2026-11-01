@@ -10,7 +10,9 @@ Trois objets, aucun ROS :
     d'intérêt (lampadaire, boulangerie, hangar...) — la matière des lubies ;
   - normalize_name / nearest_ahead_index (lot M1 « aller voir ») : la clé de
     correspondance des objets nommés par David, et l'index de REPRISE de
-    l'itinéraire après une manœuvre.
+    l'itinéraire après une manœuvre ;
+  - tours_path / load_tours (lot M3 « faire le tour de X ») : le fichier
+    FRÈRE généré (<itinéraire>_tours.yaml) -> {nom de POI: Tour}.
 
 POURQUOI un suivi de waypoints et pas un pure pursuit : la polyligne d'un
 trottoir est douce, le robot roule à 0,4 m/s, et la simplicité se teste
@@ -20,11 +22,13 @@ se bloquer sur le chien ou la terrasse EST une scène (étude §2).
 from __future__ import annotations
 
 import math
+import os
 import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from robot_rehearsal.contracts import ABS_MAX_ANG, ABS_MAX_LIN, POI_EXIT_FACTOR
+from robot_rehearsal.contracts import (ABS_MAX_ANG, ABS_MAX_LIN, POI_EXIT_FACTOR, TOUR_MAX_RADIUS_M,
+                                       TOUR_MIN_RADIUS_M)
 
 
 class RouteError(ValueError):
@@ -165,6 +169,53 @@ def load_route(data: dict) -> Route:
                         desc=desc, alias=tuple(raw_alias)))
 
     return Route(name=name, waypoints=tuple(waypoints), pois=tuple(pois))
+
+
+@dataclass(frozen=True)
+class Tour:
+    """Orbite d'un POI (lot M3, spec §8.1) : centre de l'OBJET (pas l'ancre du
+    POI) et rayon du cercle que Didier parcourt."""
+    x: float
+    y: float
+    radius: float
+
+
+# Suffixe du fichier frère généré par tools/compute_tours.py.
+TOURS_SUFFIX = "_tours"
+
+
+def tours_path(route_file: str) -> str:
+    """Itinéraire -> son fichier de tours frère : « …/chantiers.yaml » ->
+    « …/chantiers_tours.yaml » (même dossier, installé avec lui)."""
+    stem, ext = os.path.splitext(route_file)
+    return f"{stem}{TOURS_SUFFIX}{ext}"
+
+
+def load_tours(data, pois: Sequence[Poi]) -> Dict[str, Tour]:
+    """dict (YAML du fichier de tours déjà chargé) -> {nom de POI: Tour}.
+    None / {} = aucun tour (fichier vide). Refus explicite (RouteError) d'un
+    POI inconnu de l'itinéraire (fichier désynchronisé : regénérer), d'un
+    nombre non fini ou d'un rayon hors [TOUR_MIN_RADIUS_M ; TOUR_MAX_RADIUS_M]
+    — les mêmes bornes que goto.parse_order : un tour chargé est un tour
+    exécutable. L'ABSENCE du fichier (aucun tour) se juge chez l'appelant."""
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise RouteError("tours : dictionnaire {poi: {x, y, rayon}} attendu à la racine")
+    names = {p.name for p in pois}
+    tours: Dict[str, Tour] = {}
+    for name, t in data.items():
+        if name not in names:
+            raise RouteError(f"tours.{name} : POI inconnu de l'itinéraire (regénérer le fichier)")
+        if not isinstance(t, dict):
+            raise RouteError(f"tours.{name} : {{x, y, rayon}} attendu, reçu {t!r}")
+        radius = _finite(t.get("rayon"), f"tours.{name}.rayon")
+        if not TOUR_MIN_RADIUS_M <= radius <= TOUR_MAX_RADIUS_M:
+            raise RouteError(f"tours.{name}.rayon : entre {TOUR_MIN_RADIUS_M:g} et {TOUR_MAX_RADIUS_M:g} m "
+                             f"attendu, reçu {radius}")
+        tours[name] = Tour(_finite(t.get("x"), f"tours.{name}.x"), _finite(t.get("y"), f"tours.{name}.y"),
+                           radius)
+    return tours
 
 
 def nearest_ahead_index(waypoints: Sequence[Tuple[float, float]], x: float, y: float) -> int:

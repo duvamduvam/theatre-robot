@@ -1,0 +1,16 @@
+# GÉNÉRÉ — ne pas éditer. tools/compute_tours.py <monde.sdf> <itinéraire.yaml>
+# Tours « faire le tour de X » (spec-aller-voir.md §8.1) : centre (x, y) et rayon
+# de l'orbite, depuis la géométrie de COLLISION du monde. POI absent = pas de tour.
+banc: {rayon: 2.1, x: 36.2, y: 2.496}
+bouche_incendie: {rayon: 1.5, x: 123.234, y: 34.341}
+caisse_bois: {rayon: 1.8, x: 101.642, y: 25.333}
+chien: {rayon: 1.7, x: 98.351, y: 16.909}
+horloge_arretee: {rayon: 1.7, x: 116.592, y: 35.803}
+lampadaire: {rayon: 1.5, x: 72.436, y: 4.629}
+panneau_info: {rayon: 1.8, x: 63.8, y: -2.7}
+pigeon: {rayon: 1.5, x: 31.545, y: -2.4}
+plot_chantier: {rayon: 1.5, x: 91.784, y: 18.057}
+poster_bizarre: {rayon: 1.6, x: 22.4, y: -2.7}
+poubelle_tri: {rayon: 2.1, x: 27.0, y: 2.4}
+table_basse: {rayon: 1.7, x: 17.8, y: 2.1}
+velo_cadenas: {rayon: 1.9, x: 59.2, y: 2.4}

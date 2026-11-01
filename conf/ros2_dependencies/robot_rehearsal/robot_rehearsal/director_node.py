@@ -70,6 +70,12 @@ director.decide_turn / decide_forward, journalisés `tourner` / `avancer`
 EXACTEMENT comme « aller voir » (hors séance compris, arrêt vocal levé, lubie
 fermée, salve annulée, GotoPolicy) ; « stop » / abort les annulent par le même
 « cancel ».
+« FAIRE LE TOUR » (lot M3, spec §8) : {"cmd": "tour_de", "objet", "sens"} arbitré
+par director.decide_tour sur les tours du fichier FRÈRE de l'itinéraire
+(<itinéraire>_tours.yaml, généré ; absent = aucun tour, tout tour_de refusé
+« no_tour »), journalisé `tour_de` (effect accepted | unknown | no_tour |
+invalid | route_off_by_david | no_pose | too_far), accepté EXACTEMENT comme
+« aller voir » (la lubie de l'objet tourné est sautée pendant le tour).
 Les éléments `t: poi` partent sur l'« enter » du POI (rehearsal/poi_event) ;
 un « enter » hors séance (avant START, après la fin) est journalisé
 `poi_enter_ignored` et PAS mémorisé : START doit précéder `route on`.
@@ -101,19 +107,20 @@ from robot_interfaces.msg import StringTime
 
 from robot.diagnostic.journal import JournalWriter, make_event
 from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
-                                       CHAT_MOVE_TOPIC, CHAT_MOVE_TURN_CMD,
+                                       CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC,
                                        OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
                                        RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_GOTO_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
 from robot_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
-                                      decide_forward, decide_goto, decide_turn, fader_moved, goto_order,
+                                      decide_forward, decide_goto, decide_tour, decide_turn, fader_moved,
+                                      goto_order,
                                       messages, objects_payload,
                                       route_cmd_kind, speed_factor, speed_in_effect)
 from robot_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from robot_rehearsal.rehearsal_state import rehearsal_state
-from robot_rehearsal.route import RouteConfig, RouteError, load_route
+from robot_rehearsal.route import RouteConfig, RouteError, load_route, load_tours, tours_path
 from robot_rehearsal.scenario import ScenarioError, load_scenario
 
 
@@ -148,6 +155,7 @@ class DirectorNode(Node):
         route_file = str(self.get_parameter("route_file").value)
         self._poi_lubie = {}   # nom de POI -> champ lubie de l'itinéraire
         self._pois = ()        # POI de l'itinéraire : vocabulaire d'« aller voir » (lot M1)
+        self._tours = {}       # nom de POI -> Tour (lot M3) ; vide = aucun « faire le tour »
         if route_file:
             with open(route_file, encoding="utf-8") as f:
                 try:
@@ -156,6 +164,16 @@ class DirectorNode(Node):
                     raise RuntimeError(f"itinéraire invalide ({route_file}) : {e}") from e
             self._poi_lubie = {p.name: p.lubie for p in route.pois}
             self._pois = route.pois
+            # Fichier FRÈRE généré (tools/compute_tours.py). Absent = aucun
+            # tour, pas une erreur (itinéraire rue) ; présent mais faux ou
+            # désynchronisé = refus au démarrage, comme l'itinéraire.
+            tours_file = tours_path(route_file)
+            if os.path.exists(tours_file):
+                with open(tours_file, encoding="utf-8") as f:
+                    try:
+                        self._tours = load_tours(yaml.safe_load(f), route.pois)
+                    except RouteError as e:
+                        raise RuntimeError(f"tours invalides ({tours_file}) : {e}") from e
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         seed = int(self.get_parameter("seed").value)
@@ -427,6 +445,8 @@ class DirectorNode(Node):
                 self._aller_voir(cmd.get("objet"))
             elif isinstance(cmd, dict) and cmd.get("cmd") in (CHAT_MOVE_TURN_CMD, CHAT_MOVE_FORWARD_CMD):
                 self._geste(cmd)
+            elif isinstance(cmd, dict) and cmd.get("cmd") == CHAT_MOVE_TOUR_CMD:
+                self._tour_de(cmd)
             else:
                 self._voice_move(cmd)   # tout autre objet JSON : « invalide », journalisé
         except Exception as e:   # un callback qui lève tue le node : jamais ici
@@ -547,9 +567,30 @@ class DirectorNode(Node):
         if decision.effect == "accepted":
             self._accept_maneuver(decision.name, decision.order, kind, now)
 
-    def _accept_maneuver(self, name: str, order: str, by: str, now: float):
-        """Manœuvre ACCEPTÉE (aller voir, tourner, avancer) : comme un « go »
-        pour ce qui retient Didier, puis l'ordre part sur route_goto."""
+    def _tour_de(self, intent: dict):
+        """« Faire le tour » (lot M3) : arbitré, journalisé `tour_de`, accepté
+        comme « aller voir » (cible = le POI : sa lubie est sautée)."""
+        now = time.monotonic()
+        decision = decide_tour(intent, pois=self._pois, tours=self._tours, pose=self._fresh_pose(now),
+                               off_by_david=self._off_by_david())
+        # Champs du CONTRAT seulement (le producteur est un LLM).
+        payload = {k: intent[k] for k in ("objet", "sens") if k in intent}
+        payload["effect"] = decision.effect
+        if decision.reason is not None:
+            payload["reason"] = decision.reason
+        if decision.name is not None:
+            payload["name"] = decision.name
+        if decision.distance is not None:
+            payload["distance"] = round(decision.distance, 2)
+        self.log(CHAT_MOVE_TOUR_CMD, payload)
+        if decision.effect == "accepted":
+            self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TOUR_CMD, now,
+                                  target=decision.poi.name)
+
+    def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None):
+        """Manœuvre ACCEPTÉE (aller voir, tourner, avancer, tour) : comme un
+        « go » pour ce qui retient Didier, puis l'ordre part sur route_goto.
+        `target` : POI visé s'il diffère du nom (GotoPolicy.accept)."""
         relaunching = self.voice.relaunching
         lubie_active, in_effect = self._voice_context()
         voice = self.voice.accept_goto(lubie_active=lubie_active, speed_in_effect=in_effect)
@@ -563,7 +604,7 @@ class DirectorNode(Node):
         if voice.speed is not None:
             self.log("voice_hold_released", {"by": by, "speed": voice.speed})
             self._publish(ROUTE_SPEED_TOPIC, json.dumps(voice.speed))
-        self.goto_policy.accept(name)
+        self.goto_policy.accept(name, target)
         self.pub_goto.publish(StringTime(msg=order, time=0, anim=False))
 
     def _voice_relaunch_step(self, now: float):
