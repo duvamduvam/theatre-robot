@@ -1,0 +1,6 @@
+# circuit-python
+pillow~=10.3.0
+adafruit-circuitpython-bno055
+adafruit-circuitpython-matrixkeypad
+RPi.GPIO
+spidev~=3.6

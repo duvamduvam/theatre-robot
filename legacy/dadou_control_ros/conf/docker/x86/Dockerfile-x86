@@ -1,0 +1,63 @@
+# Base image with minimal ROS 2 Jazzy install (CLI + core).
+FROM ros:jazzy-ros-base
+
+LABEL authors="dadouuu"
+
+ARG GUI
+
+EXPOSE 4421
+
+# Prepare controller workspace directory tree.
+RUN mkdir /home/ros2_ws
+RUN mkdir /home/ros2_ws/src
+RUN mkdir /home/ros2_ws/src/controller
+RUN mkdir /home/ros2_ws/src/controller/resource
+
+WORKDIR /home/ros2_ws/
+
+# Copy project sources and configuration assets.
+COPY controller /home/ros2_ws/src/controller/controller/
+COPY conf/ /home/ros2_ws/src/controller/conf/
+COPY json/ /home/ros2_ws/src/controller/json/
+COPY medias/ /home/ros2_ws/src/controller/medias/
+
+# Inject ROS 2 package metadata and dependencies.
+COPY conf/ros2/setup.py /home/ros2_ws/src/controller/
+COPY conf/ros2/package.xml /home/ros2_ws/src/controller/
+COPY conf/ros2/setup.cfg /home/ros2_ws/src/controller/
+COPY conf/ros2/resource/controller /home/ros2_ws/src/controller/resource
+COPY conf/ros2_dependencies/ /home/ros2_ws/src/
+
+# Expand helper library bundle.
+COPY dadou_utils_ros.tar.gz /home/ros2_ws/src/controller/
+RUN tar -xzhf /home/ros2_ws/src/controller/dadou_utils_ros.tar.gz -C /home/ros2_ws/src/controller/ && \
+    rm /home/ros2_ws/src/controller/dadou_utils_ros.tar.gz
+
+#RUN apt-get update && cat /home/ros2_ws/src/controller/conf/packages.txt | xargs apt-get install -y
+#RUN python -m pip install --upgrade pip
+#RUN pip3 install -r /home/ros2_ws/src/controller/conf/requirements-no-gui.txt
+# Enable additional apt repositories required by dependencies.
+RUN apt-get update && apt-get install -y software-properties-common
+RUN add-apt-repository universe && apt-get update
+
+# Install system packages listed alongside the project.
+RUN grep -vE '^\s*(#|$)' /home/ros2_ws/src/controller/conf/packages.txt | xargs apt-get install -y
+
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+#RUN apt-get update && apt-get install -y python3-tk python3-pil python3-pil.imagetk
+#RUN pip install --no-cache-dir --upgrade --force-reinstall pillow
+
+# Install Python dependencies (headless first, then GUI extras).
+RUN pip3 install --no-cache-dir --ignore-installed -r /home/ros2_ws/src/controller/conf/requirements-no-gui.txt
+RUN pip3 install --no-cache-dir --ignore-installed -r /home/ros2_ws/src/controller/conf/requirements.txt
+
+# Ensure Python can import packages from the workspace and pass runtime env flags.
+ENV PYTHONPATH "${PYTHONPATH}:/home/ros2_ws/src"
+ENV DISPLAY host.docker.internal:0
+ENV GUI ${GUI}
+ENV CONTAINER_NAME ${CONTAINER_NAME}
+
+# Default entrypoint builds + launches controller within the container.
+ENTRYPOINT ["/bin/bash", "-c", "source /home/ros2_ws/src/controller/conf/scripts/launch-local-docker.sh"]
+#ENTRYPOINT ["python3", "/home/ros2_ws/src/controller/controller/test.py"]

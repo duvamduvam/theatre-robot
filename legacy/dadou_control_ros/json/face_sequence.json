@@ -1,0 +1,88 @@
+{
+  "main_seq": [
+    {
+      "name": "speak",
+      "duration": 1000,
+      "loop": false,
+      "mouth": "mspeak",
+      "reye": "ebase",
+      "leye": "ebase",
+      "keys": [
+        {
+          "key": "B2"
+        },
+        {
+          "key": "default"
+        }
+      ]
+    },
+    {
+      "name": "default",
+      "duration": 150,
+      "loop": true,
+      "mouth": "mspeak",
+      "reye": "ebase",
+      "leye": "ebase",
+      "keys": [
+        {
+          "key": "B1"
+        },
+        {
+          "key": "default"
+        }
+      ]
+    }
+  ],
+  "part_seq": [
+    {
+      "name": "mspeak",
+      "duration": 100,
+      "loop": true,
+      "sequence": [
+        {
+          "name": "mopen1",
+          "duration": 60
+        },
+        {
+          "name": "mopen2",
+          "duration": 40
+        },
+        {
+          "name": "mopen3",
+          "duration": 90
+        },
+        {
+          "name": "mopen1",
+          "duration": 20
+        },
+        {
+          "name": "mopen3",
+          "duration": 90
+        },
+        {
+          "name": "mopen3",
+          "duration": 90
+        }
+      ]
+    },
+    {
+      "name": "ebase",
+      "duration": 100,
+      "loop": true,
+      "sequence": [
+        {
+          "name": "eye-still",
+          "duration": 2
+        },
+        {
+          "name": "eye-right",
+          "duration": 1
+        },
+        {
+          "name": "eye-left",
+          "duration": 3
+        }
+      ]
+    }
+  ]
+}

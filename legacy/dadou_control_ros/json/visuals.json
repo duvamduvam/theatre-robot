@@ -1,0 +1,32 @@
+{
+  "visual": [
+    {
+      "name": "mferme1",
+      "path": "../visuals/mouth/bouche-ferme.png"
+    },
+    {
+      "name": "mopen1",
+      "path": "../visuals/mouth/bouche-ouvert1.png"
+    },
+    {
+      "name": "mopen2",
+      "path": "../visuals/mouth/bouche-ouvert2.png"
+    },
+    {
+      "name": "mopen3",
+      "path": "../visuals/mouth/bouche-ouvert3.png"
+    },
+    {
+      "name": "eye-still",
+      "path": "../visuals/eye/oeil-droit.png"
+    },
+    {
+      "name": "eye-left",
+      "path": "../visuals/eye/oeil-gauche.png"
+    },
+    {
+      "name": "eye-right",
+      "path": "../visuals/eye/oeil-droit.png"
+    }
+  ]
+}

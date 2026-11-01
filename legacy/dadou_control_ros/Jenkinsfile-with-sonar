@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+
+    environment {
+        SONAR_HOME = tool 'SonarScanner'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    withEnv([
+                        'JAVA_HOME=/opt/java/openjdk',
+                        'PATH+JAVA=/opt/java/openjdk/bin'
+                    ]) {
+                        sh """
+                            ${SONAR_HOME}/bin/sonar-scanner \
+                            -Dsonar.projectKey=dadou_robot_ros \
+                            -Dsonar.sources=. \
+                            -Dsonar.python.coverage.reportPaths=coverage.xml \
+                            -Dsonar.python.xunit.reportPath=test-results.xml
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "keys": "H1",
+    "duration": 2000,
+    "wait audio": true,
+    "types": ["little move"],
+    "left eye": [
+        [0,100],
+      [0.9, 50]
+    ]
+}

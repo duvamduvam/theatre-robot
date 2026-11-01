@@ -1,0 +1,145 @@
+{
+    "color cycle": {
+        "loop": false,
+        "duration": 50000,
+        "keys": "None",
+        "sequences": {
+            "sea colorcycle": 1
+        }
+    },
+    "trip": {
+        "loop": true,
+        "duration": 50000,
+        "keys": "None",
+        "sequences": {
+            "sea colorcycle": 0.2,
+            "rainbow": 0.4,
+            "love": 0.6,
+            "rainbow_comet": 0.8,
+            "rainbow_chase": 1
+        }
+    },
+    "default": {
+        "keys": [
+            "B6"
+        ],
+        "loop": true,
+        "default": true,
+        "duration": 150000,
+        "sequences": {
+            "chase me": 1
+        }
+    },
+    "default dark": {
+        "keys": [
+            "B6"
+        ],
+        "loop": true,
+        "default": true,
+        "duration": 150000,
+        "sequences": {
+            "chase me dark": 1
+        }
+    },
+    "speak": {
+        "keys": [
+            "B9"
+        ],
+        "loop": false,
+        "duration": 500,
+        "sequences": {
+            "pulse": 1
+        }
+    },
+
+    "speak dark": {
+        "keys": [
+            "B9"
+        ],
+        "loop": false,
+        "duration": 500,
+        "sequences": {
+            "pulse purple": 1
+        }
+    },
+    "heidi": {
+        "keys": [
+            "B3"
+        ],
+        "loop": false,
+        "duration": 999,
+        "sequences": {
+            "rainbow_sparkle": 0.4,
+            "comet2": 0.8,
+            "chase me": 1
+        }
+    },
+    "devil": {
+        "loop": true,
+        "duration": 10000,
+        "keys": "None",
+        "sequences": {
+            "solid red": 0
+        }
+    },
+    "scan": {
+        "keys": [
+            "B9"
+        ],
+        "loop": false,
+        "duration": 24000,
+        "sequences": {
+            "rainbow": 0,
+            "pulse green": 0.8
+        }
+    },
+    "transfer": {
+        "keys": [
+            "B9"
+        ],
+        "loop": false,
+        "duration": 32000,
+        "sequences": {
+            "rainbow": 0,
+            "pulse red": 0.55
+        }
+    },
+    "test": {
+        "keys": [
+            "B7"
+        ],
+        "duration": 150000,
+        "loop": false,
+        "sequences": {
+            "love": 0.14,
+            "chase me": 0.28,
+            "sea colorcycle": 0.42,
+            "pulse": 0.56,
+            "sparkle": 0.7,
+            "sparklepulse": 0.84,
+            "solido": 1
+        }
+    },
+    "off": {
+        "keys": [],
+        "duration": 150000,
+        "loop": true,
+        "sequences": {
+            "off": 0.14
+        }
+    },
+    "test2": {
+        "keys": [
+            "B8"
+        ],
+        "loop": false,
+        "duration": 150000,
+        "sequences": {
+            "rainbow": 0.14,
+            "rainbow_comet": 0.28,
+            "rainbow_chase": 0.42,
+            "sparkle_pulse": 0.56,
+            "rainbow_sparkle": 1
+        }
+    }
+}

@@ -1,0 +1,198 @@
+2025-09-20 07:08:01,622 test animation USBGamepad __init__ |177: INFO[32m Aucune manette détectée.[0m
+2025-09-20 07:09:09,062 test animation USBGamepad __init__ |177: INFO[32m Aucune manette détectée.[0m
+2025-09-20 07:09:44,579 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:09:44,580 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:12:02,109 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:12:11,522 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:13:02,277 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:13:02,278 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:19:16,410 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:19:16,411 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:20:11,909 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [R2, SELECT], joysticks [aucun][0m
+2025-09-20 07:20:18,336 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:24,738 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [LEFT], joysticks [aucun][0m
+2025-09-20 07:20:25,543 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [R2], joysticks [aucun][0m
+2025-09-20 07:20:25,644 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [R2], joysticks [aucun][0m
+2025-09-20 07:20:25,846 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [R2], joysticks [aucun][0m
+2025-09-20 07:20:26,048 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [R2], joysticks [aucun][0m
+2025-09-20 07:20:26,651 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [SELECT], joysticks [aucun][0m
+2025-09-20 07:20:26,853 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [SELECT], joysticks [aucun][0m
+2025-09-20 07:20:27,959 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [START], joysticks [aucun][0m
+2025-09-20 07:20:28,060 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [START], joysticks [aucun][0m
+2025-09-20 07:20:28,764 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [aucun], joysticks [RY=0][0m
+2025-09-20 07:20:28,865 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [aucun], joysticks [RY=0][0m
+2025-09-20 07:20:29,167 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [START], joysticks [aucun][0m
+2025-09-20 07:20:29,269 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [START], joysticks [aucun][0m
+2025-09-20 07:20:29,671 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [aucun], joysticks [RY=0][0m
+2025-09-20 07:20:29,772 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [aucun], joysticks [RY=0][0m
+2025-09-20 07:20:30,676 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:20:30,777 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:20:30,878 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:20:30,980 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:20:31,081 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:20:31,483 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:31,584 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:31,685 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:37,836 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:20:37,837 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:20:57,884 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:57,984 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,085 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,186 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,287 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,388 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,488 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,589 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,690 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,791 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,891 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:58,992 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,093 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,194 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,294 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,395 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,496 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,596 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,697 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,798 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,899 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:20:59,999 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:00,100 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:00,200 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:00,301 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:00,402 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:00,503 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:00,604 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:00,704 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:00,805 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:00,905 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:01,106 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A, Y], joysticks [aucun][0m
+2025-09-20 07:21:01,207 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A, Y], joysticks [aucun][0m
+2025-09-20 07:21:01,308 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:01,409 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:01,509 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:01,610 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:01,711 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:01,811 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:01,912 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,013 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,113 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,214 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,315 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,415 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,516 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,617 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,717 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,818 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:02,919 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:03,020 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:21:03,521 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:03,622 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:03,723 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:03,823 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:03,924 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,025 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,126 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,227 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,327 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,428 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,529 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,630 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,730 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,831 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:04,932 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,032 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,133 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,234 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,334 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,435 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,536 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,636 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,737 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,838 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:05,939 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,039 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,140 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,241 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,341 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,442 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,543 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,643 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,744 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,845 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:06,945 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:07,046 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:07,147 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:07,248 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:07,348 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:07,449 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:21:07,851 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:21:17,566 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:21:17,567 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:22:10,201 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [aucun], joysticks [RY=0][0m
+2025-09-20 07:22:52,738 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:22:55,393 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:22:59,543 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [L1], joysticks [aucun][0m
+2025-09-20 07:23:01,360 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:23:57,735 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [L1], joysticks [aucun][0m
+2025-09-20 07:24:48,237 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:24:48,238 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:25:14,096 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:25:32,190 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:25:34,914 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:26:08,621 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:26:08,622 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:26:21,698 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:26:21,699 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:28:20,850 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:29:12,009 test animation USBGamepad check_inputs |400: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:35:54,298 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:35:54,299 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:43:45,256 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-20 07:43:45,257 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:44:31,794 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [A, X], joysticks [aucun][0m
+2025-09-20 07:44:32,121 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:44:34,253 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:44:36,129 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:44:37,466 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:44:38,888 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [X], joysticks [aucun][0m
+2025-09-20 07:44:40,328 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [Y], joysticks [aucun][0m
+2025-09-20 07:44:46,771 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [B], joysticks [aucun][0m
+2025-09-20 07:44:49,964 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [LEFT], joysticks [aucun][0m
+2025-09-20 07:44:51,590 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [DOWN], joysticks [aucun][0m
+2025-09-20 07:44:53,255 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [UP], joysticks [aucun][0m
+2025-09-20 07:44:56,684 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [RIGHT], joysticks [aucun][0m
+2025-09-20 07:45:11,374 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [SELECT], joysticks [aucun][0m
+2025-09-20 07:45:43,647 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : Xbox 360 Controller[0m
+2025-09-20 07:45:43,647 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:46:21,506 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:46:36,392 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:46:57,431 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:47:10,397 test animation USBGamepad check_inputs |408: INFO[32m Entrées actives : boutons [A, R2], joysticks [aucun][0m
+2025-09-20 07:50:31,852 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : Xbox 360 Controller[0m
+2025-09-20 07:50:31,853 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:51:18,035 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : Xbox 360 Controller[0m
+2025-09-20 07:51:18,036 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:51:44,188 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : Xbox 360 Controller[0m
+2025-09-20 07:51:44,188 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:54:12,679 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : Xbox 360 Controller[0m
+2025-09-20 07:54:12,679 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:54:57,315 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : Xbox 360 Controller[0m
+2025-09-20 07:54:57,316 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:58:02,844 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : Xbox 360 Controller[0m
+2025-09-20 07:58:02,845 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m
+2025-09-20 07:58:44,963 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [A, R1], joysticks [aucun][0m
+2025-09-20 07:58:53,496 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [A], joysticks [aucun][0m
+2025-09-20 07:59:22,974 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [A, X], joysticks [aucun][0m
+2025-09-20 07:59:45,777 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [R1], joysticks [aucun][0m
+2025-09-20 07:59:48,607 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [R2], joysticks [aucun][0m
+2025-09-20 07:59:53,221 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [R2], joysticks [aucun][0m
+2025-09-20 08:00:06,366 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [L2], joysticks [aucun][0m
+2025-09-20 08:00:09,447 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [aucun], joysticks [LX=0, LY=0][0m
+2025-09-20 08:00:15,212 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [aucun], joysticks [RY=99][0m
+2025-09-20 08:00:19,291 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [aucun], joysticks [RX=0, RY=99][0m
+2025-09-20 08:00:23,572 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [aucun], joysticks [RX=0][0m
+2025-09-20 08:00:25,990 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [aucun], joysticks [RY=0][0m
+2025-09-20 08:00:30,717 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [aucun], joysticks [RX=99][0m
+2025-09-20 08:00:36,657 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [aucun], joysticks [RX=83, RY=99][0m
+2025-09-20 08:00:41,897 test animation USBGamepad check_inputs |406: INFO[32m Entrées actives : boutons [aucun], joysticks [RX=0][0m

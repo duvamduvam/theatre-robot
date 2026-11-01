@@ -1,0 +1,96 @@
+{
+    "keys": "H9",
+    "duration": 30000,
+    "audios": [
+        [
+            0,
+           "effects/failling.mp3"
+        ],
+        [
+            0.8,
+           "effects/shutdown.mp3"
+        ]
+    ],
+    "faces": [
+        [
+            0,
+           "warning"
+        ],
+        [
+            0.9,
+           "off"
+        ]
+    ],
+    "loop": true,
+    "neck": [
+        [0.1,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max":1000}
+        ],
+        [0.8, 0.5]
+    ],
+    "left eye": [
+        [0.07,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max":1000}
+        ],
+        [0.8, 0.5]
+    ],
+    "right eye": [
+        [0.07,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max": 1000}
+        ],
+        [0.8, 0.5]
+    ],
+    "left arm": [
+        [0.07,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max": 1000}
+        ],
+        [0.8, 99]
+    ],
+    "right arm": [
+        [0.1,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max": 1000}
+        ],
+        [0.8, 99]
+    ],
+    "wheels": [
+        [
+            0,
+            [0.5, 0.5]
+        ],
+        [
+            0.1,
+            [-0.5, -0.5]
+        ],
+        [
+            0.2,
+            [0.5, 0.5]
+        ],
+        [
+            0.3,
+            [-0.5, -0.5]
+        ],        [
+            0.4,
+            [0.5, 0.5]
+        ],
+        [
+            0.6,
+            [-0.5, -0.5]
+        ],        [
+            0.7,
+            [-0.5, 0.5]
+        ],
+        [
+            0.8,
+            [0.5, -0.5]
+        ],
+        [
+            1,
+            [0, 0]
+        ]
+    ]
+}

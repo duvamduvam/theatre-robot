@@ -1,0 +1,1621 @@
+{
+  "keys": "Z1",
+  "duration": 600000,
+  "types": [],
+  "audios": [
+    [
+      0.04,
+      "eternel-short/p10-1.mp3"
+    ],
+    [
+      0.09,
+      "eternel-short/p10-2.mp3"
+    ],
+    [
+      0.14,
+      "eternel-short/p9-1.mp3"
+    ],
+    [
+      0.19,
+      "eternel-short/p9-2.mp3"
+    ],
+    [
+      0.24,
+      "eternel-short/p8-1.mp3"
+    ],
+    [
+      0.29,
+      "eternel-short/p8-2.mp3"
+    ],
+    [
+      0.34,
+      "eternel-short/p7-1.mp3"
+    ],
+    [
+      0.39,
+      "eternel-short/p7-2.mp3"
+    ],
+    [
+      0.44,
+      "eternel-short/p6-1.mp3"
+    ],
+    [
+      0.49,
+      "eternel-short/p6-2.mp3"
+    ],
+    [
+      0.54,
+      "eternel-short/p5-1.mp3"
+    ],
+    [
+      0.59,
+      "eternel-short/p5-2.mp3"
+    ],
+    [
+      0.64,
+      "eternel-short/p4-1.mp3"
+    ],
+    [
+      0.69,
+      "eternel-short/p4-2.mp3"
+    ],
+    [
+      0.74,
+      "eternel-short/p3-1.mp3"
+    ],
+    [
+      0.79,
+      "eternel-short/p3-2.mp3"
+    ],
+    [
+      0.84,
+      "eternel-short/p2-1.mp3"
+    ],
+    [
+      0.89,
+      "eternel-short/p2-2.mp3"
+    ],
+    [
+      0.94,
+      "eternel-short/p1-1.mp3"
+    ],
+    [
+      0.99,
+      "eternel-short/p1-2.mp3"
+    ]
+  ],
+  "faces": [
+    [
+      0.04,
+      "speak"
+    ],
+    [
+      0.05,
+      "default"
+    ],
+    [
+      0.09,
+      "speak"
+    ],
+    [
+      0.10,
+      "default"
+    ],
+    [
+      0.14,
+      "speak"
+    ],
+    [
+      0.15,
+      "default"
+    ],
+    [
+      0.19,
+      "speak"
+    ],
+    [
+      0.2,
+      "default"
+    ],
+    [
+      0.24,
+      "speak"
+    ],
+    [
+      0.25,
+      "default"
+    ],
+    [
+      0.29,
+      "speak"
+    ],
+    [
+      0.3,
+      "default"
+    ],
+    [
+      0.34,
+      "speak"
+    ],
+    [
+      0.35,
+      "default"
+    ],
+    [
+      0.39,
+      "speak"
+    ],
+    [
+      0.4,
+      "default"
+    ],
+    [
+      0.44,
+      "speak"
+    ],
+    [
+      0.45,
+      "default"
+    ],
+    [
+      0.49,
+      "speak"
+    ],
+    [
+      0.54,
+      "speak"
+    ],
+    [
+      0.55,
+      "default"
+    ],
+    [
+      0.59,
+      "speak"
+    ],
+    [
+      0.6,
+      "default"
+    ],
+    [
+      0.64,
+      "speak"
+    ],
+    [
+      0.65,
+      "default"
+    ],
+    [
+      0.69,
+      "speak"
+    ],
+    [
+      0.7,
+      "default"
+    ],
+    [
+      0.74,
+      "speak"
+    ],
+    [
+      0.75,
+      "default"
+    ],
+    [
+      0.79,
+      "speak"
+    ],
+    [
+      0.8,
+      "default"
+    ],
+    [
+      0.84,
+      "speak"
+    ],
+    [
+      0.85,
+      "default"
+    ],
+    [
+      0.89,
+      "speak"
+    ],
+    [
+      0.9,
+      "default"
+    ],
+    [
+      0.94,
+      "speak"
+    ],
+    [
+      0.95,
+      "default"
+    ],
+    [
+      0.99,
+      "speak"
+    ]
+  ],
+  "neck": [
+    [
+      0.04,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.05,
+      60
+    ],
+    [
+      0.09,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.10,
+      60
+    ],
+    [
+      0.14,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.15,
+      60
+    ],
+    [
+      0.19,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.2,
+      60
+    ],
+    [
+      0.24,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.25,
+      60
+    ],
+    [
+      0.29,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.3,
+      60
+    ],
+    [
+      0.34,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.35,
+      60
+    ],
+    [
+      0.39,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.4,
+      60
+    ],
+    [
+      0.44,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.45,
+      60
+    ],
+    [
+      0.49,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.54,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.55,
+      60
+    ],
+    [
+      0.59,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.6,
+      60
+    ],
+    [
+      0.64,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.65,
+      60
+    ],
+    [
+      0.69,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.7,
+      60
+    ],
+    [
+      0.74,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.75,
+      60
+    ],
+    [
+      0.79,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.8,
+      60
+    ],
+    [
+      0.84,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.85,
+      60
+    ],
+    [
+      0.89,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.9,
+      60
+    ],
+    [
+      0.94,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.95,
+      60
+    ],
+    [
+      0.99,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ]
+  ],
+  "left eye": [
+    [
+      0.04,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.05,
+      60
+    ],
+    [
+      0.09,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.10,
+      60
+    ],
+    [
+      0.14,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.15,
+      60
+    ],
+    [
+      0.19,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.2,
+      60
+    ],
+    [
+      0.24,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.25,
+      60
+    ],
+    [
+      0.29,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.3,
+      60
+    ],
+    [
+      0.34,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.35,
+      60
+    ],
+    [
+      0.39,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.4,
+      60
+    ],
+    [
+      0.44,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.45,
+      60
+    ],
+    [
+      0.49,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.54,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.55,
+      60
+    ],
+    [
+      0.59,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.6,
+      60
+    ],
+    [
+      0.64,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.65,
+      60
+    ],
+    [
+      0.69,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.7,
+      60
+    ],
+    [
+      0.74,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.75,
+      60
+    ],
+    [
+      0.79,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.8,
+      60
+    ],
+    [
+      0.84,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.85,
+      60
+    ],
+    [
+      0.89,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.9,
+      60
+    ],
+    [
+      0.94,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.95,
+      60
+    ],
+    [
+      0.99,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ]
+  ],
+  "right eye": [
+    [
+      0,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.04,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.05,
+      60
+    ],
+    [
+      0.09,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.10,
+      60
+    ],
+    [
+      0.14,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.15,
+      60
+    ],
+    [
+      0.19,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.2,
+      60
+    ],
+    [
+      0.24,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.25,
+      60
+    ],
+    [
+      0.29,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.3,
+      60
+    ],
+    [
+      0.34,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.35,
+      60
+    ],
+    [
+      0.39,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.4,
+      60
+    ],
+    [
+      0.44,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.45,
+      60
+    ],
+    [
+      0.49,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.54,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.55,
+      60
+    ],
+    [
+      0.59,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.6,
+      60
+    ],
+    [
+      0.64,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.65,
+      60
+    ],
+    [
+      0.69,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.7,
+      60
+    ],
+    [
+      0.74,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.75,
+      60
+    ],
+    [
+      0.79,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.8,
+      60
+    ],
+    [
+      0.84,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.85,
+      60
+    ],
+    [
+      0.89,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.9,
+      60
+    ],
+    [
+      0.94,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.95,
+      60
+    ],
+    [
+      0.99,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ]
+  ],
+  "left arm": [
+    [
+      0.04,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.05,
+      60
+    ],
+    [
+      0.09,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.10,
+      60
+    ],
+    [
+      0.14,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.15,
+      60
+    ],
+    [
+      0.19,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.2,
+      60
+    ],
+    [
+      0.24,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.25,
+      60
+    ],
+    [
+      0.29,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.3,
+      60
+    ],
+    [
+      0.34,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.35,
+      60
+    ],
+    [
+      0.39,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.4,
+      60
+    ],
+    [
+      0.44,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.45,
+      60
+    ],
+    [
+      0.49,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.54,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.55,
+      60
+    ],
+    [
+      0.59,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.6,
+      60
+    ],
+    [
+      0.64,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.65,
+      60
+    ],
+    [
+      0.69,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.7,
+      60
+    ],
+    [
+      0.74,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.75,
+      60
+    ],
+    [
+      0.79,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.8,
+      60
+    ],
+    [
+      0.84,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.85,
+      60
+    ],
+    [
+      0.89,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.9,
+      60
+    ],
+    [
+      0.94,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.95,
+      60
+    ],
+    [
+      0.99,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ]
+  ],
+  "right arm": [
+    [
+      0.04,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.05,
+      150
+    ],
+    [
+      0.09,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.10,
+      150
+    ],
+    [
+      0.14,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.15,
+      170
+    ],
+    [
+      0.19,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.2,
+      170
+    ],
+    [
+      0.24,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.25,
+      170
+    ],
+    [
+      0.29,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.3,
+      170
+    ],
+    [
+      0.34,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.35,
+      170
+    ],
+    [
+      0.39,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.4,
+      170
+    ],
+    [
+      0.44,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.45,
+      170
+    ],
+    [
+      0.49,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.54,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.55,
+      170
+    ],
+    [
+      0.59,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.6,
+      170
+    ],
+    [
+      0.64,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.65,
+      170
+    ],
+    [
+      0.69,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.7,
+      170
+    ],
+    [
+      0.74,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.75,
+      170
+    ],
+    [
+      0.79,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.8,
+      170
+    ],
+    [
+      0.84,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.85,
+      170
+    ],
+    [
+      0.89,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.9,
+      170
+    ],
+    [
+      0.94,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ],
+    [
+      0.95,
+      170
+    ],
+    [
+      0.99,
+      {
+        "mode": "random",
+        "random move min": 40,
+        "random move max": 80,
+        "random time min": 500,
+        "random time max": 1000
+      }
+    ]
+  ]
+}

@@ -1,0 +1,58 @@
+{
+    "duration": 6000,
+    "types": ["random"],
+    "audios": [
+        [
+            0,
+           "random/quoi-ma-geule.mp3"
+        ]
+    ],
+    "faces": [
+        [
+            0,
+           "speak"
+        ]
+    ],
+    "robot_lights": [
+        [
+            0,
+           "trip"
+        ],
+        [
+            0.99,
+           "default"
+        ]
+    ],
+    "keys": "H9",
+    "wait audio": true,
+    "left eye": [
+        [1,
+          {"mode": "random", "random move min": 15,
+            "random move max": 85, "random time min": 500, "random time max": 3000}
+        ]
+    ],
+    "right eye": [
+        [1,
+          {"mode": "random", "random move min": 10,
+            "random move max": 90, "random time min": 500, "random time max": 3000}
+        ]
+    ],
+    "left arm": [
+        [1,
+          {"mode": "random", "random move min": 65,
+            "random move max": 95, "random time min": 500, "random time max": 3000}
+        ]
+    ],
+    "right arm": [
+        [1,
+          {"mode": "random", "random move min": 65,
+            "random move max": 95, "random time min": 500, "random time max": 3000}
+        ]
+    ],
+    "neck": [
+        [1,
+          {"mode": "random", "random move min": 35,
+            "random move max": 75, "random time min": 500, "random time max": 3000}
+        ]
+    ]
+}

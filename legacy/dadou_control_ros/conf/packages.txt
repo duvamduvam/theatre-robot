@@ -1,0 +1,26 @@
+# Media encoding/decoding
+ffmpeg
+
+# Python runtime + tooling
+python3
+python3-pip
+python3-dev
+
+# Graphics bindings (GTK/Pillow) and helper libs
+libcairo2-dev
+libgirepository1.0-dev
+pkg-config
+python3-pygame
+python3-numpy
+python3-pil
+python3-pil            # duplicate kept intentionally for legacy scripts that catenate the file
+python3-pil.imagetk
+python3-tk
+
+# CLI utilities used during troubleshooting
+tree
+x11-apps
+
+# Hardware access
+libasound2-dev
+python3-spidev

@@ -1,0 +1,48 @@
+{
+  "__rpi pin map__": "http://www.andycbruce.com/p02_PWM.html (pwm l | pos 3)arduino 3 -> rpi 22 | (pwm r | pos 6) arduino 4 -> rpi 25 | (dir l | dir 2)arduino 22 -> rpi 23 | (dir r | dir 5)arduino 23 -> rpi 24 ",
+  "stop_key": "Db",
+  "mouth_visuals_path": "../visuals/mouth",
+  "eye_visuals_path": "../visuals/eye",
+  "_comment": "main loop sleep to reduce cpu usage // 0 to disable",
+  "main_loop_sleep": 0.001,
+  "random_animation": 60000,
+  "stop animation key": [
+    "C0"
+  ],
+  "random_animation_low": 50000,
+  "random_animation_high": 150000,
+  "devices": [
+    {
+      "name": "head_mega",
+      "serial_id": "usb-Arduino__www.arduino.cc__Arduino_Mega_2560_75033303334351C01211-if00",
+      "msg_size": 7,
+      "type": "none"
+    },
+    {
+      "name": "radio_mega",
+      "serial_id": "usb-1a86_USB_Serial-if00-port0",
+      "msg_size": 7,
+      "type": "none"
+    },
+    {
+      "name": "main_due",
+      "serial_id": "usb-Arduino__www.arduino.cc__Arduino_Due_Prog._Port_85036313230351C0A132-if00",
+      "msg_size": 8,
+      "type": "none"
+    }
+  ],
+  "pins": {
+    "lights": 18,
+    "face": 18,
+    "right_pwm": 24,
+    "right_dir": 5,
+    "left_pwm": 22,
+    "left_dir": 6,
+    "neck": 12,
+    "lora_cs": 0,
+    "lora_reset": 0,
+    "lora_sck": 0,
+    "lora_mosi": 0,
+    "lora_miso": 0
+  }
+}

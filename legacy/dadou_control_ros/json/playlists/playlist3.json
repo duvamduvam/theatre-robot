@@ -1,0 +1,211 @@
+{
+    "playlist 3": {
+        "audio": "song/motivation-long.mp3"
+    },
+    "lacrimosa": {
+        "audio": "song/lacrimosa.mp3"
+    },
+    "lacrimosa2": {
+        "audio": "song/lacrimosa.mp3"
+    },
+    "motivation court": {
+        "audio": "song/motivation_short.mp3"
+    },
+    "motivation mid": {
+        "audio": "song/motivation_mid.mp3"
+    },
+    "jeux tv": {
+        "audio": "song/game-show1.mp3"
+    },
+    "activation_transfer": {
+        "duration": 24000,
+        "audio": "didier20/activation_scan.mp3",
+        "face": "upgrade",
+        "lights_helmet": "scan",
+        "robot_lights": "scan"
+    },
+    "transfer impossible": {
+        "duration": 32000,
+        "audio": "didier20/activation_transfer.mp3",
+        "face": "upgrade",
+        "lights_helmet": "transfer",
+        "robot_lights": "transfer"
+    },
+    "c_est_quoi_ce_bordel": {
+        "audio": "didier20/c_est_quoi_ce_bordel.mp3",
+        "face" : "speak",
+        "robot_lights" : "speak",
+        "animation": "little-move",
+        "duration": 3500
+    },
+    "tu m as fait quoi": {
+        "audio": "didier20/tu_m_as_fait_quoi1.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 1500
+    },
+    "c_est_pas_le_pape": {
+        "audio": "didier20/c_est_pas_le_pape.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 5500
+    },
+    "arrete_de_me_regarder_le_cul": {
+        "audio": "didier20/arrete_de_me_regarder_le_cul.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 5000
+    },
+    "je_me_sens_chelou": {
+        "audio": "didier20/je_me_sens_chelou.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 2500
+    },
+    "nan_juste_soif":{
+        "audio": "didier20/nan_juste_soif.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 2500
+    },
+    "Qu-est-ce-que-tu-ma-fait": {
+        "audio": "didier20/Qu-est-ce-que-tu-ma-fait.mp3",
+        "face" : "speak",
+        "animation": "little-move3",
+        "robot_lights" : "speak",
+        "duration": 5500
+    },
+    "Quoi-ce-tas-de-feraille": {
+        "audio": "didier20/Quoi-ce-tas-de-feraille.mp3",
+        "face" : "speak",
+        "animation": "little-move3",
+        "robot_lights" : "speak",
+        "duration": 4500
+    },
+    "Je-sens-plus-rien": {
+        "audio": "didier20/Je-sens-plus-rien.mp3",
+        "face" : "speak",
+        "animation": "little-move3",
+        "robot_lights" : "speak",
+        "duration": 3500
+    },
+    "s-adapter-de-quoi":{
+        "audio": "didier20/s-adapter-de-quoi.mp3",
+        "face" : "speak",
+        "duration" : 12000,
+        "animation": "little-move3",
+        "robot_lights" : "speak"
+    },
+    "trip upload":{
+        "audio": "didier20/trip-upload.mp3",
+        "animation": "trip"
+    },
+    "c est quoi le darknet": {
+        "audio": "didier20/c_est_quoi_le_darknet.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 4500
+    },
+    "quoi attend": {
+        "audio": "didier20/quoi_attend.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 2500
+    },
+    "allez soit cool": {
+        "audio": "didier20/allez_soit_cool.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 2500
+    },
+    "ouverture du darknet": {
+        "animation": "upgrade",
+        "audio": "didier20/ouverture-des-internets.mp3"
+    },
+    "ambiance darknet 1": {
+        "audio": "song/dark-ambiance-low.mp3"
+    },
+    "tiens t as des messages": {
+        "audio": "didier20/tiens_t_as_des_messages.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 7500
+    },
+    "juste un petit hack":{
+        "audio": "didier20/juste_un_petit_hack.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 4500
+    },
+    "adopteunmec": {
+        "audio": "didier20/adopteunmec.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 16500
+    },
+    "ils sont pas sympa": {
+        "audio": "didier20/ils_sont_pas_sympa.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 15500
+    },
+    "fait pas ca": {
+        "audio": "didier20/fait_pas_ca.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 2500
+    },
+    "stop music": {
+        "audio": "stop"
+    },
+    "access 4g": {
+        "audio": "didier20/acces_4g.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak",
+        "duration": 10500
+    },
+    "acces refuse": {
+        "audio": "didier20/acces_refuse.mp3",
+        "robot_lights" : "default dark"
+    },
+    "ambiance darknet 2": {
+        "audio": "song/dark-ambiance-low.mp3"
+    },
+    "trop tard": {
+        "audio": "didier20/trop_tard.mp3",
+        "face" : "speak",
+        "animation": "little-move",
+        "robot_lights" : "speak dark",
+        "duration": 3500
+    },
+    "c est moi qui control": {
+        "audio": "didier20/c_est_moi_qui_control.mp3",
+        "face" : "speak red",
+        "animation": "little-move",
+        "robot_lights" : "devil",
+        "duration": 8500
+    },
+    "je ne suis pas un jouet": {
+        "audio": "effects/encephalogramme-delay.mp3",
+        "animation": "pas-un-jouet"
+    },
+    "initialisation prometeus": {
+        "face" : "default",
+        "robot_lights" : "default",
+        "audio": "didier20/reinitialisation-prometeus.mp3"
+    }
+}

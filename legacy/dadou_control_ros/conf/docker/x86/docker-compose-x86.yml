@@ -1,0 +1,49 @@
+# Compose stack used to run the controller inside a desktop-enabled ROS container.
+services:
+  dadou-control:
+    #container_name: dadou-controller-container
+    container_name: ${CONTAINER_NAME:-dadou-controller-container}
+    platform: linux/amd64
+    image: dadouuu/dadou-controller-x86:latest
+    build:
+      # Build in monorepo root so all sources are available to the Dockerfile.
+      context: ../../..
+      dockerfile: conf/docker/x86/Dockerfile-x86
+      args:
+        GUI: ${GUI}
+        CONTAINER_NAME: ${CONTAINER_NAME}
+    #context: ../../
+    environment:
+      # Pass display variables to allow Qt apps (RViz, joint_state_publisher_gui) to open on host.
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
+      # Profil du boîtier de faders (controller/input/sliders_mapping.py) :
+      # "default" (cou / roues, historique) ou "repetition" (fader 1 = vitesse du
+      # cheminement de Didier en salle de répétition simulée — à utiliser AVEC
+      # ROS_DOMAIN_ID=43, jamais seul sur le vrai robot).
+      - SLIDERS_PROFILE=${SLIDERS_PROFILE:-default}
+    #ports:
+    #  - "80:80"
+    #  - "8000-9000:8000-9000"
+    network_mode: "host"
+
+    volumes:
+      # Share devices and workspaces; mount host X11 socket + Xauthority for GUI access.
+      - /dev:/dev
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
+      - ../../../conf:/home/ros2_ws/src/controller/conf
+      - ../../../controller:/home/ros2_ws/src/controller/controller
+      - ../../../dadou_utils_ros:/home/ros2_ws/src/controller/dadou_utils_ros
+      - ../../../json:/home/ros2_ws/src/controller/json
+      - ../../../medias:/home/ros2_ws/src/controller/medias
+      - ../../../conf/ros2_dependencies/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - /home/dadou/tmp/controller_logs:/home/ros2_ws/log
+    #  - /dev/:/dev
+    #  - /dev/null:/folder/fileToBeExcluded
+    #accès device ACMO gpio serial by id disque etc ...
+    privileged: true
+ #   devices:
+ #    - /dev

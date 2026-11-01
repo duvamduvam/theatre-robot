@@ -1,0 +1,330 @@
+2025-09-16 23:32:34,440 test animation __init__ |57: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-16 23:32:34,441 test animation __init__ |61: INFO[32m Profil manette: xbox[0m
+2025-09-16 23:32:34,443 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:32:34,443 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:32:34,444 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:32:34,444 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:32:34,444 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:32:34,444 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:32:34,444 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:32:34,444 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:32:34,444 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:32:34,444 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,301 test animation __init__ |57: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-16 23:33:18,301 test animation __init__ |61: INFO[32m Profil manette: xbox[0m
+2025-09-16 23:33:18,303 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,303 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,303 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,303 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,303 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,303 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,304 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,304 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,304 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:18,304 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:53,181 test animation __init__ |57: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-16 23:33:53,181 test animation __init__ |61: INFO[32m Profil manette: xbox[0m
+2025-09-16 23:33:53,188 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:53,289 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:53,390 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:53,491 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:53,592 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:53,693 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:53,793 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:53,894 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:53,995 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:54,096 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:54,196 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:54,297 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:54,398 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:54,498 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:54,599 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:54,700 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:54,800 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:54,901 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,002 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,102 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,203 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,304 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,405 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,505 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,606 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,707 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,807 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:55,908 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:56,009 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:56,110 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:56,210 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:33:56,311 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:33:56,412 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:56,513 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:56,613 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:56,714 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:33:56,815 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:33:56,915 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 18, 'RY': 99}[0m
+2025-09-16 23:33:57,016 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:57,117 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 48, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:57,217 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:57,318 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:57,419 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 48, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:57,519 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:57,620 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:57,721 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:57,822 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:57,922 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,023 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,124 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,224 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,325 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,426 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,526 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,627 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,728 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,829 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:58,930 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:59,031 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:59,132 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:59,232 test animation check |123: INFO[32m {'connected': 1, 'A': 1, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:59,333 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:59,433 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:59,534 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:59,635 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:33:59,735 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:33:59,836 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:33:59,937 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:34:00,038 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:34:00,138 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:00,239 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 54, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:00,340 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:00,440 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:00,541 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:00,642 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:00,743 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:00,844 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:00,944 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,045 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,146 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,247 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,347 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,448 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,549 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,649 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 35, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,750 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,851 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 72, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:01,951 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,052 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,153 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,254 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,354 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,455 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,556 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,656 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,757 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,858 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:02,958 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:03,059 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:34:03,160 test animation check |123: INFO[32m {'connected': 1, 'A': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:10,617 test animation __init__ |126: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-16 23:43:10,617 test animation __init__ |130: INFO[32m Profil manette: xbox[0m
+2025-09-16 23:43:10,624 test animation check |246: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 1, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:10,725 test animation check |246: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:10,826 test animation check |246: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 1, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:10,926 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:11,027 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:11,128 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:11,229 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:11,329 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:11,430 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:11,530 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 14, 'RY': 99}[0m
+2025-09-16 23:43:11,631 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 99, 'RY': 6}[0m
+2025-09-16 23:43:11,732 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:11,833 test animation check |246: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 0, 'RY': 0}[0m
+2025-09-16 23:43:11,934 test animation check |246: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 28, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:12,034 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:12,135 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:12,236 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:12,337 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 15, 'RY': 99}[0m
+2025-09-16 23:43:12,438 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:12,539 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 40, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:12,640 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:12,741 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 49, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:12,841 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 49, 'RX': 54, 'RY': 99}[0m
+2025-09-16 23:43:12,942 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 90, 'LY': 99, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:13,043 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:13,144 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:13,245 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 10, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:13,345 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:13,446 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:13,547 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:13,648 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:13,749 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 35, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:13,850 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:13,950 test animation check |246: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:14,051 test animation check |246: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 99, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:14,152 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:14,252 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 49, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:14,353 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 74, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:14,454 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 47, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:14,555 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:14,656 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 49, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:14,757 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:14,857 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 21, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:14,958 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:15,059 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:15,160 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:15,260 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:15,361 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:15,462 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:15,563 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 49, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:15,663 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:15,764 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:15,865 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:15,966 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:16,066 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:16,167 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:16,268 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 49, 'RX': 58, 'RY': 99}[0m
+2025-09-16 23:43:16,369 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:16,470 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:16,571 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 33, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:16,672 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:16,772 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:16,873 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:16,974 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:17,075 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:17,175 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:17,276 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:17,377 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:17,477 test animation check |246: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:17,578 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:17,679 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 40, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:17,779 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:17,880 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:17,981 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:18,082 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 51, 'LY': 0, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:18,182 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 42, 'RY': 99}[0m
+2025-09-16 23:43:18,283 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 79, 'LY': 99, 'RX': 0, 'RY': 0}[0m
+2025-09-16 23:43:18,384 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:18,485 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:18,586 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 0, 'RY': 0}[0m
+2025-09-16 23:43:18,687 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 0, 'RY': 0}[0m
+2025-09-16 23:43:18,788 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:18,889 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:18,989 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:19,090 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 0, 'RY': 0}[0m
+2025-09-16 23:43:19,191 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:43:19,292 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:19,392 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:19,493 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:19,594 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:19,695 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:19,795 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:43:19,896 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:19,997 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:20,097 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:20,198 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:43:20,299 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 0, 'RY': 0}[0m
+2025-09-16 23:43:20,400 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 2, 'RY': 0}[0m
+2025-09-16 23:43:20,500 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:43:20,601 test animation check |246: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:08,385 test animation __init__ |154: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-16 23:50:08,385 test animation __init__ |158: INFO[32m Profil manette: xbox[0m
+2025-09-16 23:50:08,392 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:08,493 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 1, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:08,594 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:08,694 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:08,795 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:08,895 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:08,996 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:09,096 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:09,197 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:09,298 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:09,399 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 0, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:09,500 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 0, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 91, 'RY': 99}[0m
+2025-09-16 23:50:09,600 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 0, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 99, 'RY': 0}[0m
+2025-09-16 23:50:09,701 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:09,802 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:09,903 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 86, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:10,004 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:10,104 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:10,205 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:10,306 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 0, 'RY': 1}[0m
+2025-09-16 23:50:10,406 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 59, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:10,507 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 0, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 8, 'RY': 99}[0m
+2025-09-16 23:50:10,608 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 65, 'RY': 99}[0m
+2025-09-16 23:50:10,709 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:10,809 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:10,910 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:11,011 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:11,112 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:11,213 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:11,314 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:11,414 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:11,515 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:11,616 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 1, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:11,717 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:11,818 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:11,918 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:12,019 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 84, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:12,120 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 0, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:12,221 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:12,321 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:12,422 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:12,523 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:12,624 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:12,724 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 1, 'X': 0, 'Y': 1, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:12,825 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:12,926 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 0, 'SELECT': 1, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 56}[0m
+2025-09-16 23:50:13,027 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:13,128 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:13,229 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:13,329 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:13,430 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:13,531 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:13,631 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 0, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:13,732 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 0, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:13,833 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 0, 'R1': 0, 'R2': 1, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:13,934 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 99, 'RX': 99, 'RY': 0}[0m
+2025-09-16 23:50:14,035 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:14,135 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:14,236 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:14,336 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:14,437 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:14,538 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:14,639 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 7}[0m
+2025-09-16 23:50:14,740 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:14,840 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:14,941 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:15,042 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:15,143 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:15,243 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:15,344 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:15,445 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:15,546 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 1, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:15,647 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:15,748 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:15,849 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:15,949 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:16,050 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:16,151 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:16,252 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 0, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:16,353 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:16,454 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:16,554 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:16,655 test animation check |302: INFO[32m {'connected': 1, 'A': 1, 'B': 1, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:16,756 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:16,857 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:16,958 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 1, 'X': 0, 'Y': 0, 'L1': 1, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 1, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:17,058 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 1, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 0}[0m
+2025-09-16 23:50:17,159 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 0, 'START': 0, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:17,260 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 0, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:17,361 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 49, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:17,462 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 1, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 52, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:17,562 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 99, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:17,663 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:17,764 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 0, 'LY': 99, 'RX': 50, 'RY': 99}[0m
+2025-09-16 23:50:17,865 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 50, 'LY': 0, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:50:17,965 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 0, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:50:18,066 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 49, 'RX': 99, 'RY': 99}[0m
+2025-09-16 23:50:18,167 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 91, 'LY': 99, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:50:18,267 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 99, 'LY': 99, 'RX': 0, 'RY': 99}[0m
+2025-09-16 23:50:18,368 test animation check |302: INFO[32m {'connected': 1, 'A': 0, 'B': 0, 'X': 0, 'Y': 0, 'L1': 0, 'L2': 1, 'R1': 0, 'R2': 1, 'START': 1, 'SELECT': 1, 'UP': 0, 'DOWN': 0, 'LEFT': 0, 'RIGHT': 0, 'LX': 90, 'LY': 49, 'RX': 50, 'RY': 99}[0m

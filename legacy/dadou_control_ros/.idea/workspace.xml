@@ -1,0 +1,693 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AnalysisUIOptions">
+    <option name="ANALYZE_INJECTED_CODE" value="false" />
+  </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="9de8dbe2-a8bd-4d96-ba64-13880b4eab0a" name="Changes" comment="Fix deploy 2 controller">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/conf/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/docker/arm/Dockerfile-arm" beforeDir="false" afterPath="$PROJECT_DIR$/conf/docker/arm/Dockerfile-arm" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/docker/x86/Dockerfile-x86" beforeDir="false" afterPath="$PROJECT_DIR$/conf/docker/x86/Dockerfile-x86" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/docker/x86/docker-compose-x86.yml" beforeDir="false" afterPath="$PROJECT_DIR$/conf/docker/x86/docker-compose-x86.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/packages.txt" beforeDir="false" afterPath="$PROJECT_DIR$/conf/packages.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/scripts/compose-up-local.sh" beforeDir="false" afterPath="$PROJECT_DIR$/conf/scripts/compose-up-local.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/scripts/launch-local-docker.sh" beforeDir="false" afterPath="$PROJECT_DIR$/conf/scripts/launch-local-docker.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dadou_utils_ros/ansible/templates/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/dadou_utils_ros/ansible/templates/Makefile" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Unit Test" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="FlaskConsoleOptions" custom-start-script="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))">
+    <envs>
+      <env key="FLASK_APP" value="app" />
+    </envs>
+    <option name="myCustomStartScript" value="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))" />
+    <option name="myEnvs">
+      <map>
+        <entry key="FLASK_APP" value="app" />
+      </map>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <excluded-from-favorite>
+      <branch-storage>
+        <map>
+          <entry type="LOCAL">
+            <value>
+              <list>
+                <branch-info repo="$PROJECT_DIR$" source="main" />
+              </list>
+            </value>
+          </entry>
+        </map>
+      </branch-storage>
+    </excluded-from-favorite>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="ROOT_SYNC" value="SYNC" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="2ea4SInN0FxHwRuNw1aAL9AQRgV" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;Python tests.pytest for test_9dof.Test9dof.test_get_values.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_9dof.Test9dof.test_get_values2.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_glove.MyTestCase.test_glove.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_guiapp.TestOled.test_oled.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_input_devices.TestInputDevices.test_glove_plugged.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_keyboard.TestKeyboard.test_keyboard.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_keys.KeysTestCase.test_screen_keys.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_oled.TestOled.test_oled.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_usb_gamepad.TestUSBGamePad.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.pytest for test_usb_gamepad.TestUSBGamePad.test_active_inputs.executor&quot;: &quot;Debug&quot;,
+    &quot;Python tests.pytest for test_usb_gamepad.TestUSBGamePad.test_check.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_usb_gamepad.test_joystick_state.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_vibrator.MyTestCase.test_gui.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest for test_vibrator.MyTestCase.test_vibrator.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest in test_9dof.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.pytest in test_usb_gamepad.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python.2inch4_LCD_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.TkPillowGui.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.oled.executor&quot;: &quot;Run&quot;,
+    &quot;Python.pil-gui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.pil_config.executor&quot;: &quot;Run&quot;,
+    &quot;Python.tk-pillow-gui.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/dadou/Nextcloud/Didier/python/dadou_control_ros/conf/scripts&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="PyConsoleOptionsProvider">
+    <option name="myPythonConsoleState">
+      <console-settings module-name="dadou_control_ros" is-module-sdk="true">
+        <option name="myUseModuleSdk" value="true" />
+        <option name="myModuleName" value="dadou_control_ros" />
+      </console-settings>
+    </option>
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/conf/scripts" />
+      <recent name="$PROJECT_DIR$/conf/ros2_dependencies" />
+      <recent name="$PROJECT_DIR$/dadou_utils_ros/ansible/roles/activate-spi" />
+      <recent name="$PROJECT_DIR$/medias/oled" />
+      <recent name="$PROJECT_DIR$/controller/lib" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/controller" />
+      <recent name="$PROJECT_DIR$/conf" />
+      <recent name="$PROJECT_DIR$/conf/make" />
+      <recent name="$PROJECT_DIR$/conf/ros2" />
+      <recent name="$PROJECT_DIR$/controller/nodes" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python tests.pytest for test_usb_gamepad.TestUSBGamePad.test_active_inputs">
+    <configuration name="pytest for test_usb_gamepad.TestUSBGamePad" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="dadou_control_ros" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="$PROJECT_DIR$/venv/bin/python" />
+      <option name="SDK_NAME" value="Python 3.11 (dadou_control_ros)" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/tests" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_usb_gamepad.TestUSBGamePad&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest for test_usb_gamepad.TestUSBGamePad.test_active_inputs" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="dadou_control_ros" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="$PROJECT_DIR$/venv/bin/python" />
+      <option name="SDK_NAME" value="Python 3.11 (dadou_control_ros)" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/tests" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_usb_gamepad.TestUSBGamePad.test_active_inputs&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest for test_usb_gamepad.TestUSBGamePad.test_check" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="dadou_control_ros" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="$PROJECT_DIR$/venv/bin/python" />
+      <option name="SDK_NAME" value="Python 3.11 (dadou_control_ros)" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/tests" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_usb_gamepad.TestUSBGamePad.test_check&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest for test_usb_gamepad.test_joystick_state" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="dadou_control_ros" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="$PROJECT_DIR$/venv/bin/python" />
+      <option name="SDK_NAME" value="Python 3.11 (dadou_control_ros)" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/tests" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_usb_gamepad.test_joystick_state&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in test_usb_gamepad.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="dadou_control_ros" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="$PROJECT_DIR$/venv/bin/python" />
+      <option name="SDK_NAME" value="Python 3.11 (dadou_control_ros)" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/controller/tests" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;-s&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/controller/tests/test_usb_gamepad.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python tests.pytest for test_usb_gamepad.TestUSBGamePad" />
+      <item itemvalue="Python tests.pytest for test_usb_gamepad.TestUSBGamePad.test_active_inputs" />
+      <item itemvalue="Python tests.pytest for test_usb_gamepad.TestUSBGamePad.test_check" />
+      <item itemvalue="Python tests.pytest for test_usb_gamepad.test_joystick_state" />
+      <item itemvalue="Python tests.pytest in test_usb_gamepad.py" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python tests.pytest for test_usb_gamepad.TestUSBGamePad.test_active_inputs" />
+        <item itemvalue="Python tests.pytest for test_usb_gamepad.TestUSBGamePad" />
+        <item itemvalue="Python tests.pytest for test_usb_gamepad.TestUSBGamePad.test_check" />
+        <item itemvalue="Python tests.pytest for test_usb_gamepad.test_joystick_state" />
+        <item itemvalue="Python tests.pytest in test_usb_gamepad.py" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-09665e90c3a7-b11f5e8da5ad-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-233.15026.15" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="9de8dbe2-a8bd-4d96-ba64-13880b4eab0a" name="Changes" comment="" />
+      <created>1712129355466</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1712129355466</updated>
+      <workItem from="1712129357300" duration="1489000" />
+      <workItem from="1712131016329" duration="579000" />
+      <workItem from="1712154149636" duration="2585000" />
+      <workItem from="1712167284345" duration="7961000" />
+      <workItem from="1712269450152" duration="421000" />
+      <workItem from="1712271454457" duration="18000" />
+      <workItem from="1712346403416" duration="55000" />
+      <workItem from="1712346963806" duration="25000" />
+      <workItem from="1712352243885" duration="593000" />
+      <workItem from="1712352850552" duration="42000" />
+      <workItem from="1712352923465" duration="407000" />
+      <workItem from="1712353342800" duration="1356000" />
+      <workItem from="1712383420242" duration="38000" />
+      <workItem from="1712383476515" duration="818000" />
+      <workItem from="1712395799015" duration="13000" />
+      <workItem from="1712397685527" duration="540000" />
+      <workItem from="1712403298634" duration="41000" />
+      <workItem from="1712404670317" duration="161000" />
+      <workItem from="1712554086055" duration="57000" />
+      <workItem from="1712701303477" duration="15000" />
+      <workItem from="1712706349186" duration="254000" />
+      <workItem from="1712707531334" duration="18000" />
+      <workItem from="1712707564866" duration="44000" />
+      <workItem from="1712707624939" duration="63000" />
+      <workItem from="1712707712699" duration="69000" />
+      <workItem from="1712707804871" duration="120000" />
+      <workItem from="1712728492153" duration="444000" />
+      <workItem from="1712728952573" duration="844000" />
+      <workItem from="1712729974523" duration="276000" />
+      <workItem from="1712788139135" duration="1258000" />
+      <workItem from="1712789424883" duration="779000" />
+      <workItem from="1712790218307" duration="2436000" />
+      <workItem from="1712861729345" duration="227000" />
+      <workItem from="1712861986162" duration="17000" />
+      <workItem from="1712862011161" duration="181000" />
+      <workItem from="1712862215357" duration="520000" />
+      <workItem from="1712862790721" duration="1728000" />
+      <workItem from="1712865947212" duration="719000" />
+      <workItem from="1712867992195" duration="246000" />
+      <workItem from="1712868520853" duration="526000" />
+      <workItem from="1712872211470" duration="122000" />
+      <workItem from="1712873390571" duration="28000" />
+      <workItem from="1713426926396" duration="3358000" />
+      <workItem from="1713430676325" duration="29000" />
+      <workItem from="1713431187223" duration="1823000" />
+      <workItem from="1713433170681" duration="10150000" />
+      <workItem from="1713511548315" duration="55000" />
+      <workItem from="1713727856731" duration="5121000" />
+      <workItem from="1713734760676" duration="2197000" />
+      <workItem from="1713858535720" duration="183000" />
+      <workItem from="1713858726072" duration="4571000" />
+      <workItem from="1714406843166" duration="2454000" />
+      <workItem from="1714546803801" duration="5054000" />
+      <workItem from="1715333875781" duration="144000" />
+      <workItem from="1715334064583" duration="2672000" />
+      <workItem from="1715357600061" duration="1553000" />
+      <workItem from="1715891658075" duration="1529000" />
+      <workItem from="1715969532142" duration="14928000" />
+      <workItem from="1715988302622" duration="21250000" />
+      <workItem from="1716155778316" duration="6000" />
+      <workItem from="1716220671830" duration="2609000" />
+      <workItem from="1716274944164" duration="685000" />
+      <workItem from="1716278263124" duration="5000" />
+      <workItem from="1716299368939" duration="7355000" />
+      <workItem from="1716310374474" duration="2759000" />
+      <workItem from="1716581126836" duration="8023000" />
+      <workItem from="1716634658131" duration="43000" />
+      <workItem from="1716841012718" duration="2775000" />
+      <workItem from="1716931683535" duration="4179000" />
+      <workItem from="1717229871287" duration="25000" />
+      <workItem from="1717541339047" duration="2277000" />
+      <workItem from="1717837285592" duration="2769000" />
+      <workItem from="1718749484766" duration="4624000" />
+      <workItem from="1718782308157" duration="1354000" />
+      <workItem from="1718807295430" duration="1451000" />
+      <workItem from="1718898321080" duration="162000" />
+      <workItem from="1718914140485" duration="10470000" />
+      <workItem from="1718975548754" duration="3000" />
+      <workItem from="1718981458353" duration="3667000" />
+      <workItem from="1719004605643" duration="8444000" />
+      <workItem from="1719051506420" duration="5151000" />
+      <workItem from="1719078216918" duration="5892000" />
+      <workItem from="1719139956121" duration="15000" />
+      <workItem from="1719140677929" duration="2216000" />
+      <workItem from="1719253012277" duration="35973000" />
+      <workItem from="1719398738248" duration="3142000" />
+      <workItem from="1719420648033" duration="2287000" />
+      <workItem from="1719423932095" duration="501000" />
+      <workItem from="1719691055016" duration="599000" />
+      <workItem from="1719952042624" duration="756000" />
+      <workItem from="1720806465706" duration="11386000" />
+      <workItem from="1720944684760" duration="8361000" />
+      <workItem from="1721051018289" duration="7615000" />
+      <workItem from="1721082978042" duration="1515000" />
+      <workItem from="1721174320845" duration="9647000" />
+      <workItem from="1721252601767" duration="2464000" />
+      <workItem from="1721305767578" duration="2758000" />
+      <workItem from="1721328207280" duration="4510000" />
+      <workItem from="1721340531186" duration="1728000" />
+      <workItem from="1721515789893" duration="2760000" />
+      <workItem from="1721558339986" duration="601000" />
+      <workItem from="1721570979401" duration="1181000" />
+      <workItem from="1721592858261" duration="6841000" />
+      <workItem from="1721718164684" duration="1698000" />
+      <workItem from="1721941971544" duration="6106000" />
+      <workItem from="1722001632719" duration="8000" />
+      <workItem from="1722007834218" duration="8784000" />
+      <workItem from="1722037120623" duration="9361000" />
+      <workItem from="1722102140171" duration="822000" />
+      <workItem from="1722109030590" duration="337000" />
+      <workItem from="1722160173906" duration="1134000" />
+      <workItem from="1722205218019" duration="1797000" />
+      <workItem from="1723119979610" duration="14000" />
+      <workItem from="1723230891527" duration="1441000" />
+      <workItem from="1724142264881" duration="46000" />
+      <workItem from="1728658269981" duration="711000" />
+      <workItem from="1728685970300" duration="646000" />
+      <workItem from="1728757125149" duration="1222000" />
+      <workItem from="1728769162148" duration="665000" />
+      <workItem from="1731535180154" duration="591000" />
+      <workItem from="1731535868919" duration="216000" />
+      <workItem from="1731537881506" duration="2013000" />
+      <workItem from="1731663222792" duration="152000" />
+      <workItem from="1731780099980" duration="822000" />
+      <workItem from="1731781205920" duration="29000" />
+      <workItem from="1731871756083" duration="307000" />
+      <workItem from="1731872267724" duration="2020000" />
+      <workItem from="1731881444405" duration="8122000" />
+      <workItem from="1732998978243" duration="3023000" />
+      <workItem from="1737235288238" duration="38000" />
+      <workItem from="1738958895940" duration="617000" />
+      <workItem from="1738966212388" duration="7729000" />
+      <workItem from="1739014296851" duration="558000" />
+      <workItem from="1739021149850" duration="651000" />
+      <workItem from="1739023961911" duration="339000" />
+      <workItem from="1739033144134" duration="22000" />
+      <workItem from="1740262485163" duration="8915000" />
+      <workItem from="1740352498634" duration="3605000" />
+      <workItem from="1740421137258" duration="16078000" />
+      <workItem from="1740470020185" duration="11817000" />
+      <workItem from="1740522463561" duration="4867000" />
+      <workItem from="1740558854582" duration="10583000" />
+      <workItem from="1740784575061" duration="4685000" />
+      <workItem from="1741120752529" duration="9000" />
+      <workItem from="1741693227628" duration="12647000" />
+      <workItem from="1741978322797" duration="11000" />
+      <workItem from="1742717943235" duration="579000" />
+      <workItem from="1743106054401" duration="6250000" />
+      <workItem from="1757112663766" duration="1920000" />
+      <workItem from="1757146371584" duration="3554000" />
+      <workItem from="1757269190116" duration="2000" />
+      <workItem from="1757269198839" duration="1000" />
+      <workItem from="1757707033208" duration="9172000" />
+      <workItem from="1757739630078" duration="2585000" />
+      <workItem from="1757759081847" duration="1851000" />
+      <workItem from="1757882707176" duration="4958000" />
+      <workItem from="1758057457969" duration="2577000" />
+      <workItem from="1758143655980" duration="3563000" />
+      <workItem from="1758233254662" duration="8960000" />
+      <workItem from="1758805642329" duration="2089000" />
+      <workItem from="1758830077627" duration="6824000" />
+      <workItem from="1758867041665" duration="23309000" />
+      <workItem from="1758983073499" duration="113000" />
+      <workItem from="1758984049987" duration="20000" />
+      <workItem from="1758985455551" duration="1044000" />
+      <workItem from="1761522257466" duration="1356000" />
+      <workItem from="1761551505424" duration="1206000" />
+      <workItem from="1761565826777" duration="1812000" />
+      <workItem from="1761587231718" duration="37000" />
+      <workItem from="1761588586192" duration="363000" />
+      <workItem from="1761606463662" duration="599000" />
+      <workItem from="1762038861666" duration="135000" />
+    </task>
+    <task id="LOCAL-00001" summary="Update">
+      <option name="closed" value="true" />
+      <created>1712872251289</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1712872251289</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Update">
+      <option name="closed" value="true" />
+      <created>1716221835387</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1716221835387</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Update">
+      <option name="closed" value="true" />
+      <created>1716222085295</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1716222085295</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Update">
+      <option name="closed" value="true" />
+      <created>1716222148080</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1716222148080</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Update">
+      <option name="closed" value="true" />
+      <created>1716223474756</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1716223474756</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Update">
+      <option name="closed" value="true" />
+      <created>1716274971608</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1716274971608</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Update">
+      <option name="closed" value="true" />
+      <created>1716305648807</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1716305648807</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Update">
+      <option name="closed" value="true" />
+      <created>1719051657597</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1719051657597</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Update">
+      <option name="closed" value="true" />
+      <created>1719268746940</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1719268746940</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Update">
+      <option name="closed" value="true" />
+      <created>1719269004741</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1719269004741</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Create config for X11 and no X11 controller">
+      <option name="closed" value="true" />
+      <created>1719327061888</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1719327061888</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Create config for X11 and no X11 controller">
+      <option name="closed" value="true" />
+      <created>1719327071433</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1719327071433</updated>
+    </task>
+    <task id="LOCAL-00013" summary="Create config for X11 and no X11 controller">
+      <option name="closed" value="true" />
+      <created>1721253722792</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1721253722792</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Create config for X11 and no X11 controller">
+      <option name="closed" value="true" />
+      <created>1731535932700</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1731535932700</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Create config for X11 and no X11 controller&#10;Update screen config">
+      <option name="closed" value="true" />
+      <created>1731923876444</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1731923876444</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Fix deploy 2 controller">
+      <option name="closed" value="true" />
+      <created>1741724121982</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1741724121982</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Fix deploy 2 controller">
+      <option name="closed" value="true" />
+      <created>1758346644058</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1758346644058</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ID_ORDER">
+      <list>
+        <option value="Default.Root" />
+        <option value="Default.Author" />
+        <option value="Default.Date" />
+        <option value="Default.Subject" />
+        <option value="Space.CommitStatus" />
+      </list>
+    </option>
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Update" />
+    <MESSAGE value="Create config for X11 and no X11 controller" />
+    <MESSAGE value="Create config for X11 and no X11 controller&#10;Update screen config" />
+    <MESSAGE value="Fix deploy 2 controller" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix deploy 2 controller" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/tests/test_input_devices.py</url>
+          <line>18</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/../dadou_utils_ros/com/serial_devices_manager.py</url>
+          <line>15</line>
+          <option name="timeStamp" value="9" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/../dadou_utils_ros/com/serial_devices_manager.py</url>
+          <line>32</line>
+          <option name="timeStamp" value="10" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/control_factory.py</url>
+          <line>12</line>
+          <option name="timeStamp" value="11" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/nodes/main_gui.py</url>
+          <line>58</line>
+          <option name="timeStamp" value="12" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/gui/pillow/KeyboardListener.py</url>
+          <line>35</line>
+          <option name="timeStamp" value="33" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/gui/pillow/TkPillowGui.py</url>
+          <line>111</line>
+          <option name="timeStamp" value="44" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/gui/pillow/ImageGenerator.py</url>
+          <line>85</line>
+          <option name="timeStamp" value="45" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/input/usb_gamepad.py</url>
+          <line>353</line>
+          <option name="timeStamp" value="55" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/controller/input/usb_gamepad.py</url>
+          <line>327</line>
+          <option name="timeStamp" value="63" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_vibrator_MyTestCase_test_vibrator.coverage" NAME="pytest for test_vibrator.MyTestCase.test_vibrator Coverage Results" MODIFIED="1721174676323" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$oled.coverage" NAME="oled Coverage Results" MODIFIED="1720999501191" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_keyboard_TestKeyboard_test_keyboard.coverage" NAME="pytest for test_keyboard.TestKeyboard.test_keyboard Coverage Results" MODIFIED="1740267456662" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_oled_TestOled_test_oled.coverage" NAME="pytest for test_oled.TestOled.test_oled Coverage Results" MODIFIED="1719257628218" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$TkPillowGui.coverage" NAME="TkPillowGui Coverage Results" MODIFIED="1721058938330" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/gui/pillow" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_9dof_Test9dof_test_get_values.coverage" NAME="pytest for test_9dof.Test9dof.test_get_values Coverage Results" MODIFIED="1721516962243" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_usb_gamepad_TestUSBGamePad_test_active_inputs.coverage" NAME="pytest for test_usb_gamepad.TestUSBGamePad.test_active_inputs Coverage Results" MODIFIED="1758924226507" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pil_config.coverage" NAME="pil_config Coverage Results" MODIFIED="1718750982199" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/gui/pillow" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_usb_gamepad_TestUSBGamePad.coverage" NAME="pytest for test_usb_gamepad.TestUSBGamePad Coverage Results" MODIFIED="1758347882087" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_vibrator_MyTestCase_test_gui.coverage" NAME="pytest for test_vibrator.MyTestCase.test_gui Coverage Results" MODIFIED="1716299955658" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_in_test_9dof_py.coverage" NAME="pytest in test_9dof.py Coverage Results" MODIFIED="1721339475013" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_usb_gamepad_test_joystick_state.coverage" NAME="pytest for test_usb_gamepad.test_joystick_state Coverage Results" MODIFIED="1757715699441" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pil_gui.coverage" NAME="pil-gui Coverage Results" MODIFIED="1718750694621" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/gui/pillow" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$tk_pillow_gui.coverage" NAME="TkPillowGui Coverage Results" MODIFIED="1718922034867" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/gui/pillow" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_glove_MyTestCase_test_glove.coverage" NAME="pytest for test_glove.MyTestCase.test_glove Coverage Results" MODIFIED="1716032056580" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$2inch4_LCD_test.coverage" NAME="2inch4_LCD_test Coverage Results" MODIFIED="1740475321588" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_input_devices_TestInputDevices_test_glove_plugged.coverage" NAME="pytest for test_input_devices.TestInputDevices.test_glove_plugged Coverage Results" MODIFIED="1712170441171" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_usb_gamepad_TestUSBGamePad_test_check.coverage" NAME="pytest for test_usb_gamepad.TestUSBGamePad.test_check Coverage Results" MODIFIED="1758058353565" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_keys_KeysTestCase_test_screen_keys.coverage" NAME="pytest for test_keys.KeysTestCase.test_screen_keys Coverage Results" MODIFIED="1716231934114" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_in_test_usb_gamepad_py.coverage" NAME="pytest in test_usb_gamepad.py Coverage Results" MODIFIED="1757715489375" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_9dof_Test9dof_test_get_values2.coverage" NAME="pytest for test_9dof.Test9dof.test_get_values2 Coverage Results" MODIFIED="1721340382448" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+    <SUITE FILE_PATH="coverage/dadou_control_ros$pytest_for_test_guiapp_TestOled_test_oled.coverage" NAME="pytest for test_guiapp.TestOled.test_oled Coverage Results" MODIFIED="1740270997538" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/controller/tests/circuitpython" />
+  </component>
+</project>

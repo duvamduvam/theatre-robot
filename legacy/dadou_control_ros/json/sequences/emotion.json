@@ -1,0 +1,69 @@
+{
+    "keys": "H9",
+    "duration": 52500,
+    "audios": [
+        [
+            1,
+           "didier20/superbe-jack.mp3"
+        ]
+    ],
+    "faces": [
+        [
+            1,
+           "speak"
+        ]
+    ],
+    "loop": true,
+    "neck": [
+        [1,
+          {"mode": "random", "random move min": 25,
+            "random move max": 60, "random time min": 1500, "random time max":3000}
+        ]
+    ],
+    "left eye": [
+        [1,
+          {"mode": "random", "random move min": 65,
+            "random move max": 90, "random time min": 1500, "random time max":3000}
+        ]
+    ],
+    "right eye": [
+        [1,
+          {"mode": "random", "random move min": 65,
+            "random move max": 90, "random time min": 1500, "random time max": 3000}
+        ]
+    ],
+    "left arm": [
+        [1,
+          {"mode": "random", "random move min": 75,
+            "random move max": 95, "random time min": 1500, "random time max": 3000}
+        ]
+    ],
+    "right arm": [
+        [1,
+          {"mode": "random", "random move min": 75,
+            "random move max": 95, "random time min": 1500, "random time max": 3000}
+        ]
+    ],
+    "wheels": [
+        [
+            0.1,
+            [0.2, -0.2]
+        ],
+        [
+            0.2,
+            [-0.2, 0.2]
+        ],
+        [
+            0.45,
+            [0.2, 0.2]
+        ],
+        [
+            0.6,
+            [-0.2, -0.2]
+        ],
+        [
+            1,
+            [0, 0]
+        ]
+    ]
+}

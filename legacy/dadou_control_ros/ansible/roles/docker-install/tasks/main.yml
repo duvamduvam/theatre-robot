@@ -1,0 +1,87 @@
+---
+- name: Installer les paquets prérequis pour Docker
+  become: yes
+  ansible.builtin.apt:
+    name: "{{ docker_prereq_packages }}"
+    state: present
+    update_cache: yes
+
+- name: Créer le répertoire des keyrings APT
+  become: yes
+  ansible.builtin.file:
+    path: "{{ docker_keyring_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Vérifier la présence du keyring Docker
+  become: yes
+  ansible.builtin.stat:
+    path: "{{ docker_gpg_keyring }}"
+  register: docker_gpg_stat
+
+- name: Télécharger la clé GPG de Docker
+  become: yes
+  ansible.builtin.command:
+    cmd: "curl -fsSL {{ docker_gpg_key_url }} -o {{ docker_gpg_tmp }}"
+  register: docker_gpg_download
+  changed_when: docker_gpg_download.rc == 0
+  failed_when: docker_gpg_download.rc != 0
+
+- name: Convertir la clé Docker au format keyring
+  become: yes
+  ansible.builtin.command:
+    cmd: "gpg --batch --yes --dearmor -o {{ docker_gpg_keyring }} {{ docker_gpg_tmp }}"
+  when: docker_gpg_download.changed or not docker_gpg_stat.stat.exists
+
+- name: Définir les permissions du keyring Docker
+  become: yes
+  ansible.builtin.file:
+    path: "{{ docker_gpg_keyring }}"
+    mode: "0644"
+  when: docker_gpg_download.changed or not docker_gpg_stat.stat.exists
+
+- name: Supprimer la clé Docker temporaire
+  become: yes
+  ansible.builtin.file:
+    path: "{{ docker_gpg_tmp }}"
+    state: absent
+
+- name: Ajouter le dépôt Docker officiel
+  become: yes
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ docker_repo_arch }} signed-by={{ docker_gpg_keyring }}] https://download.docker.com/linux/{{ docker_repo_distribution }} {{ docker_repo_codename }} {{ docker_repo_component }}"
+    filename: "docker"
+    state: present
+
+- name: Installer Docker et ses composants
+  become: yes
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: yes
+
+- name: Activer et démarrer le service Docker
+  become: yes
+  ansible.builtin.service:
+    name: "{{ docker_service_name }}"
+    state: started
+    enabled: yes
+
+- name: Ajouter les utilisateurs au groupe docker
+  become: yes
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: "docker"
+    append: yes
+  loop: "{{ docker_users }}"
+  when: docker_manage_group and docker_users | length > 0
+
+- name: Vérifier le fonctionnement de Docker
+  become: yes
+  ansible.builtin.command: "{{ docker_test_command }}"
+  register: docker_test_result
+  changed_when: false
+
+- name: Afficher le résultat du test Docker
+  ansible.builtin.debug:
+    var: docker_test_result.stdout_lines

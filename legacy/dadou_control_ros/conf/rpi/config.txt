@@ -1,0 +1,17 @@
+#/boot/firmware/config.txt
+# ne fonctionne pas ...
+
+#config Écran Tactile LCD USB HDMI de 3.5
+
+#hdmi_force_hotplug=1
+#hdmi_group=2
+#hdmi_mode=87
+#hdmi_drive=2
+#hdmi_cvt 480 320 60 6 0 0 0
+#framebuffer_width=480
+#framebuffer_height=320
+
+#hdmi_group=4
+#hdmi_mode=16
+
+#video=HDMI-A-1:1024x768@60

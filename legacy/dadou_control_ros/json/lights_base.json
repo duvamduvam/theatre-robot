@@ -1,0 +1,92 @@
+{
+    "love": {
+        "method": "blink",
+        "color": "PINK",
+        "speed": 100
+    },
+    "oulala": {
+        "method": "sparkle",
+        "color": "AMBER",
+        "speed": 100
+    },
+    "chase me": {
+        "color": "CYAN",
+        "speed": 0.01,
+        "period": 75,
+        "max_intensity": 1.0,
+        "min_intensity": 0.0,
+        "method": "chase"
+    },
+    "chase me dark": {
+        "color": "PURPLE",
+        "speed": 0.01,
+        "period": 75,
+        "max_intensity": 1.0,
+        "min_intensity": 0.0,
+        "method": "chase"
+    },
+    "sea colorcycle": {
+        "color": "PURPLE",
+        "speed": 9.994,
+        "period": 75,
+        "max_intensity": 1.0,
+        "min_intensity": 0.46,
+        "method": "color_cycle"
+    },
+    "rainbow": {
+        "method": "rainbow"
+    },
+    "rainbow_comet": {
+        "method": "rainbow_comet"
+    },
+    "rainbow_chase": {
+        "method": "rainbow_chase"
+    },
+    "rainbow_sparkle": {
+        "method": "rainbow_sparkle"
+    },
+    "sparkle_pulse": {
+         "color": "GOLD",
+        "method": "sparkle_pulse"
+    },
+    "pulse": {
+        "color": "BLUE",
+        "method": "pulse"
+    },
+    "pulse purple": {
+        "color": "PURPLE",
+        "method": "pulse"
+    },
+    "pulse green": {
+        "color": "GREEN",
+        "method": "pulse"
+    },
+    "pulse red": {
+        "color": "RED",
+        "method": "pulse"
+    },
+    "solido": {
+        "color": "GOLD",
+        "method": "solid"
+    },
+    "solid red": {
+        "color": "RED",
+        "method": "solid"
+    },
+    "off": {
+        "color": "BLACK",
+        "method": "solid"
+    },
+    "sparkle": {
+        "color": "PURPLE",
+        "method": "sparkle"
+    },
+    "sparklepulse": {
+        "color": "GREEN",
+        "method": "sparkle"
+    },
+    "comet2": {
+        "color": "CYAN",
+        "method": "comet"
+    }
+}

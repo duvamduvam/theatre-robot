@@ -1,0 +1,64 @@
+FROM ros:jazzy-ros-base
+
+LABEL authors="dadouuu"
+
+EXPOSE 4421
+
+# Créer les répertoires nécessaires
+RUN mkdir /home/scripts/
+RUN mkdir -p /home/ros2_ws/src/controller/resource
+
+# Définir le répertoire de travail
+WORKDIR /home/ros2_ws/
+
+# Copier les fichiers et répertoires nécessaires
+COPY controller /home/ros2_ws/src/controller/controller/
+COPY conf/ /home/ros2_ws/src/controller/conf/
+COPY json/ /home/ros2_ws/src/controller/json/
+COPY medias/ /home/ros2_ws/src/controller/medias/
+COPY conf/ros2/setup.py /home/ros2_ws/src/controller/
+COPY conf/ros2/package.xml /home/ros2_ws/src/controller/
+COPY conf/ros2/setup.cfg /home/ros2_ws/src/controller/
+COPY conf/ros2/resource/controller /home/ros2_ws/src/controller/resource
+COPY conf/ros2_dependencies/ /home/ros2_ws/src/
+COPY dadou_utils_ros.tar.gz /home/ros2_ws/src/controller/
+
+# Extraire l'archive et la supprimer
+RUN tar -xzhf /home/ros2_ws/src/controller/dadou_utils_ros.tar.gz -C /home/ros2_ws/src/controller/ && \
+    rm /home/ros2_ws/src/controller/dadou_utils_ros.tar.gz
+
+# Mettre à jour les paquets et installer les dépendances.
+# sed tronque les commentaires (pleine ligne ET en fin de ligne : packages.txt
+# en contient) sinon apt essaie d'installer les mots des commentaires ;
+# xargs -r ne lance rien si la liste est vide.
+RUN apt-get update && \
+sed -E 's/#.*$//' /home/ros2_ws/src/controller/conf/packages.txt | xargs -r apt-get install -y
+
+#RUN rosdep update && rosdep install --from-paths /home/ros2_ws/ --ignore-src -r -y
+
+# Configurer le fuseau horaire
+RUN ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
+
+# Définir PYTHONPATH
+ENV PYTHONPATH "${PYTHONPATH}:/home/ros2_ws/src"
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+# Installer les dépendances Python.
+# PAS de "pip install --upgrade pip" : sur Jazzy/Ubuntu 24.04 le pip système
+# est géré par dpkg ("Cannot uninstall pip 24.0, RECORD file not found") —
+# même piège que sur le Dockerfile robot, la version de l'image suffit.
+RUN pip3 install --no-cache-dir --ignore-installed -r /home/ros2_ws/src/controller/conf/requirements.txt
+RUN pip3 install --no-cache-dir --ignore-installed -r /home/ros2_ws/src/controller/conf/requirements-gpio.txt
+
+# Commande pour installer les dépendances CircuitPython
+#CMD ["/usr/bin/python3", "/home/ros2_ws/src/controller/conf/scripts/install_no_x_requirements.py"]
+
+# Définir l'affichage pour les applications GUI
+#ENV DISPLAY host.docker.internal:0
+
+#CMD ["python3", "-c", "import tkinter; import spidev; import numpy; print('Tous les imports sont OK !')"]
+
+# Script d'entrée pour lancer le conteneur
+ENTRYPOINT ["/bin/bash", "-c", "source /home/ros2_ws/src/controller/conf/scripts/launch-ros-in-docker.sh"]
+#ENTRYPOINT ["python3", "/home/ros2_ws/src/controller/controller/test.py"]

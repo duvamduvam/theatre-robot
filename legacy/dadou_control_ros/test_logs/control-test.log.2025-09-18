@@ -1,0 +1,17 @@
+2025-09-19 00:05:19,123 tests FileManagerTests |9: INFO[32m start face test[0m
+2025-09-19 00:05:19,274 test animation __init__ |168: INFO[32m Aucune manette détectée.[0m
+2025-09-19 00:07:29,176 tests FileManagerTests |9: INFO[32m start face test[0m
+2025-09-19 00:07:29,436 test animation __init__ |168: INFO[32m Aucune manette détectée.[0m
+2025-09-19 00:17:43,909 tests FileManagerTests |9: INFO[32m start face test[0m
+2025-09-19 00:17:44,436 test animation __init__ |174: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-19 00:17:44,436 test animation __init__ |178: INFO[32m Profil manette: xbox[0m
+2025-09-19 00:19:58,858 tests FileManagerTests |9: INFO[32m start face test[0m
+2025-09-19 00:19:59,292 test animation __init__ |174: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-19 00:19:59,292 test animation __init__ |178: INFO[32m Profil manette: xbox[0m
+2025-09-19 22:29:05,105 tests FileManagerTests |9: INFO[32m start face test[0m
+2025-09-19 22:29:05,193 test animation __init__ |168: INFO[32m Aucune manette détectée.[0m
+2025-09-19 22:29:14,742 tests FileManagerTests |9: INFO[32m start face test[0m
+2025-09-19 22:29:14,826 test animation __init__ |168: INFO[32m Aucune manette détectée.[0m
+2025-09-19 23:22:42,445 tests test_file_manager FileManagerTests |9: INFO[32m start face test[0m
+2025-09-19 23:22:42,828 test animation USBGamepad __init__ |183: INFO[32m Manette détectée : SHANWAN Android Gamepad[0m
+2025-09-19 23:22:42,828 test animation USBGamepad __init__ |187: INFO[32m Profil manette: xbox[0m

@@ -1,0 +1,60 @@
+services:
+  dadou-control:
+    #container_name: dadou-controller-container
+    container_name: ${CONTAINER_NAME:-dadou-controller-container}
+    image: dadouuu/dadou-controller-arm:local
+    build:
+      context: ../../..
+      dockerfile: conf/docker/arm/Dockerfile-arm
+    # Supervision par le démon Docker (même assainissement que le robot,
+    # 2026-07-11) : le service systemd n'est qu'un interrupteur up -d / stop.
+    restart: unless-stopped
+    environment:
+      - DISPLAY=:0
+      - QT_X11_NO_MITSHM=1
+      # PAS de XAUTHORITY : pointer vers un fichier inexistant fait échouer
+      # toute connexion X. Sans la variable, Xlib retombe sur /root/.Xauthority
+      # (monté ci-dessous depuis ~/.Xauthority de pi : cookie valide).
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
+      # Profil du boîtier de faders (controller/input/sliders_mapping.py) :
+      # "default" (cou / roues, historique) ou "repetition" (fader 1 = vitesse du
+      # cheminement de Didier en salle de répétition simulée — à utiliser AVEC
+      # ROS_DOMAIN_ID=43, jamais seul sur le vrai robot).
+      - SLIDERS_PROFILE=${SLIDERS_PROFILE:-default}
+    #ports:
+    #  - "80:80"
+    #  - "8000-9000:8000-9000"
+    network_mode: "host"
+
+    volumes:
+      - /dev:/dev
+      - /proc:/proc
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      # Chemin ABSOLU obligatoire : compose est lancé via sudo, donc "~" se
+      # serait étendu en /root (inexistant -> docker crée un répertoire vide
+      # à la place du cookie et toute connexion X échoue).
+      - /home/pi/.Xauthority:/root/.Xauthority
+      - ../../../conf:/home/ros2_ws/src/controller/conf
+      - ../../../controller:/home/ros2_ws/src/controller/controller
+      - ../../../dadou_utils_ros:/home/ros2_ws/src/controller/dadou_utils_ros
+      - ../../../json:/home/ros2_ws/src/controller/json
+      - ../../../medias:/home/ros2_ws/src/controller/medias
+      - ../../../conf/ros2_dependencies/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      #- ../../../../robot_bringup:/home/ros2_ws/src/robot_bringup
+      - ../../../../../log:/home/ros2_ws/log
+      - ../../../../../build:/home/ros2_ws/build
+      - ../../../../../install:/home/ros2_ws/install
+      #- ../../../../../python-lib:/home/ros2_ws/python-lib
+      #- ../../../../../python-lib/site-packages:/usr/local/lib/python3.10/site-packages
+      #- ../../../../../python-lib/local:/usr/local/lib/python3.10/dist-packages
+
+      #- /usr/include/linux/spi:/usr/include/linux/spi/
+      #- /usr/lib/modules:/usr/lib/modules
+      #- /usr/lib/python3/dist-packages:/usr/lib/python3/dist-packages
+
+      #- /home/pi/ros2_ws/python-lib:/usr/local/lib/python3.10/dist-packages
+      #fix spidev missing after restart /usr/local/lib/python3.10/dist-packages
+      #- /home/pi/ros2_ws/python-lib:/usr/local/lib/python3.10/dist-packages
+    #  - /dev/null:/folder/fileToBeExcluded
+    privileged: true
+

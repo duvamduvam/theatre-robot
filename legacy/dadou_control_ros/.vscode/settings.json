@@ -1,0 +1,14 @@
+{
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./controller/tests",
+        "-p",
+        "test_*.py",
+        "-t",
+        "."
+    ],
+    "python.testing.cwd": "${workspaceFolder}",
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true
+}

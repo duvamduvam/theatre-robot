@@ -1,0 +1,157 @@
+{
+    "comment" : " with wheels config : 27500 L and R",
+    "keys": "H1",
+    "loop": true,
+    "duration": 180000,
+    "audios": [
+        [
+            0.04,
+           "didier20/mais-tu-me-drogue.mp3"
+        ],
+        [
+            0.15,
+           "didier20/rire-drogue.mp3"
+        ],
+        [
+          0.29,
+          "didier20/alors-les-petits-poulets.mp3"
+        ],
+        [
+            0.40,
+           "didier20/jim.mp3"
+        ],
+        [
+           0.55,
+          "didier20/tu-m-en-redonne-aigue.mp3"
+        ],
+        [
+            0.65,
+           "didier20/bordel-de-cul.mp3"
+        ],
+        [
+            0.85,
+            "didier20/ouha-mais le chili.mp3"
+        ]
+
+    ],
+    "faces": [
+        [
+            0,
+           "upgrade"
+        ],
+        [
+            0.04,
+           "speak loop"
+        ],
+        [
+            0.07,
+           "upgrade"
+        ],
+        [
+            0.15,
+           "speak loop"
+        ],
+        [
+            0.19,
+           "upgrade"
+        ],
+        [
+            0.24,
+           "sexy"
+        ],
+        [
+            0.4,
+           "speak loop"
+        ],
+        [
+            0.44,
+           "upgrade"
+        ],
+        [
+            0.55,
+           "speak loop"
+        ],
+        [
+            0.59,
+           "upgrade"
+        ],
+        [
+            0.66,
+           "speak loop"
+        ],
+        [
+            0.72,
+           "upgrade"
+        ],
+        [
+            0.85,
+           "speak loop"
+        ],
+        [
+            0.95,
+           "default"
+        ]
+    ],
+    "robot_lights": [
+        [
+            0,
+           "trip"
+        ],
+        [
+            0.99,
+           "default"
+        ]
+    ],
+    "neck": [
+        [0.1,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max":1000}
+        ],
+        [0.8, 0.5]
+    ],
+    "left eye": [
+        [0.07,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max":1000}
+        ],
+        [0.8, 0.5]
+    ],
+    "right eye": [
+        [0.07,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max": 1000}
+        ],
+        [0.8, 0.5]
+    ],
+    "left arm": [
+        [0.07,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max": 1000}
+        ],
+        [0.8, 99]
+    ],
+    "right arm": [
+        [0.1,
+          {"mode": "random", "random move min": 1,
+            "random move max": 99, "random time min": 500, "random time max": 1000}
+        ],
+        [0.8, 99]
+    ],
+    "wheels": [
+        [
+            0.1,[0.2,-0.2]
+        ],
+        [
+            0.4,[-0.2,0.2]
+        ],
+        [
+            0.71,[-0.4,-0.4]
+        ],
+        [
+            0.73,[0.4,0.4]
+        ],
+        [
+            0.75 ,[0,0]
+        ]
+    ]
+}

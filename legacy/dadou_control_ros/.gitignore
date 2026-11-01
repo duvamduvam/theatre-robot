@@ -1,0 +1,14 @@
+# .gitignore
+chatgpt-key.txt
+response.mp3
+
+venv/
+logs/
+.idea/
+secret
+/dadou_utils_ros.tar.gz
+/controller/change
+
+__pycache__/
+*.pyc
+test_logs/

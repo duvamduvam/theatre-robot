@@ -1,0 +1,192 @@
+{
+    "appel eternel": {
+        "animation": "appel-eternel-life2"
+    },
+    "demarrage eternel": {
+        "audio": "eternel-short/1-demarrage.mp3",
+        "animation": "move-speak",
+        "duration": 6000
+    },
+    "c'est quoi ce merdier": {
+        "animation": "bug-debut"
+    },
+     "pas gagné": {
+        "audio": "eternel-short/3-c-est-pas-gagne.mp3",
+        "animation": "move-speak",
+        "duration": 3000
+    },
+    "Vas y commence ": {
+        "audio": "eternel-short/4-commence.mp3",
+        "animation": "move-speak",
+        "duration": 2000
+    },
+    "mais lance la présentation": {
+        "audio": "eternel-short/5-lance-presentation.mp3",
+        "animation": "move-speak",
+        "duration": 2000
+    },
+    "le texte qu'on a repété": {
+        "audio": "eternel-short/6-le-texte.mp3",
+        "animation": "move-speak",
+        "duration": 2000
+    },
+    "continue couillon": {
+        "audio": "eternel-short/7-continue.mp3",
+        "animation": "move-speak",
+        "duration": 2000
+    },
+    "La cagnotte": {
+        "audio": "eternel-short/8-la-cagnotte.mp3",
+        "animation": "move-speak",
+        "duration": 3000
+    },
+    "séquence émotion": {
+        "audio": "eternel-short/9-emotion.mp3",
+        "animation": "move-speak",
+        "duration": 3000
+    },
+    "pleure": {
+        "audio": "eternel-short/10-pleure.mp3",
+        "animation": "move-speak",
+        "duration": 2000
+    },
+    "relance patate": {
+        "audio": "eternel-short/11-relance-patate.mp3",
+        "animation": "move-speak",
+        "duration": 2000
+    },
+    "présentation technique": {
+        "audio": "eternel-short/12-presentation-technique.mp3",
+        "animation": "move-speak",
+        "duration": 2000
+    },
+    "cloud abrutie": {
+        "audio": "eternel-short/13-cloud-couillon.mp3",
+        "animation": "move-speak",
+        "duration": 1000
+    },
+    "le cloud": {
+        "audio": "eternel-short/14-cloud.mp3",
+        "animation": "move-speak",
+        "duration": 1000
+    },
+    "évite les blagues": {
+         "audio": "eternel-short/15-evite-les-balgues.mp3",
+        "animation": "move-speak",
+        "duration": 2000
+    },
+    "qu'est ce je viens de dire": {
+        "audio": "eternel-short/16-qu-est-ce-je-viens-de-dire.mp3",
+        "animation": "move-speak",
+        "duration": 5000
+    },
+    "65 milliards": {
+        "audio": "eternel-short/17-65-milliard.mp3",
+        "animation": "move-speak",
+        "duration": 5000
+    },
+    "fonctionnement neuronnes": {
+        "audio": "eternel-short/18-comment-fonctionne-les-neuronnes.mp3",
+        "animation": "move-speak",
+        "duration": 3000
+    },
+    "circulation l'information": {
+        "audio": "eternel-short/19-explique-circulation-information.mp3",
+        "animation": "move-speak",
+        "duration": 3000
+    },
+    "Arrete d'engueuler le public": {
+        "audio": "eternel-short/20-engule-pas-public.mp3",
+        "animation": "move-speak",
+        "duration": 7000
+    },
+    "Fait mieux": {
+        "audio": "eternel-short/21-bah-fait-mieux.mp3",
+        "animation": "move-speak",
+        "duration": 7000
+    },
+    "Corps bio": {
+        "audio": "eternel-short/22-corps-bio.mp3",
+        "animation": "move-speak",
+        "duration": 7000
+    },
+    "casque": {
+        "audio": "eternel-short/23-le-casque.mp3",
+        "animation": "move-speak",
+        "duration": 7000
+    },
+    "arrête ton char": {
+        "audio": "eternel-short/24-arrete-ton-char.mp3",
+        "animation": "move-speak",
+        "duration": 4000
+    },
+    "qui commande la": {
+        "audio": "eternel-short/25-qui-commande.mp3",
+        "animation": "move-speak",
+        "duration": 6000
+    },
+    "activation_transfer": {
+        "duration": 24000,
+        "audio": "didier20/activation_scan.mp3",
+        "face": "upgrade",
+        "lights_helmet": "scan",
+        "robot_lights": "scan"
+    },
+    "transfer impossible": {
+        "duration": 32000                                                                                                                                                                                                                                                                                                       ,
+        "audio": "didier20/activation_transfer.mp3",
+        "face": "upgrade",
+        "lights_helmet": "transfer",
+        "robot_lights": "transfer"
+    },
+    "trucs pas trop net": {
+        "audio": "eternel-short/26-pas-net-internet.mp3",
+        "animation": "move-speak",
+        "duration": 5000
+    },
+    "je controle plus rien": {
+        "animation": "control-pas"
+    },
+    "m'ouvre pas": {
+        "audio": "eternel-short/28-m-ouvre-pas.mp3",
+        "animation": "move-speak",
+        "duration": 4000
+    },
+    "nazi": {
+        "animation": "nazi"
+    },
+    "j'en ai marre": {
+        "audio": "eternel-short/30-j-en-est-marre.mp3",
+        "animation": "move-speak",
+        "duration": 3000
+    },
+    "thune dans la rue": {
+        "audio": "eternel-short/31-thunes.mp3",
+        "animation": "move-speak",
+        "duration": 4000
+    },
+    "bête de foire": {
+        "audio": "eternel-short/32-bete-de-foire.mp3",
+        "animation": "devil",
+        "duration": 4000
+    },
+    "perdre boutot": {
+        "audio": "eternel-short/33-prendre-vos-boulots.mp3",
+        "face" : "speak red",
+        "animation": "little-move3",
+        "robot_lights" : "transfer",
+        "duration": 10000
+    },
+    "la chaire a robot": {
+        "audio": "eternel-short/34-chaire-de-robots.mp3",
+        "face" : "speak red",
+        "animation": "little-move3",
+        "robot_lights" : "devil",
+        "duration": 4000
+    },
+    "off": {
+        "audio": "eternel-short/34-chaire-de-robots.mp3",
+        "face" : "off",
+        "robot_lights" : "off"
+    }
+}
