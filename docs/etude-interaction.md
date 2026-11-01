@@ -65,6 +65,14 @@ Conséquence immédiate sur le cahier des charges de l'IA — il **rétrécit** 
 
 ---
 
+> **RE-TRANCHÉ le 2026-11-02** (étude [`etude-autonomie-improvisation.md`](etude-autonomie-improvisation.md), §7-8 q.10) :
+> « Didier n'est pas un robot autonome » devient **« Didier est un instrument qui joue seul
+> dans le cadre que David a écrit »** — David compose (répertoire, règles, mission), Didier
+> choisit et exécute dans une enveloppe sûre, David garde veto, fil et console macro. Le
+> tableau ci-dessus reste vrai pour la PAROLE ; pour le CORPS, « décider seul où aller » revient
+> à l'échelle du mètre (approcher, se détourner, un pas), la mission écrite gardant l'échelle de
+> la rue. Le mouvement autonome est désormais une exigence (« la clé minimum »).
+
 ## 2. Ce qui est déjà tranché — ne pas re-trancher
 
 **Dans la note de création (dossier du spectacle, 27/08)** :

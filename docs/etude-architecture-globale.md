@@ -689,6 +689,21 @@ composer** (séquences, voix, persona) en parallèle : **le chantier ne doit jam
 bloquer plus de quelques heures** — d'où la contrainte « la sim marche toujours » et le
 découpage en lots indépendamment livrables. Il ne code pas.
 
+### 5.12 Ajout du 02/11 — l'autonomie entre dans l'arborescence
+
+Décidé par David le 02/11 (étude [`etude-autonomie-improvisation.md`](etude-autonomie-improvisation.md)
+§8) : trois packages de plus côté robot, génération 2, dans `packages/` — **`didier_corps_sur`**
+(Pi 4 : lidar 2D + enveloppe déterministe qui filtre TOUTES les entrées autonomes avant
+`twist_mux`, battement de cœur de la télécommande, relais e-stop W1), **`didier_perception`**
+(Pi 5 : pistes de personnes + distance lidar + direction de voix → état du monde, contrat
+testé), **`didier_jeu`** (sélecteur py_trees + score, répertoire depuis `data/`, journal
+« pourquoi »). Contrats correspondants dans `dadou_contrats` ; vocabulaire de déplacements dans
+`data/` ; lidar simulé et passants scriptés dans `dadou_sim`. **La télécommande L4 a deux modes
+nommés** : MANUEL (Twist direct, homme-mort tenu — la décision du 01/11 tient) et CONSOLE
+(ordres macro + battement de cœur). La règle « chemin roues intouché avant L4 » admet une
+exception nommée : `didier_corps_sur` (A0), validé sim + protocole caméra étendu d'une épreuve
+d'obstacle, et seulement après le premier roulage au sol télécommande en main.
+
 ## 6. Lots — ordre DÉCIDÉ le 01/11 (fondations d'abord, télécommande en dernier)
 
 *Pourquoi cet ordre : la télécommande dépend du catalogue (L1), de la sim (L2) et du

@@ -1,8 +1,9 @@
 # Autonomie et improvisation — ce que la recherche a fait, ce que Didier peut en faire
 
-*Ouverte le 2026-11-01 au soir, à la demande de David. Statut : **étude écrite, relue de façon
-adversariale (Opus, 22 points dont 7 bloquants, tous repris ci-dessous), rien d'acté** : David
-doit trancher les dix questions du §8. Sources : quatre collectes web du 01/11 (théâtre et
+*Ouverte le 2026-11-01 au soir, à la demande de David. Statut : **DÉCIDÉE le 2026-11-02** —
+étude relue de façon adversariale (Opus, 22 points dont 7 bloquants, tous repris), puis les
+**dix questions du §8 tranchées par David** (toutes dans le sens recommandé) ; les lots du §9
+sont actés dans cet ordre. Ne pas re-trancher sans fait nouveau. Sources : quatre collectes web du 01/11 (théâtre et
 improvisation ; architectures de décision ; perception spatiale à bas coût ; co-performance et
 contrôle partagé), chaque fait avec son origine ; ce qui est de seconde main est marqué
 « (2ᵉ main) » ; ce qui n'a pas été trouvé est au §10.*
@@ -336,7 +337,22 @@ pour la télécommande USB devient le **signal de vie** du §3.1 — à écrire 
 
 Ce n'est pas une note de bas de page : c'est la question 10 du §8.
 
-## 8. Ce que David doit trancher (rien n'est acté)
+## 8. Les dix décisions — TRANCHÉES par David le 2026-11-02
+
+| # | Question | Décision |
+|---|---|---|
+| 1 | Priorité | **S'insère** : la sim démarre sans attendre ; la maison après le premier roulage au sol télécommande en main (priorité 1 inchangée) ; la rue après L0-L2 + préalables |
+| 2 | Préalables | **W1 (source e-stop) avant la rue ; odométrie avant A4** — pas bloquants en sim ni à la maison |
+| 3 | Signal de vie | **Télécommande présente** (battement de cœur ; muette > 1 s = zéro et verrou) ; l'homme-mort TENU reste pour le manuel |
+| 4 | Capteur | **Lidar 2D 360° sur le Pi 4** (modèle/prix à lire à l'achat) |
+| 5 | Le 31/10 | **Gardé, variante « réclame ET amorce »** ; la pression de route ne monte qu'après SES arrêts, propose, ne coupe pas |
+| 6 | Le corps | **Un seul décideur : le sélecteur** ; bouche et metteur en scène déposent des intentions (câblage de M1-M4 à changer) |
+| 7 | Sélecteur | **Hybride py_trees (permis/interdit) + score (variété)**, hystérésis et engagement obligatoires |
+| 8 | Télécommande L4 | **Deux modes nommés** : MANUEL (Twist direct, homme-mort tenu — la décision L4 tient) / CONSOLE (ordres macro + battement de cœur), état visible |
+| 9 | Désigner | **Voix + regard de Didier** : « lui » = la piste qu'il regarde, « là » = sa direction de regard ; correction en jeu (« non, l'autre ») |
+| 10 | Le 13/09 | **Re-tranché** : « Didier est un instrument qui joue seul dans le cadre que David a écrit » |
+
+*Formulation d'origine des questions, conservée pour l'historique :*
 
 1. **Priorité** : l'autonomie passe-t-elle devant les priorités 0-1 (chat_node V2 réel, test
    au sol télécommande en main) et devant l'ordre L0-L5 du mono-dépôt ? Ou s'y **insère**-t-elle
@@ -359,7 +375,7 @@ Ce n'est pas une note de bas de page : c'est la question 10 du §8.
    « c'est moi » seulement.)
 10. **Re-tranche-t-on le 13/09** (« pas un robot autonome ») dans le sens du §7 ?
 
-## 9. Lots proposés (après les réponses du §8)
+## 9. Lots — ACTÉS le 02/11 dans cet ordre (A-préalables peut chevaucher A0 ; la sim démarre tout de suite)
 
 | Lot | Contenu | Porte de sortie (mesurable) |
 |---|---|---|
@@ -397,3 +413,7 @@ la conclusion « curaté > autonome » d'Improbotics.
 - **2026-11-01 nuit (suite)** — David : « on va commencer en grande partie en sim et dans ma
   maison, donc aucun risque » → §3.4 : trois terrains, les préalables §3.1 deviennent des
   préalables de **rue** ; le travail sim peut démarrer sans attendre.
+- **2026-11-02** — **Les dix questions tranchées par David**, toutes dans le sens recommandé
+  (§8). Étude passée en DÉCIDÉE ; lots A-préalables → A0 → A+ → A1 → A2 → A3 → A4 actés ;
+  conséquences reportées dans `etude-interaction.md` §1 (re-tranchage du 13/09),
+  `etude-architecture-globale.md` (3 packages, L4 à deux modes) et `chantiers.md`.
