@@ -1,0 +1,10 @@
+{
+  "keys": "H8",
+  "duration": 4000,
+  "faces": [[0, "parle"]],
+  "neck":      [[0, {"mode": "random", "random move min": 35, "random move max": 80, "random time min": 500, "random time max": 1000}]],
+  "left_eye":  [[0, {"mode": "random", "random move min": 15, "random move max": 90, "random time min": 500, "random time max": 1000}]],
+  "right_eye": [[0, {"mode": "random", "random move min": 15, "random move max": 90, "random time min": 500, "random time max": 1000}]],
+  "left_arm":  [[0, {"mode": "random", "random move min": 60, "random move max": 95, "random time min": 500, "random time max": 1000}]],
+  "right_arm": [[0, {"mode": "random", "random move min": 60, "random move max": 95, "random time min": 500, "random time max": 1000}]]
+}

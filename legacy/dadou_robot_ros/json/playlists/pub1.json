@@ -1,0 +1,28 @@
+{
+    "voulez vous finir": {
+        "audio": "pub1/voulez-vous-finir-votre-vie.mp3",
+        "animation": "move-speak",
+                "duration": 5000
+    },
+    "oui après des années": {
+        "audio": "pub1/oui-apres-des-annees.mp3",
+        "animation": "move-speak",
+                "duration": 9000
+    },
+    "animation left eye": {
+        "animation": "eye-left"
+    },
+    "après avoir transféré": {
+        "audio": "pub1/apres-avoir-transfere.mp3",
+        "animation": "move-speak",
+                "duration": 7000
+    },
+    "n'hésitez plus": {
+      "audio": "pub1/n-hesitez-plus.mp3",
+        "animation": "move-speak",
+        "duration": 2000
+    },
+    "animation both eyes": {
+        "animation": "louche"
+    }
+}

@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  github-runner:
+    image: ghcr.io/actions/actions-runner:latest
+    restart: unless-stopped
+    environment:
+      REPO_URL: "${REPO_URL}"                          # owner/repo complet
+      RUNNER_NAME: "${RUNNER_NAME:-ci-runner}"         # nom du runner
+      RUNNER_TOKEN: "${RUNNER_TOKEN}"                  # token d'enregistrement GitHub (valide ~1h)
+      RUNNER_WORKDIR: "${RUNNER_WORKDIR:-/home/runner/_work}"
+      LABELS: "${LABELS:-self-hosted,ci}"
+      RUNNER_ALLOW_RUNASROOT: "${RUNNER_ALLOW_RUNASROOT:-true}"
+    volumes:
+      - ./runner-data:/home/runner                    # persiste la config du runner
+      - /var/run/docker.sock:/var/run/docker.sock     # optionnel : permettre d'utiliser Docker dans les jobs
+    user: "0:0"                                       # nécessaire si montage de la socket docker

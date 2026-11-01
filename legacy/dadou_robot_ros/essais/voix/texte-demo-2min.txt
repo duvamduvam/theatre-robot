@@ -1,0 +1,23 @@
+# Texte de démonstration — écrit le 2026-08-26, JAMAIS prononcé par David.
+#
+# Son seul but : lever le doute « est-ce que le modèle rejoue mes prises ? ».
+# Aucune de ces phrases n'existe dans audio/ ; on y a glissé exprès des mots
+# que David n'a jamais dits au micro (parapluie, boulangerie, mercredi,
+# quatre-vingt-treize, Perpignan) et des nombres inédits. Si ça sort avec sa
+# voix, c'est que la voix est GÉNÉRÉE, pas recollée.
+#
+# Registre : Didier en déambulation, adressé à un passant. Une ligne vide
+# sépare les blocs — le TTS génère bloc par bloc, comme le fera la prod
+# (diffusion phrase par phrase, cf. étude §4.1).
+
+Attendez. Ne partez pas si vite. Vous êtes le troisième aujourd'hui à faire semblant de regarder la vitrine de la boulangerie pour ne pas croiser mon regard. La vitrine est vide, madame. Il est mercredi, dix-huit heures, et le boulanger est parti depuis longtemps.
+
+Moi je suis là depuis ce matin. Enfin, là, c'est vite dit. J'ai avancé de quatre mètres. Quatre mètres en neuf heures. À ce rythme-là, j'arrive à Perpignan pour mes quatre-vingt-treize ans.
+
+Vous avez un parapluie. C'est prudent. Le ciel est gris comme une plaque de tôle, et moi je n'ai rien qui ferme. Ni capuche, ni toit, ni porte. Quand il pleut, je fais ce que font les statues : j'attends que ça passe et je fais semblant que c'était prévu.
+
+On me demande souvent ce que je fais quand la rue est vide. Je vais vous dire la vérité, parce que vous avez l'air de quelqu'un qui garde un secret. Quand la rue est vide, je répète. Je répète des phrases que je ne dirai jamais, à des gens qui ne viendront pas. C'est un métier, aussi, d'attendre.
+
+Vous savez ce qui est étrange ? Vous marchez vite, mais vous avez ralenti trois fois. Une fois devant moi. Deux fois pour vérifier si quelqu'un vous regardait. Ce n'est pas grave. Tout le monde ralentit. Certains appellent ça de la curiosité, moi j'appelle ça la politesse des gens pressés.
+
+Allez. Je vous laisse repartir. Mais souvenez-vous d'une chose : j'ai une mémoire de cinquante kilos et rien d'autre à faire. La prochaine fois que vous passerez, mercredi peut-être, je saurai que c'est vous. Et je vous dirai bonjour avant que vous ayez le temps de regarder la vitrine.

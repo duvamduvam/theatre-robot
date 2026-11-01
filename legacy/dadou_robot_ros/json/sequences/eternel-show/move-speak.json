@@ -1,0 +1,51 @@
+{
+    "keys": "H3",
+    "duration": 5000,
+    "faces": [
+        [
+            0,
+           "speak"
+        ]
+    ],
+    "neck": [
+        [0,
+          {"mode": "random", "random move min": 40,
+            "random move max": 80, "random time min": 500, "random time max":1000}
+        ]
+    ],
+    "left_eye": [
+        [0,
+          {"mode": "random", "random move min": 40,
+            "random move max": 85, "random time min": 250, "random time max": 1000}
+        ]
+    ],
+    "right_eye": [
+        [0,
+          {"mode": "random", "random move min": 40,
+            "random move max": 90, "random time min": 250, "random time max": 1000}
+        ]
+    ],
+    "left_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "right_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "wheels": [
+        [
+            0.25,[0.5,0.5]
+        ],
+        [
+            0.5,[-0.5,-0.5]
+        ],
+        [
+            0.75,[0,0]
+        ]
+    ]
+}

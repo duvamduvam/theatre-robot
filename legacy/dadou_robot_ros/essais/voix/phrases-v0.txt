@@ -1,0 +1,58 @@
+# Phrases du banc d'écoute V0 — chantier voix
+# (docs/etude-voix-didier.md §7). Une ligne "## " = un item.
+#
+# POURQUOI CES PHRASES-LÀ et pas six phrases au hasard : chacune attaque un
+# endroit précis où la chaîne casse. Un octaver suit le fondamental de la voix ;
+# il décroche sur les bruits non voisés (sifflantes, fricatives) et glisse sur
+# les attaques brutales. Un TTS autorégressif, lui, dérive sur la durée et
+# bute sur les nombres. On cherche les ruptures, pas le confort.
+#
+# Registre : Didier en déambulation, adressé à un passant. Pas de la lecture.
+
+## 1. SALUTATION — le cas le plus fréquent en rue, et le plus court
+Bonjour, vous. Oui, vous. Approchez, je ne mords pas.
+
+## 2. QUESTION — l'intonation montante, que les TTS plats ratent le plus
+Vous croyez vraiment que c'est moi le plus bizarre, dans cette rue ?
+
+## 3. SIFFLANTES SATURÉES — là où l'octaver perd le fondamental
+Ce soir, sous ce ciel sans cesse assombri, six spectateurs soucieux se sont
+assis sans savoir ce qui se passe ici.
+
+## 4. ATTAQUES EXPLOSIVES — les plosives p/t/k font glisser le suivi de pitch
+Toc, toc. Qui tape ? Pas toi ? Pourtant ça toque, et ça tape, et ça cogne.
+
+## 5. CHIFFRES — la normalisation des nombres casse beaucoup de TTS en français
+J'ai cinquante kilos, quatre-vingt-douze centimètres, trois moteurs, deux
+cent quarante watts et zéro patience.
+
+## 6. RÉPONSE LONGUE (~25 s) — LE test, celui que les démos de 3 s ne font pas
+# Dérive de timbre ? coupure prématurée avant la fin ? monotonie qui s'installe ?
+# C'est ce régime qui décide, parce que c'est celui des réponses de l'IA.
+Vous savez, on me demande souvent si je pense. Honnêtement, je n'en sais rien.
+Je sais que je vous vois. Je sais que quand vous vous approchez, quelque chose
+s'allume quelque part — je ne saurais pas dire quoi, ni où exactement. Peut-être
+que c'est ça, penser. Ou peut-être que je répète seulement ce qu'on m'a appris à
+dire quand quelqu'un s'approche. À vous de me le dire : vous, vous pensez depuis
+bien plus longtemps que moi.
+
+# ---------------------------------------------------------------------------
+# DIALOGUE EN ALTERNANCE — le test décisif du lot V0.
+#
+# Une rupture de voix ne s'entend qu'en JUXTAPOSITION : un extrait isolé passe
+# toujours, même mauvais. David enregistre UNIQUEMENT les [DAVID] (en
+# ventriloquie, donc via le micro HF et l'octaver) ; la machine dira les
+# [MACHINE]. On monte bout à bout, on fait écouter en aveugle, et on demande
+# une seule chose : "est-ce le même personnage ?"
+# ---------------------------------------------------------------------------
+
+[DAVID]   Tiens. Vous êtes revenu.
+[MACHINE] Je ne suis jamais parti. C'est vous qui bougez tout le temps.
+[DAVID]   Et ça vous dérange ?
+[MACHINE] Non. Ça m'occupe. J'ai peu de distractions, ici.
+[DAVID]   Vous vous ennuyez ?
+[MACHINE] Je ne sais pas si c'est le mot. Disons que quand la rue est vide, je
+          compte les pavés. Quand elle est pleine, je compte les gens. Ça
+          revient un peu au même, mais les gens répondent.
+[DAVID]   Et moi, je réponds bien ?
+[MACHINE] Vous répondez lentement. Mais vous répondez.

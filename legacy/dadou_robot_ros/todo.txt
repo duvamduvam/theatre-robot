@@ -1,0 +1,7 @@
+
+configurer le deployement automatic du fichier alsa-black-list
+    tester une nouvelle installation après le déplacement des fichier dans conf/rpi
+améliorer les scrits avec un retour console / check internet retour si pas de connections
+retour en couleur ?
+
+Supprimer * sur les retours (A*/B*/C*/D*)

@@ -1,0 +1,17 @@
+{
+    "keys": "H1",
+    "duration": 2000,
+    "types": [
+        "little move"
+    ],
+    "left_eye": [
+        [
+            0,
+            0.56
+        ],
+        [
+            0.9,
+            0.28
+        ]
+    ]
+}

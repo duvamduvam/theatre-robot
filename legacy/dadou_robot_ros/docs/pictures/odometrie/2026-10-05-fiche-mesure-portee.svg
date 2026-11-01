@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fiche d'atelier : mesure ① du chantier odométrie (portée du LJ12A3 sur tête inox A2-70).
+     Conçue pour l'imprimante thermique A4 203 dpi : noir pur, traits ≥ 0,3 mm, texte ≥ 8 pt.
+     Seuils de décision recopiés de docs/etude-odometrie.md §4 « Quatrième piège » — les y changer d'abord. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 210 297"
+     font-family="DejaVu Sans, Arial, sans-serif" fill="#000" stroke="none">
+  <rect width="210" height="297" fill="#fff"/>
+
+  <!-- En-tête -->
+  <text x="12" y="16" font-size="5.4" font-weight="bold">Odométrie ① — portée du LJ12A3 sur tête inox</text>
+  <text x="12" y="23" font-size="3.4">Question : la tête M8 A2-70 montée sur le disque est-elle vue à 2,5 mm (l'entrefer prévu) ?</text>
+  <text x="198" y="16" font-size="3.4" text-anchor="end">Date : __________</text>
+  <line x1="12" y1="27" x2="198" y2="27" stroke="#000" stroke-width="0.5"/>
+
+  <!-- 1. Câblage -->
+  <text x="12" y="36" font-size="4.4" font-weight="bold">1. Câblage (capteur seul, aucune carte)</text>
+  <rect x="16" y="44" width="40" height="30" fill="none" stroke="#000" stroke-width="0.6"/>
+  <text x="36" y="55" font-size="3.6" text-anchor="middle" font-weight="bold">Alim 12 V</text>
+  <text x="36" y="61" font-size="3" text-anchor="middle">limitée ~100 mA</text>
+  <text x="52" y="50" font-size="4" text-anchor="middle">+</text>
+  <text x="52" y="71" font-size="4" text-anchor="middle">−</text>
+  <!-- capteur M12 vu de dessus -->
+  <rect x="140" y="50" width="44" height="18" fill="none" stroke="#000" stroke-width="0.6"/>
+  <line x1="184" y1="50" x2="184" y2="68" stroke="#000" stroke-width="1.6"/>
+  <text x="162" y="61" font-size="3.4" text-anchor="middle">LJ12A3-4-Z/BX</text>
+  <text x="186" y="61" font-size="3" text-anchor="start">face</text>
+  <circle cx="145" cy="54" r="1.4" fill="none" stroke="#000" stroke-width="0.4"/>
+  <text x="145" y="47" font-size="2.8" text-anchor="middle">LED témoin</text>
+  <!-- fils -->
+  <path d="M56 49 H120 V54 H140" fill="none" stroke="#000" stroke-width="0.5"/>
+  <text x="88" y="47" font-size="3.2" text-anchor="middle">BRUN → +12 V</text>
+  <path d="M56 69 H120 V64 H140" fill="none" stroke="#000" stroke-width="0.5"/>
+  <text x="88" y="73.5" font-size="3.2" text-anchor="middle">BLEU → 0 V</text>
+  <path d="M140 59 H128" fill="none" stroke="#000" stroke-width="0.5" stroke-dasharray="1.2 0.8"/>
+  <text x="126" y="60" font-size="3.2" text-anchor="end">NOIR : en l'air, bout isolé</text>
+  <text x="16" y="82" font-size="3">La LED du capteur suffit comme témoin. Sortie NPN à collecteur ouvert : laisser le noir libre est sans risque,</text>
+  <text x="16" y="86.5" font-size="3">mais ne JAMAIS le relier au +12 V (court-circuit du transistor de sortie dès la détection).</text>
+
+  <!-- 2. Vue de côté -->
+  <text x="12" y="98" font-size="4.4" font-weight="bold">2. Montage de la mesure (vue de côté)</text>
+  <!-- disque -->
+  <rect x="20" y="104" width="10" height="50" fill="none" stroke="#000" stroke-width="0.6"/>
+  <line x1="20" y1="110" x2="30" y2="104" stroke="#000" stroke-width="0.3"/>
+  <line x1="20" y1="122" x2="30" y2="116" stroke="#000" stroke-width="0.3"/>
+  <line x1="20" y1="134" x2="30" y2="128" stroke="#000" stroke-width="0.3"/>
+  <line x1="20" y1="146" x2="30" y2="140" stroke="#000" stroke-width="0.3"/>
+  <text x="25" y="160" font-size="3" text-anchor="middle">disque PETG</text>
+  <!-- tête de vis -->
+  <rect x="30" y="119" width="6" height="20" fill="#000"/>
+  <text x="34" y="116" font-size="3" text-anchor="start">tête A2-70</text>
+  <!-- cales -->
+  <rect x="36" y="121" width="1.2" height="16" fill="none" stroke="#000" stroke-width="0.35"/>
+  <rect x="37.2" y="121" width="1.2" height="16" fill="none" stroke="#000" stroke-width="0.35"/>
+  <rect x="38.4" y="121" width="1.2" height="16" fill="none" stroke="#000" stroke-width="0.35"/>
+  <!-- capteur -->
+  <rect x="39.6" y="121" width="56" height="16" fill="none" stroke="#000" stroke-width="0.6"/>
+  <line x1="39.6" y1="121" x2="39.6" y2="137" stroke="#000" stroke-width="1.6"/>
+  <text x="70" y="135" font-size="3.2" text-anchor="middle">capteur M12</text>
+  <line x1="95.6" y1="129" x2="112" y2="129" stroke="#000" stroke-width="0.5"/>
+  <!-- axe -->
+  <line x1="28" y1="129" x2="60" y2="129" stroke="#000" stroke-width="0.3" stroke-dasharray="3 1 0.6 1"/>
+  <!-- cote e -->
+  <line x1="36" y1="141" x2="36" y2="150" stroke="#000" stroke-width="0.3"/>
+  <line x1="39.6" y1="141" x2="39.6" y2="150" stroke="#000" stroke-width="0.3"/>
+  <path d="M36 147 L39.6 147" stroke="#000" stroke-width="0.3"/>
+  <path d="M36 147 l1.2 -0.6 v1.2 z M39.6 147 l-1.2 -0.6 v1.2 z" fill="#000"/>
+  <text x="44" y="149" font-size="3.6" font-weight="bold">e</text>
+  <!-- consignes du schéma -->
+  <text x="118" y="110" font-size="3">• e = épaisseur des cales empilées</text>
+  <text x="121" y="114.5" font-size="3">entre la TÊTE et la face du capteur</text>
+  <text x="121" y="119" font-size="3">(pas depuis le disque).</text>
+  <text x="118" y="125" font-size="3">• Axe du capteur centré sur la tête :</text>
+  <text x="121" y="129.5" font-size="3">elle a un 6 pans creux, c'est le pire cas</text>
+  <text x="121" y="134" font-size="3">et c'est CELUI qu'on veut mesurer.</text>
+  <text x="118" y="140" font-size="3">• Cales non métalliques de préférence</text>
+  <text x="121" y="144.5" font-size="3">(carton, plastique) ; en acier, elles sont</text>
+  <text x="121" y="149" font-size="3">elles-mêmes une cible et faussent tout.</text>
+  <text x="118" y="155" font-size="3">• À défaut : pied à coulisse ouvert à e.</text>
+
+  <!-- 3. Procédure -->
+  <text x="12" y="170" font-size="4.4" font-weight="bold">3. Procédure</text>
+  <text x="16" y="177" font-size="3.2">□ Test de l'aimant sur la tête (30 s) : ne colle pas = inox confirmé.</text>
+  <text x="16" y="183" font-size="3.2">a. Sans cible devant : LED ÉTEINTE. Contre la tête, sans cale : LED ALLUMÉE (sinon câblage).</text>
+  <text x="16" y="189" font-size="3.2">b. Ajouter des cales jusqu'à ce que la LED s'éteigne. Seuil = plus grand e où elle est ENCORE allumée.</text>
+  <text x="16" y="195" font-size="3.2">c. Retirer le capteur, recommencer : 3 essais. Puis 2ᵉ capteur. Puis une vis ACIER ZINGUÉE (référence).</text>
+
+  <!-- 4. Relevé -->
+  <text x="12" y="208" font-size="4.4" font-weight="bold">4. Relevé — seuil en mm</text>
+  <g stroke="#000" stroke-width="0.4" fill="none">
+    <rect x="16" y="212" width="178" height="36"/>
+    <line x1="16" y1="221" x2="194" y2="221"/>
+    <line x1="16" y1="230" x2="194" y2="230"/>
+    <line x1="16" y1="239" x2="194" y2="239"/>
+    <line x1="86" y1="212" x2="86" y2="248"/>
+    <line x1="113" y1="212" x2="113" y2="248"/>
+    <line x1="140" y1="212" x2="140" y2="248"/>
+    <line x1="167" y1="212" x2="167" y2="248"/>
+  </g>
+  <text x="19" y="218.5" font-size="3.2" font-weight="bold">Capteur / cible</text>
+  <text x="99.5" y="218.5" font-size="3.2" text-anchor="middle" font-weight="bold">essai 1</text>
+  <text x="126.5" y="218.5" font-size="3.2" text-anchor="middle" font-weight="bold">essai 2</text>
+  <text x="153.5" y="218.5" font-size="3.2" text-anchor="middle" font-weight="bold">essai 3</text>
+  <text x="180.5" y="218.5" font-size="3.2" text-anchor="middle" font-weight="bold">MINI</text>
+  <text x="19" y="227.5" font-size="3.2">Capteur 1 — tête inox montée</text>
+  <text x="19" y="236.5" font-size="3.2">Capteur 2 — tête inox montée</text>
+  <text x="19" y="245.5" font-size="3.2">Capteur 1 — vis acier zinguée</text>
+
+  <!-- 5. Verdict -->
+  <text x="12" y="260" font-size="4.4" font-weight="bold">5. Verdict (sur le MINI des têtes inox)</text>
+  <g stroke="#000" stroke-width="0.5" fill="none">
+    <rect x="16" y="265" width="56" height="18"/>
+    <rect x="77" y="265" width="56" height="18"/>
+    <rect x="138" y="265" width="56" height="18"/>
+  </g>
+  <text x="19" y="271.5" font-size="3.4" font-weight="bold">□ ≥ 3,5 mm</text>
+  <text x="19" y="278" font-size="3">on GARDE les vis inox</text>
+  <text x="80" y="271.5" font-size="3.4" font-weight="bold">□ 2,5 à 3,5 mm</text>
+  <text x="80" y="278" font-size="3">vis zinguées (pas de marge)</text>
+  <text x="141" y="271.5" font-size="3.4" font-weight="bold">□ &lt; 2,5 mm</text>
+  <text x="141" y="278" font-size="3">remplacement obligatoire</text>
+  <text x="16" y="290" font-size="2.9">Remplacement : M8×16 tête hexagonale PLEINE (DIN 933 / ISO 4017), acier zingué — tester à l'aimant au magasin.</text>
+</svg>

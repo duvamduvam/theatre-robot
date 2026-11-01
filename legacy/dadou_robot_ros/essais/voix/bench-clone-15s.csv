@@ -1,0 +1,7 @@
+phrase,mots,duree_audio_s,duree_attendue_s,ratio,calcul_s,rtf,ttfa_s,fichier
+"1. SALUTATION — le cas le plus fréquent en rue, et le plus court",9,6.96,4.09,1.7,5.18,0.744,0.319,1-salutation-le-cas-le-plus-fr-quent-en-.wav
+"2. QUESTION — l'intonation montante, que les TTS plats ratent le plus",13,3.76,5.91,0.64,2.85,0.759,0.316,2-question-l-intonation-montante-que-les.wav
+3. SIFFLANTES SATURÉES — là où l'octaver perd le fondamental,21,7.76,9.55,0.81,5.62,0.724,0.391,3-sifflantes-satur-es-l-o-l-octaver-perd.wav
+4. ATTAQUES EXPLOSIVES — les plosives p/t/k font glisser le suivi de pitch,17,9.2,7.73,1.19,6.88,0.747,0.417,4-attaques-explosives-les-plosives-p-t-k.wav
+5. CHIFFRES — la normalisation des nombres casse beaucoup de TTS en français,14,6.88,6.36,1.08,5.21,0.758,0.485,5-chiffres-la-normalisation-des-nombres-.wav
+"6. RÉPONSE LONGUE (~25 s) — LE test, celui que les démos de 3 s ne font pas",78,25.76,35.45,0.73,19.35,0.751,0.411,6-r-ponse-longue-25-s-le-test-celui-que-.wav

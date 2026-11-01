@@ -1,0 +1,42 @@
+twist_mux:
+  ros__parameters:
+    # Jazzy : twist_mux s'abonne en TwistStamped par défaut — toute notre
+    # chaîne (bridge, deadman, plugin DiffDrive gz) parle Twist simple.
+    # Migration TwistStamped à considérer avec ros2_control (Phase 2).
+    use_stamped: false
+    topics:
+      remote:
+        topic: cmd_vel_remote
+        timeout: 0.5
+        priority: 100
+      # Pilotage web (W3, partie sim) : entre la télécommande physique (100) et
+      # les animations (10). La télécommande garde donc STRUCTURELLEMENT la main
+      # sur le web ; source = web_bridge_node, publiée UNIQUEMENT si son paramètre
+      # drive_enabled est vrai (défaut false). Validé en sim ; usage sur le vrai
+      # robot conditionné au protocole caméra (plan §5-6 etude-interface-web.md).
+      web:
+        topic: cmd_vel_web
+        timeout: 0.5
+        priority: 50
+      # Suivi de personne autonome (person_follower, 2026-07-11) : SOUS la
+      # télécommande et le web (reprendre la main écrase le suivi), AU-DESSUS
+      # des animations (le suivi est un mode EXPLICITEMENT activé — topic
+      # `follow` on/off, défaut off — quand il est actif, c'est lui qui
+      # conduit, pas une piste roues de séquence). Source = person_follower,
+      # qui ne publie RIEN tant qu'il est désactivé ou sans cible.
+      # SIM-ONLY tant que : test scénique au sol (priorité 1) + protocole
+      # caméra roues hors sol (direction_sign) ne sont pas faits.
+      follow:
+        topic: cmd_vel_follow
+        timeout: 0.5
+        priority: 20
+      anim:
+        topic: cmd_vel_anim
+        timeout: 0.5
+        priority: 10
+
+    locks:
+      e_stop:
+        topic: e_stop
+        timeout: 0.0
+        priority: 255

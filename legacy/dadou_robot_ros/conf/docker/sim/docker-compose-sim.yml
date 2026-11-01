@@ -1,0 +1,108 @@
+# Simulation Gazebo sur le PC de dev.
+#
+# SÉCURITÉ : ROS_DOMAIN_ID=43 par défaut — domaine DÉDIÉ à la simulation
+# (le vrai robot est sur 42). Aucune commande envoyée à la sim ne peut
+# atteindre Didier, même allumé sur le même réseau. Pour piloter la sim
+# avec la télécommande, lancer celle-ci avec ROS_DOMAIN_ID=43.
+services:
+  dadou-sim:
+    container_name: dadou-sim-container
+    image: dadouuu/dadou-sim-x86:latest
+    build:
+      context: ../../..
+      dockerfile: conf/docker/sim/Dockerfile-sim
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-43}
+      - HEADLESS=${HEADLESS:-false}
+      # Monde Gazebo : fichier worlds/<WORLD>.sdf de robot_sim (`stage` = le
+      # plateau nu historique, `rue` = la salle de répétition, étude
+      # docs/etude-repetition-simulee.md §12, `chantiers` = des Nefs à la grue
+      # Titan grise, 20 bugs + 30 lubies, §13). Le NOM interne du monde reste
+      # `stage` dans les deux (contrat bridge LED), seul le fichier change.
+      - WORLD=${WORLD:-stage}
+      # animations_node (rejeu des séquences JSON, cf. commentaire des volumes
+      # "robot" plus bas) : OFF par défaut, comme gaze_follower -- un lancement
+      # explicite (ANIMATIONS=true docker compose ... up) est requis.
+      - ANIMATIONS=${ANIMATIONS:-false}
+      # web_bridge_node (pont HTTP/WebSocket W0, paquet robot_web) : même
+      # prudence qu'ANIMATIONS -- OFF par défaut, activation explicite
+      # (WEB=true docker compose ... up). http://localhost:8765 une fois lancé.
+      # WEB_PORT : conteneur en réseau host, une collision avec un service du
+      # PC de dev est vite arrivée (8088 était pris par Superset -- vécu).
+      - WEB=${WEB:-false}
+      - WEB_PORT=${WEB_PORT:-8765}
+      # SÉCURITÉ (SIM-ONLY) : pilotage roues du pont web. OFF par défaut. Même
+      # activé (WEB_DRIVE=true), la sim domain=43 ne peut PAS atteindre le vrai
+      # Didier (domain 42) ; et il faut EN PLUS lancer la chaîne roues à la main
+      # (drive.launch.py) dans le conteneur pour que cmd_vel_web bouge Gazebo
+      # (voir operations.md). Rien de ce lot ne s'active sur le vrai robot.
+      - WEB_DRIVE=${WEB_DRIVE:-false}
+      # SÉCURITÉ (SIM-ONLY) : boutons de répétition de la page /scene du pont web
+      # (route on/off/restart, vitesse, séance start/stop). OFF par défaut, même
+      # prudence que WEB_DRIVE (REHEARSAL=true docker compose ... up). N'a aucun
+      # effet sans WEB=true et ne LANCE rien : la route et le régisseur se lancent
+      # à la main dans le conteneur. Le pont ignore de toute façon ce drapeau hors
+      # du domaine 43 : la sim ne peut PAS commander le vrai Didier (domaine 42).
+      - REHEARSAL=${REHEARSAL:-false}
+      # face_sim (paquet "robot", aperçu web du visage LED -- les matrices LED
+      # n'ont aucun rendu dans Gazebo) : même prudence qu'ANIMATIONS/WEB, OFF
+      # par défaut. http://localhost:8766 une fois lancé (FACE=true).
+      - FACE=${FACE:-false}
+      - FACE_PORT=${FACE_PORT:-8766}
+    network_mode: "host"
+    # ipc host OBLIGATOIRE pour le banc PC (conteneur vision x86 sur la même
+    # machine, 2026-09-13) : FastDDS fait la DÉCOUVERTE en UDP mais passe les
+    # DONNÉES en mémoire partagée entre participants du même hôte — chaque
+    # conteneur ayant son /dev/shm privé, les topics se voyaient (ros2 topic
+    # list) mais aucun message ne traversait. Piège silencieux : sur le vrai
+    # robot les deux Pi sont des machines distinctes, le cas ne s'y présente
+    # jamais.
+    ipc: "host"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
+      # Accès GPU pour le rendu de la GUI Gazebo (Intel/AMD).
+      - /dev/dri:/dev/dri
+      # Sources montées par-dessus la copie de l'image : itération sans rebuild.
+      - ../../ros2_dependencies/robot_description:/home/ros2_ws/src/robot_description
+      - ../../ros2_dependencies/robot_sim:/home/ros2_ws/src/robot_sim
+      - ../../ros2_dependencies/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../ros2_dependencies/robot_drive:/home/ros2_ws/src/robot_drive
+      - ../../ros2_dependencies/robot_web:/home/ros2_ws/src/robot_web
+      # robot_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
+      # bringup du robot) — cheminement de Didier dans la rue, lancé À LA
+      # MAIN (rehearsal.launch.py), cf. son README.
+      - ../../ros2_dependencies/robot_rehearsal:/home/ros2_ws/src/robot_rehearsal
+      - ../../scripts/launch-sim-in-docker.sh:/home/ros2_ws/launch-sim-in-docker.sh
+      # V-R1 : protocole de vérification du cheminement (robot_rehearsal/README.md).
+      - ../../scripts/validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro
+      - ../../scripts/validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
+      # V-R3 : séance « chantiers » (monde chantiers, 20 bugs + 30 lubies), étude §13.8.
+      - ../../scripts/validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
+      # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
+      # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
+      - ../../../json:/home/ros2_ws/json
+
+      # --- Paquet "robot" (animations_node, param animations:=true du launch sim) ---
+      # Reproduit la structure assemblée par Ansible sur le vrai robot
+      # (setup.py/package.xml de conf/ros2/ + le module robot/ + dadou_utils_ros/
+      # + json/, tous à plat dans le même dossier ros2_ws/src/robot/, cf.
+      # dadou_utils_ros/ansible/roles/synchronise + commentaire détaillé dans
+      # Dockerfile-sim). dadou_utils_ros/ est monté ici via son VRAI chemin
+      # (dépôt frère) et non via le symlink racine dadou_robot_ros/dadou_utils_ros :
+      # ce dernier sort du contexte de build Docker (testé : COPY échoue avec
+      # "too many links"), mais un volume compose n'a pas cette restriction --
+      # c'est le SEUL endroit d'où dadou_utils_ros arrive dans le conteneur sim.
+      - ../../ros2:/home/ros2_ws/src/robot
+      - ../../../robot:/home/ros2_ws/src/robot/robot
+      - ../../../../dadou_utils_ros:/home/ros2_ws/src/robot/dadou_utils_ros
+      - ../../../json:/home/ros2_ws/src/robot/json
+      # medias/ : PNG bouche/yeux lus par Face.load_visuals() (config[MOUTH_VISUALS_PATH]/
+      # [EYE_VISUALS_PATH] = <PROJECT_DIRECTORY>/medias/visuals/{mouth,eye}, cf.
+      # robot_config.py) -- requis par face_sim (param face:=true) : sans ce
+      # volume, Face.load_visuals() lève FileNotFoundError au démarrage du node
+      # (voir le log actionnable dans face_sim_node.py).
+      - ../../../medias:/home/ros2_ws/src/robot/medias

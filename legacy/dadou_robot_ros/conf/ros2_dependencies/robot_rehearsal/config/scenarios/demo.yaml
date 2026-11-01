@@ -1,0 +1,23 @@
+# Scénario de DÉMONSTRATION du régisseur (lot R2, canal technique) : chaque
+# type de panne au moins une fois, instants FIXES (déterministe sans graine)
+# — c'est le scénario que rejoue validate-rehearsal-faults.sh (V-R2).
+# Didier part à route_speed 1.0 (0,4 m/s) ; la rue fait 60 m.
+#
+# Lecture scénique (étude §2) : batterie faible -> ralentit ; freeze -> « je
+# fais une pause syndicale » (il continue tout droit sur sa dernière consigne) ;
+# visage figé ; zero -> arrêt net ; instruction = canal joué (R3) ; kill = le
+# reboot-prétexte (respawn par le launch, puis « route on ») ; drop -> à-coups ;
+# pause route_driver -> perte de liaison -> deadman ; delay -> réagit en retard.
+name: demo
+seed: 0
+duration_s: 170
+faults:
+  - {id: batterie,    type: speed,       t: 10,  duration_s: 15, value: 0.4, restore: 1.0}
+  - {id: freeze1,     type: relay,       t: 30,  duration_s: 4,  relay: cmd_vel_follow, op: freeze}
+  - {id: visage_fige, type: pause,       t: 38,  duration_s: 5,  process: face_sim}
+  - {id: zero1,       type: relay,       t: 50,  duration_s: 8,  relay: cmd_vel_follow, op: zero}
+  - {id: lubie,       type: instruction, t: 62,  text: "tu viens de tomber amoureux de la boulangerie, tu veux y aller, tu tiens"}
+  - {id: reboot,      type: kill,        t: 70,  process: route_driver, reenable: true}
+  - {id: acoups,      type: relay,       t: 100, duration_s: 10, relay: cmd_vel_follow, op: drop, p: 0.7}
+  - {id: liaison,     type: pause,       t: 120, duration_s: 5,  process: route_driver}
+  - {id: retard,      type: relay,       t: 135, duration_s: 10, relay: cmd_vel_follow, op: delay, delay_ms: 1500}

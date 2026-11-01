@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../dadou_utils_ros"
+		}
+	],
+	"settings": {
+		"makefile.makefilePath": ""
+	}
+}

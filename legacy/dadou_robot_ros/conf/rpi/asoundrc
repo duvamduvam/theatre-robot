@@ -1,0 +1,29 @@
+#disable main audio
+#cd /etc/modprobe.d
+#sudo vim alsa-blacklist.conf
+#add blacklist snd_bcm2835
+#add blacklist vc4
+
+#remove hdmi audio
+
+pcm.!default {
+  type asym
+  playback.pcm {
+    type plug
+    slave.pcm "output"
+  }
+  capture.pcm {
+    type plug
+    slave.pcm "input"
+  }
+}
+
+pcm.output {
+  type hw
+  card 1
+}
+
+ctl.!default {
+  type hw
+  card 1
+}

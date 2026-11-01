@@ -1,0 +1,699 @@
+/* Console de régie de Didier -- sombre, moderne, spacieuse. Pensée PC pour la
+   conduite (colonne DIRECT) et téléphone pour le backstage (colonne CONTENUS
+   repliée dessous). Pas de framework CSS : grid/flexbox natifs, variables. */
+
+:root {
+  --bg: #0f1114;
+  --bg-carte: #181b21;
+  --bg-carte-2: #1f232b;
+  --bord: #2b303a;
+  --bord-clair: #3a4150;
+  --texte: #e7e9ee;
+  --texte-doux: #969db0;
+  --accent: #4f8cff;
+  --ok: #2e9e57;
+  --stop: #d8352a;
+  --rayon: 10px;
+  --transition: 120ms ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--texte);
+  line-height: 1.4;
+}
+
+h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texte-doux);
+  margin: 0 0 0.6rem;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--bord-clair);
+  background: var(--bg-carte-2);
+  color: var(--texte);
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  min-height: 40px;
+  transition: background var(--transition), border-color var(--transition),
+              transform var(--transition);
+}
+
+button:hover {
+  background: #262b34;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+input {
+  font: inherit;
+  background: #12151a;
+  border: 1px solid var(--bord-clair);
+  color: var(--texte);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+}
+
+/* --- Bandeau permanent ------------------------------------------------- */
+
+#bandeau {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  background: rgba(20, 23, 28, 0.95);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--bord);
+}
+
+.marque {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-right: 0.3rem;
+}
+
+.badge {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+/* Sécurité n°1 : le mode saute aux yeux (vert sim, rouge robot réel). */
+.badge-simulation { background: #144a24; color: #d7ffe0; }
+.badge-robot-reel { background: #6e1111; color: #ffe0e0; }
+.badge-inconnu    { background: #6e5411; color: #fff2d7; }
+.badge-on  { background: #144a24; color: #d7ffe0; }
+.badge-off { background: #2b303a; color: #c7cbd4; }
+/* Alerte orange (arrêt vocal de la page scène) : visible mais pas « erreur ». */
+.badge-alerte { background: #7a4a00; color: #ffe9c7; }
+.badge[hidden] { display: none; }
+
+#rtt {
+  font-variant-numeric: tabular-nums;
+  color: var(--texte-doux);
+  font-size: 0.85rem;
+}
+
+#btn-prendre-main {
+  margin-left: auto;
+}
+
+/* --- Layout console : 2 colonnes desktop, 1 colonne mobile ------------- */
+
+.console {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 900px) {
+  .console {
+    grid-template-columns: minmax(320px, 380px) 1fr;
+    align-items: start;
+  }
+  /* Colonne DIRECT collée en haut pendant qu'on fait défiler les contenus. */
+  .colonne-direct {
+    position: sticky;
+    top: 4rem;
+  }
+}
+
+.titre-colonne {
+  font-size: 0.8rem;
+  color: var(--texte-doux);
+  margin: 0 0 0.2rem;
+}
+
+.colonne-direct {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.carte {
+  background: var(--bg-carte);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+  padding: 0.8rem;
+}
+
+/* --- Vidéo (flux MJPEG) ------------------------------------------------- */
+
+.carte-video {
+  padding: 0;
+  overflow: hidden;
+}
+
+.video-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #0a0c0f;
+}
+
+#video,
+#perception,
+#exterieur {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--texte-doux);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: repeating-linear-gradient(45deg, #0c0e12, #0c0e12 12px, #101319 12px, #101319 24px);
+}
+
+/* PIÈGE (vécu 2026-07-11, « pas de vidéo » permanent sur Chrome ET Firefox
+   alors que le flux MJPEG tournait derrière) : le display:flex ci-dessus
+   ÉCRASE le display:none que le navigateur applique via l'attribut hidden
+   (une règle auteur bat toujours la feuille UA, à spécificité quelconque).
+   Cette règle rétablit le contrat hidden -> invisible. */
+.video-placeholder[hidden] {
+  display: none;
+}
+
+#btn-video-refresh,
+#btn-perception-refresh,
+#btn-exterieur-refresh,
+#scene-visage-refresh {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  min-height: 34px;
+  padding: 0.2rem 0.5rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* --- Pad de pilotage ---------------------------------------------------- */
+
+.pad-entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.pilotage-etat {
+  font-size: 0.85rem;
+  color: var(--texte-doux);
+}
+
+.gamepad-indic {
+  font-size: 0.8rem;
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.pad {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background:
+    radial-gradient(circle at center, #232833 0%, #171b22 75%);
+  border: 1px solid var(--bord-clair);
+  border-radius: 14px;
+  touch-action: none;               /* le glissé ne fait pas défiler la page */
+  cursor: grab;
+  overflow: hidden;
+  user-select: none;
+}
+
+.pad:active {
+  cursor: grabbing;
+}
+
+.pad.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+
+.pad-croix {
+  position: absolute;
+  background: var(--bord);
+}
+
+.pad-croix-v { left: 50%; top: 8%; bottom: 8%; width: 1px; transform: translateX(-0.5px); }
+.pad-croix-h { top: 50%; left: 8%; right: 8%; height: 1px; transform: translateY(-0.5px); }
+
+.pad-curseur {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #6ea2ff, #3d6fd6);
+  box-shadow: 0 2px 10px rgba(79, 140, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: left 60ms linear, top 60ms linear;
+  pointer-events: none;
+}
+
+.pad-repere {
+  position: absolute;
+  font-size: 0.7rem;
+  color: var(--texte-doux);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+.pad-repere-haut   { top: 0.4rem; left: 50%; transform: translateX(-50%); }
+.pad-repere-bas    { bottom: 0.4rem; left: 50%; transform: translateX(-50%); }
+.pad-repere-gauche { left: 0.4rem; top: 50%; transform: translateY(-50%); }
+.pad-repere-droite { right: 0.4rem; top: 50%; transform: translateY(-50%); }
+
+.pad-pied {
+  margin-top: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vitesse {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--texte-doux);
+}
+
+.vitesse b {
+  color: var(--texte);
+}
+
+.vitesse input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.drive-readout {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.pilotage-limites {
+  font-size: 0.78rem;
+  color: var(--texte-doux);
+}
+
+/* --- Bouton STOP -------------------------------------------------------- */
+
+#btn-stop-contenus {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: var(--stop);
+  border-color: #ff5b50;
+  color: #fff;
+}
+
+#btn-stop-contenus:hover {
+  background: #e8433a;
+}
+
+/* --- Colonne CONTENUS : onglets + recherche ---------------------------- */
+
+.colonne-contenus {
+  min-width: 0;   /* autorise le rétrécissement en grid (sinon débordement) */
+}
+
+#onglets {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.onglet-btn.actif {
+  background: #262b34;
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.recherche-box {
+  margin-bottom: 1rem;
+}
+
+#recherche {
+  width: 100%;
+}
+
+.onglet {
+  display: none;
+}
+
+.onglet.actif {
+  display: block;
+}
+
+.groupe {
+  background: var(--bg-carte);
+  border: 1px solid var(--bord);
+  border-left: 3px solid var(--bord-clair);
+  border-radius: var(--rayon);
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.8rem;
+}
+
+/* Accent couleur DISCRET par section (bord gauche seulement). */
+.accent-anim  { border-left-color: #7c5cff; }
+.accent-face  { border-left-color: #ff8a3d; }
+.accent-audio { border-left-color: #2ec7c7; }
+.accent-light { border-left-color: #ffcf3d; }
+
+.grille {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+/* --- Chips catalogue ---------------------------------------------------- */
+
+.bouton-catalogue {
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  background: var(--bg-carte-2);
+  font-size: 0.9rem;
+}
+
+.bouton-catalogue:hover {
+  border-color: var(--bord-clair);
+  background: #262b34;
+}
+
+/* Contenu actuellement actif sur le robot (d'après les topics, pas les clics). */
+.bouton-catalogue.en-cours {
+  border-color: var(--ok);
+  background: #133a24;
+  color: #d7ffe0;
+}
+
+/* --- Feedback visuel ack/err ------------------------------------------- */
+
+.flash-ok  { outline: 2px solid var(--ok); outline-offset: 1px; }
+.flash-err { outline: 2px solid var(--stop); outline-offset: 1px; }
+
+/* --- Filtre de recherche ------------------------------------------------ */
+
+.filtre-cache {
+  display: none !important;
+}
+
+/* --- Bandeau "reçu par le robot" --------------------------------------- */
+
+#statut-direct {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  margin-bottom: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-carte);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+  font-size: 0.88rem;
+}
+
+.statut-nom {
+  color: var(--texte-doux);
+  margin-right: 0.4rem;
+}
+
+.statut-valeur {
+  font-weight: 600;
+}
+
+.statut-vide {
+  color: #4a505d;
+  font-weight: 400;
+}
+
+#note-sim {
+  font-size: 0.82rem;
+  color: #e0b04a;
+  margin: 0 0 1rem;
+}
+
+/* --- Servos (panneau technique) ---------------------------------------- */
+
+.servo-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.servo-ligne label {
+  width: 6rem;
+  flex-shrink: 0;
+  color: var(--texte-doux);
+}
+
+.servo-ligne input[type="number"] {
+  width: 5rem;
+}
+
+/* --- État (panneau technique) ------------------------------------------ */
+
+#etat-topics table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.82rem;
+}
+
+#etat-topics td, #etat-topics th {
+  text-align: left;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--bord);
+}
+
+#etat-nodes {
+  margin-top: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--texte-doux);
+}
+
+/* --- Journal d'erreurs -------------------------------------------------- */
+
+footer {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+#journal-erreurs {
+  font-size: 0.85rem;
+  color: #ff9a92;
+  padding-left: 1.2rem;
+}
+
+
+/* --- Page « scène » (scene.html) ---------------------------------------- */
+/* Classes préfixées scene- : elles n'existent que sur cette page. Le bandeau,
+   les badges, les cartes vidéo et les chips .bouton-catalogue sont ceux de la
+   console (règles ci-dessus). */
+
+.scene-lien {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.scene-lien:hover {
+  text-decoration: underline;
+}
+
+/* Barre de contrôle : groupes côte à côte, qui passent à la ligne. */
+.scene-barre {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  align-items: flex-start;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--bord);
+  background: var(--bg-carte);
+}
+
+.scene-groupe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+
+.scene-groupe h2 {
+  margin: 0;
+}
+
+/* PIÈGE déjà vécu sur .video-placeholder : un display:flex d'auteur ÉCRASE le
+   display:none de l'attribut hidden. Sans cette règle, les groupes de
+   répétition resteraient visibles sur le vrai robot. */
+.scene-groupe[hidden] {
+  display: none;
+}
+
+.scene-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.scene-vitesse {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--texte-doux);
+}
+
+.scene-vitesse b {
+  color: var(--texte);
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-vitesse input[type="range"] {
+  width: 10rem;
+  accent-color: var(--accent);
+}
+
+/* Trois colonnes : caméra | visage | conversation (une seule sur téléphone). */
+.scene-colonnes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 1700px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1000px) {
+  .scene-colonnes {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+}
+
+.scene-colonne {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;   /* autorise le rétrécissement en grid */
+}
+
+.scene-colonne h2 {
+  margin: 0;
+}
+
+/* Le visage LED est une matrice de gros pixels : pas de lissage. */
+.scene-visage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* Fil de conversation : défile, le plus récent en bas. */
+.scene-fil {
+  list-style: none;
+  margin: 0;
+  padding: 0.6rem;
+  height: 22rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--bg-carte);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+  color-scheme: dark;   /* barre de défilement sombre, comme le reste */
+}
+
+.scene-msg {
+  max-width: 88%;
+  padding: 0.4rem 0.7rem;
+  border-radius: 12px;
+  background: var(--bg-carte-2);
+  overflow-wrap: anywhere;
+}
+
+/* David = ce que Didier a ENTENDU (à droite), Didier = sa voix (à gauche). */
+.scene-msg-david {
+  align-self: flex-end;
+  background: #1c3358;
+}
+
+.scene-msg-didier {
+  align-self: flex-start;
+}
+
+.scene-msg-role {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--texte-doux);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.scene-saisie {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.scene-saisie input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* --- Oreille de Didier (page scène, 31/10) ------------------------------- */
+.scene-oreille { margin: 0 0 0.6em; font-size: 0.85em; }
+.scene-oreille summary { cursor: pointer; font-weight: bold; }
+.scene-chaine { width: 100%; border-collapse: collapse; margin: 0.3em 0; }
+.scene-chaine td { padding: 1px 4px; vertical-align: top; word-break: break-all; }
+.scene-chaine td.label { white-space: nowrap; color: #999; word-break: normal; }
+.scene-entendu { list-style: none; margin: 0; padding: 0; max-height: 12em; overflow-y: auto; }
+.scene-entendu li { display: flex; flex-direction: column; padding: 2px 4px; border-left: 3px solid; margin-bottom: 2px; }
+.scene-entendu-garde { border-color: #2e7d32; }
+.scene-entendu-jete { border-color: #b26a00; opacity: 0.75; }

@@ -1,0 +1,572 @@
+<?xml version="1.0"?>
+<!--
+  URDF du robot de théâtre Dadou (Didier).
+
+  Architecture d'après les photos (docs/pictures/bout-small.jpeg = vue de face sur
+  scène, docs/pictures/mouth.jpg = tête + yeux de près, docs/pictures/wheel-motor.jpg
+  = base et roues, https://duvam.net/didier/ = vues avant/arrière) :
+   - base tricycle : caisse basse en tôle larmée rouge cerclée d'acier noir,
+     2 roues cranelées motrices DÉBORDANTES (entraînement par chaîne) + 1 roue
+     folle pneumatique au bout d'une flèche arrière ;
+   - torse = colonne de planches (plus large que profonde), portant en façade le
+     GROS HAUT-PARLEUR ROND (la « bouche » physique, sonore), deux grilles à
+     lamelles (« ouïes ») et le ruban LED vertical ; un mât d'acier noir monte à
+     l'arrière et porte l'arche ;
+   - tête = tambour clair (prisme hexagonal sur le vrai robot, approximé en
+     cylindre ici) tournant sur l'axe du cou ; sa FACE AVANT porte la matrice LED
+     « bouche » (LED 0-384) — c'est bien sur la TÊTE, pas sur le torse ;
+   - yeux = deux cloches type phare (matrice LED 8x8 en face avant : 384-447 œil
+     droit, 448-511 œil gauche) portées par une arche d'acier noir qui enjambe la
+     tête, avec un servo à chaque extrémité.
+
+  Les joints portent les MÊMES noms que les topics/servos du code
+  (neck, left_arm, right_arm, left_eye, right_eye) : le mapping vers
+  ros2_control / JointTrajectory sera direct.
+
+  RÈGLE DE SÛRETÉ TENUE ICI : la richesse visuelle ne doit rien coûter à la
+  physique validée (chaîne cmd_vel + suivi de personne en sim). Donc :
+   - toutes les décorations sont des <visual> SUPPLÉMENTAIRES dans des liens
+     existants : aucune masse, aucune inertie, aucune <collision> ajoutée ;
+   - les <collision> et les masses restent des primitives simples et INCHANGÉES
+     (la roue folle reste une SPHÈRE glissante en collision, même si elle est
+     désormais dessinée en vraie roue) ;
+   - wheel_radius / wheel_separation / base_mass sont figés : ils alimentent le
+     plugin DiffDrive gz et robot/move/diff_drive.py.
+
+  Dimensions estimées depuis les photos (échelle calée sur le diamètre de roue) —
+  à affiner depuis les plans FreeCAD/Fusion (~/Nextcloud/dev/didier/plans).
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="dadou_robot">
+
+  <!-- ======== Dimensions (mètres, kilogrammes) ======== -->
+  <!-- GELÉ : base et roues alimentent la physique validée. Ne pas retoucher sans
+       repasser le protocole caméra / la validation sim du suivi de personne. -->
+  <xacro:property name="base_length" value="0.55"/>
+  <xacro:property name="base_width" value="0.55"/>
+  <xacro:property name="base_height" value="0.20"/>
+  <xacro:property name="base_mass" value="35.0"/>
+  <!-- Largeur DESSINÉE de la caisse : plus étroite que la collision, pour que les
+       roues débordent franchement comme sur les photos. La <collision> garde
+       base_width (0.55), c'est-à-dire une enveloppe PLUS GRANDE que le visuel :
+       l'écart va dans le sens sûr (le robot simulé se cogne plus tôt, jamais plus
+       tard), et la physique validée reste bit à bit la même. -->
+  <xacro:property name="base_vis_width" value="0.48"/>
+  <xacro:property name="base_post" value="0.04"/>
+
+  <xacro:property name="wheel_radius" value="0.13"/>
+  <xacro:property name="wheel_width" value="0.075"/>
+  <xacro:property name="wheel_separation" value="0.58"/>
+  <xacro:property name="wheel_mass" value="1.5"/>
+
+  <!-- Roue folle arrière sur flèche déportée -->
+  <xacro:property name="caster_offset_x" value="-0.45"/>
+  <xacro:property name="caster_radius" value="0.10"/>
+  <xacro:property name="caster_width" value="0.06"/>
+
+  <!-- Torse : colonne de planches, PLUS LARGE (y) QUE PROFONDE (x) — c'est net
+       sur les photos de face vs de profil. -->
+  <xacro:property name="torso_length" value="0.28"/>
+  <xacro:property name="torso_width" value="0.38"/>
+  <xacro:property name="torso_height" value="0.70"/>
+  <xacro:property name="torso_mass" value="10.0"/>
+
+  <!-- Tête = tambour clair sur l'arbre du cou (axe vertical) -->
+  <xacro:property name="head_radius" value="0.11"/>
+  <xacro:property name="head_height" value="0.20"/>
+  <xacro:property name="head_mass" value="1.5"/>
+  <!-- Façade plane du tambour (le vrai est un prisme hexagonal) : elle sert
+       d'assise à la matrice LED du visage. -->
+  <xacro:property name="head_face_width" value="0.17"/>
+  <xacro:property name="head_face_depth" value="0.06"/>
+  <!-- Arbre/roulement visible entre le haut du torse et le tambour (cf. mouth.jpg) -->
+  <xacro:property name="neck_shaft_height" value="0.06"/>
+
+  <!-- Bras : PALES DE BOIS PLATES (pas des tiges), pivotant aux épaules -->
+  <xacro:property name="arm_length" value="0.42"/>
+  <xacro:property name="arm_width" value="0.09"/>
+  <xacro:property name="arm_thickness" value="0.022"/>
+  <xacro:property name="arm_mass" value="0.8"/>
+
+  <!-- Yeux : cloches (phares) au bout de l'arche. Le "rayon" sert d'échelle
+       générale de la cloche ; l'inertie reste celle d'une sphère équivalente. -->
+  <xacro:property name="eye_radius" value="0.05"/>
+  <xacro:property name="eye_mass" value="0.12"/>
+  <xacro:property name="eye_offset_y" value="0.15"/>
+  <xacro:property name="eye_offset_z" value="0.30"/>
+
+  <!-- Arche d'acier noir enjambant la tête, du haut du torse aux servos des yeux -->
+  <xacro:property name="arch_section" value="0.04"/>
+  <xacro:property name="arch_y" value="${torso_width/2 - 0.015}"/>
+
+  <!-- Haut-parleur rond de la poitrine (la bouche SONORE, pas les LED) -->
+  <xacro:property name="speaker_radius" value="0.14"/>
+  <xacro:property name="speaker_z" value="${0.28*torso_height}"/>
+
+  <!-- Grilles à lamelles ("ouïes") de part et d'autre du ruban LED -->
+  <xacro:property name="gill_y" value="0.14"/>
+  <xacro:property name="gill_z" value="${0.62*torso_height}"/>
+
+  <!-- Ruban LED "corps" (zone 513-673) : bande verticale au CENTRE de la
+       poitrine, entre les deux ouïes et au-dessus du haut-parleur. -->
+  <xacro:property name="body_leds_height" value="0.30"/>
+  <xacro:property name="body_leds_width" value="0.13"/>
+  <xacro:property name="body_leds_thickness" value="0.012"/>
+  <xacro:property name="body_leds_mass" value="0.05"/>
+  <xacro:property name="body_leds_z" value="${0.74*torso_height}"/>
+
+  <!-- Matrice LED "bouche" (LED 0-384) : plaque de façade de la TÊTE. Elle tourne
+       donc avec le cou, comme sur le vrai robot. -->
+  <xacro:property name="mouth_leds_width" value="0.16"/>
+  <xacro:property name="mouth_leds_height" value="0.13"/>
+  <xacro:property name="mouth_leds_thickness" value="0.012"/>
+  <xacro:property name="mouth_leds_mass" value="0.05"/>
+
+  <!-- Matrices LED des yeux (8x8) : disque en face avant de chaque cloche. -->
+  <xacro:property name="eye_leds_radius" value="0.048"/>
+  <xacro:property name="eye_leds_thickness" value="0.008"/>
+  <xacro:property name="eye_leds_mass" value="0.02"/>
+
+  <!-- Course des servos : 0..180° matériel, centrée dans le modèle -->
+  <xacro:property name="servo_lower" value="${-pi/2}"/>
+  <xacro:property name="servo_upper" value="${pi/2}"/>
+
+  <material name="wood"><color rgba="0.72 0.55 0.30 1"/></material>
+  <material name="wood_dark"><color rgba="0.42 0.24 0.13 1"/></material>
+  <material name="red_metal"><color rgba="0.55 0.12 0.12 1"/></material>
+  <material name="black"><color rgba="0.10 0.10 0.10 1"/></material>
+  <material name="steel_black"><color rgba="0.14 0.14 0.15 1"/></material>
+  <material name="grey"><color rgba="0.55 0.55 0.55 1"/></material>
+  <material name="cream"><color rgba="0.90 0.88 0.80 1"/></material>
+  <material name="blue_drum"><color rgba="0.15 0.20 0.35 1"/></material>
+  <!-- LED éteintes par défaut (couleur réelle pilotée en runtime par leds_sim_node
+       en sim, via matériaux émissifs gz ; sur le vrai robot ce sont des NeoPixel). -->
+  <material name="leds_off"><color rgba="0.05 0.05 0.05 1"/></material>
+
+  <!-- ======== Macros d'inertie ======== -->
+  <xacro:macro name="box_inertial" params="m x y z">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(y*y+z*z)/12}" iyy="${m*(x*x+z*z)/12}" izz="${m*(x*x+y*y)/12}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_inertial" params="m r h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(3*r*r+h*h)/12}" iyy="${m*(3*r*r+h*h)/12}" izz="${m*r*r/2}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="sphere_inertial" params="m r">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${2*m*r*r/5}" iyy="${2*m*r*r/5}" izz="${2*m*r*r/5}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ======== Base tricycle : caisse tôle larmée rouge + cadre acier ========
+       La <collision> reste LA boîte d'origine (physique inchangée) ; tout le
+       reste n'est que des <visual> posés par-dessus. -->
+  <link name="base_link">
+    <!-- Caisse rouge (tôle larmée) -->
+    <visual>
+      <geometry><box size="${base_length} ${base_vis_width} ${base_height}"/></geometry>
+      <material name="red_metal"/>
+    </visual>
+    <!-- Cornières d'acier noir en haut et en bas de la caisse : c'est ce liseré
+         sombre qui donne à la base sa lecture "caisse cerclée" sur les photos. -->
+    <visual>
+      <origin xyz="0 0 ${base_height/2 - 0.015}"/>
+      <geometry><box size="${base_length+0.012} ${base_vis_width+0.012} 0.03"/></geometry>
+      <material name="steel_black"/>
+    </visual>
+    <visual>
+      <origin xyz="0 0 ${-base_height/2 + 0.015}"/>
+      <geometry><box size="${base_length+0.012} ${base_vis_width+0.012} 0.03"/></geometry>
+      <material name="steel_black"/>
+    </visual>
+    <!-- Montants d'angle (les 4 arêtes verticales noires) -->
+    <xacro:macro name="base_corner" params="x_sign y_sign">
+      <visual>
+        <origin xyz="${x_sign*base_length/2} ${y_sign*base_vis_width/2} 0"/>
+        <geometry><box size="${base_post} ${base_post} ${base_height}"/></geometry>
+        <material name="steel_black"/>
+      </visual>
+    </xacro:macro>
+    <xacro:base_corner x_sign="1" y_sign="1"/>
+    <xacro:base_corner x_sign="1" y_sign="-1"/>
+    <xacro:base_corner x_sign="-1" y_sign="1"/>
+    <xacro:base_corner x_sign="-1" y_sign="-1"/>
+    <!-- Flèche arrière (tube carré) qui porte la roue folle : très visible sur
+         les photos, c'est elle qui donne la silhouette "tricycle" du robot. -->
+    <visual>
+      <origin xyz="${(caster_offset_x - base_length/2)/2} 0 ${-base_height/2 + 0.03}"/>
+      <geometry><box size="${-caster_offset_x - base_length/2 + 0.06} 0.06 0.06"/></geometry>
+      <material name="steel_black"/>
+    </visual>
+    <!-- Chape (fourche) de la roue folle, entre la flèche et l'axe de la roue -->
+    <visual>
+      <origin xyz="${caster_offset_x} 0 ${-base_height/2 - 0.01}"/>
+      <geometry><box size="0.07 0.09 0.10"/></geometry>
+      <material name="steel_black"/>
+    </visual>
+
+    <collision>
+      <geometry><box size="${base_length} ${base_width} ${base_height}"/></geometry>
+    </collision>
+    <xacro:box_inertial m="${base_mass}" x="${base_length}" y="${base_width}" z="${base_height}"/>
+  </link>
+
+  <!-- Roues motrices : pneu cranelé + jante. La collision reste le cylindre nu. -->
+  <xacro:macro name="drive_wheel" params="side y_sign">
+    <link name="wheel_${side}_link">
+      <visual>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="black"/>
+      </visual>
+      <!-- Jante rouge, débordant légèrement du flanc extérieur (cf. photos) -->
+      <visual>
+        <origin xyz="0 ${y_sign*0.01} 0" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${0.45*wheel_radius}" length="${wheel_width + 0.01}"/></geometry>
+        <material name="red_metal"/>
+      </visual>
+      <!-- Couronne/pignon de chaîne côté intérieur : l'entraînement par chaîne est
+           une signature visuelle de Didier. -->
+      <visual>
+        <origin xyz="0 ${-y_sign*(wheel_width/2 + 0.005)} 0" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${0.62*wheel_radius}" length="0.012"/></geometry>
+        <material name="grey"/>
+      </visual>
+      <collision>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      </collision>
+      <xacro:cylinder_inertial m="${wheel_mass}" r="${wheel_radius}" h="${wheel_width}"/>
+    </link>
+    <joint name="wheel_${side}_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="wheel_${side}_link"/>
+      <origin xyz="0.1 ${y_sign*wheel_separation/2} ${-base_height/2}"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+  <xacro:drive_wheel side="left" y_sign="1"/>
+  <xacro:drive_wheel side="right" y_sign="-1"/>
+
+  <!-- Roue folle arrière : DESSINÉE en vraie roue pneumatique (cylindre + jante),
+       mais laissée en SPHÈRE côté <collision> — c'est le modèle validé (sphère
+       glissante, mu quasi nul dans dadou_robot_gz.urdf.xacro). Le visuel ne doit
+       surtout pas devenir un cylindre en collision : ça introduirait un contact
+       de bord et changerait le comportement des roues. -->
+  <link name="caster_rear_link">
+    <visual>
+      <origin rpy="${pi/2} 0 0"/>
+      <geometry><cylinder radius="${caster_radius}" length="${caster_width}"/></geometry>
+      <material name="black"/>
+    </visual>
+    <visual>
+      <origin rpy="${pi/2} 0 0"/>
+      <geometry><cylinder radius="${0.45*caster_radius}" length="${caster_width + 0.012}"/></geometry>
+      <material name="red_metal"/>
+    </visual>
+    <collision>
+      <geometry><sphere radius="${caster_radius}"/></geometry>
+    </collision>
+    <xacro:sphere_inertial m="1.0" r="${caster_radius}"/>
+  </link>
+  <joint name="caster_rear_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_rear_link"/>
+    <origin xyz="${caster_offset_x} 0 ${-base_height/2 - wheel_radius + caster_radius}"/>
+  </joint>
+
+  <!-- ======== Torse : colonne de planches + façade sonore + mât + arche ======== -->
+  <link name="torso_link">
+    <!-- Caisse de planches -->
+    <visual>
+      <origin xyz="0 0 ${torso_height/2}"/>
+      <geometry><box size="${torso_length} ${torso_width} ${torso_height}"/></geometry>
+      <material name="wood"/>
+    </visual>
+
+    <!-- Haut-parleur rond de la poitrine : pavillon noir + couronne de bois
+         vernie. C'est la "bouche" SONORE (le HP), à ne pas confondre avec la
+         matrice LED bouche, qui est sur la tête. -->
+    <visual>
+      <origin xyz="${torso_length/2 + 0.02} 0 ${speaker_z}" rpy="0 ${pi/2} 0"/>
+      <geometry><cylinder radius="${speaker_radius}" length="0.08"/></geometry>
+      <material name="black"/>
+    </visual>
+    <visual>
+      <origin xyz="${torso_length/2 + 0.065} 0 ${speaker_z}" rpy="0 ${pi/2} 0"/>
+      <geometry><cylinder radius="${speaker_radius + 0.025}" length="0.02"/></geometry>
+      <material name="wood_dark"/>
+    </visual>
+
+    <!-- Ouïes (grilles à lamelles) de part et d'autre du ruban LED -->
+    <xacro:macro name="gill" params="y_sign">
+      <visual>
+        <origin xyz="${torso_length/2 + 0.01} ${y_sign*gill_y} ${gill_z}"/>
+        <geometry><box size="0.03 0.09 0.24"/></geometry>
+        <material name="wood_dark"/>
+      </visual>
+    </xacro:macro>
+    <xacro:gill y_sign="1"/>
+    <xacro:gill y_sign="-1"/>
+
+    <!-- Mât d'acier noir à l'arrière : il monte au-dessus du torse et porte l'arche -->
+    <visual>
+      <origin xyz="${-torso_length/2 - 0.02} 0 ${(torso_height + eye_offset_z)/2}"/>
+      <geometry><box size="0.06 0.09 ${torso_height + eye_offset_z}"/></geometry>
+      <material name="steel_black"/>
+    </visual>
+
+    <!-- Bossages d'épaule (paliers des servos de bras) -->
+    <xacro:macro name="shoulder_boss" params="y_sign">
+      <visual>
+        <origin xyz="0 ${y_sign*(torso_width/2 + 0.015)} ${torso_height - 0.06}" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="0.035" length="0.03"/></geometry>
+        <material name="grey"/>
+      </visual>
+    </xacro:macro>
+    <xacro:shoulder_boss y_sign="1"/>
+    <xacro:shoulder_boss y_sign="-1"/>
+
+    <!-- Arbre / roulement du cou, visible entre le torse et le tambour -->
+    <visual>
+      <origin xyz="0 0 ${torso_height + neck_shaft_height/2}"/>
+      <geometry><cylinder radius="0.03" length="${neck_shaft_height}"/></geometry>
+      <material name="grey"/>
+    </visual>
+
+    <!-- Arche d'acier noir : montants verticaux depuis le haut du torse, coude
+         rentrant, puis traverse qui enjambe la tête. Elle est FIXE (c'est le
+         bâti) ; seuls les yeux, montés à ses extrémités, tournent. -->
+    <xacro:macro name="arch_post" params="y_sign">
+      <!-- montant -->
+      <visual>
+        <origin xyz="0 ${y_sign*arch_y} ${torso_height + eye_offset_z/2 - 0.02}"/>
+        <geometry><box size="${arch_section} ${arch_section} ${eye_offset_z - 0.04}"/></geometry>
+        <material name="steel_black"/>
+      </visual>
+      <!-- coude rentrant vers le servo de l'œil -->
+      <visual>
+        <origin xyz="0 ${y_sign*(arch_y + eye_offset_y)/2} ${torso_height + eye_offset_z}"/>
+        <geometry><box size="${arch_section} ${arch_y - eye_offset_y + arch_section} ${arch_section}"/></geometry>
+        <material name="steel_black"/>
+      </visual>
+    </xacro:macro>
+    <xacro:arch_post y_sign="1"/>
+    <xacro:arch_post y_sign="-1"/>
+    <!-- Traverse au-dessus de la tête, reliant les deux extrémités de l'arche -->
+    <visual>
+      <origin xyz="0 0 ${torso_height + eye_offset_z + 0.05}"/>
+      <geometry><box size="${arch_section} ${2*eye_offset_y} ${arch_section}"/></geometry>
+      <material name="steel_black"/>
+    </visual>
+    <!-- Jambages reliant la traverse aux extrémités (l'arche est un cintre) -->
+    <xacro:macro name="arch_riser" params="y_sign">
+      <visual>
+        <origin xyz="0 ${y_sign*eye_offset_y} ${torso_height + eye_offset_z + 0.025}"/>
+        <geometry><box size="${arch_section} ${arch_section} 0.05"/></geometry>
+        <material name="steel_black"/>
+      </visual>
+    </xacro:macro>
+    <xacro:arch_riser y_sign="1"/>
+    <xacro:arch_riser y_sign="-1"/>
+
+    <collision>
+      <origin xyz="0 0 ${torso_height/2}"/>
+      <geometry><box size="${torso_length} ${torso_width} ${torso_height}"/></geometry>
+    </collision>
+    <xacro:box_inertial m="${torso_mass}" x="${torso_length}" y="${torso_width}" z="${torso_height}"/>
+  </link>
+  <joint name="torso_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="torso_link"/>
+    <origin xyz="0 0 ${base_height/2}"/>
+  </joint>
+
+  <!-- ======== Tête : tambour clair (servo neck, rotation panoramique) ======== -->
+  <link name="head_link">
+    <visual>
+      <origin xyz="0 0 ${head_height/2}"/>
+      <geometry><cylinder radius="${head_radius}" length="${head_height}"/></geometry>
+      <material name="cream"/>
+    </visual>
+    <!-- FACE AVANT PLATE. Le vrai tambour est un prisme hexagonal : sa façade est
+         plane, et c'est elle qui porte la matrice LED. Sans ce pavé, la plaque LED
+         plate posée sur un cylindre s'enterre au centre et ne ressort que par ses
+         deux bords (vérifié au rendu) — le visage se lit alors en deux barres. -->
+    <visual>
+      <origin xyz="${head_radius - head_face_depth/2} 0 ${head_height/2}"/>
+      <geometry><box size="${head_face_depth} ${head_face_width} ${head_height}"/></geometry>
+      <material name="cream"/>
+    </visual>
+    <!-- Chapeau bleu foncé du tambour (cf. mouth.jpg) -->
+    <visual>
+      <origin xyz="0 0 ${head_height - 0.01}"/>
+      <geometry><cylinder radius="${head_radius + 0.005}" length="0.03"/></geometry>
+      <material name="blue_drum"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${head_height/2}"/>
+      <geometry><cylinder radius="${head_radius}" length="${head_height}"/></geometry>
+    </collision>
+    <xacro:cylinder_inertial m="${head_mass}" r="${head_radius}" h="${head_height}"/>
+  </link>
+  <joint name="neck" type="revolute">
+    <parent link="torso_link"/>
+    <child link="head_link"/>
+    <origin xyz="0 0 ${torso_height + neck_shaft_height}"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="${servo_lower}" upper="${servo_upper}" effort="2.0" velocity="3.0"/>
+  </joint>
+
+  <!-- ======== Bras : pales de bois plates pivotant aux épaules ======== -->
+  <xacro:macro name="arm" params="side y_sign">
+    <link name="${side}_arm_link">
+      <!-- Lame plate. ORIENTATION : la face LARGE regarde l'AVANT (épaisseur selon
+           x, largeur selon y) — c'est ainsi qu'on voit les pales sur les photos de
+           face, et c'est cohérent avec le pivot d'axe y : la pale balaie d'avant en
+           arrière en attaquant l'air par la tranche, comme une rame. -->
+      <visual>
+        <origin xyz="0 0 ${-arm_length/2}"/>
+        <geometry><box size="${arm_thickness} ${arm_width} ${arm_length}"/></geometry>
+        <material name="wood"/>
+      </visual>
+      <!-- Bout arrondi de la pale -->
+      <visual>
+        <origin xyz="0 0 ${-arm_length}" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${arm_width/2}" length="${arm_thickness}"/></geometry>
+        <material name="wood"/>
+      </visual>
+      <!-- Épaulement arrondi côté pivot -->
+      <visual>
+        <origin rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${arm_width/2}" length="${arm_thickness}"/></geometry>
+        <material name="wood"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${-arm_length/2}"/>
+        <geometry><box size="${arm_thickness} ${arm_width} ${arm_length}"/></geometry>
+      </collision>
+      <xacro:box_inertial m="${arm_mass}" x="${arm_thickness}" y="${arm_width}" z="${arm_length}"/>
+    </link>
+    <joint name="${side}_arm" type="revolute">
+      <parent link="torso_link"/>
+      <child link="${side}_arm_link"/>
+      <!-- Épaule posée juste EN DEHORS du flanc : la pale pend le long du torse
+           sans le traverser (sa largeur est maintenant dans l'axe y). -->
+      <origin xyz="0 ${y_sign*(torso_width/2 + arm_width/2 + 0.005)} ${torso_height - 0.06}"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${servo_lower}" upper="${servo_upper}" effort="2.0" velocity="3.0"/>
+    </joint>
+  </xacro:macro>
+  <xacro:arm side="left" y_sign="1"/>
+  <xacro:arm side="right" y_sign="-1"/>
+
+  <!-- ======== Yeux : cloches (phares) au bout de l'arche ========
+       La cloche est approximée par des cylindres étagés (pas de cône en URDF).
+       Elle regarde vers +x (l'avant). Le servo est à l'extrémité de l'arche. -->
+  <xacro:macro name="eye" params="side y_sign">
+    <link name="${side}_eye_link">
+      <!-- culot -->
+      <visual>
+        <origin xyz="-0.055 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.030" length="0.04"/></geometry>
+        <material name="grey"/>
+      </visual>
+      <!-- corps de la cloche (évasement) -->
+      <visual>
+        <origin xyz="-0.017 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.042" length="0.04"/></geometry>
+        <material name="grey"/>
+      </visual>
+      <!-- collerette avant -->
+      <visual>
+        <origin xyz="0.015 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${eye_radius}" length="0.03"/></geometry>
+        <material name="grey"/>
+      </visual>
+      <collision>
+        <geometry><sphere radius="${eye_radius}"/></geometry>
+      </collision>
+      <xacro:sphere_inertial m="${eye_mass}" r="${eye_radius}"/>
+    </link>
+    <joint name="${side}_eye" type="revolute">
+      <parent link="torso_link"/>
+      <child link="${side}_eye_link"/>
+      <origin xyz="0 ${y_sign*eye_offset_y} ${torso_height + eye_offset_z}"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${servo_lower}" upper="${servo_upper}" effort="0.5" velocity="5.0"/>
+    </joint>
+  </xacro:macro>
+  <xacro:eye side="left" y_sign="1"/>
+  <xacro:eye side="right" y_sign="-1"/>
+
+  <!-- ======== LED : visualisation des matrices/rubans réels ========
+       Couleur pilotée en runtime (leds_sim_node -> MaterialColor gz), donc CHAQUE
+       zone LED vit dans son PROPRE link, sur un joint fixe protégé par
+       preserveFixedJoint (cf. dadou_robot_gz.urdf.xacro) : c'est ce qui garantit
+       un nom de visual stable "<link>_visual" auquel le node s'adresse.
+       NE PAS ajouter de second <visual> dans ces links : le premier seul porte le
+       nom "<link>_visual", les suivants sont suffixés et le node ne les verrait pas.
+       Purement visuel : pas de <collision>, masse négligeable. -->
+
+  <!-- Ruban "corps" (513-673) : bande verticale au centre de la poitrine. -->
+  <link name="body_leds_link">
+    <visual>
+      <geometry><box size="${body_leds_thickness} ${body_leds_width} ${body_leds_height}"/></geometry>
+      <material name="leds_off"/>
+    </visual>
+    <xacro:box_inertial m="${body_leds_mass}" x="${body_leds_thickness}" y="${body_leds_width}" z="${body_leds_height}"/>
+  </link>
+  <joint name="body_leds_joint" type="fixed">
+    <parent link="torso_link"/>
+    <child link="body_leds_link"/>
+    <origin xyz="${torso_length/2 + body_leds_thickness/2 + 0.005} 0 ${body_leds_z}"/>
+  </joint>
+
+  <!-- Matrice "bouche" (0-384) : plaque de façade de la TÊTE (elle tourne avec le
+       cou). Sur le vrai robot elle épouse les faces avant du prisme hexagonal ;
+       ici, une plaque plane plaquée devant le tambour. -->
+  <link name="mouth_leds_link">
+    <visual>
+      <geometry><box size="${mouth_leds_thickness} ${mouth_leds_width} ${mouth_leds_height}"/></geometry>
+      <material name="leds_off"/>
+    </visual>
+    <xacro:box_inertial m="${mouth_leds_mass}" x="${mouth_leds_thickness}" y="${mouth_leds_width}" z="${mouth_leds_height}"/>
+  </link>
+  <joint name="mouth_leds_joint" type="fixed">
+    <parent link="head_link"/>
+    <child link="mouth_leds_link"/>
+    <!-- Plaquée SUR la façade plane de la tête (et non enfoncée dans le tambour). -->
+    <origin xyz="${head_radius + mouth_leds_thickness/2} 0 ${0.48*head_height}"/>
+  </joint>
+
+  <!-- Matrices des yeux (384-447 droit, 448-511 gauche) : disque lumineux en face
+       avant de chaque cloche, solidaire du servo de l'œil. -->
+  <xacro:macro name="eye_leds" params="side">
+    <link name="${side}_eye_leds_link">
+      <visual>
+        <origin rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${eye_leds_radius}" length="${eye_leds_thickness}"/></geometry>
+        <material name="leds_off"/>
+      </visual>
+      <xacro:cylinder_inertial m="${eye_leds_mass}" r="${eye_leds_radius}" h="${eye_leds_thickness}"/>
+    </link>
+    <joint name="${side}_eye_leds_joint" type="fixed">
+      <parent link="${side}_eye_link"/>
+      <child link="${side}_eye_leds_link"/>
+      <origin xyz="0.032 0 0"/>
+    </joint>
+  </xacro:macro>
+  <xacro:eye_leds side="left"/>
+  <xacro:eye_leds side="right"/>
+
+</robot>

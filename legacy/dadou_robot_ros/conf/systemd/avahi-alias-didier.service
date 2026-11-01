@@ -1,0 +1,21 @@
+[Unit]
+# Alias mDNS didier.local -> le Pi robot (console web http://didier.local:8765).
+# POURQUOI un service et pas /etc/avahi/hosts : ce fichier ne sert que la
+# résolution LOCALE du daemon avahi, il ne publie RIEN sur le réseau (vérifié
+# le 2026-07-12 : robot.local se résolvait depuis le Pi vision, pas l'alias).
+# avahi-publish est le mécanisme d'annonce ; l'IP est relue au démarrage du
+# service -> le redémarrer si l'adresse du Pi change (réseau 4G de tournée).
+# Dépendance : paquet avahi-utils (fournit /usr/bin/avahi-publish).
+# Installation : voir docs/operations.md, section « Alias didier.local ».
+Description=Alias mDNS didier.local (console web Didier)
+Requires=avahi-daemon.service
+After=avahi-daemon.service network-online.target
+
+[Service]
+# -a = enregistrement adresse ; -R = pas de PTR inverse (robot.local le garde).
+ExecStart=/bin/sh -c "exec /usr/bin/avahi-publish -a -R didier.local $(hostname -I | cut -d' ' -f1)"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

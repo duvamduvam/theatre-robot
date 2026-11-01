@@ -1,0 +1,104 @@
+{
+    "keys": "H3",
+    "types": ["bonjour"],
+    "duration": 102000,
+    "audios": [
+        [
+            0,
+           "didier20/je_ne_suis_pas_un_jouet2.mp3"
+        ],
+        [
+            0.8,
+           "effects/failling.mp3"
+        ],
+        [
+            0.95,
+           "effects/shutdown.mp3"
+        ]
+    ],
+    "faces": [
+        [
+            0,
+           "speak red"
+        ],
+        [
+            0.7,
+           "default red"
+        ],
+        [
+            0.98,
+           "off"
+        ]
+    ],
+    "loop": true,
+    "robot_lights": [
+        [
+            0,
+            "devil"
+        ],
+        [
+            0.98,
+           "off"
+        ]
+    ],
+    "left_eye": [
+        [0,
+          {"mode": "random", "random move min": 45,
+            "random move max": 85, "random time min": 500, "random time max":1000}
+        ]
+    ],
+    "right_eye": [
+        [0,
+          {"mode": "random", "random move min": 45,
+            "random move max": 90, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "left_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "right_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "wheels": [
+        [
+            0.78,
+            [0.5, 0.5]
+        ],
+        [
+            0.80,
+            [-0.5, -0.5]
+        ],
+        [
+            0.825,
+            [0.5, 0.5]
+        ],
+        [
+            0.845,
+            [-0.5, -0.5]
+        ],        [
+            0.865,
+            [0.5, 0.5]
+        ],
+        [
+            0.885,
+            [-0.5, -0.5]
+        ],        [
+            0.905,
+            [-0.5, 0.5]
+        ],
+        [
+            0.925,
+            [0.5, -0.5]
+        ],
+        [
+            0.965,
+            [0, 0]
+        ]
+    ]
+}

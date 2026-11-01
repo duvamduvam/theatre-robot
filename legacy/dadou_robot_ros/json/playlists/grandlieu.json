@@ -1,0 +1,40 @@
+{
+    "t'étais à la plonge": {
+        "audio": "conte/arret-ton-char-tetais-a-la-plonge.mp3",
+        "animation": "move-speak",
+        "duration": 3500
+    },
+    "je recadre": {
+        "audio": "conte/je-recadre-tes-conneries.mp3",
+        "animation": "move-speak",
+        "duration": 3500
+    },
+    "colonnes": {
+        "audio": "conte/colonne-baroque.mp3",
+        "animation": "move-speak",
+        "duration": 3500
+    },
+    "imposteur": {
+        "audio": "conte/imposteur.mp3",
+        "animation": "move-speak",
+        "duration": 6500
+    },
+    "demerde toi": {
+        "audio": "conte/dermde-toi.mp3",
+        "animation": "move-speak",
+        "duration": 3000
+    },
+    "arnaché": {
+        "audio": "conte/t-etais-arnaché.mp3",
+        "animation": "move-speak",
+        "duration": 6500
+    },
+    "tinder": {
+        "audio": "conte/tinder.mp3",
+        "animation": "move-speak",
+        "duration": 4500
+    },
+    "louche": {
+        "animation": "louche"
+    }
+}

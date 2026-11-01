@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="980" viewBox="0 0 1500 980" font-family="DejaVu Sans, Arial, sans-serif">
+<defs><marker id="fl" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3a5fa8"/></marker></defs>
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="30" y="42" font-size="24" font-weight="bold">Didier v2 — tronc articulé par 3 vérins électriques</text>
+<text x="30" y="68" font-size="14" fill="#555">Concept « robot triangle » (plans/concepts/triangle-3roues) · étude docs/etude-tronc.md · 2026-10-25 · schéma de principe, cotes du concept</text>
+<text x="30" y="108" font-size="16" font-weight="bold">Élévation de côté</text>
+<line x1="58.60000000000002" y1="930" x2="574.8" y2="930" stroke="#999" stroke-width="2"/>
+<circle cx="464.6" cy="837.2" r="92.8" fill="#2b2b2b" opacity="1.0"/>
+<circle cx="464.6" cy="837.2" r="23.2" fill="#555"/>
+<rect x="457.6" y="709.6" width="13.9" height="127.6" fill="#8a8a8a"/>
+<circle cx="142.7" cy="837.2" r="92.8" fill="#2b2b2b" opacity="0.85"/>
+<circle cx="142.7" cy="837.2" r="23.2" fill="#555"/>
+<rect x="135.7" y="709.6" width="13.9" height="127.6" fill="#8a8a8a"/>
+<rect x="128.2" y="674.8" width="365.4" height="34.8" fill="#c0902f" rx="3"/>
+<text x="180.4" y="696.8" font-size="12" fill="#fff">caisson + batterie 48 V</text>
+<rect x="223.9" y="576.2" width="52.2" height="92.8" fill="#6a6a6a"/>
+<rect x="226.8" y="540.0" width="46.4" height="65.2" fill="#8d8d8d"/>
+<polygon points="116.6,529.8 383.4,529.8 383.4,521.1 371.8,521.1 371.8,202.1 371.8,202.1 369.9,192.6 364.5,183.4 355.5,174.7 343.3,166.9 328.3,160.1 310.9,154.6 291.7,150.6 271.2,148.1 250.0,147.3 228.8,148.1 208.3,150.6 189.1,154.6 171.7,160.1 156.7,166.9 144.5,174.7 135.5,183.4 130.1,192.6 128.2,202.1 128.2,521.1 116.6,521.1" fill="#d8d2c4" stroke="#9a937f"/>
+<polygon points="107.3,384.8 392.7,384.8 392.7,326.8 107.3,326.8" fill="#7a8b99" opacity="0.85"/>
+<text x="114.3" y="358.7" font-size="12" fill="#fff">anneau bras</text>
+<polygon points="107.3,289.1 392.7,289.1 392.7,202.1 107.3,202.1" fill="#7a8b99" opacity="0.85"/>
+<text x="114.3" y="248.5" font-size="12" fill="#fff">anneau visage</text>
+<polygon points="392.7,277.5 399.6,277.5 399.6,213.7 392.7,213.7" fill="#e0b400"/>
+<polyline points="250.0,355.8 250.0,483.4 366.0,483.4" fill="none" stroke="#5f6f7d" stroke-width="9" stroke-linecap="round" opacity="0.55"/>
+<polygon points="120.0,495.1 377.7,564.2 380.0,555.8 368.8,552.8 451.3,244.6 451.3,244.6 452.0,235.0 449.1,224.6 442.7,213.9 432.9,203.2 420.2,192.8 404.8,183.0 387.3,174.2 368.1,166.5 347.9,160.2 327.2,155.5 306.8,152.6 287.1,151.5 268.9,152.3 252.7,154.9 238.9,159.3 228.0,165.4 220.3,172.9 216.0,181.6 133.5,489.7 122.3,486.7" fill="none" stroke="#a63d3d" stroke-width="1.6" stroke-dasharray="7 5"/>
+<circle cx="250.0" cy="525.5" r="31.9" fill="#444" stroke="#fff" stroke-width="1.5"/>
+<line x1="237.2" y1="525.5" x2="262.8" y2="525.5" stroke="#fff" stroke-width="2"/>
+<circle cx="250.0" cy="525.5" r="5.2" fill="#fff"/>
+<g opacity="1.0"><line x1="484.9" y1="658.5" x2="475.8" y2="647.2" stroke="#1f6f50" stroke-width="17.4" stroke-linecap="round"/><line x1="475.8" y1="647.2" x2="421.4" y2="579.3" stroke="#a63d3d" stroke-width="26.1"/><line x1="421.4" y1="579.3" x2="374.7" y2="521.1" stroke="#c9c9c9" stroke-width="11.6"/><circle cx="484.9" cy="658.5" r="4.6" fill="#fff" stroke="#333" stroke-width="1.5"/><circle cx="374.7" cy="521.1" r="4.6" fill="#fff" stroke="#333" stroke-width="1.5"/></g>
+<g opacity="0.6"><line x1="132.6" y1="658.5" x2="137.1" y2="647.2" stroke="#1f6f50" stroke-width="17.4" stroke-linecap="round"/><line x1="137.1" y1="647.2" x2="164.3" y2="579.3" stroke="#a63d3d" stroke-width="26.1"/><line x1="164.3" y1="579.3" x2="187.7" y2="521.1" stroke="#c9c9c9" stroke-width="11.6"/><circle cx="132.6" cy="658.5" r="4.6" fill="#fff" stroke="#333" stroke-width="1.5"/><circle cx="187.7" cy="521.1" r="4.6" fill="#fff" stroke="#333" stroke-width="1.5"/></g>
+<g opacity="0.6"><line x1="132.5" y1="658.5" x2="137.1" y2="647.2" stroke="#1f6f50" stroke-width="17.4" stroke-linecap="round"/><line x1="137.1" y1="647.2" x2="164.3" y2="579.3" stroke="#a63d3d" stroke-width="26.1"/><line x1="164.3" y1="579.3" x2="187.6" y2="521.1" stroke="#c9c9c9" stroke-width="11.6"/><circle cx="132.5" cy="658.5" r="4.6" fill="#fff" stroke="#333" stroke-width="1.5"/><circle cx="187.6" cy="521.1" r="4.6" fill="#fff" stroke="#333" stroke-width="1.5"/></g>
+<text x="286.5" y="542.9" font-size="13" text-anchor="start" fill="#222">◀ cardan Ø110</text>
+<text x="280.7" y="616.8" font-size="13" text-anchor="start" fill="#222">◀ colonne ±40</text>
+<text x="498.9" y="616.5" font-size="13" text-anchor="start" fill="#222">vérin 24 V course 100</text>
+<text x="498.9" y="632.5" font-size="13" text-anchor="start" fill="#222">+ étage élastique</text>
+<text x="498.9" y="674.5" font-size="13" text-anchor="start" fill="#222">ancrage bas z468 (était 445)</text>
+<text x="441.4" y="176.0" font-size="13" text-anchor="start" fill="#222">fantôme : penché de 15° en avant</text>
+<text x="570.8" y="922.0" font-size="12" text-anchor="end" fill="#666">avant →</text>
+<line x1="58.60000000000002" y1="930.0" x2="58.60000000000002" y2="136.56000000000006" stroke="#3a5fa8" stroke-width="1" marker-start="url(#fl)" marker-end="url(#fl)"/>
+<text x="50.60000000000002" y="533.28" font-size="12" fill="#3a5fa8" transform="rotate(-90 50.60000000000002 533.28)" text-anchor="middle">1 368 mm</text>
+<text x="860" y="108" font-size="16" font-weight="bold">Vue de dessus</text>
+<polygon points="1226.2,310.0 999.4,179.1 999.4,440.9" fill="#c0902f" opacity="0.35" stroke="#c0902f"/>
+<circle cx="1075.0" cy="310.0" r="75.6" fill="none" stroke="#9a937f" stroke-dasharray="5 4"/>
+<circle cx="1075.0" cy="310.0" r="19.8" fill="#444"/>
+<line x1="1220.8" y1="310.0" x2="1152.4" y2="310.0" stroke="#a63d3d" stroke-width="16.2" stroke-linecap="round"/>
+<rect x="1192.0" y="252.4" width="32.4" height="115.2" fill="#2b2b2b" opacity="0.55" transform="rotate(-0 1208.2 310.0)"/>
+<text x="1251.4" y="314.0" font-size="13" text-anchor="start" fill="#a63d3d" font-weight="bold">V0 avant</text>
+<line x1="1002.1" y1="183.7" x2="1036.3" y2="243.0" stroke="#a63d3d" stroke-width="16.2" stroke-linecap="round"/>
+<rect x="992.2" y="137.0" width="32.4" height="115.2" fill="#2b2b2b" opacity="0.55" transform="rotate(-120 1008.4 194.6)"/>
+<text x="986.8" y="161.2" font-size="13" text-anchor="end" fill="#a63d3d" font-weight="bold">V120 arrière-gauche</text>
+<line x1="1002.1" y1="436.3" x2="1036.3" y2="377.0" stroke="#a63d3d" stroke-width="16.2" stroke-linecap="round"/>
+<rect x="992.2" y="367.8" width="32.4" height="115.2" fill="#2b2b2b" opacity="0.55" transform="rotate(-240 1008.4 425.4)"/>
+<text x="986.8" y="466.8" font-size="13" text-anchor="end" fill="#a63d3d" font-weight="bold">V240 arrière-droit</text>
+<text x="1229.8" y="331.6" font-size="12" fill="#666">avant →</text>
+<text x="860" y="500" font-size="14" font-weight="bold">Pilotage : 3 vérins = 3 mouvements</text>
+<text x="860" y="521" font-size="14">• hauteur : les 3 ensemble (±40 sur la colonne)</text>
+<text x="860" y="542" font-size="14">• tangage : V0 contre V120 + V240</text>
+<text x="860" y="563" font-size="14">• roulis : V120 contre V240</text>
+<text x="860" y="584" font-size="14">Vérin : 24 V, course 100, 300 N à 40 mm/s,</text>
+<text x="860" y="605" font-size="14">  potentiomètre 10 kΩ, autobloquant, IP65</text>
+<text x="860" y="626" font-size="14">Au neutre : 279 mm (course 235 → 335)</text>
+<text x="860" y="647" font-size="14">±15° : de 241 à 329 mm → reste ±6 mm</text>
+<text x="860" y="668" font-size="14">±10° : de 252 à 311 mm → reste ±17 mm</text>
+<text x="860" y="689" font-size="14">  (la marge sert à la hauteur ou à la respiration)</text>
+<rect x="860" y="720" width="400" height="150" fill="#fafafa" stroke="#ccc"/>
+<text x="872" y="742" font-size="14" font-weight="bold">Ancrage bas (×3) — étage élastique en série</text>
+<rect x="874" y="773" width="70" height="44" rx="6" fill="#c0902f"/>
+<text x="909.0" y="791" font-size="11.5" fill="#fff" text-anchor="middle">chape</text>
+<text x="909.0" y="806" font-size="11.5" fill="#fff" text-anchor="middle">caisson</text>
+<rect x="952" y="773" width="90" height="44" rx="6" fill="#1f6f50"/>
+<text x="997.0" y="791" font-size="11.5" fill="#fff" text-anchor="middle">silentbloc /</text>
+<text x="997.0" y="806" font-size="11.5" fill="#fff" text-anchor="middle">ressort</text>
+<rect x="1050" y="773" width="110" height="44" rx="6" fill="#a63d3d"/>
+<text x="1105.0" y="791" font-size="11.5" fill="#fff" text-anchor="middle">œil Ø6 +</text>
+<text x="1105.0" y="806" font-size="11.5" fill="#fff" text-anchor="middle">vérin</text>
+<rect x="1168" y="773" width="70" height="44" rx="6" fill="#555"/>
+<text x="1203.0" y="791" font-size="11.5" fill="#fff" text-anchor="middle">rotule</text>
+<text x="1203.0" y="806" font-size="11.5" fill="#fff" text-anchor="middle">haute</text>
+<text x="872" y="842" font-size="11.5" fill="#444">Le vérin autobloquant n'a aucune souplesse : le choc (seuil, appui)</text>
+<text x="872" y="858" font-size="11.5" fill="#444">est pris par l'élastique, pas par la vis (plan-de-route §6 « CHOCS »).</text>
+</svg>

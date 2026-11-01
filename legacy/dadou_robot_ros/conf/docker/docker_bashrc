@@ -1,0 +1,4 @@
+
+source /opt/ros/jazzy/setup.bash
+
+alias s='source /opt/ros/jazzy/setup.bash'

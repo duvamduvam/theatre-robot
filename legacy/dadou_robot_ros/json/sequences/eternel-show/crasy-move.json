@@ -1,0 +1,34 @@
+{
+    "keys": "H9",
+    "duration": 5000,
+    "left_eye": [
+        [1,
+          {"mode": "random", "random move min": 15,
+            "random move max": 85, "random time min": 500, "random time max": 3000}
+        ]
+    ],
+    "right_eye": [
+        [1,
+          {"mode": "random", "random move min": 10,
+            "random move max": 90, "random time min": 500, "random time max": 3000}
+        ]
+    ],
+    "left_arm": [
+        [1,
+          {"mode": "random", "random move min": 65,
+            "random move max": 95, "random time min": 500, "random time max": 3000}
+        ]
+    ],
+    "right_arm": [
+        [1,
+          {"mode": "random", "random move min": 65,
+            "random move max": 95, "random time min": 500, "random time max": 3000}
+        ]
+    ],
+    "neck": [
+        [1,
+          {"mode": "random", "random move min": 35,
+            "random move max": 75, "random time min": 500, "random time max": 3000}
+        ]
+    ]
+}

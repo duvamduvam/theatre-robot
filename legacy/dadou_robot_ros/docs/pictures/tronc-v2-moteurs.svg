@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1000" viewBox="0 0 1500 1000" font-family="DejaVu Sans, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="30" y="42" font-size="24" font-weight="bold">Didier v2 — tronc articulé : 2 moteurs rapides + ressorts de centrage</text>
+<text x="30" y="68" font-size="14" fill="#555">Solution A de docs/etude-tronc.md §10.4 · concept « robot triangle » · 2026-10-25 · schéma de principe, dimensionnement à refaire au bilan de masse</text>
+<text x="30" y="108" font-size="16" font-weight="bold">Élévation de côté</text>
+<line x1="58.60000000000002" y1="950" x2="574.8" y2="950" stroke="#999" stroke-width="2"/>
+<circle cx="464.6" cy="857.2" r="92.8" fill="#2b2b2b" opacity="1.0"/>
+<circle cx="464.6" cy="857.2" r="23.2" fill="#555"/>
+<rect x="457.6" y="729.6" width="13.9" height="127.6" fill="#8a8a8a"/>
+<circle cx="142.7" cy="857.2" r="92.8" fill="#2b2b2b" opacity="0.85"/>
+<circle cx="142.7" cy="857.2" r="23.2" fill="#555"/>
+<rect x="135.7" y="729.6" width="13.9" height="127.6" fill="#8a8a8a"/>
+<rect x="128.2" y="694.8" width="365.4" height="34.8" fill="#c0902f" rx="3"/>
+<text x="180.4" y="716.8" font-size="12" fill="#fff">caisson + batterie 48 V</text>
+<rect x="223.9" y="562.9" width="52.2" height="126.1" fill="#6a6a6a"/>
+<polygon points="116.6,549.8 383.4,549.8 383.4,541.1 371.8,541.1 371.8,222.1 371.8,222.1 369.9,212.6 364.5,203.4 355.5,194.7 343.3,186.9 328.3,180.1 310.9,174.6 291.7,170.6 271.2,168.1 250.0,167.3 228.8,168.1 208.3,170.6 189.1,174.6 171.7,180.1 156.7,186.9 144.5,194.7 135.5,203.4 130.1,212.6 128.2,222.1 128.2,541.1 116.6,541.1" fill="#d8d2c4" stroke="#9a937f"/>
+<polygon points="107.3,404.8 392.7,404.8 392.7,346.8 107.3,346.8" fill="#7a8b99" opacity="0.85"/>
+<text x="114.3" y="378.7" font-size="12" fill="#fff">anneau bras</text>
+<polygon points="107.3,309.1 392.7,309.1 392.7,222.1 107.3,222.1" fill="#7a8b99" opacity="0.85"/>
+<text x="114.3" y="268.5" font-size="12" fill="#fff">anneau visage</text>
+<polygon points="392.7,297.5 399.6,297.5 399.6,233.7 392.7,233.7" fill="#e0b400"/>
+<polyline points="250.0,375.8 250.0,503.4 366.0,503.4" fill="none" stroke="#5f6f7d" stroke-width="9" stroke-linecap="round" opacity="0.55"/>
+<line x1="371.8" y1="497.6" x2="371.8" y2="428.0" stroke="#4f8f6a" stroke-width="6" stroke-dasharray="4 3"/>
+<polygon points="120.0,515.1 377.7,584.2 380.0,575.8 368.8,572.8 451.3,264.6 451.3,264.6 452.0,255.0 449.1,244.6 442.7,233.9 432.9,223.2 420.2,212.8 404.8,203.0 387.3,194.2 368.1,186.5 347.9,180.2 327.2,175.5 306.8,172.6 287.1,171.5 268.9,172.3 252.7,174.9 238.9,179.3 228.0,185.4 220.3,192.9 216.0,201.6 133.5,509.7 122.3,506.7" fill="none" stroke="#a63d3d" stroke-width="1.6" stroke-dasharray="7 5"/>
+<rect x="136.9" y="602.0" width="226.2" height="7.0" fill="#6a6a6a"/>
+<rect x="141.5" y="571.8" width="13.9" height="23.2" fill="#222" rx="3"/>
+<polyline points="174.6,602.0 183.3,598.3 165.9,594.5 183.3,590.8 165.9,587.1 183.3,583.4 165.9,579.6 183.3,575.9 165.9,572.2 183.3,568.4 165.9,564.7 183.3,561.0 165.9,557.3 183.3,553.5 174.6,549.8" fill="none" stroke="#2f6fae" stroke-width="1.7399999999999998" stroke-linejoin="round"/>
+<rect x="344.5" y="571.8" width="13.9" height="23.2" fill="#222" rx="3"/>
+<polyline points="325.4,602.0 334.1,598.3 316.7,594.5 334.1,590.8 316.7,587.1 334.1,583.4 316.7,579.6 334.1,575.9 316.7,572.2 334.1,568.4 316.7,564.7 334.1,561.0 316.7,557.3 334.1,553.5 325.4,549.8" fill="none" stroke="#2f6fae" stroke-width="1.7399999999999998" stroke-linejoin="round"/>
+<circle cx="250.0" cy="545.5" r="31.9" fill="#444" stroke="#fff" stroke-width="1.5"/>
+<circle cx="250.0" cy="545.5" r="20.9" fill="none" stroke="#e08a1e" stroke-width="2.3"/>
+<circle cx="250.0" cy="545.5" r="4.1" fill="#fff"/>
+<line x1="186.2" y1="514.1" x2="250.0" y2="524.6" stroke="#e08a1e" stroke-width="1.7"/>
+<line x1="186.2" y1="528.1" x2="250.0" y2="566.3" stroke="#e08a1e" stroke-width="1.7"/>
+<circle cx="186.2" cy="521.1" r="27.8" fill="#2d5d8a" stroke="#fff" stroke-width="1"/>
+<text x="186.2" y="525.1" font-size="17" fill="#fff" text-anchor="middle" font-weight="bold">M2</text>
+<rect x="264.5" y="607.8" width="60.9" height="40.6" fill="#2d5d8a" stroke="#fff" stroke-width="1" rx="4"/>
+<text x="294.7" y="631.0" font-size="17" fill="#fff" text-anchor="middle" font-weight="bold">M1</text>
+<line x1="264.5" y1="628.1" x2="264.5" y2="545.5" stroke="#e08a1e" stroke-width="4.6"/>
+<text x="280.7" y="680.3" font-size="13" text-anchor="start" fill="#222">◀ colonne FIXE</text>
+<text x="385.8" y="462.8" font-size="13" text-anchor="start" fill="#4f8f6a">respiration (option) :</text>
+<text x="385.8" y="478.8" font-size="13" text-anchor="start" fill="#4f8f6a">panneau + petit servo</text>
+<text x="441.4" y="196.0" font-size="13" text-anchor="start" fill="#222">fantôme : penché de 15° en avant</text>
+<text x="400.8" y="578.8" font-size="13" text-anchor="start" fill="#666">détail ▶</text>
+<text x="570.8" y="942.0" font-size="12" text-anchor="end" fill="#666">avant →</text>
+<text x="790" y="108" font-size="16" font-weight="bold">Détail : cardan, moteurs, ressorts</text>
+<rect x="790" y="120" width="680" height="400" fill="#fafafa" stroke="#ddd"/>
+<rect x="1056.0" y="268.0" width="108.0" height="237.0" fill="#6a6a6a"/>
+<rect x="834.0" y="151.0" width="552.0" height="90.0" fill="#d8d2c4" stroke="#9a937f"/>
+<text x="843.6" y="213.4" font-size="12" fill="#6b6553">bas du corps</text>
+<rect x="876.0" y="349.0" width="468.0" height="14.4" fill="#6a6a6a"/>
+<rect x="885.6" y="286.6" width="28.8" height="48.0" fill="#222" rx="3"/>
+<polyline points="954.0,349.0 972.0,341.3 936.0,333.6 972.0,325.9 936.0,318.1 972.0,310.4 936.0,302.7 972.0,295.0 936.0,287.3 972.0,279.6 936.0,271.9 972.0,264.1 936.0,256.4 972.0,248.7 954.0,241.0" fill="none" stroke="#2f6fae" stroke-width="3.5999999999999996" stroke-linejoin="round"/>
+<rect x="1305.6" y="286.6" width="28.8" height="48.0" fill="#222" rx="3"/>
+<polyline points="1266.0,349.0 1284.0,341.3 1248.0,333.6 1284.0,325.9 1248.0,318.1 1284.0,310.4 1248.0,302.7 1284.0,295.0 1248.0,287.3 1284.0,279.6 1248.0,271.9 1284.0,264.1 1248.0,256.4 1284.0,248.7 1266.0,241.0" fill="none" stroke="#2f6fae" stroke-width="3.5999999999999996" stroke-linejoin="round"/>
+<circle cx="1110.0" cy="232.0" r="66.0" fill="#444" stroke="#fff" stroke-width="1.5"/>
+<circle cx="1110.0" cy="232.0" r="43.2" fill="none" stroke="#e08a1e" stroke-width="4.8"/>
+<circle cx="1110.0" cy="232.0" r="8.4" fill="#fff"/>
+<line x1="978.0" y1="167.2" x2="1110.0" y2="188.8" stroke="#e08a1e" stroke-width="3.6"/>
+<line x1="978.0" y1="196.0" x2="1110.0" y2="275.2" stroke="#e08a1e" stroke-width="3.6"/>
+<circle cx="978.0" cy="181.6" r="57.6" fill="#2d5d8a" stroke="#fff" stroke-width="1"/>
+<text x="978.0" y="185.6" font-size="36" fill="#fff" text-anchor="middle" font-weight="bold">M2</text>
+<rect x="1140.0" y="361.0" width="126.0" height="84.0" fill="#2d5d8a" stroke="#fff" stroke-width="1" rx="4"/>
+<text x="1202.4" y="409.0" font-size="36" fill="#fff" text-anchor="middle" font-weight="bold">M1</text>
+<line x1="1140.0" y1="403.0" x2="1140.0" y2="232.0" stroke="#e08a1e" stroke-width="9.6"/>
+<text x="1200.0" y="159.4" font-size="12.5" text-anchor="start" fill="#222">M2 (à gauche) : tangage, fixé au corps</text>
+<text x="1200.0" y="174.4" font-size="12.5" text-anchor="start" fill="#222">courroie 1:4 → axe Y</text>
+<text x="1284.0" y="379.0" font-size="12.5" text-anchor="start" fill="#222">M1 roulis, sur la colonne</text>
+<text x="1284.0" y="394.0" font-size="12.5" text-anchor="start" fill="#222">courroie 1:4 → axe X</text>
+<text x="840.0" y="367.0" font-size="12.5" text-anchor="start" fill="#222">▲ plateau fixe : 4 ressorts</text>
+<text x="840.0" y="382.0" font-size="12.5" text-anchor="start" fill="#222">de centrage (r130), butées ±17°</text>
+<text x="1176.0" y="283.0" font-size="12.5" text-anchor="start" fill="#222">cardan</text>
+<text x="790" y="560" font-size="14" font-weight="bold">Dimensionnement (hypothèses : 20 kg, CdG à 35 cm)</text>
+<text x="790" y="584" font-size="14">• gravité : m·g·h = 69 N·m/rad (le buste veut tomber)</text>
+<text x="790" y="608" font-size="14">• ressorts : 82 N·m/rad = ×1.2 → stable seul ; ~2.4 N/mm chacun à r130</text>
+<text x="790" y="632" font-size="14">• à 15°, le moteur ne tient plus que 3.8 N·m</text>
+<text x="790" y="656" font-size="14">• inertie ≈ 3.2 kg·m² → 20 rad/s² = 67 N·m de pointe à l'axe</text>
+<text x="790" y="680" font-size="14">• courroie 1:4 → 17 N·m et 8.4 rad/s au moteur pour 120 °/s</text>
+<text x="790" y="704" font-size="14" font-weight="bold">Moteurs candidats (lus le 25/10)</text>
+<text x="790" y="728" font-size="14">• Unitree GO-M8010-6 : 23,7 N·m crête (marge ×1.4), 30 rad/s, 313,95 €</text>
+<text x="790" y="752" font-size="14">• Robstride 03 : 60 N·m crête (large), A$509 — vitesse non lue</text>
+<text x="790" y="776" font-size="14" font-weight="bold">Sécurité</text>
+<text x="790" y="800" font-size="14">• coupure : les ressorts ramènent au centre (sans frein, sans logiciel)</text>
+<text x="790" y="824" font-size="14">• choc : le moteur réversible cède au lieu de casser une vis</text>
+<text x="790" y="848" font-size="14">• butées caoutchouc ±17° ; jupe anti-pincement sous le corps</text>
+<text x="790" y="872" font-size="14" font-weight="bold">Ce que ça simplifie dans le concept</text>
+<text x="790" y="896" font-size="14">• plus de vérins ni de colonne télescopique : 2 actionneurs au lieu de 3</text>
+<text x="790" y="920" font-size="14">• l'enveloppe basse des bras (z≈672, imposée par les vérins) disparaît</text>
+</svg>

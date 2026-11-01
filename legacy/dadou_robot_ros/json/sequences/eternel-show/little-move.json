@@ -1,0 +1,29 @@
+{
+    "keys": "H1",
+    "duration": 5000,
+    "types": ["little move"],
+    "left_eye": [
+        [0,
+          {"mode": "random", "random move min": 65,
+            "random move max": 85, "random time min": 500, "random time max":1000}
+        ]
+    ],
+    "right_eye": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 90, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "left_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "right_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ]
+}

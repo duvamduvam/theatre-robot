@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""Node de simulation des servos en Gazebo (paquet robot_sim, AUTONOME : aucun
+import de robot.* ni dadou_utils_ros -- même règle que leds_sim_node/robot_drive,
+cf. leur docstring respective).
+
+Rejoue en sim la sémantique de robot/actions/servo.py (voir robot_sim_lib/
+servos_logic.py pour le détail des divergences assumées et les tests), pour
+piloter les 5 JointPositionController gz (neck, left_arm, right_arm, left_eye,
+right_eye) déclarés dans dadou_robot_gz.urdf.xacro : topic /<servo>/position
+(std_msgs/Float64, RADIANS -- contrat vérifié par robot/tests/unit/test_urdf.py
+et gz_bridge.yaml).
+
+Abonnements (StringTime -- mêmes noms de topic que le vrai robot, publiés par
+animations_node/servo_node : ce sont les valeurs de dadou_utils_ros.utils_static
+.NECK/.LEFT_ARM/.RIGHT_ARM/.LEFT_EYE/.RIGHT_EYE, recopiées ici en toutes lettres
+plutôt qu'importées -- robot_sim reste un paquet autonome) :
+  neck, left_arm, right_arm, left_eye, right_eye : payload JSON = valeur 0-99,
+  "stop", {"default": x} ou {"mode": "random", ...} -- cf. servos_logic.py.
+
+Timer 10 Hz (même cadence que le servo_node.py réel, robot/nodes/servo_node.py) :
+tick chaque ServoSim, publie Float64 UNIQUEMENT si la cible a changé (l'anti-
+spam vit DANS ServoSim.tick(), cf. son docstring -- pas de duplication ici).
+"""
+import json
+import os
+import sys
+
+# Bootstrap d'import : le script et robot_sim_lib sont installés côte à côte
+# dans lib/robot_sim/ (voir CMakeLists.txt -- même mécanisme que leds_sim_node).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from robot_sim_lib.servos_logic import (  # noqa: E402
+    JOINT_LIMITS,
+    ServoSim,
+    pos99_to_radians,
+)
+
+import rclpy  # noqa: E402
+from rclpy.node import Node  # noqa: E402
+from robot_interfaces.msg import StringTime  # noqa: E402
+from std_msgs.msg import Float64  # noqa: E402
+
+# Noms de topic StringTime == dadou_utils_ros.utils_static.{NECK,LEFT_ARM,
+# RIGHT_ARM,LEFT_EYE,RIGHT_EYE} (valeurs recopiées, pas importées : cf. docstring).
+SERVO_NAMES = ["neck", "left_arm", "right_arm", "left_eye", "right_eye"]
+
+# Position de repos par défaut (0-99 = milieu de course) : le vrai robot_config
+# n'a PAS de valeur neutre unique par servo (chaque axe a son propre calibrage
+# mécanique, réglé via les paramètres HEAD_PWM_NB/DEFAULT_POS du launch réel).
+# En sim, 50 (milieu de course pour les 5 joints, cf. JOINT_LIMITS) est une
+# convention neutre raisonnable -- une visualisation, pas un calibrage.
+DEFAULT_POS = 50
+
+TICK_PERIOD_S = 0.1  # 10 Hz, même cadence que servo_node.py (timer_callback réel)
+
+
+class ServosSimNode(Node):
+
+    def __init__(self):
+        super().__init__("servos_sim_node")
+
+        now_ms = self._now_ms()
+        self._servos = {name: ServoSim(default_pos=DEFAULT_POS, now_ms=now_ms) for name in SERVO_NAMES}
+        self._publishers = {
+            name: self.create_publisher(Float64, "/{}/position".format(name), 10)
+            for name in SERVO_NAMES
+        }
+
+        for name in SERVO_NAMES:
+            # _make_subscription_callback (et non une lambda inline) : capture
+            # `name` proprement (piège classique de fermeture sur variable de
+            # boucle en Python, où une lambda partagerait la dernière valeur).
+            self.create_subscription(StringTime, name, self._make_subscription_callback(name), 10)
+
+        self.create_timer(TICK_PERIOD_S, self._on_timer)
+
+        self.get_logger().info(
+            "servos_sim_node démarré (rejoue les animations servo en sim, pas le rendu PWM/I2C réel)")
+
+    def _now_ms(self):
+        # Horloge ROS (sim_time si use_sim_time:=true, bridgée depuis gz /clock) :
+        # jamais time.time(), même règle que leds_sim_node -- sinon le rejeu
+        # d'animation dérive de l'horloge de simulation.
+        return self.get_clock().now().nanoseconds // 1_000_000
+
+    def _make_subscription_callback(self, name):
+        def _callback(msg):
+            try:
+                payload = json.loads(msg.msg)
+            except json.JSONDecodeError:
+                self.get_logger().error('{}: JSON invalide : "{}"'.format(name, msg.msg))
+                return
+            self._servos[name].update(payload, self._now_ms())
+            self.get_logger().info('{}: "{}"'.format(name, payload))
+        return _callback
+
+    # ---- timer 10 Hz : tick chaque servo + publie (anti-spam dans ServoSim) ----
+
+    def _on_timer(self):
+        now_ms = self._now_ms()
+        for name, servo in self._servos.items():
+            target = servo.tick(now_ms)
+            if target is None:
+                continue  # rien de neuf ce tick (cf. ServoSim.tick anti-spam)
+            joint_min, joint_max = JOINT_LIMITS[name]
+            radians = pos99_to_radians(target, joint_min, joint_max)
+            self._publishers[name].publish(Float64(data=radians))
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = ServosSimNode()
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

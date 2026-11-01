@@ -1,0 +1,1773 @@
+<?xml version="1.0"?>
+<!--
+  Monde "chantiers" (répétition simulée, étude §13.2, §13.3, §13.10) : le trajet
+  des Nefs de l'île de Nantes à la grue Titan grise, en deux tronçons : le Mail
+  des Chantiers (béton, x de 0 à 70 le long de +x, y = 0) puis, après une
+  COUDÉE de 35° vers y positif, le quai des Antilles (dalles, 90,8 m de plus).
+  Boîtes/cylindres/sphères uniquement : pas de mesh, pas de Fuel, aucune
+  dépendance réseau. Le rendu sert à une webcam de console, pas à un film.
+
+  Repère : x le long du Mail, y en travers, z vertical (mètres). Côté Loire =
+  y NÉGATIF (tout le long, à plus de 6 m du tracé), côté bâtiments = y de signe opposé (y > 7).
+  Didier est posé par le launch en (0, 0, 0.24), comme dans rue.sdf (la pose de spawn ne dépend
+  pas du monde).
+  Convention : Loire à DROITE d'un marcheur qui avance vers +x (repère direct, z vertical),
+  donc côté y NÉGATIF ; bâtiments à gauche, y POSITIF. C'est l'IMAGE MIROIR du brief du lot R3, qui
+  écrivait « Loire à droite = y positif » (vrai seulement dans un repère gauche).
+
+  Échelle : 1 247 m réels (routage OSM piéton, §13.10) comprimés en 160,8 m de
+  polyligne, soit ≈ 1:7,8 (le 1:8,6 visé au départ supposait un espacement des
+  30 POI plus serré que la règle « ≥ 4,5 m en x » sur la diagonale du quai).
+
+  CONTRAT : le monde s'appelle "stage" ICI AUSSI. Le bridge (config/gz_bridge.yaml) et
+  leds_sim_node ciblent /world/stage/material_color : renommer le monde casserait
+  silencieusement le visage LED en sim. Seul le FICHIER change (argument `world:=chantiers`).
+
+  Pas de ground plane : les dalles font le sol. Sortir des dalles côté bâtiments ou aux deux
+  bouts = chute dans le vide (voulu, comme rue.sdf). Côté Loire, le ressaut de quai de 12 cm
+  puis l'EAU, 1 m plus bas (z = -1,0, collision oui) : la chute s'arrête, la séance aussi.
+
+  Les 30 modèles nommés comme les POI de config/chantiers.yaml (CONTRAT, testé par
+  test_chantiers_world.py) sont, dans l'ordre de la marche : nefs, elephant, carrousel, table_basse, poster_bizarre, poubelle_tri, pigeon, banc, flaque, terrasse, grue_jaune, cale, velo_cadenas, panneau_info, rails, lampadaire, anneaux, bollard, loire, plot_chantier, chien, caisse_bois, hangar_bananes, tas_de_sable, horloge_arretee, bouche_incendie, pelouse, conteneur_rouge, tag_mur, titan_grise.
+  La POSE de chaque modèle est l'ANCRE du POI (x, y du YAML, lacet = cap du chemin à cet
+  endroit) ; les liens sont exprimés dans ce repère (x le long de la marche, y à gauche de la
+  marche), décalés de l'ancre. Dans les commentaires, v = écart latéral au tracé, POSITIF côté
+  Loire et négatif côté bâtiments, quel que soit le sens du monde (la mise en miroir ne change
+  pas ces valeurs). Les ancres sont à ≤ rayon - 1 m du tracé (sinon un Didier qui suit la
+  polyligne ne déclencherait jamais l'enter) ; les objets pleins sont à ≥ 1,7 m du tracé.
+-->
+<sdf version="1.10">
+  <world name="stage">
+
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <!-- Système Sensors : indispensable au rendu de la caméra embarquée
+         (camera_link, cf. dadou_robot_gz.urdf.xacro) : sans lui aucune image
+         n'est publiée. Le monde peut alors demander un moteur de rendu même en
+         headless (ogre2 off-screen) : le retour vidéo du pont web fonctionne
+         donc aussi sans GUI Gazebo. -->
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.85 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.4 0.2 -0.9</direction>
+    </light>
+
+    <!-- Esplanade (z surface = 0, épaisseur 0,12, friction 1.0, largeur 12 m) : bande béton gris clair sur le Mail (x de -5 à 71,9), bande dalles gris chaud sur le quai (coudée de 35°, rallongée de 1,89 m en amont pour fermer la mitre extérieure). Collision et visuel : la dalle du quai a son visuel 3 mm plus haut pour ne pas scintiller sur le recouvrement. Joints de dilatation = visuels seuls (repères de mouvement pour la caméra). -->
+    <model name="esplanade">
+      <static>true</static>
+      <link name="mail_beton">
+        <pose>33.445 0 -0.06 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>76.89 12 0.12</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>76.89 12 0.12</size></box></geometry><material><ambient>0.49 0.49 0.48 1</ambient><diffuse>0.70 0.70 0.68 1</diffuse></material></visual>
+      </link>
+      <link name="quai_dalles">
+        <pose>111.125528 28.796405 -0.06 0 0 0.610865</pose>
+        <collision name="collision"><geometry><box><size>104.19 12 0.12</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>104.19 12 0.12</size></box></geometry><material><ambient>0.48 0.45 0.41 1</ambient><diffuse>0.68 0.64 0.58 1</diffuse></material></visual>
+      </link>
+      <link name="quai_dalles_visuel">
+        <pose>111.125528 28.796405 -0.0585 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>104.19 12 0.123</size></box></geometry><material><ambient>0.48 0.45 0.41 1</ambient><diffuse>0.68 0.64 0.58 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_01">
+        <pose>0 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_02">
+        <pose>6 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_03">
+        <pose>12 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_04">
+        <pose>18 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_05">
+        <pose>24 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_06">
+        <pose>30 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_07">
+        <pose>36 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_08">
+        <pose>42 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_09">
+        <pose>48 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_10">
+        <pose>54 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_11">
+        <pose>60 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_mail_12">
+        <pose>66 0 0.0005 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 12 0.001</size></box></geometry><material><ambient>0.35 0.35 0.34 1</ambient><diffuse>0.50 0.50 0.48 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_01">
+        <pose>73.276608 2.294306 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_02">
+        <pose>76.553216 4.588611 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_03">
+        <pose>79.829825 6.882917 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_04">
+        <pose>83.106433 9.177223 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_05">
+        <pose>86.383041 11.471529 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_06">
+        <pose>89.659649 13.765834 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_07">
+        <pose>92.936257 16.06014 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_08">
+        <pose>96.212865 18.354446 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_09">
+        <pose>99.489474 20.648752 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_10">
+        <pose>102.766082 22.943057 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_11">
+        <pose>106.04269 25.237363 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_12">
+        <pose>109.319298 27.531669 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_13">
+        <pose>112.595906 29.825975 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_14">
+        <pose>115.872514 32.12028 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_15">
+        <pose>119.149123 34.414586 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_16">
+        <pose>122.425731 36.708892 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_17">
+        <pose>125.702339 39.003198 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_18">
+        <pose>128.978947 41.297503 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_19">
+        <pose>132.255555 43.591809 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_20">
+        <pose>135.532164 45.886115 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_21">
+        <pose>138.808772 48.180421 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_22">
+        <pose>142.08538 50.474726 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_23">
+        <pose>145.361988 52.769032 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_24">
+        <pose>148.638596 55.063338 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_25">
+        <pose>151.915204 57.357644 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>0.04 12 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_long_m">
+        <pose>110.178898 31.795891 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>102.3 0.04 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+      <link name="joint_quai_long_p">
+        <pose>113.620356 26.880979 0.004 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>102.3 0.04 0.002</size></box></geometry><material><ambient>0.34 0.31 0.28 1</ambient><diffuse>0.48 0.44 0.40 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- Ressaut de quai côté Loire : lèvre de 30 cm de large et 12 cm de haut au bord des dalles (v de 6,0 à 6,3). Collision oui : Didier peut s'y bloquer ou la franchir de justesse, au-delà c'est 1 m de chute dans l'eau. -->
+    <model name="bordure_quai">
+      <static>true</static>
+      <link name="bordure_mail">
+        <pose>33.645 -6.15 0.06 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>77.29 0.3 0.12</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>77.29 0.3 0.12</size></box></geometry><material><ambient>0.57 0.57 0.56 1</ambient><diffuse>0.82 0.82 0.80 1</diffuse></material></visual>
+      </link>
+      <link name="bordure_quai">
+        <pose>114.653023 23.75862 0.06 0 0 0.610865</pose>
+        <collision name="collision"><geometry><box><size>104.19 0.3 0.12</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>104.19 0.3 0.12</size></box></geometry><material><ambient>0.57 0.57 0.56 1</ambient><diffuse>0.82 0.82 0.80 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- Façades basses continues côté bâtiments (v de -12 à -7, hauteur 3,6 à 4,4) : sur le Mail de x = 30 aux abords de la coudée, puis sur le quai de s = 71 jusqu'au Hangar à Bananes, et du Hangar à la fin des dalles. Les deux alignements s'interpénètrent à l'angle intérieur de la coudée (fermeture visuelle voulue). Fenêtres = visuels seuls. -->
+    <model name="facades">
+      <static>true</static>
+      <link name="facade_01">
+        <pose>35.5 9.5 1.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>11 5 5</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>11 5 5</size></box></geometry><material><ambient>0.62 0.57 0.48 1</ambient><diffuse>0.88 0.82 0.68 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_01">
+        <pose>35.5 7.01 1.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>10 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+      <link name="facade_02">
+        <pose>46.5 9.5 1.3 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>11 5 4.6</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>11 5 4.6</size></box></geometry><material><ambient>0.56 0.43 0.32 1</ambient><diffuse>0.80 0.62 0.45 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_02">
+        <pose>46.5 7.01 1.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>10 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+      <link name="facade_03">
+        <pose>56 9.5 1.7 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>8 5 5.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>8 5 5.4</size></box></geometry><material><ambient>0.59 0.49 0.50 1</ambient><diffuse>0.84 0.70 0.72 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_03">
+        <pose>56 7.01 1.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>7 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+      <link name="facade_04">
+        <pose>64 9.5 1.4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>8 5 4.8</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>8 5 4.8</size></box></geometry><material><ambient>0.43 0.49 0.55 1</ambient><diffuse>0.62 0.70 0.78 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_04">
+        <pose>64 7.01 1.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>7 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+      <link name="facade_05">
+        <pose>69.416787 11.188988 1.6 0 0 0.610865</pose>
+        <collision name="collision"><geometry><box><size>9.88 5 5.2</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>9.88 5 5.2</size></box></geometry><material><ambient>0.59 0.59 0.55 1</ambient><diffuse>0.85 0.85 0.78 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_05">
+        <pose>70.844992 9.1493 1.7 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>8.88 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+      <link name="facade_06">
+        <pose>77.505913 16.853056 1.5 0 0 0.610865</pose>
+        <collision name="collision"><geometry><box><size>9.87 5 5</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>9.87 5 5</size></box></geometry><material><ambient>0.62 0.57 0.48 1</ambient><diffuse>0.88 0.82 0.68 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_06">
+        <pose>78.934119 14.813367 1.7 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>8.87 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+      <link name="facade_07">
+        <pose>85.590944 22.514255 1.3 0 0 0.610865</pose>
+        <collision name="collision"><geometry><box><size>9.87 5 4.6</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>9.87 5 4.6</size></box></geometry><material><ambient>0.56 0.43 0.32 1</ambient><diffuse>0.80 0.62 0.45 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_07">
+        <pose>87.019149 20.474567 1.7 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>8.87 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+      <link name="facade_08">
+        <pose>93.680071 28.178322 1.7 0 0 0.610865</pose>
+        <collision name="collision"><geometry><box><size>9.88 5 5.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>9.88 5 5.4</size></box></geometry><material><ambient>0.59 0.49 0.50 1</ambient><diffuse>0.84 0.70 0.72 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_08">
+        <pose>95.108276 26.138634 1.7 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>8.88 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+      <link name="facade_09">
+        <pose>134.957142 57.080839 1.4 0 0 0.610865</pose>
+        <collision name="collision"><geometry><box><size>10.9 5 4.8</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>10.9 5 4.8</size></box></geometry><material><ambient>0.43 0.49 0.55 1</ambient><diffuse>0.62 0.70 0.78 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_09">
+        <pose>136.385347 55.041151 1.7 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>9.9 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+      <link name="facade_10">
+        <pose>143.885899 63.332822 1.6 0 0 0.610865</pose>
+        <collision name="collision"><geometry><box><size>10.9 5 5.2</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>10.9 5 5.2</size></box></geometry><material><ambient>0.59 0.59 0.55 1</ambient><diffuse>0.85 0.85 0.78 1</diffuse></material></visual>
+      </link>
+      <link name="vitres_10">
+        <pose>145.314105 61.293134 1.7 0 0 0.610865</pose>
+        <visual name="visual"><geometry><box><size>9.9 0.06 1.4</size></box></geometry><material><ambient>0.13 0.15 0.20 1</ambient><diffuse>0.18 0.22 0.28 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 1. Les Nefs (départ) : hangar 30 x 12 x 10 côté bâtiments, toit bleu, face à v = -7 ; occupe x de 0 à 30. ancre = POI (4, 2), rayon 4. Liens exprimés dans le repère du modèle (x le long de la marche, y à gauche de la marche), décalés de l'ancre. -->
+    <model name="nefs">
+      <static>true</static>
+      <pose>4 2 0 0 0 0</pose>
+      <link name="hall">
+        <pose>11 11 4.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>30 12 8.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>30 12 8.4</size></box></geometry><material><ambient>0.56 0.53 0.48 1</ambient><diffuse>0.80 0.76 0.68 1</diffuse></material></visual>
+      </link>
+      <link name="toit">
+        <pose>11 11 9.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>30.8 12.8 1.6</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>30.8 12.8 1.6</size></box></geometry><material><ambient>0.10 0.27 0.56 1</ambient><diffuse>0.15 0.38 0.80 1</diffuse></material></visual>
+      </link>
+      <link name="porte">
+        <pose>11 4.94 2.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>6 0.12 5</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>6 0.12 5</size></box></geometry><material><ambient>0.14 0.17 0.21 1</ambient><diffuse>0.20 0.25 0.30 1</diffuse></material></visual>
+      </link>
+      <link name="bandeau_vitres">
+        <pose>11 4.95 6.4 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>24 0.1 1</size></box></geometry><material><ambient>0.32 0.43 0.55 1</ambient><diffuse>0.45 0.62 0.78 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 2. L'Éléphant mécanique : boîte grise + 4 pieds + tête + oreilles + trompe, côté Loire (centre v = 2,9). ancre = POI (8.6, -1.4), rayon 2.5. -->
+    <model name="elephant">
+      <static>true</static>
+      <pose>8.6 -1.4 0 0 0 0</pose>
+      <link name="corps">
+        <pose>0 -1.5 1.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>2.4 1.2 1.2</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>2.4 1.2 1.2</size></box></geometry><material><ambient>0.39 0.41 0.43 1</ambient><diffuse>0.56 0.58 0.62 1</diffuse></material></visual>
+      </link>
+      <link name="patte_1">
+        <pose>0.85 -1.9 0.45 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.17</radius><length>0.9</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.17</radius><length>0.9</length></cylinder></geometry><material><ambient>0.32 0.33 0.35 1</ambient><diffuse>0.45 0.47 0.50 1</diffuse></material></visual>
+      </link>
+      <link name="patte_2">
+        <pose>0.85 -1.1 0.45 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.17</radius><length>0.9</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.17</radius><length>0.9</length></cylinder></geometry><material><ambient>0.32 0.33 0.35 1</ambient><diffuse>0.45 0.47 0.50 1</diffuse></material></visual>
+      </link>
+      <link name="patte_3">
+        <pose>-0.85 -1.9 0.45 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.17</radius><length>0.9</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.17</radius><length>0.9</length></cylinder></geometry><material><ambient>0.32 0.33 0.35 1</ambient><diffuse>0.45 0.47 0.50 1</diffuse></material></visual>
+      </link>
+      <link name="patte_4">
+        <pose>-0.85 -1.1 0.45 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.17</radius><length>0.9</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.17</radius><length>0.9</length></cylinder></geometry><material><ambient>0.32 0.33 0.35 1</ambient><diffuse>0.45 0.47 0.50 1</diffuse></material></visual>
+      </link>
+      <link name="tete">
+        <pose>1.5 -1.5 1.85 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.9 0.9 0.95</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.9 0.9 0.95</size></box></geometry><material><ambient>0.39 0.41 0.43 1</ambient><diffuse>0.56 0.58 0.62 1</diffuse></material></visual>
+      </link>
+      <link name="oreille_1">
+        <pose>1.25 -2.16 1.9 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.5 0.08 0.75</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.5 0.08 0.75</size></box></geometry><material><ambient>0.43 0.39 0.41 1</ambient><diffuse>0.62 0.55 0.58 1</diffuse></material></visual>
+      </link>
+      <link name="oreille_2">
+        <pose>1.25 -0.84 1.9 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.5 0.08 0.75</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.5 0.08 0.75</size></box></geometry><material><ambient>0.43 0.39 0.41 1</ambient><diffuse>0.62 0.55 0.58 1</diffuse></material></visual>
+      </link>
+      <link name="trompe">
+        <pose>2.1 -1.5 0.95 0 -0.35 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.14</radius><length>1.3</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.14</radius><length>1.3</length></cylinder></geometry><material><ambient>0.35 0.36 0.39 1</ambient><diffuse>0.50 0.52 0.56 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 3. Carrousel : plateau + 6 poteaux rayés + toit étagé (le cône est empilé : primitives seules), loin, côté Loire (centre v = 4,6). ancre = POI (13.2, -2), rayon 4. -->
+    <model name="carrousel">
+      <static>true</static>
+      <pose>13.2 -2 0 0 0 0</pose>
+      <link name="plateau">
+        <pose>0 -2.6 0.15 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>1.3</radius><length>0.3</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>1.3</radius><length>0.3</length></cylinder></geometry><material><ambient>0.64 0.64 0.63 1</ambient><diffuse>0.92 0.92 0.90 1</diffuse></material></visual>
+      </link>
+      <link name="mat">
+        <pose>0 -2.6 1.4 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.1</radius><length>2.2</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.1</radius><length>2.2</length></cylinder></geometry><material><ambient>0.59 0.52 0.14 1</ambient><diffuse>0.85 0.75 0.20 1</diffuse></material></visual>
+      </link>
+      <link name="poteau_1">
+        <pose>1.1 -2.6 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="poteau_2">
+        <pose>0.55 -3.552628 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="poteau_3">
+        <pose>-0.55 -3.552628 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="poteau_4">
+        <pose>-1.1 -2.6 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="poteau_5">
+        <pose>-0.55 -1.647372 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="poteau_6">
+        <pose>0.55 -1.647372 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.05</radius><length>1.8</length></cylinder></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="toit_1">
+        <pose>0 -2.6 2.2 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>1.5</radius><length>0.18</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>1.5</radius><length>0.18</length></cylinder></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="toit_2">
+        <pose>0 -2.6 2.38 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>1.05</radius><length>0.18</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>1.05</radius><length>0.18</length></cylinder></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="toit_3">
+        <pose>0 -2.6 2.56 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.6</radius><length>0.18</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.6</radius><length>0.18</length></cylinder></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="toit_pointe">
+        <pose>0 -2.6 2.8 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.25</radius><length>0.3</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.25</radius><length>0.3</length></cylinder></geometry><material><ambient>0.66 0.55 0.06 1</ambient><diffuse>0.95 0.78 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 4. Table basse (30 cm) : le scandale d'urbanisme, côté bâtiments (centre v = -2,1). ancre = POI (17.8, 1.4), rayon 2.5. -->
+    <model name="table_basse">
+      <static>true</static>
+      <pose>17.8 1.4 0 0 0 0</pose>
+      <link name="plateau">
+        <pose>0 0.7 0.3 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.2 0.6 0.04</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.2 0.6 0.04</size></box></geometry><material><ambient>0.41 0.27 0.14 1</ambient><diffuse>0.58 0.38 0.20 1</diffuse></material></visual>
+      </link>
+      <link name="pied_1">
+        <pose>0.55 0.45 0.14 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.05 0.05 0.28</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.05 0.05 0.28</size></box></geometry><material><ambient>0.22 0.15 0.08 1</ambient><diffuse>0.32 0.21 0.11 1</diffuse></material></visual>
+      </link>
+      <link name="pied_2">
+        <pose>0.55 0.95 0.14 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.05 0.05 0.28</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.05 0.05 0.28</size></box></geometry><material><ambient>0.22 0.15 0.08 1</ambient><diffuse>0.32 0.21 0.11 1</diffuse></material></visual>
+      </link>
+      <link name="pied_3">
+        <pose>-0.55 0.45 0.14 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.05 0.05 0.28</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.05 0.05 0.28</size></box></geometry><material><ambient>0.22 0.15 0.08 1</ambient><diffuse>0.32 0.21 0.11 1</diffuse></material></visual>
+      </link>
+      <link name="pied_4">
+        <pose>-0.55 0.95 0.14 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.05 0.05 0.28</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.05 0.05 0.28</size></box></geometry><material><ambient>0.22 0.15 0.08 1</ambient><diffuse>0.32 0.21 0.11 1</diffuse></material></visual>
+      </link>
+      <link name="petition">
+        <pose>0.2 0.7 0.325 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.3 0.22 0.01</size></box></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 5. Poster bizarre : panneau violet, visage vert à lunettes (le chat qui juge), sur deux pieds, côté Loire (v = 2,7). ancre = POI (22.4, -1.4), rayon 2.5. -->
+    <model name="poster_bizarre">
+      <static>true</static>
+      <pose>22.4 -1.4 0 0 0 0</pose>
+      <link name="pied_1">
+        <pose>0.45 -1.3 0.35 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.06 0.06 0.7</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.06 0.06 0.7</size></box></geometry><material><ambient>0.21 0.21 0.22 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material></visual>
+      </link>
+      <link name="pied_2">
+        <pose>-0.45 -1.3 0.35 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.06 0.06 0.7</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.06 0.06 0.7</size></box></geometry><material><ambient>0.21 0.21 0.22 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material></visual>
+      </link>
+      <link name="panneau">
+        <pose>0 -1.3 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.1 0.05 1.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.1 0.05 1.4</size></box></geometry><material><ambient>0.32 0.08 0.48 1</ambient><diffuse>0.45 0.12 0.68 1</diffuse></material></visual>
+      </link>
+      <link name="visage">
+        <pose>0 -1.265 1.25 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.62 0.02 0.6</size></box></geometry><material><ambient>0.10 0.55 0.21 1</ambient><diffuse>0.15 0.78 0.30 1</diffuse></material></visual>
+      </link>
+      <link name="oeil_1">
+        <pose>0.16 -1.245 1.35 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.14 0.02 0.14</size></box></geometry><material><ambient>0.70 0.63 0.07 1</ambient><diffuse>1.00 0.90 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="oeil_2">
+        <pose>-0.16 -1.245 1.35 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.14 0.02 0.14</size></box></geometry><material><ambient>0.70 0.63 0.07 1</ambient><diffuse>1.00 0.90 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="lunettes">
+        <pose>0 -1.225 1.35 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.6 0.02 0.04</size></box></geometry><material><ambient>0.06 0.06 0.06 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 6. Trois poubelles de tri (jaune, verte, grise), côté bâtiments (v = -2,4). ancre = POI (27, 1.4), rayon 2.5. -->
+    <model name="poubelle_tri">
+      <static>true</static>
+      <pose>27 1.4 0 0 0 0</pose>
+      <link name="bac_1">
+        <pose>-0.75 1 0.45 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.27</radius><length>0.9</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.27</radius><length>0.9</length></cylinder></geometry><material><ambient>0.66 0.56 0.07 1</ambient><diffuse>0.95 0.80 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="couvercle_1">
+        <pose>-0.75 1 0.935 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.285</radius><length>0.07</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.285</radius><length>0.07</length></cylinder></geometry><material><ambient>0.49 0.41 0.03 1</ambient><diffuse>0.70 0.58 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="bac_2">
+        <pose>0 1 0.45 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.27</radius><length>0.9</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.27</radius><length>0.9</length></cylinder></geometry><material><ambient>0.08 0.42 0.15 1</ambient><diffuse>0.12 0.60 0.22 1</diffuse></material></visual>
+      </link>
+      <link name="couvercle_2">
+        <pose>0 1 0.935 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.285</radius><length>0.07</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.285</radius><length>0.07</length></cylinder></geometry><material><ambient>0.06 0.28 0.10 1</ambient><diffuse>0.08 0.40 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="bac_3">
+        <pose>0.75 1 0.45 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.27</radius><length>0.9</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.27</radius><length>0.9</length></cylinder></geometry><material><ambient>0.35 0.36 0.38 1</ambient><diffuse>0.50 0.52 0.54 1</diffuse></material></visual>
+      </link>
+      <link name="couvercle_3">
+        <pose>0.75 1 0.935 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.285</radius><length>0.07</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.285</radius><length>0.07</length></cylinder></geometry><material><ambient>0.22 0.23 0.24 1</ambient><diffuse>0.32 0.33 0.35 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 7. Pigeon : sphère grise sur un pied, avec tête, bec et queue, côté Loire (v = 2,4). ancre = POI (31.6, -1.4), rayon 2.5. -->
+    <model name="pigeon">
+      <static>true</static>
+      <pose>31.6 -1.4 0 0 0 0</pose>
+      <link name="pied">
+        <pose>0 -1 0.25 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.04</radius><length>0.5</length></cylinder></geometry><material><ambient>0.17 0.17 0.19 1</ambient><diffuse>0.25 0.25 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="corps">
+        <pose>0 -1 0.7 0 0 0</pose>
+        <collision name="collision"><geometry><sphere><radius>0.2</radius></sphere></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><sphere><radius>0.2</radius></sphere></geometry><material><ambient>0.43 0.44 0.46 1</ambient><diffuse>0.62 0.63 0.66 1</diffuse></material></visual>
+      </link>
+      <link name="tete">
+        <pose>0.17 -1 0.88 0 0 0</pose>
+        <collision name="collision"><geometry><sphere><radius>0.1</radius></sphere></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><sphere><radius>0.1</radius></sphere></geometry><material><ambient>0.49 0.49 0.52 1</ambient><diffuse>0.70 0.70 0.74 1</diffuse></material></visual>
+      </link>
+      <link name="bec">
+        <pose>0.28 -1 0.87 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.03 0.03</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.03 0.03</size></box></geometry><material><ambient>0.70 0.39 0.07 1</ambient><diffuse>1.00 0.55 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="queue">
+        <pose>-0.28 -1 0.68 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.28 0.12 0.03</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.28 0.12 0.03</size></box></geometry><material><ambient>0.32 0.32 0.34 1</ambient><diffuse>0.45 0.45 0.48 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 8. Banc en bois (assise + dossier côté bâtiments), côté bâtiments (v = -2,4). ancre = POI (36.2, 1.4), rayon 2.5. -->
+    <model name="banc">
+      <static>true</static>
+      <pose>36.2 1.4 0 0 0 0</pose>
+      <link name="assise">
+        <pose>0 1 0.45 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.8 0.45 0.06</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.8 0.45 0.06</size></box></geometry><material><ambient>0.35 0.23 0.12 1</ambient><diffuse>0.50 0.33 0.17 1</diffuse></material></visual>
+      </link>
+      <link name="dossier">
+        <pose>0 1.22 0.72 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.8 0.05 0.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.8 0.05 0.4</size></box></geometry><material><ambient>0.35 0.23 0.12 1</ambient><diffuse>0.50 0.33 0.17 1</diffuse></material></visual>
+      </link>
+      <link name="pied_1">
+        <pose>0.75 1 0.225 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.4 0.45</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.4 0.45</size></box></geometry><material><ambient>0.21 0.14 0.07 1</ambient><diffuse>0.30 0.20 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="pied_2">
+        <pose>-0.75 1 0.225 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.4 0.45</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.4 0.45</size></box></geometry><material><ambient>0.21 0.14 0.07 1</ambient><diffuse>0.30 0.20 0.10 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 9. Flaque : deux disques bleu sombre POSÉS SUR le tracé, SANS collision (visuel à 1 mm du sol : Didier roule dedans). ancre = POI (40.8, 0), rayon 2.5. -->
+    <model name="flaque">
+      <static>true</static>
+      <pose>40.8 0 0 0 0 0</pose>
+      <link name="grande">
+        <pose>0 0 0.001 0 0 0</pose>
+        <visual name="visual"><geometry><cylinder><radius>1.1</radius><length>0.002</length></cylinder></geometry><material><ambient>0.03 0.10 0.27 1</ambient><diffuse>0.05 0.14 0.38 1</diffuse></material></visual>
+      </link>
+      <link name="petite">
+        <pose>0.5 -0.4 0.002 0 0 0</pose>
+        <visual name="visual"><geometry><cylinder><radius>0.7</radius><length>0.002</length></cylinder></geometry><material><ambient>0.07 0.17 0.39 1</ambient><diffuse>0.10 0.24 0.55 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 10. Terrasse de café : 2 tables, 6 chaises, 2 parasols rouge et blanc, côté bâtiments (tables à v = -3,3). ancre = POI (45.4, 1.9), rayon 3. -->
+    <model name="terrasse">
+      <static>true</static>
+      <pose>45.4 1.9 0 0 0 0</pose>
+      <link name="table_1">
+        <pose>-1 1.4 0.375 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.38</radius><length>0.75</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.38</radius><length>0.75</length></cylinder></geometry><material><ambient>0.49 0.39 0.24 1</ambient><diffuse>0.70 0.55 0.35 1</diffuse></material></visual>
+      </link>
+      <link name="chaise_1_1">
+        <pose>-1.5 0.75 0.225 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><material><ambient>0.39 0.14 0.10 1</ambient><diffuse>0.55 0.20 0.15 1</diffuse></material></visual>
+      </link>
+      <link name="chaise_1_2">
+        <pose>-0.5 0.75 0.225 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><material><ambient>0.39 0.14 0.10 1</ambient><diffuse>0.55 0.20 0.15 1</diffuse></material></visual>
+      </link>
+      <link name="chaise_1_3">
+        <pose>-1 2.05 0.225 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><material><ambient>0.39 0.14 0.10 1</ambient><diffuse>0.55 0.20 0.15 1</diffuse></material></visual>
+      </link>
+      <link name="parasol_mat_1">
+        <pose>-1 1.4 1.05 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.03</radius><length>2.1</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.03</radius><length>2.1</length></cylinder></geometry><material><ambient>0.35 0.35 0.36 1</ambient><diffuse>0.50 0.50 0.52 1</diffuse></material></visual>
+      </link>
+      <link name="parasol_toile_1">
+        <pose>-1 1.4 2.12 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>1</radius><length>0.05</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>1</radius><length>0.05</length></cylinder></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="table_2">
+        <pose>1.3 1.4 0.375 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.38</radius><length>0.75</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.38</radius><length>0.75</length></cylinder></geometry><material><ambient>0.49 0.39 0.24 1</ambient><diffuse>0.70 0.55 0.35 1</diffuse></material></visual>
+      </link>
+      <link name="chaise_2_1">
+        <pose>0.8 0.75 0.225 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><material><ambient>0.39 0.14 0.10 1</ambient><diffuse>0.55 0.20 0.15 1</diffuse></material></visual>
+      </link>
+      <link name="chaise_2_2">
+        <pose>1.8 0.75 0.225 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><material><ambient>0.39 0.14 0.10 1</ambient><diffuse>0.55 0.20 0.15 1</diffuse></material></visual>
+      </link>
+      <link name="chaise_2_3">
+        <pose>1.3 2.05 0.225 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.4 0.4 0.45</size></box></geometry><material><ambient>0.39 0.14 0.10 1</ambient><diffuse>0.55 0.20 0.15 1</diffuse></material></visual>
+      </link>
+      <link name="parasol_mat_2">
+        <pose>1.3 1.4 1.05 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.03</radius><length>2.1</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.03</radius><length>2.1</length></cylinder></geometry><material><ambient>0.35 0.35 0.36 1</ambient><diffuse>0.50 0.50 0.52 1</diffuse></material></visual>
+      </link>
+      <link name="parasol_toile_2">
+        <pose>1.3 1.4 2.12 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>1</radius><length>0.05</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>1</radius><length>0.05</length></cylinder></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 11. Grue Titan JAUNE (décor) : jetée de béton dans la Loire + portique 4 pieds de 12 m + plateforme + cabine + mât + flèche inclinée (sommet ≈ 25 m), centre à x ≈ 52, v = 12 ; flèche vers l'avant. ancre = POI (50, -2), rayon 4. -->
+    <model name="grue_jaune">
+      <static>true</static>
+      <pose>50 -2 0 0 0 0</pose>
+      <link name="jetee">
+        <pose>2 -9 -0.75 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>9.6 10 1.5</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>9.6 10 1.5</size></box></geometry><material><ambient>0.36 0.35 0.33 1</ambient><diffuse>0.52 0.50 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="pied_1">
+        <pose>5 -13 6 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.8 0.8 12</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.8 0.8 12</size></box></geometry><material><ambient>0.66 0.53 0.04 1</ambient><diffuse>0.95 0.76 0.06 1</diffuse></material></visual>
+      </link>
+      <link name="pied_2">
+        <pose>5 -7 6 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.8 0.8 12</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.8 0.8 12</size></box></geometry><material><ambient>0.66 0.53 0.04 1</ambient><diffuse>0.95 0.76 0.06 1</diffuse></material></visual>
+      </link>
+      <link name="pied_3">
+        <pose>-1 -13 6 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.8 0.8 12</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.8 0.8 12</size></box></geometry><material><ambient>0.66 0.53 0.04 1</ambient><diffuse>0.95 0.76 0.06 1</diffuse></material></visual>
+      </link>
+      <link name="pied_4">
+        <pose>-1 -7 6 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.8 0.8 12</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.8 0.8 12</size></box></geometry><material><ambient>0.66 0.53 0.04 1</ambient><diffuse>0.95 0.76 0.06 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_u_40_p">
+        <pose>2 -13 4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>5.2 0.35 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>5.2 0.35 0.35</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_u_40_m">
+        <pose>2 -7 4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>5.2 0.35 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>5.2 0.35 0.35</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_v_40_p">
+        <pose>5 -10 4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.35 5.2 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.35 5.2 0.35</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_v_40_m">
+        <pose>-1 -10 4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.35 5.2 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.35 5.2 0.35</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_u_80_p">
+        <pose>2 -13 8 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>5.2 0.35 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>5.2 0.35 0.35</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_u_80_m">
+        <pose>2 -7 8 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>5.2 0.35 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>5.2 0.35 0.35</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_v_80_p">
+        <pose>5 -10 8 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.35 5.2 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.35 5.2 0.35</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_v_80_m">
+        <pose>-1 -10 8 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.35 5.2 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.35 5.2 0.35</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="plateforme">
+        <pose>2 -10 12.6 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>7.4 7.4 1.2</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>7.4 7.4 1.2</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="cabine">
+        <pose>0.2 -10 14.6 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>3 3 2.8</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3 3 2.8</size></box></geometry><material><ambient>0.66 0.53 0.04 1</ambient><diffuse>0.95 0.76 0.06 1</diffuse></material></visual>
+      </link>
+      <link name="cabine_vitre">
+        <pose>1.73 -10 14.9 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 2.2 1.2</size></box></geometry><material><ambient>0.07 0.10 0.17 1</ambient><diffuse>0.10 0.15 0.25 1</diffuse></material></visual>
+      </link>
+      <link name="mat">
+        <pose>2.5 -10 15.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>2 2 4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>2 2 4</size></box></geometry><material><ambient>0.66 0.53 0.04 1</ambient><diffuse>0.95 0.76 0.06 1</diffuse></material></visual>
+      </link>
+      <link name="fleche">
+        <pose>12.836619 -10 20.762222 0 -0.349066 0</pose>
+        <collision name="collision"><geometry><box><size>22 0.9 0.9</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>22 0.9 0.9</size></box></geometry><material><ambient>0.66 0.53 0.04 1</ambient><diffuse>0.95 0.76 0.06 1</diffuse></material></visual>
+      </link>
+      <link name="contre_fleche">
+        <pose>-1.5 -10 17 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>7 0.9 0.9</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>7 0.9 0.9</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="contrepoids">
+        <pose>-5.3 -10 16.4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>2 1.6 1.6</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>2 1.6 1.6</size></box></geometry><material><ambient>0.59 0.45 0.03 1</ambient><diffuse>0.85 0.65 0.05 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 12. Cale de lancement : plan incliné de 5 m qui plonge de z = 0 à z = -1 (l'eau), plus piédestal et bouteille de baptême, côté Loire. ancre = POI (54.6, -1.9), rayon 3. -->
+    <model name="cale">
+      <static>true</static>
+      <pose>54.6 -1.9 0 0 0 0</pose>
+      <link name="rampe">
+        <pose>0 -6.87 -0.647 -2.944197 0 0</pose>
+        <collision name="collision"><geometry><box><size>3.2 5.12 0.3</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3.2 5.12 0.3</size></box></geometry><material><ambient>0.29 0.27 0.24 1</ambient><diffuse>0.42 0.38 0.34 1</diffuse></material></visual>
+      </link>
+      <link name="piedestal">
+        <pose>1.6 -3.4 0.45 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.35 0.35 0.9</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.35 0.35 0.9</size></box></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="bouteille">
+        <pose>1.6 -3.4 1.075 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.06</radius><length>0.35</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.06</radius><length>0.35</length></cylinder></geometry><material><ambient>0.07 0.35 0.14 1</ambient><diffuse>0.10 0.50 0.20 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 13. Vélo cadenassé : 2 roues, cadre rouge, guidon, selle et un cadenas jaune, côté bâtiments (v = -2,4). ancre = POI (59.2, 1.4), rayon 2.5. -->
+    <model name="velo_cadenas">
+      <static>true</static>
+      <pose>59.2 1.4 0 0 0 0</pose>
+      <link name="roue_1">
+        <pose>0.55 1 0.34 1.570796 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.34</radius><length>0.05</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.34</radius><length>0.05</length></cylinder></geometry><material><ambient>0.07 0.07 0.07 1</ambient><diffuse>0.10 0.10 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="jante_1">
+        <pose>0.55 1 0.34 1.570796 0 0</pose>
+        <visual name="visual"><geometry><cylinder><radius>0.25</radius><length>0.056</length></cylinder></geometry><material><ambient>0.49 0.49 0.50 1</ambient><diffuse>0.70 0.70 0.72 1</diffuse></material></visual>
+      </link>
+      <link name="roue_2">
+        <pose>-0.55 1 0.34 1.570796 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.34</radius><length>0.05</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.34</radius><length>0.05</length></cylinder></geometry><material><ambient>0.07 0.07 0.07 1</ambient><diffuse>0.10 0.10 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="jante_2">
+        <pose>-0.55 1 0.34 1.570796 0 0</pose>
+        <visual name="visual"><geometry><cylinder><radius>0.25</radius><length>0.056</length></cylinder></geometry><material><ambient>0.49 0.49 0.50 1</ambient><diffuse>0.70 0.70 0.72 1</diffuse></material></visual>
+      </link>
+      <link name="tube_haut">
+        <pose>0.05 1 0.62 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.8 0.04 0.04</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.8 0.04 0.04</size></box></geometry><material><ambient>0.59 0.14 0.07 1</ambient><diffuse>0.85 0.20 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="tube_selle">
+        <pose>-0.25 1 0.4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.04 0.04 0.55</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.04 0.04 0.55</size></box></geometry><material><ambient>0.59 0.14 0.07 1</ambient><diffuse>0.85 0.20 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="fourche">
+        <pose>0.5 1 0.47 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.04 0.04 0.55</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.04 0.04 0.55</size></box></geometry><material><ambient>0.59 0.14 0.07 1</ambient><diffuse>0.85 0.20 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="guidon">
+        <pose>0.52 1 0.78 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.06 0.5 0.04</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.06 0.5 0.04</size></box></geometry><material><ambient>0.14 0.14 0.15 1</ambient><diffuse>0.20 0.20 0.22 1</diffuse></material></visual>
+      </link>
+      <link name="selle">
+        <pose>-0.3 1 0.7 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.25 0.12 0.05</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.25 0.12 0.05</size></box></geometry><material><ambient>0.07 0.07 0.07 1</ambient><diffuse>0.10 0.10 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="cadenas">
+        <pose>0 0.95 0.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.1 0.08 0.12</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.1 0.08 0.12</size></box></geometry><material><ambient>0.66 0.55 0.06 1</ambient><diffuse>0.95 0.78 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 14. Panneau d'information « site des Chantiers » : 2 pieds, plan blanc et point rouge « vous êtes ici », côté Loire (v = 2,7). ancre = POI (63.8, -1.4), rayon 2.5. -->
+    <model name="panneau_info">
+      <static>true</static>
+      <pose>63.8 -1.4 0 0 0 0</pose>
+      <link name="pied_1">
+        <pose>0.55 -1.3 0.6 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.08 1.2</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.08 1.2</size></box></geometry><material><ambient>0.14 0.14 0.15 1</ambient><diffuse>0.20 0.20 0.22 1</diffuse></material></visual>
+      </link>
+      <link name="pied_2">
+        <pose>-0.55 -1.3 0.6 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.08 1.2</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.08 1.2</size></box></geometry><material><ambient>0.14 0.14 0.15 1</ambient><diffuse>0.20 0.20 0.22 1</diffuse></material></visual>
+      </link>
+      <link name="panneau">
+        <pose>0 -1.3 1.45 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.5 0.06 0.95</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.5 0.06 0.95</size></box></geometry><material><ambient>0.07 0.15 0.29 1</ambient><diffuse>0.10 0.22 0.42 1</diffuse></material></visual>
+      </link>
+      <link name="plan">
+        <pose>0 -1.26 1.45 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>1.3 0.02 0.75</size></box></geometry><material><ambient>0.64 0.64 0.62 1</ambient><diffuse>0.92 0.92 0.88 1</diffuse></material></visual>
+      </link>
+      <link name="trace">
+        <pose>-0.05 -1.24 1.3 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.9 0.02 0.04</size></box></geometry><material><ambient>0.10 0.21 0.56 1</ambient><diffuse>0.15 0.30 0.80 1</diffuse></material></visual>
+      </link>
+      <link name="vous_etes_ici">
+        <pose>0.3 -1.24 1.5 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.1 0.02 0.1</size></box></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 15. Rails désaffectés : 2 rails + traverses en travers du tracé, SANS collision (visuel à 1-4 mm au-dessus du sol), juste avant la coudée. ancre = POI (68.4, 0), rayon 2.5. -->
+    <model name="rails">
+      <static>true</static>
+      <pose>68.4 0 0 0 0 0</pose>
+      <link name="rail_1">
+        <pose>0.7175 -0.5 0.002 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.07 10 0.004</size></box></geometry><material><ambient>0.39 0.40 0.42 1</ambient><diffuse>0.55 0.57 0.60 1</diffuse></material></visual>
+      </link>
+      <link name="rail_2">
+        <pose>-0.7175 -0.5 0.002 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.07 10 0.004</size></box></geometry><material><ambient>0.39 0.40 0.42 1</ambient><diffuse>0.55 0.57 0.60 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_01">
+        <pose>0 4.2 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_02">
+        <pose>0 3.5 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_03">
+        <pose>0 2.8 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_04">
+        <pose>0 2.1 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_05">
+        <pose>0 1.4 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_06">
+        <pose>0 0.7 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_07">
+        <pose>0 0 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_08">
+        <pose>0 -0.7 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_09">
+        <pose>0 -1.4 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_10">
+        <pose>0 -2.1 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_11">
+        <pose>0 -2.8 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_12">
+        <pose>0 -3.5 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_13">
+        <pose>0 -4.2 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="traverse_14">
+        <pose>0 -4.9 0.0015 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2 0.22 0.003</size></box></geometry><material><ambient>0.21 0.14 0.10 1</ambient><diffuse>0.30 0.20 0.14 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 16. Lampadaire : socle + mât de 4 m + sphère lumineuse (émissive), côté bâtiments (v = -2,4). ancre = POI (73.01, 3.81), rayon 2.5. -->
+    <model name="lampadaire">
+      <static>true</static>
+      <pose>73.01 3.81 0 0 0 0.610865</pose>
+      <link name="socle">
+        <pose>0 1 0.15 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.14</radius><length>0.3</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.14</radius><length>0.3</length></cylinder></geometry><material><ambient>0.08 0.08 0.10 1</ambient><diffuse>0.12 0.12 0.14 1</diffuse></material></visual>
+      </link>
+      <link name="mat">
+        <pose>0 1 2 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.08</radius><length>4</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.08</radius><length>4</length></cylinder></geometry><material><ambient>0.12 0.12 0.13 1</ambient><diffuse>0.17 0.17 0.19 1</diffuse></material></visual>
+      </link>
+      <link name="globe">
+        <pose>0 1 4.25 0 0 0</pose>
+        <collision name="collision"><geometry><sphere><radius>0.3</radius></sphere></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><sphere><radius>0.3</radius></sphere></geometry><material><ambient>0.70 0.70 0.70 1</ambient><diffuse>1.00 1.00 1.00 1</diffuse><emissive>1 1 1 1</emissive></material></visual>
+      </link>
+    </model>
+
+    <!-- 17. Anneaux de Buren : 3 anneaux verticaux (dodécagones de 12 boîtes, diamètre 2,4 m), plan perpendiculaire à la marche, sur le quai côté Loire (centres à v = 3,4). ancre = POI (78.42, 4.19), rayon 2.5. -->
+    <model name="anneaux">
+      <static>true</static>
+      <pose>78.42 4.19 0 0 0 0.610865</pose>
+      <link name="anneau_1_seg_01">
+        <pose>-2 -3.119615 1.65 1.308997 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_02">
+        <pose>-2 -2.819615 2.169615 0.785398 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_03">
+        <pose>-2 -2.3 2.469615 0.261799 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_04">
+        <pose>-2 -1.7 2.469615 -0.261799 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_05">
+        <pose>-2 -1.180385 2.169615 -0.785398 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_06">
+        <pose>-2 -0.880385 1.65 -1.308997 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_07">
+        <pose>-2 -0.880385 1.05 -1.832596 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_08">
+        <pose>-2 -1.180385 0.530385 -2.356194 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_09">
+        <pose>-2 -1.7 0.230385 -2.879793 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_10">
+        <pose>-2 -2.3 0.230385 2.879793 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_11">
+        <pose>-2 -2.819615 0.530385 2.356194 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_1_seg_12">
+        <pose>-2 -3.119615 1.05 1.832596 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_01">
+        <pose>0 -3.119615 1.65 1.308997 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_02">
+        <pose>0 -2.819615 2.169615 0.785398 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_03">
+        <pose>0 -2.3 2.469615 0.261799 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_04">
+        <pose>0 -1.7 2.469615 -0.261799 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_05">
+        <pose>0 -1.180385 2.169615 -0.785398 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_06">
+        <pose>0 -0.880385 1.65 -1.308997 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_07">
+        <pose>0 -0.880385 1.05 -1.832596 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_08">
+        <pose>0 -1.180385 0.530385 -2.356194 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_09">
+        <pose>0 -1.7 0.230385 -2.879793 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_10">
+        <pose>0 -2.3 0.230385 2.879793 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_11">
+        <pose>0 -2.819615 0.530385 2.356194 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_2_seg_12">
+        <pose>0 -3.119615 1.05 1.832596 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_01">
+        <pose>2 -3.119615 1.65 1.308997 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_02">
+        <pose>2 -2.819615 2.169615 0.785398 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_03">
+        <pose>2 -2.3 2.469615 0.261799 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_04">
+        <pose>2 -1.7 2.469615 -0.261799 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_05">
+        <pose>2 -1.180385 2.169615 -0.785398 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_06">
+        <pose>2 -0.880385 1.65 -1.308997 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_07">
+        <pose>2 -0.880385 1.05 -1.832596 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_08">
+        <pose>2 -1.180385 0.530385 -2.356194 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_09">
+        <pose>2 -1.7 0.230385 -2.879793 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_10">
+        <pose>2 -2.3 0.230385 2.879793 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_11">
+        <pose>2 -2.819615 0.530385 2.356194 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+      <link name="anneau_3_seg_12">
+        <pose>2 -3.119615 1.05 1.832596 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.652224 0.14</size></box></geometry><material><ambient>0.15 0.17 0.19 1</ambient><diffuse>0.22 0.24 0.27 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 18. Bitte d'amarrage : 2 cylindres noirs courts à bande jaune au bord du quai, côté Loire (v = 5,2). ancre = POI (83.05, 7.43), rayon 2.5. -->
+    <model name="bollard">
+      <static>true</static>
+      <pose>83.05 7.43 0 0 0 0.610865</pose>
+      <link name="fut_1">
+        <pose>0 -3.8 0.275 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.2</radius><length>0.55</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.2</radius><length>0.55</length></cylinder></geometry><material><ambient>0.06 0.06 0.06 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      </link>
+      <link name="bande_1">
+        <pose>0 -3.8 0.42 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.205</radius><length>0.06</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.205</radius><length>0.06</length></cylinder></geometry><material><ambient>0.66 0.55 0.06 1</ambient><diffuse>0.95 0.78 0.08 1</diffuse></material></visual>
+      </link>
+      <link name="tete_1">
+        <pose>0 -3.8 0.58 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.24</radius><length>0.06</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.24</radius><length>0.06</length></cylinder></geometry><material><ambient>0.06 0.06 0.06 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      </link>
+      <link name="fut_2">
+        <pose>2.6 -3.8 0.275 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.2</radius><length>0.55</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.2</radius><length>0.55</length></cylinder></geometry><material><ambient>0.06 0.06 0.06 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      </link>
+      <link name="bande_2">
+        <pose>2.6 -3.8 0.42 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.205</radius><length>0.06</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.205</radius><length>0.06</length></cylinder></geometry><material><ambient>0.66 0.55 0.06 1</ambient><diffuse>0.95 0.78 0.08 1</diffuse></material></visual>
+      </link>
+      <link name="tete_2">
+        <pose>2.6 -3.8 0.58 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.24</radius><length>0.06</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.24</radius><length>0.06</length></cylinder></geometry><material><ambient>0.06 0.06 0.06 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 19. La Loire : deux grands plans d'eau bleus, surface à z = -1,0 (1 m sous les dalles), l'un le long du Mail, l'autre le long du quai ; collision oui, pour que la chute s'arrête. Ce modèle est le plan d'eau lui-même : ses liens sont les coordonnées monde moins l'ancre. ancre = POI (87.68, 10.67), rayon 2.5. -->
+    <model name="loire">
+      <static>true</static>
+      <pose>87.68 10.67 0 0 0 0.610865</pose>
+      <link name="eau_mail">
+        <pose>-98.358811 -18.987567 -1.25 0 0 -0.610865</pose>
+        <collision name="collision"><geometry><box><size>116 110 0.5</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>116 110 0.5</size></box></geometry><material><ambient>0.08 0.27 0.43 1</ambient><diffuse>0.12 0.38 0.62 1</diffuse></material></visual>
+      </link>
+      <link name="eau_quai">
+        <pose>49.047331 -59.899521 -1.25 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>145.3 110 0.5</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>145.3 110 0.5</size></box></geometry><material><ambient>0.08 0.27 0.43 1</ambient><diffuse>0.12 0.38 0.62 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 20. Plot de chantier : socle noir + 3 étages de cylindres (cône empilé), orange à bande blanche, côté bâtiments (v = -2,3). ancre = POI (92.3, 17.32), rayon 2.5. -->
+    <model name="plot_chantier">
+      <static>true</static>
+      <pose>92.3 17.32 0 0 0 0.610865</pose>
+      <link name="socle">
+        <pose>0 0.9 0.02 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.5 0.5 0.04</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.5 0.5 0.04</size></box></geometry><material><ambient>0.06 0.06 0.06 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      </link>
+      <link name="etage_1">
+        <pose>0 0.9 0.165 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.2</radius><length>0.25</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.2</radius><length>0.25</length></cylinder></geometry><material><ambient>0.70 0.32 0.03 1</ambient><diffuse>1.00 0.45 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="bande">
+        <pose>0 0.9 0.35 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.155</radius><length>0.12</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.155</radius><length>0.12</length></cylinder></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="etage_2">
+        <pose>0 0.9 0.535 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.115</radius><length>0.25</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.115</radius><length>0.25</length></cylinder></geometry><material><ambient>0.70 0.32 0.03 1</ambient><diffuse>1.00 0.45 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="pointe">
+        <pose>0 0.9 0.72 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.06</radius><length>0.12</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.06</radius><length>0.12</length></cylinder></geometry><material><ambient>0.70 0.32 0.03 1</ambient><diffuse>1.00 0.45 0.05 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 21. Chien en plastique (Boulon) : corps orange, 4 pattes, tête sphère, museau, oreilles, queue, côté Loire (v = 2,4). ancre = POI (97.71, 17.7), rayon 2.5. -->
+    <model name="chien">
+      <static>true</static>
+      <pose>97.71 17.7 0 0 0 0.610865</pose>
+      <link name="corps">
+        <pose>0 -1 0.4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.75 0.3 0.34</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.75 0.3 0.34</size></box></geometry><material><ambient>0.66 0.35 0.10 1</ambient><diffuse>0.95 0.50 0.15 1</diffuse></material></visual>
+      </link>
+      <link name="patte_1">
+        <pose>0.28 -1.1 0.115 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.08 0.23</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.08 0.23</size></box></geometry><material><ambient>0.56 0.27 0.07 1</ambient><diffuse>0.80 0.38 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="patte_2">
+        <pose>0.28 -0.9 0.115 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.08 0.23</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.08 0.23</size></box></geometry><material><ambient>0.56 0.27 0.07 1</ambient><diffuse>0.80 0.38 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="patte_3">
+        <pose>-0.28 -1.1 0.115 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.08 0.23</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.08 0.23</size></box></geometry><material><ambient>0.56 0.27 0.07 1</ambient><diffuse>0.80 0.38 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="patte_4">
+        <pose>-0.28 -0.9 0.115 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.08 0.23</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.08 0.23</size></box></geometry><material><ambient>0.56 0.27 0.07 1</ambient><diffuse>0.80 0.38 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="tete">
+        <pose>0.5 -1 0.62 0 0 0</pose>
+        <collision name="collision"><geometry><sphere><radius>0.17</radius></sphere></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><sphere><radius>0.17</radius></sphere></geometry><material><ambient>0.66 0.35 0.10 1</ambient><diffuse>0.95 0.50 0.15 1</diffuse></material></visual>
+      </link>
+      <link name="museau">
+        <pose>0.64 -1 0.58 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.14 0.12 0.1</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.14 0.12 0.1</size></box></geometry><material><ambient>0.14 0.07 0.03 1</ambient><diffuse>0.20 0.10 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="oreille_1">
+        <pose>0.45 -1.14 0.76 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.05 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.05 0.14</size></box></geometry><material><ambient>0.56 0.27 0.07 1</ambient><diffuse>0.80 0.38 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="oreille_2">
+        <pose>0.45 -0.86 0.76 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.08 0.05 0.14</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.08 0.05 0.14</size></box></geometry><material><ambient>0.56 0.27 0.07 1</ambient><diffuse>0.80 0.38 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="queue">
+        <pose>-0.45 -1 0.55 0 -0.6 0</pose>
+        <collision name="collision"><geometry><box><size>0.22 0.04 0.04</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.22 0.04 0.04</size></box></geometry><material><ambient>0.56 0.27 0.07 1</ambient><diffuse>0.80 0.38 0.10 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 22. Caisse en bois de la Cantine du Voyage : caisse, couvercle, 2 sangles, marquage rouge sur la face côté chemin, côté bâtiments (v = -2,6). ancre = POI (102.33, 24.35), rayon 2.5. -->
+    <model name="caisse_bois">
+      <static>true</static>
+      <pose>102.33 24.35 0 0 0 0.610865</pose>
+      <link name="caisse">
+        <pose>0 1.2 0.35 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.95 0.95 0.7</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.95 0.95 0.7</size></box></geometry><material><ambient>0.48 0.36 0.21 1</ambient><diffuse>0.68 0.52 0.30 1</diffuse></material></visual>
+      </link>
+      <link name="couvercle">
+        <pose>0 1.2 0.72 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1 1 0.04</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1 1 0.04</size></box></geometry><material><ambient>0.39 0.28 0.15 1</ambient><diffuse>0.55 0.40 0.22 1</diffuse></material></visual>
+      </link>
+      <link name="sangle_1">
+        <pose>0.3 1.2 0.36 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.05 0.99 0.74</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.05 0.99 0.74</size></box></geometry><material><ambient>0.21 0.14 0.07 1</ambient><diffuse>0.30 0.20 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="sangle_2">
+        <pose>-0.3 1.2 0.36 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.05 0.99 0.74</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.05 0.99 0.74</size></box></geometry><material><ambient>0.21 0.14 0.07 1</ambient><diffuse>0.30 0.20 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="marquage">
+        <pose>0 0.72 0.4 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.5 0.01 0.2</size></box></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 23. Hangar à Bananes : bâtiment 40 x 10 x 8 le long du quai côté bâtiments (face à v = -7, de s = 110.5 à 150.5), 5 bars colorés sur la façade, la banane (cylindre jaune couché) sur le toit comme dans rue.sdf. ancre = POI (106.96, 28.2), rayon 3. -->
+    <model name="hangar_bananes">
+      <static>true</static>
+      <pose>106.96 28.2 0 0 0 0.610865</pose>
+      <link name="corps">
+        <pose>14.05 10.1 4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>40 10 8</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>40 10 8</size></box></geometry><material><ambient>0.28 0.29 0.32 1</ambient><diffuse>0.40 0.42 0.46 1</diffuse></material></visual>
+      </link>
+      <link name="toit">
+        <pose>14.05 10.1 8.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>40.6 10.6 0.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>40.6 10.6 0.4</size></box></geometry><material><ambient>0.20 0.21 0.23 1</ambient><diffuse>0.28 0.30 0.33 1</diffuse></material></visual>
+      </link>
+      <link name="banane">
+        <pose>14.05 10.1 9.2 0 1.570796 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.8</radius><length>6</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.8</radius><length>6</length></cylinder></geometry><material><ambient>0.70 0.62 0.03 1</ambient><diffuse>1.00 0.88 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="bar_1">
+        <pose>-0.95 4.9 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>3 0.4 2.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3 0.4 2.4</size></box></geometry><material><ambient>0.66 0.35 0.07 1</ambient><diffuse>0.95 0.50 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="enseigne_1">
+        <pose>-0.95 4.95 2.8 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>3 0.1 0.5</size></box></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="bar_2">
+        <pose>6.55 4.9 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>3 0.4 2.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3 0.4 2.4</size></box></geometry><material><ambient>0.07 0.49 0.49 1</ambient><diffuse>0.10 0.70 0.70 1</diffuse></material></visual>
+      </link>
+      <link name="enseigne_2">
+        <pose>6.55 4.95 2.8 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>3 0.1 0.5</size></box></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="bar_3">
+        <pose>14.05 4.9 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>3 0.4 2.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3 0.4 2.4</size></box></geometry><material><ambient>0.59 0.10 0.39 1</ambient><diffuse>0.85 0.15 0.55 1</diffuse></material></visual>
+      </link>
+      <link name="enseigne_3">
+        <pose>14.05 4.95 2.8 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>3 0.1 0.5</size></box></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="bar_4">
+        <pose>21.55 4.9 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>3 0.4 2.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3 0.4 2.4</size></box></geometry><material><ambient>0.21 0.52 0.17 1</ambient><diffuse>0.30 0.75 0.25 1</diffuse></material></visual>
+      </link>
+      <link name="enseigne_4">
+        <pose>21.55 4.95 2.8 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>3 0.1 0.5</size></box></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="bar_5">
+        <pose>29.05 4.9 1.2 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>3 0.4 2.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3 0.4 2.4</size></box></geometry><material><ambient>0.59 0.10 0.08 1</ambient><diffuse>0.85 0.15 0.12 1</diffuse></material></visual>
+      </link>
+      <link name="enseigne_5">
+        <pose>29.05 4.95 2.8 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>3 0.1 0.5</size></box></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 24. Tas de sable : deux demi-sphères beiges (centres à z = 0) + un seau rouge, côté Loire (v = 2,9). ancre = POI (112.66, 28.16), rayon 2.5. -->
+    <model name="tas_de_sable">
+      <static>true</static>
+      <pose>112.66 28.16 0 0 0 0.610865</pose>
+      <link name="tas">
+        <pose>0 -1.5 0 0 0 0</pose>
+        <collision name="collision"><geometry><sphere><radius>0.75</radius></sphere></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.59 0.52 0.35 1</ambient><diffuse>0.85 0.75 0.50 1</diffuse></material></visual>
+      </link>
+      <link name="petit_tas">
+        <pose>-0.7 -2.2 0 0 0 0</pose>
+        <collision name="collision"><geometry><sphere><radius>0.45</radius></sphere></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><sphere><radius>0.45</radius></sphere></geometry><material><ambient>0.57 0.50 0.33 1</ambient><diffuse>0.82 0.72 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="seau">
+        <pose>0.9 -1 0.11 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.12</radius><length>0.22</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.12</radius><length>0.22</length></cylinder></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 25. Horloge arrêtée : mât de 3 m + disque blanc cerclé de noir tourné vers le chemin, aiguilles figées à 3 h, côté bâtiments (v = -2,6). ancre = POI (117.28, 34.82), rayon 2.5. -->
+    <model name="horloge_arretee">
+      <static>true</static>
+      <pose>117.28 34.82 0 0 0 0.610865</pose>
+      <link name="mat">
+        <pose>0 1.2 1.5 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.07</radius><length>3</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.07</radius><length>3</length></cylinder></geometry><material><ambient>0.12 0.12 0.13 1</ambient><diffuse>0.17 0.17 0.19 1</diffuse></material></visual>
+      </link>
+      <link name="cadre">
+        <pose>0 1.2 3.2 1.570796 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.62</radius><length>0.1</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.62</radius><length>0.1</length></cylinder></geometry><material><ambient>0.07 0.07 0.08 1</ambient><diffuse>0.10 0.10 0.12 1</diffuse></material></visual>
+      </link>
+      <link name="cadran">
+        <pose>0 1.2 3.2 1.570796 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.55</radius><length>0.12</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.55</radius><length>0.12</length></cylinder></geometry><material><ambient>0.67 0.67 0.64 1</ambient><diffuse>0.96 0.96 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="grande_aiguille">
+        <pose>0 1.135 3.4 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.04 0.02 0.42</size></box></geometry><material><ambient>0.06 0.06 0.06 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      </link>
+      <link name="petite_aiguille">
+        <pose>0.15 1.135 3.2 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.3 0.02 0.04</size></box></geometry><material><ambient>0.06 0.06 0.06 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 26. Bouche d'incendie : petit robot timide (corps rouge, chapeau, 2 buses, 2 yeux), côté Loire (v = 2,4). ancre = POI (122.66, 35.16), rayon 2.5. -->
+    <model name="bouche_incendie">
+      <static>true</static>
+      <pose>122.66 35.16 0 0 0 0.610865</pose>
+      <link name="corps">
+        <pose>0 -1 0.325 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.17</radius><length>0.65</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.17</radius><length>0.65</length></cylinder></geometry><material><ambient>0.56 0.07 0.06 1</ambient><diffuse>0.80 0.10 0.08 1</diffuse></material></visual>
+      </link>
+      <link name="chapeau">
+        <pose>0 -1 0.69 0 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.2</radius><length>0.08</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.2</radius><length>0.08</length></cylinder></geometry><material><ambient>0.42 0.04 0.03 1</ambient><diffuse>0.60 0.06 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="sommet">
+        <pose>0 -1 0.78 0 0 0</pose>
+        <collision name="collision"><geometry><sphere><radius>0.1</radius></sphere></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><sphere><radius>0.1</radius></sphere></geometry><material><ambient>0.56 0.07 0.06 1</ambient><diffuse>0.80 0.10 0.08 1</diffuse></material></visual>
+      </link>
+      <link name="buse_1">
+        <pose>0 -1.2 0.4 1.570796 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.06</radius><length>0.2</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.06</radius><length>0.2</length></cylinder></geometry><material><ambient>0.66 0.55 0.06 1</ambient><diffuse>0.95 0.78 0.08 1</diffuse></material></visual>
+      </link>
+      <link name="buse_2">
+        <pose>0 -0.8 0.4 1.570796 0 0</pose>
+        <collision name="collision"><geometry><cylinder><radius>0.06</radius><length>0.2</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.06</radius><length>0.2</length></cylinder></geometry><material><ambient>0.66 0.55 0.06 1</ambient><diffuse>0.95 0.78 0.08 1</diffuse></material></visual>
+      </link>
+      <link name="oeil_1">
+        <pose>0.07 -0.84 0.5 0 0 0</pose>
+        <visual name="visual"><geometry><sphere><radius>0.04</radius></sphere></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+      <link name="oeil_2">
+        <pose>-0.07 -0.84 0.5 0 0 0</pose>
+        <visual name="visual"><geometry><sphere><radius>0.04</radius></sphere></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 27. Pelouse interdite : dalle verte de 3,6 x 3 SANS collision (flush, 8 mm) + panneau « interdit » rouge sur un pied, côté bâtiments (v de -4,3 à -1,3). ancre = POI (127.27, 42.42), rayon 3. -->
+    <model name="pelouse">
+      <static>true</static>
+      <pose>127.27 42.42 0 0 0 0.610865</pose>
+      <link name="herbe">
+        <pose>0 0.9 0.004 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>3.6 3 0.008</size></box></geometry><material><ambient>0.15 0.43 0.14 1</ambient><diffuse>0.22 0.62 0.20 1</diffuse></material></visual>
+      </link>
+      <link name="pied_panneau">
+        <pose>1.5 2.7 0.4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.05 0.05 0.8</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.05 0.05 0.8</size></box></geometry><material><ambient>0.21 0.21 0.22 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material></visual>
+      </link>
+      <link name="panneau">
+        <pose>1.5 2.7 0.85 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.4 0.03 0.3</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.4 0.03 0.3</size></box></geometry><material><ambient>0.59 0.08 0.07 1</ambient><diffuse>0.85 0.12 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="barre">
+        <pose>1.5 2.685 0.85 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.3 0.01 0.06</size></box></geometry><material><ambient>0.66 0.66 0.64 1</ambient><diffuse>0.95 0.95 0.92 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 28. Conteneur maritime rouge 3,2 x 1,3 x 1,4 avec nervures et portes, côté Loire (centre v = 3,4). ancre = POI (132.98, 42.39), rayon 2.5. -->
+    <model name="conteneur_rouge">
+      <static>true</static>
+      <pose>132.98 42.39 0 0 0 0.610865</pose>
+      <link name="caisse">
+        <pose>0 -2 0.7 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>3.2 1.3 1.4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3.2 1.3 1.4</size></box></geometry><material><ambient>0.50 0.08 0.07 1</ambient><diffuse>0.72 0.12 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="nervure_1">
+        <pose>-1.4 -1.335 0.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.06 0.03 1.3</size></box></geometry><material><ambient>0.39 0.06 0.05 1</ambient><diffuse>0.55 0.08 0.07 1</diffuse></material></visual>
+      </link>
+      <link name="nervure_2">
+        <pose>-1 -1.335 0.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.06 0.03 1.3</size></box></geometry><material><ambient>0.39 0.06 0.05 1</ambient><diffuse>0.55 0.08 0.07 1</diffuse></material></visual>
+      </link>
+      <link name="nervure_3">
+        <pose>-0.6 -1.335 0.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.06 0.03 1.3</size></box></geometry><material><ambient>0.39 0.06 0.05 1</ambient><diffuse>0.55 0.08 0.07 1</diffuse></material></visual>
+      </link>
+      <link name="nervure_4">
+        <pose>-0.2 -1.335 0.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.06 0.03 1.3</size></box></geometry><material><ambient>0.39 0.06 0.05 1</ambient><diffuse>0.55 0.08 0.07 1</diffuse></material></visual>
+      </link>
+      <link name="nervure_5">
+        <pose>0.2 -1.335 0.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.06 0.03 1.3</size></box></geometry><material><ambient>0.39 0.06 0.05 1</ambient><diffuse>0.55 0.08 0.07 1</diffuse></material></visual>
+      </link>
+      <link name="nervure_6">
+        <pose>0.6 -1.335 0.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.06 0.03 1.3</size></box></geometry><material><ambient>0.39 0.06 0.05 1</ambient><diffuse>0.55 0.08 0.07 1</diffuse></material></visual>
+      </link>
+      <link name="nervure_7">
+        <pose>1 -1.335 0.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.06 0.03 1.3</size></box></geometry><material><ambient>0.39 0.06 0.05 1</ambient><diffuse>0.55 0.08 0.07 1</diffuse></material></visual>
+      </link>
+      <link name="nervure_8">
+        <pose>1.4 -1.335 0.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.06 0.03 1.3</size></box></geometry><material><ambient>0.39 0.06 0.05 1</ambient><diffuse>0.55 0.08 0.07 1</diffuse></material></visual>
+      </link>
+      <link name="portes">
+        <pose>1.62 -2 0.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.04 1.2 1.3</size></box></geometry><material><ambient>0.35 0.05 0.04 1</ambient><diffuse>0.50 0.07 0.06 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 29. Graffiti : panneau mural magenta 3,4 x 2 avec taches cyan, jaune, verte et bande blanche, sur la façade côté bâtiments (face à v = -7). ancre = POI (137.6, 49.04), rayon 2.5. -->
+    <model name="tag_mur">
+      <static>true</static>
+      <pose>137.6 49.04 0 0 0 0.610865</pose>
+      <link name="fond">
+        <pose>0 5.55 1.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>3.4 0.06 2</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3.4 0.06 2</size></box></geometry><material><ambient>0.56 0.08 0.39 1</ambient><diffuse>0.80 0.12 0.55 1</diffuse></material></visual>
+      </link>
+      <link name="tache_cyan">
+        <pose>-0.7 5.51 1.4 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>1.4 0.02 1</size></box></geometry><material><ambient>0.07 0.52 0.63 1</ambient><diffuse>0.10 0.75 0.90 1</diffuse></material></visual>
+      </link>
+      <link name="tache_jaune">
+        <pose>0.8 5.51 1.7 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>1 0.02 1.2</size></box></geometry><material><ambient>0.70 0.59 0.07 1</ambient><diffuse>1.00 0.85 0.10 1</diffuse></material></visual>
+      </link>
+      <link name="tache_verte">
+        <pose>-1.4 5.49 1.6 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.5 0.02 1.6</size></box></geometry><material><ambient>0.14 0.56 0.21 1</ambient><diffuse>0.20 0.80 0.30 1</diffuse></material></visual>
+      </link>
+      <link name="bande_blanche">
+        <pose>0 5.5 0.8 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>2.2 0.02 0.18</size></box></geometry><material><ambient>0.67 0.67 0.67 1</ambient><diffuse>0.96 0.96 0.96 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- 30. Grue Titan GRISE (le but) : socle plein de 8 x 11,6 x 3 qui BARRE le quai à 2,5 m derrière le dernier waypoint (s = 160.8), bandes de chantier sur sa face, portique 4 pieds gris, cabine, mât et flèche inclinée vers la Loire (sommet ≈ 25 m). ancre = POI (145.61, 52.94), rayon 6 (1,5 m devant le dernier waypoint). -->
+    <model name="titan_grise">
+      <static>true</static>
+      <pose>145.61 52.94 0 0 0 0.610865</pose>
+      <link name="socle">
+        <pose>5 0 1.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>8 11.6 3</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>8 11.6 3</size></box></geometry><material><ambient>0.20 0.20 0.22 1</ambient><diffuse>0.28 0.29 0.31 1</diffuse></material></visual>
+      </link>
+      <link name="bande_1">
+        <pose>0.98 4.2 1.5 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.04 0.7 3</size></box></geometry><material><ambient>0.66 0.56 0.03 1</ambient><diffuse>0.95 0.80 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="bande_2">
+        <pose>0.98 1.4 1.5 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.04 0.7 3</size></box></geometry><material><ambient>0.66 0.56 0.03 1</ambient><diffuse>0.95 0.80 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="bande_3">
+        <pose>0.98 -1.4 1.5 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.04 0.7 3</size></box></geometry><material><ambient>0.66 0.56 0.03 1</ambient><diffuse>0.95 0.80 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="bande_4">
+        <pose>0.98 -4.2 1.5 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.04 0.7 3</size></box></geometry><material><ambient>0.66 0.56 0.03 1</ambient><diffuse>0.95 0.80 0.05 1</diffuse></material></visual>
+      </link>
+      <link name="pied_1">
+        <pose>8 -4.4 7.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.2 1.2 9</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.2 1.2 9</size></box></geometry><material><ambient>0.41 0.42 0.44 1</ambient><diffuse>0.58 0.60 0.63 1</diffuse></material></visual>
+      </link>
+      <link name="pied_2">
+        <pose>8 4.4 7.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.2 1.2 9</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.2 1.2 9</size></box></geometry><material><ambient>0.41 0.42 0.44 1</ambient><diffuse>0.58 0.60 0.63 1</diffuse></material></visual>
+      </link>
+      <link name="pied_3">
+        <pose>2 -4.4 7.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.2 1.2 9</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.2 1.2 9</size></box></geometry><material><ambient>0.41 0.42 0.44 1</ambient><diffuse>0.58 0.60 0.63 1</diffuse></material></visual>
+      </link>
+      <link name="pied_4">
+        <pose>2 4.4 7.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.2 1.2 9</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.2 1.2 9</size></box></geometry><material><ambient>0.41 0.42 0.44 1</ambient><diffuse>0.58 0.60 0.63 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_u_45_p">
+        <pose>5 -4.4 7.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>4.8 0.35 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>4.8 0.35 0.35</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_u_45_m">
+        <pose>5 4.4 7.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>4.8 0.35 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>4.8 0.35 0.35</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_v_45_p">
+        <pose>8 0 7.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.35 7.6 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.35 7.6 0.35</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_v_45_m">
+        <pose>2 0 7.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.35 7.6 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.35 7.6 0.35</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_u_85_p">
+        <pose>5 -4.4 11.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>4.8 0.35 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>4.8 0.35 0.35</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_u_85_m">
+        <pose>5 4.4 11.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>4.8 0.35 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>4.8 0.35 0.35</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_v_85_p">
+        <pose>8 0 11.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.35 7.6 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.35 7.6 0.35</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="entretoise_v_85_m">
+        <pose>2 0 11.5 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.35 7.6 0.35</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.35 7.6 0.35</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="plateforme">
+        <pose>5 0 12.8 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>9.6 11.6 1.6</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>9.6 11.6 1.6</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="cabine">
+        <pose>3.5 3 15 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>3 3 2.8</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>3 3 2.8</size></box></geometry><material><ambient>0.41 0.42 0.44 1</ambient><diffuse>0.58 0.60 0.63 1</diffuse></material></visual>
+      </link>
+      <link name="cabine_vitre">
+        <pose>5.03 3 15.3 0 0 0</pose>
+        <visual name="visual"><geometry><box><size>0.05 2.2 1.2</size></box></geometry><material><ambient>0.14 0.20 0.24 1</ambient><diffuse>0.20 0.28 0.35 1</diffuse></material></visual>
+      </link>
+      <link name="mat">
+        <pose>5 0 15.6 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>2.4 2.4 4</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>2.4 2.4 4</size></box></geometry><material><ambient>0.41 0.42 0.44 1</ambient><diffuse>0.58 0.60 0.63 1</diffuse></material></visual>
+      </link>
+      <link name="fleche">
+        <pose>5 -11.412678 21.108204 0 -0.314159 -1.570796</pose>
+        <collision name="collision"><geometry><box><size>24 0.9 0.9</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>24 0.9 0.9</size></box></geometry><material><ambient>0.41 0.42 0.44 1</ambient><diffuse>0.58 0.60 0.63 1</diffuse></material></visual>
+      </link>
+      <link name="contre_fleche">
+        <pose>5 3.5 17.4 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>0.9 6 0.9</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>0.9 6 0.9</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+      <link name="contrepoids">
+        <pose>5 6.8 16.8 0 0 0</pose>
+        <collision name="collision"><geometry><box><size>1.6 2 1.6</size></box></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+        <visual name="visual"><geometry><box><size>1.6 2 1.6</size></box></geometry><material><ambient>0.29 0.31 0.33 1</ambient><diffuse>0.42 0.44 0.47 1</diffuse></material></visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

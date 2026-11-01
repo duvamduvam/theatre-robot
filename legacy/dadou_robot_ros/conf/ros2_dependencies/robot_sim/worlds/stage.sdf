@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<!--
+  Monde "scène de théâtre" minimal : sol plan + lumière.
+  Le plateau fait 10 x 8 m (une scène raisonnable), Didier est posé dessus
+  par le launch. Pas de capteurs pour l'instant : la physique seule suffit
+  (le serveur tourne donc aussi en headless, sans GPU).
+-->
+<sdf version="1.10">
+  <world name="stage">
+
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <!-- Système Sensors : indispensable au rendu de la caméra embarquée
+         (camera_link, cf. dadou_robot_gz.urdf.xacro) -- sans lui aucune image
+         n'est publiée. Le monde peut alors demander un moteur de rendu même en
+         headless (ogre2 off-screen) : le retour vidéo du pont web fonctionne
+         donc aussi sans GUI Gazebo. -->
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.85 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.4 0.2 -0.9</direction>
+    </light>
+
+    <model name="stage_floor">
+      <static>true</static>
+      <link name="floor">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>10 8</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1.0</mu>
+                <mu2>1.0</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>10 8</size>
+            </plane>
+          </geometry>
+          <material>
+            <!-- Plancher de scène : brun sombre -->
+            <ambient>0.25 0.18 0.12 1</ambient>
+            <diffuse>0.35 0.25 0.16 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

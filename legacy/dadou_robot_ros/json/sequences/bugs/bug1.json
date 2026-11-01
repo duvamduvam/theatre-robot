@@ -1,0 +1,51 @@
+{
+   "keys": "Y1",
+   "duration": 30000,
+   "types": ["bug"],
+   "audios": [
+        [
+            0,
+           "eternel-short/74-laisse-moi-pas-tourner.mp3"
+        ]
+   ],
+   "faces": [
+       [
+            0,
+            "warning"
+        ]
+    ],
+    "left_eye": [
+        [0,
+          {"mode": "random", "random move min": 65,
+            "random move max": 85, "random time min": 500, "random time max":1000}
+        ]
+    ],
+    "right_eye": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 90, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "left_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "right_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "wheels": [
+        [
+            0,
+            [-0.6, -0.6]
+        ],
+        [
+            1,
+            [0, 0]
+        ]
+    ]
+}

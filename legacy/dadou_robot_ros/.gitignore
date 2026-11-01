@@ -1,0 +1,31 @@
+# .gitignore
+chatgpt-key.txt
+response.mp3
+
+venv/
+.venv/
+logs/
+.idea/
+secret
+/dadou_utils_ros.tar.gz
+__pycache__
+.iadadou/
+.iaction/
+
+# Atelier voix : venv, échantillons et rendus NE SONT PAS versionnés.
+# ⚠️ Le dépôt est PUBLIC : un échantillon de la voix de David est exactement
+# ce qu'il faut à un tiers pour la cloner. Rien de sonore ne sort d'ici.
+essais/voix/.venv/
+essais/voix/audio/
+essais/voix/sorties/
+*.wav
+*.mp3
+*.flac
+*.ogg
+
+# Inventaire du stock : les médias sources ne sont PAS versionnés.
+# La vidéo de dépouillement pèse 1,6 Go et le dépôt est public ; les 130 images
+# extraites (best/) pèsent 54 Mo. Tout cela vit dans Nextcloud, donc sauvegardé.
+# Le livrable versionné, c'est docs/hardware/inventaire-stock.md — pas les images.
+docs/pictures/stock/
+docs/pictures/robot-2026-09-03/

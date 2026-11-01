@@ -1,0 +1,34 @@
+# Core Python tooling inside the container
+python3-pip
+
+# Audio stack (playback, ALSA headers, decoding, speech)
+alsa-utils
+ffmpeg
+libasound2-dev
+portaudio19-dev
+mpg123
+
+# Graphics/GUI bindings required by PyGObject/Pillow
+libcairo2-dev
+libgirepository1.0-dev
+
+# Build helpers
+pkg-config
+python3-dev
+
+# Timezone info for consistent logs
+tzdata
+
+# ROS tutorials used for URDF demos (rviz launchers)
+ros-jazzy-urdf-tutorial
+# xacro pour générer l'URDF du robot
+ros-jazzy-xacro
+# Arbitre de priorités de la chaîne cmd_vel (robot_drive/drive.launch.py) :
+# remote > anim, verrou e_stop. Requis même à WHEELS_CMD_VEL_ENABLED=False
+# (la chaîne est lancée par robot_app.launch.py, seule la consommation change).
+ros-jazzy-twist-mux
+# Pont web robot_web (web_bridge_node, lancé par robot_app.launch.py) :
+# serveur HTTP/WebSocket + encodage JPEG du retour vidéo. AJOUT 2026-07-11 :
+# nécessite un REBUILD de l'image ARM au prochain déploiement.
+python3-aiohttp
+python3-pil

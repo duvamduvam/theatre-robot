@@ -1,0 +1,57 @@
+{
+    "duration": 7000,
+    "types": ["random", "bonjour"],
+    "audios": [
+        [
+            0,
+           "random/bon-attend.mp3"
+        ]
+    ],
+    "faces": [
+        [
+            0,
+           "speak"
+        ]
+    ],
+    "robot_lights": [
+        [
+            0,
+           "trip"
+        ],
+        [
+            0.99,
+           "default"
+        ]
+    ],
+    "keys": "H9",
+    "neck": [
+        [0,
+          {"mode": "random", "random move min": 40,
+            "random move max": 80, "random time min": 500, "random time max":1000}
+        ]
+    ],
+    "left_eye": [
+        [0,
+          {"mode": "random", "random move min": 40,
+            "random move max": 85, "random time min": 250, "random time max": 1000}
+        ]
+    ],
+    "right_eye": [
+        [0,
+          {"mode": "random", "random move min": 40,
+            "random move max": 90, "random time min": 250, "random time max": 1000}
+        ]
+    ],
+    "left_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ],
+    "right_arm": [
+        [0,
+          {"mode": "random", "random move min": 60,
+            "random move max": 95, "random time min": 500, "random time max": 1000}
+        ]
+    ]
+}

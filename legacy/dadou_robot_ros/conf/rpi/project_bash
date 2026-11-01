@@ -1,0 +1,19 @@
+################# PROJECT PARAMS ###################
+
+alias ll='ls -alh'
+
+alias s='source ~/.bashrc'
+#alias b='cd ~/ros2_ws && colcon build && s'
+
+alias log='tail -f ~/ros2_ws/log/robot.log'
+
+alias start='sudo service robot start && log'
+alias stop='sudo service robot stop'
+alias restart='stop && start'
+alias status='sudo service robot status'
+alias in='sudo docker exec -it dadou-robot-container /bin/bash'
+alias build='~/scripts/compose-up-pi.sh build'
+
+alias i2c='i2cdetect -y 1'
+
+alias r='sudo reboot'
