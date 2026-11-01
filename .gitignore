@@ -1,0 +1,10 @@
+# Ignorés dans tout le dépôt
+.venv/
+venv/
+__pycache__/
+*.pyc
+build/
+install/
+log/
+*.egg-info/
+.idea/
