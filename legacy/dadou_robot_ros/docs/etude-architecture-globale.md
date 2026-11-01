@@ -552,7 +552,7 @@ déploiement par retouche), hash vérifié seulement (la divergence resterait po
 
 ### 5.4 Partage du code : UN mono-dépôt, génération 2 partout, un package `contrats`
 
-- **Mono-dépôt `dadou`** (GitHub `duvamduvam/dadou`) : cœur, roues, web, vision,
+- **Mono-dépôt `theatre-robot`** (GitHub `duvamduvam/theatre-robot`) : cœur, roues, web, vision,
   télécommande, sono, contrats, sim, Ansible. Une version = tout cohérent ; **une CI**
   construit et teste tout → casser la sono fait rougir le commit qui la casse. Les
   historiques des 4 dépôts sont **conservés** (`git subtree add`, pas de copie à plat).
@@ -561,12 +561,12 @@ déploiement par retouche), hash vérifié seulement (la divergence resterait po
 - **Motif unique = génération 2** : nœud rclpy mince (I/O seulement) + modules purs testés
   sans ROS — c'est ce qui a été validé en sim et caméra depuis juillet (20 nœuds de
   génération 2 contre 6 fichiers de génération 1). Les noms de topics, schémas de payload,
-  codec StringTime et messages `.msg` viennent d'**un package `dadou_contrats`** du
+  codec StringTime et messages `.msg` viennent d'**un package `theatre_contrats`** du
   mono-dépôt : fin de la duplication « figée par tests » de la génération 2 ET de la lib
   fourre-tout de la génération 1. Le cœur `robot/` migre **module par module, au fil des
   lots, sim toujours verte** ; `SubscriberNode`/`Action` disparaissent avec le dernier
   module migré (L5). Supprime : 59 % de la lib (mort), `utils_static` (93 constantes →
-  `dadou_contrats`), `abstract_subscriber`, les 3 décodeurs StringTime, les 3 copies de
+  `theatre_contrats`), `abstract_subscriber`, les 3 décodeurs StringTime, les 3 copies de
   `robot_interfaces`.
 - Options écartées : multi-dépôts + paquet versionné (versions à gérer dans 5 dépôts, la
   casse se voit à la montée de version et pas au commit) ; zéro partage (c'est le modèle
@@ -580,19 +580,19 @@ Principe choisi : on lit la carte du système en ouvrant **deux dossiers** — `
 workspace ROS nu (`src/` à plat, illisible pour qui ne connaît pas ROS).
 
 Nommage décidé : **`didier_*`** pour ce qui appartient au robot, **`<appareil>_*`**
-(`telecommande_*`, `sono_*`, `lights_*`) pour les appareils, **`dadou_*`** pour le commun.
+(`telecommande_*`, `sono_*`, `lights_*`) pour les appareils, **`theatre_*`** pour le commun.
 Le préfixe dit à qui appartient le package ; fin de la collision `robot` ×3. Écarté :
-garder `robot_*` (ambigu le jour du 2e robot), `dadou_*` partout (on ne lit plus la
+garder `robot_*` (ambigu le jour du 2e robot), `theatre_*` partout (on ne lit plus la
 machine).
 
 ```
-dadou/
+theatre-robot/
 ├── CLAUDE.md                  un seul (règles, commandes, priorités)
 ├── README.md                  la carte du système en une page : quoi tourne où
 ├── packages/                  un package ROS 2 par fonction, à plat
-│   ├── dadou_contrats/        topics, schémas de payload, codec StringTime, .msg (ex robot_interfaces)
-│   ├── dadou_sim/             la séance : compose multi-conteneurs, monde Gazebo, page scène
-│   ├── dadou_gabarit/         le squelette d'appareil à copier (README-contrat, pilote sim, tests)
+│   ├── theatre_contrats/        topics, schémas de payload, codec StringTime, .msg (ex robot_interfaces)
+│   ├── theatre_sim/             la séance : compose multi-conteneurs, monde Gazebo, page scène
+│   ├── theatre_gabarit/         le squelette d'appareil à copier (README-contrat, pilote sim, tests)
 │   ├── didier_core/           ex robot/ : visage, servos, animations, relais, lumières
 │   ├── didier_drive/          ex robot_drive — INCHANGÉ (validé caméra 04/07)
 │   ├── didier_description/    URDF
@@ -652,7 +652,7 @@ dadou/
 ### 5.8 Déploiement : rsync du sous-ensemble + empreinte de version ; Ansible épuré
 
 - Ansible copie pour chaque machine **ses** packages (déclarés dans
-  `machines/<hôte>/packages.txt`) + `dadou_contrats` + `data` (robot seul), et **écrit le
+  `machines/<hôte>/packages.txt`) + `theatre_contrats` + `data` (robot seul), et **écrit le
   sha git déployé** ; chaque nœud publie ce sha, la page scène montre si deux machines
   divergent. Même mécanique qu'aujourd'hui (pas de git sur le Pi, sentinelle de build),
   mais versionnée et visible. Écarté : images Docker par commit (build ARM en CI lent,
@@ -672,7 +672,7 @@ dadou/
   `docs/etudes/` avec un **statut en tête** : *ouverte* ou *close* (gelée, on n'y écrit
   plus). **Un seul `CLAUDE.md`.**
 - **Chaque package a un README-contrat obligatoire** : rôle, topics entrée/sortie (avec
-  renvoi à `dadou_contrats`), comment le simuler, comment le tester, sur quelle machine
+  renvoi à `theatre_contrats`), comment le simuler, comment le tester, sur quelle machine
   il tourne. C'est ce README qui rend « ajouter un appareil ≈ 1 j » possible.
 - Règle inchangée (mémoire `feedback-doc-a-jour`) : la doc se met à jour **dans le même
   lot** que le code.
@@ -702,8 +702,8 @@ Décidé par David le 02/11 (étude [`etude-autonomie-improvisation.md`](etude-a
 `twist_mux`, battement de cœur de la télécommande, relais e-stop W1), **`didier_perception`**
 (Pi 5 : pistes de personnes + distance lidar + direction de voix → état du monde, contrat
 testé), **`didier_jeu`** (sélecteur py_trees + score, répertoire depuis `data/`, journal
-« pourquoi »). Contrats correspondants dans `dadou_contrats` ; vocabulaire de déplacements dans
-`data/` ; lidar simulé et passants scriptés dans `dadou_sim`. **La télécommande L4 a deux modes
+« pourquoi »). Contrats correspondants dans `theatre_contrats` ; vocabulaire de déplacements dans
+`data/` ; lidar simulé et passants scriptés dans `theatre_sim`. **La télécommande L4 a deux modes
 nommés** : MANUEL (Twist direct, homme-mort tenu — la décision du 01/11 tient) et CONSOLE
 (ordres macro + battement de cœur). La règle « chemin roues intouché avant L4 » admet une
 exception nommée : `didier_corps_sur` (A0), validé sim + protocole caméra étendu d'une épreuve
@@ -718,10 +718,10 @@ vérifiable ; David valide entre chaque.*
 
 | Lot | Contenu | Supprime | Porte de sortie (vérifiée) |
 |---|---|---|---|
-| **L0 Sauvegardes + squelette** | 1) pousser les **90 commits** du cœur, **31** de vision, **3** de la télécommande ; commiter les 12 fichiers de la télécommande, 3 de DoubleLights, 13 de DEVICE_WORKSPACE ; 2) ~~rapatrier les ~29 séquences~~ **fausse alerte (02/11)** : elles sont dans `eternel-show/` au bon format, les copies télécommande sont à supprimer ; 3) archiver la sono sur GitHub ✅ (fait le 01/11) ; 4) créer `dadou` par `git subtree add` des 4 dépôts (historiques conservés), arborescence §5.5 **posée mais vide là où rien n'existe** ; déplacer les packages existants SANS les renommer encore ; 5) un `CLAUDE.md`, les 4 anciens dépôts marqués « archivé, voir dadou » | `dadou_web` ✅, liens symboliques | la sim démarre depuis le mono-dépôt exactement comme avant (`validate-*.sh` existants verts) ; CI tests verte ; David valide l'arborescence SUR PIÈCE |
-| **L1 Contrats + données** | `dadou_contrats` (93 constantes utiles, codec StringTime unique, `.msg`) ; namespace `didier/` + test « aucun topic absolu » (3 à corriger dans vision) ; le robot publie **catalogue + sha déployé** ; **protocole d'édition via le robot** ; cache côté lecteur ; renommages `didier_*` | `utils_static`, 3 décodeurs StringTime, 3 `robot_interfaces`, `BUTTONS_LAYOUT`, 71 JSON | une retouche faite depuis la page scène arrive dans `data/` du robot et est rejouée ; la télécommande actuelle lit le catalogue publié ; chemin roues NON touché |
+| **L0 Sauvegardes + squelette** | 1) pousser les **90 commits** du cœur, **31** de vision, **3** de la télécommande ; commiter les 12 fichiers de la télécommande, 3 de DoubleLights, 13 de DEVICE_WORKSPACE ; 2) ~~rapatrier les ~29 séquences~~ **fausse alerte (02/11)** : elles sont dans `eternel-show/` au bon format, les copies télécommande sont à supprimer ; 3) archiver la sono sur GitHub ✅ (fait le 01/11) ; 4) créer `theatre-robot` par `git subtree add` des 4 dépôts (historiques conservés), arborescence §5.5 **posée mais vide là où rien n'existe** ; déplacer les packages existants SANS les renommer encore ; 5) un `CLAUDE.md`, les 4 anciens dépôts marqués « archivé, voir dadou » | `dadou_web` ✅, liens symboliques | la sim démarre depuis le mono-dépôt exactement comme avant (`validate-*.sh` existants verts) ; CI tests verte ; David valide l'arborescence SUR PIÈCE |
+| **L1 Contrats + données** | `theatre_contrats` (93 constantes utiles, codec StringTime unique, `.msg`) ; namespace `didier/` + test « aucun topic absolu » (3 à corriger dans vision) ; le robot publie **catalogue + sha déployé** ; **protocole d'édition via le robot** ; cache côté lecteur ; renommages `didier_*` | `utils_static`, 3 décodeurs StringTime, 3 `robot_interfaces`, `BUTTONS_LAYOUT`, 71 JSON | une retouche faite depuis la page scène arrive dans `data/` du robot et est rejouée ; la télécommande actuelle lit le catalogue publié ; chemin roues NON touché |
 | **L2 Sim multi-conteneurs** | `machines/sim/` : un conteneur par machine, mêmes Dockerfiles que l'ARM ; pilotes `sim` qui publient leur état ; page scène qui rend tous les états ; **séance de fumée** en CI | l'image sim fourre-tout | robot + vision + télécommande actuelle tournent dans 3 conteneurs, domaine 43 ; CI build + fumée verte |
-| **L3 Gabarit + sono** | `dadou_gabarit` (README-contrat, pilote sim, tests, entrée `machines/`) ; **`sono_core` réécrit en suivant le gabarit, chrono en main** ; rôle Ansible `sono` épuré | `dadou_sceno_ros` du disque | la sono joue en sim un audio et un relais visibles sur la page scène ; déployée sur `s` par Ansible ; **temps mesuré ≤ 1 j** ou le gabarit est corrigé |
+| **L3 Gabarit + sono** | `theatre_gabarit` (README-contrat, pilote sim, tests, entrée `machines/`) ; **`sono_core` réécrit en suivant le gabarit, chrono en main** ; rôle Ansible `sono` épuré | `dadou_sceno_ros` du disque | la sono joue en sim un audio et un relais visibles sur la page scène ; déployée sur `s` par Ansible ; **temps mesuré ≤ 1 j** ou le gabarit est corrigé |
 | **L4 Télécommande neuve** | 3 packages `telecommande_*` depuis le gabarit, pilotes matériels repris en modules purs, **Twist direct** ; pygame (essai décidé dans l'étude UI) ; **procédure de repli vers l'ancienne, écrite** | (après roulage au sol) `wheels_bridge`, `controller` | **sim + protocole caméra 4/4** avant mise en service ; l'ancienne reste installée jusqu'au premier roulage au sol réussi de la neuve |
 | **L5 Ménage + fin de migration** | derniers modules du cœur en génération 2 ; `SubscriberNode`/`Action` supprimés ; Ansible épuré (§5.8) ; études gelées dans `docs/etudes/` ; README-contrat partout ; DoubleLights/casque = **lot optionnel** sur le gabarit si le spectacle reprend | `abstract_subscriber`, 59 % de la lib, 6 rôles + Jenkins/Sonar/`ci`, anciens dépôts (archivés) | `grep` des motifs de génération 1 = 0 ; tous les packages ont leur README-contrat ; les 7 critères du §5.0 cochés un à un avec David |
 

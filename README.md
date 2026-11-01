@@ -1,4 +1,4 @@
-# dadou — le système Didier en un seul dépôt
+# theatre-robot — le système Didier en un seul dépôt
 
 Mono-dépôt du robot de théâtre Didier et de ses appareils (télécommande, vision, sono,
 lumières, gants) — décidé le 2026-11-01 (`legacy/dadou_robot_ros/docs/etude-architecture-globale.md`).
@@ -7,7 +7,7 @@ lumières, gants) — décidé le 2026-11-01 (`legacy/dadou_robot_ros/docs/etude
 
 | Dossier | Ce qu'on y trouve |
 |---|---|
-| `packages/` | **QUOI** : un package ROS 2 par fonction, à plat. Noms : `didier_*` (le robot), `telecommande_*` / `sono_*` / `lights_*` (les appareils), `dadou_*` (le commun : contrats, sim, gabarit) |
+| `packages/` | **QUOI** : un package ROS 2 par fonction, à plat. Noms : `didier_*` (le robot), `telecommande_*` / `sono_*` / `lights_*` (les appareils), `theatre_*` (le commun : contrats, sim, gabarit) |
 | `machines/<hôte>/` | **OÙ** : ce qui tourne sur chaque machine — packages déployés, compose, launch, variables Ansible. `machines/sim/` = la séance de simulation, un conteneur par machine |
 | `data/` | les JSON (séquences, visuels, audios, relais, lumières) — **vérité unique**, servie par le robot, éditée à travers lui |
 | `deploy/` | Ansible (toutes les machines) |

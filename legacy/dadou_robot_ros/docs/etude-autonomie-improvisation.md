@@ -313,11 +313,11 @@ Garde-fous : jamais une distance demandée à un VLM ; jamais la caméra seule q
 mouvement ; une intention de la boucle 2 **porte l'identifiant d'une piste**, sinon elle est
 périmée à l'arrivée.
 
-## 6. Conséquences sur l'architecture (mono-dépôt `dadou`)
+## 6. Conséquences sur l'architecture (mono-dépôt `theatre-robot`)
 
 Trois packages côté robot, absents de l'arborescence du 01/11 : `didier_corps_sur` (Pi 4,
 §3.2-3.3), `didier_perception` (Pi 5, état du monde publié, contrat testé), `didier_jeu`
-(sélecteur + répertoire + journal). Plus : les contrats correspondants dans `dadou_contrats` ;
+(sélecteur + répertoire + journal). Plus : les contrats correspondants dans `theatre_contrats` ;
 le vocabulaire de déplacements dans `data/` ; un **lidar simulé** et des **passants** dans la
 sim (HuNavSim est testé Humble/Fortress, **pas** Jazzy/Harmonic — à vérifier ; à défaut des
 acteurs gz scriptés) — sachant que **la caméra Gazebo ne détecte personne** (étude interaction
