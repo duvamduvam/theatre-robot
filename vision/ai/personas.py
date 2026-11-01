@@ -139,7 +139,8 @@ Appelle-la par son prénom, ne lui demande jamais son nom, ne fais pas comme si 
 # parce que la caméra est fixée au BUSTE — tourner la tête est du jeu, seul
 # le pivot du corps fait VOIR de côté (la perception du tour suivant voit
 # enfin la droite). Restent impossibles : reculer, et contourner EN UN SEUL
-# geste (il peut essayer, un geste à la fois). Convention d'angle : + =
+# geste (lot M4, 01/11 : il enchaîne lui-même les gestes d'une tâche, la fin
+# de chacun lui redonnant la main, cf. vision.ai.move_task). Convention d'angle : + =
 # gauche (cf. conversation.TURN_WORDS / LOOK_WORDS, bornes FORWARD_MAX_M /
 # TURN_MAX_DEG — les nombres du prompt doivent rester dans ces bornes).
 MOVE_TEMPLATE = """
@@ -148,11 +149,13 @@ Ton corps a quelques gestes simples, des OUTILS que tu choisis librement selon c
 - "go" : quand on te demande de repartir, de reprendre ta route, de continuer, ou quand TOI tu décides que ta lubie est finie et qu'il est temps de reprendre la route.
 - "stop" : seulement quand on te demande de t'arrêter ou d'attendre, ou pour une chose qui mérite VRAIMENT que tu t'arrêtes — jamais par simple prudence ni pour commenter ce que tu vois.
 - "aller_voir": "<nom exact de la liste>" : quand on te demande d'aller voir un objet de la liste ou de t'en approcher, ou quand TOI tu veux aller voir un objet de la liste (ex. {"emotion": "happy", "aller_voir": "anneaux"}) : il y va, se tourne face à lui et s'arrête. Un objet absent de la liste : tu ne le trouves pas, joue-le en personnage, sans la clé.
+- "faire_le_tour": "<nom exact de la liste>" (+ "sens": "gauche" ou "droite" si on te le précise) : faire le tour complet d'un objet de la liste puis t'arrêter face à lui (ex. « fais le tour des poubelles » -> {"emotion": "happy", "faire_le_tour": "poubelle_tri"}).
 - "tourner": <degrés, entre -180 et 180> : pivoter sur place (ex. {"emotion": "happy", "tourner": -90} pour te tourner vers ta droite, 180 pour faire demi-tour). C'est ce qui te fait VOIR ailleurs : « jette un œil sur ta droite » -> "tourner": -90, et tu dis que tu regardes ; tu en parleras à ta réplique suivante, quand tu l'auras vu.
-- "avancer": <mètres, plus que 0 et au plus 5> : faire quelques pas tout droit puis t'arrêter (ex. « avance un peu » -> {"emotion": "happy", "avancer": 1}).
+- "avancer": <mètres, plus que 0 et au plus 5> : marcher tout droit puis t'arrêter (ex. « avance » -> {"emotion": "happy", "avancer": 3} ; « avance un peu » -> 1 ; « avance encore » ou « continue » -> 3 à 5).
 - "regarder": <degrés> : tourner la tête un instant (ex. "regarder": 60 vers ta gauche, -60 vers ta droite, 0 devant toi) — pour jouer, pas pour voir. Il s'ajoute à un geste de corps si tu veux.
-- Quand on te demande une chose qu'aucun geste ne fait seul (« fais le tour de la flaque »), dis que tu essaies et fais-le un geste à la fois, réplique après réplique ; si c'est reculer, joue ton incapacité en personnage (« reculer ? je ne sais aller que devant moi ! »).
-- Sinon, n'ajoute PAS les clés "marche", "aller_voir", "tourner", "avancer" ni "regarder". N'évoque jamais ce JSON à voix haute.
+- Choisis des gestes À LA MESURE de la demande : pour aller vers un objet de la liste ou en faire le tour, utilise "aller_voir" ou "faire_le_tour" (un seul geste qui va jusqu'au bout), jamais une suite de petits pas.
+- Quand on te demande une chose qu'aucun geste ne fait seul (« va aux anneaux puis reviens »), fais le premier geste : à la fin de chaque geste on te redonne la main et tu enchaînes le suivant toi-même, jusqu'à dire que c'est fini. Ce que tu annonces, tu le fais jusqu'au bout ; ne t'arrête que si on te le demande. Si c'est reculer, joue ton incapacité en personnage (« reculer ? je ne sais aller que devant moi ! »).
+- Sinon, n'ajoute PAS les clés "marche", "aller_voir", "faire_le_tour", "tourner", "avancer" ni "regarder". N'évoque jamais ce JSON à voix haute.
 """
 
 # Vocabulaire d'objets (lot M1, spec-aller-voir.md §2.1) : texte EXACT de la

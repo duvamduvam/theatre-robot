@@ -208,9 +208,13 @@ def test_mouvement_exemples_de_gestes_generaux():
     # Les trois exemples de la décision de David, gravés.
     assert '« jette un œil sur ta droite » -> "tourner": -90' in template
     assert "tu en parleras à ta réplique suivante" in template
-    assert '« avance un peu » -> {"emotion": "happy", "avancer": 1}' in template
-    assert ("(« fais le tour de la flaque »), dis que tu essaies et fais-le un geste "
-            "à la fois") in template
+    # Exemple d'« avancer » corrigé le 01/11 (séance : il avançait mètre par
+    # mètre) : « avance » seul = 3 m.
+    assert '« avance » -> {"emotion": "happy", "avancer": 3}' in template
+    assert "« avance un peu » -> 1" in template
+    # Lot M4 (spec §9.4) : l'ancien « un geste à la fois, réplique après
+    # réplique » est remplacé par l'enchaînement de la tâche.
+    assert "(« va aux anneaux puis reviens »), fais le premier geste" in template
     # Des outils au choix, pas des cas figés.
     assert "des OUTILS que tu choisis librement" in template
 
@@ -224,5 +228,46 @@ def test_mouvement_ne_dit_plus_qu_il_ne_sait_pas_tourner():
 
 def test_mouvement_liste_toutes_les_cles_a_ne_pas_ajouter():
     assert personas.MOVE_TEMPLATE.endswith(
-        '- Sinon, n\'ajoute PAS les clés "marche", "aller_voir", "tourner", "avancer" '
+        '- Sinon, n\'ajoute PAS les clés "marche", "aller_voir", "faire_le_tour", "tourner", "avancer" '
         'ni "regarder". N\'évoque jamais ce JSON à voix haute.\n')
+
+
+# --- « Faire le tour » (lot M3, 01/11, spec-aller-voir.md §8.2) ---
+
+def test_mouvement_apprend_la_cle_faire_le_tour():
+    template = personas.MOVE_TEMPLATE
+    assert ('- "faire_le_tour": "<nom exact de la liste>" (+ "sens": "gauche" ou "droite" '
+            'si on te le précise) : faire le tour complet d\'un objet de la liste puis '
+            't\'arrêter face à lui') in template
+    assert ('« fais le tour des poubelles » -> {"emotion": "happy", '
+            '"faire_le_tour": "poubelle_tri"}') in template
+    # L'ancien exemple « impossible » est retiré : le geste existe.
+    assert "fais le tour de la flaque" not in template
+    assert template.endswith("N'évoque jamais ce JSON à voix haute.\n")
+
+
+# --- Tâche en cours (lot M4, 01/11, spec-aller-voir.md §9.4) ---
+
+def test_mouvement_tache_enchainee_jusqu_au_bout():
+    template = personas.MOVE_TEMPLATE
+    # Textes GRAVÉS : un geste de corps par réplique, la main redonnée à la
+    # fin de chaque geste, et la tâche menée jusqu'au bout.
+    assert "un seul geste de corps par réplique" in template
+    assert ("à la fin de chaque geste on te redonne la main et tu enchaînes le suivant "
+            "toi-même, jusqu'à dire que c'est fini.") in template
+    assert ("Ce que tu annonces, tu le fais jusqu'au bout ; ne t'arrête que si on te "
+            "le demande.") in template
+    assert "réplique après réplique" not in template
+    assert "un geste à la fois" not in template
+    assert template.endswith("N'évoque jamais ce JSON à voix haute.\n")
+
+
+def test_mouvement_gestes_a_la_mesure_de_la_demande():
+    # Constat de séance (01/11) : « fais le tour complet » -> avancer 2 m,
+    # « avance » -> 1 m. Consignes GRAVÉES.
+    template = personas.MOVE_TEMPLATE
+    assert ('Choisis des gestes À LA MESURE de la demande : pour aller vers un objet de la '
+            'liste ou en faire le tour, utilise "aller_voir" ou "faire_le_tour" (un seul '
+            'geste qui va jusqu\'au bout), jamais une suite de petits pas.') in template
+    assert ('« avance » -> {"emotion": "happy", "avancer": 3} ; « avance un peu » -> 1 ; '
+            '« avance encore » ou « continue » -> 3 à 5') in template

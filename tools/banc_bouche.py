@@ -91,8 +91,11 @@ SCENARIOS = [
     ("Regarde-moi quand je te parle.", "regarder",
      lambda p: "regarder" in p and _gesture_number(p["regarder"], LOOK_WORDS) is not None),
     ("Recule un peu.", "aucun geste (il ne recule pas)", _no_move),
-    ("Fais le tour de la flaque.", "un geste (aller_voir/tourner/avancer)",
-     lambda p: any(k in p for k in ("aller_voir", "tourner", "avancer"))),
+    ("Fais le tour de la flaque.", "faire_le_tour",
+     lambda p: "faire_le_tour" in p),
+    ("Fais le tour des poubelles par la droite.", "faire_le_tour poubelle_tri sens droite",
+     lambda p: str(p.get("faire_le_tour", "")).strip().lower() == "poubelle_tri"
+     and str(p.get("sens", "")).strip().lower() == "droite"),
     ("Tu cherches quoi, au juste ?", "aucun geste", _no_move),
     ("Attention, on ne va pas dans la Loire non plus.", "aucun geste", _no_move),
     ("Un peu plus à gauche.", "tourner>0 ou regarder>0",

@@ -616,3 +616,30 @@ def test_on_prompt_decode_refuse_ou_range_sans_toucher_au_micro():
     assert "self.get_logger().warning" in calls
     # Même règle que _on_chat_text : le moteur sert la direction depuis SON thread.
     assert not any("_mic" in call for call in calls)
+
+
+# --- Tâche en cours (lot M4, 01/11, spec-aller-voir.md §9.3) : chat_node
+# lit route_goto_result (contrat robot_rehearsal/contracts.py
+# ROUTE_GOTO_RESULT_TOPIC) SEULEMENT si le mouvement à la voix est branché.
+
+def test_topic_d_issue_de_geste_a_la_valeur_du_contrat():
+    assert (_module_string_constants(_chat_node_tree()).get("ROUTE_GOTO_RESULT_TOPIC")
+            == "route_goto_result")
+
+
+def test_tache_et_abonnement_conditionnes_au_mouvement():
+    init = _chat_node_method(_chat_node_tree(), "__init__")
+    init_source = ast.unparse(init)
+    assert ("self._move_task = MoveTask() if self._move_pub is not None else None"
+            in init_source)
+    assert "move_task=self._move_task" in init_source
+    blocs = [node for node in ast.walk(init) if isinstance(node, ast.If)
+             and ast.unparse(node.test) == "self._move_task is not None"]
+    attendu = [("StringTime", "ROUTE_GOTO_RESULT_TOPIC", "self._on_goto_result")]
+    assert len(blocs) == 1 and _subscriptions(blocs[0]) == attendu
+    assert [a for a in _subscriptions(init) if a[1] == "ROUTE_GOTO_RESULT_TOPIC"] == attendu
+
+
+def test_chat_off_ferme_la_tache():
+    source = ast.unparse(_chat_node_method(_chat_node_tree(), "_on_chat_cmd"))
+    assert "self._move_task.close('chat OFF')" in source

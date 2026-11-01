@@ -25,6 +25,7 @@ from dadou_utils_ros.utils_static import ANIMATION, FACE
 
 from vision.ai import conversation as conversation_module
 from vision.ai.conversation import ConversationEngine, has_usable_text
+from vision.ai.move_task import MoveTask
 from vision.ai.performance import RosMessage
 from vision.ai.stage import StageState
 from vision.audio.vad import VadEvent
@@ -1180,9 +1181,10 @@ class FakeMicAvecRegie(FakeMic):
 def _make_stage_engine(timeline, stage, *, brain_deltas, frames=(), vad_events=(),
                        stt_text="jamais utilisé", mic=None, on_state=None,
                        on_transcript=None, on_timing=None, dead_mic_backoff_s=0.0,
-                       on_move=None, on_reflect=None):
+                       on_move=None, on_reflect=None, move_task=None):
     """Factory dédiée aux tests de régie (la factory historique reste
-    intacte) : renvoie (engine, brain) pour lire brain.extra_systems."""
+    intacte) : renvoie (engine, brain) pour lire brain.extra_systems.
+    `move_task` : tâche en cours (lot M4), None par défaut."""
     brain = FakeStageBrain(timeline, brain_deltas)
     engine = ConversationEngine(
         mic=mic if mic is not None else FakeMic(timeline, frames),
@@ -1202,6 +1204,7 @@ def _make_stage_engine(timeline, stage, *, brain_deltas, frames=(), vad_events=(
         on_transcript=on_transcript,
         on_move=on_move,
         on_reflect=on_reflect,
+        move_task=move_task,
     )
     return engine, brain
 
@@ -3300,3 +3303,348 @@ def test_on_look_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
             on_look=explose) is True
     assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
     assert any("on_look" in r.message for r in caplog.records)
+
+
+# --- « Faire le tour » (lot M3, 01/11, spec-aller-voir.md §8.2) ------------------
+# Préséance stop > aller_voir > faire_le_tour > tourner > avancer > go ; jamais
+# en tour spontané ; "sens" absent = gauche.
+
+TOUR_GAUCHE = {"cmd": "tour_de", "objet": "poubelle_tri", "sens": "gauche"}
+
+
+def test_faire_le_tour_sens_par_defaut_gauche_payload_grave(timeline):
+    ordres = _ordre_pour(timeline, '"faire_le_tour": "  poubelle_tri "')
+    assert ordres == [TOUR_GAUCHE]
+    assert json.dumps(ordres[0]) == '{"cmd": "tour_de", "objet": "poubelle_tri", "sens": "gauche"}'
+
+
+@pytest.mark.parametrize("sens_brut, sens", [
+    ('"droite"', "droite"), ('" Droite "', "droite"), ('"GAUCHE"', "gauche")])
+def test_faire_le_tour_sens_normalise(timeline, sens_brut, sens):
+    assert _ordre_pour(timeline, '"faire_le_tour": "poubelle_tri", "sens": ' + sens_brut) == [
+        {"cmd": "tour_de", "objet": "poubelle_tri", "sens": sens}]
+
+
+def test_faire_le_tour_garde_la_casse_de_l_objet(timeline):
+    assert _ordre_pour(timeline, '"faire_le_tour": "La Grue"')[0]["objet"] == "La Grue"
+
+
+@pytest.mark.parametrize("sens_brut", ['"haut"', '""', "1", "null", '["droite"]'])
+def test_faire_le_tour_sens_invalide_gauche_avec_warning(timeline, caplog, sens_brut):
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        ordres = _ordre_pour(timeline, '"faire_le_tour": "poubelle_tri", "sens": ' + sens_brut)
+    assert ordres == [TOUR_GAUCHE]
+    assert any("sens" in r.message for r in caplog.records)
+
+
+@pytest.mark.parametrize("valeur", ['""', '"  "', "1", "null", "true", '["a"]'])
+def test_faire_le_tour_vide_ou_non_chaine_ignore_avec_warning(timeline, caplog, valeur):
+    with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+        assert _ordre_pour(timeline, '"faire_le_tour": ' + valeur) == []
+    assert any("faire_le_tour" in r.message for r in caplog.records)
+
+
+@pytest.mark.parametrize("cles, attendu", [
+    ('"faire_le_tour": "poubelle_tri", "aller_voir": "anneaux"', ANNEAUX),
+    ('"aller_voir": "anneaux", "faire_le_tour": "poubelle_tri"', ANNEAUX),
+    ('"faire_le_tour": "poubelle_tri", "tourner": -90', TOUR_GAUCHE),
+    ('"avancer": 1, "faire_le_tour": "poubelle_tri"', TOUR_GAUCHE),
+    ('"marche": "go", "faire_le_tour": "poubelle_tri"', TOUR_GAUCHE),
+    ('"marche": "stop", "faire_le_tour": "poubelle_tri"', "stop"),
+    ('"faire_le_tour": "", "tourner": -90', TOURNE_DROITE),     # perdant illisible = suivant
+])
+def test_faire_le_tour_preseance_un_seul_ordre(timeline, cles, attendu):
+    assert _ordre_pour(timeline, cles) == [attendu]
+
+
+def test_tour_spontane_n_emet_jamais_faire_le_tour(timeline, clock, caplog):
+    stage = StageState()
+    stage.push_prompt("Fais le tour des poubelles.", clock.t)
+    ordres = []
+    engine, _brain = _spontane_engine(
+        timeline, stage, clock, frames=[b"f0", b"f1", b"f2"],
+        brain_deltas=['Ok ! {"emotion": "happy", "faire_le_tour": "poubelle_tri"}'])
+    engine._on_move = ordres.append
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == []
+    assert [r.message for r in caplog.records] == [
+        "Clé \"faire_le_tour\" : 'poubelle_tri' ignoré : tour spontané "
+        "(aucun humain ne l'a demandé)."]
+
+
+# --------------------------------------------------------------------------
+# Tâche en cours (lot M4, 01/11, dadou_robot_ros/docs/spec-aller-voir.md §9) :
+# une tâche ouverte par un HUMAIN se poursuit d'elle-même — continuation
+# servie pendant l'écoute (avant tout tour spontané), gestes PERMIS, garde
+# armée ; un tour spontané ne bouge toujours jamais (B1) ; parole/texte de
+# David, "stop", réplique sans geste ferment la tâche.
+# --------------------------------------------------------------------------
+
+TACHE = "fais le tour de la place"
+FIN_DU_TOUR = {"name": "tour de poubelle_tri", "result": "arrived", "reason": "arrived",
+               "travelled": 12.57}
+# Direction rendue par MoveTask pour FIN_DU_TOUR (texte GRAVÉ, spec §9.1).
+CONTINUATION = (
+    "Ton geste « tour de poubelle_tri » est terminé (12.57 m parcourus). "
+    "Ta tâche, demandée par David : « fais le tour de la place ». Si elle n'est pas "
+    "finie, dis où tu en es en quelques mots et fais le geste suivant ; si elle est "
+    "finie, dis-le en une phrase, SANS clé de geste.")
+TACHE_USER = "(Ton geste est fini. Personne ne te parle : poursuis ta tâche.)"
+
+
+def test_tache_constantes_gravees():
+    assert conversation_module.TASK_USER_TEXT == TACHE_USER
+    assert conversation_module.TASK_MIN_SILENCE_S == 0.5
+
+
+def _tache_en_attente(now):
+    """Tâche ouverte par David, premier geste fini : continuation rangée."""
+    task = MoveTask()
+    task.gesture_emitted(TACHE, False, now)
+    assert task.on_result(FIN_DU_TOUR, now) == CONTINUATION
+    return task
+
+
+def _tache_engine(timeline, clock, task, *, deltas, stage=None, frames=(b"f0", b"f1", b"f2"),
+                  step=1.0, vad_events=(), stt_text="jamais utilisé"):
+    stage = stage if stage is not None else StageState()
+    ordres = []
+    mic = FakeMicHorloge(timeline, list(frames), clock, step)
+    engine, brain = _make_stage_engine(
+        timeline, stage, brain_deltas=list(deltas), frames=frames, vad_events=vad_events,
+        stt_text=stt_text, mic=mic, on_move=ordres.append, move_task=task)
+    return engine, brain, ordres
+
+
+def test_tour_humain_avec_geste_ouvre_la_tache(timeline):
+    stage = StageState()
+    stage.push_text(TACHE)
+    task = MoveTask()
+    ordres = []
+    engine, _brain = _make_stage_engine(
+        timeline, stage, on_move=ordres.append, move_task=task,
+        brain_deltas=['Allons-y. {"emotion": "happy", "faire_le_tour": "poubelle_tri"}'])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == [TOUR_GAUCHE]
+    assert task.is_open() and task.steps == 1
+    assert task.on_result(FIN_DU_TOUR, time.monotonic()) == CONTINUATION
+
+
+def test_tour_humain_avec_go_seul_n_ouvre_pas_de_tache(timeline):
+    stage = StageState()
+    stage.push_text("repars")
+    task = MoveTask()
+    engine, _brain = _make_stage_engine(
+        timeline, stage, on_move=lambda _c: None, move_task=task,
+        brain_deltas=['Je repars. {"emotion": "happy", "marche": "go"}'])
+    try:
+        engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+    assert not task.is_open()
+
+
+def test_continuation_servie_avant_le_tour_spontane_et_geste_emis(timeline, clock):
+    stage = StageState()
+    stage.push_prompt("Relance la scène.", clock.t)
+    task = _tache_en_attente(clock.t)
+    # step 3 s : à la 1re trame, la continuation ET la direction sont servables.
+    engine, brain, ordres = _tache_engine(
+        timeline, clock, task, stage=stage, step=3.0,
+        deltas=['La moitié est faite, je continue. {"emotion": "happy", "tourner": -90}'])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls[0]["user_text"] == TACHE_USER
+    assert brain.calls[0]["direction"] == CONTINUATION
+    assert engine._mic._frames == [b"f1", b"f2"]     # servie dès la 1re trame
+    # Le geste PASSE (spontaneous=False) et compte pour la même tâche.
+    assert ordres == [TOURNE_DROITE]
+    assert task.is_open() and task.steps == 2
+    # Visage "reflechit" sans bips, pas de ligne "david" (cf. _serve_prompt).
+    assert ("publish", THINKING) in timeline
+    assert "player_play_async_raw" not in _tags(timeline)
+    # La direction du metteur en scène attend toujours (non consommée).
+    assert stage.pop_prompt(clock.t) == "Relance la scène."
+
+
+def test_continuation_apres_un_demi_seconde_de_silence(timeline, clock):
+    task = _tache_en_attente(clock.t)
+    engine, brain, _ordres = _tache_engine(timeline, clock, task, step=0.25,
+                                           deltas=["C'est fini."])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    # t = +0,25 puis +0,5 s : servie à la 2e trame, pas avant.
+    assert engine._mic._frames == [b"f2"]
+    assert brain.calls[0]["direction"] == CONTINUATION
+
+
+def test_continuation_jamais_pendant_un_son_de_spectacle(timeline, clock):
+    task = _tache_en_attente(clock.t)
+    engine, brain, _ordres = _tache_engine(timeline, clock, task, deltas=["x"])
+    engine._show_audio_active = lambda: True
+    try:
+        assert engine.run_once() is False
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls == []
+    assert task.pop_continuation() == CONTINUATION     # toujours en attente
+
+
+def test_continuation_jamais_pendant_que_david_parle(timeline, clock):
+    task = _tache_en_attente(clock.t)
+    frames = [b"f0", b"f1", b"f2", b"f3"]
+    events = [VadEvent(kind="speech_start", preroll_frames=2), None, None,
+              VadEvent(kind="speech_end", reason="silence")]
+    # Pas de 0,25 s : la parole commence AVANT le silence minimal de 0,5 s.
+    engine, brain, _ordres = _tache_engine(
+        timeline, clock, task, frames=frames, vad_events=events, stt_text="attends",
+        deltas=["D'accord."], step=0.25)
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    # La parole de David est servie… et FERME la tâche.
+    assert brain.calls[0]["user_text"] == "attends"
+    assert brain.calls[0]["direction"] is None
+    assert not task.is_open()
+    assert task.pop_continuation() is None
+
+
+def test_continuation_sans_geste_ferme_la_tache(timeline, clock):
+    task = _tache_en_attente(clock.t)
+    engine, _brain, ordres = _tache_engine(
+        timeline, clock, task, deltas=['Voilà, j\'ai fait le tour ! {"emotion": "happy"}'])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == []
+    assert not task.is_open()
+
+
+def test_continuation_avec_go_seul_ferme_la_tache(timeline, clock):
+    # "go" n'est pas un geste de corps : la tâche est finie, il reprend la route.
+    task = _tache_en_attente(clock.t)
+    engine, _brain, ordres = _tache_engine(
+        timeline, clock, task, deltas=['Fini, je repars. {"emotion": "happy", "marche": "go"}'])
+    try:
+        engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == ["go"]
+    assert not task.is_open()
+
+
+def test_continuation_avec_stop_ferme_la_tache(timeline, clock):
+    task = _tache_en_attente(clock.t)
+    engine, _brain, ordres = _tache_engine(
+        timeline, clock, task,
+        deltas=['Je m\'arrête là. {"emotion": "neutral", "marche": "stop", "avancer": 3}'])
+    try:
+        engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == ["stop"]
+    assert not task.is_open()
+
+
+def test_texte_tape_passe_avant_la_continuation_et_ferme_la_tache(timeline, clock):
+    stage = StageState()
+    stage.push_text("Arrête de tourner en rond.")
+    task = _tache_en_attente(clock.t)
+    engine, brain, _ordres = _tache_engine(timeline, clock, task, stage=stage,
+                                           deltas=["Bon, d'accord."])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls[0]["user_text"] == "Arrête de tourner en rond."
+    assert not task.is_open()
+    assert task.pop_continuation() is None
+
+
+def test_tour_spontane_ne_bouge_jamais_meme_avec_une_tache_ouverte(timeline, clock, caplog):
+    # B1 inchangé : la tâche attend l'issue de son geste, le metteur en scène
+    # relance la scène — ses gestes sont jetés, la tâche n'avance pas.
+    stage = StageState()
+    stage.push_prompt("Va voir plus loin.", clock.t)
+    task = MoveTask()
+    task.gesture_emitted(TACHE, False, clock.t)
+    engine, brain, ordres = _tache_engine(
+        timeline, clock, task, stage=stage,
+        deltas=['On avance ! {"emotion": "happy", "avancer": 3}'])
+    try:
+        with caplog.at_level("WARNING", logger="vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls[0]["user_text"] == SPONTANE
+    assert ordres == []
+    assert task.is_open() and task.steps == 1       # ni fermée ni avancée
+    assert "Clé \"avancer\" : 3 ignoré : tour spontané (aucun humain ne l'a demandé)." in [
+        r.message for r in caplog.records]
+
+
+def test_tour_spontane_stop_ferme_la_tache(timeline, clock):
+    stage = StageState()
+    stage.push_prompt("Arrête-toi ici.", clock.t)
+    task = MoveTask()
+    task.gesture_emitted(TACHE, False, clock.t)
+    engine, _brain, ordres = _tache_engine(
+        timeline, clock, task, stage=stage,
+        deltas=['Halte. {"emotion": "neutral", "marche": "stop"}'])
+    try:
+        engine.run_once()
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == ["stop"]
+    assert not task.is_open()
+
+
+def test_continuation_sans_regie_transmet_la_direction(timeline, clock):
+    # stage None : l'appel brain reste historique SAUF la direction, sans
+    # laquelle le LLM ignorerait l'issue du geste et la tâche.
+    task = _tache_en_attente(clock.t)
+    brain = FakeStageBrain(timeline, ["C'est fini."])
+    engine = ConversationEngine(
+        mic=FakeMicHorloge(timeline, [b"f0", b"f1"], clock, 1.0),
+        vad=FakeVad([], timeline=timeline), stt=FakeStt(timeline, "x"), brain=brain,
+        tts=FakeTts(timeline), player=FakePlayer(timeline), publish=_make_publish(timeline),
+        refresh_ms=REFRESH_MS, dead_mic_backoff_s=0.0, on_move=lambda _c: None,
+        move_task=task)
+    assert engine.run_once() is True
+    assert brain.calls == [{"direction": CONTINUATION, "user_text": TACHE_USER,
+                            "extra_system": None}]
+
+
+def test_continuation_garde_armee_stop_crie_arrete_et_ferme(timeline):
+    # « Stop ! » crié pendant la réplique de continuation : l'ordre stop part,
+    # le geste de fin n'est JAMAIS émis, la tâche est close.
+    ordres, on_move = _ordres_thread_safe()
+    stt = GuardStt("Stop !")
+    holder = {}
+    engine, mic, guard_vad, player, _lines, _states = _guard_engine(
+        timeline, stt=stt, on_move=on_move,
+        pause=lambda: holder["player"].interrupted.wait(timeout=WAIT_S),
+        deltas=["Je continue. ", 'Encore un bout. {"emotion": "happy", "avancer": 3}'])
+    holder["player"] = player
+    task = MoveTask()
+    task.gesture_emitted(TACHE, False, time.monotonic())
+    task.on_result(FIN_DU_TOUR, time.monotonic())
+    engine._move_task = task
+    assert engine._serve_continuation(task.pop_continuation()) is False
+    assert ordres == ["stop"]
+    assert guard_vad.adopted == [7.5]            # garde armée (seuil repris)
+    assert "player_interrupt" in _tags(timeline)
+    assert not task.is_open()

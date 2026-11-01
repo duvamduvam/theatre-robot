@@ -114,6 +114,9 @@ POURQUOI CHAT_MOVE_TOPIC (lot I1 « mouvement à la voix », 2026-10-22, spec
        "tourner" ({"cmd": "tourner", "angle_deg": …}) et "avancer" ({"cmd":
        "avancer", "metres": …}) sur le même topic, et clé "regarder" ->
        LOOK_TOPIC (tête seule, consommé par gaze_follower_node côté robot).
+       Lot M4 (01/11, spec §9, tâche en cours) : abonnement
+       ROUTE_GOTO_RESULT_TOPIC (même condition) -> vision.ai.move_task : la
+       fin d'un geste redonne la main à Didier, qui enchaîne le suivant.
 POURQUOI les topics du METTEUR EN SCÈNE INTÉRIEUR (lot P, 2026-10-23, spec
        fermée dadou_robot_ros/docs/spec-metteur-en-scene.md) : la parole
        relit le tableau de situation (SITUATION_TOPIC) à chaque tour, sert
@@ -148,6 +151,7 @@ from dadou_utils_ros.utils_static import ANIMATION, ANIMATION_STATE, FACE
 from vision.ai import arbitration, personas, reflection_contract, stage
 from vision.ai.conversation import ConversationEngine
 from vision.ai.llm_stream import StreamingBrain
+from vision.ai.move_task import TASK_MAX_STEPS, MoveTask
 from vision.ai.performance import RosMessage
 from vision.ai import hearing
 from vision.ai.stt import FallbackStt, FasterWhisperStt, OpenRouterStt
@@ -291,6 +295,15 @@ REHEARSAL_OBJECTS_TOPIC = "rehearsal/objects"
 # PROD-compatible, mais l'ouvrir au vrai robot (condition propre, hors
 # CHAT_MOUVEMENT) est une décision à prendre plus tard, après essai réel.
 LOOK_TOPIC = "look"
+
+# Issue d'un geste (lot M4, dadou_robot_ros/docs/spec-aller-voir.md §9.3) :
+# StringTime JSON {"name", "result", "reason", "travelled"} publié par
+# route_driver — contrat robot_rehearsal/contracts.py ROUTE_GOTO_RESULT_TOPIC
+# (dadou_robot_ros), aucun changement côté robot. Écouté SEULEMENT si le
+# mouvement à la voix est branché : c'est lui qui fait enchaîner la tâche en
+# cours (vision.ai.move_task). QoS VOLATILE (comme côté robot) : une vieille
+# issue rejouée relancerait une tâche hors de propos.
+ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
 
 
 # --- Serveur de diagnostic web (vumètre + latences, cf. docstring de module
@@ -865,6 +878,9 @@ class ChatNode(Node):
         # --- Régie du chat (cf. docstring de module POURQUOI les topics de
         # RÉGIE) : créé AVANT ConversationEngine, qui le reçoit en kwarg.
         self._stage = stage.StageState()
+        # Tâche en cours (lot M4, cf. ROUTE_GOTO_RESULT_TOPIC) : même condition
+        # que le mouvement à la voix — None = aucune continuation possible.
+        self._move_task = MoveTask() if self._move_pub is not None else None
 
         # --- Orchestrateur (logique déjà testée hors ROS) ------------------
         self._engine = ConversationEngine(
@@ -914,6 +930,8 @@ class ChatNode(Node):
             # Regard (cf. LOOK_TOPIC) : None si désactivé (la clé "regarder"
             # n'est pas lue).
             on_look=self._publish_look if self._look_pub is not None else None,
+            # Tâche en cours (cf. ROUTE_GOTO_RESULT_TOPIC) : None si désactivé.
+            move_task=self._move_task,
         )
         self._mic = mic
         self._player = player
@@ -945,6 +963,11 @@ class ChatNode(Node):
             self.create_subscription(
                 StringTime, REHEARSAL_OBJECTS_TOPIC, self._on_objects,
                 QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        # Issue des gestes (cf. ROUTE_GOTO_RESULT_TOPIC) : même condition, via
+        # la tâche (créée seulement si le mouvement à la voix l'est).
+        if self._move_task is not None:
+            self.create_subscription(
+                StringTime, ROUTE_GOTO_RESULT_TOPIC, self._on_goto_result, 10)
         # Metteur en scène intérieur (cf. docstring de module) : rien n'est
         # écouté si la réflexion est désactivée — StageState reste vide,
         # aucun tableau ni tour spontané ne peut atteindre la parole.
@@ -1039,6 +1062,10 @@ class ChatNode(Node):
             # stoppe ici est de toute façon déjà coupé pendant qu'il parle
             # (anti-larsen).
             self._mic.stop()
+            # Lot M4 : chat OFF = plus de continuation (la tâche ne reprendrait
+            # pas d'elle-même à la reprise, longtemps après).
+            if self._move_task is not None:
+                self._move_task.close("chat OFF")
             self.get_logger().info("chat OFF : mode interactif désactivé (micro coupé)")
         else:
             self.get_logger().warning(f"commande chat inconnue : {raw!r}")
@@ -1194,6 +1221,21 @@ class ChatNode(Node):
         self.get_logger().info(
             f"objets à aller voir : {len(objects)} reçus "
             f"({', '.join(name for name, _desc in objects)})")
+
+    def _on_goto_result(self, ros_msg):
+        """Issue d'un geste (cf. ROUTE_GOTO_RESULT_TOPIC) : JSON illisible =
+        warning, ignoré ; sinon MoveTask.on_result décide (continuation rangée
+        dans SON emplacement, servie par le moteur pendant l'écoute — jamais
+        de mic.stop() depuis ce thread, même règle que _on_prompt). La
+        fermeture est journalisée par MoveTask lui-même."""
+        try:
+            payload = json.loads(ros_msg.msg)
+        except (ValueError, TypeError):
+            self.get_logger().warning(f"{ROUTE_GOTO_RESULT_TOPIC} illisible : {ros_msg.msg!r}")
+            return
+        if self._move_task.on_result(payload, time.monotonic()) is not None:
+            self.get_logger().info(
+                f"tâche : continuation (geste {self._move_task.steps}/{TASK_MAX_STEPS})")
 
     def _on_situation(self, ros_msg):
         """Tableau de situation (reflection_contract.SITUATION_TOPIC) : rangé
