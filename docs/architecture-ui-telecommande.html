@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Didier — architecture UI télécommande & gants (sans X11)</title>
+<!--
+  Document d'architecture du chantier « UI télécommande sans X11 » (docs/chantiers.md).
+  Proposé le 2026-11-01 — RIEN N'EST CODÉ. Fichier autonome (aucune ressource externe)
+  pour être lisible hors ligne à l'atelier. Les schémas sont en SVG inline : pour en
+  modifier un, éditer directement les coordonnées (grille de 10 px).
+  Couleurs sémantiques des schémas (constantes CSS ci-dessous) :
+    --entrees  = chemin sécurité (entrées physiques → roues)   rouge
+    --coeur    = logique pure (menus, état)                    bleu
+    --affich   = afficheurs (écrans, web)                      vert d'eau
+    --robot    = graphe ROS du robot                           violet
+-->
+<style>
+  :root{
+    --bg:#111318; --panel:#1a1c22; --panel2:#22252d; --line:#3a3e48;
+    --txt:#ececec; --txt2:#b9bcc4; --muted:#878b95;
+    --entrees:#e66767; --coeur:#3987e5; --affich:#199e70; --robot:#9085e9; --warn:#c98500;
+    /* palette catégorielle validée (thème sombre) pour la jauge mémoire */
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{padding:28px 40px 18px;border-bottom:1px solid var(--line)}
+  header h1{margin:0 0 6px;font-size:26px}
+  header p{margin:0;color:var(--txt2)}
+  .pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;margin-right:6px}
+  .pill.ok{background:#164d3a;color:#bff0dc} .pill.wait{background:#4d3a10;color:#f5dca0} .pill.no{background:#4d1c1c;color:#f6c4c4}
+  nav{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 40px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px}
+  nav a{color:var(--txt2);text-decoration:none;font-size:13px;padding:4px 10px;border:1px solid var(--line);border-radius:99px}
+  nav a:hover{color:var(--txt);border-color:var(--txt2)}
+  main{max-width:1180px;margin:0 auto;padding:10px 40px 60px}
+  section{margin:38px 0}
+  h2{font-size:20px;margin:0 0 6px} h2 .n{color:var(--muted);margin-right:8px}
+  .lead{color:var(--txt2);margin:0 0 16px;max-width:860px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .grid{display:grid;gap:14px} .g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  svg{width:100%;height:auto;display:block}
+  svg text{font-family:system-ui,sans-serif;fill:var(--txt)}
+  .callout{border-left:4px solid var(--entrees);background:#2a1b1d;padding:10px 14px;border-radius:6px;margin-top:12px}
+  .callout.info{border-color:var(--coeur);background:#17202e}
+  .callout.ok{border-color:var(--affich);background:#14261f}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--txt2);margin:8px 0 0}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--txt2);font-weight:600}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .card h3{margin:0 0 6px;font-size:16px}
+  .card ul{margin:6px 0 0;padding-left:18px;color:var(--txt2)}
+  .tag{font-size:12px;color:var(--muted)}
+  .lots{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  @media (max-width:900px){.lots{grid-template-columns:1fr 1fr}}
+  .lot{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--coeur);border-radius:8px;padding:12px}
+  .lot b{display:block;font-size:13px;color:var(--muted)} .lot.secu{border-top-color:var(--entrees)} .lot.aff{border-top-color:var(--affich)}
+  .lot p{margin:6px 0 0;font-size:13.5px}
+  .lot .x11{display:block;margin-top:8px;font-size:12px;color:var(--txt2)}
+  .bar-tip{position:fixed;pointer-events:none;background:#000c;border:1px solid var(--line);padding:6px 10px;border-radius:6px;font-size:13px;display:none;z-index:10}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:13px}
+  footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding:18px 40px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Télécommande & gants de Didier — architecture de l'interface</h1>
+  <p><span class="pill wait">PROPOSÉ 01/11/2026 — rien n'est codé</span>
+     Une seule idée : <b>séparer ce qui conduit le robot de ce qui s'affiche</b>, puis brancher autant d'écrans qu'on veut sur le même cœur.</p>
+</header>
+
+<nav>
+  <a href="#probleme">1. Le problème</a><a href="#couches">2. Les 3 couches</a><a href="#appareils">3. Les appareils</a>
+  <a href="#action">4. Une action</a><a href="#roues">5. Roues & sécurité</a><a href="#ecrans">6. Les écrans</a>
+  <a href="#memoire">7. Mémoire</a><a href="#lots">8. Phasage</a><a href="#ouvert">9. Pas décidé</a>
+</nav>
+
+<main>
+
+<!-- ============================================================ 1 -->
+<section id="probleme">
+  <h2><span class="n">1</span>Aujourd'hui : l'écran tient le volant</h2>
+  <p class="lead">Dans <code>dadou_control_ros</code>, c'est la boucle de l'interface tkinter qui lit le gamepad et les gants.
+  Les commandes roues passent donc <b>à travers</b> l'interface graphique.</p>
+  <div class="card">
+  <svg viewBox="0 0 1080 300" role="img" aria-label="Chaîne actuelle : timer ROS, interface tkinter, lecture des entrées, publication roues">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#b9bcc4"/></marker>
+      <marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#e66767"/></marker>
+    </defs>
+    <!-- boîte englobante tkinter -->
+    <rect x="200" y="30" width="560" height="200" rx="14" fill="#22252d" stroke="#c98500" stroke-dasharray="6 5"/>
+    <text x="220" y="58" font-size="15" font-weight="700" fill="#c98500">Interface tkinter (SmallGui) — affichée via Xwayland</text>
+
+    <rect x="20" y="100" width="150" height="70" rx="10" fill="#1a1c22" stroke="#3a3e48"/>
+    <text x="95" y="130" text-anchor="middle" font-size="14" font-weight="600">Timer ROS</text>
+    <text x="95" y="150" text-anchor="middle" font-size="12" fill="#b9bcc4">10 Hz → gui.update()</text>
+    <line x1="170" y1="135" x2="228" y2="135" stroke="#b9bcc4" stroke-width="2" marker-end="url(#ar)"/>
+
+    <rect x="232" y="90" width="150" height="90" rx="10" fill="#1a1c22" stroke="#3a3e48"/>
+    <text x="307" y="125" text-anchor="middle" font-size="14" font-weight="600">Boucle Tk</text>
+    <text x="307" y="145" text-anchor="middle" font-size="12" fill="#b9bcc4">after(50 ms)…</text>
+    <text x="307" y="162" text-anchor="middle" font-size="12" fill="#b9bcc4">menus, playlist</text>
+    <line x1="382" y1="135" x2="430" y2="135" stroke="#e66767" stroke-width="2" marker-end="url(#arR)"/>
+
+    <rect x="434" y="90" width="150" height="90" rx="10" fill="#2a1b1d" stroke="#e66767"/>
+    <text x="509" y="125" text-anchor="middle" font-size="14" font-weight="600">check_inputs()</text>
+    <text x="509" y="145" text-anchor="middle" font-size="12" fill="#b9bcc4">gamepad, gants,</text>
+    <text x="509" y="162" text-anchor="middle" font-size="12" fill="#b9bcc4">sliders</text>
+    <line x1="584" y1="135" x2="632" y2="135" stroke="#e66767" stroke-width="2" marker-end="url(#arR)"/>
+
+    <rect x="636" y="90" width="110" height="90" rx="10" fill="#2a1b1d" stroke="#e66767"/>
+    <text x="691" y="130" text-anchor="middle" font-size="14" font-weight="600">publish()</text>
+    <text x="691" y="150" text-anchor="middle" font-size="12" fill="#b9bcc4">wheels…</text>
+    <line x1="760" y1="135" x2="840" y2="135" stroke="#e66767" stroke-width="2" marker-end="url(#arR)"/>
+
+    <rect x="844" y="95" width="216" height="80" rx="10" fill="#1d1a2e" stroke="#9085e9"/>
+    <text x="952" y="128" text-anchor="middle" font-size="14" font-weight="600">Robot : roues</text>
+    <text x="952" y="148" text-anchor="middle" font-size="12" fill="#b9bcc4">deadman 400 ms</text>
+
+    <text x="480" y="270" text-anchor="middle" font-size="14" fill="#e66767">⚠ Un sleep, un chargement de playlist ou un widget lent fige aussi la conduite.</text>
+    <text x="480" y="290" text-anchor="middle" font-size="12" fill="#878b95">Le deadman rattrape (arrêt), mais la conduite saccade — et aucun mode sans écran n'est possible.</text>
+  </svg>
+  </div>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="couches">
+  <h2><span class="n">2</span>La cible : trois couches qui ne se connaissent presque pas</h2>
+  <p class="lead">Chaque appareil (télécommande, gant 2) fait tourner les mêmes trois couches.
+  Elles ne se parlent que par des <b>topics ROS</b> : on peut arrêter ou remplacer un écran sans toucher à la conduite.</p>
+  <div class="card">
+  <svg viewBox="0 0 1080 430" role="img" aria-label="Trois couches : entrées, cœur, afficheurs">
+    <defs>
+      <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#b9bcc4"/></marker>
+    </defs>
+    <!-- couche 1 -->
+    <rect x="20" y="20" width="1040" height="100" rx="14" fill="#2a1b1d" stroke="#e66767" stroke-width="2"/>
+    <text x="40" y="50" font-size="16" font-weight="700" fill="#e66767">① controller_inputs_node — SANS écran, toujours lancé</text>
+    <text x="40" y="75" font-size="13" fill="#b9bcc4">Lit : boîtier RP2040 (USB série) · gamepad · gants · sliders · boutons GPIO</text>
+    <text x="40" y="97" font-size="13" fill="#b9bcc4">Publie directement : wheels / cmd_vel_remote (prio 100), animation, face, audio… — aucun import graphique</text>
+    <rect x="860" y="40" width="180" height="60" rx="10" fill="#1a1c22" stroke="#e66767"/>
+    <text x="950" y="66" text-anchor="middle" font-size="13" font-weight="600">Chemin roues</text>
+    <text x="950" y="86" text-anchor="middle" font-size="12" fill="#b9bcc4">sim + protocole caméra</text>
+
+    <line x1="540" y1="120" x2="540" y2="158" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a2)"/>
+    <text x="555" y="145" font-size="12" fill="#878b95">appuis de menu (pas la conduite)</text>
+
+    <!-- couche 2 -->
+    <rect x="20" y="162" width="1040" height="110" rx="14" fill="#17202e" stroke="#3987e5" stroke-width="2"/>
+    <text x="40" y="192" font-size="16" font-weight="700" fill="#3987e5">② controller_core — Python pur, zéro matériel, testé sur le PC</text>
+    <text x="40" y="217" font-size="13" fill="#b9bcc4">État : page de menu, playlist, MODE, sélection · Règle : menu INERTE tant que l'homme-mort est tenu</text>
+    <text x="40" y="239" font-size="13" fill="#b9bcc4">Publie <tspan fill="#ececec" font-weight="600">remote/ui_state</tspan> (JSON complet, latché) · Écoute <tspan fill="#ececec" font-weight="600">remote/ui_action</tspan> (appui, toucher, clic web)</text>
+    <text x="40" y="261" font-size="13" fill="#b9bcc4">Marque l'origine de chaque action : une action venue du web ne touche jamais les roues</text>
+
+    <line x1="300" y1="272" x2="160" y2="318" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a2)"/>
+    <line x1="460" y1="272" x2="420" y2="318" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a2)"/>
+    <line x1="620" y1="272" x2="680" y2="318" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a2)"/>
+    <line x1="780" y1="272" x2="940" y2="318" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a2)"/>
+    <text x="560" y="300" text-anchor="middle" font-size="12" fill="#878b95">ui_state ↓   ·   ↑ ui_action</text>
+
+    <!-- couche 3 -->
+    <g font-size="13">
+      <rect x="20" y="322" width="250" height="90" rx="12" fill="#14261f" stroke="#199e70"/>
+      <text x="145" y="350" text-anchor="middle" font-weight="700" fill="#199e70">Écran tactile du Pi 4</text>
+      <text x="145" y="372" text-anchor="middle" fill="#b9bcc4">HDMI/DSI, sans X11</text>
+      <text x="145" y="392" text-anchor="middle" fill="#b9bcc4">pygame ou cog (essai)</text>
+
+      <rect x="290" y="322" width="250" height="90" rx="12" fill="#14261f" stroke="#199e70"/>
+      <text x="415" y="350" text-anchor="middle" font-weight="700" fill="#199e70">LCD SPI 2,4"</text>
+      <text x="415" y="372" text-anchor="middle" fill="#b9bcc4">320×240, aux boutons</text>
+      <text x="415" y="392" text-anchor="middle" fill="#b9bcc4">pilote existant</text>
+
+      <rect x="560" y="322" width="250" height="90" rx="12" fill="#14261f" stroke="#199e70"/>
+      <text x="685" y="350" text-anchor="middle" font-weight="700" fill="#199e70">Petit écran du gant 2</text>
+      <text x="685" y="372" text-anchor="middle" fill="#b9bcc4">Zero 2 W, discret</text>
+      <text x="685" y="392" text-anchor="middle" fill="#b9bcc4">l'essentiel seulement</text>
+
+      <rect x="830" y="322" width="230" height="90" rx="12" fill="#14261f" stroke="#199e70"/>
+      <text x="945" y="350" text-anchor="middle" font-weight="700" fill="#199e70">Panneau page scène</text>
+      <text x="945" y="372" text-anchor="middle" fill="#b9bcc4">navigateur PC</text>
+      <text x="945" y="392" text-anchor="middle" fill="#b9bcc4">via web_bridge</text>
+    </g>
+  </svg>
+  <div class="legend"><span><i style="background:var(--entrees)"></i>sécurité / conduite</span><span><i style="background:var(--coeur)"></i>logique pure</span><span><i style="background:var(--affich)"></i>afficheurs (interchangeables)</span></div>
+  </div>
+  <div class="callout ok"><b>Ce que ça garantit :</b> si un écran plante, on obtient un menu figé — <b>jamais</b> un mouvement figé. C'est la même discipline que celle déjà actée pour le boîtier RP2040 (la conduite ne passe jamais par le menu).</div>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="appareils">
+  <h2><span class="n">3</span>Qui tourne où</h2>
+  <p class="lead">Quatre machines. Le RP2040 n'est qu'une source de boutons : aucun logiciel de menu n'y vit (OLED mis de côté le 01/11).
+  Chaque appareil a son propre espace de noms (<code>remote/…</code>, <code>glove2/…</code>) : deux menus, deux états.</p>
+  <div class="card">
+  <svg viewBox="0 0 1080 520" role="img" aria-label="Carte des appareils et des liaisons">
+    <defs>
+      <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#b9bcc4"/></marker>
+    </defs>
+    <!-- Pi 4 télécommande -->
+    <rect x="20" y="20" width="400" height="230" rx="14" fill="#1a1c22" stroke="#3a3e48" stroke-width="2"/>
+    <text x="40" y="48" font-size="16" font-weight="700">Pi 4 — télécommande principale</text>
+    <text x="40" y="68" font-size="12" fill="#878b95">control · 192.168.1.25 · Docker</text>
+    <rect x="40" y="82" width="170" height="44" rx="8" fill="#2a1b1d" stroke="#e66767"/><text x="125" y="109" text-anchor="middle" font-size="13">inputs_node</text>
+    <rect x="230" y="82" width="170" height="44" rx="8" fill="#17202e" stroke="#3987e5"/><text x="315" y="109" text-anchor="middle" font-size="13">core (remote/)</text>
+    <rect x="40" y="140" width="170" height="44" rx="8" fill="#14261f" stroke="#199e70"/><text x="125" y="167" text-anchor="middle" font-size="13">écran tactile</text>
+    <rect x="230" y="140" width="170" height="44" rx="8" fill="#14261f" stroke="#199e70"/><text x="315" y="167" text-anchor="middle" font-size="13">LCD SPI</text>
+    <text x="40" y="215" font-size="12" fill="#b9bcc4">USB : boîtier RP2040, gamepad, gants, sliders</text>
+    <text x="40" y="235" font-size="12" fill="#b9bcc4">Bureau labwc à supprimer (~490 Mo)</text>
+
+    <!-- RP2040 -->
+    <rect x="20" y="300" width="180" height="80" rx="12" fill="#1a1c22" stroke="#3a3e48" stroke-dasharray="5 4"/>
+    <text x="110" y="330" text-anchor="middle" font-size="14" font-weight="600">Boîtier RP2040</text>
+    <text x="110" y="350" text-anchor="middle" font-size="12" fill="#b9bcc4">boutons + homme-mort</text>
+    <text x="110" y="367" text-anchor="middle" font-size="12" fill="#b9bcc4">joystick → série 50 Hz</text>
+    <line x1="110" y1="300" x2="120" y2="250" stroke="#e66767" stroke-width="2" marker-end="url(#a3)"/>
+    <text x="128" y="285" font-size="11" fill="#e66767">USB</text>
+
+    <!-- Zero 2 W -->
+    <rect x="230" y="300" width="300" height="190" rx="14" fill="#1a1c22" stroke="#3a3e48" stroke-width="2"/>
+    <text x="250" y="328" font-size="16" font-weight="700">Zero 2 W — gant 2</text>
+    <text x="250" y="348" font-size="12" fill="#878b95">hôte gr · 192.168.1.123 · 415 Mo · Pi OS Lite</text>
+    <rect x="250" y="362" width="125" height="40" rx="8" fill="#2a1b1d" stroke="#e66767"/><text x="312" y="387" text-anchor="middle" font-size="12">inputs_node</text>
+    <rect x="390" y="362" width="125" height="40" rx="8" fill="#17202e" stroke="#3987e5"/><text x="452" y="387" text-anchor="middle" font-size="12">core (glove2/)</text>
+    <rect x="250" y="414" width="265" height="40" rx="8" fill="#14261f" stroke="#199e70"/><text x="382" y="439" text-anchor="middle" font-size="12">petit écran discret</text>
+    <text x="250" y="476" font-size="12" fill="#b9bcc4">aucun bureau graphique (impossible en 512 Mo)</text>
+
+    <!-- Robot -->
+    <rect x="600" y="20" width="460" height="300" rx="14" fill="#1d1a2e" stroke="#9085e9" stroke-width="2"/>
+    <text x="620" y="48" font-size="16" font-weight="700" fill="#9085e9">Pi 4 robot — Didier (domain 42 ; sim = 43)</text>
+    <rect x="620" y="66" width="200" height="56" rx="8" fill="#1a1c22" stroke="#9085e9"/>
+    <text x="720" y="90" text-anchor="middle" font-size="13" font-weight="600">web_bridge</text>
+    <text x="720" y="108" text-anchor="middle" font-size="11" fill="#b9bcc4">whitelist + 2 topics UI</text>
+    <rect x="840" y="66" width="200" height="56" rx="8" fill="#1a1c22" stroke="#9085e9"/>
+    <text x="940" y="90" text-anchor="middle" font-size="13" font-weight="600">twist_mux</text>
+    <text x="940" y="108" text-anchor="middle" font-size="11" fill="#b9bcc4">remote 100 › web 50 › anim 10</text>
+    <rect x="840" y="140" width="200" height="50" rx="8" fill="#1a1c22" stroke="#9085e9"/>
+    <text x="940" y="170" text-anchor="middle" font-size="13">deadman → roues</text>
+    <rect x="620" y="140" width="200" height="50" rx="8" fill="#1a1c22" stroke="#9085e9"/>
+    <text x="720" y="170" text-anchor="middle" font-size="13">animations, visage, son</text>
+    <line x1="940" y1="122" x2="940" y2="138" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a3)"/>
+    <text x="620" y="225" font-size="12" fill="#b9bcc4">Reçoit les topics des deux appareils via DDS (Wi-Fi/RJ45).</text>
+    <text x="620" y="245" font-size="12" fill="#b9bcc4">Le web_bridge relaie remote/ui_state et glove2/ui_state</text>
+    <text x="620" y="265" font-size="12" fill="#b9bcc4">vers la page scène, et les clics vers ui_action.</text>
+
+    <!-- PC -->
+    <rect x="640" y="380" width="420" height="110" rx="14" fill="#1a1c22" stroke="#199e70" stroke-width="2"/>
+    <text x="660" y="408" font-size="16" font-weight="700" fill="#199e70">PC — navigateur, page scène</text>
+    <text x="660" y="432" font-size="12" fill="#b9bcc4">Panneaux existants (parole, route, vision, conversation)</text>
+    <text x="660" y="452" font-size="12" fill="#b9bcc4">+ NOUVEAU panneau « Télécommande » (et « Gant 2 »)</text>
+    <text x="660" y="472" font-size="12" fill="#b9bcc4">même état que les écrans physiques</text>
+
+    <!-- liaisons -->
+    <line x1="420" y1="110" x2="596" y2="100" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a3)"/>
+    <text x="440" y="92" font-size="11" fill="#878b95">topics ROS (DDS)</text>
+    <line x1="530" y1="360" x2="616" y2="300" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a3)"/>
+    <text x="540" y="345" font-size="11" fill="#878b95">Wi-Fi</text>
+    <line x1="720" y1="322" x2="760" y2="376" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a3)"/>
+    <line x1="790" y1="376" x2="745" y2="324" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a3)"/>
+    <text x="790" y="352" font-size="11" fill="#878b95">WebSocket</text>
+  </svg>
+  </div>
+  <div class="callout info"><b>En simulation</b>, les cœurs tournent dans le conteneur sim (domain 43), sans aucun matériel : le menu se teste depuis la page scène avec le même code que sur les Pi.</div>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="action">
+  <h2><span class="n">4</span>Une action de bout en bout</h2>
+  <p class="lead">Exemple : David touche « Parle » sur l'écran, puis l'opérateur clique la même chose dans la page scène.
+  Les deux chemins entrent par la même porte (<code>ui_action</code>) — c'est le cœur qui décide.</p>
+  <div class="card">
+  <svg viewBox="0 0 1080 430" role="img" aria-label="Diagramme de séquence d'une action de menu">
+    <defs>
+      <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#b9bcc4"/></marker>
+    </defs>
+    <!-- acteurs -->
+    <g font-size="13" font-weight="600" text-anchor="middle">
+      <rect x="20" y="10" width="160" height="40" rx="8" fill="#14261f" stroke="#199e70"/><text x="100" y="35">Écran tactile</text>
+      <rect x="230" y="10" width="160" height="40" rx="8" fill="#14261f" stroke="#199e70"/><text x="310" y="35">Page scène</text>
+      <rect x="440" y="10" width="160" height="40" rx="8" fill="#1d1a2e" stroke="#9085e9"/><text x="520" y="35">web_bridge</text>
+      <rect x="650" y="10" width="180" height="40" rx="8" fill="#17202e" stroke="#3987e5"/><text x="740" y="35">controller_core</text>
+      <rect x="880" y="10" width="180" height="40" rx="8" fill="#1d1a2e" stroke="#9085e9"/><text x="970" y="35">Robot (animation)</text>
+    </g>
+    <g stroke="#3a3e48" stroke-dasharray="4 4"><line x1="100" y1="50" x2="100" y2="420"/><line x1="310" y1="50" x2="310" y2="420"/><line x1="520" y1="50" x2="520" y2="420"/><line x1="740" y1="50" x2="740" y2="420"/><line x1="970" y1="50" x2="970" y2="420"/></g>
+    <g font-size="12">
+      <line x1="100" y1="85" x2="734" y2="85" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a4)"/>
+      <text x="110" y="78" fill="#b9bcc4">① toucher → ui_action {origine: écran, bouton: "Parle"}</text>
+      <rect x="745" y="95" width="210" height="40" rx="6" fill="#17202e" stroke="#3987e5"/>
+      <text x="755" y="112" fill="#ececec">② homme-mort relâché ? oui</text>
+      <text x="755" y="128" fill="#ececec">→ action autorisée</text>
+      <line x1="740" y1="150" x2="964" y2="150" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a4)"/>
+      <text x="750" y="168" fill="#b9bcc4">③ animation "parle"</text>
+      <line x1="740" y1="185" x2="106" y2="185" stroke="#199e70" stroke-width="2" marker-end="url(#a4)"/>
+      <line x1="740" y1="185" x2="526" y2="185" stroke="#199e70" stroke-width="2"/>
+      <text x="300" y="178" fill="#199e70">④ ui_state mis à jour → TOUS les écrans affichent « Parle ▶ »</text>
+      <line x1="520" y1="185" x2="316" y2="200" stroke="#199e70" stroke-width="2" marker-end="url(#a4)"/>
+
+      <line x1="310" y1="250" x2="514" y2="250" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a4)"/>
+      <text x="320" y="243" fill="#b9bcc4">⑤ clic « MODE vitesse »</text>
+      <line x1="520" y1="270" x2="734" y2="270" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a4)"/>
+      <text x="530" y="263" fill="#b9bcc4">⑥ ui_action {origine: web}</text>
+      <rect x="745" y="282" width="300" height="52" rx="6" fill="#2a1b1d" stroke="#e66767"/>
+      <text x="755" y="302" fill="#ececec">⑦ action web + touche aux roues</text>
+      <text x="755" y="321" fill="#e66767" font-weight="600">→ REFUSÉE (roues web = cmd_vel_web)</text>
+      <line x1="740" y1="355" x2="316" y2="355" stroke="#e66767" stroke-width="2" marker-end="url(#a4)"/>
+      <text x="360" y="348" fill="#e66767">⑧ ui_state : message « refusé depuis le web »</text>
+      <text x="20" y="405" fill="#878b95">L'écran ne fait qu'afficher ui_state et envoyer des ui_action : il ne contient aucune règle.</text>
+    </g>
+  </svg>
+  </div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="roues">
+  <h2><span class="n">5</span>Le chemin roues ne change pas — il est seulement libéré de l'écran</h2>
+  <p class="lead">Les priorités et les arrêts déjà validés restent tels quels. La seule modification : c'est le node d'entrées
+  (et non plus l'interface) qui publie la conduite de la télécommande.</p>
+  <div class="card">
+  <svg viewBox="0 0 1080 300" role="img" aria-label="Priorités du twist_mux et arrêts de sécurité">
+    <defs>
+      <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#b9bcc4"/></marker>
+    </defs>
+    <g font-size="13">
+      <rect x="20" y="20" width="250" height="52" rx="8" fill="#2a1b1d" stroke="#e66767"/>
+      <text x="35" y="43" font-weight="600">inputs_node (télécommande)</text><text x="35" y="62" fill="#b9bcc4" font-size="12">cmd_vel_remote — prio 100</text>
+      <rect x="20" y="88" width="250" height="52" rx="8" fill="#1a1c22" stroke="#3a3e48"/>
+      <text x="35" y="111" font-weight="600">web (pad page scène)</text><text x="35" y="130" fill="#b9bcc4" font-size="12">cmd_vel_web — prio 50, plafonné</text>
+      <rect x="20" y="156" width="250" height="52" rx="8" fill="#1a1c22" stroke="#3a3e48"/>
+      <text x="35" y="179" font-weight="600">animations / suivi</text><text x="35" y="198" fill="#b9bcc4" font-size="12">cmd_vel_anim — prio 10</text>
+      <rect x="20" y="224" width="250" height="52" rx="8" fill="#2a1b1d" stroke="#e66767" stroke-dasharray="5 4"/>
+      <text x="35" y="247" font-weight="600">e_stop (verrou latché)</text><text x="35" y="266" fill="#e66767" font-size="12">prio 255 — AUCUNE source aujourd'hui</text>
+
+      <line x1="270" y1="46" x2="396" y2="140" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a5)"/>
+      <line x1="270" y1="114" x2="396" y2="146" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a5)"/>
+      <line x1="270" y1="182" x2="396" y2="152" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a5)"/>
+      <line x1="270" y1="250" x2="396" y2="158" stroke="#e66767" stroke-width="2" marker-end="url(#a5)"/>
+
+      <rect x="400" y="110" width="170" height="80" rx="10" fill="#1d1a2e" stroke="#9085e9"/>
+      <text x="485" y="145" text-anchor="middle" font-weight="700">twist_mux</text><text x="485" y="165" text-anchor="middle" font-size="12" fill="#b9bcc4">le plus prioritaire gagne</text>
+      <line x1="570" y1="150" x2="636" y2="150" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a5)"/>
+      <rect x="640" y="110" width="170" height="80" rx="10" fill="#1d1a2e" stroke="#9085e9"/>
+      <text x="725" y="145" text-anchor="middle" font-weight="700">twist_deadman</text><text x="725" y="165" text-anchor="middle" font-size="12" fill="#b9bcc4">zéros si silence &gt; 400 ms</text>
+      <line x1="810" y1="150" x2="876" y2="150" stroke="#b9bcc4" stroke-width="2" marker-end="url(#a5)"/>
+      <rect x="880" y="110" width="180" height="80" rx="10" fill="#1d1a2e" stroke="#9085e9"/>
+      <text x="970" y="145" text-anchor="middle" font-weight="700">wheels_node</text><text x="970" y="165" text-anchor="middle" font-size="12" fill="#b9bcc4">deadman local 400 ms</text>
+      <text x="400" y="235" font-size="12" fill="#b9bcc4">Le menu (cœur) n'est sur AUCUNE de ces flèches.</text>
+      <text x="400" y="255" font-size="12" fill="#b9bcc4">Une action web passée par le menu ne peut pas atteindre les roues.</text>
+    </g>
+  </svg>
+  </div>
+  <div class="callout"><b>Règle projet :</b> le lot 1 (déplacement de la lecture des entrées) touche le chemin roues → validation en <b>simulation</b>, puis <b>protocole caméra</b> roues hors sol, avant tout usage au sol.</div>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="ecrans">
+  <h2><span class="n">6</span>Les écrans : même état, plus ou moins de détail</h2>
+  <p class="lead">Le cœur publie <b>tout</b> l'état ; chaque afficheur choisit ce qu'il montre. Le gant 2 est discret : il montre moins, il ne sait pas moins.</p>
+  <div class="grid g4">
+    <div class="card"><h3>Écran tactile Pi 4</h3><span class="tag">HDMI/DSI · tactile</span>
+      <ul><li>menu complet, playlist</li><li>état liaisons (gants, RP2040)</li><li>MODE, dernière commande</li></ul></div>
+    <div class="card"><h3>LCD SPI 2,4"</h3><span class="tag">320×240 · boutons</span>
+      <ul><li>menu en liste courte</li><li>curseur aux boutons</li><li>pilote déjà écrit</li></ul></div>
+    <div class="card"><h3>Gant 2 (Zero 2 W)</h3><span class="tag">petit · discret</span>
+      <ul><li>mode courant</li><li>dernière commande</li><li>liaison OK / homme-mort</li><li><i>contenu exact : à décider avec le matériel</i></li></ul></div>
+    <div class="card"><h3>Page scène (PC)</h3><span class="tag">navigateur</span>
+      <ul><li>panneau « Télécommande »</li><li>panneau « Gant 2 »</li><li>cliquable, sauf roues</li></ul></div>
+  </div>
+
+  <h3 style="margin:26px 0 8px">Essai décidé pour l'afficheur sans X11</h3>
+  <div class="grid g2">
+    <div class="card"><h3>pygame (SDL2 kmsdrm)</h3>
+      <ul><li>✔ léger, tactile natif, dessine directement sur l'écran</li><li>✔ robuste, peu de dépendances</li><li>✘ deux interfaces à écrire : pygame pour le Pi, HTML pour la page scène</li></ul></div>
+    <div class="card"><h3>WPE WebKit « cog »</h3>
+      <ul><li>✔ navigateur embarqué <b>sans X11</b> (DRM direct)</li><li>✔ <b>une seule interface HTML</b> pour le Pi ET la page scène</li><li>✘ plus lourd — tenue sur 512 Mo non vérifiée</li></ul></div>
+  </div>
+  <div class="callout info"><b>Critères de l'essai</b>, sur la vraie carte : mémoire mesurée et réactivité du toucher. Si cog tient sur la Zero 2 W, il gagne.
+  Le choix est réversible : l'afficheur n'est qu'un client de <code>ui_state</code>.</div>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="memoire">
+  <h2><span class="n">7</span>Budget mémoire du gant 2 (Zero 2 W, 512 Mo)</h2>
+  <p class="lead">Mesuré le 01/11 : la télécommande actuelle (Pi 4) et la Zero 2 W fraîchement installée (Pi OS Lite trixie 64 bits, 415 Mo visibles, 144 Mo utilisés au repos). Le bureau graphique est hors de question ; <b>Docker mange presque toute la marge</b>.</p>
+  <div class="card">
+    <div class="legend" style="margin:0 0 10px">
+      <span><i style="background:var(--s1)"></i>OS Lite au repos (mesuré sur la Zero)</span><span><i style="background:var(--s2)"></i>Docker (dockerd + containerd)</span>
+      <span><i style="background:var(--s3)"></i>node télécommande (mesuré)</span><span><i style="background:var(--s4)"></i>bureau labwc + Xwayland (mesuré)</span>
+    </div>
+    <svg id="memchart" viewBox="0 0 1080 250" role="img" aria-label="Barres empilées du budget mémoire selon trois scénarios">
+      <!-- échelle : 1 Mo = 1 px, origine x=260 ; capacité = 415 Mo MESURÉS sur la Zero (free -m, 01/11) -->
+      <g font-size="13" fill="#b9bcc4">
+        <text x="250" y="52" text-anchor="end">avec bureau graphique</text>
+        <text x="250" y="122" text-anchor="end">sans bureau, avec Docker</text>
+        <text x="250" y="192" text-anchor="end">sans bureau, sans Docker</text>
+      </g>
+      <!-- scénario 1 : 144 + 150 + 113 + 490 ≈ 900 (barre tronquée à droite) -->
+      <g class="bars">
+        <rect x="260" y="30" width="142" height="32" rx="4" fill="var(--s1)" data-t="OS Lite au repos : 144 Mo (mesuré sur la Zero, 01/11)"/>
+        <rect x="404" y="30" width="148" height="32" fill="var(--s2)" data-t="Docker : ~150 Mo (RSS, mesuré sur Pi 4)"/>
+        <rect x="554" y="30" width="111" height="32" fill="var(--s3)" data-t="node télécommande : 113 Mo (PSS, mesuré)"/>
+        <rect x="667" y="30" width="393" height="32" rx="4" fill="var(--s4)" data-t="bureau : ~490 Mo (RSS, mesuré) — barre tronquée"/>
+        <text x="1060" y="78" text-anchor="end" font-size="12" fill="#ececec">≈ 900 Mo — ne rentre pas</text>
+
+        <rect x="260" y="100" width="142" height="32" rx="4" fill="var(--s1)" data-t="OS Lite au repos : 144 Mo (mesuré)"/>
+        <rect x="404" y="100" width="148" height="32" fill="var(--s2)" data-t="Docker : ~150 Mo"/>
+        <rect x="554" y="100" width="111" height="32" rx="4" fill="var(--s3)" data-t="node : 113 Mo (celui du gant sera plus léger : pas de tkinter)"/>
+        <text x="690" y="121" font-size="12" fill="#ececec">≈ 407 Mo — à la limite, sans marge</text>
+
+        <rect x="260" y="170" width="142" height="32" rx="4" fill="var(--s1)" data-t="OS Lite au repos : 144 Mo (mesuré)"/>
+        <rect x="404" y="170" width="111" height="32" rx="4" fill="var(--s3)" data-t="node : 113 Mo"/>
+        <text x="526" y="191" font-size="12" fill="#ececec">≈ 257 Mo — tient</text>
+      </g>
+      <!-- capacité mesurée -->
+      <line x1="675" y1="18" x2="675" y2="215" stroke="#ececec" stroke-width="2" stroke-dasharray="6 4"/>
+      <text x="681" y="232" font-size="12" fill="#ececec">415 Mo au total sur la Zero (mesuré)</text>
+      <line x1="260" y1="215" x2="1060" y2="215" stroke="#3a3e48"/>
+    </svg>
+    <table style="margin-top:12px">
+      <tr><th>Poste</th><th class="num">Mo</th><th>Source</th></tr>
+      <tr><td>Conteneur télécommande (controller_node + ros2)</td><td class="num">113</td><td>PSS mesuré sur control, 01/11</td></tr>
+      <tr><td>Docker (dockerd + containerd)</td><td class="num">~150</td><td>RSS mesuré (surestime)</td></tr>
+      <tr><td>Bureau labwc + Xwayland + panneau + portails</td><td class="num">~490</td><td>RSS mesuré (surestime)</td></tr>
+      <tr><td>OS Lite au repos (Zero 2 W, hôte <code>gr</code>)</td><td class="num">144</td><td>mesuré sur la Zero, 01/11, juste après le premier démarrage</td></tr>
+      <tr><td>Mémoire totale visible sur la Zero</td><td class="num">415</td><td>mesuré (512 − GPU/noyau)</td></tr>
+    </table>
+    <p class="tag" style="margin-top:8px">Piège : <code>docker stats</code> affiche 0 o sur les Pi (comptabilité mémoire cgroup coupée) — il faut sommer le PSS des processus du conteneur.</p>
+  </div>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="lots">
+  <h2><span class="n">8</span>Phasage : la télécommande marche à chaque étape</h2>
+  <p class="lead">On ne coupe l'affichage actuel qu'une fois le nouveau validé. Si un essai échoue, on garde l'existant — sans régression.</p>
+  <div class="lots">
+    <div class="lot"><b>LOT 0</b><p>Commit instantané avant refactoring</p><span class="x11">tkinter : oui</span></div>
+    <div class="lot secu"><b>LOT 1</b><p>Sortir <b>inputs_node</b> de l'interface</p><span class="x11">sim + protocole caméra</span></div>
+    <div class="lot"><b>LOT 2</b><p>Extraire <b>controller_core</b> + tests ; tkinter devient un simple afficheur</p><span class="x11">tkinter : oui</span></div>
+    <div class="lot aff"><b>LOT 3</b><p>Essai <b>pygame vs cog</b> sur la vraie carte, puis écran tactile sans bureau</p><span class="x11">bureau : supprimé</span></div>
+    <div class="lot aff"><b>LOT 4</b><p>LCD SPI + <b>gant 2</b> (Zero 2 W)</p><span class="x11">sans bureau</span></div>
+    <div class="lot aff"><b>LOT 5</b><p>Panneaux <b>page scène</b> (web_bridge + 2 topics)</p><span class="x11">sans bureau</span></div>
+  </div>
+  <div class="callout info" style="margin-top:14px"><b>Raccourci possible :</b> le cœur + son panneau dans la page scène peuvent être faits <b>en sim</b> avant d'avoir les Pi — rien n'y touche aux roues.</div>
+</section>
+
+<!-- ============================================================ 9 -->
+<section id="ouvert">
+  <h2><span class="n">9</span>Ce qui n'est pas encore décidé</h2>
+  <div class="card">
+  <table>
+    <tr><th>Question</th><th>Quand / comment</th></tr>
+    <tr><td>pygame ou cog pour les écrans</td><td>essai du lot 3, sur la vraie carte</td></tr>
+    <tr><td>Contenu exact de l'écran du gant 2</td><td>avec le matériel en main</td></tr>
+    <tr><td>Garder Docker sur la Zero 2 W</td><td><b>penche vers NON</b> : ~407 Mo sur 415 avec Docker (mesure 01/11) ; à confirmer en mesurant le vrai node du gant</td></tr>
+    <tr><td>Wi-Fi 2,4 GHz du gant en salle pleine</td><td>test en salle, pas à l'atelier</td></tr>
+    <tr><td>pygame kmsdrm / cog <b>dans Docker</b> (accès /dev/dri, /dev/input)</td><td>non vérifié — fait partie de l'essai</td></tr>
+    <tr><td>Hub USB pour la Zero (un seul port OTG)</td><td>selon ce que le gant branche</td></tr>
+  </table>
+  </div>
+</section>
+
+</main>
+
+<footer>Didier · dadou_robot_ros · docs/architecture-ui-telecommande.html · état du chantier : docs/chantiers.md (ligne « UI télécommande sans X11 »)</footer>
+
+<div class="bar-tip" id="tip"></div>
+<script>
+  // Infobulle des barres mémoire : la valeur exacte et sa source au survol.
+  const tip = document.getElementById('tip');
+  document.querySelectorAll('#memchart rect[data-t]').forEach(r => {
+    r.style.cursor = 'default';
+    r.addEventListener('mousemove', e => {
+      tip.textContent = r.dataset.t; tip.style.display = 'block';
+      tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+    });
+    r.addEventListener('mouseleave', () => tip.style.display = 'none');
+  });
+</script>
+</body>
+</html>
