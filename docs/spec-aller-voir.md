@@ -191,3 +191,79 @@ est du jeu, seul le corps qui pivote fait VOIR ailleurs.
   il sait aller voir un objet de la liste, tourner la tête (regarder), pivoter
   sur place et avancer tout droit ; il ne sait toujours ni contourner ni
   reculer.
+
+---
+
+## 8. Lot M3 — « Faire le tour de X » (01/11)
+
+David : « je veux lui faire faire le tour des poubelles mais c'est super
+laborieux » — chaque geste (pivot, 1 m) se terminait par un arrêt et
+attendait une relance (un geste par réplique ; un tour spontané ne remet
+jamais en mouvement, revue B1). Un tour est la demande composée la plus
+fréquente : il devient UN geste, exécuté de bout en bout par route_driver.
+SIM-ONLY (vérité terrain), comme tout robot_rehearsal.
+
+### 8.1 Géométrie des tours — `config/chantiers_tours.yaml` (GÉNÉRÉ)
+
+L'ancre d'un POI n'est PAS le centre de l'objet (poubelle_tri : ancre
+(27 ; 1,4), bacs centrés en (27 ; 2,4)). Le tour se calcule sur la géométrie
+de COLLISION du monde Gazebo :
+- outil `robot_rehearsal/tools/compute_tours.py <world.sdf> <itinéraire.yaml>`
+  (stdlib + yaml) : pour chaque POI de l'itinéraire, le modèle SDF de même
+  nom ; centre = milieu de la boîte englobante (x, y) des collisions
+  (cylindre : rayon ; boîte : demi-diagonale, rotation de lien ignorée →
+  majorant) ; rayon objet = distance max centre → bord ; rayon de tour =
+  rayon objet + TOUR_CLEARANCE_M (0,4 Didier + 0,6 marge = 1,0 m), arrondi
+  au 0,1 m supérieur, au moins TOUR_MIN_RADIUS_M (1,5).
+- tour IMPOSSIBLE (champ absent) si : rayon de tour > TOUR_MAX_RADIUS_M (6),
+  ou un AUTRE modèle (hors sol : modèles dont l'emprise dépasse 50 m) a une
+  collision à moins de 0,5 m de l'anneau [r − 0,6 ; r + 0,6].
+- sortie : `{poi: {x, y, rayon}}` triée, en-tête « GÉNÉRÉ — ne pas éditer ».
+- test hôte `test_tours.py` : regénère depuis le SDF et compare au fichier
+  (désynchronisation = rouge) ; valeurs gravées pour poubelle_tri.
+
+### 8.2 Contrat
+
+- chat_move : `{"cmd": "tour_de", "objet": "<texte>", "sens": "gauche"|"droite"}`
+  (`sens` absent = "gauche"). gauche = sens trigonométrique (l'objet reste
+  à GAUCHE de Didier), droite = horaire.
+- route_goto : `{"name": "tour de <poi>", "orbit_x", "orbit_y", "orbit_r",
+  "orbit_dir": 1|-1}` — 4e forme exclusive de parse_order. Bornes : r dans
+  [TOUR_MIN_RADIUS_M ; TOUR_MAX_RADIUS_M], dir ∈ {1, −1}, finis.
+- Côté bouche : clé `"faire_le_tour": "<nom de la liste>"` (+ clé optionnelle
+  `"sens": "gauche"|"droite"`), préséance stop > aller_voir > faire_le_tour >
+  tourner > avancer > go ; jamais en tour spontané.
+
+### 8.3 Arbitrage (régisseur) — comme aller_voir
+
+Objet résolu (nom + alias) ; inconnu → `unknown` ; connu sans tour →
+refus `no_tour` (journal) ; route OFF par David → refus ; centre à plus de
+GOTO_MAX_DISTANCE_M → `too_far` ; accepté hors séance ; lève l'arrêt vocal
+comme go ; stop/off/cancel → cancel ; un nouvel ordre remplace l'ancien.
+
+### 8.4 Manœuvre (goto.py, OrbitOrder)
+
+1. APPROCHE : point d'entrée E = C + r·(pose − C)/|pose − C| (le point du
+   cercle le plus proche ; si Didier est à < 0,2 m du centre : E devant lui).
+   ALIGN puis DRIVE vers E (mêmes règles que aller_voir, arrivée à
+   arrive_tol_m).
+2. ORBIT : θ = atan2(y − cy, x − cx). Cap visé = θ + dir·π/2 +
+   dir·clamp(k_r·(d − r), ±0,6 rad) (k_r = 1,0 : trop loin → rentre vers le
+   centre). ω = ang_gain·erreur + dir·v/r (anticipation), plafonds habituels ;
+   v = min(max_lin × facteur, TOUR_CRUISE_MS 0,35) × facteur de cap (comme
+   DRIVE : à l'entrée, il pivote d'abord). Angle balayé INTÉGRÉ
+   (Σ dir·wrap(Δθ), jamais négatif compté) ; ≥ 2π → FACE (vers C) → ARRIVED.
+3. SÉCURITÉ (en plus de toutes celles du DRIVE) : |d − r| > TOUR_MAX_DEV_M
+   (1,0) pendant ORBIT → abandon `off_track` ; délai = GOTO_TIMEOUT_S +
+   2πr / TOUR_MIN_MS (0,1) ; distance parcourue ≤ 1,5 × (|pose − E| + 2πr),
+   plancher min_travel_m ; calage, odom périmée, pose NaN, fader 0, cancel :
+   inchangés (zéro franc).
+4. Tests purs : tour complet simulé (intégrateur cinématique) dans les deux
+   sens, arrêt face au centre ; cancel immédiat ; fader 0 ; off_track
+   (pose téléportée) ; calage ; timeout ; NaN ; bornes parse_order ;
+   mutation des gardes principales.
+
+### 8.5 Hors lot
+
+Suites de gestes enchaînés (« tourne, avance, va voir ») : lot suivant.
+Pas d'évitement : le cercle est réputé libre (§8.1).
