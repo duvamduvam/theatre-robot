@@ -735,6 +735,21 @@ concernés (`git filter-repo`, force-push) — ça réécrit des dépôts public
 David ; les dépôts sont de toute façon destinés à l'archive. La règle « historique déjà
 purgé » du `CLAUDE.md` ne valait que pour le dépôt du robot.
 
+**Purge FAITE le 01/11 au soir (décision de David : « purge les 2 historiques maintenant »)** :
+sauvegarde `.bundle` de chaque dépôt dans `~/Nextcloud/dev/didier/archives/` ; `git filter-repo
+--path conf/secret --invert-paths` sur un clone miroir ; force-push de `main` (+ `master` pour la
+télécommande) ; **piège rencontré : les branches Dependabot et leur PR n°1, créées par GitHub sur
+l'ancien historique, gardaient le fichier** — branches supprimées, PR fermées ; clone frais depuis
+GitHub ensuite : **0 commit avec `conf/secret`** dans les deux dépôts, clé introuvable. Dépôts
+locaux réalignés (`reset --hard origin/main`, modifications non commitées mises de côté puis
+remises, reflog purgé). **Résidu non effaçable par nous : `refs/pull/1/head` (une par dépôt),
+cachée mais existante — seul le support GitHub peut la supprimer** ; et rien n'empêche qu'un
+tiers ait copié la clé depuis 2024. ⚠️ **La révocation des 4 identifiants reste À FAIRE par
+David (non cochée le 01/11)** : clé OpenAI, identifiant Google Cloud, compte SMS (`sms_user` /
+`sms_pwd`, qui étaient aussi dans l'ancien `conf/secret` public de la télécommande).
+Découverte annexe : un dossier `rpi/` (asoundrc, bashrc, project.service… de 2024) traînait DANS
+`.git/objects/95/` de la télécommande (d'où « bad sha1 file ») — déplacé dans les archives.
+
 **Transversal, à chaque lot** : la sim marche en fin de lot (contrainte dure) ; commit
 d'instantané avant chaque déplacement ; doc mise à jour dans le lot ; chemin roues
 intouché sauf L4, qui repasse par le protocole caméra.
