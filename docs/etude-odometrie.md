@@ -963,7 +963,26 @@ carte est faite pour les arrêter, et le test d'acceptation (circuit ouvert entr
 masses) échouerait. **Toute mesure batterie traverse la barrière par un optocoupleur**,
 comme les capteurs.
 
-### Branche A (préférée SI le matériel le permet) : lire le BMS Daly
+### ~~Le Bluetooth du chargeur Victron~~ — écarté (question de David, 01/11)
+
+Le Blue Smart est alimenté **par le secteur** : débranché, son Bluetooth est muet. Et
+même branché, il ne voit que la **charge** — jamais la décharge en jeu, qui est ce qu'on
+veut suivre. Il reste l'outil d'atelier pour la tension de fin de charge (§1.6 de
+`hardware/robot-embarque.md`).
+
+### Branche A0 (zéro matériel, à essayer EN PREMIER) : le Bluetooth du BMS, lu par le Pi
+
+Le dongle Bluetooth du Daly Smart (s'il existe sur le robot) est alimenté **par le pack** :
+il parle en permanence. Le **Pi 4 a le Bluetooth intégré** → un nœud ROS lit le BMS en
+BLE, **sans rien souder**, et la radio est la meilleure isolation galvanique qui soit.
+Mêmes règles qu'en A : **lecture seule en liste blanche** (le dongle accepte les mêmes
+écritures), péremption. Risques à mesurer, pas à supposer : portée BLE depuis le fond de
+la caisse métallique, coupures en jeu, et cohabitation avec un éventuel usage futur de
+l'UART primaire (qui partage le contrôleur Bluetooth du Pi 4, §6 « Quel UART ? »). Essai
+de dix minutes avec l'appli Daly sur un téléphone posé à l'emplacement du Pi.
+Si A0 tient : la carte odométrie n'a **rien** à ajouter.
+
+### Branche A (si A0 échoue) : lire le BMS Daly par fil
 
 `hardware/overview.md` décrit un **Daly *Smart* BMS** — donc avec un port **UART** (photo
 catalogue : port `UART` + dongle Bluetooth offert). Un BMS « smart » donne bien plus qu'une
