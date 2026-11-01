@@ -1,4 +1,6 @@
-local_projects_dir: "/home/dadou/Nextcloud/dev/didier/python"
+# Depuis le lot L0 (2026-11-02) les déploiements partent du mono-dépôt dadou, dossier legacy/
+# (les anciens dépôts frères sont archivés). Changera de nouveau quand machines/<hôte>/ existera.
+local_projects_dir: "/home/dadou/Nextcloud/dev/didier/python/dadou/legacy"
 #controller_project_dir: "dadou_controller_ros"
 #utils_project_dir: "dadou_utils_ros_ros"
 #deploy_dir: "robot_base"
