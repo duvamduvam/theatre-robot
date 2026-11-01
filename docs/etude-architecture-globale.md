@@ -537,9 +537,14 @@ en L1. Écarté pour l'instant : contrat d'état partagé, deux Didier dans Gaze
   d'édition (topic/service, validation du payload, refus loggué comme pour StringTime).
 - **Le catalogue des commandes est publié par le robot** (généralisation de
   `web_catalog.py`) ; `BUTTONS_LAYOUT` disparaît.
-- ⚠️ **26 à 29 séquences n'existent QUE sur la télécommande** (robot : 6, télécommande :
-  32 — `access-internet`, `moon-walk`, `pas-un-jouet`, `t-es-sur`, `upload-cerveau`,
-  `suicide`, `trip`… ) : **à rapatrier dans `data/` en L0, avant toute suppression**.
+- ✅ **Correction du 02/11 — fausse alerte sur les « 29 séquences perdues ».** Ma comparaison
+  du 01/11 ne regardait que la racine de `json/sequences/` ; le cœur les a **déplacées** le
+  27/09/2025 dans `json/sequences/eternel-show/` (commit « align utils, assets, and
+  sequences »), **au contrat actuel**. 28/29 y sont ; `iloveyou.json` est devenu
+  `iloveyou2.json` le 04/07. Les copies de la télécommande sont l'**ancien format** (clés
+  avec espaces, `wait audio`, keyframes du cou non triées) : **rien à rapatrier, tout à
+  supprimer** — c'est exactement l'écart « éditeur local jamais rapatrié » du §4.2, dans
+  l'autre sens. Leçon : comparer des arbres, jamais des racines.
 
 Supprime : 71 JSON de la télécommande, `BUTTONS_LAYOUT`, les 3 copies de `relays.json`,
 les 4 de `robot_lights.json`. Options écartées : paquet de données versionné (un
@@ -713,7 +718,7 @@ vérifiable ; David valide entre chaque.*
 
 | Lot | Contenu | Supprime | Porte de sortie (vérifiée) |
 |---|---|---|---|
-| **L0 Sauvegardes + squelette** | 1) pousser les **90 commits** du cœur, **31** de vision, **3** de la télécommande ; commiter les 12 fichiers de la télécommande, 3 de DoubleLights, 13 de DEVICE_WORKSPACE ; 2) **rapatrier les ~29 séquences** de la télécommande dans `data/` ; 3) archiver la sono sur GitHub ✅ (fait le 01/11) ; 4) créer `dadou` par `git subtree add` des 4 dépôts (historiques conservés), arborescence §5.5 **posée mais vide là où rien n'existe** ; déplacer les packages existants SANS les renommer encore ; 5) un `CLAUDE.md`, les 4 anciens dépôts marqués « archivé, voir dadou » | `dadou_web` ✅, liens symboliques | la sim démarre depuis le mono-dépôt exactement comme avant (`validate-*.sh` existants verts) ; CI tests verte ; David valide l'arborescence SUR PIÈCE |
+| **L0 Sauvegardes + squelette** | 1) pousser les **90 commits** du cœur, **31** de vision, **3** de la télécommande ; commiter les 12 fichiers de la télécommande, 3 de DoubleLights, 13 de DEVICE_WORKSPACE ; 2) ~~rapatrier les ~29 séquences~~ **fausse alerte (02/11)** : elles sont dans `eternel-show/` au bon format, les copies télécommande sont à supprimer ; 3) archiver la sono sur GitHub ✅ (fait le 01/11) ; 4) créer `dadou` par `git subtree add` des 4 dépôts (historiques conservés), arborescence §5.5 **posée mais vide là où rien n'existe** ; déplacer les packages existants SANS les renommer encore ; 5) un `CLAUDE.md`, les 4 anciens dépôts marqués « archivé, voir dadou » | `dadou_web` ✅, liens symboliques | la sim démarre depuis le mono-dépôt exactement comme avant (`validate-*.sh` existants verts) ; CI tests verte ; David valide l'arborescence SUR PIÈCE |
 | **L1 Contrats + données** | `dadou_contrats` (93 constantes utiles, codec StringTime unique, `.msg`) ; namespace `didier/` + test « aucun topic absolu » (3 à corriger dans vision) ; le robot publie **catalogue + sha déployé** ; **protocole d'édition via le robot** ; cache côté lecteur ; renommages `didier_*` | `utils_static`, 3 décodeurs StringTime, 3 `robot_interfaces`, `BUTTONS_LAYOUT`, 71 JSON | une retouche faite depuis la page scène arrive dans `data/` du robot et est rejouée ; la télécommande actuelle lit le catalogue publié ; chemin roues NON touché |
 | **L2 Sim multi-conteneurs** | `machines/sim/` : un conteneur par machine, mêmes Dockerfiles que l'ARM ; pilotes `sim` qui publient leur état ; page scène qui rend tous les états ; **séance de fumée** en CI | l'image sim fourre-tout | robot + vision + télécommande actuelle tournent dans 3 conteneurs, domaine 43 ; CI build + fumée verte |
 | **L3 Gabarit + sono** | `dadou_gabarit` (README-contrat, pilote sim, tests, entrée `machines/`) ; **`sono_core` réécrit en suivant le gabarit, chrono en main** ; rôle Ansible `sono` épuré | `dadou_sceno_ros` du disque | la sono joue en sim un audio et un relais visibles sur la page scène ; déployée sur `s` par Ansible ; **temps mesuré ≤ 1 j** ou le gabarit est corrigé |
