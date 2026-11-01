@@ -267,3 +267,88 @@ comme go ; stop/off/cancel → cancel ; un nouvel ordre remplace l'ancien.
 
 Suites de gestes enchaînés (« tourne, avance, va voir ») : lot suivant.
 Pas d'évitement : le cercle est réputé libre (§8.1).
+
+---
+
+## 9. Lot M4 — Tâche en cours : il fait ce qu'il annonce, jusqu'au bout (01/11)
+
+David : « je ne veux pas une liste d'instructions pour chaque mouvement ; il
+dit qu'il fait quelque chose, il le fait — pourquoi il s'arrête ? ».
+Cause : chaque geste finit par un arrêt et Didier ne reprend JAMAIS la main
+à ce moment ; un tour spontané ne peut pas le remettre en mouvement (B1).
+Décision de David (01/11) : une TÂCHE ouverte par une demande humaine se
+poursuit d'elle-même, geste après geste, jusqu'à ce que Didier dise qu'elle
+est finie. Assouplissement BORNÉ de B1 : seule une tâche ouverte par un
+humain peut enchaîner ; un tour spontané du metteur en scène ne bouge
+toujours jamais. Tout côté vision (chat_node lit `route_goto_result`, déjà
+publié par route_driver) ; aucun changement robot. SIM-ONLY (le mouvement à
+la voix n'existe qu'au domaine 43).
+
+### 9.1 Logique pure — `vision/ai/move_task.py`, `MoveTask` (verrou interne)
+
+- `gesture_emitted(request, continuation, now)` : appelé quand une réplique
+  NON spontanée émet un geste de corps (aller_voir, tour_de, tourner,
+  avancer — pas go/stop). Tour humain : NOUVELLE tâche (request = texte de
+  David, steps = 1). Tour de continuation : même tâche, steps += 1.
+  Dans les deux cas `awaiting = True`.
+- `close(reason)` : tour humain servi (avant sa réplique ; il rouvre si sa
+  réplique émet un geste), arrêt d'urgence vocal, clé "marche": "stop",
+  chat OFF, réplique de continuation SANS geste (= « c'est fini »).
+  Journalisé (tâche close + raison).
+- `on_result(payload, now) -> Optional[str]` (payload route_goto_result
+  {name, result, reason, travelled}) :
+  - aucune tâche ou pas `awaiting` → None ; reason "goto_suivant" → None
+    (remplacé par un ordre plus récent, la tâche attend le sien) ;
+  - result "arrived", ou reason ∈ {timeout, max_travel, stalled, off_track,
+    too_far} → si steps < TASK_MAX_STEPS (8) et âge < TASK_MAX_S (180) :
+    `awaiting = False`, rend le texte de continuation ; sinon close
+    ("budget") et None ;
+  - toute autre raison (cancel, cancelled, stop, route on/off…) → close, None
+    (défaut SÛR : ce qu'on ne connaît pas arrête la tâche).
+- Texte de continuation (direction), gravé dans les tests :
+  « Ton geste « {name} » est terminé ({travelled} m parcourus). » ou
+  « Ton geste « {name} » s'est interrompu ({raison en clair}). », puis
+  « Ta tâche, demandée par David : « {request} ». Si elle n'est pas finie,
+  dis où tu en es en quelques mots et fais le geste suivant ; si elle est
+  finie, dis-le en une phrase, SANS clé de geste. »
+
+### 9.2 Moteur (conversation.py)
+
+- Emplacement de continuation (StageState ou MoveTask, un seul, la plus
+  récente remplace) servi pendant l'écoute comme un tour spontané, MAIS :
+  prioritaire sur la direction du metteur en scène ; silence minimal
+  TASK_MIN_SILENCE_S (0,5 s) au lieu de SPONTANEOUS_MIN_SILENCE_S ; pas
+  soumis à SPONTANEOUS_MIN_GAP_S ; jamais pendant in_speech ni son de
+  spectacle ; texte tapé et parole de David passent avant (et ferment la
+  tâche).
+- `_serve_continuation(direction)` : comme `_serve_prompt` (visage
+  « reflechit », pas de ligne « david », panne mute seule) mais
+  `spontaneous=False` pour _notify_move (les gestes PASSENT, par
+  _emit_start : barrière des stops tardifs + verrou de la garde) ; ÉCOUTE
+  GARDE ARMÉE comme pour un tour humain (« stop » pendant la réplique de
+  continuation doit arrêter) ; texte utilisateur fixe TASK_USER_TEXT.
+- Tours spontanés (metteur en scène) : inchangés, jamais de geste (B1).
+
+### 9.3 chat_node
+
+Abonnement `route_goto_result` (StringTime JSON) SEULEMENT si le mouvement
+à la voix est actif ; JSON illisible = warning, ignoré ; `on_result` →
+direction poussée dans l'emplacement de continuation ; log « tâche :
+continuation (geste n/8) » / « tâche close (raison) ».
+
+### 9.4 Prompt (MOVE_TEMPLATE)
+
+Remplacer « un geste à la fois, réplique après réplique » par : un seul
+geste de corps par réplique ; pour une demande qui en demande plusieurs,
+fais le premier : à la fin de chaque geste on te redonne la main et tu
+enchaînes le suivant toi-même, jusqu'à dire que c'est fini. Ce que tu
+annonces, tu le fais jusqu'au bout ; ne t'arrête que si on te le demande.
+
+### 9.5 Tests (purs + moteur avec doubles) et mutation
+
+Ouverture/continuation/budget 8 et 180 s/goto_suivant ignoré/raison
+inconnue = close/tour humain ferme/stop ferme/réplique sans geste ferme ;
+moteur : continuation servie avant un prompt spontané, gestes émis en
+continuation, JAMAIS en spontané, garde armée, priorité du texte tapé.
+Mutation : budget, défaut sûr des raisons, spontaneous=False réservé à la
+continuation.
