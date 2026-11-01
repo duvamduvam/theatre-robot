@@ -744,8 +744,7 @@ GitHub ensuite : **0 commit avec `conf/secret`** dans les deux dépôts, clé in
 locaux réalignés (`reset --hard origin/main`, modifications non commitées mises de côté puis
 remises, reflog purgé). **Résidu non effaçable par nous : `refs/pull/1/head` (une par dépôt),
 cachée mais existante — seul le support GitHub peut la supprimer** ; et rien n'empêche qu'un
-tiers ait copié la clé depuis 2024. ⚠️ **La révocation des 4 identifiants reste À FAIRE par
-David (non cochée le 01/11)** : clé OpenAI, identifiant Google Cloud, compte SMS (`sms_user` /
+tiers ait copié la clé depuis 2024. **Révocation : David confirme le 01/11 que ces identifiants ne sont plus actifs depuis longtemps** — point clos : clé OpenAI, identifiant Google Cloud, compte SMS (`sms_user` /
 `sms_pwd`, qui étaient aussi dans l'ancien `conf/secret` public de la télécommande).
 Découverte annexe : un dossier `rpi/` (asoundrc, bashrc, project.service… de 2024) traînait DANS
 `.git/objects/95/` de la télécommande (d'où « bad sha1 file ») — déplacé dans les archives.
