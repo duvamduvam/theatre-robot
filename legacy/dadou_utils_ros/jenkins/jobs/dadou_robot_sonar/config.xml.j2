@@ -1,0 +1,56 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job">
+  <actions/>
+  <description>{{ jenkins_sonar_job_description }}</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+      <triggers>
+        {% if jenkins_sonar_poll_schedule | length > 0 %}
+        <hudson.triggers.SCMTrigger>
+          <spec>{{ jenkins_sonar_poll_schedule }}</spec>
+          <ignorePostCommitHooks>false</ignorePostCommitHooks>
+        </hudson.triggers.SCMTrigger>
+        {% endif %}
+      </triggers>
+    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+    <org.jenkinsci.plugins.workflow.job.properties.EnvironmentVariablesJobProperty>
+      <envVars>
+        <entry>
+          <string>REPO_URL</string>
+          <string>{{ jenkins_sonar_repo_url }}</string>
+        </entry>
+        <entry>
+          <string>REPO_BRANCH</string>
+          <string>{{ jenkins_sonar_repo_branch }}</string>
+        </entry>
+      </envVars>
+    </org.jenkinsci.plugins.workflow.job.properties.EnvironmentVariablesJobProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps">
+    <scm class="hudson.plugins.git.GitSCM" plugin="git">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <url>{{ jenkins_sonar_definition_repo_url }}</url>
+          {% if jenkins_sonar_definition_repo_credentials_id | length > 0 %}
+          <credentialsId>{{ jenkins_sonar_definition_repo_credentials_id }}</credentialsId>
+          {% endif %}
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <name>{{ jenkins_sonar_definition_repo_branch }}</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions>
+        <hudson.plugins.git.extensions.impl.CleanBeforeCheckout/>
+      </extensions>
+    </scm>
+    <scriptPath>{{ jenkins_sonar_definition_script_path }}</scriptPath>
+    <lightweight>{{ 'true' if jenkins_sonar_lightweight_checkout else 'false' }}</lightweight>
+  </definition>
+  <disabled>false</disabled>
+</flow-definition>

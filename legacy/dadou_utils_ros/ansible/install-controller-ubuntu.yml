@@ -1,0 +1,19 @@
+---
+- name: install didier
+  hosts: controller
+#  become: yes
+
+  vars_files:
+  - vars/main.yml
+
+  roles:
+    - role: dir_struct
+    - role: synchronise
+    - role: linux-package
+    - role: python
+    - role: set-bashrc
+      vars:
+        set_bashrc_project_file: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/rpi/project_bash"
+    - role: ros_humble_base
+    - role: ros_humble_desktop
+    - role: colcon_build

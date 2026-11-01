@@ -1,0 +1,5 @@
+python3-docker
+python3-requests
+python3-requests-unixsocket
+portaudio19-dev
+libasound2-dev

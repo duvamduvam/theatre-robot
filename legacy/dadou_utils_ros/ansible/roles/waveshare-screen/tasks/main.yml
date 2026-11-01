@@ -1,0 +1,26 @@
+- name: Check is LCD-show directory exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/LCD-show"
+  register: lcd_show_dir
+
+- name: Cloner LCD-show repository
+  git:
+    repo: 'https://github.com/waveshare/LCD-show.git'
+    dest: "{{ ansible_env.HOME }}/LCD-show"
+    clone: yes
+    update: yes
+  when: not lcd_show_dir.stat.exists
+
+- name: Change scripts rights
+  file:
+    path: "{{ ansible_env.HOME }}/LCD-show/LCD35-show"
+    mode: '0755'
+  when: not lcd_show_dir.stat.exists
+
+- name: Execute LCD-show script
+  shell: |
+    cd {{ ansible_env.HOME }}/LCD-show/
+    sudo ./LCD35-show
+  args:
+    executable: /bin/bash
+  when: not lcd_show_dir.stat.exists

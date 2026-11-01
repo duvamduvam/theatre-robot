@@ -1,0 +1,38 @@
+---
+
+- name: Set up root
+  hosts: robot
+
+  roles:
+    - role: root_ssh
+
+- name: install didier
+  hosts: robot-root
+#  become: yes
+
+  vars_files:
+  - vars/main.yml
+
+  roles:
+    - role: dir_struct
+    - role: synchronise
+    - role: linux-package
+      vars:
+      - package_file: "packages.txt"
+    - role: python
+    - role: set-bashrc
+      vars:
+        set_bashrc_project_file: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/rpi/project_bash"
+    - role: ros_humble_base
+    - role: colcon_build
+    - role: services
+#      vars:
+#        project_dir: "{{ local_projects_dir }}/{{ robot_project_dir }}"
+#        project_name: "controller"
+    #    - packages
+#    - blinka
+
+    #- deploy
+    #- set-vim
+    #- set-bashrc
+    #- services

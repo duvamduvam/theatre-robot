@@ -1,0 +1,54 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+  }
+
+  environment {
+    SONAR_HOME = tool 'SonarScanner'
+  }
+
+  stages {
+    stage('Prepare defaults') {
+      steps {
+        script {
+          env.REPO_URL = env.REPO_URL?.trim() ?: 'https://github.com/duvamduvam/dadou_robot_ros.git'
+          env.REPO_BRANCH = env.REPO_BRANCH?.trim() ?: 'main'
+        }
+      }
+    }
+
+    stage('Checkout') {
+      steps {
+        deleteDir()
+        git url: env.REPO_URL, branch: env.REPO_BRANCH
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv('SonarQube') {
+          sh '''#!/usr/bin/env bash
+set -euo pipefail
+export JAVA_HOME=/opt/java/openjdk
+export PATH=/opt/java/openjdk/bin:$PATH
+${SONAR_HOME}/bin/sonar-scanner \
+  -Dsonar.projectKey=dadou_robot_ros \
+  -Dsonar.sources=. \
+  -Dsonar.python.coverage.reportPaths=coverage.xml \
+  -Dsonar.python.xunit.reportPath=test-results.xml
+'''
+        }
+      }
+    }
+
+    stage('Quality Gate') {
+      steps {
+        timeout(time: 1, unit: 'HOURS') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+---
+blinka_install_dir: "{{ ansible_env.HOME }}/test"
+blinka_venv_path: "{{ blinka_install_dir }}/venv"
+blinka_script_path: /tmp/raspi-blinka.py
+blinka_auto_answer: "n"
+blinka_ignore_errors: true

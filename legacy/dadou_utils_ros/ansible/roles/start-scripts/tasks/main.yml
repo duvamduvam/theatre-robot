@@ -1,0 +1,40 @@
+- name: copy compose-up-pi.sh
+  copy:
+    src: "templates/scripts/compose-up-pi.sh"
+    dest: "{{ ansible_env.HOME }}/scripts/"
+    #owner: utilisateur # Remplace par le propriétaire du fichier
+    #group: groupe # Remplace par le groupe du fichier
+    mode: '0755' # Définit les permissions du fichier
+
+- name: Update project name in compose-up-pi.sh
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/scripts/compose-up-pi.sh"
+    regexp: '^export PROJECT='
+    line: "export PROJECT={{ project_name }}"
+
+- name: copy docker-stop.sh
+  copy:
+    src: "templates/scripts/docker-stop.sh"
+    dest: "{{ ansible_env.HOME }}/scripts/"
+    #owner: utilisateur # Remplace par le propriétaire du fichier
+    #group: groupe # Remplace par le groupe du fichier
+    mode: '0755' # Définit les permissions du fichier
+
+- name: Update project name in docker-stop.sh
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/scripts/docker-stop.sh"
+    regexp: '^PROJECT='
+    line: "PROJECT={{ project_name }}"
+
+- name: Update log path
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/scripts/compose-up-pi.sh"
+    regexp: '^LOG_PATH='
+    line: "LOG_PATH={{ ansible_env.HOME }}/{{ ros2_ws }}/log"
+
+- name: Update docker compose file path
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/scripts/compose-up-pi.sh"
+    regexp: '^DOCKER_COMPOSE_FILE='
+    line: "DOCKER_COMPOSE_FILE={{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/docker/arm/docker-compose-arm.yml"
+

@@ -1,0 +1,11 @@
+---
+linux_package_file: >-
+  {{
+    (((package_file | default('', true)) | length) > 0)
+      | ternary(
+          local_projects_dir ~ '/' ~ local_project_dir ~ '/conf/' ~ (package_file | default('', true)),
+          playbook_dir ~ '/../jenkins/jenkins-package.txt'
+        )
+  }}
+linux_package_state: latest
+linux_package_upgrade: dist

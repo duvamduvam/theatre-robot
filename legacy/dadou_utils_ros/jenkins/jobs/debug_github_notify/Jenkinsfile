@@ -1,0 +1,173 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+  }
+
+  parameters {
+    string(
+      name: 'REPO_URL',
+      defaultValue: 'https://github.com/duvamduvam/dadou_robot_ros.git',
+      description: 'Repository to clone for access validation'
+    )
+    string(
+      name: 'REPO_BRANCH',
+      defaultValue: 'main',
+      description: 'Branch to checkout'
+    )
+    string(
+      name: 'NOTIFY_SHA',
+      defaultValue: 'HEAD',
+      description: 'Commit SHA to associate with the GitHub status (HEAD resolves dynamically)'
+    )
+    string(
+      name: 'GITHUB_ACCOUNT',
+      defaultValue: 'duvamduvam',
+      description: 'GitHub account or organization'
+    )
+    string(
+      name: 'GITHUB_REPO',
+      defaultValue: 'dadou_robot_ros',
+      description: 'GitHub repository name'
+    )
+    string(
+      name: 'GITHUB_CREDENTIALS_ID',
+      defaultValue: 'github-token4',
+      description: 'Jenkins credentials ID used for git and notify steps'
+    )
+    string(
+      name: 'NOTIFY_CONTEXT',
+      defaultValue: 'debug-github-notify',
+      description: 'Status context label pushed to GitHub'
+    )
+    choice(
+      name: 'NOTIFY_STATUS',
+      choices: ['SUCCESS', 'FAILURE', 'ERROR', 'PENDING'],
+      description: 'Status reported to GitHub'
+    )
+    string(
+      name: 'NOTIFY_DESCRIPTION',
+      defaultValue: 'Manual debug notification',
+      description: 'Description attached to the GitHub status'
+    )
+  }
+
+  stages {
+    stage('Checkout test') {
+      steps {
+        git credentialsId: params.GITHUB_CREDENTIALS_ID,
+            url: params.REPO_URL,
+            branch: params.REPO_BRANCH
+      }
+    }
+
+    stage('Resolve SHA') {
+      when { expression { params.NOTIFY_SHA?.trim().equalsIgnoreCase('HEAD') } }
+      steps {
+        script {
+          env.RESOLVED_NOTIFY_SHA = sh(
+            returnStdout: true,
+            script: "git rev-parse HEAD"
+          ).trim()
+          echo "Resolved HEAD to ${env.RESOLVED_NOTIFY_SHA}"
+        }
+      }
+    }
+
+    stage('GitHub notify test') {
+      steps {
+        script {
+          def shaParam = params.NOTIFY_SHA?.trim()
+          def sha = shaParam?.equalsIgnoreCase('HEAD') ? env.RESOLVED_NOTIFY_SHA : shaParam
+
+          if (!sha) {
+            error 'No SHA resolved for githubNotify step.'
+          }
+
+          def credsId = params.GITHUB_CREDENTIALS_ID?.trim()
+          def account = params.GITHUB_ACCOUNT?.trim()
+          def repo = params.GITHUB_REPO?.trim()
+          def statusValue = params.NOTIFY_STATUS?.trim() ?: 'SUCCESS'
+          def descriptionValue = params.NOTIFY_DESCRIPTION?.trim() ?: 'Manual debug notification'
+          def contextValue = params.NOTIFY_CONTEXT?.trim() ?: 'debug-github-notify'
+
+          echo "[debug_github_notify] Sending status '${statusValue}' for ${sha} using credential '${credsId}'."
+          if (credsId) {
+            try {
+              def creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+                com.cloudbees.plugins.credentials.common.StandardCredentials,
+                jenkins.model.Jenkins.instance,
+                null,
+                (List) null
+              ).find { it.id == credsId }
+              echo creds ? "[debug_github_notify] Credential '${credsId}' found (${creds.class.simpleName})."
+                         : "[debug_github_notify] Credential '${credsId}' NOT found in global store."
+            } catch (Throwable err) {
+              echo "[debug_github_notify] Unable to inspect credential '${credsId}': ${err.getMessage()}"
+            }
+          } else {
+            echo '[debug_github_notify] No credential ID provided.'
+          }
+
+          if (!(credsId && account && repo)) {
+            error 'Missing credential/account/repo information for GitHub notify test.'
+          }
+
+          try {
+            githubNotify credentialsId: credsId,
+                         account: account,
+                         repo: repo,
+                         sha: sha,
+                         context: contextValue,
+                         status: statusValue,
+                         description: descriptionValue,
+                         targetUrl: env.BUILD_URL
+          } catch (IllegalArgumentException ex) {
+            echo "[debug_github_notify] githubNotify failed (${ex.message}); falling back to manual API call."
+            withCredentials([string(credentialsId: credsId, variable: 'GITHUB_TOKEN')]) {
+              sh label: 'GitHub status fallback', script: """#!/usr/bin/env bash
+set -euo pipefail
+curl -sSf -X POST https://api.github.com/repos/${account}/${repo}/statuses/${sha} \\
+  -H 'Authorization: Bearer '"\${GITHUB_TOKEN}" \\
+  -H 'Accept: application/vnd.github+json' \\
+  -d '{
+    "state": "${statusValue.toLowerCase()}",
+    "target_url": "${env.BUILD_URL}",
+    "description": "${descriptionValue}",
+    "context": "${contextValue}"
+  }'
+"""
+            }
+          }
+        }
+      }
+    }
+
+    stage('Force failure to test alerting') {
+      steps {
+        error 'Intentional failure to validate email notification'
+      }
+    }
+  }
+
+  post {
+    failure {
+      script {
+        echo "[debug_mail] Preparing failure notification for build #${env.BUILD_NUMBER}."
+        try {
+          mail to: 'david@duvam.net',
+               from: 'jenkins@eternel-life.com',
+               subject: "debug_github_notify #${env.BUILD_NUMBER} FAILED",
+               body: "Job ${env.JOB_NAME} build #${env.BUILD_NUMBER} failed.\nConsole: ${env.BUILD_URL}console"
+          echo '[debug_mail] Mail sent successfully.'
+        } catch (Throwable err) {
+          def sw = new StringWriter()
+          err.printStackTrace(new PrintWriter(sw))
+          echo "[debug_mail] Mail sending failed: ${err.getMessage()}"
+          echo sw.toString()
+        }
+      }
+    }
+  }
+}

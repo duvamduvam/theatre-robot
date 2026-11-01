@@ -1,0 +1,13 @@
+################# JENKINS PROJECT PARAMS ###################
+
+alias ll='ls -alh'
+alias s='source ~/.bashrc'
+alias log='tail -f ~/ros2_ws/log/robot.log'
+alias i2c='i2cdetect -y 1'
+alias r='sudo reboot'
+alias temp='vcgencmd measure_temp'
+
+alias jl='sudo docker logs -f jenkins'
+alias sl='sudo docker logs -f sonarqube'
+alias ji='sudo docker exec -it jenkins /bin/bash'
+alias si='sudo docker exec -it sonarqube /bin/bash'

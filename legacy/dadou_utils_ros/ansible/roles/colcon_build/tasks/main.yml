@@ -1,0 +1,7 @@
+- name: Colcon build
+  shell: colcon build
+  register: result
+  args:
+    chdir: "{{ ros2_ws }}"
+
+- debug: msg="{{ result.stdout_lines }}"

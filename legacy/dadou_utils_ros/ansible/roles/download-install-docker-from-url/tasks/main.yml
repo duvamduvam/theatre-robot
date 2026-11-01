@@ -1,0 +1,40 @@
+- name: Create directory for the downloaded packages
+  file:
+    path: "local_packages"
+    state: directory
+  register: directory_creation  # Enregistre le résultat de la création du répertoire
+
+- name: Download the packages
+  get_url:
+    url: "{{ item }}"
+    dest: "local_packages"
+  loop: "{{ debian_packages_urls }}"
+  when: directory_creation.changed  # Télécharge les paquets seulement si le répertoire vient d'être créé
+  register: downloaded_files
+
+- name: Install the packages
+  become: yes
+  apt:
+    deb: "local_packages/{{ item.item | basename }}"
+  loop: "{{ downloaded_files.results }}"
+  when: directory_creation.changed and item.changed
+
+- name: Copy service file
+  copy:
+    src: "templates/scripts/launch-local-docker.sh"
+    dest: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/scripts/launch-local-docker.sh"
+    owner: pi
+    group: pi
+    mode: '0755'
+
+- name: Update project change file destination in launch-local-docker.sh
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/scripts/launch-local-docker.sh"
+    regexp: '^CHANGE_FILE='
+    line: "CHANGE_FILE=/home/{{ ros2_ws }}/src/{{ project_ros_dir }}/{{ project_ros_dir }}/change"
+
+- name: Update launch cmd in launch-local-docker.sh
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/scripts/launch-local-docker.sh"
+    regexp: '^LAUNCH_CMD_TO_CHANGE'
+    line: "{{ launch_cmd }}"

@@ -1,0 +1,436 @@
+---
+- name: Check Docker daemon accessibility
+  become: yes
+  ansible.builtin.command: docker info
+  register: jenkins_docker_info
+  changed_when: false
+
+
+- name: Add Jenkins aliases to bashrc
+  when: jenkins_bashrc_manage | bool
+  become: false
+  ansible.builtin.blockinfile:
+    path: "{{ jenkins_bashrc_path }}"
+    create: true
+    marker: "# {mark} {{ jenkins_bashrc_marker }}"
+    block: "{{ jenkins_bashrc_alias_block }}"
+    mode: "0644"
+
+- name: Create Jenkins data directory
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0755"
+    recurse: yes
+
+- name: Create Jenkins job directory
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}/jobs/{{ jenkins_pipeline_job_name }}"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0755"
+    recurse: yes
+
+- name: Deploy Jenkins job configuration
+  become: yes
+  ansible.builtin.template:
+    src: "{{ jenkins_pipeline_config_template }}"
+    dest: "{{ jenkins_data_dir }}/jobs/{{ jenkins_pipeline_job_name }}/config.xml"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0644"
+
+- name: Ensure Jenkins Sonar job directory
+  when: jenkins_sonar_job_enabled | bool
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}/jobs/{{ jenkins_sonar_job_name }}"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0755"
+    recurse: yes
+
+- name: Deploy Jenkins Sonar job configuration
+  when: jenkins_sonar_job_enabled | bool
+  become: yes
+  ansible.builtin.template:
+    src: "{{ jenkins_sonar_config_template }}"
+    dest: "{{ jenkins_data_dir }}/jobs/{{ jenkins_sonar_job_name }}/config.xml"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0644"
+
+- name: Ensure Jenkins debug job directory
+  when: jenkins_debug_job_enabled | bool
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}/jobs/{{ jenkins_debug_job_name }}"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0755"
+    recurse: yes
+
+- name: Deploy Jenkins debug job configuration
+  when: jenkins_debug_job_enabled | bool
+  become: yes
+  ansible.builtin.template:
+    src: "{{ jenkins_debug_job_config_template }}"
+    dest: "{{ jenkins_data_dir }}/jobs/{{ jenkins_debug_job_name }}/config.xml"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0644"
+
+- name: Ensure Jenkins mail notify job directory
+  when: jenkins_mail_notify_job_enabled | bool
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}/jobs/{{ jenkins_mail_notify_job_name }}"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0755"
+    recurse: yes
+
+- name: Deploy Jenkins mail notify job configuration
+  when: jenkins_mail_notify_job_enabled | bool
+  become: yes
+  ansible.builtin.template:
+    src: "{{ jenkins_mail_notify_config_template }}"
+    dest: "{{ jenkins_data_dir }}/jobs/{{ jenkins_mail_notify_job_name }}/config.xml"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0644"
+
+- name: Create Jenkins scripts directory
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}/scripts"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0755"
+
+- name: Deploy Jenkins scripts
+  become: yes
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "{{ item.mode | default('0755') }}"
+  loop: "{{ jenkins_scripts }}"
+
+- name: Generate SSH key pair for Jenkins access if missing
+  when: jenkins_ssh_manage | bool and jenkins_ssh_generate | bool
+  become: false
+  ansible.builtin.openssh_keypair:
+    path: "{{ jenkins_ssh_private_key_source_file }}"
+    type: "{{ jenkins_ssh_key_type }}"
+    mode: "0600"
+    comment: "jenkins-builder"
+    force: false
+
+- name: Ensure authorized_keys directory on builder host
+  when: jenkins_ssh_manage | bool and jenkins_ssh_authorized_keys_manage | bool
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_ssh_authorized_user_home }}/.ssh"
+    state: directory
+    owner: "{{ jenkins_ssh_authorized_user }}"
+    group: "{{ jenkins_ssh_authorized_user }}"
+    mode: "0700"
+
+- name: Authorize Jenkins public key on builder host
+  when: jenkins_ssh_manage | bool and jenkins_ssh_authorized_keys_manage | bool
+  become: yes
+  ansible.builtin.authorized_key:
+    user: "{{ jenkins_ssh_authorized_user }}"
+    key: "{{ lookup('file', jenkins_ssh_public_key_source_file) }}"
+    state: present
+
+- name: Ensure Jenkins SSH directory for host access
+  when: jenkins_ssh_manage | bool
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}/.ssh"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0700"
+
+- name: Mirror host SSH materials into Jenkins home
+  when: jenkins_ssh_manage | bool
+  become: yes
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { src: "{{ jenkins_ssh_private_key_source_file }}", dest: "{{ jenkins_data_dir }}/.ssh/{{ jenkins_ssh_private_key_name }}", mode: "0600" }
+    - { src: "{{ jenkins_ssh_public_key_source_file }}", dest: "{{ jenkins_data_dir }}/.ssh/{{ jenkins_ssh_public_key_name }}", mode: "0644" }
+    - { src: "{{ jenkins_ssh_known_hosts_source_file }}", dest: "{{ jenkins_data_dir }}/.ssh/known_hosts", mode: "0644" }
+  loop_control:
+    label: "{{ item.src }}"
+  register: jenkins_ssh_copy
+  failed_when: false
+
+- name: Enforce strict permissions on Jenkins SSH materials
+  when: jenkins_ssh_manage | bool
+  become: yes
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "{{ item.mode }}"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+  loop:
+    - { path: "{{ jenkins_data_dir }}/.ssh", mode: "0700" }
+    - { path: "{{ jenkins_data_dir }}/.ssh/{{ jenkins_ssh_private_key_name }}", mode: "0600" }
+    - { path: "{{ jenkins_data_dir }}/.ssh/id_ed25519", mode: "0600" }
+    - { path: "{{ jenkins_data_dir }}/.ssh/{{ jenkins_ssh_public_key_name }}", mode: "0644" }
+    - { path: "{{ jenkins_data_dir }}/.ssh/known_hosts", mode: "0644" }
+  loop_control:
+    label: "{{ item.path }}"
+  failed_when: false
+
+- name: Warn when SSH materials are missing
+  ansible.builtin.debug:
+    msg: >-
+      Impossible de copier {{ item.item.src }} -> {{ item.item.dest }} (fichier introuvable ?) ;
+      vérifie que tes clés/known_hosts existent ou ajuste jenkins_ssh_*_source_file.
+  loop: "{{ jenkins_ssh_copy.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.src }}"
+  when:
+    - jenkins_ssh_manage | bool
+    - item is defined
+    - item.failed | default(false)
+
+- name: Create remote workspace directory
+  when: jenkins_pipeline_remote_workspace | length > 0
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_pipeline_remote_workspace }}"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0755"
+
+- name: Install required Jenkins plugins
+  when: jenkins_plugins | length > 0
+  become: yes
+  ansible.builtin.command: >-
+    docker run --rm
+    -v {{ jenkins_data_dir }}:/var/jenkins_home
+    {{ jenkins_docker_image }}
+    jenkins-plugin-cli
+    --plugin-download-directory {{ jenkins_plugins_download_dir }}
+    --plugins {{ jenkins_plugins | join(' ') }}
+  register: jenkins_plugins_install
+  changed_when: "'No updates are available.' not in jenkins_plugins_install.stdout"
+
+- name: Validate Jenkins admin password configuration
+  when: jenkins_admin_manage | bool
+  ansible.builtin.assert:
+    that:
+      - (jenkins_admin_password | length > 0) or (jenkins_admin_password_source_file | length > 0)
+    fail_msg: >-
+      No Jenkins admin password provided.
+      Set jenkins_admin_password or jenkins_admin_password_source_file.
+
+- name: Set Jenkins admin password from variable
+  when:
+    - jenkins_admin_manage | bool
+    - jenkins_admin_password_source_file | length == 0
+  ansible.builtin.set_fact:
+    jenkins_admin_password_content: "{{ jenkins_admin_password | trim }}"
+
+- name: Read Jenkins admin password from local file
+  when:
+    - jenkins_admin_manage | bool
+    - jenkins_admin_password_source_file | length > 0
+  ansible.builtin.set_fact:
+    jenkins_admin_password_content: "{{ lookup('file', jenkins_admin_password_source_file) | trim }}"
+
+- name: Ensure Jenkins admin password is not empty
+  when: jenkins_admin_manage | bool
+  ansible.builtin.assert:
+    that:
+      - jenkins_admin_password_content | default('') | length > 0
+    fail_msg: "Jenkins admin password is empty after processing."
+
+- name: Disable Jenkins setup wizard via JAVA_OPTS
+  when:
+    - jenkins_admin_manage | bool
+    - jenkins_disable_setup_wizard | bool
+  ansible.builtin.set_fact:
+    jenkins_environment: "{{ jenkins_environment | combine({ (jenkins_setup_wizard_env_var): new_java_opts }) }}"
+  vars:
+    current_java_opts: "{{ jenkins_environment.get(jenkins_setup_wizard_env_var, '') }}"
+    new_java_opts: >-
+      {{ current_java_opts if jenkins_disable_setup_wizard_flag in current_java_opts
+         else (current_java_opts + (' ' if current_java_opts else '') + jenkins_disable_setup_wizard_flag) }}
+
+- name: Create Jenkins secrets directory
+  when: jenkins_admin_manage | bool
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}/secrets"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0700"
+
+- name: Deploy Jenkins admin password
+  when: jenkins_admin_manage | bool
+  become: yes
+  ansible.builtin.copy:
+    content: "{{ jenkins_admin_password_content }}"
+    dest: "{{ jenkins_admin_password_destination }}"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0600"
+
+- name: Create Jenkins init.groovy.d directory
+  when: jenkins_admin_manage | bool
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}/init.groovy.d"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0755"
+
+- name: Deploy Jenkins admin initialization script
+  when: jenkins_admin_manage | bool
+  become: yes
+  ansible.builtin.template:
+    src: "{{ jenkins_admin_init_script_template }}"
+    dest: "{{ jenkins_data_dir }}/init.groovy.d/{{ jenkins_admin_init_script_name }}"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0640"
+
+- name: Ensure Jenkins init.groovy.d directory exists for additional tools
+  when: jenkins_sonar_scanner_manage | bool
+  become: yes
+  ansible.builtin.file:
+    path: "{{ jenkins_data_dir }}/init.groovy.d"
+    state: directory
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0755"
+
+- name: Deploy SonarScanner tool initialization script
+  when: jenkins_sonar_scanner_manage | bool
+  become: yes
+  ansible.builtin.template:
+    src: "{{ jenkins_sonar_scanner_init_script_template }}"
+    dest: "{{ jenkins_data_dir }}/init.groovy.d/{{ jenkins_sonar_scanner_init_script_name }}"
+    owner: "{{ jenkins_data_dir_owner }}"
+    group: "{{ jenkins_data_dir_group }}"
+    mode: "0640"
+
+- name: Pull Jenkins image
+  become: yes
+  ansible.builtin.command: docker pull {{ jenkins_docker_image }}
+  register: jenkins_docker_pull
+  changed_when: "'Downloaded' in jenkins_docker_pull.stdout"
+
+- name: Remove existing Jenkins container
+  become: yes
+  ansible.builtin.command: docker rm -f {{ jenkins_container_name }}
+  register: jenkins_container_rm
+  changed_when: jenkins_container_rm.rc == 0
+  failed_when: jenkins_container_rm.rc not in [0, 1]
+
+- name: Start Jenkins container
+  become: yes
+  ansible.builtin.command: >-
+    docker run --detach --restart unless-stopped
+    --name {{ jenkins_container_name }}
+    -p {{ jenkins_http_port }}:8080
+    -p {{ jenkins_agent_port }}:50000
+    -v {{ jenkins_data_dir }}:/var/jenkins_home
+    {% for key, value in jenkins_environment.items() %}-e {{ key }}="{{ value }}" {% endfor %}
+    {{ jenkins_docker_image }}
+  register: jenkins_docker_run
+  changed_when: jenkins_docker_run.rc == 0
+  failed_when: jenkins_docker_run.rc != 0
+
+
+- name: Remove embedded SonarScanner JRE to force system Java
+  become: yes
+  ansible.builtin.shell: |
+    docker exec --user root {{ jenkins_container_name }} bash -lc '
+      if [ -d /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation ]; then
+        find /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation -maxdepth 4 -type d -name jre -prune -exec rm -rf {} +
+      fi'
+  changed_when: false
+
+- name: Ensure Jenkins SSH permissions inside container
+  when: jenkins_fix_ssh_permissions | bool
+  become: yes
+  ansible.builtin.command: >-
+    docker exec --user root {{ jenkins_container_name }}
+    sh -c "if [ -d /var/jenkins_home/.ssh ]; then chmod 700 /var/jenkins_home/.ssh; fi &&
+           if [ -f /var/jenkins_home/.ssh/{{ jenkins_ssh_private_key_name }} ]; then chmod 600 /var/jenkins_home/.ssh/{{ jenkins_ssh_private_key_name }}; fi &&
+           if [ -f /var/jenkins_home/.ssh/{{ jenkins_ssh_public_key_name }} ]; then chmod 644 /var/jenkins_home/.ssh/{{ jenkins_ssh_public_key_name }}; fi"
+  changed_when: false
+  failed_when: false
+
+- name: Check Jenkins container status
+  become: yes
+  ansible.builtin.command: >-
+    docker ps --filter name={{ jenkins_container_name }} --format {{ '"{{.Status}}"' }}
+  register: jenkins_container_status
+  changed_when: false
+
+- name: Show Jenkins container status
+  ansible.builtin.debug:
+    var: jenkins_container_status.stdout_lines
+
+- name: Check SSH client presence in Jenkins container
+  become: yes
+  ansible.builtin.command: docker exec --user root {{ jenkins_container_name }} bash -lc 'command -v ssh'
+  register: jenkins_ssh_client_check
+  changed_when: false
+  failed_when: false
+
+- name: Install SSH client in Jenkins container
+  when:
+    - jenkins_install_ssh_client | bool
+    - jenkins_ssh_client_check.rc != 0
+  become: yes
+  ansible.builtin.command: >-
+    docker exec --user root {{ jenkins_container_name }} bash -lc
+    "apt-get update && apt-get install -y openssh-client"
+  register: jenkins_ssh_client_install
+  changed_when: true
+
+- name: Check Git client presence in Jenkins container
+  when: jenkins_install_git_client | bool
+  become: yes
+  ansible.builtin.command: docker exec --user root {{ jenkins_container_name }} bash -lc 'command -v git'
+  register: jenkins_git_client_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Git client in Jenkins container
+  when:
+    - jenkins_install_git_client | bool
+    - jenkins_git_client_check.rc != 0
+  become: yes
+  ansible.builtin.command: >-
+    docker exec --user root {{ jenkins_container_name }} bash -lc
+    "apt-get update && apt-get install -y git"
+  register: jenkins_git_client_install
+  changed_when: true

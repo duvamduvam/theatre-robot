@@ -1,0 +1,7 @@
+---
+jenkins_admin_password: "votre_mot_de_passe_securise"
+jenkins_url: "http://jenkins.local:8080"
+sonar_url: "http://127.0.0.1:9000"
+allowed_networks:
+  - "192.168.1.0/24"
+  # Ajoutez d'autres réseaux si nécessaire

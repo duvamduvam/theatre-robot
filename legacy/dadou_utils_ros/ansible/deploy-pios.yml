@@ -1,0 +1,10 @@
+---
+- name: deploy {{ target_group | default('robot') }}
+  hosts: "{{ target_group | default('robot') }}"
+#  become: yes
+
+  vars_files:
+  - vars/main.yml
+
+  roles:
+    - role: synchronise

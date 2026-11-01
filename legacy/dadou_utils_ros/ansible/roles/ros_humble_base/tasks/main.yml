@@ -1,0 +1,78 @@
+- name: Mise à jour des packages et installation de locales
+  become: yes
+  apt:
+    update_cache: yes
+    name: locales
+    state: present
+
+- name: Générer les locales en_US.UTF-8
+  become: yes
+  command:
+    cmd: locale-gen en_US en_US.UTF-8
+  changed_when: False
+
+- name: Mettre à jour les paramètres de locale
+  become: yes
+  lineinfile:
+    path: /etc/default/locale
+    regexp: '^LANG='
+    line: 'LANG=en_US.UTF-8'
+    create: yes
+
+- name: Exporter la variable d'environnement LANG
+  become: yes
+  shell:
+    cmd: export LANG=en_US.UTF-8
+  args:
+    executable: /bin/bash
+  changed_when: False
+
+- name: Installer software-properties-common et ajouter le dépôt universe
+  become: yes
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - software-properties-common
+    - curl
+  when: ansible_os_family == "Debian"
+
+- name: Ajouter le dépôt ROS 2
+  become: yes
+  shell:
+    cmd: |
+      curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list
+  args:
+    executable: /bin/bash
+
+- name: Mise à jour des packages et installation de ROS Humble Ros Base et des outils de développement ROS
+  become: yes
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: present
+  loop:
+    - ros-humble-ros-base
+    - ros-dev-tools
+
+- name: Ros2 Environment Setup
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    line: "source /opt/ros/humble/setup.bash"
+    create: yes
+
+- name: Colcon auto complete Environment Setup
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    line: "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
+    create: yes
+
+- name: Local project auto complete Environment Setup
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    line: "source ~/{{ ros2_ws }}/install/setup.bash"
+    create: yes
+
+

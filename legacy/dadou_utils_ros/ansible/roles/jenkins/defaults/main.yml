@@ -1,0 +1,135 @@
+---
+jenkins_docker_image: "jenkins/jenkins:lts-jdk21"
+jenkins_container_name: "jenkins"
+jenkins_http_port: 8080
+jenkins_agent_port: 50000
+# Emplacement du volume Jenkins sur la machine cible (monté dans /var/jenkins_home)
+jenkins_data_dir: "/home/pi/jenkins-workspace/jenkins_home"
+jenkins_data_dir_owner: "1000"
+jenkins_data_dir_group: "1000"
+jenkins_java_home: "/opt/java/openjdk"
+jenkins_environment:
+  JAVA_HOME: "{{ jenkins_java_home }}"
+jenkins_pipeline_job_name: "dadou_robot_ci"
+jenkins_pipeline_job_description: "CI pipeline pour builder et tester dadou_robot."
+jenkins_pipeline_definition_repo_url: "https://github.com/duvamduvam/dadou_utils_ros.git"
+jenkins_pipeline_definition_repo_branch: "main"
+jenkins_pipeline_definition_repo_credentials_id: ""
+jenkins_pipeline_definition_script_path: "jenkins/jobs/dadou_robot_ci/Jenkinsfile"
+jenkins_pipeline_repo_url: "https://github.com/duvamduvam/dadou_robot_ros.git"
+jenkins_pipeline_poll_repo_url: "{{ jenkins_pipeline_definition_repo_url }}"
+jenkins_pipeline_repo_branch: "main"
+jenkins_pipeline_script_path: "Jenkinsfile"
+jenkins_pipeline_lightweight_checkout: true
+jenkins_pipeline_disable_concurrent_builds: true
+jenkins_pipeline_requirements_path: "requirements.txt"
+jenkins_pipeline_test_command: "pytest -q /home/ros2_ws/src/robot/robot/tests --ignore=/home/ros2_ws/src/robot/robot/tests/sandbox"
+jenkins_pipeline_junit_report_glob: ""
+jenkins_pipeline_docker_image: "dadou_robot"
+jenkins_pipeline_docker_tag_expression: "${env.BRANCH_NAME ?: 'main'}-${env.BUILD_NUMBER}"
+jenkins_pipeline_docker_context: "."
+jenkins_pipeline_dockerfile: "conf/docker/jenkins/Dockerfile-jenkins"
+jenkins_pipeline_docker_compose_file: "conf/docker/jenkins/docker-compose-jenkins.yml"
+jenkins_pipeline_docker_compose_service: "dadou-robot-jenkins"
+jenkins_pipeline_push_enabled: false
+jenkins_pipeline_poll_schedule: "H/5 * * * *"
+jenkins_pipeline_config_template: "{{ role_path }}/../../../jenkins/jobs/{{ jenkins_pipeline_job_name }}/config.xml.j2"
+jenkins_plugins:
+  - "credentials"
+  - "ssh-credentials"
+  - "workflow-aggregator"
+  - "workflow-job"
+  - "git"
+  - "sonar"
+  - "timestamper"
+  - "ws-cleanup"
+  - "resource-disposer"
+  - "script-security"
+jenkins_plugins_download_dir: "/var/jenkins_home/plugins"
+jenkins_fix_ssh_permissions: true
+jenkins_ssh_private_key_name: "id_ed25519"
+jenkins_ssh_public_key_name: "{{ jenkins_ssh_private_key_name }}.pub"
+jenkins_ssh_manage: true
+jenkins_ssh_generate: false
+jenkins_ssh_key_type: "ed25519"
+jenkins_ssh_authorized_keys_manage: true
+jenkins_ssh_authorized_user: "{{ jenkins_pipeline_remote_user }}"
+jenkins_ssh_authorized_user_home: "/home/{{ jenkins_ssh_authorized_user }}"
+# Paths on the target host that will be mirrored into the Jenkins home volume
+# to allow the container to SSH back to the host (builder).
+jenkins_ssh_private_key_source_file: "/home/dadou/Nextcloud/divers/keys/github"
+jenkins_ssh_public_key_source_file: "/home/dadou/Nextcloud/divers/keys/github.pub"
+jenkins_ssh_known_hosts_source_file: "{{ ansible_env.HOME }}/.ssh/known_hosts"
+jenkins_scripts:
+  - src: "{{ role_path }}/../../../jenkins/scripts/run_ci_pipeline.sh"
+    dest: "{{ jenkins_data_dir }}/scripts/run_ci_pipeline.sh"
+    mode: "0755"
+jenkins_pipeline_ci_script_path: "/var/jenkins_home/scripts/run_ci_pipeline.sh"
+jenkins_pipeline_ci_script_host_path: "{{ jenkins_data_dir }}/scripts/run_ci_pipeline.sh"
+jenkins_pipeline_remote_host: "172.17.0.1"
+jenkins_pipeline_remote_user: "pi"
+jenkins_pipeline_remote_workspace: "/home/pi/jenkins-workspace"
+jenkins_install_ssh_client: true
+jenkins_install_git_client: true
+jenkins_admin_manage: false
+jenkins_admin_user: "admin"
+jenkins_admin_password: ""
+jenkins_admin_password_source_file: ""
+jenkins_admin_password_secret_filename: "admin_password"
+jenkins_admin_password_relative_path: "secrets/{{ jenkins_admin_password_secret_filename }}"
+jenkins_admin_password_destination: "{{ jenkins_data_dir }}/{{ jenkins_admin_password_relative_path }}"
+jenkins_admin_init_script_template: "{{ role_path }}/templates/jenkins-create-admin.groovy.j2"
+jenkins_admin_init_script_name: "10-create-admin.groovy"
+jenkins_disable_setup_wizard: true
+jenkins_disable_setup_wizard_flag: "-Djenkins.install.runSetupWizard=false"
+jenkins_setup_wizard_env_var: "JAVA_OPTS"
+jenkins_bashrc_manage: true
+jenkins_bashrc_path: "{{ ansible_env.HOME }}/.bashrc"
+jenkins_bashrc_marker: "JENKINS ALIASES"
+jenkins_sonar_container_name: "{{ sonar_container_name | default('sonarqube') }}"
+jenkins_bashrc_alias_block: |-
+  alias ll='ls -alh'
+  alias jl='sudo docker logs -f {{ jenkins_container_name }}'
+  alias sl='sudo docker logs -f {{ jenkins_sonar_container_name }}'
+  alias jr='sudo docker restart {{ jenkins_container_name }}'
+  alias sr='sudo docker restart {{ jenkins_sonar_container_name }}'
+  alias js='sudo docker exec -it {{ jenkins_container_name }} bash'
+jenkins_sonar_scanner_manage: true
+jenkins_sonar_scanner_name: "SonarScanner"
+jenkins_sonar_scanner_install_url: "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006.zip"
+jenkins_sonar_scanner_install_subdir: "sonar-scanner-5.0.1.3006"
+jenkins_sonar_scanner_home: ""
+jenkins_sonar_scanner_init_script_template: "{{ role_path }}/templates/sonar-scanner-tool.groovy.j2"
+jenkins_sonar_scanner_init_script_name: "20-sonar-scanner.groovy"
+
+jenkins_sonar_job_enabled: true
+jenkins_sonar_job_name: "dadou_robot_sonar"
+jenkins_sonar_job_description: "Analyse SonarQube périodique pour dadou_robot_ros."
+jenkins_sonar_definition_repo_url: "https://github.com/duvamduvam/dadou_utils_ros.git"
+jenkins_sonar_definition_repo_branch: "main"
+jenkins_sonar_definition_repo_credentials_id: ""
+jenkins_sonar_definition_script_path: "jenkins/jobs/dadou_robot_sonar/Jenkinsfile"
+jenkins_sonar_repo_url: "https://github.com/duvamduvam/dadou_robot_ros.git"
+jenkins_sonar_repo_branch: "main"
+jenkins_sonar_script_path: "jenkins/jobs/dadou_robot_sonar/Jenkinsfile"
+jenkins_sonar_lightweight_checkout: true
+jenkins_sonar_poll_schedule: "H/12 * * * *"
+jenkins_sonar_config_template: "{{ role_path }}/../../../jenkins/jobs/{{ jenkins_sonar_job_name }}/config.xml.j2"
+
+jenkins_debug_job_enabled: true
+jenkins_debug_job_name: "debug_github_notify"
+jenkins_debug_job_description: "Pipeline manuel pour valider l'accès GitHub et les notifications."
+jenkins_debug_job_repo_url: "https://github.com/duvamduvam/dadou_utils_ros.git"
+jenkins_debug_job_repo_branch: "main"
+jenkins_debug_job_repo_credentials_id: ""
+jenkins_debug_job_script_path: "jenkins/jobs/debug_github_notify/Jenkinsfile"
+jenkins_debug_job_config_template: "{{ role_path }}/../../../jenkins/jobs/{{ jenkins_debug_job_name }}/config.xml.j2"
+
+jenkins_mail_notify_job_enabled: true
+jenkins_mail_notify_job_name: "debug_mail_notify"
+jenkins_mail_notify_job_description: "Pipeline de test pour notifier par e-mail en cas d'échec."
+jenkins_mail_notify_repo_url: "https://github.com/duvamduvam/dadou_utils_ros.git"
+jenkins_mail_notify_repo_branch: "main"
+jenkins_mail_notify_repo_credentials_id: ""
+jenkins_mail_notify_script_path: "jenkins/jobs/debug_mail_notify/Jenkinsfile"
+jenkins_mail_notify_config_template: "{{ role_path }}/../../../jenkins/jobs/{{ jenkins_mail_notify_job_name }}/config.xml.j2"

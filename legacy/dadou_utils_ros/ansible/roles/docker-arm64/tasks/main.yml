@@ -1,0 +1,39 @@
+- name: Check if docker-arm64-packages exists
+  stat:
+    path: "{{ ansible_env.HOME }}/docker-arm64-packages/"
+  register: docker_packages_exists
+
+- name: Create python venv
+  command: python3 -m venv venv
+  args:
+    creates: "{{ ansible_env.HOME }}/venv/"
+  when: not docker_packages_exists.stat.exists
+
+- name: Install python librairies
+  pip:
+    name:
+      - packaging
+      - requests
+      - bs4
+    state: present
+    virtualenv: "{{ ansible_env.HOME }}/venv/"
+  when: not docker_packages_exists.stat.exists
+
+- name: "{{ ansible_env.HOME }}/venv/bin/python3 {{ ros2_ws }}/src/{{ project_ros_dir }}/conf/docker/get-docker-packages-from-url.py"
+  command: "{{ ansible_env.HOME }}/venv/bin/python3 {{ ros2_ws }}/src/{{ project_ros_dir }}/conf/docker/get-docker-packages-from-url.py"
+  when: not docker_packages_exists.stat.exists
+
+- name: Find downloaded packages
+  find:
+    paths: "{{ ansible_env.HOME }}/docker-arm64-packages"
+    patterns: "*.deb"
+  register: found_packages
+
+- name: Installer local packaqes
+  become: yes
+  apt:
+    deb: "{{ item.path }}"
+    state: present
+  loop: "{{ found_packages.files }}"
+  when: found_packages.matched > 0 and not docker_packages_exists.stat.exists
+

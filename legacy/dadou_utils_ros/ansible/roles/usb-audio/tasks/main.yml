@@ -1,0 +1,17 @@
+- name: Copy alsa-blacklist.conf
+  become: yes
+  copy:
+    src: "templates/rpi/alsa-blacklist.conf"
+    dest: "/etc/modprobe.d/alsa-blacklist.conf"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Copy asoundrc file
+  copy:
+    src: "templates/rpi/asoundrc"
+    dest: "{{ ansible_env.HOME }}/.asoundrc"
+    owner: pi
+    group: pi
+    mode: '0644'
+

@@ -1,0 +1,91 @@
+robot:
+  hosts:
+    r:
+        local_project_dir: dadou_robot_ros
+        project_ros_dir: robot
+        project_name: robot
+        launch_cmd: ros2 launch robot_bringup robot_app.launch.py
+
+# Console de pilotage sur Pi 4 + écran (hostname control, Pi OS Full trixie,
+# flashé le 2026-07-04). Alias ssh "c" (User pi, clé didier). Ne pas confondre
+# avec le groupe "controller" d'install-controller-ubuntu.yml (ancienne console
+# Ubuntu/ROS hôte) : ici tout tourne en Docker comme sur le robot.
+control:
+  hosts:
+    c:
+        local_project_dir: dadou_control_ros
+        project_ros_dir: controller
+        project_name: controller
+        launch_cmd: ros2 run controller controller_node
+
+integration:
+  hosts:
+    ci:
+        ansible_host: ci.local
+        ansible_user: pi
+        ansible_ssh_private_key_file: "{{ lookup('env','HOME') }}/Nextcloud/divers/keys/didier"
+        local_project_dir: dadou_robot_ros
+        project_ros_dir: dadou_robot
+        project_name: robot
+        launch_cmd: test
+        jenkins_workspace: dadou_robot
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+disk:
+  hosts:
+    d:
+        local_project_dir: dadou_hardrive_ros
+        project_ros_dir: hardrive
+        project_name: hardrive
+
+sceno:
+  hosts:
+    s:
+        local_project_dir: dadou_sceno_ros
+        project_ros_dir: sceno
+        project_name: sceno
+
+vision:
+  hosts:
+    ai:
+        local_project_dir: dadou_vision_ros
+        project_ros_dir: vision
+        project_name: vision
+        # Heartbeat V0 (robot_bringup était un copier-coller du groupe robot,
+        # ce package n'existe pas côté vision). Deviendra un launch file en V1.
+        launch_cmd: ros2 run vision vision_status
+
+robot-test:
+  hosts:
+    test:
+        local_project_dir: dadou_robot_ros
+        project_ros_dir: robot
+        project_name: robot
+
+glove-left:
+  hosts:
+    gl:
+        packages:
+            - vim
+            - libgirepository1.0-dev
+            - libasound2-dev
+        local_project_dir: dadou_control_ros
+        local_utils_dir: dadou_utils_ros_ros
+        project_ros_dir: controller
+        project_name: controller
+        launch_cmd: ros2 run controller controller_node
+
+
+glove-right:
+  hosts:
+    gr:
+        packages:
+            - vim
+            - libgirepository1.0-dev
+            - libasound2-dev
+        local_project_dir: dadou_control_ros
+        local_utils_dir: dadou_utils_ros_ros
+        project_ros_dir: controller
+        project_name: controller
+        launch_cmd: ros2 run controller controller_node

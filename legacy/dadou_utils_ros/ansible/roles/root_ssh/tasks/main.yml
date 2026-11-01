@@ -1,0 +1,10 @@
+- name: Copy ssh folder to root
+  become: yes
+  copy:
+    src: "{{ ansible_env.HOME }}/.ssh/"
+    dest: "/root/.ssh/"
+    remote_src: yes
+    owner: root
+    group: root
+    mode: '0700'
+

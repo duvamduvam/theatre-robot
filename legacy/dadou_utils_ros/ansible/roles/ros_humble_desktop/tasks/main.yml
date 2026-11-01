@@ -1,0 +1,8 @@
+- name: Install ROS desktop
+  become: yes
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: present
+  loop:
+    - ros-humble-desktop

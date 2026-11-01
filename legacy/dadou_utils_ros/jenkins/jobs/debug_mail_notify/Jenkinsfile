@@ -1,0 +1,34 @@
+pipeline {
+  agent any
+
+  options { timestamps() }
+
+  stages {
+    stage('Trigger failure') {
+      steps {
+        echo 'Forcing a failure to validate mail notification.'
+        error 'Intentional failure in debug_mail_notify pipeline.'
+      }
+    }
+  }
+
+  post {
+    failure {
+      script {
+        echo "[debug_mail_notify] Preparing e-mail for build #${env.BUILD_NUMBER}."
+        try {
+          mail to: 'david@duvam.net',
+               from: 'jenkins@eternel-life.com',
+               subject: "${env.JOB_NAME} #${env.BUILD_NUMBER} FAILED",
+               body: "Le job ${env.JOB_NAME} s'est terminé en échec.\nConsole: ${env.BUILD_URL}console"
+          echo '[debug_mail_notify] Mail sent successfully.'
+        } catch (Throwable err) {
+          def sw = new StringWriter()
+          err.printStackTrace(new PrintWriter(sw))
+          echo "[debug_mail_notify] Mail sending failed: ${err.getMessage()}"
+          echo sw.toString()
+        }
+      }
+    }
+  }
+}

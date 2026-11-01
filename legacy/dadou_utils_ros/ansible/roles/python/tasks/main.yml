@@ -1,0 +1,124 @@
+- name: Construire la liste des interpréteurs Python candidats
+  ansible.builtin.set_fact:
+    python_interpreter_candidates: "{{ python_runtime_candidates | reject('equalto', '') | list }}"
+
+- name: Tester les interpréteurs Python candidats
+  ansible.builtin.command: "{{ item }} --version"
+  register: python_interpreter_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ python_interpreter_candidates }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Collecter les interpréteurs Python disponibles
+  ansible.builtin.set_fact:
+    python_interpreters_found: "{{ python_interpreter_lookup.results | selectattr('rc', 'eq', 0) | map(attribute='item') | list }}"
+
+- name: Sélectionner l'interpréteur Python
+  ansible.builtin.set_fact:
+    python_runtime: "{{ python_interpreters_found[0] }}"
+  when: python_interpreters_found | length > 0
+
+- name: Définir la commande pip système
+  ansible.builtin.set_fact:
+    python_system_pip_executable: "{{ python_runtime }} -m pip"
+  when: python_runtime is defined
+
+- name: Déterminer si un virtualenv est requis
+  ansible.builtin.set_fact:
+    python_use_venv: "{{ (python_venv_path | default('')) | length > 0 }}"
+
+- name: Échouer si aucun interpréteur Python n'a été trouvé
+  ansible.builtin.fail:
+    msg: "Aucun interpréteur Python valide parmi {{ python_interpreter_candidates }}"
+  when: python_interpreters_found | length == 0
+
+- name: Télécharger le script get-pip.py sur la machine de contrôle
+  ansible.builtin.get_url:
+    url: "{{ python_get_pip_url }}"
+    dest: "{{ python_get_pip_local_path }}"
+    mode: '0644'
+  delegate_to: localhost
+  run_once: true
+  when: not python_use_venv
+
+- name: Copier get-pip.py sur l'hôte cible
+  ansible.builtin.copy:
+    src: "{{ python_get_pip_local_path }}"
+    dest: "{{ python_get_pip_remote_path }}"
+    mode: '0644'
+  when: not python_use_venv
+
+- name: Installer pip avec {{ python_runtime }}
+  become: yes
+  ansible.builtin.command:
+    cmd: "{{ python_runtime }} {{ python_get_pip_remote_path }}"
+  when: not python_use_venv
+
+- name: S'assurer que le virtualenv existe
+  ansible.builtin.command:
+    cmd: "{{ python_runtime }} -m venv {{ python_venv_path }}"
+    creates: "{{ python_venv_path }}/bin/activate"
+  when: python_use_venv
+
+- name: Préparer la liste des fichiers requirements candidats
+  ansible.builtin.set_fact:
+    python_requirements_candidate_paths: >-
+      {{
+        python_requirements_candidates
+        if python_requirements_candidates is iterable and (python_requirements_candidates is not string)
+        else [python_requirements_candidates]
+      }}
+
+- name: Vérifier les fichiers requirements candidats
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ python_requirements_candidate_paths }}"
+  register: python_requirements_stats
+
+- name: Collecter les fichiers requirements existants
+  ansible.builtin.set_fact:
+    python_requirements_existing: "{{ python_requirements_stats.results | default([]) | selectattr('stat.exists') | map(attribute='item') | list }}"
+
+- name: Échouer si aucun requirements n'est disponible
+  ansible.builtin.fail:
+    msg: "Aucun requirements.txt trouvé dans {{ python_requirements_candidate_paths }}"
+  when:
+    - python_requirements_required
+    - (python_requirements_existing | length) == 0
+
+- name: Sélectionner le requirements à utiliser
+  ansible.builtin.set_fact:
+    python_requirements_selected: "{{ python_requirements_existing[0] }}"
+  when: (python_requirements_existing | length) > 0
+
+- name: Mettre à jour pip dans le virtualenv
+  ansible.builtin.pip:
+    name: pip
+    state: latest
+    virtualenv: "{{ python_venv_path }}"
+  when: python_use_venv
+
+- name: Mettre à jour pip pour {{ python_version }}
+  ansible.builtin.pip:
+    name: pip
+    state: latest
+    executable: "{{ python_system_pip_executable }}"
+  when: not python_use_venv
+
+- name: Installer les requirements dans le virtualenv
+  ansible.builtin.pip:
+    requirements: "{{ python_requirements_selected }}"
+    virtualenv: "{{ python_venv_path }}"
+  when:
+    - python_use_venv
+    - python_requirements_selected is defined
+
+- name: Installer les requirements avec l'interpréteur système
+  ansible.builtin.pip:
+    requirements: "{{ python_requirements_selected }}"
+    executable: "{{ python_system_pip_executable }}"
+  when:
+    - not python_use_venv
+    - python_requirements_selected is defined

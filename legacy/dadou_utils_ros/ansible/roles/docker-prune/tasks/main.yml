@@ -1,0 +1,6 @@
+---
+- name: Prune unused Docker resources
+  become: yes
+  ansible.builtin.command: docker system prune -af
+  register: docker_prune_result
+  changed_when: "'Total reclaimed' in (docker_prune_result.stdout | default(''))"

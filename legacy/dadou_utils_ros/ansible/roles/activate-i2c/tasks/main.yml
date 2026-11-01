@@ -1,0 +1,4 @@
+- name: Activate raspberry i2c
+  command:
+    cmd: sudo raspi-config nonint do_i2c 0
+  check_mode: no

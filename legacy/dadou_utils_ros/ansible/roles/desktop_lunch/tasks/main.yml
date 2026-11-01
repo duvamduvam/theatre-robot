@@ -1,0 +1,57 @@
+- name: install desktop file for automatic lunch
+  copy:
+    src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/rpi/remote.desktop"
+    dest: "{{ ansible_env.HOME }}/.config/autostart/"
+    #owner: utilisateur # Remplace par le propriétaire du fichier
+    #group: groupe # Remplace par le groupe du fichier
+    mode: '0644' # Définit les permissions du fichier
+
+- name: Create a symlink from autostart to Desktop
+  file:
+    src: "{{ ansible_env.HOME }}/.config/autostart/remote.desktop"
+    dest: "{{ ansible_env.HOME }}/Desktop/controller"
+    state: link
+    force: yes  # Cela permet de remplacer le lien si celui-ci existe déjà
+
+- name: set docker compose log
+  become: yes
+  lineinfile:
+    path: /etc/environment
+    line: 'COMPOSE_LOG_FILE="{{ ansible_env.HOME }}/{{ ros2_ws }}/log/docker_compose.log"'
+    state: present
+
+- name: set docker compose log
+  become: yes
+  lineinfile:
+    path: /etc/environment
+    line: 'COMPOSE_LOG_LEVEL="DEBUG"'
+    state: present
+
+- name: Update log path
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/scripts/compose-up-pi.sh"
+    regexp: '^LOG_PATH='
+    line: "LOG_PATH={{ ansible_env.HOME }}/{{ ros2_ws }}/log"
+
+- name: Update docker compose file path
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/scripts/compose-up-pi.sh"
+    regexp: '^DOCKER_COMPOSE_FILE='
+    line: "DOCKER_COMPOSE_FILE={{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/docker/arm/docker-compose-arm.yml"
+
+- name: Set the running script
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.config/autostart/remote.desktop"
+    regexp: '^Exec='
+    line: "Exec=lxterminal --command=\"bash -c '{{ ansible_env.HOME }}/scripts/compose-up-pi.sh log'\""
+
+- name: Set the icons
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.config/autostart/remote.desktop"
+    regexp: '^Icon='
+    line: "Icon={{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/rpi/icon.png"
+
+#    - { regexp: '^Description=.*', line: 'Description={{ project_name }} Daemon' }
+#    - { regexp: '^ExecStart=.*', line: 'ExecStart=/root/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/scripts/run.sh' }
+#    - { regexp: '^ExecStop=.*', line: 'ExecStop=/root/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/scripts/stop.sh' }
+#    - { regexp: '^StandardError=.*', line: 'StandardError=/root/{{ ros2_ws }}/log/service-error.log' }

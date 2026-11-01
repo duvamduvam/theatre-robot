@@ -1,0 +1,59 @@
+---
+- name: Vérifier l'accès au démon Docker
+  become: yes
+  ansible.builtin.command: docker info
+  register: sonar_docker_info
+  changed_when: false
+
+- name: Créer les répertoires SonarQube
+  become: yes
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ sonar_directories_owner }}"
+    group: "{{ sonar_directories_group }}"
+    mode: "0755"
+    recurse: yes
+  loop:
+    - "{{ sonar_data_dir }}"
+    - "{{ sonar_extensions_dir }}"
+    - "{{ sonar_logs_dir }}"
+
+- name: Récupérer l'image SonarQube
+  become: yes
+  ansible.builtin.command: docker pull {{ sonar_docker_image }}
+  register: sonar_docker_pull
+  changed_when: "'Downloaded' in sonar_docker_pull.stdout"
+
+- name: Supprimer l'ancien conteneur SonarQube s'il existe
+  become: yes
+  ansible.builtin.command: docker rm -f {{ sonar_container_name }}
+  register: sonar_container_rm
+  changed_when: sonar_container_rm.rc == 0
+  failed_when: sonar_container_rm.rc not in [0, 1]
+
+- name: Démarrer le conteneur SonarQube
+  become: yes
+  ansible.builtin.command: >-
+    docker run --detach --restart unless-stopped
+    --name {{ sonar_container_name }}
+    -p {{ sonar_http_port }}:9000
+    -v {{ sonar_data_dir }}:/opt/sonarqube/data
+    -v {{ sonar_extensions_dir }}:/opt/sonarqube/extensions
+    -v {{ sonar_logs_dir }}:/opt/sonarqube/logs
+    {% for key, value in sonar_environment.items() %}-e {{ key }}="{{ value }}" {% endfor %}
+    {{ sonar_docker_image }}
+  register: sonar_docker_run
+  changed_when: sonar_docker_run.rc == 0
+  failed_when: sonar_docker_run.rc != 0
+
+- name: Vérifier l'état du conteneur SonarQube
+  become: yes
+  ansible.builtin.command: >-
+    docker ps --filter name={{ sonar_container_name }} --format {{ '"{{.Status}}"' }}
+  register: sonar_container_status
+  changed_when: false
+
+- name: Afficher l'état du conteneur SonarQube
+  ansible.builtin.debug:
+    var: sonar_container_status.stdout_lines

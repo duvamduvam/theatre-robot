@@ -1,0 +1,13 @@
+#- name: Déployer ROS avec Docker Compose
+#  become: yes
+#  docker_compose:
+#    project_src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/docker/docker-compose-x86.yml"
+#    state: present
+#    pull: yes
+#    restarted: yes
+
+#- debug:
+#    var: output
+- name: lunch docker compose
+  become: yes
+  command: "docker compose -f {{ ros2_ws }}/src/{{ project_ros_dir }}/conf/docker/docker-compose-x86.yml up"

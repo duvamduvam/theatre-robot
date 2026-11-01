@@ -1,0 +1,38 @@
+---
+
+- name: install didier
+  hosts: robot
+#  become: yes
+
+  vars_files:
+  - vars/main.yml
+
+  roles:
+    - role: dir_struct
+      vars:
+      - directories:
+          - "{{ ros2_ws }}/build"
+          - "{{ ros2_ws }}/install"
+          - "{{ ros2_ws }}/log"
+          - "{{ ros2_ws }}/src/{{ project_ros_dir }}"
+    - role: synchronise
+    - role: linux-package
+      vars:
+      - package_file: "packages.txt"
+    - role: download-install-deb-from-url
+      vars:
+        - debian_packages_urls:
+            - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/containerd.io_1.7.18-1_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/docker-ce-cli_27.0.1-1~debian.12~bookworm_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/docker-ce_27.0.1-1~debian.12~bookworm_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/docker-buildx-plugin_0.15.1-1~debian.12~bookworm_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/docker-compose-plugin_2.28.1-1~debian.12~bookworm_arm64.deb"
+    #- role: docker-arm64
+    - role: set-bashrc
+      vars:
+        set_bashrc_project_file: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/rpi/project_bash"
+    - role: usb-audio
+    - role: start-scripts
+    - role: activate-i2c
+    - role: services
+

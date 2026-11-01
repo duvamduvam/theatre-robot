@@ -1,0 +1,8 @@
+d:
+	ansible-playbook $(UTILS_DIR)/ansible/deploy-${ANSIBLE}-pios.yml -i $(UTILS_DIR)/ansible/hosts
+
+dt:
+	ansible-playbook $(UTILS_DIR)/ansible/deploy-${ANSIBLE-test-pios.yml -vv -i $(UTILS_DIR)/ansible/hosts
+
+i:
+	ansible-playbook $(UTILS_DIR)/ansible/install-${ANSIBLE}-pios.yml -i $(UTILS_DIR)/ansible/hosts

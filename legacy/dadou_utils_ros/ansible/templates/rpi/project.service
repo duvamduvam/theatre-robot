@@ -1,0 +1,26 @@
+[Unit]
+Description=REPLACE
+# Requires/After docker.service : le conteneur est supervisé par le démon
+# Docker lui-même (restart: unless-stopped dans le compose) ; ce service n'est
+# qu'un INTERRUPTEUR (up -d / stop), plus un superviseur. Assainissement du
+# 2026-07-11 : l'ancien montage (compose up ATTACHÉ + Restart=always) laissait
+# un client compose orphelin dès qu'on recréait le conteneur à la main.
+Requires=docker.service
+After=network.target docker.service
+
+[Service]
+# oneshot + RemainAfterExit : ExecStart (up -d) rend la main aussitôt, le
+# service reste "actif" pour que systemctl stop déclenche bien ExecStop.
+Type=oneshot
+RemainAfterExit=yes
+User=root
+Group=root
+UMask=007
+ExecStart=REPLACE
+ExecStop=REPLACE
+Environment="DISPLAY=:0"
+TimeoutStopSec=300
+StandardError=REPLACE
+
+[Install]
+WantedBy=multi-user.target

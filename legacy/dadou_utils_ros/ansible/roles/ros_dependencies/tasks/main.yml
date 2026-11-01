@@ -1,0 +1,6 @@
+- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
+  synchronize:
+    src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/"
+    dest: "{{ ros2_ws }}/src/"
+    recursive: yes
+    copy_links: yes

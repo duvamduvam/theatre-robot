@@ -1,0 +1,35 @@
+local_projects_dir: "/home/dadou/Nextcloud/dev/didier/python"
+#controller_project_dir: "dadou_controller_ros"
+#utils_project_dir: "dadou_utils_ros_ros"
+#deploy_dir: "robot_base"
+conf_dir: "conf"
+python_version: "python3.8"
+ros2_ws: "ros2_ws"
+
+test_mail_notify_to: "jenkins@eternel-life.com"
+test_mail_notify_from: "jenkins@eternel-life.com"
+test_mail_notify_subject: "[TEST] Installation terminée"
+test_mail_notify_body: "Le playbook de test vient de s'exécuter sur {{ inventory_hostname }}."
+test_mail_notify_smtp_host: "ssl0.ovh.net"
+test_mail_notify_smtp_port: 587
+test_mail_notify_username: "jenkins@eternel-life.com"
+test_mail_notify_password_file: "{{ playbook_dir }}/../jenkins/test_mail_notify_password"
+
+#debian_packages_urls:
+#              - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/containerd.io_1.7.27-1_arm64.deb"
+#              - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/docker-compose-plugin_2.39.1-1~debian.12~bookworm_arm64.deb"
+#              - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/docker-ce-cli_28.3.3-1~debian.12~bookworm_arm64.deb"
+#              - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/docker-ce_28.3.3-1~debian.12~bookworm_arm64.deb"
+#              - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/docker-buildx-plugin_0.26.1-1~debian.12~bookworm_arm64.deb"
+#              - "https://download.docker.com/linux/debian/dists/bookworm/pool/stable/arm64/docker-model-plugin_0.1.36-1~debian.12~bookworm_arm64.deb"
+
+#libatlas-base-dev libopenjp2-7 libasound2-dev
+#vim
+
+# Jenkins admin auto-setup
+jenkins_admin_manage: true
+jenkins_admin_user: "admin"
+# Change this password to a secret of your choice; it will be pushed into Jenkins on install.
+jenkins_admin_password: "changeme-admin"
+jenkins_admin_password_source_file: ""
+jenkins_disable_setup_wizard: true

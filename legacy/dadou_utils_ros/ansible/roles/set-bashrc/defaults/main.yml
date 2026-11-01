@@ -1,0 +1,7 @@
+---
+set_bashrc_global_template: "templates/rpi/project_bash"
+set_bashrc_global_marker: "# {mark} GLOBAL PARAMETERS"
+set_bashrc_project_file: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/rpi/project_bash"
+set_bashrc_project_marker: "# {mark} PROJECT PARAMETER"
+set_bashrc_update_project_name: true
+set_bashrc_source_bashrc: true

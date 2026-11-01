@@ -1,0 +1,14 @@
+# .gitignore
+chatgpt-key.txt
+response.mp3
+
+venv/
+logs/
+.idea/
+__pycache__/
+*/__pycache__/
+
+ngrok*
+__pycache__/
+*.pyc
+jenkins/test_mail_notify_password

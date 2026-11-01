@@ -1,0 +1,15 @@
+- name: Assurer que les répertoires existent
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'  # Définir les permissions des répertoires
+  loop: "{{ directories }}"
+
+# Le log applicatif vit dans ros2_ws/log/ (monté dans le conteneur par le
+# compose). L'ancien chemin "{{ project_ros_dir }}/log/" ne correspondait à
+# aucun répertoire créé et faisait échouer le provisioning d'un hôte neuf.
+- name: Create log file
+  become: yes
+  file:
+    path: "{{ ros2_ws }}/log/{{ project_name }}.log"
+    state: touch

@@ -1,0 +1,28 @@
+[Unit]
+Description=PROJECT_NAME
+#After=network.target
+
+[Service]
+Type=simple
+
+User=root
+Group=root
+UMask=007
+
+#Path given with install-service.sh
+ExecStart=PATH_RUN
+Environment="DISPLAY=:0"
+#Environment=RPI_SCRIPTS
+RemainAfterExit=yes
+
+Restart=always
+RestartSec=3
+# Configures the time to wait before service is stopped forcefully.
+TimeoutStopSec=300
+
+#StandardOutput=append:/home/didier/deploy/logs/service-standard.log
+#Path given with install-service.sh
+StandardError=PATH_ERROR
+
+[Install]
+WantedBy=multi-user.target

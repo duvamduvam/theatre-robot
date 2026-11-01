@@ -1,0 +1,41 @@
+import hudson.tools.InstallSourceProperty
+import hudson.tools.ZipExtractionInstaller
+import hudson.plugins.sonar.SonarRunnerInstallation
+import jenkins.model.Jenkins
+
+def descriptor = Jenkins.get().getDescriptorByType(SonarRunnerInstallation.DescriptorImpl)
+if (descriptor == null) {
+    println("Sonar plugin not available; skipping SonarScanner tool provisioning.")
+    return
+}
+
+def installations = descriptor.getInstallations() as List
+def name = "{{ jenkins_sonar_scanner_name }}"
+def home = "{{ jenkins_sonar_scanner_home }}"
+def downloadUrl = "{{ jenkins_sonar_scanner_install_url }}"
+def subdir = "{{ jenkins_sonar_scanner_install_subdir }}"
+
+def installers = []
+if (downloadUrl) {
+    installers << new ZipExtractionInstaller(null, downloadUrl, subdir)
+}
+
+def props = installers ? [new InstallSourceProperty(installers)] : []
+def newInstallation = new SonarRunnerInstallation(name, home, props)
+def updated = false
+
+installations = installations.collect { existing ->
+    if (existing.getName() == name) {
+        updated = true
+        return newInstallation
+    }
+    return existing
+}
+
+if (!updated) {
+    installations << newInstallation
+}
+
+descriptor.setInstallations(installations.toArray(new SonarRunnerInstallation[installations.size()]))
+descriptor.save()
+println("SonarScanner tool '${name}' registered (updated=${updated}).")

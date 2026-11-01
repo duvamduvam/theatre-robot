@@ -1,0 +1,81 @@
+---
+- name: Deploy GitHub Actions runner (Docker) on CI host
+  hosts: integration
+  become: yes
+
+  vars_files:
+    - vars/main.yml
+
+  vars:
+    github_runner_repo: "https://github.com/duvamduvam/dadou_robot_ros"  # dépôt GitHub à surveiller
+    github_runner_name: "{{ inventory_hostname }}"
+    github_runner_labels: "self-hosted,ros2,ci"
+    github_runner_workdir: "/home/runner/_work"
+    github_runner_image: "ghcr.io/actions/actions-runner:latest"
+    github_runner_container_name: "github-actions-runner"
+    github_runner_data_dir: "/opt/github-actions/runner-data"
+
+  pre_tasks:
+    - name: Vérifier si le runner est déjà configuré
+      stat:
+        path: "{{ github_runner_data_dir }}/.runner"
+      register: github_runner_state
+
+    - name: Exiger un token d'enregistrement si nécessaire
+      assert:
+        that:
+          - github_runner_token is defined
+        fail_msg: "Fournis github_runner_token=<token d'enregistrement> (valide ~1h) pour la première configuration du runner."
+      when: not github_runner_state.stat.exists
+
+  roles:
+    - role: docker-install
+
+  tasks:
+    - name: Créer le répertoire de données du runner
+      file:
+        path: "{{ github_runner_data_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Récupérer l'image du runner
+      command: "docker pull {{ github_runner_image }}"
+      register: github_runner_pull
+      changed_when: "'Downloaded' in github_runner_pull.stdout or 'Status: Downloaded' in github_runner_pull.stderr"
+
+    - name: Arrêter et supprimer l'ancien conteneur s'il existe
+      command: "docker rm -f {{ github_runner_container_name }}"
+      register: github_runner_rm
+      ignore_errors: true
+      changed_when: github_runner_rm.rc == 0
+
+    - name: Démarrer le conteneur GitHub Actions runner
+      command: >
+        docker run -d
+        --name {{ github_runner_container_name }}
+        --restart unless-stopped
+        -e REPO_URL={{ github_runner_repo }}
+        -e RUNNER_NAME={{ github_runner_name }}
+        -e RUNNER_TOKEN={{ github_runner_token | default('') }}
+        -e RUNNER_WORKDIR={{ github_runner_workdir }}
+        -e LABELS={{ github_runner_labels }}
+        -e RUNNER_ALLOW_RUNASROOT=true
+        -v {{ github_runner_data_dir }}:/home/runner
+        -v /var/run/docker.sock:/var/run/docker.sock
+        {{ github_runner_image }}
+      register: github_runner_run
+      changed_when: "'Error' not in github_runner_run.stderr"
+
+    - name: Afficher l'état du runner
+      command: >
+        docker ps --filter name={{ github_runner_container_name }}
+        --format 'table {{ "{{" }}.Names{{ "}}" }}\t{{ "{{" }}.Status{{ "}}" }}\t{{ "{{" }}.RunningFor{{ "}}" }}'
+      register: github_runner_status
+      changed_when: false
+      failed_when: false
+
+    - name: Statut du conteneur
+      debug:
+        msg: "{{ github_runner_status.stdout_lines }}"

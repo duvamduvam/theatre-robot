@@ -1,0 +1,15 @@
+---
+python_version: "{{ ansible_facts.python.executable | default('python3') }}"
+python_runtime_candidates:
+  - "{{ python_version | default('', true) }}"
+  - "{{ ansible_facts.python.executable | default('', true) }}"
+  - python3
+  - python
+python_venv_path: "{{ ansible_env.HOME }}/test/venv"
+python_requirements_path: "{{ ansible_env.HOME }}/test/requirements.txt"
+python_requirements_candidates:
+  - "{{ python_requirements_path }}"
+python_requirements_required: true
+python_get_pip_url: https://bootstrap.pypa.io/get-pip.py
+python_get_pip_local_path: /tmp/get-pip.py
+python_get_pip_remote_path: /tmp/get-pip.py

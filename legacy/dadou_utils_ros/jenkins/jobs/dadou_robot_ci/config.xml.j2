@@ -1,0 +1,121 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job">
+  <actions/>
+  <description>{{ jenkins_pipeline_job_description }}</description>
+  <keepDependencies>false</keepDependencies>
+  <logRotator class="hudson.tasks.LogRotator">
+    <daysToKeep>-1</daysToKeep>
+    <numToKeep>60</numToKeep>
+    <artifactDaysToKeep>-1</artifactDaysToKeep>
+    <artifactNumToKeep>-1</artifactNumToKeep>
+  </logRotator>
+  <properties>
+    {% if jenkins_pipeline_disable_concurrent_builds %}
+    <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty/>
+    {% endif %}
+    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+      <triggers>
+        {% if jenkins_pipeline_poll_schedule != "" %}
+        <hudson.triggers.SCMTrigger>
+          <spec>{{ jenkins_pipeline_poll_schedule }}</spec>
+          <ignorePostCommitHooks>false</ignorePostCommitHooks>
+        </hudson.triggers.SCMTrigger>
+        {% endif %}
+      </triggers>
+    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+    <org.jenkinsci.plugins.workflow.job.properties.EnvironmentVariablesJobProperty>
+      <envVars>
+        <entry>
+          <string>REPO_URL</string>
+          <string>{{ jenkins_pipeline_repo_url }}</string>
+        </entry>
+        <entry>
+          <string>REPO_BRANCH</string>
+          <string>{{ jenkins_pipeline_repo_branch }}</string>
+        </entry>
+        <entry>
+          <string>PYTHON_REQUIREMENTS</string>
+          <string>{{ jenkins_pipeline_requirements_path }}</string>
+        </entry>
+        <entry>
+          <string>TEST_COMMAND</string>
+          <string>{{ jenkins_pipeline_test_command }}</string>
+        </entry>
+        <entry>
+          <string>DOCKER_IMAGE</string>
+          <string>{{ jenkins_pipeline_docker_image }}</string>
+        </entry>
+        <entry>
+          <string>DOCKER_TAG</string>
+          <string>{{ jenkins_pipeline_docker_tag_expression }}</string>
+        </entry>
+        <entry>
+          <string>DOCKER_CONTEXT</string>
+          <string>{{ jenkins_pipeline_docker_context }}</string>
+        </entry>
+        <entry>
+          <string>DOCKERFILE</string>
+          <string>{{ jenkins_pipeline_dockerfile }}</string>
+        </entry>
+        <entry>
+          <string>DOCKER_COMPOSE_FILE</string>
+          <string>{{ jenkins_pipeline_docker_compose_file | default('conf/docker/jenkins/docker-compose-jenkins.yml') }}</string>
+        </entry>
+        <entry>
+          <string>DOCKER_COMPOSE_SERVICE</string>
+          <string>{{ jenkins_pipeline_docker_compose_service | default('dadou-robot-jenkins') }}</string>
+        </entry>
+        <entry>
+          <string>WORKSPACE_ROOT</string>
+          <string>{{ jenkins_pipeline_remote_workspace }}</string>
+        </entry>
+        <entry>
+          <string>KEEP_WORKDIR</string>
+          <string>1</string>
+        </entry>
+        <entry>
+          <string>CI_SCRIPT_PATH</string>
+          <string>{{ jenkins_pipeline_ci_script_host_path }}</string>
+        </entry>
+        <entry>
+          <string>JENKINS_REMOTE_USER</string>
+          <string>{{ jenkins_pipeline_remote_user }}</string>
+        </entry>
+        <entry>
+          <string>JENKINS_REMOTE_HOST</string>
+          <string>{{ jenkins_pipeline_remote_host }}</string>
+        </entry>
+        <entry>
+          <string>DOCKER_PUSH_ENABLED</string>
+          <string>{{ 'true' if jenkins_pipeline_push_enabled else 'false' }}</string>
+        </entry>
+      </envVars>
+    </org.jenkinsci.plugins.workflow.job.properties.EnvironmentVariablesJobProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps">
+    <scm class="hudson.plugins.git.GitSCM" plugin="git">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <url>{{ jenkins_pipeline_definition_repo_url }}</url>
+          {% if jenkins_pipeline_definition_repo_credentials_id | length > 0 %}
+          <credentialsId>{{ jenkins_pipeline_definition_repo_credentials_id }}</credentialsId>
+          {% endif %}
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <name>{{ jenkins_pipeline_definition_repo_branch }}</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions>
+        <hudson.plugins.git.extensions.impl.CleanBeforeCheckout/>
+      </extensions>
+    </scm>
+    <scriptPath>{{ jenkins_pipeline_definition_script_path }}</scriptPath>
+    <lightweight>{{ 'true' if jenkins_pipeline_lightweight_checkout else 'false' }}</lightweight>
+  </definition>
+  <disabled>false</disabled>
+</flow-definition>

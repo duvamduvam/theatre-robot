@@ -1,0 +1,47 @@
+---
+- name: "\e[1;31m install {{ target_group }} on pios lite \e[0m"
+  hosts: "{{ target_group | default('robot') }}"
+
+#  become: yes
+
+  vars_files:
+  - vars/main.yml
+
+  roles:
+      #- role: info
+      - role: dir_struct
+        vars:
+          directories:
+            - "{{ ros2_ws }}/build"
+            - "{{ ros2_ws }}/install"
+            - "{{ ros2_ws }}/log"
+            - "{{ ros2_ws }}/src/{{ project_ros_dir }}"
+            - "{{ project_ros_dir }}/log"
+            - "scripts"
+      - role: synchronise
+        become: yes
+      - role: linux-package
+        vars:
+          package_file: "packages.txt"
+      #- role: blinka
+      - role: download-install-deb-from-url
+        vars:
+          # Docker CE épinglé pour Debian 13 TRIXIE (aligné sur install-pios-full,
+          # utilisé pour le Pi 5 "vision" 2026-07). Pour re-provisionner un Pi
+          # resté bookworm : reprendre les .deb dans dists/bookworm/pool/stable/arm64/
+          # (mais un re-provisioning passe normalement par un re-flash → trixie).
+          debian_packages_urls:
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.2.5-1~debian.13~trixie_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/docker-ce-cli_29.6.1-1~debian.13~trixie_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/docker-ce_29.6.1-1~debian.13~trixie_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/docker-buildx-plugin_0.35.0-1~debian.13~trixie_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/docker-compose-plugin_5.3.0-1~debian.13~trixie_arm64.deb"
+      #- role: docker-arm64
+      - role: logging
+      - role: usb-audio
+      - role: set-bashrc
+        vars:
+          set_bashrc_project_file: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/rpi/project_bash"
+      - role: start-scripts
+      - role: activate-i2c
+      - role: services

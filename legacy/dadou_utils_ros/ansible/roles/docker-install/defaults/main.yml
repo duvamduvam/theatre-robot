@@ -1,0 +1,33 @@
+---
+docker_prereq_packages:
+  - ca-certificates
+  - curl
+  - gnupg
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+docker_repo_distribution: "debian"
+docker_repo_component: "stable"
+docker_repo_codename: "{{ ansible_lsb.codename | default(ansible_distribution_release) }}"
+docker_repo_arch_map:
+  aarch64: "arm64"
+  armv7l: "armhf"
+  armv6l: "armhf"
+  x86_64: "amd64"
+docker_repo_arch: "{{ docker_repo_arch_map.get(ansible_architecture, ansible_architecture) }}"
+
+docker_keyring_dir: "/etc/apt/keyrings"
+docker_gpg_key_url: "https://download.docker.com/linux/{{ docker_repo_distribution }}/gpg"
+docker_gpg_keyring: "{{ docker_keyring_dir }}/docker.gpg"
+docker_gpg_tmp: "/tmp/docker.gpg"
+
+docker_service_name: "docker"
+docker_test_command: "docker info"
+
+docker_manage_group: true
+docker_users: []

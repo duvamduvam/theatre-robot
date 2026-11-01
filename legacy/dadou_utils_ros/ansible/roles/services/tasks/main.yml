@@ -1,0 +1,33 @@
+- name: Copy service file
+  become: yes
+  copy:
+    src: "templates/rpi/project.service"
+    dest: "/etc/systemd/system/{{ project_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create error log file
+  file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/log/service-error.log"
+    state: touch
+
+- name: Mise à jour des paramètres du service systemd
+  become: yes
+  lineinfile:
+    path: "/etc/systemd/system/{{ project_name }}.service"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^Description=.*', line: 'Description={{ project_name }} Daemon' }
+    - { regexp: '^ExecStart=.*', line: 'ExecStart={{ ansible_env.HOME }}/scripts/compose-up-pi.sh' }
+    - { regexp: '^ExecStop=.*', line: 'ExecStop={{ ansible_env.HOME }}/scripts/docker-stop.sh' }
+    - { regexp: '^StandardError=.*', line: 'StandardError={{ ansible_env.HOME }}/{{ ros2_ws }}/log/service-error.log' }
+
+- name: Activate and start service
+  become: yes
+  systemd:
+    name: "{{ project_name }}"
+    enabled: yes
+    state: started
+    daemon_reload: yes

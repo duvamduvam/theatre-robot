@@ -1,0 +1,32 @@
+################# GLOBAL PARAMS ####################
+
+alias ll='ls -alh'
+alias la='ls -A'
+alias l='ls -CF'
+
+source $RPI_SCRIPTS/project-deploy.sh "read_param"
+source $RPI_SCRIPTS/params.sh
+
+alias p='python3'
+alias s='sudo shutdown -h now'
+alias temp='vcgencmd measure_temp'
+
+alias d='cd $RPI_DEPLOY'
+alias run='$RPI_SCRIPTS/run.sh'
+alias start='sudo service $SERVICE_NAME start && log'
+alias restart='sudo service $SERVICE_NAME stop && sudo service $SERVICE_NAME start && log'
+alias stop='sudo service $SERVICE_NAME stop'
+
+alias halt='sudo systemctl halt -i'
+
+alias lib='cd /usr/lib/python3/dist-packages/'
+alias utils='cd /usr/lib/python3/dist-packages/dadou_utils_ros/'
+
+alias log='sudo tail -f $RPI_DEPLOY/logs/$LOG_FILE'
+alias err='sudo tail -f $RPI_DEPLOY/logs/service-error.log'
+
+alias i2c='i2cdetect -y 1'
+alias p='ps -aux | grep python'
+alias k='sudo pkill python'
+
+alias signal='sudo iwlist wlan0 scan | egrep \"Cell|ESSID|Signal|Rates\"'

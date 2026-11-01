@@ -1,0 +1,14 @@
+- name: update /boot/firmware/cmdline.txt
+  become: yes
+  #blockinfile:
+  #  path: "/boot/firmware/config.txt"
+  #  block: |
+  #    {{ lookup('file', local_projects_dir ~ '/' ~ local_project_dir ~ '/conf/rpi/config.txt') }}
+  #  marker: "# {mark} ANSIBLE MANAGED BLOCK"
+  #  create: yes
+  copy:
+    src: "templates/rpi/cmdline.txt"
+    dest: /boot/firmware/cmdline.txt
+    owner: root
+    group: root
+    mode: '0644'

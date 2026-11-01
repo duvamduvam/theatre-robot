@@ -1,0 +1,19 @@
+- name: Create log file
+  become: yes
+  file:
+    path: "{{ ros2_ws }}/log/{{ project_name }}.log"
+    state: touch
+
+- name: copy logging files
+  copy:
+    src: "templates/logging/"
+    dest: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_name }}//conf/logging"
+    #owner: utilisateur # Remplace par le propriétaire du fichier
+    #group: groupe # Remplace par le groupe du fichier
+    mode: '0755' # Définit les permissions du fichier
+
+- name: Update logging log path
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_name }}//conf/logging/logging.conf"
+    regexp: '^args=REPLACE'
+    line: "args=('/home/pi/ros2_ws/log/{{ project_name }}.log',)"

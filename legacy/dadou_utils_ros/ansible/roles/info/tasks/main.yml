@@ -1,0 +1,4 @@
+- name: "Project info variables"
+  debug:
+    msg: "{{ item }}: {{ hostvars[inventory_hostname][item] }}"
+  loop: "{{ hostvars[inventory_hostname] | dict2items | selectattr('key', 'match', '^(?!ansible_).*') | list | map(attribute='key') }}"

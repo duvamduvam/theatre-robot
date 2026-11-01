@@ -1,0 +1,50 @@
+---
+- name: "\e[1;31m install {{ target_group }} on pios full \e[0m"
+  hosts: "{{ target_group }}"
+#  become: yes
+
+  vars_files:
+  - vars/main.yml
+
+  roles:
+    #- role: info
+    - role: dir_struct
+      directories:
+          - "{{ ros2_ws }}/build"
+          - "{{ ros2_ws }}/install"
+          - "{{ ros2_ws }}/log"
+          - "{{ ros2_ws }}/src/{{ project_ros_dir }}"
+          - "scripts"
+    - role: synchronise
+      become: yes
+    # Syntaxe "vars: dictionnaire" exigée par ansible-core récent (l'ancienne
+    # forme liste "- var:" est refusée depuis 2.14+).
+    - role: linux-package
+      vars:
+        package_file: "packages-rpi.txt"
+    - role: download-install-deb-from-url
+      vars:
+        # Docker CE épinglé pour Debian 13 TRIXIE (Pi OS 2026+, ex: Pi "control").
+        # Le Pi du robot, provisionné à l'époque bookworm, n'utilise plus ce
+        # playbook ; si re-provisioning d'un Pi bookworm : reprendre les .deb
+        # bookworm dans dists/bookworm/pool/stable/arm64/.
+        debian_packages_urls:
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.2.5-1~debian.13~trixie_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/docker-ce-cli_29.6.1-1~debian.13~trixie_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/docker-ce_29.6.1-1~debian.13~trixie_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/docker-buildx-plugin_0.35.0-1~debian.13~trixie_arm64.deb"
+            - "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/docker-compose-plugin_5.3.0-1~debian.13~trixie_arm64.deb"
+    #- role: docker-arm64
+    - role: set-bashrc
+      vars:
+        set_bashrc_project_file: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/rpi/project_bash"
+    - role: start-scripts
+    - role: desktop_lunch
+    #- role: screen-config
+    - role: command_root
+      vars:
+        command: "reboot"
+
+
+
+#    - role: screen-config

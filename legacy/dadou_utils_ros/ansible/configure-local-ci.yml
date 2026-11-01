@@ -1,0 +1,67 @@
+---
+- name: Configure Jenkins and SonarQube for local network
+  hosts: jenkins_server
+  become: yes
+  
+  vars:
+    jenkins_hostname: jenkins.local
+    sonar_hostname: sonar.local
+    network_ip: "192.168.1.0/24"  # Ajustez selon votre réseau local
+
+  tasks:
+    - name: Install NGINX
+      apt:
+        name: nginx
+        state: present
+
+    - name: Configure NGINX for Jenkins and SonarQube
+      template:
+        src: templates/jenkins-sonar.conf.j2
+        dest: /etc/nginx/sites-available/jenkins-sonar.conf
+
+    - name: Enable NGINX configuration
+      file:
+        src: /etc/nginx/sites-available/jenkins-sonar.conf
+        dest: /etc/nginx/sites-enabled/jenkins-sonar.conf
+        state: link
+
+    - name: Configure Jenkins security
+      jenkins_script:
+        script: |
+          import jenkins.model.*
+          import hudson.security.*
+          
+          def instance = Jenkins.getInstance()
+          
+          def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+          strategy.setAllowAnonymousRead(false)
+          instance.setAuthorizationStrategy(strategy)
+          
+          def realm = new HudsonPrivateSecurityRealm(false)
+          instance.setSecurityRealm(realm)
+          
+          instance.save()
+        user: admin
+        password: "{{ jenkins_admin_password }}"
+
+    - name: Configure Jenkins location
+      jenkins_script:
+        script: |
+          import jenkins.model.JenkinsLocationConfiguration
+          
+          def location = JenkinsLocationConfiguration.get()
+          location.setUrl("http://{{ jenkins_hostname }}/")
+          location.save()
+        user: admin
+        password: "{{ jenkins_admin_password }}"
+
+    - name: Configure firewall
+      ufw:
+        rule: allow
+        from: "{{ network_ip }}"
+        to_port: "{{ item }}"
+        protocol: tcp
+      with_items:
+        - 80    # NGINX
+        - 8080  # Jenkins
+        - 9000  # SonarQube

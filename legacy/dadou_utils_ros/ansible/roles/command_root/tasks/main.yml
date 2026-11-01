@@ -1,0 +1,3 @@
+- name: "exec : {{ command }}"
+  become: yes
+  command: "{{ command }}"

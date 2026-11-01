@@ -1,0 +1,28 @@
+- name: apt-get update/upgrade
+  become: yes
+  ansible.builtin.apt:
+    update_cache: yes
+    upgrade: "{{ linux_package_upgrade }}"
+    cache_valid_time: 84600
+
+- name: Charger la liste des paquets depuis {{ linux_package_file }}
+  ansible.builtin.set_fact:
+    linux_packages_raw: "{{ lookup('file', linux_package_file).splitlines() }}"
+
+- name: Nettoyer la liste des paquets
+  ansible.builtin.set_fact:
+    linux_packages: >-
+      {{
+        linux_packages_raw
+        | map('regex_replace', '^\\s+|\\s+$', '')
+        | reject('match', '^#')
+        | reject('equalto', '')
+        | list
+      }}
+
+- name: Installer les paquets requis
+  become: yes
+  ansible.builtin.apt:
+    name: "{{ linux_packages }}"
+    state: "{{ linux_package_state }}"
+  when: linux_packages | length > 0
