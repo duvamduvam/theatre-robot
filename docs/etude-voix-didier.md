@@ -639,3 +639,20 @@ illusion : **le timbre de David, pas son jeu** (§4.3).
   **0,27 en int8**, TTFA 0,10-0,27 s, et **aucune coupure prématurée sur un
   énoncé de 30 s**. Extrapolation Pi : RTF ≈ 0,8-1,1, à cheval — donc à
   mesurer. **La qualité n'a été jugée par personne : ça s'écoute.**
+- **2026-11-01 — Banc « nouvelles voix » Kyutai, SANS David.** Au banc des
+  costumes (étude répétition §10), David retient les deux rendus « texte qui
+  bafouille » et constate que des effets ne font pas une voix. Il demande des
+  voix Kyutai **plus lourdes**, **sans banque de données et sans sa voix**
+  (« je ne veux pas ma voix »), et rappelle que **Didier a aujourd'hui une voix
+  de FEMME** (piper `siwis`). `essais/voix/voix_kyutai.py` : 27 voix du
+  catalogue Pocket TTS parlant français (WAV hors git, `sorties/kyutai/`) +
+  « lourdes » = référence d'origine descendue de 4 ou 7 demi-tons PUIS clonée
+  (le modèle génère nativement grave, pas d'effet en sortie). Mesures F0
+  (autocorrélation, pour classer) : femmes les plus graves alba ≈ 128 Hz,
+  eponine/caro_davy ≈ 146, vera ≈ 168 ; lourdes −4 → 108-141 Hz, −7 → 81-112.
+  Contrôle whisper `small` : ⚠️ **le nom « Didier » est souvent mangé**
+  (« Edidier », « Titié », « dédié ») et **les références −7 font sauter des
+  morceaux de phrase** (alba, charles, peter_yearsley) — le −4 est la limite
+  utilisable ; Kyutai ajoute de lui-même des « euh » (déglingo gratuit, mais
+  non contrôlé). ⚠️ Le conteneur vision PC est mort (137) pendant le banc,
+  probablement OOM (RAM PC partagée) — rien relancé d'office.

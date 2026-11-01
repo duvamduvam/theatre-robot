@@ -113,3 +113,5 @@ l'octaver et écouter » — trente minutes au lieu d'une journée.
 répétition simulée §10), avec la voix de prod `didier.onnx`. Il tourne dans le
 conteneur vision PC (piper + modèle + `vision/audio/effects.py` y sont) — mode
 d'emploi en tête du script. Sortie : `sorties/costumes/*.wav` (hors git).
+
+`voix_kyutai.py` (01/11) : voix du catalogue Kyutai en français + variantes « lourdes » (référence descendue puis clonée). Venv `.venv` ci-dessus + `faster-whisper` pour le contrôle. Sortie `sorties/kyutai/`.
