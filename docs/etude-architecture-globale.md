@@ -1,9 +1,10 @@
 # Architecture globale du système Didier — étude multi-dépôts
 
-*Ouverte le 2026-11-01. Statut : **étape 1 (état des lieux) en cours**. Méthode décidée par
-David : par étapes validées — état des lieux → propositions → lots — il lit et tranche entre
-chaque. Contrainte dure : la simulation (`conf/docker/sim`) doit continuer à marcher pendant
-tout le chantier.*
+*Ouverte le 2026-11-01. Statut : **étape 2 (propositions) DÉCIDÉE le 01/11 au soir** par
+interrogatoire structuré (`/grill-me`, 9 axes, chaque arbitrage pris par David sur faits
+vérifiés) ; **étape 3 (lots) posée, prochaine action = lot L0**. Méthode : par étapes
+validées — David lit et tranche entre chaque. Contrainte dure : la simulation
+(`conf/docker/sim`) doit continuer à marcher pendant tout le chantier.*
 
 ## 0. Pourquoi cette étude, et ce qu'elle doit produire
 
@@ -473,8 +474,243 @@ petit que prévu — et le vrai actif commun du système n'est pas la lib, c'est
    plusieurs appareils tournent dans une même séance (un conteneur ? un domaine ? un
    compose multi-services ?) — et ce que devient la page scène pour montrer l'ensemble.
 
-## 5. Propositions
-*(étape 2 — n'est ouverte qu'après validation du §4)*
+## 5. Propositions — DÉCIDÉES le 01/11 (interrogatoire en 9 axes)
 
-## 6. Lots
-*(étape 3)*
+*Chaque ligne ci-dessous est un arbitrage de David, pris sur des faits vérifiés dans les
+dépôts le jour même (pas sur des impressions). Les options écartées sont rappelées pour
+que personne ne les rouvre sans raison nouvelle. Règle du §0 appliquée : chaque
+décision dit ce qu'elle SUPPRIME.*
+
+### 5.0 Ce que « réussi » veut dire (critères de fin du chantier)
+
+1. **Ajouter un appareil ≈ 1 jour**, en suivant un gabarit documenté, sans copier ni code
+   ni JSON (la sono le prouvera, §6 L3).
+2. **Une vérité par donnée** : chaque JSON, le catalogue de commandes, chaque nom de topic
+   n'existe qu'à UN endroit ; les autres le lisent.
+3. **Tout dans la sim** : robot + appareils jouent ensemble dans une même séance
+   simulée, un conteneur par machine.
+4. **Casse détectée tout de suite** : un changement du cœur qui casse un appareil fait
+   rougir la CI au commit, plus jamais en silence.
+5. **Une télécommande fluide et bien intégrée** (c'est le sujet qui intéresse le plus
+   David : le contrôle à distance).
+6. **Des répertoires cohérents qui facilitent la lecture** — David dit avoir eu du mal à
+   structurer, c'est POUR ÇA qu'il avait fait plusieurs dépôts.
+7. **La doc mise à jour en profondeur**, pas rafistolée.
+
+### 5.1 Tri du périmètre
+
+| Objet | Décision | Supprime |
+|---|---|---|
+| `dadou_web` | **SUPPRIMÉ le 01/11** (gabarit public `nickjj/docker-flask-example` intact, 0 commit, 270 lignes JS caméra de 2024 jamais branchées, « ça n'a jamais vraiment marché ») | le dossier (67 Mo) |
+| Sono (`dadou_sceno_ros`) | **Réécrite depuis le gabarit** (§6 L3) ; le code actuel est archivé dans un nouveau dépôt public `duvamduvam/dadou_sceno_ros` (il n'était dans AUCUN git) puis supprimé du disque. On ne garde que : `json/` (audios, relais) et le rôle Ansible `sceno`. Les 244 Mo d'audios du spectacle restent sur le disque, hors dépôt public | 19 .py de génération 1, liens cassés |
+| DoubleLights (`dadou_hardrive_ros`) + casque | **Même traitement** : réécrits depuis le gabarit quand le spectacle en aura besoin ; déjà sur GitHub (`dadou_disk_ros`, 3 fichiers non commités à pousser). On garde `lights_helmet.json` (mapping LED disk/casque) et le rôle `disk` | le code 2024, le `venv/` commité |
+| `DEVICE_WORKSPACE` | hors périmètre (décidé) ; **13 modifications non commitées à pousser** (lot L0), rien d'autre | — |
+
+Option écartée : *porter le code existant* (réparer les liens, adapter les signatures) —
+ça aurait gardé la génération 1 vivante dans deux appareils de plus.
+
+### 5.2 Cible lointaine : des Didier autonomes qui se parlent — pas avant 2028
+
+Ce que « d'autres robots synchronisés » veut dire pour David : **des robots autonomes qui
+partagent un état** (où est l'acteur, qui parle), **pas de chef**, pas de chœur en
+timeline. Horizon : **pas avant 2028**. Consigne explicite : *« fais ce qu'il faut pour
+qu'un ajout soit fluide, mais ne perds pas de temps pour un robot spécifique qui arrive
+dans longtemps »*.
+
+**La seule garantie prise maintenant : un nom par robot.** Tous les topics d'un robot
+vivent sous son namespace (`didier/…`), posé dans les launch ; les noms de topics
+**absolus sont interdits** et un test le vérifie. Fait relevé le 01/11 : vision publie
+3 topics absolus (`/vision/person`, `/vision/person_box`, `/vision/status`) — à corriger
+en L1. Écarté pour l'instant : contrat d'état partagé, deux Didier dans Gazebo.
+
+### 5.3 Sources de vérité : le robot publie, on édite À TRAVERS le robot
+
+- **Les JSON vivent dans le cœur seulement** (`data/`). Au démarrage, télécommande, page
+  web et appareils **reçoivent le catalogue du robot** (topic latché — c'est déjà ce que
+  fait `robot_web`). Zéro copie sur disque ailleurs. Prix accepté : sans robot allumé, la
+  télécommande n'a pas de liste → elle garde un **cache du dernier catalogue reçu**.
+- **Contradiction levée en séance** : la télécommande n'est pas qu'un lecteur, c'est
+  **l'éditeur** (8 modules écrivent du JSON : séquences, expressions, lumières) — ses
+  copies ont divergé par édition locale, jamais rapatriée. Décision : **tout éditeur
+  ENVOIE la modification au robot**, qui écrit le fichier, garde une sauvegarde et
+  republie le catalogue. Une seule écriture au monde. À définir en L1 : le protocole
+  d'édition (topic/service, validation du payload, refus loggué comme pour StringTime).
+- **Le catalogue des commandes est publié par le robot** (généralisation de
+  `web_catalog.py`) ; `BUTTONS_LAYOUT` disparaît.
+- ⚠️ **26 à 29 séquences n'existent QUE sur la télécommande** (robot : 6, télécommande :
+  32 — `access-internet`, `moon-walk`, `pas-un-jouet`, `t-es-sur`, `upload-cerveau`,
+  `suicide`, `trip`… ) : **à rapatrier dans `data/` en L0, avant toute suppression**.
+
+Supprime : 71 JSON de la télécommande, `BUTTONS_LAYOUT`, les 3 copies de `relays.json`,
+les 4 de `robot_lights.json`. Options écartées : paquet de données versionné (un
+déploiement par retouche), hash vérifié seulement (la divergence resterait possible).
+
+### 5.4 Partage du code : UN mono-dépôt, génération 2 partout, un package `contrats`
+
+- **Mono-dépôt `dadou`** (GitHub `duvamduvam/dadou`) : cœur, roues, web, vision,
+  télécommande, sono, contrats, sim, Ansible. Une version = tout cohérent ; **une CI**
+  construit et teste tout → casser la sono fait rougir le commit qui la casse. Les
+  historiques des 4 dépôts sont **conservés** (`git subtree add`, pas de copie à plat).
+  Supprime : `dadou_utils_ros`, tous les liens symboliques, les 4 dépôts séparés (archivés
+  sur GitHub tels quels, en lecture).
+- **Motif unique = génération 2** : nœud rclpy mince (I/O seulement) + modules purs testés
+  sans ROS — c'est ce qui a été validé en sim et caméra depuis juillet (20 nœuds de
+  génération 2 contre 6 fichiers de génération 1). Les noms de topics, schémas de payload,
+  codec StringTime et messages `.msg` viennent d'**un package `dadou_contrats`** du
+  mono-dépôt : fin de la duplication « figée par tests » de la génération 2 ET de la lib
+  fourre-tout de la génération 1. Le cœur `robot/` migre **module par module, au fil des
+  lots, sim toujours verte** ; `SubscriberNode`/`Action` disparaissent avec le dernier
+  module migré (L5). Supprime : 59 % de la lib (mort), `utils_static` (93 constantes →
+  `dadou_contrats`), `abstract_subscriber`, les 3 décodeurs StringTime, les 3 copies de
+  `robot_interfaces`.
+- Options écartées : multi-dépôts + paquet versionné (versions à gérer dans 5 dépôts, la
+  casse se voit à la montée de version et pas au commit) ; zéro partage (c'est le modèle
+  qui a produit les 71 JSON divergents).
+
+### 5.5 Structure du mono-dépôt — « packages à plat + machines » (à valider en L0 sur pièce)
+
+Principe choisi : on lit la carte du système en ouvrant **deux dossiers** — `packages/`
+(QUOI, un package par fonction) et `machines/` (OÙ ça tourne). Écarté : par machine
+(le code commun aurait regrossi un `commun/` = l'histoire de la lib qui recommence) ;
+workspace ROS nu (`src/` à plat, illisible pour qui ne connaît pas ROS).
+
+Nommage décidé : **`didier_*`** pour ce qui appartient au robot, **`<appareil>_*`**
+(`telecommande_*`, `sono_*`, `lights_*`) pour les appareils, **`dadou_*`** pour le commun.
+Le préfixe dit à qui appartient le package ; fin de la collision `robot` ×3. Écarté :
+garder `robot_*` (ambigu le jour du 2e robot), `dadou_*` partout (on ne lit plus la
+machine).
+
+```
+dadou/
+├── CLAUDE.md                  un seul (règles, commandes, priorités)
+├── README.md                  la carte du système en une page : quoi tourne où
+├── packages/                  un package ROS 2 par fonction, à plat
+│   ├── dadou_contrats/        topics, schémas de payload, codec StringTime, .msg (ex robot_interfaces)
+│   ├── dadou_sim/             la séance : compose multi-conteneurs, monde Gazebo, page scène
+│   ├── dadou_gabarit/         le squelette d'appareil à copier (README-contrat, pilote sim, tests)
+│   ├── didier_core/           ex robot/ : visage, servos, animations, relais, lumières
+│   ├── didier_drive/          ex robot_drive — INCHANGÉ (validé caméra 04/07)
+│   ├── didier_description/    URDF
+│   ├── didier_web/            ex robot_web : catalogue publié, page scène, édition via robot
+│   ├── didier_vision/         ex vision/
+│   ├── didier_rehearsal/      SIM-ONLY (garde-fou domaine 43)
+│   ├── didier_bringup/
+│   ├── telecommande_entrees/  gants, gamepad, faders, boutons → événements   (L4)
+│   ├── telecommande_core/     état, modes, deadman, catalogue reçu → commandes (L4)
+│   ├── telecommande_affichage/ écran Pi 4 / LCD, pygame                    (L4)
+│   └── sono_core/             réécrit depuis le gabarit                      (L3)
+├── machines/                  CE qui tourne OÙ : une entrée par hôte Ansible
+│   ├── robot/ vision/ telecommande/ sono/ lights/ gant-gauche/ gant-droit/
+│   │     chacun : packages.txt (ce qu'on y rsync), compose ARM, launch, host_vars
+│   └── sim/                   compose x86 : un service par machine ci-dessus, domaine 43
+├── data/                      les JSON — vérité unique, déployés sur le robot seul
+├── deploy/                    Ansible (ex dadou_utils_ros/ansible), épuré (§5.7)
+├── docker/                    Dockerfiles communs (base ARM / x86)
+├── docs/                      doc VIVANTE : architecture, operations, contrats, chantiers, hardware/, incidents/
+│   └── etudes/                les études, statut en tête (ouverte / close = gelée)
+└── atelier/                   essais (voix…), pcb, scripts d'atelier — pas déployé
+```
+
+### 5.6 La télécommande : réécrite de zéro, Twist dès sa naissance
+
+- **Réécriture de zéro** depuis le gabarit d'appareil ; on ne reprend que les **pilotes
+  matériels** (gants LoRa, faders, gamepad) comme modules purs. La télécommande actuelle
+  **reste en service** jusqu'à la bascule. Découpe = celle de l'étude UI
+  (`architecture-ui-telecommande.html`, décisions conservées) : entrées / cœur /
+  affichage, trois nœuds testables séparément, le cœur sans matériel ni écran.
+  Écarté : 1 nœud + modules purs ; 3 nœuds extraits du code actuel.
+- **Chemin roues** : la nouvelle télécommande **publie `cmd_vel_remote` (Twist)
+  directement**, dès sa naissance. Elle passe **sim + protocole caméra**
+  (`validate-cmdvel-protocol.sh`) avant toute mise en service, comme tout nouveau chemin
+  roues. **L'ancienne (StringTime → `wheels_bridge`) reste le chemin de repli documenté**
+  jusqu'à ce que la nouvelle ait roulé au sol ; `wheels_bridge` ne disparaît qu'après.
+  Demande explicite de David : *documenter pour la suite en cas de problème* → la
+  procédure de retour à l'ancienne télécommande fait partie du lot L4.
+- Supprime (à terme) : `wheels_bridge`, `PUBLISHER_LIST`, les `after()` tkinter, les 3
+  modules morts, 71 JSON.
+
+### 5.7 Tout dans la sim : pilote interchangeable + un conteneur par machine
+
+- **Contrat de simulabilité** (règle pour tout package) : chaque nœud qui touche du
+  matériel passe par un **pilote** (`Leds`, `Relais`, `Audio`, `Servos`…) qui a une
+  variante `sim` **publiant son état** sur un topic ; la **page scène rend tous ces
+  états** (LED, relais, son joué, servos). Le reste du code est identique réel/sim.
+  Gazebo seulement pour ce qui bouge dans l'espace. Écarté : jumeau Gazebo par appareil
+  (lourd, inutile pour un relais), nœud qui tourne sans rendu (on ne voit pas que la sono
+  a joué le bon son).
+- **Séance** : `machines/sim/` = un compose qui lance robot, vision, télécommande, sono…
+  **chacun dans SON conteneur**, image x86 du **même Dockerfile** que l'ARM, domaine 43,
+  `SIM=true`. La sim teste aussi le déploiement et les frontières entre machines. Prix
+  accepté : RAM PC, démarrage plus long. Écarté : tout-en-un (rien ne garantit que ce qui
+  marche dans un conteneur marche sur 4 machines).
+
+### 5.8 Déploiement : rsync du sous-ensemble + empreinte de version ; Ansible épuré
+
+- Ansible copie pour chaque machine **ses** packages (déclarés dans
+  `machines/<hôte>/packages.txt`) + `dadou_contrats` + `data` (robot seul), et **écrit le
+  sha git déployé** ; chaque nœud publie ce sha, la page scène montre si deux machines
+  divergent. Même mécanique qu'aujourd'hui (pas de git sur le Pi, sentinelle de build),
+  mais versionnée et visible. Écarté : images Docker par commit (build ARM en CI lent,
+  plus de retouche rapide), git sur chaque Pi.
+- `hosts` déclare déjà par machine `local_project_dir`, `project_ros_dir`, `launch_cmd` :
+  c'est l'embryon de `machines/`.
+- **Ménage décidé** : suppression des **6 rôles orphelins** (`activate-spi`,
+  `download-install-docker-from-url`, `root_ssh`, `ros_dependencies`, `set-vim`,
+  `waveshare-screen`) et de **toute la mécanique Jenkins/Sonar/hôte `ci`** (rôles
+  `jenkins`, `sonar`, playbooks `install-ci*.yml`, `configure-local-ci.yml`,
+  `install-test-pios.yml`) — la CI est GitHub Actions depuis juillet.
+
+### 5.9 Documentation : vivante / études / README-contrat
+
+- `docs/` ne garde que la doc **vivante** (architecture, opérations, contrats, chantiers,
+  incidents, matériel). Les **études** (11 fichiers, 10 056 lignes) partent dans
+  `docs/etudes/` avec un **statut en tête** : *ouverte* ou *close* (gelée, on n'y écrit
+  plus). **Un seul `CLAUDE.md`.**
+- **Chaque package a un README-contrat obligatoire** : rôle, topics entrée/sortie (avec
+  renvoi à `dadou_contrats`), comment le simuler, comment le tester, sur quelle machine
+  il tourne. C'est ce README qui rend « ajouter un appareil ≈ 1 j » possible.
+- Règle inchangée (mémoire `feedback-doc-a-jour`) : la doc se met à jour **dans le même
+  lot** que le code.
+
+### 5.10 CI : tests + build colcon + séance sim de fumée
+
+À chaque commit du mono-dépôt : pytest de chaque package (hôte) + `colcon build` du
+workspace complet dans l'image x86 + **démarrage de la sim headless multi-conteneurs et
+vérification que tous les nœuds annoncent leur état**. David a choisi la variante la
+plus sûre en connaissant son prix (~25 min, fragile en CI gratuite) : si la fumée s'avère
+trop instable, on la rend **optionnelle sur `main`** plutôt que de la supprimer. Toujours
+public, jamais de secrets.
+
+### 5.11 Rôle de David pendant le chantier
+
+Il **valide chaque étape** (rien ne passe au lot suivant sans son OK), fait **les tests
+physiques** (protocole caméra, écoute, séances en sim devant l'écran) et **continue à
+composer** (séquences, voix, persona) en parallèle : **le chantier ne doit jamais le
+bloquer plus de quelques heures** — d'où la contrainte « la sim marche toujours » et le
+découpage en lots indépendamment livrables. Il ne code pas.
+
+## 6. Lots — ordre DÉCIDÉ le 01/11 (fondations d'abord, télécommande en dernier)
+
+*Pourquoi cet ordre : la télécommande dépend du catalogue (L1), de la sim (L2) et du
+gabarit (L3) — la mettre avant, c'était figer le gabarit sur le cas le plus complexe. La
+sono avant les contrats aurait été à reprendre. Chaque lot a sa porte de sortie
+vérifiable ; David valide entre chaque.*
+
+| Lot | Contenu | Supprime | Porte de sortie (vérifiée) |
+|---|---|---|---|
+| **L0 Sauvegardes + squelette** | 1) pousser les **90 commits** du cœur, **31** de vision, **3** de la télécommande ; commiter les 12 fichiers de la télécommande, 3 de DoubleLights, 13 de DEVICE_WORKSPACE ; 2) **rapatrier les ~29 séquences** de la télécommande dans `data/` ; 3) archiver la sono sur GitHub ✅ (fait le 01/11) ; 4) créer `dadou` par `git subtree add` des 4 dépôts (historiques conservés), arborescence §5.5 **posée mais vide là où rien n'existe** ; déplacer les packages existants SANS les renommer encore ; 5) un `CLAUDE.md`, les 4 anciens dépôts marqués « archivé, voir dadou » | `dadou_web` ✅, liens symboliques | la sim démarre depuis le mono-dépôt exactement comme avant (`validate-*.sh` existants verts) ; CI tests verte ; David valide l'arborescence SUR PIÈCE |
+| **L1 Contrats + données** | `dadou_contrats` (93 constantes utiles, codec StringTime unique, `.msg`) ; namespace `didier/` + test « aucun topic absolu » (3 à corriger dans vision) ; le robot publie **catalogue + sha déployé** ; **protocole d'édition via le robot** ; cache côté lecteur ; renommages `didier_*` | `utils_static`, 3 décodeurs StringTime, 3 `robot_interfaces`, `BUTTONS_LAYOUT`, 71 JSON | une retouche faite depuis la page scène arrive dans `data/` du robot et est rejouée ; la télécommande actuelle lit le catalogue publié ; chemin roues NON touché |
+| **L2 Sim multi-conteneurs** | `machines/sim/` : un conteneur par machine, mêmes Dockerfiles que l'ARM ; pilotes `sim` qui publient leur état ; page scène qui rend tous les états ; **séance de fumée** en CI | l'image sim fourre-tout | robot + vision + télécommande actuelle tournent dans 3 conteneurs, domaine 43 ; CI build + fumée verte |
+| **L3 Gabarit + sono** | `dadou_gabarit` (README-contrat, pilote sim, tests, entrée `machines/`) ; **`sono_core` réécrit en suivant le gabarit, chrono en main** ; rôle Ansible `sono` épuré | `dadou_sceno_ros` du disque | la sono joue en sim un audio et un relais visibles sur la page scène ; déployée sur `s` par Ansible ; **temps mesuré ≤ 1 j** ou le gabarit est corrigé |
+| **L4 Télécommande neuve** | 3 packages `telecommande_*` depuis le gabarit, pilotes matériels repris en modules purs, **Twist direct** ; pygame (essai décidé dans l'étude UI) ; **procédure de repli vers l'ancienne, écrite** | (après roulage au sol) `wheels_bridge`, `controller` | **sim + protocole caméra 4/4** avant mise en service ; l'ancienne reste installée jusqu'au premier roulage au sol réussi de la neuve |
+| **L5 Ménage + fin de migration** | derniers modules du cœur en génération 2 ; `SubscriberNode`/`Action` supprimés ; Ansible épuré (§5.8) ; études gelées dans `docs/etudes/` ; README-contrat partout ; DoubleLights/casque = **lot optionnel** sur le gabarit si le spectacle reprend | `abstract_subscriber`, 59 % de la lib, 6 rôles + Jenkins/Sonar/`ci`, anciens dépôts (archivés) | `grep` des motifs de génération 1 = 0 ; tous les packages ont leur README-contrat ; les 7 critères du §5.0 cochés un à un avec David |
+
+**Transversal, à chaque lot** : la sim marche en fin de lot (contrainte dure) ; commit
+d'instantané avant chaque déplacement ; doc mise à jour dans le lot ; chemin roues
+intouché sauf L4, qui repasse par le protocole caméra.
+
+**Ce qui reste ouvert (assumé)** : la forme exacte du protocole d'édition (topic ou
+service — L1 le tranche sur pièce) ; le gabarit en détail (L3 le fait émerger de la sono,
+pas l'inverse) ; la stabilité de la séance de fumée en CI gratuite (§5.10, repli
+décidé : optionnelle plutôt que supprimée) ; la place du concept triangle 3 roues le jour
+où il devient un robot (2028+ : il s'appellera `<nom>_*` et vivra dans `packages/`).
