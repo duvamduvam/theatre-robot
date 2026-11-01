@@ -942,6 +942,76 @@ détail vit dans `chantiers.md` § « Chemin de commande des roues V2 » ; en tr
 mais c'est une décision de sécurité à prendre explicitement — jamais un effet de bord d'un
 chantier capteur.
 
+## 6 ter. Indicateur de batterie — PROPOSÉ le 2026-11-01, rien d'acté
+
+**Demande de David** : le robot n'a aucune mesure du niveau de batterie ; le RP2040 de cette
+carte pourrait la remonter au Pi « si besoin ». Il est déjà sur un lien série vers le Pi, à
+côté du coffre des alims : c'est le bon endroit.
+
+**Données d'entrée** : pack de **cellules 18650** (confirmé par David le 01/11), donc
+Li-ion — dont la tension **suit** l'état de charge (contrairement au LiFePO4, plat), une
+mesure de tension est donc un vrai indicateur. Configuration **7S probable** (le chargeur
+Victron 24 V exclut le 8S NMC, `hardware/robot-embarque.md` §1.6) : 21 V vide → 29,4 V
+plein. **7S ou 8S ne change pas le design** : seulement l'échelle (valeurs de résistances
+ou table SOC en firmware) ; dimensionner pour ≤ 34 V couvre les deux.
+
+### ⛔ Ce qu'on ne fait PAS : un pont diviseur sur l'ADC du RP2040
+
+Le RP2040 est du côté **propre** de la barrière (§5). Un pont diviseur relierait le moins
+batterie à sa masse, donc au Pi par l'USB : les balais des moteurs entreraient par là où la
+carte est faite pour les arrêter, et le test d'acceptation (circuit ouvert entre les deux
+masses) échouerait. **Toute mesure batterie traverse la barrière par un optocoupleur**,
+comme les capteurs.
+
+### Branche A (préférée SI le matériel le permet) : lire le BMS Daly
+
+`hardware/overview.md` décrit un **Daly *Smart* BMS** — donc avec un port **UART** (photo
+catalogue : port `UART` + dongle Bluetooth offert). Un BMS « smart » donne bien plus qu'une
+tension : **SOC compté en ampères-heures**, courant, tension de chaque cellule,
+températures, alarmes. Aucune électronique de mesure à concevoir.
+
+- Câblage : **2 PC817 de plus** (TX et RX), même montage que §5 côté LED ; UART matériel
+  du RP2040 sur **GP8 (TX) / GP9 (RX)** — libres, pas besoin du PIO.
+- ⚠️ **9600 bauds (bit de 104 µs) est la limite d'un PC817** : rappel de sortie à baisser
+  (~1-2 kΩ au lieu de 10 kΩ) et **mesure de la forme d'onde sur banc** avant d'y croire.
+- 🔴 **Règle de sécurité, non négociable** : le protocole Daly accepte des commandes
+  d'**écriture** — dont l'ouverture du MOSFET de **décharge**, qui couperait tout le robot
+  (Pi compris) en plein jeu. Le firmware n'émet que des requêtes de **lecture**, d'une
+  **liste blanche figée**, avec un test qui rougit si une autre commande sort. C'est le
+  même principe que « le Pico ne commande RIEN » : il interroge, il ne règle pas.
+- **Prérequis à vérifier sur le robot** : (1) référence réelle du BMS (jamais lue, cf.
+  `robot-embarque.md` — la photo de la doc est un visuel catalogue « 16S LiFePO4 ») ;
+  (2) le port UART est-il **libre**, ou occupé par le dongle Bluetooth (souvent le même
+  connecteur — l'appli Daly donne alors déjà le niveau, mais pas au robot) ; (3) niveau
+  logique et brochage du port, lus sur la fiche Daly, pas devinés.
+
+### Branche B (repli) : mesurer la tension côté puissance
+
+Si le BMS n'est pas « smart » ou que son port est pris : un fil **batterie fusiblé**
+(l'entrée actuelle de la carte est le 12 V Mean Well, pas la batterie) et une mesure côté
+12 V transmise par **1 PC817**. Deux niveaux d'ambition :
+- **Seuils** (TL431 + 2 R + 1 PC817 par seuil : « basse », « critique ») — robuste, minuscule,
+  mais TL431 **à acheter** (absent du stock) ;
+- **Valeur continue** : petit MCU côté puissance (un clone Nano du stock, référence interne
+  1,1 V, diviseur ~1/30) qui envoie la tension en série à 1200 bauds par le PC817 — tout
+  en stock, mais un second firmware à maintenir.
+
+Dans les deux cas : **masse de mesure = moins batterie**, à vérifier identique à la masse
+12 V de la carte (le Mean Well 12 V est-il isolé ?), et mesure **filtrée/au repos** (la
+tension chute sous la charge des moteurs).
+
+### Côté Pi (commun aux deux branches)
+
+Un champ de plus dans la trame (forme exacte à figer avec la branche), publié en
+`sensor_msgs/BatteryState` à ~1 Hz. **Péremption** obligatoire (pas de dernière valeur
+figée affichée comme vraie si le lien meurt). Aucune action automatique : c'est un
+**indicateur** — un éventuel « retour au stand » sur batterie basse serait une décision de
+sécurité à prendre à part.
+
+**Vérifications de ce soir (David)** : compter les cellules en série ; lire la référence du
+BMS et regarder si un connecteur UART est libre ; noter si le 12 V Mean Well partage le
+moins batterie. Elles tranchent A ou B — **le plan de plaque ne bouge pas avant**.
+
 ## 6 bis. « Une carte du commerce ne le fait-elle pas déjà ? » — RECHERCHE du 2026-09-26
 
 **Question de David** : « la carte d'odométrie est beaucoup plus compliquée que j'aurais pensé,
