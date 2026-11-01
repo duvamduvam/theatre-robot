@@ -106,3 +106,10 @@ sort un signal fantômatique — le verdict « TROP FAIBLE » le détecte).
 
 Arriver avec l'audio déjà fabriqué transforme la séance V0 en « brancher dans
 l'octaver et écouter » — trente minutes au lieu d'une journée.
+
+## Banc des costumes vocaux (01/11)
+
+`costumes.py` décline une réplique de Didier en 14 traitements (étude
+répétition simulée §10), avec la voix de prod `didier.onnx`. Il tourne dans le
+conteneur vision PC (piper + modèle + `vision/audio/effects.py` y sont) — mode
+d'emploi en tête du script. Sortie : `sorties/costumes/*.wav` (hors git).

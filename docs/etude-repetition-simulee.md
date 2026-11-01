@@ -439,6 +439,19 @@ phrases courtes, des ruptures, des hésitations écrites** (« euh… non. Si. E
 fait c'est une fonctionnalité. »). Piper lit ce qu'on lui donne ; un texte
 qui bafouille **sonne** décalé sans un seul effet.
 
+**Banc d'écoute FAIT le 01/11** (`essais/voix/costumes.py`, WAV dans
+`essais/voix/sorties/costumes/`, hors git) : une réplique, 14 rendus — sec
+(= prod V2 piper), robot historique (le VRAI `effects.py`), les 5 costumes
+ci-dessus, et 6 « déglingos » ajoutés à la demande de David (bégaiement
+numérique + mot à l'envers, cassette qui cale, chorale de 3 Didier
+désaccordés, robot chanteur au vocodeur, débit qui s'emballe, texte qui
+bafouille). Tous normalisés à −20 dBFS RMS (en crête, l'écrêteur historique
+sortait 11 dB au-dessus : l'oreille aurait triché). Whisper `small` transcrit
+les 14 correctement — ⚠️ ça ne prouve PAS l'intelligibilité en rue (whisper
+est bien plus robuste qu'un passant, et lisse même les bégaiements). Hauteur
+par rééchantillonnage = hauteur et débit liés (voulu pour le gag). **Rien
+d'intégré à la prod : suite = écoute de David sur enceintes (§10.3).**
+
 ### 10.2 Les voix des passants simulés (lot R5)
 
 Si le passant simulé existe, il lui faut **plusieurs** voix, sinon David
