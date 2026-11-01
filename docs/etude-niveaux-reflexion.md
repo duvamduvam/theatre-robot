@@ -297,3 +297,42 @@ Chaque lot a de la valeur seul ; l'ordre va du moins risqué au plus neuf.
 fusionnent avec I0** : tableau de situation + boucle 2 + état de mission =
 un seul chantier, « le metteur en scène intérieur », à spécifier ensemble.
 N4 (tour spontané + instructions complexes) suit, autorisé.
+
+## 11. Banc des modèles de la bouche — 2026-11-01
+
+Outil : `dadou_vision_ros/tools/banc_bouche.py` (même code que la prod :
+prompt bougon + marche + 30 objets + situation, StreamingBrain, parseur JSON).
+14 phrases de séance × 2 passages, puis 4 questions sur une image Gazebo
+connue (panneau violet, grue jaune, eau ; personne, pas d'anneaux).
+Pourquoi : les classements publics mesurent des tâches à réflexion poussée
+(latences 30-700 s), pas une réplique de 25 mots qui pilote un corps.
+
+**Sans image** (1er mot médiane/max ; bon geste, ≤ 25 mots, sur 28) :
+Haiku 5.5 0,67/0,97 s, 26, 16 · Sonnet 5.5 (effort minimal) 0,84/3,94 s, 27, 26 ·
+Mistral Medium 3.5 0,56/1,66 s, 28, 28 · GPT-6.1 Sol 1,54/2,85 s, 28, 28 ·
+GPT-6 Astra 1,34/1,87 s, 28, 28 · GPT-6.1 Terra 1,19/3,10 s, 27, 28 ·
+Gemini 3.5 Flash-Lite 0,68/1,00 s, 25, 26 · GPT-6 Luna 2,25 s · Gemini 3.8
+Flash 1,83/6,30 s · éliminés : Grok 4.7 (9 s), DeepSeek V4.1 Flash (19
+gestes), Mistral Small (11 gestes).
+
+**Avec l'image jointe** — piège trouvé : avec la consigne actuelle
+(REFLECT_TEMPLATE « ce que tu vois -> délègue »), Sol/Terra/Astra répondent
+« je regarde » sans décrire ; seul Sonnet décrit. Avec une consigne « tes
+yeux = l'image jointe, ne cite rien qui n'y est pas » (IMAGE_RULE du banc) :
+Sonnet 1,00/1,04 s, 8/8 juste, aucune invention · Terra 1,48/2,00 s, 8/8 ·
+Sol 1,87/3,23 s, 8/8 · Astra 2,10/5,61 s, 8/8 · Haiku 0,88 s mais INVENTE
+(« deux bagues dessinées sur le panneau ») et trop long · Mistral Medium
+0,67 s, juste mais plat · Gemini 3.5 Flash-Lite 0,80 s, 6/8 · Gemini 3.8
+Flash 3,27/6,33 s.
+
+**Coût bouche** (requête réelle ~4 400 jetons, 150 répliques/h) : Haiku
+~0,07 $/h, Mistral Medium ~0,70, Sol ~0,5-1,1 (cache auto), Sonnet ~1,50
+(sans cache de prompt — ~0,35 avec), Astra ~5. L'image ajoute ~400 jetons
+(+10 %).
+
+**Lecture** : Sonnet + image + consigne IMAGE_RULE est le meilleur
+compromis mesuré (le plus rapide parmi les justes, aucune invention) ;
+Terra est l'alternative à moitié prix. Défaut Sonnet vu à la relecture :
+il ressert ses tics (« bon sang de boulon », « c'est pas contre toi, c'est
+contre tout ») presque à chaque réplique — sujet persona, pas modèle.
+Rien n'est branché en prod : décision de David attendue.
