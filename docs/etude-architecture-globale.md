@@ -705,6 +705,36 @@ vérifiable ; David valide entre chaque.*
 | **L4 Télécommande neuve** | 3 packages `telecommande_*` depuis le gabarit, pilotes matériels repris en modules purs, **Twist direct** ; pygame (essai décidé dans l'étude UI) ; **procédure de repli vers l'ancienne, écrite** | (après roulage au sol) `wheels_bridge`, `controller` | **sim + protocole caméra 4/4** avant mise en service ; l'ancienne reste installée jusqu'au premier roulage au sol réussi de la neuve |
 | **L5 Ménage + fin de migration** | derniers modules du cœur en génération 2 ; `SubscriberNode`/`Action` supprimés ; Ansible épuré (§5.8) ; études gelées dans `docs/etudes/` ; README-contrat partout ; DoubleLights/casque = **lot optionnel** sur le gabarit si le spectacle reprend | `abstract_subscriber`, 59 % de la lib, 6 rôles + Jenkins/Sonar/`ci`, anciens dépôts (archivés) | `grep` des motifs de génération 1 = 0 ; tous les packages ont leur README-contrat ; les 7 critères du §5.0 cochés un à un avec David |
 
+⚠️ **Secrets — découvert le 01/11 en archivant la sono.** GitHub a bloqué le push : la sono
+embarquait un fichier `conf/secret` (format INI) avec **4 identifiants** — `chatgpt_key`
+(clé API OpenAI, détectée par GitHub), `google_cloud`, `sms_user`, `sms_pwd`. Le fichier a
+été retiré de l'archive avant publication (commit amendé, `.gitignore`). Mon contrôle
+préalable (motifs `api_key|secret|token`…) **l'avait manqué** parce qu'il excluait les
+liens `robot/` et `dadou_utils_ros/` et ne cherchait pas un fichier NOMMÉ `secret` :
+leçon = chercher aussi les noms de fichiers, et faire confiance à la protection GitHub
+comme filet, pas comme premier contrôle. **À faire en L0, avant tout push des commits en
+retard : (1) révoquer/renouveler les 4 identifiants côté fournisseur (OpenAI, Google
+Cloud, opérateur SMS) — la clé OpenAI est réputée morte (mémoire du proto conversation)
+mais on ne parie pas dessus ; (2) vérifier que ni le fichier ni les valeurs n'existent
+dans l'arbre ou l'historique des 6 autres dépôts (recherche lancée le 01/11, résultat
+ci-dessous) ; (3) dans le mono-dépôt, les secrets vivent HORS git (fichier `.env` local
+ignoré + variables d'environnement dans le compose), jamais dans `conf/`.**
+
+**Résultat de la recherche (01/11, 6 dépôts, arbre + historique complet)** :
+
+| Dépôt | Fichier `secret` dans l'arbre | Dans l'historique | La clé OpenAI de la sono |
+|---|---|---|---|
+| `dadou_hardrive_ros` (= GitHub **public** `dadou_disk_ros`) | non | **oui** : `conf/secret` dans les 2 commits « initial » du 2024-10-12, tous poussés | **OUI, publique depuis octobre 2024**, ainsi que la valeur `google_cloud` |
+| `dadou_control_ros` (public) | non (retiré le 2026-07-04, commit « Phase 0 ») | **oui** : `conf/secret` de 2024-03-30 à 2026-07-04 (3 commits) | non (autres valeurs — à lire) |
+| robot, vision, utils, DEVICE_WORKSPACE | non | non | non |
+
+Conséquence : **révoquer les 4 identifiants n'est pas une précaution, c'est obligatoire**
+— la clé OpenAI et l'identifiant Google Cloud sont lisibles par n'importe qui dans
+l'historique de `dadou_disk_ros`. Ensuite, **purger l'historique** des deux dépôts publics
+concernés (`git filter-repo`, force-push) — ça réécrit des dépôts publics, donc acte de
+David ; les dépôts sont de toute façon destinés à l'archive. La règle « historique déjà
+purgé » du `CLAUDE.md` ne valait que pour le dépôt du robot.
+
 **Transversal, à chaque lot** : la sim marche en fin de lot (contrainte dure) ; commit
 d'instantané avant chaque déplacement ; doc mise à jour dans le lot ; chemin roues
 intouché sauf L4, qui repasse par le protocole caméra.
