@@ -1,0 +1,77 @@
+# Requirements MINIMAL — chaque ligne justifiée (V0 socle sain, cf. ARCHITECTURE.md).
+# Rien d'autre ne doit être ajouté sans raison documentée ici.
+
+# Client officiel OpenAI : GPT-4o (vision/ai/interactions.py) et TTS
+# streaming (vision/ai/tts.py). Version récente pour l'API Chat Completions
+# et le client audio streaming actuels.
+openai>=1.50.0
+
+# Historique de conversation persistant en SQLite (vision/db/chat_db.py)
+sqlobject
+
+# Serveur de diagnostic web du chat_node V2 (vumètre + latences par tour,
+# lot du 2026-09-13, param ROS `diag_port`, OFF par défaut) : même lib que
+# robot_web/face_sim_node côté dadou_robot_ros (motif "troisième boucle
+# d'événements", cf. vision/nodes/chat_node.py) — importée sans condition
+# (chat_node en a besoin même diag désactivé, coût nul au runtime tant que
+# diag_port=0 : aucun thread/socket créé, cf. docstring du node).
+aiohttp
+
+# Lecture de la réponse TTS sur la sortie audio ALSA (vision/ai/tts.py,
+# PyAudio.open + player_stream.write)
+pyaudio~=0.2.14
+
+# Suivi de personne V1 (vision/tracking/detector.py) : ObjectDetector
+# EfficientDet-Lite0 int8, backend retenu par le bench sur le Pi 5 réel
+# (16,7 Hz à ~24% CPU, cf. ARCHITECTURE.md). 0.10.18 = dernière version
+# disponible en wheel aarch64/py3.12 au moment du bench (2026-07-04).
+#
+# PIÈGE (mesuré au bench, cf. detector.py docstring MediaPipeDetector) :
+# mediapipe installe TRANSITIVEMENT opencv-contrib-python (non-headless,
+# nécessite libgl1 — ajouté à conf/packages-docker.txt) et EXIGE numpy<2.
+# On ne liste donc PAS opencv-python-headless ici : avoir les deux variantes
+# d'opencv dans le même conteneur provoque un conflit de FICHIERS à
+# l'installation (les deux paquets installent le même module cv2). Un seul
+# opencv dans le conteneur = celui apporté par mediapipe. vision/ai/camera.py
+# continue de fonctionner à l'identique (même API cv2.VideoCapture/imwrite).
+mediapipe==0.10.18
+
+# Capture caméra USB (vision/ai/camera.py) : PLUS de ligne opencv-python-headless
+# explicite (cf. commentaire mediapipe ci-dessus) — cv2 est fourni
+# transitivement par opencv-contrib-python (dépendance de mediapipe).
+
+# Traitement du signal pour l'effet de voix robotique (resample + tremolo),
+# vision/ai/tts.py — gardé tel quel de la version historique.
+# numpy<2 : ÉPINGLÉ explicitement (pas juste laissé au résolveur pip) car
+# mediapipe 0.10.18 downgrade de toute façon numpy vers 1.26.4 — épingler ici
+# rend cette contrainte visible et documentée plutôt que subie silencieusement
+# au moment de l'install de mediapipe. Rien d'autre dans requirements.txt
+# n'exige numpy>=2 (vérifié : openai/sqlobject/pyaudio/scipy s'en accommodent).
+numpy<2
+scipy
+
+# V2 streaming (conversation temps réel, cf. ARCHITECTURE.md) : STT local
+# (vision/ai/stt.py, FasterWhisperStt) — pas d'appel réseau/latence API pour
+# la reconnaissance vocale, tourne en CPU int8 sur le Pi 5. PIÈGE À SURVEILLER
+# au build conteneur : faster-whisper embarque ctranslate2, qui doit fournir
+# un wheel cp312/aarch64 (même contrainte de plateforme que mediapipe
+# ci-dessus) — à vérifier au premier build du conteneur V2, pas testé en CI
+# (requirements-test.txt ne l'installe pas, import différé dans stt.py).
+faster-whisper
+# PyAV ÉPINGLÉ (22/10) : faster-whisper 1.2.1 appelle av.open(...,
+# metadata_errors=) — mot-clé SUPPRIMÉ par PyAV 15 ; l'image rebâtie le 14/10
+# avait tiré av 19 → TypeError à chaque transcription, thread de conversation
+# mort (Didier sourd). Lever l'épingle seulement quand faster-whisper l'exige.
+# Version EXACTE 14.2.0 : « >=14,<15 » tirait 14.4.0, publiée SANS roue
+# (sources seules) -> compilation contre libav*, absentes de l'image -> build
+# en échec (22/10). 14.2.0 a ses roues cp312 x86_64 ET aarch64 (Pi).
+av==14.2.0
+
+# V2 streaming : TTS local, voix DÉDIÉE à Didier (vision/ai/tts_piper.py,
+# PiperTts) — même logique que faster-whisper ci-dessus : local, pas de
+# latence réseau, personnage propre plutôt que la voix OpenAI générique de
+# vision/ai/tts.py. >=1.3 : version où l'API Python (PiperVoice.load +
+# synthesize_wav) est stable ; PIÈGE À SURVEILLER au build conteneur : wheel
+# cp312/aarch64 requis pour le Pi 5, comme faster-whisper — non testé en CI
+# (import différé dans tts_piper.py, requirements-test.txt ne l'installe pas).
+piper-tts>=1.3

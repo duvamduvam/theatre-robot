@@ -1,0 +1,41 @@
+# Paquets apt du conteneur — minimal, chaque ligne justifiée (filtrés par
+# `sed -E 's/#.*$//' | xargs -r apt-get install -y`, cf. Dockerfile-arm).
+
+# Outils pip dans le conteneur
+python3-pip
+
+# Audio : lecture TTS (vision/ai/tts.py, PyAudio) + diagnostic ALSA
+# (aplay/arecord). V2 (chat_node) : arecord/aplay ne sont PLUS juste du
+# diagnostic — vision/audio/mic.py et vision/audio/playback.py les lancent
+# en subprocess pour de vrai (capture micro + lecture TTS/bips), cf.
+# docker-compose-arm.yml (montage /etc/asound.conf + /dev/snd).
+alsa-utils
+libasound2-dev
+portaudio19-dev
+
+# Plugin ALSA -> PulseAudio/PipeWire (`pcm.type pulse`). Requis par le BANC PC
+# x86 (conf/docker/x86/) pour atteindre un casque BLUETOOTH : le Bluetooth
+# n'existe pas comme carte ALSA, il n'est servi que par PipeWire côté hôte —
+# sans ce plugin, arecord/aplay -D <alias pulse> échouent sur "Unknown PCM".
+# Neutre sur le Pi (il attaque ses cartes USB en hw direct, aucun serveur
+# audio n'y tourne) : le paquet est présent mais jamais sollicité.
+libasound2-plugins
+
+# Build helper requis pour compiler le binding C de PyAudio contre portaudio
+python3-dev
+
+# Diagnostic caméra USB (v4l2-ctl) — la capture elle-même passe par opencv (pip)
+v4l-utils
+
+# Requis par opencv-contrib-python (non-headless), installé TRANSITIVEMENT
+# par mediapipe (cf. conf/requirements.txt) : sans libgl1, `import cv2` échoue
+# au chargement avec "libGL.so.1: cannot open shared object file" — piège
+# classique de la variante non-headless d'opencv sur un système sans X11/GPU.
+libgl1
+
+# curl : téléchargement du modèle MediaPipe EfficientDet-Lite0 int8 DANS
+# L'IMAGE (Dockerfile-arm), pas au démarrage du node person_tracker.
+curl
+
+# Timezone pour des logs cohérents avec le reste du parc
+tzdata
