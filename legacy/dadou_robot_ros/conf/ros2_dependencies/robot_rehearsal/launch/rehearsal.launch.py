@@ -19,7 +19,7 @@ mouvement automatique au démarrage). Le suivi de personne doit rester OFF
 
 jeu:=true (lot A1, spec theatre-robot/docs/spec-A1-selecteur-de-jeu.md §1) :
 UN SEUL DÉCIDEUR DU CORPS. Le régisseur écoute alors `jeu/chat_move` (le
-sélecteur didier_jeu, lancé à part : ros2 run didier_jeu jeu_node) au lieu de
+sélecteur didier_jeu, lancé par CE launch) au lieu de
 `rehearsal/chat_move` (la bouche, dont les demandes deviennent des intentions
 que le sélecteur pondère ; son « stop » est relayé sans arbitrage), et CE
 launch démarre lui-même le sélecteur (respawn) : jamais de remap sans relais.

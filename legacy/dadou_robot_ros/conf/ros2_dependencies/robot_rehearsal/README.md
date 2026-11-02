@@ -79,13 +79,15 @@ ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chant
 
 ```bash
 ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
-ros2 run didier_jeu jeu_node
 ```
 
 `jeu:=true` remappe le régisseur sur **`jeu/chat_move`** (publié par le sélecteur
 `packages/didier_jeu` du mono-dépôt) au lieu de `rehearsal/chat_move` : un seul
 décideur du corps, la bouche ne fait plus que déposer des intentions (son `stop`
-est relayé sans arbitrage). Remap seul, `director` ne change pas ; défaut `false`
+est relayé sans arbitrage). Le launch démarre **lui-même** `jeu_node` (respawn),
+sous la même condition que le remap : jamais de remap sans relais du `stop` (si
+le répertoire est illisible, le sélecteur ne fait que relayer stop/go). `director`
+ne change pas ; défaut `false`
 = séance Chantiers inchangée (V-R3). `scenario:=jeu-a1` : scénario VIDE (0 bug,
 0 lubie — les lubies viennent du sélecteur), qu'il faut quand même **starter**
 (un `go` hors séance est ignoré). `rehearsal/objects` porte depuis A1 `x`, `y`
