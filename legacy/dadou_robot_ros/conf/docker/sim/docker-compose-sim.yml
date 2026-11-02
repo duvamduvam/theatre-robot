@@ -18,6 +18,7 @@ services:
       additional_contexts:
         robot_interfaces: ../../../../../packages/robot_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
+        didier_jeu: ../../../../../packages/didier_jeu
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
@@ -81,6 +82,9 @@ services:
       # par dadou_utils_ros/utils_static.py — sans lui, tout node tombe à l'import).
       - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      # didier_jeu (lot A1, SIM-ONLY : refus hors domaine 43) : sélecteur de
+      # jeu, lancé À LA MAIN (ros2 run didier_jeu jeu_node), cf. son README.
+      - ../../../../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
       - ../../ros2_dependencies/robot_drive:/home/ros2_ws/src/robot_drive
       - ../../ros2_dependencies/robot_web:/home/ros2_ws/src/robot_web
       # robot_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
@@ -93,6 +97,8 @@ services:
       - ../../scripts/validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
       # V-R3 : séance « chantiers » (monde chantiers, 20 bugs + 30 lubies), étude §13.8.
       - ../../scripts/validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
+      # A1 : porte de sortie du sélecteur de jeu (T1-T7, spec A1 §6), 15 min.
+      - ../../scripts/validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
       - ../../../json:/home/ros2_ws/json

@@ -22,6 +22,10 @@ RUN apt-get update && apt-get install -y \
     # vérifié packages.ubuntu.com/noble/python3-imageio) : cohérent avec
     # python3-pil/python3-aiohttp ci-dessus, pas de pip pour cette lib-là.
     python3-imageio \
+    # py_trees : behaviour trees du sélecteur de jeu (packages/didier_jeu, lot
+    # A1). Paquet ROS officiel (2.6.0 au 02/11) ; la même version est épinglée
+    # dans requirements-test.txt pour les tests hôte.
+    ros-jazzy-py-trees \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /home/ros2_ws/src
@@ -35,6 +39,8 @@ COPY conf/ros2_dependencies/robot_sim /home/ros2_ws/src/robot_sim
 # contextes nommés fournis par docker-compose-sim.yml (additional_contexts).
 COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
+# didier_jeu (lot A1, SIM-ONLY) : sélecteur de jeu, packages/ du mono-dépôt.
+COPY --from=didier_jeu . /home/ros2_ws/src/didier_jeu
 COPY conf/ros2_dependencies/robot_drive /home/ros2_ws/src/robot_drive
 COPY conf/ros2_dependencies/robot_web /home/ros2_ws/src/robot_web
 COPY conf/ros2_dependencies/robot_rehearsal /home/ros2_ws/src/robot_rehearsal

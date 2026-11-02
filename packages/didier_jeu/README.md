@@ -19,7 +19,7 @@ par des demandes au régisseur (`jeu/chat_move`), qui les arbitre, puis par
 | Topic | Sens | Format |
 |---|---|---|
 | `jeu/console` | page scène → sélecteur | StringTime JSON `{"cmd": "va_la"\|"joue_avec"\|"ignore"\|"reviens"\|"plus_lent"\|"stop"\|"go", "cible"?, "presence": true}` ; la page envoie `{"presence": true}` à 2 Hz (battement) |
-| `jeu/intention` | sélecteur → page | **latché**, republié chaque seconde : `{"action", "cible", "pourquoi", "t_ms", "fin_prevue_ms", "reste_ms", "verrou", "jauges", "proposition"?}` ; `"action": "rien"` au repos, jamais vide |
+| `jeu/intention` | sélecteur → page | **latché**, republié toutes les 0,5 s : `{"action", "cible", "pourquoi", "t_ms", "fin_prevue_ms", "reste_ms", "verrou", "jauges", "proposition"?}` ; `"action": "rien"` au repos, jamais vide |
 | `jeu/chat_move` | sélecteur → régisseur | même payload que `rehearsal/chat_move` ; le régisseur y est remappé par `rehearsal.launch.py jeu:=true` |
 | `jeu/journal` | sélecteur → page (+ fichier) | une ligne JSONL (format boîte noire `robot.diagnostic.journal`) par message |
 | `animation` | sélecteur → animations_node | nom de séquence (JSON chaîne) |

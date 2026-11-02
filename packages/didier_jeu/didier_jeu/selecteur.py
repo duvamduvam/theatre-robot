@@ -133,7 +133,7 @@ class Selecteur:
         self.sorties.append(("journal", type_, payload))
 
     def intention(self, now: float) -> dict:
-        """État courant pour jeu/intention (republié par le node chaque seconde)."""
+        """État courant pour jeu/intention (republié par le node toutes les 0,5 s)."""
         action, cible = self.courante
         fin = self.en_cours.fin_prevue if self.en_cours else None
         out = {"action": action, "cible": cible, "pourquoi": self.pourquoi_courant,

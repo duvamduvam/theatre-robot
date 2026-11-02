@@ -15,7 +15,7 @@ Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
         l'objet ; A2 le remplacera par la perception).
 Écrit : jeu/chat_move (-> régisseur, remappé par rehearsal.launch.py jeu:=true),
         animation (nom de séquence), look (« regarder », gaze_follower),
-        jeu/intention (latché, republié chaque seconde), jeu/journal (+ JSONL).
+        jeu/intention (latché, republié toutes les 0,5 s), jeu/journal (+ JSONL).
 
 SÉCURITÉ : AUCUN éditeur de Twist ici (gravé par test_contrat_node.py). Les
 roues ne bougent que par le régisseur, qui arbitre, puis route_driver.
@@ -44,7 +44,9 @@ LOOK_TOPIC = "look"
 SITUATION_TOPIC = "chat_situation"
 MISSION_STATE_TOPIC = "mission_state"
 # Republication de l'intention latchée (porte T6 : jamais muette plus de 1 s).
-INTENTION_PERIODE_S = 1.0
+# 0,5 s et pas 1 s : le tick (0,1 s) ferait des écarts de 1,0 à 1,1 s, plus le
+# transport DDS — la porte se mesure côté abonné.
+INTENTION_PERIODE_S = 0.5
 
 
 def _share(*parts):
