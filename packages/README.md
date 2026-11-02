@@ -6,6 +6,7 @@ Un package ROS 2 par fonction, à plat.
 |---|---|---|
 | `theatre_contrats` | L1a (02/11) | le contrat commun : noms de topics (relatifs), clés de payload, organes, codec StringTime, profils QoS — Python pur, voir son README |
 | `robot_interfaces` | L1a (02/11) | les messages (`StringTime`…) — copie UNIQUE (les copies vision/télécommande sont supprimées) ; renommé `theatre_interfaces` en L1e |
+| `didier_jeu` | A1 (02/11) | le sélecteur de jeu (arbre py_trees + score), **SIM-ONLY** : `jeu_node` refuse de démarrer hors domaine 43 ; monté/copié par la sim seulement — voir son README. ⚠️ Le rsync Ansible de `packages/` le pousserait aussi vers les Pi (inerte, mais à exclure : décision de déploiement non prise) |
 
 Les autres packages sont encore dans `legacy/` (robot : `legacy/dadou_robot_ros/conf/ros2_dependencies/*` et `robot/` ; vision : `legacy/dadou_vision_ros/vision` ; télécommande : `legacy/dadou_control_ros/controller`). Ils arrivent ici au lot L1e, renommés.
 
