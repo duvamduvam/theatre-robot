@@ -9,8 +9,8 @@ porte de sortie vérifiée, la sim verte en fin de chaque sous-lot, David valide
 
 | Fait | Mesure |
 |---|---|
-| `dadou_utils_ros/utils_static.py` | **90** constantes, **58** importées (robot 53, télécommande 40, vision 3), **32 mortes** |
-| Décodage StringTime (`json.loads(msg.msg)`) | **8 fichiers** : robot `payload.py` (le décodeur commun de juillet), `gaze_control`, `person_follower_node`, `gaze_follower_node`, `wheels_bridge_node` ⚠️ chemin roues, `route_driver_node`, `director` (rehearsal), vision `reflection_contract` |
+| `dadou_utils_ros/utils_static.py` | **94** constantes ; **74** importées par robot/télécommande/vision (comptage AST, imports multi-lignes compris — mon premier comptage ligne à ligne disait 58/32, il était FAUX) ; 20 non importées par eux, dont **17 servent à la lib elle-même** ; **3 vraiment mortes** (`JSON_NOTES`, `NOTE`, `FILES`) ; `IP` ne sert qu'aux modules `ws_server`/`ws_com`, eux-mêmes morts (L5) |
+| Décodage StringTime (`json.loads((ros_)?msg.msg)`) | **12 fichiers** : robot `payload.py` (strict : None + log), `gaze_control`, `gaze_follower_node` (×2), `person_follower_node`, `route_driver_node`, `director.py`, `director_node.py` (×3), `fault_relay_node.py`, `web_bridge_node.py` (×2), `wheels_bridge_node` ⚠️ chemin roues, vision `reflection_contract` (None sans log), `chat_node.py`. ⚠️ La plupart sont **volontairement tolérants** (JSON invalide → chaîne brute, pour les `on`/`off` tapés à la main) : le codec commun doit offrir les DEUX variantes |
 | `robot_interfaces` | **3 copies** (robot, vision, télécommande) ; 4 `.msg` (`StringTime`, `LedState`, `HardwareStatus`, `TurtleTuple`) ; seul le `CMakeLists.txt` de la télécommande diffère |
 | Topics absolus | vision : `/vision/person`, `/vision/person_box`, `/vision/status` — rien d'absolu côté robot |
 | Catalogue de commandes | `robot_web/web_catalog.py` (construit depuis les JSON, publié) vs `BUTTONS_LAYOUT` (télécommande, recopié à la main) |
@@ -18,9 +18,9 @@ porte de sortie vérifiée, la sim verte en fin de chaque sous-lot, David valide
 
 ## 1. Ce que L1 supprime (règle du §0 de l'étude)
 
-`utils_static.py` comme source (devient un **shim** qui ré-exporte, puis disparaît en L5) ;
-les 32 constantes mortes ; 7 décodeurs StringTime sur 8 (le 8ᵉ, `wheels_bridge`, part avec
-le pont en L4) ; 2 copies de `robot_interfaces` sur 3 ; `BUTTONS_LAYOUT` comme vérité (il
+`utils_static.py` comme source du CONTRAT (shim pour topics/clés/organes, inchangé pour
+chemins/logging/couleurs/réglages, qui restent à la lib jusqu'à L5) ; les 3 constantes
+mortes ; 11 décodeurs StringTime sur 12 (le 12ᵉ, `wheels_bridge`, part avec le pont en L4) ; 2 copies de `robot_interfaces` sur 3 ; `BUTTONS_LAYOUT` comme vérité (il
 reste un cache vérifié par test jusqu'à L4) ; les 71 JSON de la télécommande (sauvegardés
 dans git, supprimés du disque et du déploiement).
 
@@ -40,31 +40,35 @@ packages/theatre_contrats/
 │   │                    # de utils_static qui nomment un topic
 │   ├── keys.py          # clés de payload (WHEELS, LEFT_ARM, NECK, FACE, DURATION, KEYS…)
 │   ├── organs.py        # les 11 noms d'organes de Didier
-│   ├── stringtime.py    # LE codec : encode(value, time_ms, anim) / decode(msg) -> valeur ou
-│   │                    # refus loggué (payload invalide = None + log, jamais d'exception
-│   │                    # silencieuse) — copié de robot/nodes/payload.py, comportement identique
+│   ├── stringtime.py    # LE codec : encode(value, time_ms, anim) ; decode(msg) STRICT (invalide →
+│   │                    # None + log erreur = payload.decode actuel) ; decode_or_raw(msg) TOLÉRANT
+│   │                    # (invalide → chaîne brute, log DEBUG) — chaque site d'appel garde sa variante
 │   └── qos.py           # les 2 profils : volatile(depth) / latched (TRANSIENT_LOCAL depth 1)
 ├── test/
 │   ├── test_topics_relatifs.py   # AUCUNE constante de topics ne commence par « / » (gravé)
 │   ├── test_stringtime.py        # valeurs attendues GRAVÉES (pas recalculées) ; mutation du
 │   │                             # codec = rouge
-│   └── test_inventaire.py        # la liste des 58 constantes reprises est GRAVÉE : en
-│                                 # ajouter/retirer une exige de toucher le test
+│   ├── test_inventaire.py        # la liste des constantes REPRISES (topics, clés, organes) est
+│   │                             # GRAVÉE : en ajouter/retirer une exige de toucher le test
+│   └── (tools/inventaire.py)     # le script AST qui compte les imports — rejouable, c'est lui
+│                                 # qui a trouvé l'erreur du premier comptage
 └── README.md            # README-contrat : rôle, ce que chaque module expose, comment tester
 ```
 
-**Crée** `packages/theatre_interfaces/` = `robot_interfaces` renommé (ament_cmake, les 4 `.msg`
-inchangés) — **ou** décision de garder le nom `robot_interfaces` jusqu'à L1e : *à trancher
-par l'implémenteur selon le coût des remaps ; par défaut, L1a NE renomme PAS* (`robot_interfaces`
-déplacé dans `packages/robot_interfaces`, les 2 copies supprimées, les 3 dépôts le montent
-depuis là).
+**Déplace** `robot_interfaces` (copie du robot) dans `packages/robot_interfaces/` — pas de
+renommage avant L1e ; les 2 autres copies supprimées, les 3 dépôts le montent depuis là. Le
+bloc numpy du `CMakeLists.txt` de la télécommande (`find_package(Python3 … NumPy)`) est repris
+en **facultatif** (sans `REQUIRED`, `include_directories` sous `if(Python3_NumPy_FOUND)`),
+commenté avec son origine.
 
 **Branche les consommateurs sans les réécrire** :
 - `legacy/dadou_utils_ros/utils_static.py` → shim : `from theatre_contrats.topics import *`
-  etc. + les constantes NON-contrat qui restent (couleurs, chemins, réglages) ; les 32 mortes
-  **supprimées** ; un commentaire en tête dit que le fichier disparaît en L5.
-- `robot/nodes/payload.py` → délègue à `theatre_contrats.stringtime` (même signature) ; les
-  6 autres décodeurs (hors `wheels_bridge`) appellent le codec commun.
+  etc. + les constantes NON-contrat qui restent (couleurs, chemins, réglages) ; `JSON_NOTES`,
+  `NOTE`, `FILES` **supprimées** ; un commentaire en tête dit que le fichier disparaît en L5.
+- `robot/nodes/payload.py` → délègue à `theatre_contrats.stringtime.decode` ; les 10 autres
+  sites (hors `wheels_bridge`) appellent `decode` ou `decode_or_raw` selon leur comportement
+  actuel, prouvé par un test d'équivalence par site (mêmes entrées → mêmes sorties, cas
+  invalide compris).
 - vision : `reflection_contract` utilise le codec ; ses 3 topics absolus deviennent relatifs
   (`vision/person`…) — **et** le consommateur côté robot (`person_follower`, `gaze`) lit la
   même constante de `theatre_contrats.topics`.
@@ -77,8 +81,8 @@ depuis là).
 le comportement d'un décodeur (le test d'équivalence le prouve).
 
 **Porte de sortie** : pytest vert dans robot (≥ 601), vision (≥ 960), télécommande ; tests de
-`theatre_contrats` verts ; `grep -rn "json.loads(msg.msg" legacy/` ne renvoie que
-`wheels_bridge` ; sim `stage` + animation `parle` jouée ; **V-R3 Chantiers 21/21 rejoué** ;
+`theatre_contrats` verts ; `grep -rnE "json\.loads\(\s*(ros_)?msg\.msg" legacy/ --include=*.py | grep -v /test` ne
+renvoie que `wheels_bridge_node.py` ; sim `stage` + animation `parle` jouée ; **V-R3 Chantiers 21/21 rejoué** ;
 `grep -rnE "create_(publisher|subscription)\([^,]+,\s*['\"]/" legacy/*/vision legacy/*/robot`
 = 0.
 
