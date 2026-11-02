@@ -157,3 +157,22 @@ sélecteur, une action du répertoire à composer par David.
 | 7 | poids du score | dans `reglages.yaml`, valeurs de départ gravées : offre 1,0 ; pulsion 0,6 ; metteur en scène 0,8 ; console 1,5 ; réfractaire = facteur 0/1 ; immobilité = 0,3 − 0,3 × ennui |
 
 py_trees absent de l'image sim et du venv : ajouté (Dockerfile-sim, package.xml, requirements-test).
+
+## 9. Revue adversariale du 02/11 (après la première séance) et décisions de David
+
+Verdict de la revue : mécanisme sain (mutations attrapées, filtre roues complet sur 48
+séquences, garde-fou 43 effectif, aucun Twist), **pas montrable comme porte passée** :
+- BLOQUANTS corrigés : un `go` de la bouche levait le stop de la console (le verrou ne
+  retenait pas sa source) ; avec `jeu:=true` l'arrêt vocal dépendait d'un `jeu_node` lancé à la
+  main sans respawn (désormais lancé par le launch, respawn, mode « relais seul » si le
+  répertoire est illisible) ; STOP CONTENUS de la page n'atteignait pas le jeu ; bouton
+  Stop/Go unique à 2 s de retard ; T7 lançait un vrai nœud en domaine 42 ; journal aux jauges
+  photographiées APRÈS mutation (pourquoi contredit par les chiffres).
+- **Décisions de David (02/11)** : reprise après SON arrêt = **90 s de silence** (toute parole
+  remet le compteur à zéro — lettre du 31/10) ; `joue_avec` = **approches répétées
+  autorisées avec garde de distance** (hauteur de boîte < 0,55) ; `plus_lent` = **moins
+  souvent** (réfractaires ×2, 60 s) ; mots-clés du metteur en scène → **déplacement autorisé
+  mais borné** (un pas par piste décrite, jamais si proche, jamais sans identifiant de piste).
+- Durcissements : « un arrêt par 2 min » couvre tout arrêt causé par Didier ; « réclamé ET
+  amorcé » exige le regard parti ; épreuves sans fenêtres accommodantes ; `pourquoi` écrit
+  pour un humain.
