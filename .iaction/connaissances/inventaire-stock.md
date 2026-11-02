@@ -1,1 +1,0 @@
-../../docs/hardware/inventaire-stock.md

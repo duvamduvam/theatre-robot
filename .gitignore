@@ -9,7 +9,5 @@ log/
 *.egg-info/
 .idea/
 
-# IAction (app de bureau) : index et états générés, préférences locales
-.iaction/connaissances-index/
-.iaction/mcp.local.json
-.iaction/mcp.runtime.json
+# IAction (app de bureau) : dossier local de l'app, jamais versionné (même règle que l'ancien dépôt)
+.iaction/
