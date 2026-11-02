@@ -1,0 +1,18 @@
+# Vocabulaire de déplacements — composé par David, valeurs de départ du 02/11
+# (spec A1 §8.4). Verbe du sélecteur -> commande du RÉGISSEUR (payload de
+# rehearsal/chat_move, spec-aller-voir §2.2, §7.2-7.3, §8.2), publiée sur
+# jeu/chat_move. Le régisseur arbitre (route OFF par David, distance, bornes) :
+# le sélecteur propose, le régisseur dispose, route_driver exécute.
+#
+# `reculer` est OMIS : le régisseur refuse tout « avancer » négatif
+# (decide_forward, FORWARD_MIN_M = 0,1 m : pas de capteur arrière, pas
+# d'évitement — spec-aller-voir §7.3).
+approcher:
+  cmd: avancer
+  metres: 1.0
+se_tourner_vers:
+  cmd: tourner          # angle_deg calculé depuis l'azimut de la piste
+aller_voir:
+  cmd: aller_voir       # objet = nom de rehearsal/objects
+faire_le_tour:
+  cmd: tour_de          # objet + sens

@@ -4,3 +4,6 @@ colorlog
 psutil
 xacro
 imageio
+# py_trees : behaviour trees du sélecteur de jeu (packages/didier_jeu, lot A1) —
+# même version que ros-jazzy-py-trees dans l image sim (2.6.0 au 02/11).
+py_trees==2.6.0

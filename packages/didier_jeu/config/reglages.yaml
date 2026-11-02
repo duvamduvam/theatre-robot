@@ -1,0 +1,158 @@
+# Réglages du sélecteur de jeu (lot A1) — TOUS les chiffres du modèle de timing.
+# Réglage de départ, se règle au journal : David relit le journal d'une
+# séance (jeu/journal, JSONL) et règle ici. Sources : spec A1 §3 et §8
+# (theatre-robot/docs/spec-A1-selecteur-de-jeu.md), étude autonomie §4.2,
+# décisions du 31/10 et du 23/10. Aucune valeur n'est « sourcée » : ce sont
+# des points de départ.
+# GRAVÉ : test/test_reglages.py recopie chaque valeur en dur — en changer une
+# exige de toucher le test (c'est voulu : un réglage se change en conscience).
+
+# Cadence du sélecteur (s). ~10 Hz (étude §4.1).
+tick_s: 0.1
+
+hysteresis:
+  # Le meilleur candidat doit dépasser le second de 15 %...
+  marge: 0.15
+  # ... pendant 300 ms d'affilée, sinon rien ne change (pas d'oscillation).
+  duree_s: 0.3
+
+changement:
+  # Deux décisions DIFFÉRENTES jamais à moins de 2 s (porte T1). Tient aussi
+  # pour le retour au repos (« rien »).
+  min_s: 2.0
+
+reaction:
+  # Une naissance de piste produit une ligne de décision (choix OU maintien)
+  # au plus tard après ce délai (porte T3 : <= 1 s). 0,6 s laisse passer
+  # l'hystérésis (0,3 s) avant de dire « je garde ».
+  maintien_apres_s: 0.6
+
+engagement:
+  # Une action engagée se finit ; seule une offre de VALEUR >= ce seuil peut
+  # l'interrompre (la bouche, valeur 0,9).
+  seuil_rupture: 0.9
+
+offres:
+  # Durée de vie d'une offre (Johnstone : tout événement est une offre).
+  ttl_s: 3.0
+  valeur:
+    personne: 0.7     # naissance d'une piste de personne
+    objet: 0.8        # rehearsal/poi_event « enter » (décision 02/11, §8.1)
+    bouche: 0.9       # demande de mouvement de la bouche (rehearsal/chat_move)
+
+pistes:
+  # Silence de vision/person_box au-delà duquel la piste est perdue
+  # (= timeout_ms du suivi, robot/move/follow_control.py : 600 ms).
+  perte_s: 0.6
+  # Une redétection moins de 2 s après la perte n'est PAS une nouvelle piste.
+  nouvelle_apres_s: 2.0
+  # Boîte en dessous de cette confiance : ignorée.
+  confiance_min: 0.5
+
+pulsions:
+  ennui:
+    montee_par_s: 0.1     # sans événement ni action ; 0 à toute action
+    plafond: 1.0
+  curiosite:
+    saut: 1.0             # à la naissance d'une PISTE (pas d'une détection)
+    retombee_par_s: 0.2
+  lubie:
+    par_poi: 0.5          # par POI entré (§8.1)
+    retombee_par_s: 0.05
+    plafond: 1.0
+  fatigue:
+    par_deplacement: 0.3
+    retombee_par_s: 0.05
+    seuil_interdit: 0.8   # au-dessus : toute action de déplacement est interdite
+
+# Périodes réfractaires (s) : facteur 0 avant, 1 après (décision 02/11, §8.7).
+refractaire_s:
+  initiative_spontanee: 8.0   # toute action choisie SANS offre (23/10)
+  arret_didier: 120.0         # arrêts de route demandés par Didier (31/10)
+  expression: 8.0
+  regarder: 4.0
+  deplacement: 10.0
+
+lubie:
+  # Réclamé en mots (jeu/intention) ET amorcé (regard) : le « stop » ne part
+  # que si la console n'a dit ni ignore ni va_la pendant ce délai.
+  delai_refus_s: 3.0
+
+reprise:
+  # Après un arrêt décidé par DIDIER : il propose « repartir ? » puis envoie
+  # lui-même « go » au bout de ce délai, sauf stop/ignore de la console.
+  # Jamais de « go » automatique après un stop/off de David (31/10, §8.3).
+  delai_s: 90.0
+
+superviseur:
+  # « suppose » (A1 sim, défaut) : présence supposée. « exigeant » : sans
+  # battement jeu/console depuis silence_max_s, aucune initiative de déplacement.
+  mode: suppose
+  silence_max_s: 1.0
+
+console:
+  ignore_s: 30.0          # « ignore » : aucune action vers la cible pendant 30 s (T4)
+  ordre_ttl_s: 10.0       # un ordre macro non exécutable tombe (refus journalisé)
+  joue_avec_s: 30.0       # « joue avec lui » : biais console sur la piste
+  plus_lent_s: 60.0       # « plus lent » : réfractaires multipliés...
+  plus_lent_facteur: 2.0  # ... par ce facteur pendant plus_lent_s
+
+# Poids du score (décision 02/11, §8.7) : score = Σ considération × poids,
+# considérations dans [0, 1], puis × gain de l'action × facteur réfractaire.
+poids:
+  offre: 1.0
+  pulsion: 0.6
+  metteur_en_scene: 0.8
+  console: 1.5
+
+# Score de l'immobilité (« rien » est candidat aussi) : base − pente × ennui.
+immobilite:
+  base: 0.3
+  pente_ennui: 0.3
+
+# Gain par action : départage deux actions servies par la même offre et la
+# même pulsion. PIÈGE : l'écart doit dépasser la marge d'hystérésis (15 %),
+# sinon personne ne domine et rien n'est jamais choisi (vu au premier calcul :
+# regarder 1,3 contre accueil 1,17 = 11 %). Nouvelle piste : regarder 1,3 >
+# accueil 1,04 (+25 %) > approcher 0,91 (+14 %, mais seul le meilleur compte).
+gains:
+  regarder: 1.0
+  accueil: 0.8        # expression de types « bonjour »
+  spontanee: 1.0      # expression de types « random » / « little move »
+  approcher: 0.7      # se tourner vers une piste puis avancer
+  lubie: 1.0
+  bouche: 1.0
+  aller_voir: 1.0     # va_la vers un objet (console)
+  repartir: 2.0       # reprise après un arrêt de Didier ou « reviens »
+
+# Emploi des séquences selon leur clé `types` (répertoire). Une séquence dont
+# aucun type n'est listé ici est chargée mais SANS EMPLOI (journalisée).
+emplois:
+  bonjour: accueil
+  random: spontanee
+  little move: spontanee
+
+durees_s:
+  regarder: 3.0           # tenue du « regarder » (hold_ms du topic look)
+  expression_defaut: 5.0  # séquence sans `duration`
+  expression_marge: 2.0   # fin de séquence attendue (animation_state "") + marge
+  deplacement_max: 70.0   # attente de route_goto_result (GOTO_TIMEOUT_S 60 + marge)
+  deplacement_accuse: 3.0 # sans route_state « goto » d'ici là : ordre refusé par le régisseur
+  arret: 3.0              # l'arrêt se « joue » (engagé) avant de rendre la main
+  relais: 2.0             # go / repartir : engagement minimal
+
+regard:
+  # Azimut normalisé ±1 = bord de l'image = ± demi-champ caméra (60° -> 30°).
+  demi_champ_deg: 30.0
+
+metteur_en_scene:
+  # Péremption d'une indication (= SITUATION_TTL_S de la boucle de réflexion).
+  ttl_s: 5.0
+  # Mot-clé (texte normalisé : minuscules, sans accents) -> action servie.
+  mots_cles:
+    approche: approcher
+    regarde: regarder
+    salue: accueil
+    bonjour: accueil
+    danse: spontanee
+    bouge: spontanee

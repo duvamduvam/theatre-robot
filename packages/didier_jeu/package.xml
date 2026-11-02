@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>didier_jeu</name>
+  <version>0.1.0</version>
+  <description>Sélecteur de jeu de Didier (lot A1, SIM-ONLY) : arbre py_trees (ce qui est permis) + score (ce qui est choisi), offres, pistes, pulsions, journal « pourquoi ». Aucun Twist : il demande au régisseur.</description>
+  <maintainer email="achats@duvam.net">dadou</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>robot_interfaces</depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <!-- Contrat commun : topics jeu/*, codec StringTime, QoS latché. -->
+  <exec_depend>theatre_contrats</exec_depend>
+  <!-- Garde-fou SIM-ONLY (check_domain) et contrats du régisseur (topics
+       rehearsal/*, route_*) : importés, jamais recopiés. -->
+  <exec_depend>robot_rehearsal</exec_depend>
+  <!-- Journal JSONL (robot.diagnostic.journal, module PUR du paquet robot). -->
+  <exec_depend>robot</exec_depend>
+  <!-- Behaviour trees (apt ros-jazzy-py-trees, 2.6.0 au 02/11 ; même version
+       dans le venv de test : requirements-test.txt du robot). -->
+  <exec_depend>py_trees</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
