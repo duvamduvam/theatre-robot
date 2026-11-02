@@ -35,7 +35,7 @@ from robot_rehearsal.contracts import (CHAT_MOVE_TOPIC, OBJECTS_TOPIC, ODOM_TOPI
                                        check_domain)
 from theatre_contrats import stringtime, topics
 
-from didier_jeu.journal import Journal
+from didier_jeu.journal import Journal, marquer_sans_pourquoi
 from didier_jeu.reglages import charger_reglages
 from didier_jeu.repertoire import candidates, charger_deplacements, par_emploi
 from didier_jeu.relais import RelaisSeul
@@ -78,6 +78,7 @@ def main(args=None):
             self.declare_parameter("journal_dir", "/home/ros2_ws/log/jeu")
             p = lambda n: self.get_parameter(n).value  # noqa: E731
             self.journal = None
+            self._compteur = {"sans_pourquoi": 0}   # lignes sans pourquoi (bugs), comptées
             try:
                 self.journal = Journal(p("journal_dir"))
                 self.get_logger().info(f"journal : {self.journal.chemin}")
@@ -199,6 +200,7 @@ def main(args=None):
                     self._journaliser(sortie[1], sortie[2])
 
         def _journaliser(self, type_, payload):
+            payload = marquer_sans_pourquoi(payload, self._compteur)
             if self.journal is None:
                 self.get_logger().info(f"{type_} {str(payload.get('pourquoi', ''))[:120]}")
                 return

@@ -22,6 +22,20 @@ def evenement(t_mono_ms: int, type_: str, payload: dict):
     return make_event(t_mono_ms, SOURCE, type_, payload)
 
 
+POURQUOI_ABSENT = "(absent — bug)"
+
+
+def marquer_sans_pourquoi(payload: dict, compteur: dict) -> dict:
+    """Une ligne SANS pourquoi est un bug du sélecteur : elle n'est PAS avalée
+    (revue A1, point 13) — elle part avec POURQUOI_ABSENT et le nombre de ces
+    bugs depuis le démarrage (`bug_sans_pourquoi`), visible au journal."""
+    pourquoi = payload.get("pourquoi")
+    if isinstance(pourquoi, str) and pourquoi.strip():
+        return payload
+    compteur["sans_pourquoi"] += 1
+    return dict(payload, pourquoi=POURQUOI_ABSENT, bug_sans_pourquoi=compteur["sans_pourquoi"])
+
+
 class Journal:
     """Écrit les lignes du sélecteur ; ecrire() rend la ligne JSONL (publiée
     aussi sur jeu/journal pour la page scène)."""

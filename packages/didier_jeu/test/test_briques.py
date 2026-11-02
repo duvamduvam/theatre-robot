@@ -75,7 +75,8 @@ def test_score_poids_et_immobilite():
     assert score(Candidat("accueil", "p1", o, "curiosite"), ctx, s.r).total == pytest.approx(1.04)
     assert score(Candidat("approcher", "p1", o, "curiosite"), ctx, s.r).total == pytest.approx(0.91)
     # metteur en scène 0,8 et console 1,5
-    ctx2 = Contexte(now=0.0, jauges={}, metteur="regarder", console={"action": None, "cible": "p1"})
+    ctx2 = Contexte(now=0.0, jauges={}, metteur={"action": "regarder", "mot": "regarde"},
+                   console={"action": None, "cible": "p1", "cmd": "joue_avec"})
     assert score(Candidat("regarder", "p1"), ctx2, s.r).total == pytest.approx(2.3)
 
 
@@ -134,3 +135,13 @@ def test_angle_vers():
     assert angle_vers((0.0, 0.0, 0.0), (1.0, -1.0)) == pytest.approx(-45.0)
     assert angle_vers((0.0, 0.0, math.pi / 2), (-1.0, 0.0)) == pytest.approx(90.0)
     assert angle_vers((0.0, 0.0, math.pi), (1.0, 0.1)) == pytest.approx(-174.29, abs=0.01)
+
+
+def test_ligne_sans_pourquoi_marquee_et_comptee_jamais_avalee():
+    from didier_jeu.journal import POURQUOI_ABSENT, marquer_sans_pourquoi
+    c = {"sans_pourquoi": 0}
+    assert marquer_sans_pourquoi({"pourquoi": "ok"}, c) == {"pourquoi": "ok"}
+    assert marquer_sans_pourquoi({"action": "x"}, c) == {"action": "x", "pourquoi": POURQUOI_ABSENT,
+                                                         "bug_sans_pourquoi": 1}
+    assert marquer_sans_pourquoi({"pourquoi": " "}, c)["bug_sans_pourquoi"] == 2
+    assert POURQUOI_ABSENT == "(absent — bug)"

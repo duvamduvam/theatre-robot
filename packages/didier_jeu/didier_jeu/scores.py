@@ -17,6 +17,7 @@ précédente.
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from didier_jeu import phrases
 from didier_jeu.offres import Offre
 
 RIEN = "rien"
@@ -71,11 +72,17 @@ class Contexte:
     """Ce que le score lit du monde, figé pour un tick."""
     now: float
     jauges: Dict[str, float]               # pulsions (ennui, curiosite, lubie, fatigue, pression_route)
-    metteur: Optional[str] = None          # action désignée par le metteur en scène (fraîche)
-    console: Optional[Dict] = None         # {"action": ..., "cible": ...} biais de l'ordre en cours
+    metteur: Optional[Dict] = None         # {"action", "cible"?, "mot"} : indication fraîche du metteur en scène
+    console: Optional[Dict] = None         # {"action", "cible", "cmd"} : biais de l'ordre en cours
     derniers: Dict[str, float] = field(default_factory=dict)   # catégorie -> t de la dernière action
     derniere_spontanee: Optional[float] = None
     tempo: float = 1.0                     # « plus lent » : réfractaires × tempo
+
+
+def _vise_metteur(c: Candidat, metteur: Optional[Dict]) -> bool:
+    if not metteur or metteur.get("action") != c.action:
+        return False
+    return metteur.get("cible") is None or metteur["cible"] == c.cible
 
 
 def _vise_console(c: Candidat, console: Optional[Dict]) -> bool:
@@ -93,12 +100,12 @@ def score(c: Candidat, ctx: Contexte, reglages) -> Score:
         pente = reglages.get("immobilite.pente_ennui")
         total = base - pente * ctx.jauges.get("ennui", 0.0)
         return Score(c, total, {"immobilite": round(total, 3)},
-                     f"immobilité {base} − {pente}×ennui {ctx.jauges.get('ennui', 0.0):.2f}", False)
+                     f"rien ne le pousse (immobilité {phrases.n(total)}) → {phrases.action(RIEN)}", False)
     poids = {k: reglages.get(f"poids.{k}") for k in ("offre", "pulsion", "metteur_en_scene", "console")}
     cons = {
         "offre": c.offre.valeur * c.offre.fraicheur(ctx.now) if c.offre is not None else 0.0,
         "pulsion": ctx.jauges.get(c.pulsion, 0.0) if c.pulsion else 0.0,
-        "metteur_en_scene": 1.0 if ctx.metteur == c.action else 0.0,
+        "metteur_en_scene": 1.0 if _vise_metteur(c, ctx.metteur) else 0.0,
         "console": 1.0 if _vise_console(c, ctx.console) else 0.0,
     }
     spontanee = cons["offre"] == 0.0 and cons["console"] == 0.0
@@ -107,25 +114,26 @@ def score(c: Candidat, ctx: Contexte, reglages) -> Score:
     if cat is not None and cat in ctx.derniers:
         periode = reglages.get(f"refractaire_s.{cat}") * ctx.tempo
         if ctx.now - ctx.derniers[cat] < periode - 1e-6:
-            facteur, raison_ref = 0.0, f" ; réfractaire {cat} {periode:g} s"
+            facteur, raison_ref = 0.0, f" (trop tôt : déjà fait il y a moins de {periode:g} s)"
     if spontanee and ctx.derniere_spontanee is not None:
         periode = reglages.get("refractaire_s.initiative_spontanee") * ctx.tempo
         if ctx.now - ctx.derniere_spontanee < periode - 1e-6:
-            facteur, raison_ref = 0.0, f" ; réfractaire initiative spontanée {periode:g} s"
+            facteur, raison_ref = 0.0, f" (trop tôt : initiative il y a moins de {periode:g} s)"
     gain = reglages.gain(c.action)
     somme = sum(cons[k] * poids[k] for k in cons)
     total = somme * gain * facteur
+    # Phrase lisible par David (revue A1, point 6) : raisons -> action.
     termes = []
-    if cons["offre"]:
-        termes.append(f"offre:{c.offre.kind} {c.offre.piste} {cons['offre']:.2f}")
-    if cons["pulsion"]:
-        termes.append(f"{c.pulsion} {cons['pulsion']:.2f}")
-    if cons["metteur_en_scene"]:
-        termes.append("metteur en scène")
     if cons["console"]:
-        termes.append("console")
-    pourquoi = " + ".join(termes) or "aucune considération"
-    pourquoi += f" ; gain {gain:g}" + raison_ref
+        termes.append(f"David : {ctx.console.get('cmd') or 'consigne'}")
+    if cons["offre"]:
+        termes.append(phrases.offre(c.offre, cons["offre"]))
+    if cons["pulsion"]:
+        termes.append(phrases.pulsion(c.pulsion, cons["pulsion"]))
+    if cons["metteur_en_scene"]:
+        termes.append(f"le metteur en scène dit « {ctx.metteur.get('mot')} »")
+    pourquoi = " + ".join(termes) or "aucune raison"
+    pourquoi += f" → {phrases.action(c.action, c.cible, c.detail)}" + raison_ref
     return Score(c, total, {k: round(v, 3) for k, v in cons.items()}, pourquoi, spontanee)
 
 

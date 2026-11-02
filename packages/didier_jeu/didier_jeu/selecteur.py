@@ -38,7 +38,8 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from didier_jeu import arbre
+from didier_jeu import arbre, phrases
+from didier_jeu.phrases import n as num
 from didier_jeu.offres import Offre, Offres
 from didier_jeu.pistes import Pistes
 from didier_jeu.pulsions import Pulsions
@@ -107,7 +108,7 @@ class Selecteur:
         self.joues: Dict[str, float] = {}      # séquence -> dernier t joué (rotation)
         self.en_cours: Optional[Engagement] = None
         self.courante = (RIEN, None)           # (action, cible) affichée
-        self.pourquoi_courant = "démarrage : rien ne se passe encore"
+        self.pourquoi_courant = "il vient d'arriver : rien ne se passe encore"
         self.t_derniere_decision: Optional[float] = None
         self.derniers: Dict[str, float] = {}   # catégorie réfractaire -> t
         self.derniere_spontanee: Optional[float] = None
@@ -181,8 +182,7 @@ class Selecteur:
                                  self.r.get("offres.ttl_s")))
         self.pulsions.sur_piste_nee()
         self.reaction_due = {"piste": nee, "t": now}
-        self._journal("naissance_piste", f"nouvelle piste {nee} (aucune piste depuis plus de "
-                      f"{self.r.get('pistes.nouvelle_apres_s'):g} s)",
+        self._journal("naissance_piste", f"une nouvelle personne apparaît ({nee})",
                       piste=nee, azimut=round(azimut, 2), hauteur=round(hauteur, 2))
 
     def sur_poi_event(self, payload, now: float) -> None:
@@ -191,7 +191,7 @@ class Selecteur:
         poi = str(payload["poi"])
         self.offres.naitre(Offre("objet", poi, self.r.get("offres.valeur.objet"), now, self.r.get("offres.ttl_s")))
         self.pulsions.sur_poi()
-        self._journal("offre", f"poi_event enter {poi} : offre objet, lubie +{self.r.get('pulsions.lubie.par_poi'):g}",
+        self._journal("offre", f"il passe près de « {poi} » (lubie +{num(self.r.get('pulsions.lubie.par_poi'))})",
                       kind="objet", piste=poi)
 
     def sur_chat_move_bouche(self, valeur, now: float) -> None:
@@ -207,14 +207,14 @@ class Selecteur:
             cible = (valeur.get("objet") or valeur.get("cmd")) if isinstance(valeur, dict) else GO
             self.offres.naitre(Offre("bouche", "bouche", self.r.get("offres.valeur.bouche"), now,
                                      self.r.get("offres.ttl_s"), payload={"demande": valeur, "cible": cible}))
-            self._journal("offre", f"la bouche demande {valeur!r} : intention pondérée", kind="bouche",
-                          demande=valeur)
+            self._journal("offre", f"il dit vouloir {phrases.demande(valeur)} : il y réfléchit",
+                          kind="bouche", demande=valeur)
             return
-        self._journal("refus", f"bouche : demande invalide {valeur!r}", source="bouche")
+        self._journal("refus", f"demande de mouvement incompréhensible ({valeur!r})", source="bouche")
 
     def sur_console(self, payload, now: float) -> None:
         if not isinstance(payload, dict):
-            self._journal("refus", f"console : objet JSON attendu, reçu {payload!r}", source="console")
+            self._journal("refus", f"ordre de la console illisible ({payload!r})", source="console")
             return
         if payload.get("presence") is True:
             self.presence_t = now
@@ -222,7 +222,7 @@ class Selecteur:
         if cmd is None:
             return
         if cmd not in CONSOLE_CMDS:
-            self._journal("refus", f"console : commande inconnue {cmd!r}", source="console")
+            self._journal("refus", f"ordre de la console inconnu ({cmd!r})", source="console")
             return
         cible = payload.get("cible")
         cible = str(cible) if isinstance(cible, (str, int)) and str(cible) else None
@@ -234,18 +234,18 @@ class Selecteur:
             self._ignorer(cible, now)
         elif cmd == "plus_lent":
             self.plus_lent_fin = now + self.r.get("console.plus_lent_s")
-            self._journal("console", f"plus lent : réfractaires × {self.r.get('console.plus_lent_facteur'):g} "
-                          f"pendant {self.r.get('console.plus_lent_s'):g} s", cmd=cmd)
+            self._journal("console", f"David : plus lent → il agit {self.r.get('console.plus_lent_facteur'):g} fois "
+                          f"moins souvent pendant {self.r.get('console.plus_lent_s'):g} s", cmd=cmd)
         elif cmd == "reviens":
             self.joue_avec = None
-            self._ordre({"action": "repartir", "cible": None, "cmd": cmd}, now, "reviens : rejoindre la route")
+            self._ordre({"action": "repartir", "cible": None, "cmd": cmd}, now, "David : reviens → rejoindre la route")
         elif cmd == "joue_avec":
             piste = cible or self._piste_regardee(now)
             if piste is None:
-                self._journal("refus", "joue avec lui : aucune piste regardée", source="console", cmd=cmd)
+                self._journal("refus", "David : joue avec lui — mais il ne voit personne", source="console", cmd=cmd)
                 return
             self.joue_avec = {"cible": piste, "fin": now + self.r.get("console.joue_avec_s")}
-            self._journal("console", f"joue avec {piste} : biais console sur cette piste "
+            self._journal("console", f"David : joue avec {piste} → il s'occupe d'elle pendant "
                           f"{self.r.get('console.joue_avec_s'):g} s", cmd=cmd, cible=piste)
         elif cmd == "va_la":
             self._va_la(cible, now)
@@ -257,7 +257,7 @@ class Selecteur:
         norm = normaliser(texte)
         for mot, action in mots.items():
             if normaliser(mot) in norm:
-                self.metteur = {"action": action, "t": now, "source": source, "mot": mot}
+                self.metteur = {"action": action, "cible": None, "t": now, "source": source, "mot": mot}
                 return
 
     def sur_mission(self, etat, now: float) -> None:
@@ -305,7 +305,8 @@ class Selecteur:
             # Arrêt décidé par Didier (il est allé quelque part de lui-même) :
             # la reprise s'arme, il proposera de repartir.
             self.arret_didier = {"t": now, "cible": e.candidat.cible}
-        self._finir(now, f"route_goto_result {resultat} ({payload.get('reason') if isinstance(payload, dict) else ''})")
+        raison = payload.get("reason") if isinstance(payload, dict) else None
+        self._finir(now, "il est arrivé" if resultat == "arrived" else f"il a renoncé ({raison or resultat})")
 
     def sur_animation_state(self, nom, now: float) -> None:
         self.animation_state = nom if isinstance(nom, str) else ""
@@ -316,7 +317,7 @@ class Selecteur:
         if self.animation_state == seq:
             e.anim_vue = True
         elif e.anim_vue:
-            self._finir(now, f"séquence {seq} terminée (animation_state {self.animation_state!r})")
+            self._finir(now, f"séquence « {seq} » terminée")
 
     # ================================================================ relais et ordres
     def relayer_stop(self, source: str, now: float) -> None:
@@ -329,8 +330,9 @@ class Selecteur:
         if self.en_cours is not None and (self.en_cours.candidat.deplacement
                                           or self.en_cours.candidat.action == "lubie"):
             self._annuler(now, f"stop de {source}")
-        self._journal("relais_stop", f"stop de {source} relayé sans arbitrage ; verrou jusqu'au go", source=source)
-        self.pourquoi_courant = f"stop de {source} : arrêté jusqu'au go"
+        self._journal("relais_stop", f"{phrases.qui(source)} « stop » → il s'arrête tout de suite, jusqu'au go",
+                      source=source)
+        self.pourquoi_courant = f"{phrases.qui(source)} « stop » : arrêté jusqu'au go"
         self._publier_intention(now)
 
     def relayer_go(self, source: str, now: float) -> None:
@@ -342,46 +344,45 @@ class Selecteur:
             return
         self.sorties.append(("chat_move", GO))
         self.arret_didier = None
-        self._journal("relais_go", f"go de {source} relayé : verrou levé", source=source)
-        self.pourquoi_courant = f"go de {source}"
+        self._journal("relais_go", f"{phrases.qui(source)} « go » → il repart", source=source)
+        self.pourquoi_courant = f"{phrases.qui(source)} « go »"
         self._publier_intention(now)
 
     def _ignorer(self, cible: Optional[str], now: float) -> None:
         cible = cible or self.courante[1] or (self.en_cours.candidat.cible if self.en_cours else None)
-        n = 0
         if cible is not None:
             self.ignores[cible] = now + self.r.get("console.ignore_s")
-            n = self.offres.tuer_cible(cible)
+            self.offres.tuer_cible(cible)
         e = self.en_cours
         if e is not None and (cible is None or e.candidat.cible == cible):
-            self._annuler(now, f"ignore {cible or ''}".strip())
+            self._annuler(now, f"David dit d'ignorer {cible or 'ça'}")
         # Reprise armée : « ignore » (sans cible, ou sur la cible de l'arrêt) la coupe.
         if self.arret_didier is not None and cible in (None, self.arret_didier["cible"]):
             self.arret_didier = None
-            self._journal("reprise_annulee", "ignore de la console : pas de go automatique", cible=cible)
-        self._journal("console", f"ignore {cible} : {n} offre(s) tuée(s), rien vers elle "
-                      f"{self.r.get('console.ignore_s'):g} s", cmd="ignore", cible=cible)
+            self._journal("reprise_annulee", "David dit d'ignorer → il ne repartira pas de lui-même", cible=cible)
+        self._journal("console", f"David : ignorer {cible or 'ça'} pendant {self.r.get('console.ignore_s'):g} s",
+                      cmd="ignore", cible=cible)
 
     def _va_la(self, cible: Optional[str], now: float) -> None:
         # Une lubie en attente de son délai de refus : va_la la refuse.
         if self.en_cours is not None and self.en_cours.candidat.action == "lubie" and not self.en_cours.stop_envoye:
-            self._annuler(now, "va_la de la console pendant la lubie")
+            self._annuler(now, "David l'envoie ailleurs")
         if cible in self.objets:
-            self._ordre({"action": "aller_voir", "cible": cible, "cmd": "va_la"}, now, f"va là : {cible}")
+            self._ordre({"action": "aller_voir", "cible": cible, "cmd": "va_la"}, now, f"David : va voir « {cible} »")
             return
         piste = self.pistes.courante(now)
         if piste is not None and cible == piste.id:
             # Une PISTE : se tourner vers elle puis avancer <= 1 m (§8.2), si
             # superviseur présent et fatigue sous le seuil — vérifié au choix.
-            self._ordre({"action": "approcher", "cible": cible, "cmd": "va_la"}, now, f"va là : piste {cible}")
+            self._ordre({"action": "approcher", "cible": cible, "cmd": "va_la"}, now, f"David : va vers {cible}")
             return
-        self._journal("refus", f"va là : cible inconnue {cible!r} (ni objet de rehearsal/objects, ni piste vue)",
+        self._journal("refus", f"David : va là « {cible} » — inconnu (ni objet connu, ni personne vue)",
                       source="console", cmd="va_la", cible=cible)
 
     def _ordre(self, ordre: dict, now: float, pourquoi: str) -> None:
         refus = self._refus_deplacement(now)
         if refus:
-            self._journal("refus", f"{pourquoi} refusé : {refus}", source="console", cmd=ordre["cmd"],
+            self._journal("refus", f"{pourquoi} — impossible : {refus}", source="console", cmd=ordre["cmd"],
                           cible=ordre.get("cible"))
             return
         ordre["t"] = now
@@ -390,11 +391,11 @@ class Selecteur:
 
     def _refus_deplacement(self, now: float) -> Optional[str]:
         if self.verrou_stop:
-            return f"verrou d'arrêt ({', '.join(sorted(self.verrou.sources))}) jusqu'au go"
+            return "il est arrêté jusqu'au go (" + ", ".join(phrases.qui(x) for x in sorted(self.verrou.sources)) + ")"
         if self.superviseur_absent():
-            return "superviseur absent"
+            return "personne ne surveille (page fermée)"
         if self.pulsions.deplacement_interdit():
-            return f"fatigue {self.pulsions.fatigue:.2f} > {self.pulsions.fatigue_seuil:g}"
+            return f"il est fatigué ({num(self.pulsions.fatigue)} > {num(self.pulsions.fatigue_seuil)})"
         return None
 
     def _piste_regardee(self, now: float) -> Optional[str]:
@@ -430,8 +431,8 @@ class Selecteur:
         if self.metteur is not None and now - self.metteur["t"] > self.r.get("metteur_en_scene.ttl_s"):
             self.metteur = None
         if self.ordre is not None and now - self.ordre["t"] > self.r.get("console.ordre_ttl_s"):
-            self._journal("refus", f"ordre {self.ordre['cmd']} non exécuté en "
-                          f"{self.r.get('console.ordre_ttl_s'):g} s : abandonné", source="console",
+            self._journal("refus", f"David : {self.ordre['cmd']} — pas faisable en "
+                          f"{self.r.get('console.ordre_ttl_s'):g} s, abandonné", source="console",
                           cmd=self.ordre["cmd"], cible=self.ordre.get("cible"))
             self.ordre = None
 
@@ -446,19 +447,17 @@ class Selecteur:
             e.stop_envoye = True
             self.sorties.append(("chat_move", STOP))
             self.arret_didier = {"t": now, "cible": e.candidat.cible}
-            self._journal("arret_didier", f"lubie {e.candidat.cible} non refusée en "
-                          f"{self.r.get('lubie.delai_refus_s'):g} s : stop demandé au régisseur",
-                          cible=e.candidat.cible)
-            self.pourquoi_courant = f"arrêté pour {e.candidat.cible} ; repartir ? (go dans " \
-                                    f"{self.r.get('reprise.delai_s'):g} s)"
+            self._journal("arret_didier", f"lubie « {e.candidat.cible} » réclamée, pas de refus en "
+                          f"{self.r.get('lubie.delai_refus_s'):g} s → il s'arrête", cible=e.candidat.cible)
+            self.pourquoi_courant = f"arrêté devant « {e.candidat.cible} » ; repartir ? (après " \
+                                    f"{self.r.get('reprise.delai_s'):g} s de silence)"
             self._publier_intention(now)
         if e.candidat.deplacement and e.candidat.action != "repartir" and not e.accuse \
                 and now - e.t_etape > self.r.get("durees_s.deplacement_accuse") + EPS:
-            self._finir(now, f"pas de route_state goto en {self.r.get('durees_s.deplacement_accuse'):g} s : "
-                        "demande refusée par le régisseur (voir son journal)")
+            self._finir(now, "le régisseur n'a pas donné suite (voir son journal)")
             return
         if now >= e.fin_prevue - EPS:
-            self._finir(now, f"échéance de {action}")
+            self._finir(now, "c'est fini")
 
     def _etape_suivante(self, e: Engagement, now: float) -> None:
         etape = e.etapes.pop(0)
@@ -469,10 +468,11 @@ class Selecteur:
         fini = self.en_cours.candidat
         self.en_cours = None
         self.courante = (RIEN, None)
-        self.pourquoi_courant = f"fin de {fini.action} : {pourquoi}"
+        self.pourquoi_courant = f"{phrases.action(fini.action, fini.cible, fini.detail)} : {pourquoi}"
         if self.arret_didier is not None:
             self.pourquoi_courant += " ; repartir ?"
-        self._journal("fin", pourquoi, action=fini.action, cible=fini.cible)
+        self._journal("fin", f"{phrases.action(fini.action, fini.cible, fini.detail)} : {pourquoi}",
+                      action=fini.action, cible=fini.cible)
         self._publier_intention(now)
 
     def _annuler(self, now: float, pourquoi: str) -> None:
@@ -480,8 +480,9 @@ class Selecteur:
         fini = self.en_cours.candidat
         self.en_cours = None
         self.courante = (RIEN, None)
-        self.pourquoi_courant = f"{fini.action} annulé : {pourquoi}"
-        self._journal("annulation", pourquoi, action=fini.action, cible=fini.cible)
+        phrase = f"{pourquoi} → il arrête de {phrases.action(fini.action, fini.cible, fini.detail)}"
+        self.pourquoi_courant = phrase
+        self._journal("annulation", phrase, action=fini.action, cible=fini.cible)
         self._publier_intention(now)
 
     def _reaction(self, now: float) -> None:
@@ -494,16 +495,17 @@ class Selecteur:
         action, cible = self.courante
         offre = next((o for o in self.offres.vivantes(now) if o.kind == "personne" and o.piste == due["piste"]), None)
         valeur = offre.valeur if offre else 0.0
+        fait = phrases.action(action, cible)
         if self.en_cours is not None:
-            raison = (f"garde {action}, engagé ; offre {valeur:.1f} < "
-                      f"{self.r.get('engagement.seuil_rupture'):g}")
+            raison = (f"il continue ({fait}) : la nouvelle offre ({num(valeur)}) ne suffit pas à "
+                      f"l'interrompre (il faut {num(self.r.get('engagement.seuil_rupture'))})")
         elif due["piste"] in self.ignores:
-            raison = f"garde {action} : {due['piste']} ignorée par la console"
+            raison = f"il continue ({fait}) : David a dit d'ignorer {due['piste']}"
         elif self.t_derniere_decision is not None and now - self.t_derniere_decision < self.r.get("changement.min_s"):
-            raison = (f"garde {action} : dernier changement il y a {now - self.t_derniere_decision:.1f} s "
-                      f"< {self.r.get('changement.min_s'):g} s")
+            raison = (f"il continue ({fait}) : il vient de changer d'action il y a "
+                      f"{phrases.s(now - self.t_derniere_decision)} (< {self.r.get('changement.min_s'):g} s)")
         else:
-            raison = f"garde {action} : aucun candidat ne domine (hystérésis)"
+            raison = f"il continue ({fait}) : rien ne l'attire assez pour changer"
         self._journal("maintien", raison, action=action, cible=cible, reaction_a=due["piste"])
 
     # ================================================================ choix (feuilles de l'arbre)
@@ -546,12 +548,11 @@ class Selecteur:
     def _contexte(self, now: float) -> Contexte:
         console = None
         if self.ordre is not None:
-            console = {"action": self.ordre["action"], "cible": self.ordre["cible"]}
+            console = {"action": self.ordre["action"], "cible": self.ordre["cible"], "cmd": self.ordre["cmd"]}
         elif self.joue_avec is not None:
-            console = {"action": None, "cible": self.joue_avec["cible"]}
+            console = {"action": None, "cible": self.joue_avec["cible"], "cmd": "joue avec"}
         tempo = self.r.get("console.plus_lent_facteur") if self.plus_lent_fin is not None else 1.0
-        return Contexte(now=now, jauges=self.pulsions.jauges(),
-                        metteur=self.metteur["action"] if self.metteur else None, console=console,
+        return Contexte(now=now, jauges=self.pulsions.jauges(), metteur=self.metteur, console=console,
                         derniers=dict(self.derniers), derniere_spontanee=self.derniere_spontanee, tempo=tempo)
 
     def choisir(self, branche: str, deplacement_permis: bool, interrompt: bool) -> None:
@@ -589,15 +590,23 @@ class Selecteur:
     def _decider(self, s, scores, branche: str, now: float) -> None:
         c = s.candidat
         origine = "console" if s.considerations.get("console") else "didier"
+        # PHOTOGRAPHIE avant toute mutation (revue A1, point 6) : pulsions et
+        # offres de la ligne sont celles qui ont fait le `pourquoi` (calculé
+        # au même instant), pas l'état d'après (ennui remis à 0, offre prise).
+        jauges = self.pulsions.jauges()
+        offres = [o.resume(now) for o in self.offres.vivantes(now)]
         if self.en_cours is not None:
-            self._annuler(now, f"interrompu par {c.action} ({branche})")
+            self._annuler(now, f"plus pressant : {phrases.action(c.action, c.cible, c.detail)}")
         sortie_ok = self._executer(c, now, origine)
         if not sortie_ok:
             return
         self.leader = None
         self.t_derniere_decision = now
         self.courante = (c.action, c.cible)
-        self.pourquoi_courant = s.pourquoi
+        pourquoi = s.pourquoi
+        if c.detail.get("sequence"):
+            pourquoi += f" « {c.detail['sequence']} »"
+        self.pourquoi_courant = pourquoi
         if c.action != RIEN:
             self.pulsions.sur_action(c.deplacement)
             if c.categorie is not None:
@@ -613,16 +622,16 @@ class Selecteur:
             "considerations": s.considerations, "spontanee": s.spontanee, "deplacement": c.deplacement,
             "top3": [{"action": x.candidat.action, "cible": x.candidat.cible, "score": round(x.total, 3)}
                      for x in scores[:3]],
-            "offres": [o.resume(now) for o in self.offres.vivantes(now)],
-            "pulsions": self.pulsions.jauges(),
+            "offres": offres,
+            "pulsions": jauges,
         }
         if c.detail.get("sequence"):
             payload["sequence"] = c.detail["sequence"]
         if self.reaction_due is not None:
             payload["reaction_a"] = self.reaction_due["piste"]
             self.reaction_due = None
-        self._journal("decision", s.pourquoi, **payload)
-        self._decision_tick = Decision(c.action, c.cible, s.pourquoi)
+        self._journal("decision", pourquoi, **payload)
+        self._decision_tick = Decision(c.action, c.cible, pourquoi)
         self._publier_intention(now)
 
     def _executer(self, c: Candidat, now: float, origine: str) -> bool:

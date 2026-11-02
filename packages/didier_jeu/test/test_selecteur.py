@@ -79,7 +79,7 @@ def test_verrou_jusqu_au_go_aucun_deplacement():
     ])
     assert moves(out) == [(1.0, "stop"), (15.0, "go")]
     assert [p["source"] for _, p in journal(out, "relais_go")] == ["console"]
-    assert any("verrou" in p["pourquoi"] for _, p in journal(out, "refus"))
+    assert any("arrêté jusqu'au go" in p["pourquoi"] for _, p in journal(out, "refus"))
 
 
 # ================================================================== T1 jamais deux changements < 2 s
@@ -153,7 +153,8 @@ def test_naissance_de_piste_engagee_donne_un_maintien_en_moins_de_1_s():
     assert [(t, p["piste"]) for t, p in nee] == [(5.0, "p1")]
     assert len(m) == 1 and m[0][1]["reaction_a"] == "p1"
     assert m[0][0] - 5.0 == pytest.approx(0.6) and m[0][0] - 5.0 <= 1.0
-    assert m[0][1]["pourquoi"] == "garde spontanee, engagé ; offre 0.7 < 0.9"
+    assert m[0][1]["pourquoi"] == ("il continue (une expression spontanée) : la nouvelle offre (0,70) "
+                                   "ne suffit pas à l'interrompre (il faut 0,90)")
 
 
 def test_naissance_de_piste_libre_donne_un_choix_en_moins_de_1_s():
@@ -469,3 +470,28 @@ def test_route_off_par_david_annule_la_lubie_en_attente():
     out2 = jouer(fabriquer(), 0.0, 8.0, [(0.0, marche), (1.0, _poi("anneaux")),
                                          (2.0, lambda s, t: s.sur_route_cause("boot", t))])
     assert moves(out2) == [(4.3, "stop")]
+
+
+# ================================================================== journal lisible et cohérent (revue point 6)
+def test_ligne_de_decision_photographiee_avant_mutation():
+    out = jouer(fabriquer(), 0.0, 6.0)
+    d = journal(out, "decision")[0][1]
+    # Spontanée à 4,0 s : ennui 0,40 AU MOMENT du choix (l'action le remet à 0 ensuite).
+    assert d["pulsions"]["ennui"] == 0.4
+    assert d["pourquoi"] == "il s'ennuie (0,40) → une expression spontanée « spont-a »"
+
+
+def test_pourquoi_lisible_par_un_humain():
+    out = jouer(fabriquer(), 0.0, 130.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                          (50.0, lambda s, t: s.sur_console({"cmd": "ignore", "cible": "p1"}, t))],
+                continu=boite(20.0, 25.0))
+    textes = [o[3]["pourquoi"] for o in out if o[1] == "journal"]
+    # Valeurs AU MOMENT du choix (0,3 s d'hystérésis après la naissance de l'offre).
+    assert "il passe près de « anneaux » (offre 0,72) + lubie (0,48) → réclamer de s'arrêter devant « anneaux »" \
+        in textes
+    assert "lubie « anneaux » réclamée, pas de refus en 3 s → il s'arrête" in textes
+    assert "une personne, p1 (offre 0,63) + curiosité (0,92) → la regarder" in textes
+    assert "David : ignorer p1 pendant 30 s" in textes
+    for t in textes:
+        assert "animation_state" not in t and "offre(s)" not in t and "poi_event" not in t, t
+        assert not any(c.isdigit() and "." in t[i:i + 3] for i, c in enumerate(t)), t   # virgule décimale
