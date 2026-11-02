@@ -53,3 +53,20 @@
     copy_links: yes
     #rsync_opts:
     #  - "--delete"
+
+# Lot L1a (2026-11-02) : les packages communs du mono-dépôt vivent dans
+# theatre-robot/packages/ (hors de l'ancien dépôt) ; ils doivent arriver dans
+# ros2_ws/src/<package> sur CHAQUE machine, car dadou_utils_ros/utils_static.py
+# importe theatre_contrats — sans lui, tous les nodes tombent au démarrage.
+# Copie de l'arbre entier (petit : pur Python + 4 .msg), exclusions comme ci-dessus.
+- name: Synchronize mono-repo packages "{{ packages_dir }}/" with "{{ ros2_ws }}/src/"
+  synchronize:
+    src: "{{ packages_dir }}/"
+    dest: "{{ ros2_ws }}/src/"
+    recursive: yes
+    copy_links: yes
+    rsync_opts:
+      - "--exclude=.git/"
+      - "--exclude=__pycache__/"
+      - "--exclude=*.egg-info/"
+      - "--exclude=README.md"
