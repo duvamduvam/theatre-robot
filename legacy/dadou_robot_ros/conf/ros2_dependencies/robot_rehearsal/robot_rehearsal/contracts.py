@@ -124,7 +124,9 @@ TOUR_SENS_DEFAUT = "gauche"
 # --- « Aller voir » (lot M1, spec-aller-voir.md) — SIM-ONLY -----------------------
 # Vocabulaire d'objets (régisseur -> chat_node) : StringTime LATCHÉ (TRANSIENT_
 # LOCAL depth 1, des DEUX côtés), publié au démarrage du régisseur, JSON liste
-# [{"name", "desc"}] dans l'ordre de l'itinéraire. Gravé des deux côtés.
+# [{"name", "desc", "x", "y"}] dans l'ordre de l'itinéraire. Gravé des deux
+# côtés ; x, y (ancre du POI, m) ajoutés au lot A1 pour le sélecteur de jeu —
+# chat_node ne lit que name/desc.
 OBJECTS_TOPIC = "rehearsal/objects"
 # Ordre de manœuvre (régisseur -> route_driver) : StringTime JSON
 # {"name", "x", "y", "standoff"} ou "cancel". Le régisseur ORDONNE ; seul

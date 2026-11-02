@@ -25,6 +25,9 @@ régisseur : JSON liste `[{"name": "anneaux", "desc": "bagues géantes"}, …]`,
 construit depuis l'itinéraire (`config/chantiers.yaml`). Nouveau champ YAML
 par POI : `desc` (≤ 6 mots, ce qu'on VOIT) et `alias` (liste de mots que
 David peut dire). Absent → `desc` = nom, `alias` = [].
+Lot A1 (02/11) : chaque objet porte aussi `x`, `y` (ancre du POI, m) pour
+que le sélecteur de jeu (`didier_jeu`, SIM-ONLY) oriente le regard vers
+l'objet d'une lubie ; champs additifs, chat_node ne lit que `name`/`desc`.
 
 chat_node (vision), seulement si le mouvement à la voix est branché : ajoute
 au prompt de marche la liste « Objets que tu peux aller voir : anneaux

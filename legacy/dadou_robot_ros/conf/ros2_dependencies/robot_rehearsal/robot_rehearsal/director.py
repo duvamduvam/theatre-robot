@@ -691,9 +691,13 @@ class VoiceMove:
 
 def objects_payload(pois) -> str:
     """Payload LATCHÉ de rehearsal/objects (spec §2.1) : JSON liste
-    [{"name", "desc"}] dans l'ordre de l'itinéraire, desc = nom si absente.
-    Les alias n'y sont PAS : ils servent à la résolution ici, pas au prompt."""
-    return json.dumps([{"name": p.name, "desc": p.shown_desc} for p in pois])
+    [{"name", "desc", "x", "y"}] dans l'ordre de l'itinéraire, desc = nom si
+    absente. Les alias n'y sont PAS : ils servent à la résolution ici, pas au
+    prompt. x, y (m, repère du monde = ANCRE du POI, pas le centre de l'objet)
+    ajoutés au lot A1 (02/11) pour que le sélecteur de jeu oriente le regard
+    vers l'objet d'une lubie (SIM-ONLY) : champs ADDITIFS, chat_node ne lit
+    que name/desc (vision/ai/stage.decode_objects_payload) et les ignore."""
+    return json.dumps([{"name": p.name, "desc": p.shown_desc, "x": p.x, "y": p.y} for p in pois])
 
 
 def resolve_object(text, pois) -> Poi | None:

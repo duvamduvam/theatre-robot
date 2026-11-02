@@ -20,8 +20,10 @@ POIS = (TABLE, ANNEAUX)
 
 
 def test_objets_payload_ordre_itineraire_desc_ou_nom():
-    assert json.loads(objects_payload(POIS)) == [{"name": "table_basse", "desc": "table_basse"},
-                                                 {"name": "anneaux", "desc": "bagues géantes"}]
+    # x, y (ancre du POI) : ajoutés au lot A1 (sélecteur de jeu, regard vers l'objet).
+    assert json.loads(objects_payload(POIS)) == [
+        {"name": "table_basse", "desc": "table_basse", "x": 17.8, "y": 1.4},
+        {"name": "anneaux", "desc": "bagues géantes", "x": 78.42, "y": 4.19}]
     assert objects_payload(()) == "[]"
 
 
