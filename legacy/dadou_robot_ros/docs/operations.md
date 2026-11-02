@@ -265,18 +265,26 @@ WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true 
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_jeu jeu_node'
 ```
+- Le launch `jeu:=true` démarre **lui-même** le sélecteur (`jeu_node`, respawn).
+  Ne pas le lancer à part. Si le répertoire de séquences est illisible, il
+  démarre en **mode dégradé** (relais stop/go seul, ligne `degrade` au journal) :
+  l'arrêt vocal passe toujours.
 - `--build` est nécessaire une fois : l'image doit contenir `ros-jazzy-py-trees`.
   Le code de `didier_jeu` est monté en volume et rebâti à chaque démarrage.
 - Page scène http://localhost:8765/scene : **Route ON**, **Séance START**. La séance
   doit être startée, car le régisseur ignore un « go » hors séance, et c'est par
   ce « go » que Didier repart après SES arrêts. Le panneau **« Jeu »** (sim
   seulement) montre l'intention en cours avec son pourquoi et le temps restant,
-  les jauges, les 20 dernières lignes du journal, et six boutons : va là
+  les jauges, les 20 dernières lignes du journal, et sept boutons : va là
   (objet, ou dernière piste vue), joue avec lui, ignore, reviens, plus lent,
-  stop/go. La page envoie un battement (`presence`) tant que l'onglet est
-  visible et qu'elle a la main.
+  STOP et GO (deux boutons distincts). La page envoie un battement (`presence`)
+  tant que l'onglet est visible et qu'elle a la main. **STOP CONTENUS** arrête
+  aussi le sélecteur (stop de David). Un « go » dit à voix haute ne relance
+  jamais un stop posé à la console : seul GO le fait.
+- **Reprise** : après un arrêt de sa part, Didier repart seul après **90 s de
+  silence**, et toute parole entendue relance le compte. Jamais après un stop ni
+  une Route OFF de David.
 - **Perception** : en A1, elle est **scriptée**. Une personne se simule à la main :
   `ros2 topic pub -r 16 /vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.3, y: 0.4, z: 0.9}}"`.
   On peut aussi brancher la tête vision et sa webcam.
@@ -287,8 +295,9 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
   départ, gravées en test : un réglage se change donc en touchant
   `test_reglages.py`.
 
-**Vérification rejouable** (dans le conteneur, les cinq commandes ci-dessus
-lancées, route OFF ; ≈ 16 min) :
+**Vérification rejouable** (dans le conteneur, les quatre commandes ci-dessus
+lancées ; ≈ 16 min ; le script fait lui-même la mise en route et échoue s'il
+ne lit pas `route_state`) :
 `docker exec dadou-sim-container bash /home/ros2_ws/validate-jeu-a1.sh`.
 Le script contient sa propre perception scriptée et joue la console et la bouche ;
 il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
