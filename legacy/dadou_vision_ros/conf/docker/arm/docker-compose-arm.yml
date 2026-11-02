@@ -5,6 +5,12 @@ services:
     build:
       context: ../../..
       dockerfile: conf/docker/arm/Dockerfile-arm
+      # Packages COMMUNS du mono-dépôt (lot L1a) en contextes NOMMÉS, chemins
+      # de l'arborescence déployée sur le Pi (ros2_ws/src/<package>, comme le
+      # volume robot_interfaces) — Ansible doit les y synchroniser.
+      additional_contexts:
+        robot_interfaces: ../../../../robot_interfaces
+        theatre_contrats: ../../../../theatre_contrats
     environment:
       - ALSA_CARD=0
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
@@ -23,6 +29,9 @@ services:
       # src/, comme sur les autres machines du parc — pas encore utilisé par
       # le heartbeat V0, prêt pour /face /audio en V2.
       - ../../../../robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      # theatre_contrats (lot L1a) : même mécanique (rsync ansible au niveau
+      # src/) — importé par dadou_utils_ros/utils_static.py, OBLIGATOIRE.
+      - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # Workspace colcon partagé entre les dépôts dadou_*_ros (comme robot).
       - ../../../../../build:/home/ros2_ws/build
       - ../../../../../install:/home/ros2_ws/install

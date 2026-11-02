@@ -25,6 +25,12 @@ COPY conf/ros2/setup.cfg /home/ros2_ws/src/vision/
 COPY conf/ros2/resource/ /home/ros2_ws/src/vision/resource/
 # Launch file V1 (heartbeat + person_tracker) : cf. conf/ros2/launch/vision.launch.py
 COPY conf/ros2/launch/ /home/ros2_ws/src/vision/launch/
+# Packages communs du mono-dépôt (lot L1a), en contextes NOMMÉS : fournis par
+# docker-compose-arm.yml (additional_contexts) sur le Pi, par build-x86.sh
+# (--build-context) sur le banc PC. theatre_contrats est OBLIGATOIRE : le shim
+# dadou_utils_ros/utils_static.py l'importe.
+COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces
+COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
 
 # Leçon apt du parc (payée 3 fois sur dadou_robot_ros) : filtrer les
 # commentaires avant xargs (une ligne '#' brute ferait planter apt-get) ;

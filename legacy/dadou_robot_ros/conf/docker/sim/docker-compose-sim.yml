@@ -11,6 +11,13 @@ services:
     build:
       context: ../../..
       dockerfile: conf/docker/sim/Dockerfile-sim
+      # Packages COMMUNS du mono-dépôt theatre-robot (lot L1a) : hors du
+      # contexte principal (racine de dadou_robot_ros), passés en contextes
+      # NOMMÉS — `COPY --from=<nom>` dans le Dockerfile. Chemins relatifs à ce
+      # fichier : ../../../../../ = racine du mono-dépôt.
+      additional_contexts:
+        robot_interfaces: ../../../../../packages/robot_interfaces
+        theatre_contrats: ../../../../../packages/theatre_contrats
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
@@ -69,7 +76,11 @@ services:
       # Sources montées par-dessus la copie de l'image : itération sans rebuild.
       - ../../ros2_dependencies/robot_description:/home/ros2_ws/src/robot_description
       - ../../ros2_dependencies/robot_sim:/home/ros2_ws/src/robot_sim
-      - ../../ros2_dependencies/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      # Packages communs du mono-dépôt (lot L1a) : robot_interfaces (copie
+      # UNIQUE, ex-conf/ros2_dependencies) et theatre_contrats (contrat, importé
+      # par dadou_utils_ros/utils_static.py — sans lui, tout node tombe à l'import).
+      - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       - ../../ros2_dependencies/robot_drive:/home/ros2_ws/src/robot_drive
       - ../../ros2_dependencies/robot_web:/home/ros2_ws/src/robot_web
       # robot_rehearsal : salle de répétition (SIM-ONLY, jamais dans le

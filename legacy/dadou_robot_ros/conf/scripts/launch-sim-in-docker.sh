@@ -9,7 +9,9 @@ cd /home/ros2_ws/
 # Toujours buildé ici (colcon build est rapide, pas de compilation C++) : ça
 # évite un flag de build séparé pour un flag de lancement, et permet de
 # basculer animations:=true à chaud sans rebuild.
-colcon build --packages-select robot_description robot_sim robot_interfaces robot_drive robot_web robot_rehearsal robot
+# theatre_contrats (lot L1a) : OBLIGATOIRE dès qu'un node importe
+# dadou_utils_ros.utils_static (shim) ou le codec StringTime commun.
+colcon build --packages-select theatre_contrats robot_description robot_sim robot_interfaces robot_drive robot_web robot_rehearsal robot
 source /home/ros2_ws/install/setup.bash
 
 ros2 launch robot_sim sim.launch.py world:=${WORLD:-stage} headless:=${HEADLESS:-false} animations:=${ANIMATIONS:-false} web:=${WEB:-false} web_port:=${WEB_PORT:-8765} web_drive:=${WEB_DRIVE:-false} rehearsal:=${REHEARSAL:-false} face:=${FACE:-false} face_port:=${FACE_PORT:-8766}

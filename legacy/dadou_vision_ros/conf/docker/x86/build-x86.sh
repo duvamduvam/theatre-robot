@@ -15,6 +15,9 @@
 # ceinture et bretelles, la clé ne doit jamais approcher une image.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."   # racine du dépôt vision = racine du contexte
+# Packages COMMUNS du mono-dépôt theatre-robot (lot L1a) : hors du contexte
+# streamé, passés en contextes NOMMÉS (COPY --from=... dans Dockerfile-arm).
+PACKAGES="$(cd ../../packages && pwd)"
 
 tar -ch \
     --exclude-vcs \
@@ -22,4 +25,6 @@ tar -ch \
     --exclude=./conf/docker/x86/workspace \
     --exclude='__pycache__' \
     . | docker build -t dadouuu/dadou-vision-x86:latest \
+        --build-context robot_interfaces="$PACKAGES/robot_interfaces" \
+        --build-context theatre_contrats="$PACKAGES/theatre_contrats" \
         -f conf/docker/arm/Dockerfile-arm -

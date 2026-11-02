@@ -5,6 +5,14 @@ services:
     build:
       context: ../../..
       dockerfile: conf/docker/arm/Dockerfile-arm
+      # Packages COMMUNS du mono-dépôt (lot L1a) en contextes NOMMÉS. Chemins
+      # de l'arborescence DÉPLOYÉE sur le Pi (ros2_ws/src/<package>, même
+      # convention que le volume robot_interfaces ci-dessous) — ⚠️ Ansible
+      # doit y synchroniser packages/robot_interfaces et packages/theatre_contrats
+      # AVANT tout déploiement de ce lot (verrou noté au tableau de bord).
+      additional_contexts:
+        robot_interfaces: ../../../../robot_interfaces
+        theatre_contrats: ../../../../theatre_contrats
     # Supervision par le DÉMON Docker (assainissement 2026-07-11) : relance
     # sur crash et au boot, sauf arrêt volontaire (docker stop / systemctl
     # stop robot). robot.service n'est plus qu'un interrupteur up -d / stop —
@@ -28,6 +36,9 @@ services:
       - ../../../medias:/home/ros2_ws/src/robot/medias
       - ../../../../robot_bringup:/home/ros2_ws/src/robot_bringup
       - ../../../../robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      # theatre_contrats (lot L1a) : importé par dadou_utils_ros/utils_static.py
+      # — sans lui, TOUS les nodes tombent à l'import, wheels_node compris.
+      - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # Chaîne cmd_vel (bridge/mux/deadman) — rsyncée sur le Pi par la tâche
       # ansible "ros2_dependencies -> src/", comme robot_bringup/robot_interfaces.
       - ../../../../robot_drive:/home/ros2_ws/src/robot_drive

@@ -100,9 +100,14 @@ services:
       # (ChatStartupError « voix Piper introuvable » — piège documenté dans
       # Dockerfile-arm). L'image se suffit.
       #
-      # robot_interfaces (StringTime) : depuis le dépôt frère dadou_robot_ros,
-      # même niveau src/ que sur le parc.
-      - ../../../../dadou_robot_ros/conf/ros2_dependencies/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      # robot_interfaces (StringTime) et theatre_contrats (contrat, importé par
+      # le shim dadou_utils_ros/utils_static.py) : packages/ du mono-dépôt
+      # (lot L1a, ../../../../../ = racine theatre-robot), même niveau src/ que
+      # sur le parc. ⚠️ workspace/ persistant : après ce lot, `touch
+      # vision/CHANGE` pour que colcon construise theatre_contrats, sinon les
+      # nodes tombent à l'import.
+      - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # Workspace colcon LOCAL au banc (pas le workspace partagé du Pi — sur
       # le PC les chemins ../../../../../ du compose ARM ne mènent nulle
       # part). Dossier gitignoré, jetable ; le premier démarrage build tout

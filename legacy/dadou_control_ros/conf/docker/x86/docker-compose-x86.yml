@@ -9,6 +9,10 @@ services:
       # Build in monorepo root so all sources are available to the Dockerfile.
       context: ../../..
       dockerfile: conf/docker/x86/Dockerfile-x86
+      # Packages communs du mono-dépôt (lot L1a) : ../../../../../ = racine theatre-robot.
+      additional_contexts:
+        robot_interfaces: ../../../../../packages/robot_interfaces
+        theatre_contrats: ../../../../../packages/theatre_contrats
       args:
         GUI: ${GUI}
         CONTAINER_NAME: ${CONTAINER_NAME}
@@ -39,7 +43,11 @@ services:
       - ../../../dadou_utils_ros:/home/ros2_ws/src/controller/dadou_utils_ros
       - ../../../json:/home/ros2_ws/src/controller/json
       - ../../../medias:/home/ros2_ws/src/controller/medias
-      - ../../../conf/ros2_dependencies/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      # robot_interfaces (copie UNIQUE) et theatre_contrats (contrat, importé par
+      # le shim dadou_utils_ros/utils_static.py) : packages/ du mono-dépôt
+      # (lot L1a, ../../../../../ = racine theatre-robot).
+      - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       - /home/dadou/tmp/controller_logs:/home/ros2_ws/log
     #  - /dev/:/dev
     #  - /dev/null:/folder/fileToBeExcluded
