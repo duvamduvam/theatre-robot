@@ -6,7 +6,7 @@ StringTime, profils QoS. Créé au lot L1a (2026-11-02) pour remplacer
 `dadou_utils_ros/utils_static.py` comme source du contrat ; ce dernier n'en est plus
 qu'un **shim** qui ré-exporte d'ici (il disparaît au lot L5).
 
-**Python pur, stdlib seulement** : s'importe sur le PC de dev sans ROS. C'est un package
+**Python pur, stdlib seulement** : s'importe sur le PC de dev sans ROS (seul `qos.py` utilise rclpy, importé à l'appel — d'où l'unique `exec_depend`). C'est un package
 ament_python pour que colcon l'installe dans chaque conteneur (sim, robot, vision,
 télécommande) — `dadou_utils_ros/utils_static.py` l'importe, donc **tout conteneur qui
 embarque la lib doit avoir ce package dans son `src/`**.

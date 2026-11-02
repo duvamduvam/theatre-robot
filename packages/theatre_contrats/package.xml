@@ -7,9 +7,8 @@
   <maintainer email="achats@duvam.net">dadou</maintainer>
   <license>MIT</license>
 
-  <!-- AUCUNE dépendance d'exécution : le package doit s'importer sur le PC
-       sans ROS (tests hôte). qos.py importe rclpy PARESSEUSEMENT, à l'appel. -->
-  <!-- qos.py importe rclpy À L'APPEL (le module reste importable sans ROS) -->
+  <!-- Seule dépendance d'exécution : rclpy, pour qos.py, qui l'importe À
+       L'APPEL — le package reste importable sur le PC sans ROS (tests hôte). -->
   <exec_depend>rclpy</exec_depend>
   <test_depend>python3-pytest</test_depend>
 
