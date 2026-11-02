@@ -249,6 +249,51 @@ scène** ou la télécommande (publieurs longue durée), pas au CLI ; dans un
 script, envoyer des **salves** (`-t 10 -r 2`) de commandes idempotentes et
 vérifier **par l'effet** (odométrie, journal), jamais par un `echo --once`.
 
+## Séance A1 — le sélecteur de jeu décide (lot A1, 02/11, SIM-ONLY)
+
+Le sélecteur de jeu (`theatre-robot/packages/didier_jeu`, spec
+`theatre-robot/docs/spec-A1-selecteur-de-jeu.md`) est **le seul décideur du
+corps**. La bouche dépose des intentions, son « stop » est relayé sans arbitrage,
+et le régisseur arbitre puis ordonne. Même monde, même page scène que la séance
+Chantiers ; deux différences : `jeu:=true` (le régisseur écoute `jeu/chat_move`)
+et un **scénario vide** `jeu-a1` (0 bug, 0 lubie : les lubies viennent du
+sélecteur). Tout se passe sur le domaine **43** ; `jeu_node` refuse de démarrer ailleurs.
+
+```bash
+cd conf/docker/sim
+WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d --build
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_jeu jeu_node'
+```
+- `--build` est nécessaire une fois : l'image doit contenir `ros-jazzy-py-trees`.
+  Le code de `didier_jeu` est monté en volume et rebâti à chaque démarrage.
+- Page scène http://localhost:8765/scene : **Route ON**, **Séance START**. La séance
+  doit être startée, car le régisseur ignore un « go » hors séance, et c'est par
+  ce « go » que Didier repart après SES arrêts. Le panneau **« Jeu »** (sim
+  seulement) montre l'intention en cours avec son pourquoi et le temps restant,
+  les jauges, les 20 dernières lignes du journal, et six boutons : va là
+  (objet, ou dernière piste vue), joue avec lui, ignore, reviens, plus lent,
+  stop/go. La page envoie un battement (`presence`) tant que l'onglet est
+  visible et qu'elle a la main.
+- **Perception** : en A1, elle est **scriptée**. Une personne se simule à la main :
+  `ros2 topic pub -r 16 /vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.3, y: 0.4, z: 0.9}}"`.
+  On peut aussi brancher la tête vision et sa webcam.
+- **Journal « pourquoi »** (à relire avec David, ligne par ligne) :
+  `/home/ros2_ws/log/jeu/<horodatage>_<pid>_jeu.jsonl` dans le conteneur
+  (format boîte noire, une ligne par décision, maintien, refus ou relais).
+- Les réglages (`packages/didier_jeu/config/reglages.yaml`) sont des valeurs de
+  départ, gravées en test : un réglage se change donc en touchant
+  `test_reglages.py`.
+
+**Vérification rejouable** (dans le conteneur, les cinq commandes ci-dessus
+lancées, route OFF ; ≈ 16 min) :
+`docker exec dadou-sim-container bash /home/ros2_ws/validate-jeu-a1.sh`.
+Le script contient sa propre perception scriptée et joue la console et la bouche ;
+il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
+`jeu:=true` reste vérifiée par `validate-rehearsal-chantiers.sh` (V-R3).
+
 ## Salle de répétition simulée — Didier chemine seul dans la rue (lot R1, 2026-10-07)
 
 Monde `rue` + package SIM-ONLY `robot_rehearsal` (étude
