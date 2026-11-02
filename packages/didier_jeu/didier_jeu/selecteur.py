@@ -26,8 +26,10 @@ RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.
   RÉCLAMÉ (intention) ET AMORCÉ (regard) puis demandé au régisseur seulement si
   la console n'a dit ni ignore ni va_la pendant lubie.delai_refus_s ;
 - reprise : après un arrêt de DIDIER, « repartir ? » puis « go » de lui-même
-  après reprise.delai_s, sauf stop/ignore de la console ; JAMAIS de « go »
-  automatique après un stop de David ;
+  après reprise.delai_s de SILENCE (décision de David, 02/11 : toute parole
+  entendue — chat_transcript rôle david — remet le compteur à zéro ; jamais
+  de « go » tant que la scène parle), sauf stop/ignore de la console ;
+  JAMAIS de « go » automatique après un stop de David ;
 - fatigue > seuil : aucun déplacement ; « ignore » : rien vers la cible
   pendant console.ignore_s.
 SÉCURITÉ : ce module ne produit AUCUN Twist ; ses seuls effets sur les roues
@@ -280,6 +282,16 @@ class Selecteur:
         if e is not None and etat == "goto":
             e.accuse = True
 
+    def sur_parole(self, texte, now: float) -> None:
+        """Une parole ENTENDUE (chat_transcript, rôle david : ce que Didier a
+        compris, de David ou du public). Arrêté par lui-même, Didier attend
+        reprise.delai_s de SILENCE : le compteur repart de zéro (David, 02/11)."""
+        if self.arret_didier is None:
+            return
+        self.arret_didier["silence_depuis"] = now
+        self._journal("parole", f"on lui parle → il attend encore {self.r.get('reprise.delai_s'):g} s de "
+                      "silence avant de repartir", texte=str(texte)[:80])
+
     def sur_route_cause(self, cause, now: float) -> None:
         """route_state_cause (latché, régisseur) : « cmd » = David a coupé la
         route — traité comme un stop de David : reprise désarmée, lubie en
@@ -413,7 +425,8 @@ class Selecteur:
         vivantes = self.offres.vivantes(now)
         self.pulsions.avancer(dt, calme=not vivantes and self.en_cours is None)
         if self.arret_didier is not None:
-            self.pulsions.pression_route = min(1.0, (now - self.arret_didier["t"]) / self.r.get("reprise.delai_s"))
+            silence = now - self.arret_didier.get("silence_depuis", self.arret_didier["t"])
+            self.pulsions.pression_route = min(1.0, silence / self.r.get("reprise.delai_s"))
         else:
             self.pulsions.pression_route = 0.0
         self._expirer(now)
@@ -530,7 +543,7 @@ class Selecteur:
                 cands.append(Candidat("bouche", o.payload["cible"], o, None, {"demande": o.payload["demande"]}))
         if self.ordre is not None and self.ordre["action"] in ("aller_voir", "repartir"):
             cands.append(Candidat(self.ordre["action"], self.ordre["cible"]))
-        if self.arret_didier is not None and self.pulsions.pression_route >= 1.0:
+        if self.arret_didier is not None and self.pulsions.pression_route >= 1.0 - EPS:
             cands.append(Candidat("repartir", None, None, "pression_route"))
         return [c for c in cands if self._permis(c, deplacement_permis)]
 

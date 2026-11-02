@@ -80,8 +80,10 @@ lubie:
 
 reprise:
   # Après un arrêt décidé par DIDIER : il propose « repartir ? » puis envoie
-  # lui-même « go » au bout de ce délai, sauf stop/ignore de la console.
-  # Jamais de « go » automatique après un stop/off de David (31/10, §8.3).
+  # lui-même « go » après ce délai de SILENCE — toute parole entendue
+  # (chat_transcript, rôle david) remet le compteur à zéro : jamais de « go »
+  # tant que la scène parle (décision de David, 02/11). Sauf stop/ignore de la
+  # console ; jamais de « go » automatique après un stop/off de David (31/10).
   delai_s: 90.0
 
 superviseur:

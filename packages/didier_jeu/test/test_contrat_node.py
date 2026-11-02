@@ -84,3 +84,9 @@ def test_modules_purs_sans_ros():
         if nom == "jeu_node.py":
             continue
         assert "rclpy" not in src, nom
+
+
+def test_topic_de_la_parole_entendue_egal_a_celui_de_chat_node():
+    src = (LEGACY / "dadou_vision_ros" / "vision" / "nodes" / "chat_node.py").read_text(encoding="utf-8")
+    assert re.search(r'^CHAT_TRANSCRIPT_TOPIC = "chat_transcript"$', src, re.M)
+    assert re.search(r'^TRANSCRIPT_TOPIC = "chat_transcript"$', NODE.read_text(encoding="utf-8"), re.M)

@@ -9,7 +9,7 @@ Le refus a lieu AVANT rclpy.init : rien n'est jamais créé sur le domaine 42.
 Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
         rehearsal/chat_move (la BOUCHE : ses demandes deviennent des intentions,
         son « stop » est relayé sans arbitrage), jeu/console (page scène),
-        chat_situation, mission_state (latché), route_state et route_state_cause (latchés),
+        chat_situation, chat_transcript (parole entendue), mission_state (latché), route_state et route_state_cause (latchés),
         route_goto_result, animation_state (latché), rehearsal/objects (latché),
         /ground_truth/odom (SIM-ONLY : orienter le regard d'une lubie vers
         l'objet ; A2 le remplacera par la perception).
@@ -48,6 +48,10 @@ LOOK_TOPIC = "look"
 # SITUATION_TOPIC / MISSION_STATE_TOPIC, littéraux gravés en test.
 SITUATION_TOPIC = "chat_situation"
 MISSION_STATE_TOPIC = "mission_state"
+# Ce que Didier a COMPRIS (chat_node, « Flow », docs/interfaces.md) : JSON
+# {"role": "david"|"didier", "text", "t_ms"} ; rôle david = parole entendue.
+# Littéral gravé avec CHAT_TRANSCRIPT_TOPIC de chat_node (test_contrat_node.py).
+TRANSCRIPT_TOPIC = "chat_transcript"
 # Republication de l'intention latchée (porte T6 : jamais muette plus de 1 s).
 # 0,5 s et pas 1 s : le tick (0,1 s) ferait des écarts de 1,0 à 1,1 s, plus le
 # transport DDS — la porte se mesure côté abonné.
@@ -114,6 +118,7 @@ def main(args=None):
             self.create_subscription(StringTime, CHAT_MOVE_TOPIC, self._json(self.sel.sur_chat_move_bouche), 10)
             self.create_subscription(StringTime, topics.JEU_CONSOLE, self._json(self.sel.sur_console), 10)
             self.create_subscription(StringTime, SITUATION_TOPIC, self._on_situation, 10)
+            self.create_subscription(StringTime, TRANSCRIPT_TOPIC, self._on_transcript, 10)
             self.create_subscription(StringTime, MISSION_STATE_TOPIC, self._json(self.sel.sur_mission),
                                      qos.latched())
             self.create_subscription(StringTime, ROUTE_STATE_TOPIC, self._on_route_state, qos.latched())
@@ -154,6 +159,12 @@ def main(args=None):
             v = stringtime.decode_or_raw(msg.msg)
             texte = v.get("text") if isinstance(v, dict) else None
             self.sel.sur_situation(texte, time.monotonic())
+
+        def _on_transcript(self, msg):
+            v = stringtime.decode_or_raw(msg.msg)
+            if isinstance(v, dict) and v.get("role") == "david":
+                self.sel.sur_parole(v.get("text", ""), time.monotonic())
+                self._vider()
 
         def _on_route_state(self, msg):
             # Contrat route_driver : payload BRUT (on/off/goto/arrived), JSON toléré.

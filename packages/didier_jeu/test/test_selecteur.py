@@ -495,3 +495,26 @@ def test_pourquoi_lisible_par_un_humain():
     for t in textes:
         assert "animation_state" not in t and "offre(s)" not in t and "poi_event" not in t, t
         assert not any(c.isdigit() and "." in t[i:i + 3] for i, c in enumerate(t)), t   # virgule décimale
+
+
+# ================================================================== reprise après 90 s de SILENCE (David, 02/11)
+def _reprise(parole_a=None):
+    evs = [(0.0, marche), (1.0, _poi("anneaux"))]
+    if parole_a is not None:
+        evs.append((parole_a, lambda s, t: s.sur_parole("dis donc, tu fais quoi ?", t)))
+    # Sans expressions (pools vides) : la reprise n'est retardée par rien d'autre.
+    out = jouer(fabriquer(pools={}), 0.0, 200.0, evs)
+    stop = [t for t, m in moves(out) if m == "stop"][0]
+    return stop, [t for t, m in moves(out) if m == "go"]
+
+
+def test_parole_a_80_s_repousse_le_go_a_170_s():
+    stop, gos = _reprise(parole_a=4.3 + 80.0)
+    assert stop == pytest.approx(4.3)
+    assert not [g for g in gos if g < stop + 170.0 - 1e-6]          # pas de go à 90 s
+    assert len(gos) == 1 and stop + 170.0 <= gos[0] <= stop + 170.0 + 0.5   # go à 170 s (+ hystérésis)
+
+
+def test_sans_parole_le_go_part_a_90_s():
+    stop, gos = _reprise()
+    assert len(gos) == 1 and stop + 90.0 <= gos[0] <= stop + 90.5
