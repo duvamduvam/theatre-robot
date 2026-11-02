@@ -875,8 +875,11 @@ def test_scene_boutons_de_repetition_masques_par_defaut():
 
     analyse = Analyse()
     analyse.feed(_lire("scene.html"))
-    # 3 route + 2 séance + 2 webcam + 2 source + 1 curseur + 6 boutons du panneau « Jeu »
-    assert len(analyse.trouves) == 16
+    # 3 route + 2 séance + 2 webcam + 2 source + 1 curseur + 7 boutons du panneau « Jeu »
+    # (va là, joue avec, ignore, reviens, plus lent, STOP, GO — STOP et GO distincts).
+    assert len(analyse.trouves) == 17
+    assert [x[0] for x in analyse.trouves[-7:]] == ["va_la", "joue_avec", "ignore", "reviens",
+                                                    "plus_lent", "stop", "go"]
     assert [x for x in analyse.trouves if not x[1]] == []
 
 

@@ -509,9 +509,6 @@ function afficherJeu(msg) {
     $("jeu-pourquoi").textContent = intention.pourquoi || "";
     $("jeu-verrou").hidden = intention.verrou !== true;
     $("jeu-proposition").hidden = !intention.proposition;
-    const stopGo = $("jeu-stop-go");
-    stopGo.dataset.jeu = intention.verrou === true ? "go" : "stop";
-    stopGo.textContent = intention.verrou === true ? "Go" : "Stop";
     afficherJauges(intention.jauges || {});
   }
   const brutObjets = valeurTopic(msg.topics, "rehearsal/objects");

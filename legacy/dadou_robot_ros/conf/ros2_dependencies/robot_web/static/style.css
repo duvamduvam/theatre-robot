@@ -714,6 +714,7 @@ footer {
 .jeu-pourquoi { font-size: 0.9em; opacity: 0.85; min-height: 2.4em; }
 .jeu-barre { height: 6px; background: var(--bord); margin-top: 0.3rem; }
 .jeu-barre div { height: 100%; width: 0; background: #2e7d32; transition: width 0.2s linear; }
+.jeu-stop { font-weight: bold; }
 .jeu-commandes { display: flex; flex-wrap: wrap; gap: 0.4rem; align-content: flex-start; }
 .jeu-jauges { display: grid; grid-template-columns: 7em 1fr 3em; gap: 2px 0.5em; font-size: 0.85em; align-items: center; }
 .jeu-jauge { height: 8px; background: var(--bord); }

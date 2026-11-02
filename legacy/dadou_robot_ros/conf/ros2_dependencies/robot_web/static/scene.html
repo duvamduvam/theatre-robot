@@ -142,7 +142,10 @@
       <button type="button" class="jeu-bouton" data-jeu="ignore" title="la cible de l'intention en cours, 30 s">Ignore</button>
       <button type="button" class="jeu-bouton" data-jeu="reviens" title="rejoindre la route">Reviens</button>
       <button type="button" class="jeu-bouton" data-jeu="plus_lent" title="réfractaires × 2 pendant 60 s">Plus lent</button>
-      <button type="button" class="jeu-bouton" id="jeu-stop-go" data-jeu="stop">Stop</button>
+      <!-- STOP et GO DISTINCTS (revue A1) : un interrupteur dont l'état vient de
+           `state` (2 s de retard) pouvait envoyer « go » à qui voulait arrêter. -->
+      <button type="button" class="jeu-bouton jeu-stop" data-jeu="stop">STOP</button>
+      <button type="button" class="jeu-bouton" data-jeu="go">GO</button>
     </div>
     <div id="jeu-jauges" class="jeu-jauges"></div>
     <ol id="jeu-journal" class="jeu-journal" aria-live="polite"></ol>
