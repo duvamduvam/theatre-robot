@@ -52,7 +52,10 @@ dadou_vision_ros/
 
 Supprimé à la refonte : MQTT (essais), torch/whisper/blinka/pysftp (jamais utilisés),
 tests lumières/neopixel (copiés du robot), `conf/ros2_dependencies/` dupliqué (le vrai
-`robot_interfaces` arrive par le rsync ansible comme sur les autres machines),
+`robot_interfaces` arrive par le rsync ansible comme sur les autres machines ; copie
+unique dans `packages/robot_interfaces` du mono-dépôt depuis le lot L1a, avec
+`packages/theatre_contrats` — contrat commun, topics `vision/person*` et `vision/status`
+RELATIFS, codec StringTime — que le shim `dadou_utils_ros/utils_static.py` importe),
 `robot` symlink (dépendance à retirer du code), venv commité sur disque.
 
 ## Interfaces ROS (le contrat avec le robot)

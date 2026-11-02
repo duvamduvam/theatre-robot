@@ -15,7 +15,8 @@ physical subsystems.
 
 | Package | Role | Depends on |
 |---|---|---|
-| `robot_interfaces` | messages (`StringTime`, …) | nothing — the shared contract |
+| `robot_interfaces` | messages (`StringTime`, …) — **moved to `packages/robot_interfaces` of the theatre-robot mono-repo (lot L1a, 2026-11-02), single copy for robot/vision/remote** | nothing — the shared contract |
+| `theatre_contrats` | **`packages/theatre_contrats` (lot L1a)**: topic names (relative), payload keys, organ names, the StringTime codec, QoS profiles — pure Python | nothing (stdlib) |
 | `robot_drive` | cmd_vel chain (bridge, twist_mux config, deadman, kinematics) | `robot_interfaces` only |
 | `robot_sim` | Gazebo Harmonic simulation (servos + LED logic re-implemented) | `robot_interfaces` only |
 | `robot_description` | URDF (xacro) | — |
@@ -48,7 +49,9 @@ nodes/      ROS boundary: decode StringTime payloads (nodes/payload.py,
                                  it corrupted frames, incident 2026-07-13),
                                  Visual (raw PNG load)
         └─> robot_config.py / robot_static.py   deploy constants; shared
-                                 constants stay in dadou_utils_ros/utils_static
+                                 CONTRACT constants live in theatre_contrats
+                                 (lot L1a), re-exported by the
+                                 dadou_utils_ros/utils_static shim until L5
                                  (one-way migration rule + contract test)
 ```
 

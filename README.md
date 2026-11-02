@@ -21,7 +21,7 @@ lumières, gants) — décidé le 2026-11-01 (`legacy/dadou_robot_ros/docs/etude
 | Lot | Statut |
 |---|---|
 | L0 sauvegardes + squelette | **FAIT le 02/11** : 6 dépôts sauvegardés et poussés, secrets purgés, squelette posé et **validé sur pièce par David**, 4 historiques importés (1 628 commits), **V-R3 rejoué depuis `legacy/` : 21 OK / 0 KO**, tests du cœur verts, Ansible pointe sur `legacy/` |
-| L1 contrats + données | **prochain** (`dadou_contrats` → `theatre_contrats`, namespace `didier/`, catalogue publié, édition via le robot, renommages `didier_*`) |
+| L1 contrats + données | **en cours** — **L1a fait le 02/11** (à valider par David) : `packages/theatre_contrats` + `packages/robot_interfaces` (copie unique), `utils_static.py` réduit à un shim, codec StringTime commun, topics de la vision relatifs, V-R3 21/21 ; ⚠️ Ansible ne déploie pas encore `packages/` (verrou de déploiement). Suite : L1b namespace `didier/`, L1c catalogue publié, L1d édition via le robot, L1e renommages `didier_*` (spec `docs/spec-L1-contrats-donnees.md`) |
 | L2 sim multi-conteneurs | à venir |
 | L3 gabarit + sono | à venir |
 | L4 télécommande neuve | à venir |

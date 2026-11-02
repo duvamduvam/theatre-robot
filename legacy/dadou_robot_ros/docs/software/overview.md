@@ -21,8 +21,10 @@
 ## Configuration & assets
 - `robot/robot_config.py`: deploy constants (pins, channels, flags — including
   `WHEELS_CMD_VEL_ENABLED`). `robot/robot_static.py`: constants owned by the
-  robot; shared constants live in `dadou_utils_ros/utils_static.py`
-  (one-way migration rule, contract test `test_contrat_utils.py`).
+  robot; shared contract constants (topics, payload keys, organs) live in
+  `packages/theatre_contrats` of the mono-repo since lot L1a, re-exported by
+  the `dadou_utils_ros/utils_static.py` shim until L5 (contract test
+  `test_contrat_utils.py`). StringTime decoding: `theatre_contrats.stringtime`.
 - `json/`: sequences, expressions, lights — ALL under data-contract tests
   (structure, sorted keyframes, referenced assets must exist, PNG sizes).
 - `medias/`: visuals (mouth 24x16, eye 8x8) and audio; the expression visuals
