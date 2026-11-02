@@ -21,6 +21,15 @@ def test_topics_de_la_vision_graves():
     assert topics.VISION_STATUS == "vision/status"
 
 
+def test_topics_du_jeu_graves():
+    # Lot A1 (sélecteur de jeu) : valeurs DE FIL, partagées avec la page scène
+    # (robot_web) et le remap du régisseur (rehearsal.launch.py jeu:=true).
+    assert topics.JEU_CONSOLE == "jeu/console"
+    assert topics.JEU_INTENTION == "jeu/intention"
+    assert topics.JEU_CHAT_MOVE == "jeu/chat_move"
+    assert topics.JEU_JOURNAL == "jeu/journal"
+
+
 def test_nombre_de_topics_grave():
-    # 10 organes + 6 StringTime hors organes + 3 perception.
-    assert len(_noms_de_topics()) == 19
+    # 10 organes + 6 StringTime hors organes + 3 perception + 4 jeu (lot A1).
+    assert len(_noms_de_topics()) == 23

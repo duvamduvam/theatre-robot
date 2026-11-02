@@ -16,7 +16,7 @@ embarque la lib doit avoir ce package dans son `src/`**.
 | Module | Contenu | Règle |
 |---|---|---|
 | `organs.py` | les 10 organes de Didier (`FACE`, `NECK`, `LEFT_ARM`…, tuple `ORGANS`) | critère : topic consommé par un node actionneur du robot ; chaque nom est aussi topic, piste de séquence et clé de payload |
-| `topics.py` | tous les noms de topics : organes (ré-exportés), `ANIMATION`, `ANIMATION_STATE`, `EXPRESSION`, `LIGHTS`, `SPEAK`, `SYSTEM`, `VISION_PERSON`, `VISION_PERSON_BOX`, `VISION_STATUS` | **relatifs**, jamais de `/` initial (namespace par robot au lot L1b) |
+| `topics.py` | tous les noms de topics : organes (ré-exportés), `ANIMATION`, `ANIMATION_STATE`, `EXPRESSION`, `LIGHTS`, `SPEAK`, `SYSTEM`, `VISION_PERSON`, `VISION_PERSON_BOX`, `VISION_STATUS`, et ceux du sélecteur de jeu (lot A1) `JEU_CONSOLE`, `JEU_INTENTION`, `JEU_CHAT_MOVE`, `JEU_JOURNAL` | **relatifs**, jamais de `/` initial (namespace par robot au lot L1b) |
 | `keys.py` | clés et valeurs de payload (`DURATION`, `KEYS`, `MODE`, `JOYSTICK`…) | valeurs de fil reprises à l'identique, incohérences historiques comprises (`UP = "UP"`) |
 | `stringtime.py` | `decode(ros_msg, topic)` / `decode_payload(raw, topic)` **stricts** (invalide → `None` + log ERROR) ; `decode_or_raw(raw, topic="")` **tolérant** (invalide → la chaîne brute, log DEBUG) ; `loads(raw)` nu (lève comme `json.loads`) ; `encode(value, time_ms=0, anim=False, msg_type=None)` | chaque site d'appel garde SA variante — voir la docstring du module |
 | `qos.py` | `volatile(depth=10)`, `latched()` (TRANSIENT_LOCAL, depth 1) | rclpy importé à l'appel ; latché = des DEUX côtés |

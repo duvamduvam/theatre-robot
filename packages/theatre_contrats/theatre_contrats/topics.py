@@ -39,3 +39,20 @@ VISION_PERSON = 'vision/person'
 VISION_PERSON_BOX = 'vision/person_box'
 # std_msgs/String '<hostname> uptime=<s>s' toutes les 5 s : preuve de vie du Pi vision.
 VISION_STATUS = 'vision/status'
+
+# ---------------------------------------------------------------- sélecteur de jeu (lot A1, SIM-ONLY)
+# Contrat : docs/spec-A1-selecteur-de-jeu.md §4 (mono-dépôt). Producteur ou
+# consommateur côté robot : packages/didier_jeu (refus hors domaine 43).
+# StringTime JSON, page scène -> sélecteur : {"cmd": "va_la"|"joue_avec"|
+# "ignore"|"reviens"|"plus_lent"|"stop"|"go", "cible"?, "presence": true} ;
+# la page renvoie {"presence": true} à 2 Hz tant qu'elle est visible (battement).
+JEU_CONSOLE = 'jeu/console'
+# StringTime LATCHÉ (qos.latched() des DEUX côtés), sélecteur -> page scène :
+# {"action", "cible", "pourquoi", "t_ms", "fin_prevue_ms"} ; {"action": "rien"} au repos.
+JEU_INTENTION = 'jeu/intention'
+# StringTime, sélecteur -> régisseur : MÊME payload que rehearsal/chat_move
+# (le régisseur y est remappé par rehearsal.launch.py jeu:=true).
+JEU_CHAT_MOVE = 'jeu/chat_move'
+# StringTime volatile : une ligne du journal JSONL du sélecteur par message
+# (format boîte noire, robot.diagnostic.journal), pour la page scène.
+JEU_JOURNAL = 'jeu/journal'
