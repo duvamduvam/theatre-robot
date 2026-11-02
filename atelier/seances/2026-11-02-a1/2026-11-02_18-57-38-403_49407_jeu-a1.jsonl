@@ -1,0 +1,70 @@
+{"payload": {"duration_s": 3600.0, "name": "jeu-a1", "seed": 0, "timeline": [], "undrawn": []}, "source": "director", "t_mono_ms": 30491577, "t_wall": "2026-11-02T18:57:38.439+00:00", "type": "scenario_loaded"}
+{"payload": {"poi": "titan_grise", "reason": "before_start"}, "source": "director", "t_mono_ms": 30493228, "t_wall": "2026-11-02T18:57:40.091+00:00", "type": "poi_enter_ignored"}
+{"payload": {"distance": 154.94, "poi": "titan_grise"}, "source": "director", "t_mono_ms": 30533297, "t_wall": "2026-11-02T18:58:20.159+00:00", "type": "poi_exit"}
+{"payload": {"name": "jeu-a1", "seed": 0}, "source": "director", "t_mono_ms": 30543239, "t_wall": "2026-11-02T18:58:30.102+00:00", "type": "scenario_start"}
+{"payload": {"distance": 3.99, "poi": "nefs"}, "source": "director", "t_mono_ms": 30551199, "t_wall": "2026-11-02T18:58:38.061+00:00", "type": "poi_enter"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 30555487, "t_wall": "2026-11-02T18:58:42.349+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 30648787, "t_wall": "2026-11-02T19:00:15.650+00:00", "type": "voice_move"}
+{"payload": {"distance": 2.5, "poi": "elephant"}, "source": "director", "t_mono_ms": 30663420, "t_wall": "2026-11-02T19:00:30.282+00:00", "type": "poi_enter"}
+{"payload": {"distance": 5.21, "poi": "nefs"}, "source": "director", "t_mono_ms": 30669823, "t_wall": "2026-11-02T19:00:36.685+00:00", "type": "poi_exit"}
+{"payload": {"distance": 3.99, "poi": "carrousel"}, "source": "director", "t_mono_ms": 30672488, "t_wall": "2026-11-02T19:00:39.350+00:00", "type": "poi_enter"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 30677787, "t_wall": "2026-11-02T19:00:44.649+00:00", "type": "voice_move"}
+{"payload": {"distance": 6.52, "effect": "accepted", "name": "table_basse", "objet": "table_basse"}, "source": "director", "t_mono_ms": 30725189, "t_wall": "2026-11-02T19:01:32.051+00:00", "type": "aller_voir"}
+{"payload": {"by": "aller_voir", "speed": 1.0}, "source": "director", "t_mono_ms": 30725190, "t_wall": "2026-11-02T19:01:32.052+00:00", "type": "voice_hold_released"}
+{"payload": {"distance": 3.26, "poi": "elephant"}, "source": "director", "t_mono_ms": 30726722, "t_wall": "2026-11-02T19:01:33.584+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "table_basse"}, "source": "director", "t_mono_ms": 30738515, "t_wall": "2026-11-02T19:01:45.378+00:00", "type": "poi_enter"}
+{"payload": {"name": "table_basse"}, "source": "director", "t_mono_ms": 30741271, "t_wall": "2026-11-02T19:01:48.133+00:00", "type": "goto_arrived"}
+{"payload": {"name": "table_basse", "reason": "arrived", "result": "arrived", "travelled": 4.77}, "source": "director", "t_mono_ms": 30741272, "t_wall": "2026-11-02T19:01:48.134+00:00", "type": "goto_result"}
+{"payload": {"cmd": "go", "effect": "rejoin", "rejoin": true}, "source": "director", "t_mono_ms": 30743788, "t_wall": "2026-11-02T19:01:50.650+00:00", "type": "voice_move"}
+{"payload": {}, "source": "director", "t_mono_ms": 30743791, "t_wall": "2026-11-02T19:01:50.653+00:00", "type": "voice_relaunch_confirmed"}
+{"payload": {"distance": 5.2, "poi": "carrousel"}, "source": "director", "t_mono_ms": 30749423, "t_wall": "2026-11-02T19:01:56.285+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "poster_bizarre"}, "source": "director", "t_mono_ms": 30758521, "t_wall": "2026-11-02T19:02:05.383+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "table_basse"}, "source": "director", "t_mono_ms": 30759697, "t_wall": "2026-11-02T19:02:06.559+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.48, "poi": "poubelle_tri"}, "source": "director", "t_mono_ms": 30772335, "t_wall": "2026-11-02T19:02:19.197+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "poster_bizarre"}, "source": "director", "t_mono_ms": 30773417, "t_wall": "2026-11-02T19:02:20.280+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "pigeon"}, "source": "director", "t_mono_ms": 30786082, "t_wall": "2026-11-02T19:02:32.944+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.27, "poi": "poubelle_tri"}, "source": "director", "t_mono_ms": 30788106, "t_wall": "2026-11-02T19:02:34.968+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "banc"}, "source": "director", "t_mono_ms": 30800697, "t_wall": "2026-11-02T19:02:47.559+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "pigeon"}, "source": "director", "t_mono_ms": 30801868, "t_wall": "2026-11-02T19:02:48.731+00:00", "type": "poi_exit"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 30804187, "t_wall": "2026-11-02T19:02:51.050+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 30836711, "t_wall": "2026-11-02T19:03:23.573+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "ignored", "reason": "deja_en_marche"}, "source": "director", "t_mono_ms": 30841811, "t_wall": "2026-11-02T19:03:28.673+00:00", "type": "voice_move"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 30844711, "t_wall": "2026-11-02T19:03:31.573+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 30904811, "t_wall": "2026-11-02T19:04:31.673+00:00", "type": "voice_move"}
+{"payload": {"distance": 2.5, "poi": "flaque"}, "source": "director", "t_mono_ms": 30906162, "t_wall": "2026-11-02T19:04:33.024+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.27, "poi": "banc"}, "source": "director", "t_mono_ms": 30909381, "t_wall": "2026-11-02T19:04:36.243+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.99, "poi": "terrasse"}, "source": "director", "t_mono_ms": 30921453, "t_wall": "2026-11-02T19:04:48.316+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.25, "poi": "flaque"}, "source": "director", "t_mono_ms": 30924072, "t_wall": "2026-11-02T19:04:50.934+00:00", "type": "poi_exit"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 30924987, "t_wall": "2026-11-02T19:04:51.850+00:00", "type": "voice_move"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 30994711, "t_wall": "2026-11-02T19:06:01.573+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 31004811, "t_wall": "2026-11-02T19:06:11.673+00:00", "type": "voice_move"}
+{"payload": {"distance": 3.99, "poi": "grue_jaune"}, "source": "director", "t_mono_ms": 31010884, "t_wall": "2026-11-02T19:06:17.747+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.91, "poi": "terrasse"}, "source": "director", "t_mono_ms": 31018425, "t_wall": "2026-11-02T19:06:25.288+00:00", "type": "poi_exit"}
+{"payload": {"distance": 3.0, "poi": "cale"}, "source": "director", "t_mono_ms": 31029584, "t_wall": "2026-11-02T19:06:36.446+00:00", "type": "poi_enter"}
+{"payload": {"distance": 5.22, "poi": "grue_jaune"}, "source": "director", "t_mono_ms": 31037954, "t_wall": "2026-11-02T19:06:44.816+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "velo_cadenas"}, "source": "director", "t_mono_ms": 31045701, "t_wall": "2026-11-02T19:06:52.563+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.92, "poi": "cale"}, "source": "director", "t_mono_ms": 31048282, "t_wall": "2026-11-02T19:06:55.144+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "panneau_info"}, "source": "director", "t_mono_ms": 31061048, "t_wall": "2026-11-02T19:07:07.910+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "velo_cadenas"}, "source": "director", "t_mono_ms": 31062188, "t_wall": "2026-11-02T19:07:09.050+00:00", "type": "poi_exit"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 31064488, "t_wall": "2026-11-02T19:07:11.350+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 31154987, "t_wall": "2026-11-02T19:08:41.849+00:00", "type": "voice_move"}
+{"payload": {"distance": 2.49, "poi": "rails"}, "source": "director", "t_mono_ms": 31163909, "t_wall": "2026-11-02T19:08:50.772+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.25, "poi": "panneau_info"}, "source": "director", "t_mono_ms": 31166205, "t_wall": "2026-11-02T19:08:53.067+00:00", "type": "poi_exit"}
+{"payload": {"distance": 3.26, "poi": "rails"}, "source": "director", "t_mono_ms": 31183157, "t_wall": "2026-11-02T19:09:10.019+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.5, "poi": "lampadaire"}, "source": "director", "t_mono_ms": 31185299, "t_wall": "2026-11-02T19:09:12.161+00:00", "type": "poi_enter"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 31190187, "t_wall": "2026-11-02T19:09:17.049+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 31280487, "t_wall": "2026-11-02T19:10:47.350+00:00", "type": "voice_move"}
+{"payload": {"distance": 2.49, "poi": "anneaux"}, "source": "director", "t_mono_ms": 31290549, "t_wall": "2026-11-02T19:10:57.411+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "lampadaire"}, "source": "director", "t_mono_ms": 31291584, "t_wall": "2026-11-02T19:10:58.446+00:00", "type": "poi_exit"}
+{"payload": {"distance": 3.27, "poi": "anneaux"}, "source": "director", "t_mono_ms": 31306808, "t_wall": "2026-11-02T19:11:13.670+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "bollard"}, "source": "director", "t_mono_ms": 31308633, "t_wall": "2026-11-02T19:11:15.495+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.25, "poi": "bollard"}, "source": "director", "t_mono_ms": 31324724, "t_wall": "2026-11-02T19:11:31.586+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "loire"}, "source": "director", "t_mono_ms": 31326615, "t_wall": "2026-11-02T19:11:33.477+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "loire"}, "source": "director", "t_mono_ms": 31341732, "t_wall": "2026-11-02T19:11:48.594+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "plot_chantier"}, "source": "director", "t_mono_ms": 31349891, "t_wall": "2026-11-02T19:11:56.753+00:00", "type": "poi_enter"}
+{"payload": {"distance": 2.49, "poi": "chien"}, "source": "director", "t_mono_ms": 31364125, "t_wall": "2026-11-02T19:12:10.987+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "plot_chantier"}, "source": "director", "t_mono_ms": 31365162, "t_wall": "2026-11-02T19:12:12.024+00:00", "type": "poi_exit"}
+{"payload": {"distance": 3.25, "poi": "chien"}, "source": "director", "t_mono_ms": 31379953, "t_wall": "2026-11-02T19:12:26.815+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "caisse_bois"}, "source": "director", "t_mono_ms": 31388217, "t_wall": "2026-11-02T19:12:35.079+00:00", "type": "poi_enter"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 31391787, "t_wall": "2026-11-02T19:12:38.649+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 31488587, "t_wall": "2026-11-02T19:14:15.449+00:00", "type": "voice_move"}

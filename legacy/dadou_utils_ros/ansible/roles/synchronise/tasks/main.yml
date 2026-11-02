@@ -77,8 +77,5 @@
     dest: "{{ ros2_ws }}/src/"
     recursive: yes
     copy_links: yes
-    rsync_opts:
-      - "--exclude=.git/"
-      - "--exclude=__pycache__/"
-      - "--exclude=*.egg-info/"
-      - "--exclude=README.md"
+    rsync_opts: "{{ ['--exclude=.git/', '--exclude=__pycache__/', '--exclude=*.egg-info/', '--exclude=README.md']
+                    + (packages_sim_only | default([]) | map('regex_replace', '^(.*)$', '--exclude=\\1/') | list) }}"

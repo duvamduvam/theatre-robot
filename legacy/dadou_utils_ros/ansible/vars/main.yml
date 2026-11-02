@@ -5,6 +5,10 @@ local_projects_dir: "/home/dadou/Nextcloud/dev/didier/python/theatre-robot/legac
 # vers ros2_ws/src/ de chaque Pi — les compose ARM les montent depuis là. Sans cette
 # copie, tous les nodes tombent à l'import (utils_static importe theatre_contrats).
 packages_dir: "/home/dadou/Nextcloud/dev/didier/python/theatre-robot/packages"
+# Packages SIM-ONLY (garde-fou domaine 43) : inertes sur un Pi, et surtout jamais compilés
+# là-bas pour rien. À compléter à chaque package de simulation.
+packages_sim_only:
+  - didier_jeu
 #controller_project_dir: "dadou_controller_ros"
 #utils_project_dir: "dadou_utils_ros_ros"
 #deploy_dir: "robot_base"
