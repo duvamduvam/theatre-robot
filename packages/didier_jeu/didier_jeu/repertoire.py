@@ -18,6 +18,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import yaml
+# Le nom de la piste roues d'une séquence = l'organe WHEELS du contrat commun
+# (revue A1, point 14 : pas de littéral local).
+from theatre_contrats.organs import WHEELS
 
 # Dossier des séquences de PANNES (bugs joués par le régisseur) : jamais du jeu.
 DOSSIER_EXCLU = "bugs"
@@ -42,7 +45,7 @@ class Sequence:
 
 
 def _a_des_roues(data: dict) -> bool:
-    return bool(data.get("wheels"))
+    return bool(data.get(WHEELS))
 
 
 def lire_sequences(dossier) -> List[Sequence]:
@@ -78,24 +81,40 @@ def candidates(dossier) -> List[Sequence]:
             and not s.roues]
 
 
-def par_emploi(sequences, emplois: Dict[str, str]) -> Tuple[Dict[str, List[Sequence]], List[str]]:
-    """-> ({emploi: [séquences]}, [noms sans emploi]). Un nom présent dans deux
-    dossiers (animations_node n'en garde qu'un) n'est compté qu'une fois."""
+def par_emploi(sequences, emplois: Dict[str, str]):
+    """-> ({emploi: [séquences]}, [noms sans emploi], [noms en double sans emploi]).
+
+    DOUBLON (revue A1, point 14) : animations_node résout une séquence par son
+    NOM de fichier et n'en garde qu'une — deux fichiers du même nom dont l'un
+    est JOUABLE (a un emploi) = RepertoireError au chargement (jamais deviner
+    laquelle jouera). Deux homonymes SANS emploi ne seront jamais joués : ils
+    sont seulement listés (cas réel au 02/11 : appel-eternel-life, dans
+    eternel-short/ et eternel-show/, types [])."""
     pools: Dict[str, List[Sequence]] = {}
     sans_emploi: List[str] = []
-    vus = set()
-    for s in sequences:
-        if s.nom in vus:
-            continue
-        vus.add(s.nom)
+    doublons: List[str] = []
+    vus: Dict[str, Sequence] = {}
+
+    def emploi_de(seq):
         # Ordre des `emplois` du RÉGLAGE (bonjour d'abord) : une séquence
         # ["random", "bonjour"] est un accueil, pas une expression spontanée.
-        emploi = next((e for t, e in emplois.items() if t in s.types), None)
+        return next((e for t, e in emplois.items() if t in seq.types), None)
+
+    for s in sequences:
+        emploi = emploi_de(s)
+        if s.nom in vus:
+            premier = vus[s.nom]
+            if emploi is not None or emploi_de(premier) is not None:
+                raise RepertoireError(f"séquence « {s.nom} » en double ({premier.chemin}, {s.chemin}) : "
+                                      "animations_node n'en jouerait qu'une — renommer l'une des deux")
+            doublons.append(s.nom)
+            continue
+        vus[s.nom] = s
         if emploi is None:
             sans_emploi.append(s.nom)
         else:
             pools.setdefault(emploi, []).append(s)
-    return pools, sans_emploi
+    return pools, sans_emploi, doublons
 
 
 def charger_deplacements(chemin) -> Dict[str, dict]:

@@ -92,11 +92,13 @@ def main(args=None):
             try:
                 self.reglages = charger_reglages(p("reglages_file"))
                 tick_s = self.reglages.get("tick_s")
-                pools, sans_emploi = par_emploi(candidates(p("sequences_dir")), self.reglages.get("emplois"))
+                pools, sans_emploi, doublons = par_emploi(candidates(p("sequences_dir")),
+                                                          self.reglages.get("emplois"))
                 self.sel = Selecteur(self.reglages, pools, charger_deplacements(p("deplacements_file")))
                 demarrage = {"pourquoi": "le sélecteur de jeu démarre (simulation seulement, domaine 43)",
                              "repertoire": {k: [s.nom for s in v] for k, v in pools.items()},
-                             "sans_emploi": sans_emploi, "superviseur": self.reglages.get("superviseur.mode")}
+                             "sans_emploi": sans_emploi, "doublons_sans_emploi": doublons,
+                             "superviseur": self.reglages.get("superviseur.mode")}
             except Exception as e:  # noqa: BLE001 — répertoire, réglages, vocabulaire illisibles
                 # MODE DÉGRADÉ (revue A1, bloquant 2) : avec jeu:=true le régisseur
                 # n'écoute plus la bouche ; sans ce relais, son « stop » serait perdu.

@@ -151,7 +151,7 @@ def test_naissance_de_piste_engagee_donne_un_maintien_en_moins_de_1_s():
     nee = journal(out, "naissance_piste")
     m = journal(out, "maintien")
     assert [(t, p["piste"]) for t, p in nee] == [(5.0, "p1")]
-    assert len(m) == 1 and m[0][1]["reaction_a"] == "p1"
+    assert len(m) == 1 and m[0][1]["reaction_a"] == ["p1"]
     assert m[0][0] - 5.0 == pytest.approx(0.6) and m[0][0] - 5.0 <= 1.0
     assert m[0][1]["pourquoi"] == ("il continue (une expression spontanée) : la nouvelle offre (0,70) "
                                    "ne suffit pas à l'interrompre (il faut 0,90)")
@@ -160,7 +160,7 @@ def test_naissance_de_piste_engagee_donne_un_maintien_en_moins_de_1_s():
 def test_naissance_de_piste_libre_donne_un_choix_en_moins_de_1_s():
     out = jouer(fabriquer(), 0.0, 2.0, continu=boite(0.0, 2.0))
     d = journal(out, "decision")
-    assert d[0][1]["reaction_a"] == "p1" and d[0][0] <= 1.0
+    assert d[0][1]["reaction_a"] == ["p1"] and d[0][0] <= 1.0
     assert journal(out, "maintien") == []
 
 
@@ -648,3 +648,20 @@ def test_ordre_de_david_jamais_bloque_par_un_arret_de_didier():
     ], continu=boite(11.0, 30.0, azimut=0.0, hauteur=0.4))
     assert [p["kind"] for _, p in journal(out, "arret_didier")] == ["lubie"]
     assert avancees(out) and avancees(out)[0] < 16.0
+
+
+# ================================================================== réaction <= 1 s aux offres OBJET (revue point 14)
+def test_offre_objet_choix_en_moins_de_1_s():
+    out = jouer(fabriquer(), 0.0, 3.0, [(0.0, marche), (1.0, _poi("anneaux"))])
+    d = journal(out, "decision")[0]
+    assert d[1]["reaction_a"] == ["anneaux"] and d[0] - 1.0 <= 1.0
+
+
+def test_offre_objet_maintien_en_moins_de_1_s_si_deja_arrete_recemment():
+    out = jouer(fabriquer(pools={}), 0.0, 40.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                                 (10.0, lambda s, t: s.sur_console({"cmd": "go"}, t)),
+                                                 (20.0, _poi("flaque"))])
+    m = [(t, p) for t, p in journal(out, "maintien") if p["reaction_a"] == ["flaque"]]
+    assert len(m) == 1 and m[0][0] - 20.0 <= 1.0
+    assert m[0][1]["pourquoi"] == ("il continue (rester tranquille) : « flaque », mais il s'est déjà arrêté "
+                                   "il y a moins de 120 s")

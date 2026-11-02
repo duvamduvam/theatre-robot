@@ -21,7 +21,8 @@ RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.
 - deux décisions différentes jamais à moins de changement.min_s (porte T1) ;
 - hystérésis : le meilleur doit dépasser le second de marge pendant duree_s ;
 - engagement : une action engagée se finit, sauf offre >= seuil_rupture ;
-- naissance de piste -> ligne de décision (choix OU maintien) en <= 1 s (T3) ;
+- naissance d'une offre de personne OU d'objet -> ligne de décision (choix OU
+  maintien) en <= 1 s (T3) ;
 - initiatives spontanées >= 8 s ; arrêts de Didier >= 120 s — TOUT arrêt de
   route qu'il cause (lubie, approche de lui-même, demande de la bouche) ; un
   ordre de David n'en est jamais un ; une lubie est RÉCLAMÉE (intention) ET
@@ -132,7 +133,7 @@ class Selecteur:
         self.metteur: Optional[dict] = None        # {"action", "t", "source"}
         self.piste_regardee: Optional[str] = None
         self.pas_metteur: Dict[str, int] = {}      # piste -> pas faits sur l'indication du metteur
-        self.reaction_due: Optional[dict] = None   # {"piste", "t"}
+        self.reaction_due: List[dict] = []         # [{"cible", "kind", "t"}] : offres nées sans réponse
         self._t_prec: Optional[float] = None
         self._now = 0.0
         self._decision_tick: Optional[Decision] = None
@@ -189,7 +190,7 @@ class Selecteur:
         self.offres.naitre(Offre("personne", nee, self.r.get("offres.valeur.personne"), now,
                                  self.r.get("offres.ttl_s")))
         self.pulsions.sur_piste_nee()
-        self.reaction_due = {"piste": nee, "t": now}
+        self.reaction_due.append({"cible": nee, "kind": "personne", "t": now})
         self._journal("naissance_piste", f"une nouvelle personne apparaît ({nee})",
                       piste=nee, azimut=round(azimut, 2), hauteur=round(hauteur, 2))
 
@@ -199,6 +200,7 @@ class Selecteur:
         poi = str(payload["poi"])
         self.offres.naitre(Offre("objet", poi, self.r.get("offres.valeur.objet"), now, self.r.get("offres.ttl_s")))
         self.pulsions.sur_poi()
+        self.reaction_due.append({"cible": poi, "kind": "objet", "t": now})
         self._journal("offre", f"il passe près de « {poi} » (lubie +{num(self.r.get('pulsions.lubie.par_poi'))})",
                       kind="objet", piste=poi)
 
@@ -520,27 +522,37 @@ class Selecteur:
         self._publier_intention(now)
 
     def _reaction(self, now: float) -> None:
-        """Porte T3 : une naissance de piste a sa ligne de décision en <= 1 s —
-        un choix (taggé dans _decider) ou, faute de choix, un MAINTIEN."""
-        due = self.reaction_due
-        if due is None or now - due["t"] < self.r.get("reaction.maintien_apres_s") - EPS:
+        """Porte T3 : toute offre née (personne ou objet) a sa ligne de décision
+        en <= 1 s — un choix (taggé dans _decider) ou, faute de choix, un
+        MAINTIEN qui dit pourquoi il ne réagit pas."""
+        dus = [d for d in self.reaction_due if now - d["t"] >= self.r.get("reaction.maintien_apres_s") - EPS]
+        if not dus:
             return
-        self.reaction_due = None
+        self.reaction_due = [d for d in self.reaction_due if d not in dus]
         action, cible = self.courante
-        offre = next((o for o in self.offres.vivantes(now) if o.kind == "personne" and o.piste == due["piste"]), None)
-        valeur = offre.valeur if offre else 0.0
         fait = phrases.action(action, cible)
-        if self.en_cours is not None:
-            raison = (f"il continue ({fait}) : la nouvelle offre ({num(valeur)}) ne suffit pas à "
-                      f"l'interrompre (il faut {num(self.r.get('engagement.seuil_rupture'))})")
-        elif due["piste"] in self.ignores:
-            raison = f"il continue ({fait}) : David a dit d'ignorer {due['piste']}"
-        elif self.t_derniere_decision is not None and now - self.t_derniere_decision < self.r.get("changement.min_s"):
-            raison = (f"il continue ({fait}) : il vient de changer d'action il y a "
-                      f"{phrases.s(now - self.t_derniere_decision)} (< {self.r.get('changement.min_s'):g} s)")
-        else:
-            raison = f"il continue ({fait}) : rien ne l'attire assez pour changer"
-        self._journal("maintien", raison, action=action, cible=cible, reaction_a=due["piste"])
+        for due in dus:
+            offre = next((o for o in self.offres.vivantes(now) if o.piste == due["cible"]), None)
+            valeur = offre.valeur if offre else 0.0
+            if self.en_cours is not None:
+                raison = (f"il continue ({fait}) : la nouvelle offre ({num(valeur)}) ne suffit pas à "
+                          f"l'interrompre (il faut {num(self.r.get('engagement.seuil_rupture'))})")
+            elif due["cible"] in self.ignores:
+                raison = f"il continue ({fait}) : David a dit d'ignorer {due['cible']}"
+            elif self.t_derniere_decision is not None and now - self.t_derniere_decision < self.r.get("changement.min_s"):
+                raison = (f"il continue ({fait}) : il vient de changer d'action il y a "
+                          f"{phrases.s(now - self.t_derniere_decision)} (< {self.r.get('changement.min_s'):g} s)")
+            elif due["kind"] == "objet" and self.route_state != "on":
+                raison = f"il continue ({fait}) : « {due['cible']} », mais il n'est pas en route"
+            elif due["kind"] == "objet" and (self.arret_didier is not None or self.verrou_stop):
+                raison = f"il continue ({fait}) : « {due['cible']} », mais il est déjà arrêté"
+            elif due["kind"] == "objet" and now - self.derniers.get(ARRET_DIDIER, -1e9) < \
+                    self.r.get("refractaire_s.arret_didier"):
+                raison = (f"il continue ({fait}) : « {due['cible']} », mais il s'est déjà arrêté il y a moins de "
+                          f"{self.r.get('refractaire_s.arret_didier'):g} s")
+            else:
+                raison = f"il continue ({fait}) : rien ne l'attire assez pour changer"
+            self._journal("maintien", raison, action=action, cible=cible, reaction_a=[due["cible"]])
 
     # ================================================================ choix (feuilles de l'arbre)
     def _candidats(self, now: float, deplacement_permis: bool) -> List[Candidat]:
@@ -673,9 +685,9 @@ class Selecteur:
         }
         if c.detail.get("sequence"):
             payload["sequence"] = c.detail["sequence"]
-        if self.reaction_due is not None:
-            payload["reaction_a"] = self.reaction_due["piste"]
-            self.reaction_due = None
+        if self.reaction_due:
+            payload["reaction_a"] = [d["cible"] for d in self.reaction_due]
+            self.reaction_due = []
         self._journal("decision", pourquoi, **payload)
         self._decision_tick = Decision(c.action, c.cible, pourquoi)
         self._publier_intention(now)

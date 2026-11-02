@@ -2,9 +2,11 @@
 
 Racine = sélecteur de PRIORITÉS (le premier enfant qui réussit gagne) :
   1. arrêt vocal    : un « stop » a été relayé (bouche ou console) -> verrou
-                      jusqu'au « go » : aucune action de déplacement ;
-                      expressions et regards permis (le relais lui-même est fait
-                      À LA RÉCEPTION, jamais pondéré : selecteur.relayer_stop) ;
+                      jusqu'au « go » DE CELUI QUI L'A POSÉ (un go de la bouche ne
+                      lève jamais un stop de David) : aucune action de
+                      déplacement ; expressions et regards permis. Le relais
+                      lui-même est fait À LA RÉCEPTION, jamais dans l'arbre ni
+                      pondéré (selecteur.relayer_stop / relayer_go) ;
   2. superviseur absent (mode « exigeant » seulement) : aucun déplacement ;
   3. ordre macro en cours (console) : il peut interrompre l'action engagée ;
   4. action engagée : on la finit — seule une offre de valeur >=
@@ -12,8 +14,9 @@ Racine = sélecteur de PRIORITÉS (le premier enfant qui réussit gagne) :
   5. choisir        : la feuille de score, tout est permis.
 Les feuilles « choisir » délèguent au sélecteur (Selecteur.choisir) : l'arbre
 porte la STRUCTURE, le score la VARIÉTÉ (décision 7 du 02/11). Les verrous
-communs à toutes les branches (fatigue, « ignore », réfractaires) vivent dans
-le sélecteur et le score, pas ici.
+communs à toutes les branches (fatigue, « ignore », garde de distance des
+approches, réfractaires dont « un arrêt de Didier par 120 s ») vivent dans le
+sélecteur et le score, pas ici.
 """
 import py_trees
 from py_trees.common import Status

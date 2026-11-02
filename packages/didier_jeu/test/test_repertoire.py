@@ -38,19 +38,43 @@ def test_aucune_jouable_n_a_de_roues_ni_ne_vient_de_bugs():
     assert not any(s.roues for s in candidates(SEQUENCES))
 
 
-def test_mutation_filtre_roues(monkeypatch):
-    """Muter le filtre (piste roues ignorée) fait entrer des séquences qui
-    bougent les roues : le test du filtre rougirait."""
-    from didier_jeu import repertoire
-    monkeypatch.setattr(repertoire, "_a_des_roues", lambda data: False)
-    noms = [s.chemin for s in repertoire.candidates(SEQUENCES)]
-    assert "eternel-show/pas-un-jouet.json" in noms and noms != JOUABLES
+def _ecrire(dossier, chemin, data):
+    import json
+    f = dossier / chemin
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(data), encoding="utf-8")
+
+
+def test_filtre_grave_sur_un_repertoire_construit(tmp_path):
+    """Chaque règle du filtre, sur des fichiers écrits ici (valeurs en dur)."""
+    from didier_jeu.repertoire import candidates
+    _ecrire(tmp_path, "a/jouable.json", {"types": ["random"], "duration": 1000, "faces": [[1, "x.png"]]})
+    _ecrire(tmp_path, "a/roues.json", {"types": ["random"], "wheels": [[1, {"x": 1}]]})
+    _ecrire(tmp_path, "a/roues_vides.json", {"types": ["random"], "wheels": []})     # piste vide : aucun mouvement
+    _ecrire(tmp_path, "a/sans_types.json", {"duration": 1000})
+    _ecrire(tmp_path, "a/types_vides.json", {"types": []})
+    _ecrire(tmp_path, "bugs/panne.json", {"types": ["random"]})
+    assert [s.chemin for s in candidates(tmp_path)] == ["a/jouable.json", "a/roues_vides.json", "a/types_vides.json"]
+
+
+def test_doublon_jouable_refuse_doublon_sans_emploi_liste(tmp_path):
+    import pytest as _pt
+    from didier_jeu.repertoire import RepertoireError, candidates, par_emploi
+    emplois = {"random": "spontanee"}
+    _ecrire(tmp_path, "a/muet.json", {"types": []})
+    _ecrire(tmp_path, "b/muet.json", {"types": []})
+    pools, sans, doublons = par_emploi(candidates(tmp_path), emplois)
+    assert pools == {} and sans == ["muet"] and doublons == ["muet"]
+    _ecrire(tmp_path, "a/joue.json", {"types": ["random"]})
+    _ecrire(tmp_path, "b/joue.json", {"types": []})
+    with _pt.raises(RepertoireError, match="joue"):
+        par_emploi(candidates(tmp_path), emplois)
 
 
 def test_emplois_grave():
     from conftest import donnees_reglages
     from didier_jeu.repertoire import candidates, par_emploi
-    pools, sans_emploi = par_emploi(candidates(SEQUENCES), donnees_reglages()["emplois"])
+    pools, sans_emploi, doublons = par_emploi(candidates(SEQUENCES), donnees_reglages()["emplois"])
     assert {k: [s.nom for s in v] for k, v in pools.items()} == {
         "accueil": ["bon-attend", "t-es-sur"],
         "spontanee": ["c-est-qui-le-con", "little-move", "little-neck", "little-neck2",
@@ -59,6 +83,8 @@ def test_emplois_grave():
     }
     # types [] : chargées mais sans emploi (journalisées au démarrage).
     assert sans_emploi == ["appel-eternel-life", "internet", "upload-cerveau", "warning"]
+    # Homonymes SANS emploi (eternel-short/ et eternel-show/) : listés, pas refusés.
+    assert doublons == ["appel-eternel-life"]
 
 
 def test_vocabulaire_de_deplacements_grave():
