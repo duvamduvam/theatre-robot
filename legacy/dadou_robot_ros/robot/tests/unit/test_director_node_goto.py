@@ -50,7 +50,9 @@ def test_vocabulaire_latche_au_demarrage(regisseur, monkeypatch, tmp_path):
     qos = n.qos_publieurs["rehearsal/objects"]
     assert (qos.depth, qos.durability) == (1, "TRANSIENT_LOCAL")
     assert [json.loads(m) for m in _publie(n, "rehearsal/objects")] == [
-        [{"name": "banc", "desc": "banc"}, {"name": "flaque", "desc": "flaque"}]]
+        # x, y (ancre du POI) : ajoutés au lot A1 (sélecteur de jeu, regard vers l'objet).
+        [{"name": "banc", "desc": "banc", "x": 5.0, "y": 0.0},
+         {"name": "flaque", "desc": "flaque", "x": 12.0, "y": 0.0}]]
 
 
 def test_accepte_hors_seance_et_ordonne(regisseur, monkeypatch, tmp_path):
