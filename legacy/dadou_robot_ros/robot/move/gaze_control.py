@@ -24,9 +24,10 @@ Découpage volontaire (même philosophie que robot_drive) :
              « regarde à droite » n'exige pas le gaze ON.
 """
 
-import json
 import math
 from dataclasses import dataclass
+
+from theatre_contrats import stringtime
 
 # Bornes matérielles de la consigne servo (voir robot/actions/servo.py :
 # INPUT_MIN=0, INPUT_MAX=99, mappés 0->0°, 99->max_pos=180°). On ne sort JAMAIS
@@ -121,10 +122,7 @@ def parse_look(raw, course_deg):
 
 
 def _parse_look(raw, course_deg):
-    try:
-        value = json.loads(raw)
-    except (ValueError, TypeError):
-        value = raw
+    value = stringtime.decode_or_raw(raw, "look")
     if isinstance(value, dict):
         hold_ms = value.get("hold_ms")
         if "angle_deg" in value:

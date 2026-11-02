@@ -7,7 +7,6 @@ Toute la décision est dans robot_rehearsal.fault_relay (pure, testée) ; ici
 seulement l'I/O : abonnement amont, publication aval, traduction du sentinel
 ZERO en message nul du bon type. Paramètre `relay` = clé de contracts.RELAYS.
 """
-import json
 import logging
 import os
 import time
@@ -16,6 +15,7 @@ import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from robot_interfaces.msg import StringTime
+from theatre_contrats import stringtime
 
 from robot_rehearsal.contracts import HEARTBEAT_TOPIC, RELAYS, RELAY_CMD_TOPIC, check_domain
 from robot_rehearsal.fault_relay import ZERO, FaultRelay
@@ -67,7 +67,9 @@ class FaultRelayNode(Node):
 
     def _on_cmd(self, msg: StringTime):
         try:
-            cmd = json.loads(msg.msg)
+            # `loads` (et non decode) : ce node a son propre refus (warning +
+            # return) et n'attrape QUE ValueError — gardé tel quel (lot L1a).
+            cmd = stringtime.loads(msg.msg)
         except ValueError:
             self.get_logger().warning(f"relay_cmd illisible : {msg.msg!r}")
             return

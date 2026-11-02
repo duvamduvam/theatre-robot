@@ -9,6 +9,9 @@
 
   <depend>rclpy</depend>
   <depend>robot_interfaces</depend>
+  <!-- Contrat commun (lot L1a, packages/theatre_contrats) : codec StringTime et noms
+       de topics ; dadou_utils_ros/utils_static.py (shim) l'importe aussi. -->
+  <exec_depend>theatre_contrats</exec_depend>
   <!-- Pilotage roues (SIM-ONLY) : Twist publié sur cmd_vel_web (twist_mux prio
        50). Vidéo : Image de la caméra embarquée, encodée en JPEG côté pont. -->
   <depend>geometry_msgs</depend>

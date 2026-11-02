@@ -32,6 +32,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from robot_interfaces.msg import StringTime
 from sensor_msgs.msg import CompressedImage, Image
+from theatre_contrats import topics
 
 from vision.tracking.detector import MediaPipeDetector, open_camera
 from vision.tracking.camera_source import (
@@ -187,14 +188,16 @@ class PersonTrackerNode(Node):
         self._sim_msg = None
         self._last_sim_log_s = 0.0
         self._picker = TargetPicker(ema_alpha=ema_alpha)
-        self._publisher = self.create_publisher(PointStamped, "/vision/person", 10)
+        # Noms RELATIFS (theatre_contrats.topics, lot L1a) : sans namespace ils
+        # se résolvent en /vision/person et /vision/person_box comme avant.
+        self._publisher = self.create_publisher(PointStamped, topics.VISION_PERSON, 10)
         # Suivi roues (2026-07-11) : même cible, contrat ÉTENDU sur un topic
         # SÉPARÉ — /vision/person reste gelé (x=azimut, y=élévation,
         # z=confiance, consommé par gaze_follower), /vision/person_box porte
         # x=azimut, y=HAUTEUR de silhouette [0..1] (proxy de distance,
         # cf. target_picker), z=confiance. Consommé par person_follower
         # (dadou_robot_ros). Mêmes règles : silence = personne perdue.
-        self._box_publisher = self.create_publisher(PointStamped, "/vision/person_box", 10)
+        self._box_publisher = self.create_publisher(PointStamped, topics.VISION_PERSON_BOX, 10)
 
         # Désignation par bouton (cf. constante DESIGNATE_TOPIC) : bascule le
         # TargetPicker entre régime historique et cible verrouillée. QoS par

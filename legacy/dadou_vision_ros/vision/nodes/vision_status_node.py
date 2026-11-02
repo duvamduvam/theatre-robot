@@ -12,6 +12,7 @@ vision/status.py (testable sans ROS).
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from theatre_contrats import topics
 
 from vision.status import build_status_message
 
@@ -21,7 +22,8 @@ PUBLISH_PERIOD_SECONDS = 5.0
 class VisionStatusNode(Node):
     def __init__(self):
         super().__init__("vision_status")
-        self.publisher_ = self.create_publisher(String, "/vision/status", 10)
+        # Nom RELATIF (lot L1a) : sans namespace, se résout en /vision/status.
+        self.publisher_ = self.create_publisher(String, topics.VISION_STATUS, 10)
         self.timer = self.create_timer(PUBLISH_PERIOD_SECONDS, self._publish_status)
 
     def _publish_status(self):

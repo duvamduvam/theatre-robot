@@ -51,11 +51,14 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy
 from std_msgs.msg import Float64
 from robot_interfaces.msg import StringTime
+from theatre_contrats import stringtime, topics
 
 from robot.move.gaze_control import GazeControl, LookGovernor, consigne_to_radians, look_course_deg, parse_look
 
 # Contrats de topics (ne pas dévier — interfaces existantes).
-VISION_TOPIC = "/vision/person"     # PointStamped : x=azimut, y=élévation, z=confiance
+# PointStamped : x=azimut, y=élévation, z=confiance. Nom RELATIF depuis le lot
+# L1a (theatre_contrats.topics) : sans namespace il se résout en /vision/person.
+VISION_TOPIC = topics.VISION_PERSON
 GAZE_CMD_TOPIC = "gaze"             # StringTime "on"/"off" : activation en direct
 # StringTime JSON {"angle_deg", "hold_ms"} : « regarder » (lot M2). Littéral gravé des
 # deux côtés (LOOK_TOPIC de chat_node, dépôt vision).
@@ -246,10 +249,7 @@ class GazeFollowerNode(Node):
         # Tolérant comme _on_gaze_cmd : json ou brut, tout ce qui n'est pas une
         # chaîne devient "" (repos) par prudence (producteur qui divague).
         raw = ros_msg.msg
-        try:
-            value = json.loads(raw)
-        except (ValueError, TypeError):
-            value = raw
+        value = stringtime.decode_or_raw(raw, ANIMATION_STATE_TOPIC)
         name = value if isinstance(value, str) else ""
 
         was_active = self._animation_active
@@ -283,10 +283,7 @@ class GazeFollowerNode(Node):
     def _on_gaze_cmd(self, ros_msg):
         # Le fil StringTime porte "on"/"off" (json ou brut, on tolère les deux).
         raw = ros_msg.msg
-        try:
-            value = json.loads(raw)
-        except (ValueError, TypeError):
-            value = raw
+        value = stringtime.decode_or_raw(raw, GAZE_CMD_TOPIC)
         if value in ("on", True, 1, "1"):
             self._user_enabled = True
             self._apply_enabled()

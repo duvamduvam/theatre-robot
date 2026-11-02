@@ -56,6 +56,10 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage, Image
 
 from robot_interfaces.msg import StringTime
+# Codec StringTime commun (lot L1a) : `loads` et non decode_or_raw — le pont
+# n'attrape que TypeError/JSONDecodeError (pas tout ValueError) et sa
+# sémantique générique est gardée à l'identique.
+from theatre_contrats import stringtime
 from robot_web.web_catalog import build_catalog
 from robot_web.web_protocol import (
     DRIVE_TIMEOUT_S, TOPICS_FLUX, TOPICS_LECTURE, WRITE_TIMEOUT_S, DriveFlow,
@@ -259,7 +263,7 @@ class WebBridgeNode(Node):
         ranger la valeur reçue dans last_topics."""
         def _on_message(msg):
             try:
-                value = json.loads(msg.msg)
+                value = stringtime.loads(msg.msg)
             except (TypeError, json.JSONDecodeError):
                 # Payload non-JSON (ne devrait pas arriver, cf. décodage StringTime
                 # commun côté nodes robot) : republié tel quel, la supervision ne
@@ -279,7 +283,7 @@ class WebBridgeNode(Node):
             if sink is None:
                 return
             try:
-                value = json.loads(msg.msg)
+                value = stringtime.loads(msg.msg)
             except (TypeError, json.JSONDecodeError):
                 value = msg.msg
             sink(build_feed(topic, value))

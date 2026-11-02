@@ -20,12 +20,16 @@ POURQUOI (cf. dadou_robot_ros/docs/etude-niveaux-reflexion.md) : la parole
 
 DÉCODEURS : jamais d'exception — un payload invalide rend None, l'appelant
       logge le refus (même doctrine que le décodage StringTime commun :
-      payload invalide = refus loggué, pas de perte silencieuse).
+      payload invalide = refus loggué, pas de perte silencieuse). Depuis le
+      lot L1a, le décodage passe par le codec commun STRICT
+      (theatre_contrats.stringtime), qui logge AUSSI une ERROR avec le topic.
 """
 from __future__ import annotations
 
 import json
 from typing import Optional
+
+from theatre_contrats import stringtime
 
 SITUATION_TOPIC = "chat_situation"
 PROMPT_TOPIC = "chat_prompt"
@@ -57,10 +61,13 @@ def _clean(value, max_chars: int) -> Optional[str]:
     return value[:max_chars]
 
 
-def _load_object(raw) -> Optional[dict]:
+def _load_object(raw, topic: str) -> Optional[dict]:
+    # Le strict n'attrape que JSONDecodeError/TypeError (copie du décodeur de
+    # juillet) : un entier JSON géant (> 4300 chiffres) lève ValueError. Ce
+    # except garde la promesse « jamais d'exception » d'avant le lot L1a.
     try:
-        value = json.loads(raw)
-    except (ValueError, TypeError):
+        value = stringtime.decode_payload(raw, topic)
+    except ValueError:
         return None
     return value if isinstance(value, dict) else None
 
@@ -74,7 +81,7 @@ def encode_situation(text: str, t_ms: int) -> str:
 
 def decode_situation(raw) -> Optional[str]:
     """Texte du tableau ("" = tableau vide, valide) ; None si payload invalide."""
-    obj = _load_object(raw)
+    obj = _load_object(raw, SITUATION_TOPIC)
     if obj is None or not isinstance(obj.get("text"), str):
         return None
     return obj["text"].strip()[:SITUATION_MAX_CHARS]
@@ -90,7 +97,7 @@ def encode_prompt(direction: str, raison: str = "") -> str:
 def decode_prompt(raw) -> Optional[str]:
     """Direction de jeu du tour spontané ; None si invalide ou vide (un tour
     spontané sans direction n'a rien à faire avancer)."""
-    obj = _load_object(raw)
+    obj = _load_object(raw, PROMPT_TOPIC)
     if obj is None:
         return None
     return _clean(obj.get("direction"), DIRECTION_MAX_CHARS)
@@ -103,7 +110,7 @@ def encode_reflect(demande: str) -> str:
 
 def decode_reflect(raw) -> Optional[str]:
     """Demande de réflexion ; None si invalide ou vide."""
-    obj = _load_object(raw)
+    obj = _load_object(raw, REFLECT_TOPIC)
     if obj is None:
         return None
     return _clean(obj.get("demande"), REFLECT_MAX_CHARS)

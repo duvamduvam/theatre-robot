@@ -54,6 +54,7 @@ from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
+from theatre_contrats import stringtime
 
 from robot_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
                                        ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL, ROUTE_GOTO_RESULT_TOPIC,
@@ -78,11 +79,8 @@ def _now_ms() -> int:
 
 def _decode(raw: str):
     """Payload StringTime : JSON si possible, brut sinon (contrat commun
-    follow/gaze/chat)."""
-    try:
-        return json.loads(raw)
-    except (ValueError, TypeError):
-        return raw
+    follow/gaze/chat) — theatre_contrats.stringtime.decode_or_raw."""
+    return stringtime.decode_or_raw(raw)
 
 
 class RouteDriverNode(Node):

@@ -104,6 +104,10 @@ from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
+# Codec StringTime commun (lot L1a). `loads` là où le node a SON propre
+# traitement de l'échec (strip du brut, warning + return, KeyError dans le
+# même try) : chaque except est gardé tel quel, le comportement ne bouge pas.
+from theatre_contrats import stringtime
 
 from robot.diagnostic.journal import JournalWriter, make_event
 from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
@@ -343,7 +347,7 @@ class DirectorNode(Node):
     def _on_route_cause(self, msg: StringTime):
         """Contrat route_driver : json.dumps("boot"|"cmd") ; brut toléré."""
         try:
-            cause = json.loads(msg.msg)
+            cause = stringtime.loads(msg.msg)
         except (ValueError, TypeError):
             cause = msg.msg.strip()
         self.reenable.note_cause(cause)
@@ -353,7 +357,7 @@ class DirectorNode(Node):
     def _on_goto_result(self, msg: StringTime):
         """Contrat route_driver : JSON {name, result, reason, travelled} -> journal `goto_result`."""
         try:
-            self.log("goto_result", json.loads(msg.msg))
+            self.log("goto_result", stringtime.loads(msg.msg))
         except (ValueError, TypeError):
             self.get_logger().warning(f"route_goto_result illisible : {msg.msg!r}")
 
@@ -399,7 +403,7 @@ class DirectorNode(Node):
         """Contrat route_driver : JSON {"poi", "event": enter|exit, "distance"}.
         Tout est journalisé (la frise du débrief) ; seul « enter » déclenche."""
         try:
-            ev = json.loads(msg.msg)
+            ev = stringtime.loads(msg.msg)
             poi, kind = str(ev["poi"]), ev["event"]
         except (ValueError, TypeError, KeyError) as e:
             self.get_logger().warning(f"poi_event illisible : {msg.msg!r} ({e!r})")
@@ -437,10 +441,7 @@ class DirectorNode(Node):
         main). Tout est journalisé `voice_move`, ignorés compris."""
         try:
             raw = msg.msg.strip()
-            try:
-                cmd = json.loads(raw)
-            except (ValueError, TypeError):
-                cmd = raw
+            cmd = stringtime.decode_or_raw(raw, CHAT_MOVE_TOPIC)
             if isinstance(cmd, dict) and cmd.get("cmd") == CHAT_MOVE_GOTO_CMD:
                 self._aller_voir(cmd.get("objet"))
             elif isinstance(cmd, dict) and cmd.get("cmd") in (CHAT_MOVE_TURN_CMD, CHAT_MOVE_FORWARD_CMD):

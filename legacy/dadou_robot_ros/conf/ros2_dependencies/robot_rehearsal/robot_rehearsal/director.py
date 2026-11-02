@@ -40,9 +40,11 @@ import math
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
+from theatre_contrats import stringtime
+
 from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
                                        FORWARD_MAX_M, FORWARD_MIN_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
-                                       ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
+                                       ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
                                        TURN_DEG_COMPAT, TURN_MAX_DEG)
 from robot_rehearsal.goto import forward_name, tour_name, turn_name
 from robot_rehearsal.route import Poi, Tour, normalize_name
@@ -283,10 +285,7 @@ def speed_factor(raw) -> float | None:
     route_driver), non-nombre ou non-fini -> None (route_driver l'ignore
     aussi), hors 0..1 -> borné (route_driver borne aussi)."""
     if isinstance(raw, str):
-        try:
-            raw = json.loads(raw)
-        except (ValueError, TypeError):
-            pass
+        raw = stringtime.decode_or_raw(raw, ROUTE_SPEED_TOPIC)
     try:
         value = float(raw)
     except (TypeError, ValueError):
@@ -301,10 +300,7 @@ def route_cmd_kind(raw: str) -> str | None:
     formats que route_driver accepte (JSON sinon brut ; on/true/1/"1",
     off/false/0/"0"). Revue I1 : le régisseur ne reconnaissait que "off" —
     un `false` de David lui échappait."""
-    try:
-        value = json.loads(raw)
-    except (ValueError, TypeError):
-        value = raw
+    value = stringtime.decode_or_raw(raw, ROUTE_CMD_TOPIC)
     if value in ("on", True, 1, "1"):
         return "on"
     if value in ("off", False, 0, "0"):

@@ -24,18 +24,20 @@ pas d'import robot_config ni robot.actions.* — il tourne tel quel dans le
 conteneur de simulation.
 """
 
-import json
 import time
 
 import rclpy
 from geometry_msgs.msg import PointStamped, Twist
 from rclpy.node import Node
 from robot_interfaces.msg import StringTime
+from theatre_contrats import stringtime, topics
 
 from robot.move.follow_control import FollowConfig, FollowControl
 
 # Contrats de topics (ne pas dévier — interfaces existantes).
-VISION_BOX_TOPIC = "/vision/person_box"  # PointStamped : x=azimut, y=HAUTEUR silhouette, z=confiance
+# PointStamped : x=azimut, y=HAUTEUR silhouette, z=confiance. Nom RELATIF depuis le
+# lot L1a (theatre_contrats.topics) : sans namespace il se résout en /vision/person_box.
+VISION_BOX_TOPIC = topics.VISION_PERSON_BOX
 FOLLOW_CMD_TOPIC = "follow"              # StringTime "on"/"off" : activation en direct
 CMD_VEL_TOPIC = "cmd_vel_follow"         # Twist -> twist_mux priorité 20
 
@@ -110,10 +112,7 @@ class PersonFollowerNode(Node):
     def _on_follow_cmd(self, ros_msg):
         # Même contrat que gaze/chat : "on"/"off", json ou brut tolérés.
         raw = ros_msg.msg
-        try:
-            value = json.loads(raw)
-        except (ValueError, TypeError):
-            value = raw
+        value = stringtime.decode_or_raw(raw, FOLLOW_CMD_TOPIC)
         if value in ("on", True, 1, "1"):
             self.follow.set_enabled(True)
             self.get_logger().info("follow ON : suivi aux roues activé")

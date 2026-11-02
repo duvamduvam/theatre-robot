@@ -145,6 +145,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
+from theatre_contrats import stringtime
 
 from dadou_utils_ros.utils_static import ANIMATION, ANIMATION_STATE, FACE
 
@@ -1229,7 +1230,8 @@ class ChatNode(Node):
         de mic.stop() depuis ce thread, même règle que _on_prompt). La
         fermeture est journalisée par MoveTask lui-même."""
         try:
-            payload = json.loads(ros_msg.msg)
+            # `loads` : refus PROPRE à ce node (warning + return), gardé tel quel (lot L1a).
+            payload = stringtime.loads(ros_msg.msg)
         except (ValueError, TypeError):
             self.get_logger().warning(f"{ROUTE_GOTO_RESULT_TOPIC} illisible : {ros_msg.msg!r}")
             return

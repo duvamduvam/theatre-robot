@@ -34,6 +34,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from robot_interfaces.msg import StringTime
+from theatre_contrats import topics
 from sensor_msgs.msg import CompressedImage
 
 from vision.ai import reflection, reflection_contract as contract
@@ -62,7 +63,7 @@ ROUTE_SPEED_TOPIC = "route_speed"
 # SEULEMENT, pour son "restart" (nouvelle traversée) qui remet à neuf la
 # mémoire des objets commentés en marche. Ce node n'y publie JAMAIS.
 ROUTE_CMD_TOPIC = "route"
-PERSON_BOX_TOPIC = "/vision/person_box"
+PERSON_BOX_TOPIC = topics.VISION_PERSON_BOX   # relatif depuis le lot L1a
 VIDEO_TOPIC = "camera/image_raw/compressed"
 INSTRUCTION_TOPIC = "chat_instruction"
 CHAT_STATE_TOPIC = "chat_state"
