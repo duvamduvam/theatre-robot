@@ -10,7 +10,8 @@
 # operations.md §Séance « Chantiers ») : personne A approche à t=60 s, reste
 # 30 s, s'éloigne ; personne B passe vite à t=300 s ; silence ensuite.
 # Console jouée par le script : ignore pendant l'approche de A, va_la vers un
-# objet devant (t=150 s) puis reviens, go+stop (t=262/270 s) puis go (330 s),
+# objet devant (t=150 s) puis reviens, stop dès que Didier roule (après 270 s,
+# « go » de David toutes les 5 s dès 262 s tant qu'il est arrêté) puis go 60 s après,
 # « stop » de la BOUCHE (t=420 s) puis « go » (430 s). Route ON, séance startée.
 #
 # T1 zéro oscillation : jamais deux décisions DIFFÉRENTES à < 2 s (journal)
@@ -94,6 +95,7 @@ class Pilote(Node):
         self.create_subscription(StringTime, "rehearsal/objects", self._objets, LATCHE)
         self.create_subscription(Odometry, "/ground_truth/odom", self._odom, 10)
         self.pose = None
+        self.dernier_go = 0.0
         self.pistes = []          # (id, t) des naissances vues sur jeu/journal
         self.t0 = None
         self.faits = set()
@@ -196,11 +198,19 @@ class Pilote(Node):
         res = [r for r in self.cap["goto_result"] if va and r[0] > va["t"]]
         if self._une_fois("reviens", (res and time.monotonic() > res[0][0] + 2.0) or t >= 240.0):
             self.console({"cmd": "reviens"}); self.ev("reviens")
-        if self._une_fois("go_avant_stop", t >= 262.0):
-            self.console({"cmd": "go"}); self.ev("go_avant_stop")
-        if self._une_fois("stop_console", t >= 270.0):
-            self.console({"cmd": "stop"}); self.ev("stop_console")
-        if self._une_fois("go_console", t >= 330.0):
+        # « stop » de David : l'épreuve n'a de sens que si Didier ROULE (vécu au
+        # 1er passage du 02/11 : une lubie l'avait déjà arrêté, T4 passait à vide).
+        # Dès 262 s le pilote joue David : « go » toutes les 5 s tant que Didier est
+        # arrêté, puis « stop » dès qu'il roule (au plus tard à 320 s) ; « go » 60 s après.
+        if "stop_console" not in self.faits and t >= 262.0:
+            if self._roule() and t >= 270.0 or t >= 320.0:
+                self._une_fois("stop_console")
+                self.console({"cmd": "stop"}); self.ev("stop_console", roule=self._roule())
+            elif time.monotonic() - self.dernier_go >= 5.0:
+                self.dernier_go = time.monotonic()
+                self.console({"cmd": "go"}); self.ev("go_avant_stop")
+        st = self.cap["evenements"].get("stop_console")
+        if st and self._une_fois("go_console", time.monotonic() >= st["t"] + 60.0):
             self.console({"cmd": "go"}); self.ev("go_console")
         if self._une_fois("stop_bouche", t >= 420.0):
             self.bouche("stop"); self.ev("stop_bouche")
@@ -209,6 +219,11 @@ class Pilote(Node):
         if t >= DUREE:
             self.ev("fin")
             raise SystemExit
+
+    def _roule(self):
+        """Didier avance : consigne cmd_vel_follow > 0,05 m/s dans la dernière 0,5 s."""
+        now = time.monotonic()
+        return any(abs(l) > 0.05 for t, l, a in self.cap["cmd_vel"][-40:] if t >= now - 0.5)
 
     def _objet_devant(self):
         """Objet de rehearsal/objects devant Didier, entre 5 et 35 m (le
@@ -268,17 +283,32 @@ arrets = typ("arret_didier")
 ta = [ts(e) for e in arrets]
 print(f"#  arrêts de Didier : {len(ta)} à " + ", ".join(f"{t - t0:.0f} s" for t in ta))
 V(len(ta) >= 1 and all(b - a >= 119.999 for a, b in zip(ta, ta[1:])), "T2 au plus un arrêt de Didier par 120 s (au moins un arrêt joué)")
+# Intention publiée par le sélecteur DANS LE MÊME TICK que la décision « lubie »
+# (journal) ; la capture ne la voit que si le pilote écoutait déjà (vécu le 02/11 :
+# lubie décidée 2,4 s avant le départ du pilote, qui n'a reçu que la
+# republication latchée -> faux « 0,82 s »). On mesure donc sur le journal pour
+# chaque arrêt, et sur la capture quand elle couvre la décision.
 stops = [t for t, m in cap["jeu_chat_move"] if m == "stop"]
 inten = [(t, i) for t, i in cap["intention"] if i.get("action") == "lubie"]
+t_ecoute = cap["intention"][0][0] if cap["intention"] else 1e18
 ok_pre = True
 for e in arrets:
+    cible = e["payload"]["cible"]
+    dec_l = [x for x in typ("decision") if x["payload"]["action"] == "lubie" and x["payload"]["cible"] == cible
+             and ts(x) <= ts(e)]
+    dj = round(ts(e) - ts(dec_l[-1]), 3) if dec_l else None
     t_stop = min((t for t in stops if t >= ts(e) - 0.5), default=None)
-    t_int = min((t for t, i in inten if i.get("cible") == e["payload"]["cible"] and t <= (t_stop or 0)
-                 and t >= (t_stop or 0) - 10.0), default=None)
-    d = None if t_stop is None or t_int is None else round(t_stop - t_int, 2)
-    print(f"#    arrêt {e['payload']['cible']} : intention reçue {d} s avant le stop")
-    ok_pre = ok_pre and d is not None and d >= 2.9
-V(ok_pre and arrets, "T2 chaque arrêt précédé de son intention publiée >= 3 s avant le stop (tolérance de réception 0,1 s)")
+    dc = None
+    if dec_l and ts(dec_l[-1]) > t_ecoute:
+        t_int = min((t for t, i in inten if i.get("cible") == cible and t <= (t_stop or 0)
+                     and t >= ts(dec_l[-1]) - 0.5), default=None)
+        dc = None if t_stop is None or t_int is None else round(t_stop - t_int, 2)
+        ok_pre = ok_pre and dc is not None and dc >= 2.9
+    print(f"#    arrêt {cible} : intention (journal) {dj} s avant le stop ; reçue (capture) "
+          f"{dc if dc is not None else 'hors fenêtre'} s avant")
+    # 1 ms de tolérance : t_mono_ms est TRONQUÉ à la ms (3,000 s peut s'écrire 2 999 ms).
+    ok_pre = ok_pre and dj is not None and dj >= 2.999
+V(ok_pre and arrets, "T2 chaque arrêt précédé de son intention publiée >= 3 s avant le stop (journal ; capture à 0,1 s près)")
 
 # T3 : réaction <= 1 s à chaque naissance de piste.
 nee = typ("naissance_piste")
@@ -317,7 +347,8 @@ dep = [e["payload"]["action"] for e in dec if st and go and st["t"] <= ts(e) < g
 print(f"#  stop console : relayé en {None if relais is None else round((relais - st['t']) * 1000)} ms ; "
       f"vitesse avant {max(avant) if avant else None} ; à zéro après {None if zero is None else round(zero - st['t'], 2)} s ; "
       f"max pendant le verrou {max(pendant) if pendant else None} ; chat_move pendant : {moves} ; déplacements décidés : {dep}")
-V(zero is not None and zero - st["t"] < 1.0 and relais is not None, "T4 stop : Didier à l'arrêt en < 1 s")
+V(bool(avant) and max(avant) > 0.05 and zero is not None and zero - st["t"] < 1.0 and relais is not None,
+  "T4 stop : Didier qui ROULAIT est à l'arrêt en < 1 s")
 V(bool(pendant) and max(pendant) < 0.02 and not moves and not dep, "T4 stop : aucune initiative de déplacement jusqu'au go")
 # T5 arrêt vocal.
 sb = ev.get("stop_bouche")
