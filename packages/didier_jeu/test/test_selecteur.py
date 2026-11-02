@@ -296,9 +296,39 @@ def test_pas_de_go_automatique_apres_stop_ou_ignore_de_la_console(ordre):
     assert not any(o[2].get("proposition") for o in out if o[1] == "intention" and o[0] >= 30.0)
 
 
-def test_jamais_de_go_automatique_apres_un_stop_de_david():
+def test_jamais_de_go_automatique_apres_un_stop_de_la_bouche():
     out = jouer(fabriquer(), 0.0, 300.0, [(0.0, marche), (1.0, lambda s, t: s.sur_chat_move_bouche("stop", t))])
     assert moves(out) == [(1.0, "stop")]
+
+
+def test_jamais_de_go_automatique_apres_un_stop_de_david():
+    # Stop de la CONSOLE (David) après une lubie : ni reprise, ni go, 300 s durant.
+    out = jouer(fabriquer(), 0.0, 300.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                          (10.0, lambda s, t: s.sur_console({"cmd": "stop"}, t))])
+    assert moves(out) == [(4.3, "stop"), (10.0, "stop")]
+
+
+def test_go_de_la_bouche_ne_leve_pas_un_stop_de_david():
+    out = jouer(fabriquer(), 0.0, 20.0, [
+        (0.0, marche),
+        (1.0, lambda s, t: s.sur_console({"cmd": "stop"}, t)),
+        (5.0, lambda s, t: s.sur_chat_move_bouche("go", t)),
+        (8.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "avancer", "metres": 1.0}, t)),
+    ])
+    assert moves(out) == [(1.0, "stop")]                    # rien ne part
+    assert any("David" in p["pourquoi"] for _, p in journal(out, "refus"))
+
+
+def test_go_de_la_bouche_leve_le_stop_de_la_bouche_et_console_leve_tout():
+    out = jouer(fabriquer(), 0.0, 10.0, [
+        (0.0, marche),
+        (1.0, lambda s, t: s.sur_chat_move_bouche("stop", t)),
+        (2.0, lambda s, t: s.sur_chat_move_bouche("go", t)),
+        (3.0, lambda s, t: s.sur_chat_move_bouche("stop", t)),
+        (3.5, lambda s, t: s.sur_console({"cmd": "stop"}, t)),
+        (4.0, lambda s, t: s.sur_console({"cmd": "go"}, t)),
+    ])
+    assert moves(out) == [(1.0, "stop"), (2.0, "go"), (3.0, "stop"), (3.5, "stop"), (4.0, "go")]
 
 
 # ================================================================== fatigue

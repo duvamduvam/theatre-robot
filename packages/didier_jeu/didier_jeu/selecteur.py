@@ -15,7 +15,9 @@ Sorties (tuples, dans l'ordre où elles doivent partir) :
 
 RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.py) :
 - « stop » (bouche ou console) : relayé À LA RÉCEPTION, sans score, et verrou
-  de tout déplacement jusqu'au « go » (porte T5 : < 200 ms) ;
+  de tout déplacement jusqu'au « go » (porte T5 : < 200 ms). Le verrou retient
+  QUI l'a posé : un « go » de la console (David) lève tout ; un « go » de la
+  bouche ne lève que le stop de la bouche — JAMAIS un stop de David ;
 - deux décisions différentes jamais à moins de changement.min_s (porte T1) ;
 - hystérésis : le meilleur doit dépasser le second de marge pendant duree_s ;
 - engagement : une action engagée se finit, sauf offre >= seuil_rupture ;
@@ -111,8 +113,8 @@ class Selecteur:
         self.derniere_spontanee: Optional[float] = None
         self.leader: Optional[str] = None
         self.leader_depuis = 0.0
-        self.verrou_stop = False
-        self.source_verrou: Optional[str] = None
+        # Sources du verrou d'arrêt posé : {"console", "bouche"} (revue A1, 02/11).
+        self.verrous: set = set()
         self.arret_didier: Optional[dict] = None   # {"t", "cible"} : reprise armée
         self.presence_t: Optional[float] = None
         self.ordre: Optional[dict] = None          # {"action", "cible", "t", "cmd"}
@@ -152,6 +154,10 @@ class Selecteur:
         return out
 
     # ================================================================ prédicats de l'arbre
+    @property
+    def verrou_stop(self) -> bool:
+        return bool(self.verrous)
+
     def verrouille(self) -> bool:
         return self.verrou_stop
 
@@ -195,7 +201,7 @@ class Selecteur:
             self.relayer_stop("bouche", now)
             return
         if valeur == GO and self.verrou_stop:
-            self.relayer_go("bouche", now)
+            self.relayer_go("bouche", now)   # refusé si David a posé le verrou
             return
         if valeur == GO or (isinstance(valeur, dict) and valeur.get("cmd") in COMMANDES_REGISSEUR):
             cible = (valeur.get("objet") or valeur.get("cmd")) if isinstance(valeur, dict) else GO
@@ -303,7 +309,7 @@ class Selecteur:
     def relayer_stop(self, source: str, now: float) -> None:
         """« stop » : relayé TOUT DE SUITE, sans score ; verrou jusqu'au « go »."""
         self.sorties.append(("chat_move", STOP))
-        self.verrou_stop, self.source_verrou = True, source
+        self.verrous.add(source)
         self.arret_didier = None    # arrêt de David : jamais de « go » automatique
         self.ordre = None
         self.leader = None
@@ -315,8 +321,17 @@ class Selecteur:
         self._publier_intention(now)
 
     def relayer_go(self, source: str, now: float) -> None:
+        """« go » : la console (David) lève tout verrou ; la bouche ne lève que
+        le sien — un stop de David ne se lève qu'à la console."""
+        if source != "console" and "console" in self.verrous:
+            self._journal("refus", "la bouche dit « go » mais c'est David qui a arrêté : "
+                          "seul un go de la console le relance", source=source)
+            return
+        if source == "console":
+            self.verrous.clear()
+        else:
+            self.verrous.discard(source)
         self.sorties.append(("chat_move", GO))
-        self.verrou_stop, self.source_verrou = False, None
         self.arret_didier = None
         self._journal("relais_go", f"go de {source} relayé : verrou levé", source=source)
         self.pourquoi_courant = f"go de {source}"
@@ -366,7 +381,7 @@ class Selecteur:
 
     def _refus_deplacement(self, now: float) -> Optional[str]:
         if self.verrou_stop:
-            return f"verrou d'arrêt ({self.source_verrou}) jusqu'au go"
+            return f"verrou d'arrêt ({', '.join(sorted(self.verrous))}) jusqu'au go"
         if self.superviseur_absent():
             return "superviseur absent"
         if self.pulsions.deplacement_interdit():
