@@ -23,8 +23,8 @@
 #                      et aucune initiative de déplacement jusqu'au go
 # T5 arrêt vocal     : stop de la bouche relayé en < 200 ms, journal relais_stop
 # T6 lisibilité      : jeu/intention jamais muette > 1 s ; chaque ligne a un pourquoi
-# T7 domaine         : jeu_node refuse de démarrer hors 43 (le garde-fou de
-#                      robot_rehearsal, testé aussi sur l'hôte : test_contrat_node.py)
+# T7 domaine         : le vrai main() de jeu_node refuse hors 43 AVANT d'importer
+#                      rclpy (sous-processus sans rclpy ; aucun node lancé hors 43)
 source /opt/ros/${ROS_DISTRO}/setup.sh
 source /home/ros2_ws/install/setup.bash
 CAP=/tmp/vja1; rm -rf $CAP; mkdir -p $CAP
@@ -52,11 +52,31 @@ rpid=$(basename "$RJ" 2>/dev/null | cut -d_ -f3)
 echo "  journal du jeu : $JJ"
 echo "  journal du régisseur : $RJ"
 
-echo "=== T7 domaine : jeu_node refuse hors 43 $(date +%T) ==="
-# Refus AVANT rclpy.init : rien n'est créé sur le domaine 42 (gravé en test).
-out7=$(ROS_DOMAIN_ID=42 timeout 30 ros2 run didier_jeu jeu_node 2>&1); rc7=$?
-echo "  code de sortie : $rc7 ; $(echo "$out7" | grep -o 'refuse de démarrer[^(]*' | head -1)"
-verdict "$([ $rc7 != 0 ] && [ $rc7 != 124 ] && echo "$out7" | grep -q "ROS_DOMAIN_ID='42'" && echo 1 || echo 0)" "ROS_DOMAIN_ID=42 : refus au démarrage (code ≠ 0, message du garde-fou)"
+echo "=== T7 domaine : le garde-fou refuse hors 43, AVANT rclpy $(date +%T) ==="
+# Revue A1 (bloquant 5) : on ne lance JAMAIS un vrai node sur un autre domaine
+# (conteneur en network_mode host). Le VRAI main() de jeu_node est appelé dans
+# un python où rclpy est INTERDIT d'import : le refus doit venir de check_domain
+# (RuntimeError) AVANT tout import rclpy (sinon ImportError = régression).
+# Domaines essayés : 0 (défaut ROS) et absent. Test hôte : test_contrat_node.py.
+t7=1
+for dom in 0 absent; do
+  if [ "$dom" = absent ]; then envd="env -u ROS_DOMAIN_ID"; else envd="env ROS_DOMAIN_ID=$dom"; fi
+  out7=$($envd python3 -c "
+import sys
+sys.modules['rclpy'] = None   # tout import de rclpy lèverait ImportError
+from didier_jeu.jeu_node import main
+try:
+    main()
+except RuntimeError as e:
+    print('REFUS', e); sys.exit(0)
+except ImportError as e:
+    print('ATTEINT RCLPY', e); sys.exit(1)
+print('DÉMARRÉ'); sys.exit(1)
+" 2>&1); rc=$?
+  echo "  domaine $dom : $(echo "$out7" | tail -1 | cut -c1-110)"
+  [ $rc = 0 ] && echo "$out7" | grep -q "^REFUS" || t7=0
+done
+verdict "$t7" "T7 jeu_node refuse hors domaine 43 (domaine 0 et absent), avant tout import rclpy"
 
 echo "=== mise en route : téléportation, séance START, route ON $(date +%T) ==="
 ROUTE off; P route restart
