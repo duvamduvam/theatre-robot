@@ -1,0 +1,185 @@
+<!-- généré par IAction — NE PAS ÉDITER : mis à jour automatiquement -->
+
+# IAction — guide d'intégration du projet
+
+Ce projet est ouvert dans **IAction** (app de bureau de chat/agents
+multi-fournisseur). Ce fichier décrit le contrat entre l'app et le projet :
+ce qu'elle lit ici, ce qu'elle expose aux agents, et comment ajouter une
+capacité — sans jamais avoir besoin de lire le code source d'iaction.
+
+## Ce qu'IAction lit dans le projet
+
+- `CLAUDE.md` — instructions projet du moteur Claude (chargées à chaque tour).
+- `.claude/` — réglages locaux (`settings.local.json`), skills du projet
+  (`.claude/skills/`), mémoire agent (`.claude/memory/*.md`). Les skills et
+  commandes GLOBAUX du poste (`~/.claude/skills`, `~/.claude/commands`) sont
+  hérités par tous les projets (un skill transverse n'a pas à être recopié) —
+  contrepartie : les réglages utilisateur globaux (`~/.claude/settings.json`)
+  s'appliquent aussi aux tours de l'app.
+- `.mcp.json` — serveurs MCP du projet (stdio ou http), chargés par le moteur
+  projet. Jamais en mode « chat pur » (page Chat, aucun outil). Aucun secret
+  en clair : toute chaîne `${SECRET:nom}` (dans `env`, `headers`, `args`,
+  `url`…) est résolue au lancement du tour depuis le coffre local
+  `~/.config/net.duvam.iaction/mcp-secrets.json` (mode 600, hors projet,
+  hors git). Un secret introuvable écarte le serveur concerné — le tour
+  continue sans lui, avec un avertissement au journal (scope `mcp`).
+- `.iaction/` — dossier d'IAction dans le projet :
+  - `project.json` : identité du projet dans l'app ;
+  - `connaissances/` : documents sources du RAG local (« Automatiques ») —
+    fichiers texte/markdown, les liens symboliques sont suivis, > 1 Mo ignoré ;
+  - `connaissances-index/` : index d'embeddings GÉNÉRÉ (chunks.jsonl +
+    meta.json) — ne pas éditer, ne pas committer (gitignoré) ;
+  - `mcp.local.json` : préférences LOCALES des serveurs MCP (serveurs
+    éteints, allowlist d'outils par serveur) — écrit par le panneau MCP de
+    l'app, à ne pas versionner ;
+  - `mcp.runtime.json` : dernier état CONSTATÉ des serveurs MCP (statut +
+    outils réellement exposés au dernier tour) — GÉNÉRÉ, ne pas éditer.
+
+## Ce qu'IAction expose aux agents du projet
+
+- **RAG local** : quand l'index existe, l'outil MCP
+  `mcp__iaction__search_knowledge` (serveur in-process `iaction`) répond aux
+  recherches sémantiques sur les connaissances du projet. Sources indexées :
+  documents épinglés dans le panneau Connaissances, `.iaction/connaissances/`,
+  `CLAUDE.md`, `.claude/memory/*.md`. Embeddings locaux via Ollama
+  (`nomic-embed-text` par défaut). Indexation : panneau Connaissances.
+- **Questions à l'utilisateur** : dans un tour lancé depuis la page Projets
+  (humain devant l'écran), l'outil MCP `mcp__studio__ask_user` (serveur
+  in-process `studio`) pose 1 à 4 questions à choix, affichées comme un
+  formulaire cliquable, et **attend** la réponse : elle revient comme résultat
+  de l'outil et le tour continue. À utiliser dès qu'un arbitrage de
+  l'utilisateur conditionne la suite, au lieu de terminer son tour sur une
+  question en texte que l'utilisateur devrait recopier. Absent des tours
+  headless (orchestration, tâches planifiées) : là, personne ne répondrait —
+  poser la question en texte, ou décider en annonçant l'hypothèse retenue.
+- **Outils MCP du projet** : la fiche `connaissances/iaction-mcp.md` est
+  régénérée à chaque tour avec les serveurs et outils RÉELLEMENT exposés
+  (statut constaté, pas déclaration). Elle porte la règle **source avant
+  mémoire** : quand un outil MCP sert la donnée demandée (mails, base de
+  pilotage, dossier distant), l'interroger AVANT de répondre — y compris
+  quand la mémoire ou le RAG semblent déjà contenir la réponse (un index est
+  une copie, il périme). Si l'outil est indisponible, le dire au lieu de
+  répondre de mémoire.
+- **Moteurs** : Claude (abonnement ou clé API) et moteur neutre
+  (Ollama local / OpenRouter), avec routage automatique possible.
+- **Orchestration** : enchaînements d'étapes multi-agents (page Orchestration),
+  chaque étape pouvant cibler un moteur/modèle différent. Définis PAR FICHIERS
+  dans le projet (voir ci-dessous) : un agent du projet peut donc en créer.
+- **Tâches de fond** : un tour dont le modèle a fini mais dont des tâches de
+  fond (commandes longues, sous-agents) vivent encore reste ouvert pour
+  recevoir leurs rapports — plafonné (10 min par défaut), bouton « Rendre la
+  main » dans l'UI pour clore sans attendre.
+
+## Fichiers produits ou modifiés : où les écrire, comment les citer
+
+- **Le livrable s'écrit DANS le projet.** Tout fichier produit ou modifié pour
+  l'utilisateur va sous la racine du projet (un dossier métier existant, sinon
+  un dossier explicite) : il y est versionnable, indexable, et l'app sait
+  l'ouvrir.
+- **Une source qui vit dehors se copie d'abord.** Document déposé dans
+  `~/Téléchargements`, `~/Documents`, un montage réseau : le copier dans le
+  projet, travailler sur la copie, livrer la copie. Ne recopier vers
+  l'emplacement d'origine QUE si l'utilisateur l'a demandé — et le dire alors
+  explicitement, avec le chemin de destination.
+- **Un chemin cité en `code` inline devient un bouton cliquable** dans la
+  transcription, et ce bouton n'ouvre QUE ce qui est sous la racine du projet
+  (chemin relatif, ou absolu sous la racine ; à défaut, recherche par nom de
+  base dans le projet). Citer donc le chemin RELATIF à la racine —
+  `rapports/2026-08-10.md`. Un `~/…`, un `/home/…` hors projet ou un chemin
+  d'un autre dépôt ne s'ouvrira jamais : le donner en texte simple, JAMAIS en
+  `code` inline, pour ne pas promettre un lien mort.
+- Hors recopie demandée par l'utilisateur, la seule écriture hors projet
+  prévue par le contrat est le manifeste de tâche planifiée (ci-dessous).
+
+## Ajouter une capacité au projet
+
+- **Un outil autonome** (serveur, script, API) → le déclarer dans
+  `.mcp.json` ; préférer un outil générique par-projet plutôt que codé en dur.
+  Le panneau MCP de l'app propose un catalogue (mails IMAP, Airtable, serveur
+  HTTP distant) qui écrit l'entrée et range le jeton au coffre. Y sont aussi
+  affichés, par serveur : statut réel, outils exposés, interrupteur, allowlist
+  d'outils. Préférer un accès MCP interrogeable à la
+  recopie d'une source dans `connaissances/` : la copie périme, l'outil non.
+- **De la connaissance** (docs de référence, notes) → déposer ou symlinker des
+  `.md` dans `.iaction/connaissances/` puis relancer l'indexation.
+- **Un savoir-faire agent** (workflow outillé, checklist) → un skill dans
+  `.claude/skills/`.
+- **De la mémoire durable** → `.claude/memory/*.md` (indexée dans le RAG).
+- **Un agent réutilisable** (rôle nommé pour l'orchestration) →
+  `.iaction/agents/<nom>.yaml` :
+
+  ```yaml
+  name: relecteur            # [a-z0-9-], unique
+  description: Relit les pages et signale les problèmes.
+  engine: claude             # claude | neutral | auto (routeur)
+  provider: null             # neutral : ollama, openrouter…
+  model: claude-fable-5      # ou qwen3:8b, etc. (null en auto)
+  permissionMode: default    # default | acceptEdits | plan | bypassPermissions
+  instructions: |
+    Tu es relecteur. Réponds en français.
+  mcp: true                  # hérite du .mcp.json du projet
+  maxTurns: 12
+  ```
+
+  (Les `.claude/agents/*.md` de Claude Code sont aussi visibles, en lecture
+  seule.)
+- **Un enchaînement d'orchestration** (visible et lançable dans l'onglet
+  Orchestration) → `.iaction/orchestrations/<nom>.yaml` :
+
+  ```yaml
+  name: revue-docs
+  description: Contrôle puis synthèse.
+  inputs:                    # variables demandées au lancement
+    - name: cible
+      label: "Page ou dossier à contrôler"
+      default: ""            # utilisé si non fourni (chaîne vide permise) ;
+                             # sans default, l'input est REQUIS — une tâche
+                             # planifiée échouerait au lancement
+  steps:
+    - id: controle
+      agent: relecteur       # nom d'agent (projet, puis global)
+      task: "Contrôle {{cible}} et liste les problèmes."
+    - id: synthese
+      agent: relecteur
+      needs: [controle]      # DAG par dépendances
+      task: "Synthétise : {{steps.controle.output}}"
+  limits:
+    maxParallel: 2
+    maxDurationMin: 30
+  ```
+
+  Portée globale possible (tous projets) dans
+  `~/.config/net.duvam.iaction/agents/` et `orchestrations/` ; en cas de
+  collision de nom, le projet gagne.
+- **Une tâche récurrente** (exécution planifiée d'une orchestration) : un
+  agent PEUT la créer en écrivant le manifeste
+  `~/.config/net.duvam.iaction/taches/<nom>/tache.yaml` — c'est la seule
+  écriture hors projet prévue par le contrat (zone de l'app ; voir
+  « Fichiers produits » pour la recopie demandée par l'utilisateur), et
+  UNIQUEMENT avec `enabled: false` : l'armement du timer systemd reste un
+  acte de l'utilisateur (bascule « Armée » dans la page Orchestration, où la
+  tâche apparaît dès le fichier écrit). Format :
+
+  ```yaml
+  name: revue-hebdo            # [a-z0-9-], = nom du dossier
+  description: Revue hebdomadaire de la doc.
+  orchestration: revue-hebdo   # nom d'orchestration
+  schedule: "Mon *-*-* 08:00"  # OnCalendar systemd
+  inputs: {}                   # gabarit {{today}} disponible
+  report: rapports/{{today}}.md
+  enabled: false               # TOUJOURS false — l'utilisateur arme dans l'app
+  cwd: /chemin/absolu/du/projet  # fait résoudre l'orchestration dans le repo
+  ```
+
+  Poser l'orchestration versionnée dans `.iaction/orchestrations/` du
+  projet et la référencer via `cwd`. Faire aussi écrire le rapport dans le
+  repo par la dernière étape de l'orchestration le rend versionnable et
+  interrogeable.
+
+## Règles
+
+- Le projet ne doit JAMAIS dépendre du code d'iaction (chemins, imports) :
+  le contrat, c'est ce fichier + les emplacements ci-dessus.
+- Ce fichier est déposé et mis à jour par IAction. Pour le compléter,
+  utiliser un autre fichier de `connaissances/` — toute édition ici sera
+  écrasée à la prochaine mise à jour de l'app.
