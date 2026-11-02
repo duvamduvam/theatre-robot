@@ -143,3 +143,17 @@ dit si « pourquoi et quand » lui parle. La porte technique ne remplace pas cet
 Fond permanent (A+), perception réelle (A2), corps sûr (A0), télécommande console (L4),
 chiffres « artistiques » (réglage au réel). Et **la hésitation jouée** : pas un défaut du
 sélecteur, une action du répertoire à composer par David.
+
+## 8. Précisions du 02/11 (questions de l'implémenteur, tranchées avant le code)
+
+| # | Question | Décision |
+|---|---|---|
+| 1 | mécanisme de la lubie | naît sur `rehearsal/poi_event` `enter` (offre `objet`, valeur 0,8, TTL 3 s) ; +0,5 par POI entré, −0,05/s, plafond 1 ; Didier « regarde » par `regarder <objet>` du régisseur (M2) ; le sélecteur ne lit pas `/ground_truth/odom` ; pas de doublon avec le scénario Chantiers → **scénario vide `jeu-a1.yaml`** |
+| 2 | `va_la` vers une piste | objets de `rehearsal/objects` seulement (T4) ; une piste = `tourner` vers son azimut puis `avancer` ≤ 1 m, si superviseur présent et fatigue < 0,8 ; `joue_avec` = la piste regardée |
+| 3 | reprise après un arrêt de Didier | règle du 31/10 gravée : il propose (« repartir ? ») puis envoie `go` lui-même après 90 s, sauf `stop`/`ignore` de la console ; **jamais de `go` automatique après un `stop`/`off` de David** ; le régisseur refusant `go` hors séance, A1 tourne avec un scénario vide (0 bug, 0 lubie) |
+| 4 | répertoire | séquences avec clé `types`, **hors `bugs/` et hors toute séquence à piste `wheels`** (pas de corps sûr en A1 — filtre gravé) ; `deplacements.yaml` = valeurs de départ « composées par David » : approcher (avancer 1 m), se_tourner_vers (tourner), aller_voir, faire_le_tour (tour_de), reculer seulement si le régisseur accepte un `avancer` négatif |
+| 5 | T3 vs engagement | toute naissance de piste → une ligne de décision en ≤ 1 s, qui peut être un **maintien** ; T1 ne compte que les changements d'action |
+| 6 | les « mots » | `jeu/intention` seul en A1 |
+| 7 | poids du score | dans `reglages.yaml`, valeurs de départ gravées : offre 1,0 ; pulsion 0,6 ; metteur en scène 0,8 ; console 1,5 ; réfractaire = facteur 0/1 ; immobilité = 0,3 − 0,3 × ennui |
+
+py_trees absent de l'image sim et du venv : ajouté (Dockerfile-sim, package.xml, requirements-test).
