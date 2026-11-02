@@ -635,3 +635,16 @@ def test_lubie_note_si_le_regard_est_parti():
     looks = [o[0] for o in avec if o[1] == "look"]
     a = journal(avec, "arret_didier")
     assert a[0][1]["regard"] is True and looks and looks[0] <= a[0][0] - 3.0 + 1e-9   # regard >= 3 s avant
+
+
+def test_ordre_de_david_jamais_bloque_par_un_arret_de_didier():
+    """Lubie de Didier (arrêt à 4,3 s), puis David : go et joue avec p1 à 12 s —
+    l'approche part malgré les 120 s : un ordre de David n'est pas un arrêt de Didier."""
+    sel = fabriquer({"refractaire_s.deplacement": 0.0}, pools={})
+    out = jouer_avec_regisseur(sel, 30.0, [
+        (0.0, marche), (1.0, _poi("anneaux")),
+        (10.0, lambda s, t: s.sur_console({"cmd": "go"}, t)),
+        (12.0, lambda s, t: s.sur_console({"cmd": "joue_avec", "cible": "p1"}, t)),
+    ], continu=boite(11.0, 30.0, azimut=0.0, hauteur=0.4))
+    assert [p["kind"] for _, p in journal(out, "arret_didier")] == ["lubie"]
+    assert avancees(out) and avancees(out)[0] < 16.0
