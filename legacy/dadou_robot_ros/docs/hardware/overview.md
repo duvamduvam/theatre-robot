@@ -1003,6 +1003,14 @@ The arms and mouth are controlled by **ASME-MR 380 kg·cm** servos.
 ![ASME-MR servo](../../docs/pictures/consumable-parts/arm-motor.png)
 *ASME-MR high-torque servo for arms and mouth.*
 
+> ⚠️ **Le fil rouge du connecteur 3 points des ASME est une SORTIE 5 V, pas une entrée**
+> (régulateur interne de la carte, cavalier n° 1 « Signal line "5V" output or floating »).
+> Le manuel dit de **ne pas câbler le « + »** en mode PWM. Câblé sur le `V+`/5 V de la carte
+> porteuse, il alimente le rail 5 V du robot depuis le 12 V — constaté le 2026-11-03
+> (LED 5 V allumée convertisseur débranché), fiche
+> [`../incidents/2026-11-03-led-5v-allumee-convertisseur-debranche.md`](../incidents/2026-11-03-led-5v-allumee-convertisseur-debranche.md),
+> manuel `datasheets/ASME-02-series-wingxine-manual.pdf`.
+
 The eyes use a JX Servo CLS-12V7346 (46 kg·cm, 12 V).
 ![JX CLS-12V servo](../../docs/pictures/consumable-parts/servo-cls-12V.png)
 *JX CLS-12V7346 servo dedicated to the eyes.*
