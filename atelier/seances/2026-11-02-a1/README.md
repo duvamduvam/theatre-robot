@@ -9,3 +9,12 @@ décision du sélecteur — offres vivantes, jauges (ennui, curiosité, lubie, f
 meilleurs scores, le choix et son `pourquoi`. C'est là qu'on dit si « pourquoi et quand
 Didier agit » parle, et quels potards de `packages/didier_jeu/config/reglages.yaml` tourner.
 Les autres fichiers : journal du régisseur, sorties des deux scripts de vérification.
+
+**Lecture humaine** : `lecture.md` (généré par `packages/didier_jeu/tools/lire_journal.py … --md`),
+une ligne par événement, avec le pourquoi et les jauges.
+
+**Première observation (Fable, 02/11, avant relecture par David)** : dans la première minute,
+Didier joue une expression spontanée **toutes les 9 s** (ennui 0,41 → score 0,25 contre 0,18 pour
+« rien ») : il ne se tait jamais. Ce n'est pas une infraction aux règles (≥ 8 s respecté), c'est
+un **réglage** — le score de base de l'immobilité (0,3 − 0,3 × ennui) est trop bas, ou l'ennui
+remonte trop vite. C'est exactement le genre de potard que cette lecture sert à tourner.
