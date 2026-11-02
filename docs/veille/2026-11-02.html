@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veille robotique Didier — 2 novembre 2026</title>
+<style>
+  /* Feuille de style de référence : les éditions suivantes la recopient à l'identique. */
+  :root { --fond:#fbfaf7; --texte:#1f2328; --doux:#5b636b; --trait:#e3e0d8;
+          --essayer:#1a7f37; --surveiller:#9a6700; --plustard:#57606a; --lien:#0b5cad; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fond); color:var(--texte);
+         font:16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:2rem 1.25rem 4rem; }
+  header p { color:var(--doux); margin:.2rem 0; }
+  h1 { font-size:1.7rem; margin:0 0 .3rem; }
+  h2 { font-size:1.25rem; margin:2.2rem 0 .8rem; padding-bottom:.3rem; border-bottom:2px solid var(--trait); }
+  h3 { font-size:1.05rem; margin:1.4rem 0 .6rem; color:var(--doux); }
+  a { color:var(--lien); }
+  .retenir { background:#fff; border:1px solid var(--trait); border-left:5px solid var(--essayer);
+             border-radius:6px; padding:.8rem 1.1rem; }
+  .retenir li { margin:.45rem 0; }
+  .carte { background:#fff; border:1px solid var(--trait); border-radius:6px; padding:.8rem 1rem; margin:.7rem 0; }
+  .carte h4 { margin:0 0 .3rem; font-size:1rem; }
+  .meta { font-size:.85rem; color:var(--doux); margin-bottom:.4rem; }
+  .carte p { margin:.35rem 0; }
+  .verdict { display:inline-block; font-size:.75rem; font-weight:600; text-transform:uppercase;
+             letter-spacing:.03em; padding:.1rem .5rem; border-radius:99px; color:#fff; margin-left:.4rem; vertical-align:middle; }
+  .essayer { background:var(--essayer); } .surveiller { background:var(--surveiller); } .plustard { background:var(--plustard); }
+  .prudence { font-size:.88rem; color:var(--surveiller); }
+  ul.ecarte { padding-left:1.2rem; } ul.ecarte li { margin:.25rem 0; }
+  footer { margin-top:3rem; font-size:.85rem; color:var(--doux); border-top:1px solid var(--trait); padding-top:1rem; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Veille robotique — Didier</h1>
+  <p><strong>Édition n° 1 · 2 novembre 2026</strong> · fenêtre : 5 octobre → 2 novembre 2026 (premier numéro, un mois)</p>
+  <p>Ne figure ici que ce qui sert un chantier. Tout est sourcé dans la collecte brute ; rien n'est ajouté de mémoire.</p>
+</header>
+
+<h2>À retenir cette semaine</h2>
+<div class="retenir"><ul>
+  <li><strong>Kyutai a rendu Pocket TTS minuscule, mais en anglais seulement.</strong> C'est la bonne
+    direction pour le banc V0b (Pocket TTS tient-il sur le Pi 5 ?). La variante française reste la
+    « preview » non distillée. Guetter son équivalent français avant de monter le banc.</li>
+  <li><strong>Un accélérateur 25 TOPS pour ~3 W sur Pi 5 existe désormais.</strong> Le Sixfab AI HAT+
+    (puce DEEPX) détecte des objets à des milliers d'images par seconde. C'est la classe d'outil qui
+    lèverait le mur « modèle de vision sur CPU Pi » du suivi de personne, sans passer à un Jetson.</li>
+  <li><strong>Les 60 vidéos de ROSCon Global 2026 sont en ligne.</strong> Nav2, ros2_control et
+    sim-to-real y sont traités : c'est la meilleure lecture de préparation du lot A1 en sim.</li>
+</ul></div>
+
+<h2>Par chantier</h2>
+
+<h3>Conversation et voix</h3>
+<div class="carte">
+  <h4>Kyutai Pocket TTS : petits modèles d'octobre <span class="verdict surveiller">à surveiller</span></h4>
+  <div class="meta">Kyutai · octobre 2026 (billet du 20/10) · <a href="https://github.com/kyutai-labs/pocket-tts">dépôt</a> · <a href="https://kyutai.org/blog/2026-10-20-pocket-tts-small/">billet</a></div>
+  <p>Variantes anglaises de 18,2, 6,9 et 1,9 M de paramètres, données à 25 fois le temps réel sur un
+    seul thread CPU. Le modèle de base de 100 M parle français, sous licence MIT, avec clonage depuis un wav.</p>
+  <p><strong>Pour Didier :</strong> l'étude voix fait de Pocket TTS le pari principal et de son
+    fonctionnement sur ARM l'inconnue qui décide de la forme du chantier. Une version française
+    distillée rendrait V0b presque gagné d'avance. Rien n'indique qu'elle existe déjà.</p>
+</div>
+<div class="carte">
+  <h4>Voxtral TTS et Voxtral Transcribe 2 en poids ouverts <span class="verdict plustard">pour plus tard</span></h4>
+  <div class="meta">Mistral · mars et février 2026, hors fenêtre · sources tierces : <a href="https://noqta.tn/en/news/mistral-voxtral-tts-open-source-speech-ai-2026">TTS</a>, <a href="https://alternativeto.net/news/2026/2/mistral-unveils-voxtral-transcribe-2-a-cheap-open-source-speech-model-that-runs-on-device">Transcribe 2</a></div>
+  <p>Synthèse en 9 langues dont le français, et reconnaissance ouverte exécutable sur l'appareil.</p>
+  <p><strong>Pour Didier :</strong> le STT tourne déjà sur Voxtral via OpenRouter avec repli whisper.
+    Une version locale de Voxtral serait un meilleur repli hors ligne que whisper.</p>
+  <p class="prudence">Non vérifié à la source Mistral : à confirmer avant tout essai.</p>
+</div>
+
+<h3>Mouvement autonome (A1 → A4)</h3>
+<div class="carte">
+  <h4>Vidéos de ROSCon Global 2026 <span class="verdict essayer">à regarder</span></h4>
+  <div class="meta">Open Robotics · 22 octobre 2026 · <a href="https://discourse.openrobotics.org/t/recordings-now-available-for-roscon-global-2026-in-toronto/59071">annonce</a> · <a href="https://vimeo.com/showcase/12459077">vidéos Vimeo</a></div>
+  <p>60 présentations sans publicité. Thèmes : Nav2, ros-controls, Gazebo, temps réel, interfaces matérielles, sim-to-real.</p>
+  <p><strong>Pour Didier :</strong> trier les exposés Nav2 et sécurité avant d'écrire A1. Les vidéos
+    de ROSCon UK sont annoncées « bientôt ».</p>
+</div>
+<div class="carte">
+  <h4>EasyNav 0.5.0, alternative légère à Nav2 <span class="verdict surveiller">à surveiller</span></h4>
+  <div class="meta">ROS News des 5 et 12 octobre 2026 · <a href="https://discourse.openrobotics.org/t/ros-news-for-the-week-of-october-12th-2026/58909">billet</a></div>
+  <p>Publiée pour Humble, Jazzy, Kilted et Lyrical, interopérable avec Nav2, avec environnements de simulation.</p>
+  <p><strong>Pour Didier :</strong> option à connaître si Nav2 s'avère trop lourd sur le Pi 4. La
+    décision du 02/11 (sélecteur py_trees comme seul décideur du corps) n'est pas remise en cause.</p>
+</div>
+<div class="carte">
+  <h4>ros2_control : APIs dépréciées supprimées <span class="verdict plustard">pour plus tard</span></h4>
+  <div class="meta">ROS News du 5 octobre 2026 · <a href="https://discourse.openrobotics.org/t/ros-news-for-the-week-of-october-5th-2026/58739">billet</a> · version non lue</div>
+  <p><strong>Pour Didier :</strong> au démarrage du chantier ros2_control, partir des APIs actuelles
+    et non de tutoriels anciens. Lire le journal des changements à ce moment-là.</p>
+</div>
+
+<h3>Perception et calcul</h3>
+<div class="carte">
+  <h4>Sixfab AI HAT+ (DEEPX DX-M1M) pour Pi 5 <span class="verdict surveiller">à surveiller</span></h4>
+  <div class="meta">Blog Raspberry Pi · 5 octobre 2026 · <a href="https://www.raspberrypi.com/news/seeing-understanding-and-responding-low-power-cnn-vlm-and-slm-workloads-on-raspberry-pi-5/">billet</a> · prix non indiqué</div>
+  <p>25 TOPS pour environ 3 W. Chiffres de l'éditeur : MobileNet_v2 à 2361 images/s, DeepLabv3plus
+    512×512 à 155 images/s, Qwen3-1.7B à 4,64 tokens/s avec premier token en 599 ms.</p>
+  <p><strong>Pour Didier :</strong> la détection de personne cesserait d'être un problème de CPU sur
+    le Pi 5 vision. Le LLM embarqué est trop lent pour dialoguer, mais suffirait à un repli de
+    réflexes hors ligne. Concurrent direct de l'AI HAT+ 2 à Hailo-10H sorti en janvier.</p>
+</div>
+<div class="carte">
+  <h4>JetPack 7.2.1 : l'Orin Nano s'installe par ISO, plus par carte SD <span class="verdict plustard">pour plus tard</span></h4>
+  <div class="meta">NVIDIA · 11 août 2026, hors fenêtre · <a href="https://developer.nvidia.com/embedded/jetpack/downloads/archive-7.2.1.md">page</a></div>
+  <p>L'Orin Nano est flashé en mode Super par défaut. À savoir si la piste Orin évoquée le 02/11 revient un jour.</p>
+</div>
+
+<h3>Expression, danse et bras futur</h3>
+<div class="carte">
+  <h4>Reachy Mini et Microducks de Pollen Robotics <span class="verdict surveiller">à surveiller</span></h4>
+  <div class="meta">IEEE Spectrum, Video Friday des <a href="https://spectrum.ieee.org/video-friday-reachy-mini-raps">9</a> et <a href="https://spectrum.ieee.org/video-friday-reconfigurable-robots">16 octobre</a> 2026</div>
+  <p>Reachy Mini est un robot de compagnie expressif. Les Microducks sont de petits robots
+    synchronisés sans fil qui jouent un morceau ensemble, en mesure. CoDance, un robot dansant, figure dans la même édition.</p>
+  <p><strong>Pour Didier :</strong> Pollen est français et publie en ouvert. Leur grammaire de gestes
+    expressifs est une référence pour le visage et les bras. La synchronisation musicale touche
+    directement l'étude danse en cadence.</p>
+</div>
+<div class="carte">
+  <h4>LeRobot 0.6 : rien de neuf en octobre <span class="verdict plustard">pour plus tard</span></h4>
+  <div class="meta">Hugging Face · v0.6.0 du 7 juillet 2026 · <a href="https://huggingface.co/blog/lerobot-release-v060">billet</a> · <a href="https://github.com/huggingface/lerobot/releases">releases</a></div>
+  <p>Le bras SO-101 reste supporté. La commande <code>lerobot-rollout</code> permet de déployer une
+    politique avec corrections humaines. Les nouveaux VLA visent tous un GPU, aucun le Pi 5.</p>
+  <p><strong>Pour Didier :</strong> base toujours valable pour le bras expressif. Attention à la
+    rupture de la 0.6.1, où un module a été renommé.</p>
+</div>
+<div class="carte">
+  <h4>Atelier « Theatre in the Loop » à ICSR 2026 <span class="verdict plustard">pour plus tard</span></h4>
+  <div class="meta">ICSR 2026, Londres, juillet, hors fenêtre · <a href="https://sites.google.com/view/icsr2026theatreintheloop">site de l'atelier</a> · non lu</div>
+  <p><strong>Pour Didier :</strong> c'est exactement la niche du projet, théâtre et robots sociaux.
+    Les articles de l'atelier méritent une lecture de fond, hors veille hebdomadaire.</p>
+</div>
+
+<h3>Socle ROS</h3>
+<div class="carte">
+  <h4>ROS 2 Lyrical Luth, nouvelle LTS jusqu'en 2031 <span class="verdict plustard">pour plus tard</span></h4>
+  <div class="meta">Sortie le 22 mai 2026, hors fenêtre · <a href="https://docs.ros.org/en/lyrical/Releases/Release-Lyrical-Luth.html">notes de version</a> · date lue sur un extrait de recherche</div>
+  <p><strong>Pour Didier :</strong> Jazzy reste supporté jusqu'en 2029. La question de la cible du
+    mono-dépôt n'est posée nulle part dans les études. Elle mérite une ligne dans l'étude architecture, sans urgence.</p>
+</div>
+
+<h2>Vu, écarté</h2>
+<ul class="ecarte">
+  <li>OpenAMRobot 2.0, manipulateur mobile à deux bras : une autre classe de robot.</li>
+  <li>Swift-ROS2 3.0, PlanSys2 4.0.0, Isaac ROS 5.0 : hors de la pile de Didier.</li>
+  <li>Conduit 3, app iPhone de pilotage : la télécommande RP2040 est décidée.</li>
+  <li>Robotheca, catalogue de 475 robots open source : curiosité, pas d'usage direct.</li>
+  <li>Mini Pupper 4, Jacob's Ladder : quadrupède et drones.</li>
+  <li>AthenaZero, SuperMimic, Reflex, Apollo 2, Workhorse : manipulation et humanoïdes de labo.</li>
+  <li>VLA lourds de LeRobot 0.6 (GR00T, MolmoAct2) : GPU de 12 à 32 Go.</li>
+  <li>REKI et CADRE de Kyutai : recherche amont, non lus.</li>
+  <li>Rumeur d'un rachat de Hugging Face par NVIDIA : source en erreur, non vérifiée, ignorée.</li>
+</ul>
+
+<h2>Sources de la semaine</h2>
+<ul>
+  <li><a href="brut/2026-11-02-ros-materiel.md">Collecte brute ROS et matériel</a></li>
+  <li><a href="brut/2026-11-02-ia-social.md">Collecte brute IA embarquée et robotique sociale</a></li>
+</ul>
+<p class="prudence">Trous de la collecte : rien de daté d'octobre n'a été trouvé sur les lidars, les caméras de
+  profondeur, les servos à bus série, piper ni whisper.cpp. Les listes de paquets Jazzy n'ont pas été détaillées.</p>
+
+<footer>
+  Veille produite par l'orchestration IAction <em>veille-robotique</em>. Méthode et centres d'intérêt :
+  <a href="README.md">README</a>. La veille propose, David décide. Elle ne modifie aucun chantier.
+</footer>
+</main>
+</body>
+</html>
