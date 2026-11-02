@@ -3,6 +3,7 @@
     ros2 launch robot_rehearsal rehearsal.launch.py                 # route OFF, scénario demo chargé, en attente de « start »
     ros2 launch robot_rehearsal rehearsal.launch.py speed:=0.3 scenario:=demo seed:=42
     ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers   # lot R3
+    ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true   # lot A1
     # partir :      ros2 topic pub -1 route robot_interfaces/msg/StringTime '{msg: "on"}'
     # régisseur :   ros2 topic pub -1 rehearsal/cmd robot_interfaces/msg/StringTime '{msg: "start"}'   (stop | abort)
 
@@ -15,9 +16,17 @@ Prérequis dans le conteneur sim : sim.launch.py world:=rue ET la chaîne roues
 (drive.launch.py use_sim_time:=true) — ce launch ne les lance PAS (aucun
 mouvement automatique au démarrage). Le suivi de personne doit rester OFF
 (même créneau prio 20 du mux).
+
+jeu:=true (lot A1, spec theatre-robot/docs/spec-A1-selecteur-de-jeu.md §1) :
+UN SEUL DÉCIDEUR DU CORPS. Le régisseur écoute alors `jeu/chat_move` (le
+sélecteur didier_jeu, lancé à part : ros2 run didier_jeu jeu_node) au lieu de
+`rehearsal/chat_move` (la bouche, dont les demandes deviennent des intentions
+que le sélecteur pondère ; son « stop » est relayé sans arbitrage). Remap
+SEUL : director ne change pas. Défaut false = séance Chantiers inchangée.
 """
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -45,6 +54,10 @@ def generate_launch_description():
         DeclareLaunchArgument("autostart", default_value="false",
                               description="true = le scénario démarre au lancement. Défaut false :"
                                           " « start » explicite sur rehearsal/cmd."),
+        DeclareLaunchArgument("jeu", default_value="false",
+                              description="true = lot A1 : le régisseur écoute jeu/chat_move (le"
+                                          " sélecteur didier_jeu) au lieu de rehearsal/chat_move (la"
+                                          " bouche). Défaut false : séance inchangée."),
 
         # Cheminement : publie vers l'AMONT du relais. respawn : une panne
         # « kill » le fait renaître après respawn_delay (le reboot-prétexte) ;
@@ -70,14 +83,27 @@ def generate_launch_description():
         # scénario qui référence un POI absent de `route` est refusé au démarrage.
         # Et la MÊME vitesse initiale : c'est celle qu'il rend à la fin d'un
         # speed / d'une lubie tant qu'aucun fader n'a parlé.
-        Node(
-            package="robot_rehearsal", executable="director", name="director", output="screen",
-            parameters=[{
-                "scenario_file": scenario_file,
-                "route_file": route_file,
-                "speed": ParameterValue(LaunchConfiguration("speed"), value_type=float),
-                "seed": ParameterValue(LaunchConfiguration("seed"), value_type=int),
-                "autostart": ParameterValue(LaunchConfiguration("autostart"), value_type=bool),
-            }],
-        ),
+        _director(scenario_file, route_file, UnlessCondition(LaunchConfiguration("jeu")), []),
+        # Littéraux = robot_rehearsal.contracts.CHAT_MOVE_TOPIC et
+        # theatre_contrats.topics.JEU_CHAT_MOVE (le launch n'importe pas le
+        # package ; égalité gravée par test_rehearsal_contract.py).
+        _director(scenario_file, route_file, IfCondition(LaunchConfiguration("jeu")),
+                  [("rehearsal/chat_move", "jeu/chat_move")]),
     ])
+
+
+def _director(scenario_file, route_file, condition, remappings):
+    """Le régisseur — UNE définition, deux instances exclusives (jeu:=true ou
+    non) : un remap ne se conditionne pas par une LaunchConfiguration."""
+    return Node(
+        package="robot_rehearsal", executable="director", name="director", output="screen",
+        parameters=[{
+            "scenario_file": scenario_file,
+            "route_file": route_file,
+            "speed": ParameterValue(LaunchConfiguration("speed"), value_type=float),
+            "seed": ParameterValue(LaunchConfiguration("seed"), value_type=int),
+            "autostart": ParameterValue(LaunchConfiguration("autostart"), value_type=bool),
+        }],
+        remappings=remappings,
+        condition=condition,
+    )

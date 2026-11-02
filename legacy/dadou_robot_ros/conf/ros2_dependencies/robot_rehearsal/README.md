@@ -75,6 +75,22 @@ lubie `t: poi` par POI (`p: 0.4`, la Titan grise toujours).
 ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers
 ```
 
+## Lot A1 — le sélecteur de jeu décide (02/11)
+
+```bash
+ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
+ros2 run didier_jeu jeu_node
+```
+
+`jeu:=true` remappe le régisseur sur **`jeu/chat_move`** (publié par le sélecteur
+`packages/didier_jeu` du mono-dépôt) au lieu de `rehearsal/chat_move` : un seul
+décideur du corps, la bouche ne fait plus que déposer des intentions (son `stop`
+est relayé sans arbitrage). Remap seul, `director` ne change pas ; défaut `false`
+= séance Chantiers inchangée (V-R3). `scenario:=jeu-a1` : scénario VIDE (0 bug,
+0 lubie — les lubies viennent du sélecteur), qu'il faut quand même **starter**
+(un `go` hors séance est ignoré). `rehearsal/objects` porte depuis A1 `x`, `y`
+de chaque objet (le sélecteur oriente le regard d'une lubie).
+
 ## Lot I1 — mouvement à la voix (étude §13.11, 22/10)
 
 Didier peut demander à repartir ou à s'arrêter : la clé `"marche": "go"|"stop"`

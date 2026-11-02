@@ -116,10 +116,15 @@ def test_scenarios_livres_valides():
     cible que des processus/relais des listes blanches — par construction."""
     from robot_rehearsal.scenario import load_scenario
     files = sorted((PKG / "config" / "scenarios").glob("*.yaml"))
-    assert [f.name for f in files] == ["chantiers.yaml", "demo.yaml"]
+    assert [f.name for f in files] == ["chantiers.yaml", "demo.yaml", "jeu-a1.yaml"]
     for f in files:
         sc = load_scenario(yaml.safe_load(f.read_text(encoding="utf-8")))
-        assert sc.faults, f.name
+        # jeu-a1 (lot A1) est VIDE exprès : le sélecteur de jeu décide seul,
+        # un tirage du régisseur ferait doublon avec ses lubies.
+        if f.name == "jeu-a1.yaml":
+            assert sc.faults == () and sc.duration_s == 3600.0, f.name
+        else:
+            assert sc.faults, f.name
     demo = load_scenario(yaml.safe_load((PKG / "config" / "scenarios" / "demo.yaml").read_text(encoding="utf-8")))
     # couverture : chaque type de panne au moins une fois dans la démo (V-R2 s'en sert)
     assert {f.type for f in demo.faults} == {"relay", "pause", "kill", "speed", "instruction"}
@@ -264,3 +269,22 @@ def test_launch_passe_la_vitesse_initiale_au_regisseur_et_seuil_du_fader():
     attendu = '"speed": ParameterValue(LaunchConfiguration("speed"), value_type=float)'
     assert attendu in route_driver and attendu in director
     assert contracts.EXTERNAL_SPEED_DELTA == 0.05
+
+
+def test_launch_jeu_remappe_le_regisseur_seulement_sur_demande():
+    """Lot A1 (un seul décideur du corps) : jeu:=true remappe rehearsal/chat_move
+    -> jeu/chat_move sur le régisseur, et SEULEMENT dans ce cas (défaut false :
+    la séance Chantiers garde la bouche en direct). Littéraux du launch = les
+    contrats (le launch n'importe pas les packages)."""
+    import ast
+    from theatre_contrats.topics import JEU_CHAT_MOVE
+    src = (PKG / "launch" / "rehearsal.launch.py").read_text(encoding="utf-8")
+    tree = ast.parse(src)
+    defaults = {c.args[0].value: c.keywords[0].value.value for c in ast.walk(tree)
+                if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "DeclareLaunchArgument"}
+    assert defaults["jeu"] == "false"
+    calls = [c for c in ast.walk(tree) if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "_director"]
+    assert len(calls) == 2
+    par_condition = {c.args[2].func.id: ast.literal_eval(c.args[3]) for c in calls}
+    assert par_condition == {"UnlessCondition": [],
+                             "IfCondition": [(contracts.CHAT_MOVE_TOPIC, JEU_CHAT_MOVE)]}
