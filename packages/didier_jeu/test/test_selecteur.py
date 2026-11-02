@@ -345,20 +345,21 @@ def _trois_deplacements(sel):
 def test_fatigue_interdit_le_deplacement_au_dessus_de_0_8():
     # Retombée coupée pour isoler la règle : 3 déplacements × 0,3 = 0,9 > 0,8,
     # la 4e demande (37 s) est refusée.
-    sel = fabriquer({"pulsions.fatigue.retombee_par_s": 0.0, "refractaire_s.deplacement": 0.0})
+    sel = fabriquer({"pulsions.fatigue.retombee_par_s": 0.0, "refractaire_s.deplacement": 0.0,
+                     "refractaire_s.arret_didier": 0.0})
     out = _trois_deplacements(sel)
     assert len([m for _, m in moves(out)]) == 3          # la 4e est refusée (fatigue 0,9 > 0,8)
 
 
 def test_mutation_seuil_de_fatigue():
     sel = fabriquer({"pulsions.fatigue.retombee_par_s": 0.0, "refractaire_s.deplacement": 0.0,
-                     "pulsions.fatigue.seuil_interdit": 1.0})
+                     "refractaire_s.arret_didier": 0.0, "pulsions.fatigue.seuil_interdit": 1.0})
     assert len(moves(_trois_deplacements(sel))) == 4
 
 
 def test_fatigue_retombe_avec_les_valeurs_gravees():
     # Valeurs gravées (retombée 0,05/s) : 12 s entre deux -> 0,3 − 0,6 < 0 : jamais interdit.
-    out = _trois_deplacements(fabriquer({"refractaire_s.deplacement": 0.0}))
+    out = _trois_deplacements(fabriquer({"refractaire_s.deplacement": 0.0, "refractaire_s.arret_didier": 0.0}))
     assert len(moves(out)) == 4
 
 
@@ -489,7 +490,7 @@ def test_pourquoi_lisible_par_un_humain():
     # Valeurs AU MOMENT du choix (0,3 s d'hystérésis après la naissance de l'offre).
     assert "il passe près de « anneaux » (offre 0,72) + lubie (0,48) → réclamer de s'arrêter devant « anneaux »" \
         in textes
-    assert "lubie « anneaux » réclamée, pas de refus en 3 s → il s'arrête" in textes
+    assert "lubie « anneaux » réclamée, regard tourné vers elle, pas de refus en 3 s → il s'arrête" in textes
     assert "une personne, p1 (offre 0,63) + curiosité (0,92) → la regarder" in textes
     assert "David : ignorer p1 pendant 30 s" in textes
     for t in textes:
@@ -597,3 +598,40 @@ def test_joue_avec_approches_repetees_tant_qu_il_est_loin():
 
 def test_mutation_garde_de_distance():
     assert len(_texte_republie("approche-toi de p1", hauteur=0.6, **{"approche.hauteur_max": 1.0})) == 1
+
+
+# ================================================================== tout arrêt de Didier compte (revue point 11)
+def _bouche_puis_lubie(**surcharges):
+    sel = fabriquer(surcharges, pools={})
+    return jouer_avec_regisseur(sel, 60.0, [
+        (0.0, marche),
+        (1.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "aller_voir", "objet": "flaque"}, t)),
+        # David relance (go console) : la reprise armée tombe, seul le réfractaire commun reste.
+        (20.0, lambda s, t: s.sur_console({"cmd": "go"}, t)),
+        (20.5, lambda s, t: s.sur_route_state("on", t)),
+        (30.0, _poi("anneaux")),
+        (45.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "avancer", "metres": 1.0}, t)),
+    ])
+
+
+def test_demande_de_la_bouche_compte_comme_arret_de_didier():
+    out = _bouche_puis_lubie()
+    arrets = journal(out, "arret_didier")
+    assert [(t, p["kind"]) for t, p in arrets] == [(1.3, "bouche")]
+    assert "lubie" not in [a for _, a, _ in decisions(out)]               # < 120 s après
+    assert [m for _, m in moves(out)] == [{"cmd": "aller_voir", "objet": "flaque"}, "go"]
+
+
+def test_mutation_refractaire_commun_des_arrets():
+    out = _bouche_puis_lubie(**{"refractaire_s.arret_didier": 0.0})
+    assert [p["kind"] for _, p in journal(out, "arret_didier")] == ["bouche", "lubie", "bouche"]
+
+
+def test_lubie_note_si_le_regard_est_parti():
+    sans_pose = jouer(fabriquer(), 0.0, 6.0, [(0.0, lambda s, t: s.sur_route_state("on", t)), (1.0, _poi("anneaux"))])
+    a = journal(sans_pose, "arret_didier")[0][1]
+    assert a["regard"] is False and [o for o in sans_pose if o[1] == "look"] == []
+    avec = jouer(fabriquer(), 0.0, 6.0, [(0.0, marche), (1.0, _poi("anneaux"))])
+    looks = [o[0] for o in avec if o[1] == "look"]
+    a = journal(avec, "arret_didier")
+    assert a[0][1]["regard"] is True and looks and looks[0] <= a[0][0] - 3.0 + 1e-9   # regard >= 3 s avant

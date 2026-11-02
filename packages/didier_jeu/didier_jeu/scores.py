@@ -21,16 +21,21 @@ from didier_jeu import phrases
 from didier_jeu.offres import Offre
 
 RIEN = "rien"
-# Catégorie réfractaire de chaque action (reglages refractaire_s.<catégorie>).
+# Catégories réfractaires de chaque action (reglages refractaire_s.<catégorie>).
+# « arret_didier » (revue A1, point 11) : TOUT arrêt de route causé par Didier
+# — lubie, approche de sa propre initiative, demande de la bouche (aller voir,
+# tourner, avancer, faire le tour) — au plus un par 120 s. Un ORDRE de David
+# (considération console) n'est jamais un arrêt de Didier : il n'y est pas soumis.
+ARRET_DIDIER = "arret_didier"
 CATEGORIES = {
-    "regarder": "regarder",
-    "accueil": "expression",
-    "spontanee": "expression",
-    "approcher": "deplacement",
-    "aller_voir": "deplacement",
-    "bouche": "deplacement",
-    "repartir": "deplacement",
-    "lubie": "arret_didier",
+    "regarder": ("regarder",),
+    "accueil": ("expression",),
+    "spontanee": ("expression",),
+    "approcher": ("deplacement", ARRET_DIDIER),
+    "aller_voir": ("deplacement",),
+    "bouche": ("deplacement", ARRET_DIDIER),
+    "repartir": ("deplacement",),
+    "lubie": (ARRET_DIDIER,),
 }
 # Actions qui font bouger les ROUES (via le régisseur) : soumises à la
 # fatigue, au superviseur, au verrou d'arrêt vocal.
@@ -50,8 +55,8 @@ class Candidat:
         return self.action in DEPLACEMENTS
 
     @property
-    def categorie(self) -> Optional[str]:
-        return CATEGORIES.get(self.action)
+    def categories(self) -> tuple:
+        return CATEGORIES.get(self.action, ())
 
     def cle(self) -> str:
         """Identité pour l'hystérésis : même action, même cible."""
@@ -113,11 +118,13 @@ def score(c: Candidat, ctx: Contexte, reglages) -> Score:
     }
     spontanee = cons["offre"] == 0.0 and cons["console"] == 0.0
     facteur, raison_ref = 1.0, ""
-    cat = c.categorie
-    if cat is not None and cat in ctx.derniers:
-        periode = reglages.get(f"refractaire_s.{cat}") * ctx.tempo
-        if ctx.now - ctx.derniers[cat] < periode - 1e-6:
-            facteur, raison_ref = 0.0, f" (trop tôt : déjà fait il y a moins de {periode:g} s)"
+    for cat in c.categories:
+        if cat == ARRET_DIDIER and cons["console"]:
+            continue   # ordre de David : pas un arrêt de Didier
+        if cat in ctx.derniers:
+            periode = reglages.get(f"refractaire_s.{cat}") * ctx.tempo
+            if ctx.now - ctx.derniers[cat] < periode - 1e-6:
+                facteur, raison_ref = 0.0, f" (trop tôt : déjà fait il y a moins de {periode:g} s)"
     if spontanee and ctx.derniere_spontanee is not None:
         periode = reglages.get("refractaire_s.initiative_spontanee") * ctx.tempo
         if ctx.now - ctx.derniere_spontanee < periode - 1e-6:

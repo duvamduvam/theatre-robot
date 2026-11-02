@@ -22,9 +22,11 @@ RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.
 - hystérésis : le meilleur doit dépasser le second de marge pendant duree_s ;
 - engagement : une action engagée se finit, sauf offre >= seuil_rupture ;
 - naissance de piste -> ligne de décision (choix OU maintien) en <= 1 s (T3) ;
-- initiatives spontanées >= 8 s ; arrêts de Didier >= 120 s ; un arrêt est
-  RÉCLAMÉ (intention) ET AMORCÉ (regard) puis demandé au régisseur seulement si
-  la console n'a dit ni ignore ni va_la pendant lubie.delai_refus_s ;
+- initiatives spontanées >= 8 s ; arrêts de Didier >= 120 s — TOUT arrêt de
+  route qu'il cause (lubie, approche de lui-même, demande de la bouche) ; un
+  ordre de David n'en est jamais un ; une lubie est RÉCLAMÉE (intention) ET
+  AMORCÉE (regard ; à défaut de pose/objet, l'intention seule, 3 s) puis le stop
+  n'est demandé que si la console n'a dit ni ignore ni va_la entre-temps ;
 - reprise : après un arrêt de DIDIER, « repartir ? » puis « go » de lui-même
   après reprise.delai_s de SILENCE (décision de David, 02/11 : toute parole
   entendue — chat_transcript rôle david — remet le compteur à zéro ; jamais
@@ -48,7 +50,7 @@ from didier_jeu.pistes import Pistes
 from didier_jeu.pulsions import Pulsions
 from didier_jeu.relais import GO, STOP, Verrou
 from didier_jeu.repertoire import COMMANDES_REGISSEUR, commande
-from didier_jeu.scores import DEPLACEMENTS, RIEN, Candidat, Contexte, classer
+from didier_jeu.scores import ARRET_DIDIER, DEPLACEMENTS, RIEN, Candidat, Contexte, classer
 
 # Commandes de la console (spec §4), gravées avec la page scène.
 CONSOLE_CMDS = ("va_la", "joue_avec", "ignore", "reviens", "plus_lent", "stop", "go")
@@ -476,8 +478,11 @@ class Selecteur:
             e.stop_envoye = True
             self.sorties.append(("chat_move", STOP))
             self.arret_didier = {"t": now, "cible": e.candidat.cible}
-            self._journal("arret_didier", f"lubie « {e.candidat.cible} » réclamée, pas de refus en "
-                          f"{self.r.get('lubie.delai_refus_s'):g} s → il s'arrête", cible=e.candidat.cible)
+            regard = bool(e.candidat.detail.get("regard"))
+            self._journal("arret_didier", f"lubie « {e.candidat.cible} » réclamée"
+                          + (", regard tourné vers elle" if regard else " (sans regard : position inconnue)")
+                          + f", pas de refus en {self.r.get('lubie.delai_refus_s'):g} s → il s'arrête",
+                          cible=e.candidat.cible, kind="lubie", regard=regard)
             self.pourquoi_courant = f"arrêté devant « {e.candidat.cible} » ; repartir ? (après " \
                                     f"{self.r.get('reprise.delai_s'):g} s de silence)"
             self._publier_intention(now)
@@ -556,7 +561,9 @@ class Selecteur:
                 if o.kind == "objet":
                     cands.append(Candidat("lubie", o.piste, o, "lubie"))
         for o in vivantes:
-            if o.kind == "bouche":
+            if o.kind == "bouche" and o.payload["demande"] == GO:
+                cands.append(Candidat("repartir", None, o))      # « go » de la bouche : repartir
+            elif o.kind == "bouche":
                 cands.append(Candidat("bouche", o.payload["cible"], o, None, {"demande": o.payload["demande"]}))
         if self.ordre is not None and self.ordre["action"] in ("aller_voir", "repartir"):
             cands.append(Candidat(self.ordre["action"], self.ordre["cible"]))
@@ -643,8 +650,11 @@ class Selecteur:
         self.pourquoi_courant = pourquoi
         if c.action != RIEN:
             self.pulsions.sur_action(c.deplacement)
-            if c.categorie is not None:
-                self.derniers[c.categorie] = now
+            for cat in c.categories:
+                if cat != ARRET_DIDIER:
+                    self.derniers[cat] = now
+                elif origine == "didier":
+                    self._noter_arret_didier(c, now)
             if s.spontanee:
                 self.derniere_spontanee = now
             if c.offre is not None:
@@ -669,6 +679,17 @@ class Selecteur:
         self._journal("decision", pourquoi, **payload)
         self._decision_tick = Decision(c.action, c.cible, pourquoi)
         self._publier_intention(now)
+
+    def _noter_arret_didier(self, c: Candidat, now: float) -> None:
+        """Un arrêt de route causé par Didier (revue A1, point 11). Lubie : l'arrêt
+        tombera après le délai de refus (le stop est noté là, ligne arret_didier) ;
+        approche / demande de la bouche : il quitte sa route MAINTENANT."""
+        if c.action == "lubie":
+            self.derniers[ARRET_DIDIER] = now + self.r.get("lubie.delai_refus_s")
+            return
+        self.derniers[ARRET_DIDIER] = now
+        self._journal("arret_didier", f"il quitte sa route pour {phrases.action(c.action, c.cible, c.detail)}",
+                      cible=c.cible, kind=c.action)
 
     def _executer(self, c: Candidat, now: float, origine: str) -> bool:
         """Effets d'une action choisie ; False si elle ne peut pas partir."""
@@ -696,6 +717,7 @@ class Selecteur:
                 angle = angle_vers(self.pose, self.objets[c.cible])
                 hold = r.get("lubie.delai_refus_s") + r.get("durees_s.arret")
                 self.sorties.append(("look", {"angle_deg": round(angle, 1), "hold_ms": int(hold * 1000)}))
+                c.detail["regard"] = True
             fin = now + r.get("lubie.delai_refus_s") + r.get("durees_s.arret")
             self.en_cours = Engagement(c, now, fin, origine)
             return True
@@ -714,13 +736,7 @@ class Selecteur:
         elif c.action == "aller_voir":
             etapes = [commande(self.deplacements, "aller_voir", objet=c.cible)]
         elif c.action == "bouche":
-            demande = c.detail["demande"]
-            if demande == GO:
-                self.sorties.append(("chat_move", GO))
-                self.arret_didier = None
-                self.en_cours = Engagement(c, now, now + r.get("durees_s.relais"), origine, accuse=True)
-                return True
-            etapes = [demande]
+            etapes = [c.detail["demande"]]
         else:
             return False
         e = Engagement(c, now, now + r.get("durees_s.deplacement_max") * len(etapes), origine, etapes=etapes)
