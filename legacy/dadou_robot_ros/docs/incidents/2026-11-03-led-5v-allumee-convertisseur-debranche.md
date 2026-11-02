@@ -41,6 +41,37 @@ servo**, qu'un servo RC classique utilise comme entrée et que celui-ci utilise 
 Le cavalier est soit en position `5V`, soit la variante MR sort le 5 V d'office (ADIN
 0-5 V) : à lire sur la carte.
 
+## ⚠️ Constat aggravant (David, 2026-11-03) : le fil NOIR a fondu sur le PCA9685
+
+En débranchant le connecteur 3 points de la bouche, David a eu du mal à l'extraire :
+**le plastique côté fil noir (masse) a un peu fondu sur une broche du PCA9685.**
+Une broche de connecteur Dupont fond à quelques ampères : **ce n'est pas le courant
+du BEC** (prévu pour un potentiomètre, il s'effondrerait avant). C'est un **courant de
+retour moteur qui passe par la masse du signal** : si la masse de puissance du servo
+(bornier vert « - ») est mal serrée, oxydée ou trop fine, le moteur (380 kg·cm, plusieurs
+ampères au démarrage) retourne au « - » de la batterie par le chemin le plus facile —
+fil noir → GND du PCA9685 → masse de la carte porteuse → masse du convertisseur/des Pi.
+
+Conséquences :
+- **Les Pi sont sur ce chemin de retour.** Du courant moteur traversant les broches GND
+  du GPIO du Pi 4 est une explication plausible de la fumée du 12/09 « côté connecteur
+  GPIO », plus sérieuse que le BEC seul. Hypothèse, pas preuve.
+- **Risque incendie** : un contact qui chauffe jusqu'à faire fondre le plastique, dans un
+  robot en bois, près du public.
+
+À faire AVANT toute remise sous tension :
+1. **Ne pas remettre ce connecteur ni cette barrette** : remplacer le boîtier Dupont, et
+   inspecter la broche GND du PCA9685 (noircie ? piste GND de la carte décollée ?).
+   Continuité GND broche → GND bornier du PCA9685 : doit être ~0 Ω.
+2. **Masse de puissance du servo bouche** : resserrer le bornier vert, vérifier section
+   du fil et continuité jusqu'au « - » batterie/BMS (< 0,1 Ω attendu). C'est LA cause à
+   trouver : un retour moteur sain ne passe pas par le fil signal.
+3. Même inspection sur les connecteurs des **deux ASME des bras** et des **JX des yeux**
+   (plastique déformé, broche décolorée).
+4. Remède durable : le PCA9685 ne doit recevoir que `S` + une masse de **référence**.
+   Masse de puissance des servos en étoile au « - » batterie, en fil de section moteur ;
+   jamais de retour moteur par la carte porteuse.
+
 ## Pourquoi c'est grave (et peut-être pas nouveau)
 
 - Deux régulateurs se disputent le même rail 5 V : le convertisseur principal et un
