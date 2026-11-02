@@ -36,6 +36,7 @@ SÉCURITÉ : ce module ne produit AUCUN Twist ; ses seuls effets sur les roues
 sont des DEMANDES au régisseur (jeu/chat_move), qui arbitre (spec-aller-voir §3).
 """
 import math
+import re
 import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -47,7 +48,7 @@ from didier_jeu.pistes import Pistes
 from didier_jeu.pulsions import Pulsions
 from didier_jeu.relais import GO, STOP, Verrou
 from didier_jeu.repertoire import COMMANDES_REGISSEUR, commande
-from didier_jeu.scores import RIEN, Candidat, Contexte, classer
+from didier_jeu.scores import DEPLACEMENTS, RIEN, Candidat, Contexte, classer
 
 # Commandes de la console (spec §4), gravées avec la page scène.
 CONSOLE_CMDS = ("va_la", "joue_avec", "ignore", "reviens", "plus_lent", "stop", "go")
@@ -56,6 +57,8 @@ ANGLE_MIN_TOURNER_DEG = 5.0
 # Tolérance des comparaisons d'échéances : 5,6 − 5,0 vaut 0,5999… en flottant,
 # un délai de 0,6 s tomberait un tick trop tard (vu en test).
 EPS = 1e-6
+# Identifiant de piste dans un texte du metteur en scène (« approche-toi de p3 »).
+PISTE_RE = re.compile(r"\bp(\d+)\b")
 
 
 def normaliser(texte: str) -> str:
@@ -126,6 +129,7 @@ class Selecteur:
         self.plus_lent_fin: Optional[float] = None
         self.metteur: Optional[dict] = None        # {"action", "t", "source"}
         self.piste_regardee: Optional[str] = None
+        self.pas_metteur: Dict[str, int] = {}      # piste -> pas faits sur l'indication du metteur
         self.reaction_due: Optional[dict] = None   # {"piste", "t"}
         self._t_prec: Optional[float] = None
         self._now = 0.0
@@ -259,7 +263,9 @@ class Selecteur:
         norm = normaliser(texte)
         for mot, action in mots.items():
             if normaliser(mot) in norm:
-                self.metteur = {"action": action, "cible": None, "t": now, "source": source, "mot": mot}
+                piste = PISTE_RE.search(norm)
+                self.metteur = {"action": action, "cible": f"p{piste.group(1)}" if piste else None,
+                                "t": now, "source": source, "mot": mot}
                 return
 
     def sur_mission(self, etat, now: float) -> None:
@@ -385,7 +391,13 @@ class Selecteur:
         piste = self.pistes.courante(now)
         if piste is not None and cible == piste.id:
             # Une PISTE : se tourner vers elle puis avancer <= 1 m (§8.2), si
-            # superviseur présent et fatigue sous le seuil — vérifié au choix.
+            # superviseur présent et fatigue sous le seuil — vérifié au choix —
+            # et JAMAIS trop près (approche.hauteur_max, David 02/11).
+            if not self._assez_loin(piste):
+                self._journal("refus", f"David : va vers {cible} — déjà trop près (hauteur "
+                              f"{num(piste.hauteur)} ≥ {num(self.r.get('approche.hauteur_max'))})",
+                              source="console", cmd="va_la", cible=cible)
+                return
             self._ordre({"action": "approcher", "cible": cible, "cmd": "va_la"}, now, f"David : va vers {cible}")
             return
         self._journal("refus", f"David : va là « {cible} » — inconnu (ni objet connu, ni personne vue)",
@@ -409,6 +421,10 @@ class Selecteur:
         if self.pulsions.deplacement_interdit():
             return f"il est fatigué ({num(self.pulsions.fatigue)} > {num(self.pulsions.fatigue_seuil)})"
         return None
+
+    def _assez_loin(self, piste) -> bool:
+        """Garde de distance de toute approche : hauteur de boîte < hauteur_max."""
+        return piste.hauteur < self.r.get("approche.hauteur_max")
 
     def _piste_regardee(self, now: float) -> Optional[str]:
         p = self.pistes.courante(now)
@@ -531,7 +547,8 @@ class Selecteur:
             cands.append(Candidat("regarder", piste.id, o, "curiosite", {"azimut": piste.azimut}))
             if o is not None and self.pools.get("accueil"):
                 cands.append(Candidat("accueil", piste.id, o, "curiosite"))
-            cands.append(Candidat("approcher", piste.id, o, "curiosite", {"azimut": piste.azimut}))
+            if self._assez_loin(piste):
+                cands.append(Candidat("approcher", piste.id, o, "curiosite", {"azimut": piste.azimut}))
         if self.pools.get("spontanee"):
             cands.append(Candidat("spontanee", None, None, "ennui"))
         if self.route_state == "on" and not self.verrou_stop and self.arret_didier is None:
@@ -565,7 +582,11 @@ class Selecteur:
         elif self.joue_avec is not None:
             console = {"action": None, "cible": self.joue_avec["cible"], "cmd": "joue avec"}
         tempo = self.r.get("console.plus_lent_facteur") if self.plus_lent_fin is not None else 1.0
-        return Contexte(now=now, jauges=self.pulsions.jauges(), metteur=self.metteur, console=console,
+        metteur = self.metteur
+        if metteur is not None and metteur["action"] in DEPLACEMENTS and metteur["cible"] is not None and \
+                self.pas_metteur.get(metteur["cible"], 0) >= self.r.get("metteur_en_scene.pas_par_piste"):
+            metteur = None   # pas déjà fait pour cette piste : le texte republié ne pousse plus
+        return Contexte(now=now, jauges=self.pulsions.jauges(), metteur=metteur, console=console,
                         derniers=dict(self.derniers), derniere_spontanee=self.derniere_spontanee, tempo=tempo)
 
     def choisir(self, branche: str, deplacement_permis: bool, interrompt: bool) -> None:
@@ -630,6 +651,8 @@ class Selecteur:
                 self.offres.prendre(c.offre)
         if self.ordre is not None and c.action == self.ordre["action"]:
             self.ordre = None
+        if c.deplacement and s.considerations.get("metteur_en_scene") and c.cible is not None:
+            self.pas_metteur[c.cible] = self.pas_metteur.get(c.cible, 0) + 1
         payload = {
             "action": c.action, "cible": c.cible, "branche": branche, "score": round(s.total, 3),
             "considerations": s.considerations, "spontanee": s.spontanee, "deplacement": c.deplacement,

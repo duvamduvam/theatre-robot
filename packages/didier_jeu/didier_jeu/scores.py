@@ -82,6 +82,9 @@ class Contexte:
 def _vise_metteur(c: Candidat, metteur: Optional[Dict]) -> bool:
     if not metteur or metteur.get("action") != c.action:
         return False
+    if c.deplacement:
+        # Un DÉPLACEMENT ne part jamais d'un texte sans piste nommée (David, 02/11).
+        return metteur.get("cible") is not None and metteur["cible"] == c.cible
     return metteur.get("cible") is None or metteur["cible"] == c.cible
 
 

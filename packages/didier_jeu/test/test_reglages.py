@@ -25,6 +25,7 @@ ATTENDU = {
     "superviseur": {"mode": "suppose", "silence_max_s": 1.0},
     "console": {"ignore_s": 30.0, "ordre_ttl_s": 10.0, "joue_avec_s": 30.0,
                 "plus_lent_s": 60.0, "plus_lent_facteur": 2.0},
+    "approche": {"hauteur_max": 0.55},
     "poids": {"offre": 1.0, "pulsion": 0.6, "metteur_en_scene": 0.8, "console": 1.5},
     "immobilite": {"base": 0.3, "pente_ennui": 0.3},
     "gains": {"regarder": 1.0, "accueil": 0.8, "spontanee": 1.0, "approcher": 0.7, "lubie": 1.0,
@@ -33,7 +34,7 @@ ATTENDU = {
     "durees_s": {"regarder": 3.0, "expression_defaut": 5.0, "expression_marge": 2.0,
                  "deplacement_max": 70.0, "deplacement_accuse": 3.0, "arret": 3.0, "relais": 2.0},
     "regard": {"demi_champ_deg": 30.0},
-    "metteur_en_scene": {"ttl_s": 5.0, "mots_cles": {"approche": "approcher", "regarde": "regarder",
+    "metteur_en_scene": {"ttl_s": 5.0, "pas_par_piste": 1, "mots_cles": {"approche": "approcher", "regarde": "regarder",
                                                      "salue": "accueil", "bonjour": "accueil",
                                                      "danse": "spontanee", "bouge": "spontanee"}},
 }

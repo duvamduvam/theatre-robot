@@ -27,7 +27,7 @@ REQUIS = (
     "durees_s.regarder", "durees_s.expression_defaut", "durees_s.expression_marge",
     "durees_s.deplacement_max", "durees_s.deplacement_accuse", "durees_s.arret",
     "durees_s.relais", "regard.demi_champ_deg", "metteur_en_scene.ttl_s",
-    "metteur_en_scene.mots_cles",
+    "metteur_en_scene.mots_cles", "metteur_en_scene.pas_par_piste", "approche.hauteur_max",
 )
 MODES_SUPERVISEUR = ("suppose", "exigeant")
 

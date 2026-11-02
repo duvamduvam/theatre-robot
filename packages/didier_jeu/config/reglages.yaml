@@ -95,9 +95,21 @@ superviseur:
 console:
   ignore_s: 30.0          # « ignore » : aucune action vers la cible pendant 30 s (T4)
   ordre_ttl_s: 10.0       # un ordre macro non exécutable tombe (refus journalisé)
-  joue_avec_s: 30.0       # « joue avec lui » : biais console sur la piste
-  plus_lent_s: 60.0       # « plus lent » : réfractaires multipliés...
-  plus_lent_facteur: 2.0  # ... par ce facteur pendant plus_lent_s
+  # « joue avec lui » : biais console sur la piste pendant 30 s ; approches
+  # RÉPÉTÉES permises (David, 02/11), bornées par approche.hauteur_max.
+  joue_avec_s: 30.0
+  # « plus lent » = MOINS SOUVENT (David, 02/11) : toutes les périodes
+  # réfractaires sont multipliées par plus_lent_facteur pendant plus_lent_s.
+  # Ce n'est PAS une vitesse de roues (le sélecteur n'en a aucune).
+  plus_lent_s: 60.0
+  plus_lent_facteur: 2.0
+
+approche:
+  # Garde de distance de « s'approcher d'une personne » (va_la vers une piste,
+  # joue avec lui, curiosité, metteur en scène) : jamais si la hauteur de
+  # boîte de la piste (vision/person_box y, proxy de distance) atteint ce
+  # seuil — 0,55 ≈ 2,7 m (étude suivi de personne). David, 02/11.
+  hauteur_max: 0.55
 
 # Poids du score (décision 02/11, §8.7) : score = Σ considération × poids,
 # considérations dans [0, 1], puis × gain de l'action × facteur réfractaire.
@@ -150,6 +162,11 @@ regard:
 metteur_en_scene:
   # Péremption d'une indication (= SITUATION_TTL_S de la boucle de réflexion).
   ttl_s: 5.0
+  # Un mot-clé de DÉPLACEMENT (approche) ne fait bouger que si le texte nomme
+  # une piste (« p3 ») ; au plus ce nombre de pas par piste nommée, et jamais
+  # au-delà de approche.hauteur_max (David, 02/11) — le texte est republié
+  # chaque seconde : sans cette borne, il ferait avancer Didier en boucle.
+  pas_par_piste: 1
   # Mot-clé (texte normalisé : minuscules, sans accents) -> action servie.
   mots_cles:
     approche: approcher

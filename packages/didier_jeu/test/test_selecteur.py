@@ -518,3 +518,82 @@ def test_parole_a_80_s_repousse_le_go_a_170_s():
 def test_sans_parole_le_go_part_a_90_s():
     stop, gos = _reprise()
     assert len(gos) == 1 and stop + 90.0 <= gos[0] <= stop + 90.5
+
+
+# ================================================================== approches bornées (David, 02/11)
+def jouer_avec_regisseur(sel, t1, evenements=(), continu=None):
+    """Comme jouer(), mais chaque demande de manœuvre (chat_move objet) est
+    accusée (route_state goto) au tick suivant et arrivée 1 s après."""
+    evs = sorted(evenements, key=lambda e: e[0])
+    out, a_faire = [], []
+    for i in range(int(round(t1 / 0.1)) + 1):
+        t = round(i * 0.1, 6)
+        while evs and evs[0][0] <= t + 1e-9:
+            evs.pop(0)[1](sel, t)
+        for (tt, f) in [x for x in a_faire if x[0] <= t + 1e-9]:
+            a_faire.remove((tt, f))
+            f(t)
+        if continu is not None:
+            continu(sel, t)
+        sel.tick(t)
+        for so in sel.vider_sorties():
+            out.append((t,) + so)
+            if so[0] == "chat_move" and isinstance(so[1], dict):
+                a_faire.append((t + 0.1, lambda tt: sel.sur_route_state("goto", tt)))
+                a_faire.append((t + 1.0, lambda tt: sel.sur_goto_result({"result": "arrived"}, tt)))
+    return out
+
+
+def avancees(out):
+    return [t for t, m in moves(out) if isinstance(m, dict) and m.get("cmd") == "avancer"]
+
+
+# Réfractaires des arrêts et déplacements coupés : on isole LA borne testée.
+SANS_REFRACTAIRE = {"refractaire_s.arret_didier": 0.0, "refractaire_s.deplacement": 0.0}
+
+
+def _texte_republie(texte, hauteur=0.4, **surcharges):
+    sel = fabriquer(dict(SANS_REFRACTAIRE, **surcharges), pools={})
+    evs = [(0.0, marche)] + [(float(k), (lambda s, t: s.sur_situation(texte, t))) for k in range(1, 61)]
+    return avancees(jouer_avec_regisseur(sel, 62.0, evs, continu=boite(0.0, 62.0, azimut=0.0, hauteur=hauteur)))
+
+
+def test_metteur_au_plus_un_pas_par_piste_nommee():
+    assert len(_texte_republie("Didier, approche-toi de p1 doucement")) == 1
+
+
+def test_mutation_metteur_sans_borne_4_avancees_en_60_s():
+    assert len(_texte_republie("Didier, approche-toi de p1 doucement",
+                               **{"metteur_en_scene.pas_par_piste": 99})) >= 4
+
+
+def test_metteur_jamais_depuis_un_texte_sans_piste():
+    assert _texte_republie("Didier, approche-toi de lui") == []
+
+
+def test_metteur_jamais_trop_pres():
+    assert _texte_republie("Didier, approche-toi de p1", hauteur=0.6) == []
+
+
+def test_va_la_vers_une_piste_trop_proche_refuse():
+    out = jouer(fabriquer(), 0.0, 3.0, [(0.0, marche),
+                                        (1.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "p1"}, t))],
+                continu=boite(0.0, 3.0, hauteur=0.55))
+    assert moves(out) == [] and "trop près" in journal(out, "refus")[0][1]["pourquoi"]
+
+
+def test_joue_avec_approches_repetees_tant_qu_il_est_loin():
+    sel = fabriquer({"refractaire_s.deplacement": 0.0, "console.joue_avec_s": 60.0}, pools={})
+    out = jouer_avec_regisseur(sel, 40.0, [(0.0, marche),
+                                           (1.0, lambda s, t: s.sur_console({"cmd": "joue_avec", "cible": "p1"}, t))],
+                               continu=boite(0.0, 40.0, azimut=0.0, hauteur=0.4))
+    assert len(avancees(out)) >= 2          # répétées : la console n'est pas un arrêt de Didier
+    sel2 = fabriquer({"refractaire_s.deplacement": 0.0, "console.joue_avec_s": 60.0}, pools={})
+    out2 = jouer_avec_regisseur(sel2, 40.0, [(0.0, marche),
+                                             (1.0, lambda s, t: s.sur_console({"cmd": "joue_avec", "cible": "p1"}, t))],
+                                continu=boite(0.0, 40.0, azimut=0.0, hauteur=0.6))
+    assert avancees(out2) == []             # jamais au-delà de hauteur_max
+
+
+def test_mutation_garde_de_distance():
+    assert len(_texte_republie("approche-toi de p1", hauteur=0.6, **{"approche.hauteur_max": 1.0})) == 1
