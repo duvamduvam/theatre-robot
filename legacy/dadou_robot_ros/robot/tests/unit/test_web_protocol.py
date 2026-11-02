@@ -102,9 +102,10 @@ def test_topics_lecture_jamais_publiables():
     # (31/10) : état réel de la webcam de perception.
     # camera_source_state / camera_sources (31/10) : source d'images réelle de la
     # perception et liste des sources disponibles, latchées côté vision.
+    # jeu/intention, rehearsal/objects (02/11, lot A1) : panneau « Jeu » de la page scène.
     assert TOPICS_LECTURE == {"chat_state", "persona_state", "route_state", "chat_audio_chain",
                               "rehearsal/state", "camera_state", "camera_source_state",
-                              "camera_sources"}
+                              "camera_sources", "jeu/intention", "rehearsal/objects"}
     assert TOPICS_LECTURE.isdisjoint(WHITELIST)
     assert TOPICS_LECTURE.isdisjoint(WHITELIST_REPETITION)
 
@@ -570,7 +571,7 @@ WHITELIST_BASE_GRAVEE = {
     "chat", "persona", "system", "chat_text", "chat_instruction",
 }
 TOPICS_REPETITION_GRAVES = {"route", "route_speed", "rehearsal/cmd", "camera_enable",
-                            "camera_source"}
+                            "camera_source", "jeu/console"}
 
 
 def test_whitelist_repetition_exacte_et_hors_whitelist_de_base():
@@ -712,7 +713,7 @@ def test_rehearsal_allowed_seulement_en_simulation(domain_id, attendu):
 # --- Page « scène » : lecture seule, flux et hello --------------------------------
 
 def test_topics_flux_graves_et_jamais_publiables():
-    assert TOPICS_FLUX == {"chat_transcript", "chat_hearing"}
+    assert TOPICS_FLUX == {"chat_transcript", "chat_hearing", "jeu/journal"}
     assert TOPICS_FLUX.isdisjoint(WHITELIST | WHITELIST_REPETITION | TOPICS_LECTURE)
 
 
@@ -808,11 +809,15 @@ def test_scene_ne_lit_que_les_topics_d_etat_publics():
     topics. Jamais chat_instruction (le régisseur y publie ses consignes)
     ni route_speed (une panne « batterie faible » y passerait).
     chat_audio_chain (31/10) : le branchement du son — public, il ne porte
-    aucune panne (micro, moteurs, persona)."""
+    aucune panne (micro, moteurs, persona).
+    jeu/intention (02/11, lot A1) : ce que le SÉLECTEUR DE JEU a choisi et
+    pourquoi — la lisibilité voulue (spec A1 §5), pas un tirage du régisseur
+    (la séance A1 tourne avec un scénario vide) ; rehearsal/objects : le
+    vocabulaire d'objets, déjà public (envoyé à la bouche)."""
     lus = re.findall(r'valeurTopic\(msg\.topics, "([^"]+)"\)', _lire("scene.js"))
     assert sorted(lus) == ["camera_source_state", "camera_sources", "camera_state",
-                           "chat_audio_chain", "chat_state", "persona_state",
-                           "rehearsal/state", "route_state"]
+                           "chat_audio_chain", "chat_state", "jeu/intention", "persona_state",
+                           "rehearsal/objects", "rehearsal/state", "route_state"]
     # Et aucun autre accès direct aux topics du message state.
     assert len(re.findall(r"msg\.topics", _lire("scene.js"))) == len(lus)
 
@@ -826,8 +831,10 @@ def test_scene_publie_seulement_des_topics_de_la_whitelist_effective():
     topics = set(re.findall(r'data-topic="([^"]+)"', _lire("scene.html")))
     topics |= set(re.findall(r'envoyerSaisie\("([^"]+)"', _lire("scene.js")))
     topics |= set(re.findall(r'creerBoutonCatalogue\("([^"]+)"', _lire("scene.js")))
+    # jeu/console (02/11, lot A1) : panneau « Jeu » (ordres macro du sélecteur de jeu).
     assert topics == {"chat", "persona", "chat_text", "chat_instruction",
-                      "route", "route_speed", "rehearsal/cmd", "camera_enable", "camera_source"}
+                      "route", "route_speed", "rehearsal/cmd", "camera_enable", "camera_source",
+                      "jeu/console"}
     assert topics <= effective_whitelist(True)
 
 
@@ -853,6 +860,9 @@ def test_scene_boutons_de_repetition_masques_par_defaut():
             sous_protection = any(p for _t, p in self.pile)
             if attrs.get("data-topic") in TOPICS_REPETITION_GRAVES or attrs.get("id") == "scene-vitesse":
                 self.trouves.append((attrs.get("data-topic") or attrs.get("id"), sous_protection))
+            # Panneau « Jeu » (lot A1) : ses boutons publient jeu/console via scene.js.
+            if "jeu-bouton" in classes:
+                self.trouves.append((attrs.get("data-jeu"), sous_protection))
 
         def handle_endtag(self, tag):
             for i in range(len(self.pile) - 1, -1, -1):
@@ -862,7 +872,8 @@ def test_scene_boutons_de_repetition_masques_par_defaut():
 
     analyse = Analyse()
     analyse.feed(_lire("scene.html"))
-    assert len(analyse.trouves) == 10         # 3 route + 2 séance + 2 webcam + 2 source + 1 curseur
+    # 3 route + 2 séance + 2 webcam + 2 source + 1 curseur + 6 boutons du panneau « Jeu »
+    assert len(analyse.trouves) == 16
     assert [x for x in analyse.trouves if not x[1]] == []
 
 

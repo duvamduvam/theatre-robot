@@ -101,7 +101,7 @@ liaison.surLiaison = () => {
   // Boutons d'action inertes en lecture seule (le serveur refuse déjà). Le champ
   // visage et le ⟳ restent actifs : regarder ne demande pas l'écriture.
   document.querySelectorAll(".bouton-catalogue, #scene-form-texte button, "
-      + "#scene-form-consigne button, #scene-vitesse")
+      + "#scene-form-consigne button, #scene-vitesse, .jeu-bouton, #jeu-cible-va-la")
     .forEach((el) => { el.disabled = !state.isWriter; });
   // Route / vitesse / séance : seulement si le serveur les accepte (hello.rehearsal).
   document.querySelectorAll(".scene-repetition").forEach((el) => {
@@ -287,6 +287,7 @@ function ajouterEntendu(h) {
 liaison.surEtat = (msg) => {
   afficherEtatScene(msg);
   afficherChaine(valeurTopic(msg.topics, "chat_audio_chain"));
+  afficherJeu(msg);
 };
 
 // --- Conversation : flux chat_transcript ------------------------------------------
@@ -331,6 +332,8 @@ liaison.surFeed = (msg) => {
     ajouterReplique(msg.msg);
   } else if (msg.topic === "chat_hearing") {
     ajouterEntendu(msg.msg);
+  } else if (msg.topic === "jeu/journal") {
+    ajouterLigneJeu(msg.msg);
   }
 };
 
@@ -467,6 +470,169 @@ function installerVisage() {
   });
   fluxVisage.charger();
 }
+
+// --- Panneau « Jeu » : le sélecteur de jeu (lot A1, SIM-ONLY) ------------------------
+// Contrat : theatre-robot/packages/didier_jeu/README.md. L'intention arrive par `state`
+// (toutes les 2 s, latchée côté sélecteur) : la barre de temps se décompte ICI entre
+// deux états, sur reste_ms. Le journal arrive par le flux (une ligne par message).
+
+const JEU_JOURNAL_MAX = 20;
+const JEU_PRESENCE_MS = 500;   // battement « presence » : 2 Hz (spec A1 §4)
+const JAUGES = [["ennui", "ennui"], ["curiosite", "curiosité"], ["lubie", "lubie"],
+                ["fatigue", "fatigue"], ["pression_route", "pression de route"]];
+// Témoin hors DOM : l'ack d'un battement flashe CET élément, pas le badge
+// d'écriture (sinon il clignoterait deux fois par seconde).
+const temoinPresence = document.createElement("span");
+// total : premier reste_ms vu pour une échéance (fin_prevue_ms) = durée de la
+// barre ; l'intention ne porte pas la durée totale de l'action.
+const jeu = { intention: null, recuA: 0, piste: null, objets: "", fin: null, total: 1 };
+
+function lireJson(brut) {
+  try {
+    return brut === null ? null : JSON.parse(brut);
+  } catch (e) {
+    return null;
+  }
+}
+
+function afficherJeu(msg) {
+  const intention = lireJson(valeurTopic(msg.topics, "jeu/intention"));
+  if (intention !== null && typeof intention === "object") {
+    jeu.intention = intention;
+    jeu.recuA = Date.now();
+    if (intention.fin_prevue_ms !== jeu.fin) {
+      jeu.fin = intention.fin_prevue_ms;
+      jeu.total = Math.max(1, intention.reste_ms || 1);
+    }
+    $("jeu-action").textContent = intention.action || "—";
+    $("jeu-cible").textContent = intention.cible ? "→ " + intention.cible : "";
+    $("jeu-pourquoi").textContent = intention.pourquoi || "";
+    $("jeu-verrou").hidden = intention.verrou !== true;
+    $("jeu-proposition").hidden = !intention.proposition;
+    const stopGo = $("jeu-stop-go");
+    stopGo.dataset.jeu = intention.verrou === true ? "go" : "stop";
+    stopGo.textContent = intention.verrou === true ? "Go" : "Stop";
+    afficherJauges(intention.jauges || {});
+  }
+  const brutObjets = valeurTopic(msg.topics, "rehearsal/objects");
+  if (brutObjets !== null && brutObjets !== jeu.objets) {
+    jeu.objets = brutObjets;
+    remplirCibles();
+  }
+}
+
+function afficherJauges(jauges) {
+  const boite = $("jeu-jauges");
+  boite.replaceChildren();
+  for (const [cle, libelle] of JAUGES) {
+    const v = typeof jauges[cle] === "number" ? clamp(jauges[cle], 0, 1) : 0;
+    const nom = document.createElement("span");
+    nom.textContent = libelle;
+    const barre = document.createElement("div");
+    barre.className = "jeu-jauge";
+    const plein = document.createElement("div");
+    plein.style.width = Math.round(v * 100) + "%";
+    barre.appendChild(plein);
+    const val = document.createElement("span");
+    val.textContent = v.toFixed(2);
+    boite.append(nom, barre, val);
+  }
+}
+
+// Cibles de « va là » : la dernière piste née (journal) puis les objets du régisseur.
+function remplirCibles() {
+  const choix = $("jeu-cible-va-la");
+  const garde = choix.value;
+  choix.replaceChildren();
+  const ajouter = (valeur, libelle) => {
+    const o = document.createElement("option");
+    o.value = valeur;
+    o.textContent = libelle;
+    choix.appendChild(o);
+  };
+  if (jeu.piste) {
+    ajouter(jeu.piste, "piste " + jeu.piste);
+  }
+  const objets = lireJson(jeu.objets);
+  (Array.isArray(objets) ? objets : []).forEach((o) => {
+    if (o && typeof o.name === "string") {
+      ajouter(o.name, o.name + (o.desc && o.desc !== o.name ? " (" + o.desc + ")" : ""));
+    }
+  });
+  if ([...choix.options].some((o) => o.value === garde)) {
+    choix.value = garde;
+  }
+}
+
+function ajouterLigneJeu(ligne) {
+  // Contrat : ligne du journal boîte noire {t_mono_ms, type, payload{pourquoi…}}.
+  if (ligne === null || typeof ligne !== "object" || typeof ligne.type !== "string"
+      || ligne.payload === null || typeof ligne.payload !== "object") {
+    logErreur("ligne de journal du jeu illisible");
+    return;
+  }
+  const p = ligne.payload;
+  if (ligne.type === "naissance_piste" && typeof p.piste === "string") {
+    jeu.piste = p.piste;
+    remplirCibles();
+  }
+  const li = document.createElement("li");
+  li.className = "jeu-" + ligne.type;
+  const quoi = [ligne.type, p.action, p.cible].filter((x) => typeof x === "string" && x).join(" ");
+  li.textContent = quoi + " — " + (p.pourquoi || "");
+  const liste = $("jeu-journal");
+  liste.prepend(li);
+  while (liste.children.length > JEU_JOURNAL_MAX) {
+    liste.lastChild.remove();
+  }
+}
+
+function envoyerJeu(cmd, bouton) {
+  if (!state.isWriter) {
+    return;
+  }
+  const ordre = { cmd: cmd, presence: true };
+  if (cmd === "va_la") {
+    ordre.cible = $("jeu-cible-va-la").value;
+    if (!ordre.cible) {
+      logErreur("va là : aucune cible (ni piste vue ni objet connu)");
+      return;
+    }
+  } else if (cmd === "ignore" && jeu.intention && jeu.intention.cible) {
+    ordre.cible = jeu.intention.cible;
+  }
+  envoyerSaisie("jeu/console", ordre, bouton);
+}
+
+document.querySelectorAll(".jeu-bouton").forEach((bouton) => {
+  bouton.addEventListener("click", () => envoyerJeu(bouton.dataset.jeu, bouton));
+});
+
+// Battement : seulement si on a la main, si la répétition est annoncée et si
+// l'onglet est VISIBLE (un onglet caché ne surveille rien — spec A1 §5).
+setInterval(() => {
+  if (!state.isWriter || !state.rehearsal || document.visibilityState !== "visible") {
+    return;
+  }
+  if (!state.attenteAck["jeu/console"]) {
+    state.attenteAck["jeu/console"] = temoinPresence;
+  }
+  envoyerCmd("jeu/console", { presence: true });
+}, JEU_PRESENCE_MS);
+
+// Barre de temps : décompte local de reste_ms entre deux `state`.
+setInterval(() => {
+  const i = jeu.intention;
+  const barre = $("jeu-barre-temps");
+  if (!i || typeof i.reste_ms !== "number") {
+    barre.style.width = "0";
+    return;
+  }
+  const reste = Math.max(0, i.reste_ms - (Date.now() - jeu.recuA));
+  barre.style.width = Math.round(clamp(reste / jeu.total, 0, 1) * 100) + "%";
+}, 200);
+
+afficherJauges({});
 
 // --- Démarrage ------------------------------------------------------------------------
 

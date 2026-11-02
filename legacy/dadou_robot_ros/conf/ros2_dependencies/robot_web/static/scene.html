@@ -11,6 +11,9 @@
   chat_state, persona_state, route_state, rehearsal/state (séance + arrêt vocal :
   deux booléens-ou-presque, aucune panne), camera_state, camera_source_state, camera_sources et le flux chat_transcript.
 
+  Panneau « Jeu » (lot A1) : intention du sélecteur de jeu, ordres macro, jauges,
+  20 dernières lignes de son journal « pourquoi ». SIM-ONLY comme la route.
+
   SÉCURITÉ : le groupe « Répétition » (route, vitesse, séance) n'est affiché que
   si le serveur l'annonce (hello.rehearsal, SIM-ONLY, domaine 43) ; le serveur
   refuse de toute façon ces topics sinon. Aucun accès aux roues par cette page.
@@ -112,6 +115,37 @@
       </span>
     </div>
 
+  </section>
+
+  <!-- Panneau « Jeu » (lot A1, 02/11) : le SÉLECTEUR DE JEU (didier_jeu, SIM-ONLY).
+       Masqué tant que hello.rehearsal n'est pas vrai, comme la route : le serveur
+       refuse de toute façon jeu/console hors domaine 43. Lit jeu/intention (latché,
+       via `state`), rehearsal/objects (latché) et le flux jeu/journal ; écrit
+       jeu/console (ordres macro + battement « presence » à 2 Hz tant que l'onglet
+       est visible et qu'on a la main). -->
+  <section id="scene-jeu" class="scene-jeu scene-repetition" hidden>
+    <div class="jeu-intention">
+      <h2>Jeu — intention
+        <span id="jeu-verrou" class="badge badge-alerte" hidden>arrêté jusqu'au go</span>
+        <span id="jeu-proposition" class="badge badge-alerte" hidden>repartir ?</span>
+      </h2>
+      <div><b id="jeu-action" class="jeu-action">—</b> <span id="jeu-cible" class="jeu-cible"></span></div>
+      <div id="jeu-pourquoi" class="jeu-pourquoi">sélecteur pas lancé ? (ros2 run didier_jeu jeu_node)</div>
+      <div class="jeu-barre" title="temps restant de l'action en cours"><div id="jeu-barre-temps"></div></div>
+    </div>
+    <div class="jeu-commandes">
+      <!-- « va là » : objets de rehearsal/objects (aller voir) et pistes vues
+           (se tourner vers elle puis avancer d'1 m). -->
+      <select id="jeu-cible-va-la" aria-label="Cible de « va là »"></select>
+      <button type="button" class="jeu-bouton" data-jeu="va_la">Va là</button>
+      <button type="button" class="jeu-bouton" data-jeu="joue_avec" title="la piste que Didier regarde">Joue avec lui</button>
+      <button type="button" class="jeu-bouton" data-jeu="ignore" title="la cible de l'intention en cours, 30 s">Ignore</button>
+      <button type="button" class="jeu-bouton" data-jeu="reviens" title="rejoindre la route">Reviens</button>
+      <button type="button" class="jeu-bouton" data-jeu="plus_lent" title="réfractaires × 2 pendant 60 s">Plus lent</button>
+      <button type="button" class="jeu-bouton" id="jeu-stop-go" data-jeu="stop">Stop</button>
+    </div>
+    <div id="jeu-jauges" class="jeu-jauges"></div>
+    <ol id="jeu-journal" class="jeu-journal" aria-live="polite"></ol>
   </section>
 
   <main class="scene-colonnes">

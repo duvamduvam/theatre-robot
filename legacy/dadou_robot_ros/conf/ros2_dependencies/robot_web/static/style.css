@@ -697,3 +697,28 @@ footer {
 .scene-entendu li { display: flex; flex-direction: column; padding: 2px 4px; border-left: 3px solid; margin-bottom: 2px; }
 .scene-entendu-garde { border-color: #2e7d32; }
 .scene-entendu-jete { border-color: #b26a00; opacity: 0.75; }
+
+/* --- Panneau « Jeu » (lot A1, sélecteur de jeu, SIM-ONLY) ------------------------ */
+/* Même piège que .scene-groupe : un display d'auteur écraserait hidden. */
+.scene-jeu[hidden] { display: none; }
+.scene-jeu {
+  display: grid;
+  grid-template-columns: minmax(18rem, 2fr) minmax(16rem, 1fr);
+  gap: 0.6rem 1.4rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--bord);
+}
+.jeu-intention h2 { margin: 0 0 0.3rem; }
+.jeu-action { font-size: 1.8em; }
+.jeu-cible { font-size: 1.3em; opacity: 0.85; }
+.jeu-pourquoi { font-size: 0.9em; opacity: 0.85; min-height: 2.4em; }
+.jeu-barre { height: 6px; background: var(--bord); margin-top: 0.3rem; }
+.jeu-barre div { height: 100%; width: 0; background: #2e7d32; transition: width 0.2s linear; }
+.jeu-commandes { display: flex; flex-wrap: wrap; gap: 0.4rem; align-content: flex-start; }
+.jeu-jauges { display: grid; grid-template-columns: 7em 1fr 3em; gap: 2px 0.5em; font-size: 0.85em; align-items: center; }
+.jeu-jauge { height: 8px; background: var(--bord); }
+.jeu-jauge div { height: 100%; background: #b26a00; }
+.jeu-journal { list-style: none; margin: 0; padding: 0; max-height: 12em; overflow-y: auto; font-size: 0.8em; grid-column: 1 / -1; }
+.jeu-journal li { padding: 1px 4px; border-left: 3px solid var(--bord); margin-bottom: 1px; }
+.jeu-journal li.jeu-decision { border-color: #2e7d32; }
+.jeu-journal li.jeu-refus, .jeu-journal li.jeu-relais_stop { border-color: #b26a00; }

@@ -59,8 +59,12 @@ WHITELIST = WHITELIST_SPECTACLE | WHITELIST_TECHNIQUE
 # camera_source (2026-10-31) : sélecteur de SOURCE d'images de la perception,
 # StringTime "webcam" | "gazebo", consommé côté vision (person_tracker) ; même
 # raison que camera_enable : sim seulement, jamais écrivable sur le vrai robot.
+# jeu/console (02/11, lot A1) : ordres macro du panneau « Jeu » vers le
+# sélecteur de jeu (didier_jeu, SIM-ONLY, refus hors domaine 43) — va_la,
+# joue_avec, ignore, reviens, plus_lent, stop, go — et battement {"presence":
+# true} à 2 Hz. Même prudence que la route : sim seulement par construction.
 WHITELIST_REPETITION = {"route", "route_speed", "rehearsal/cmd", "camera_enable",
-                        "camera_source"}
+                        "camera_source", "jeu/console"}
 
 # Topics MASQUÉS dans le message `state` (2026-10-14, étude §13.1 « David ne
 # voit pas le tirage ») : publiables depuis le web (ils restent dans la
@@ -107,9 +111,13 @@ def effective_whitelist(rehearsal_enabled: bool) -> frozenset:
 # latchée côté vision en réponse à camera_source. camera_sources : JSON liste des
 # sources DISPONIBLES (["webcam"] ou ["webcam","gazebo"]), latchée aussi ; la page
 # masque « Caméra Gazebo » tant que "gazebo" n'y figure pas.
+# jeu/intention (02/11, lot A1) : l'intention en cours du sélecteur de jeu
+# ({"action", "cible", "pourquoi", "reste_ms", "jauges"…}), latchée par lui ;
+# rehearsal/objects (02/11) : le vocabulaire d'objets du régisseur (latché), pour
+# que « va là » propose les objets connus. Lecture seule, comme les autres.
 TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chain",
                   "rehearsal/state", "camera_state", "camera_source_state",
-                  "camera_sources"}
+                  "camera_sources", "jeu/intention", "rehearsal/objects"}
 
 # Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
 # clients (message "feed"), contrairement à `state` qui ne porte que la
@@ -119,7 +127,9 @@ TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chai
 # par quel moteur, en combien de temps, gardé ou jeté. Y compris les tours
 # jetés, que le transcript ne montre pas (c'est eux qui expliquent un Didier
 # « qui n'entend rien »).
-TOPICS_FLUX = {"chat_transcript", "chat_hearing"}
+# jeu/journal (02/11, lot A1) : une ligne du journal « pourquoi » du sélecteur de
+# jeu par message (décisions, maintiens, refus) — la page en garde les 20 dernières.
+TOPICS_FLUX = {"chat_transcript", "chat_hearing", "jeu/journal"}
 
 # Session d'écriture : silence du writer au-delà de ce délai -> écriture
 # libérée (personne ne la récupère automatiquement, cf. §2 du protocole).
