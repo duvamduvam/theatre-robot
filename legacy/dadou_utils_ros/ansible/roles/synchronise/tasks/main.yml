@@ -45,6 +45,17 @@
     #rsync_opts:
     #  - "--delete"
 
+# Lot L1a (2026-11-02) : vision et télécommande n'ont PLUS de conf/ros2_dependencies
+# (robot_interfaces est passé dans theatre-robot/packages/). Un rsync sur un dossier
+# source absent échoue (code 23) et bloquerait les tâches suivantes — dont la copie des
+# packages communs ci-dessous. D'où le stat côté PC et la condition.
+- name: Check whether "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/" exists on the control node
+  stat:
+    path: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/"
+  delegate_to: localhost
+  become: no
+  register: ros2_dependencies_dir
+
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/" with "{{ ros2_ws }}/src/"
   synchronize:
     src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/"
@@ -53,6 +64,7 @@
     copy_links: yes
     #rsync_opts:
     #  - "--delete"
+  when: ros2_dependencies_dir.stat.exists
 
 # Lot L1a (2026-11-02) : les packages communs du mono-dépôt vivent dans
 # theatre-robot/packages/ (hors de l'ancien dépôt) ; ils doivent arriver dans

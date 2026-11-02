@@ -178,8 +178,10 @@ def test_traitements_d_echec_gardes():
     attendus = {
         ("director_node.py", "_on_route_cause"): ["(ValueError, TypeError)"],
         ("director_node.py", "_on_goto_result"): ["(ValueError, TypeError)"],
-        ("director_node.py", "_on_poi_event"): ["(ValueError, TypeError, KeyError)"],
-        ("fault_relay_node.py", "_on_cmd"): ["ValueError"],
+        # liste COMPLÈTE des except de la fonction, dans l'ordre de l'AST : un except
+        # ajouté plus bas (revue du 02/11) ne passe plus inaperçu
+        ("director_node.py", "_on_poi_event"): ["(ValueError, TypeError, KeyError)", "Exception"],
+        ("fault_relay_node.py", "_on_cmd"): ["ValueError", "ValueError"],
         ("web_bridge_node.py", "_on_message"): ["(TypeError, json.JSONDecodeError)"],
         ("web_bridge_node.py", "_on_feed"): ["(TypeError, json.JSONDecodeError)"],
     }
@@ -188,4 +190,4 @@ def test_traitements_d_echec_gardes():
         if cle in attendus:
             gestionnaires = [ast.unparse(h.type) for h in ast.walk(_fonction(chemin, nom))
                              if isinstance(h, ast.ExceptHandler) and h.type is not None]
-            assert gestionnaires[:1] == attendus[cle], cle
+            assert gestionnaires == attendus[cle], cle

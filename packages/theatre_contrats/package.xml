@@ -9,6 +9,8 @@
 
   <!-- AUCUNE dépendance d'exécution : le package doit s'importer sur le PC
        sans ROS (tests hôte). qos.py importe rclpy PARESSEUSEMENT, à l'appel. -->
+  <!-- qos.py importe rclpy À L'APPEL (le module reste importable sans ROS) -->
+  <exec_depend>rclpy</exec_depend>
   <test_depend>python3-pytest</test_depend>
 
   <export>
