@@ -301,7 +301,10 @@ def stop_all_commands(rehearsal_enabled: bool = False) -> list:
     -- la route est un mode latché, comme `follow` : sans ça, un STOP en pleine
     séance laisserait Didier continuer sa rue) et termine la séance
     (`rehearsal/cmd stop` : le régisseur révoque toutes ses pannes, SIGCONT
-    compris). Le deadman reste derrière dans tous les cas."""
+    compris). Le deadman reste derrière dans tous les cas.
+    Lot A1 (revue du 02/11) : en répétition, STOP envoie D'ABORD {"cmd": "stop"}
+    au sélecteur de jeu (jeu/console) — c'est un stop de David : verrou
+    jusqu'au « go » de la console, jamais de reprise automatique."""
     commands = [
         ("animation", False),
         ("audio", "stop"),
@@ -313,7 +316,7 @@ def stop_all_commands(rehearsal_enabled: bool = False) -> list:
         ("right_arm", "stop"),
     ]
     if rehearsal_enabled:
-        commands += [("route", "off"), ("rehearsal/cmd", "stop")]
+        commands += [("jeu/console", {"cmd": "stop"}), ("route", "off"), ("rehearsal/cmd", "stop")]
     return commands
 
 

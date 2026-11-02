@@ -280,6 +280,19 @@ class Selecteur:
         if e is not None and etat == "goto":
             e.accuse = True
 
+    def sur_route_cause(self, cause, now: float) -> None:
+        """route_state_cause (latché, régisseur) : « cmd » = David a coupé la
+        route — traité comme un stop de David : reprise désarmée, lubie en
+        attente annulée (revue A1, bloquant 3). « boot » : rien."""
+        if cause != "cmd":
+            return
+        e = self.en_cours
+        if e is not None and e.candidat.action == "lubie" and not e.stop_envoye:
+            self._annuler(now, "David a coupé la route")
+        if self.arret_didier is not None:
+            self.arret_didier = None
+            self._journal("reprise_annulee", "David a coupé la route → pas de reprise automatique")
+
     def sur_goto_result(self, payload, now: float) -> None:
         e = self.en_cours
         if e is None or not e.candidat.deplacement or e.candidat.action == "repartir":

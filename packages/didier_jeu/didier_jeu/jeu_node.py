@@ -9,7 +9,7 @@ Le refus a lieu AVANT rclpy.init : rien n'est jamais créé sur le domaine 42.
 Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
         rehearsal/chat_move (la BOUCHE : ses demandes deviennent des intentions,
         son « stop » est relayé sans arbitrage), jeu/console (page scène),
-        chat_situation, mission_state (latché), route_state (latché),
+        chat_situation, mission_state (latché), route_state et route_state_cause (latchés),
         route_goto_result, animation_state (latché), rehearsal/objects (latché),
         /ground_truth/odom (SIM-ONLY : orienter le regard d'une lubie vers
         l'objet ; A2 le remplacera par la perception).
@@ -31,7 +31,8 @@ import time
 
 # Garde-fou AVANT tout import rclpy à effet : check_domain est pur.
 from robot_rehearsal.contracts import (CHAT_MOVE_TOPIC, OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
-                                       ROUTE_GOTO_RESULT_TOPIC, ROUTE_STATE_TOPIC, check_domain)
+                                       ROUTE_GOTO_RESULT_TOPIC, ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC,
+                                       check_domain)
 from theatre_contrats import stringtime, topics
 
 from didier_jeu.journal import Journal
@@ -115,6 +116,9 @@ def main(args=None):
             self.create_subscription(StringTime, MISSION_STATE_TOPIC, self._json(self.sel.sur_mission),
                                      qos.latched())
             self.create_subscription(StringTime, ROUTE_STATE_TOPIC, self._on_route_state, qos.latched())
+            # Cause latchée de l'état de route : « cmd » = Route OFF par David.
+            self.create_subscription(StringTime, ROUTE_STATE_CAUSE_TOPIC, self._json(self.sel.sur_route_cause),
+                                     qos.latched())
             self.create_subscription(StringTime, ROUTE_GOTO_RESULT_TOPIC, self._json(self.sel.sur_goto_result), 10)
             self.create_subscription(StringTime, topics.ANIMATION_STATE, self._json(self.sel.sur_animation_state),
                                      qos.latched())

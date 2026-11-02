@@ -453,3 +453,19 @@ def test_intention_jamais_vide():
             assert o[2]["action"] and o[2]["pourquoi"]
         if o[1] == "journal":
             assert o[3]["pourquoi"].strip()
+
+
+def test_route_off_par_david_desarme_la_reprise():
+    out = jouer(fabriquer(), 0.0, 200.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                          (20.0, lambda s, t: s.sur_route_cause("cmd", t))])
+    assert "go" not in [m for _, m in moves(out)]
+    assert len(journal(out, "reprise_annulee")) == 1
+
+
+def test_route_off_par_david_annule_la_lubie_en_attente():
+    out = jouer(fabriquer(), 0.0, 8.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                        (2.0, lambda s, t: s.sur_route_cause("cmd", t))])
+    assert moves(out) == []
+    out2 = jouer(fabriquer(), 0.0, 8.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                         (2.0, lambda s, t: s.sur_route_cause("boot", t))])
+    assert moves(out2) == [(4.3, "stop")]

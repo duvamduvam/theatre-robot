@@ -237,9 +237,12 @@ def test_stop_all_commands_repetition_coupe_la_route_et_la_seance():
     ensuite). Sans répétition, rien de plus (liste gravée ci-dessus)."""
     base = stop_all_commands()
     assert stop_all_commands(False) == base
-    assert stop_all_commands(True) == base + [("route", "off"), ("rehearsal/cmd", "stop")]
-    assert {t for t, _ in stop_all_commands(True)} - {t for t, _ in base} == {"route", "rehearsal/cmd"}
-    assert {"route", "rehearsal/cmd"} <= WHITELIST_REPETITION
+    # Lot A1 (revue du 02/11) : le sélecteur de jeu reçoit un stop de David, en premier.
+    assert stop_all_commands(True) == base + [("jeu/console", {"cmd": "stop"}), ("route", "off"),
+                                              ("rehearsal/cmd", "stop")]
+    assert {t for t, _ in stop_all_commands(True)} - {t for t, _ in base} == {"jeu/console", "route",
+                                                                               "rehearsal/cmd"}
+    assert {"jeu/console", "route", "rehearsal/cmd"} <= WHITELIST_REPETITION
 
 
 def test_topics_masques_graves_et_filtres_du_state():
