@@ -20,8 +20,8 @@ lumières, gants) — décidé le 2026-11-01 (`legacy/dadou_robot_ros/docs/etude
 
 | Lot | Statut |
 |---|---|
-| L0 sauvegardes + squelette | **en cours** (02/11) : squelette posé, historiques importés, sim à vérifier depuis `legacy/` |
-| L1 contrats + données | à venir |
+| L0 sauvegardes + squelette | **FAIT le 02/11** : 6 dépôts sauvegardés et poussés, secrets purgés, squelette posé et **validé sur pièce par David**, 4 historiques importés (1 628 commits), **V-R3 rejoué depuis `legacy/` : 21 OK / 0 KO**, tests du cœur verts, Ansible pointe sur `legacy/` |
+| L1 contrats + données | **prochain** (`dadou_contrats` → `theatre_contrats`, namespace `didier/`, catalogue publié, édition via le robot, renommages `didier_*`) |
 | L2 sim multi-conteneurs | à venir |
 | L3 gabarit + sono | à venir |
 | L4 télécommande neuve | à venir |
