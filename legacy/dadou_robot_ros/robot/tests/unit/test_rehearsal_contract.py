@@ -288,3 +288,18 @@ def test_launch_jeu_remappe_le_regisseur_seulement_sur_demande():
     par_condition = {c.args[2].func.id: ast.literal_eval(c.args[3]) for c in calls}
     assert par_condition == {"UnlessCondition": [],
                              "IfCondition": [(contracts.CHAT_MOVE_TOPIC, JEU_CHAT_MOVE)]}
+
+
+def test_launch_jeu_demarre_le_selecteur_sous_la_meme_condition():
+    """Revue A1 (bloquant 2) : avec jeu:=true le régisseur n'écoute plus la
+    bouche ; le launch démarre donc LUI-MÊME jeu_node (respawn), sous la même
+    IfCondition que le remap — jamais de remap sans relais du « stop »."""
+    import ast
+    tree = ast.parse((PKG / "launch" / "rehearsal.launch.py").read_text(encoding="utf-8"))
+    noeuds = [c for c in ast.walk(tree) if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "Node"
+              and any(k.arg == "package" and getattr(k.value, "value", None) == "didier_jeu" for k in c.keywords)]
+    assert len(noeuds) == 1
+    kw = {k.arg: k.value for k in noeuds[0].keywords}
+    assert ast.unparse(kw["condition"]) == 'IfCondition(LaunchConfiguration("jeu"))'.replace('"', "'")
+    assert kw["executable"].value == "jeu_node"
+    assert kw["respawn"].value is True and kw["respawn_delay"].value == 2.0

@@ -42,12 +42,12 @@ from didier_jeu import arbre
 from didier_jeu.offres import Offre, Offres
 from didier_jeu.pistes import Pistes
 from didier_jeu.pulsions import Pulsions
+from didier_jeu.relais import GO, STOP, Verrou
 from didier_jeu.repertoire import COMMANDES_REGISSEUR, commande
 from didier_jeu.scores import RIEN, Candidat, Contexte, classer
 
 # Commandes de la console (spec §4), gravées avec la page scène.
 CONSOLE_CMDS = ("va_la", "joue_avec", "ignore", "reviens", "plus_lent", "stop", "go")
-STOP, GO = "stop", "go"
 # Angle sous lequel « se tourner vers » une piste est inutile avant d'avancer (°).
 ANGLE_MIN_TOURNER_DEG = 5.0
 # Tolérance des comparaisons d'échéances : 5,6 − 5,0 vaut 0,5999… en flottant,
@@ -113,8 +113,8 @@ class Selecteur:
         self.derniere_spontanee: Optional[float] = None
         self.leader: Optional[str] = None
         self.leader_depuis = 0.0
-        # Sources du verrou d'arrêt posé : {"console", "bouche"} (revue A1, 02/11).
-        self.verrous: set = set()
+        # Qui a posé le verrou d'arrêt (relais.Verrou, revue A1 du 02/11).
+        self.verrou = Verrou()
         self.arret_didier: Optional[dict] = None   # {"t", "cible"} : reprise armée
         self.presence_t: Optional[float] = None
         self.ordre: Optional[dict] = None          # {"action", "cible", "t", "cmd"}
@@ -156,7 +156,7 @@ class Selecteur:
     # ================================================================ prédicats de l'arbre
     @property
     def verrou_stop(self) -> bool:
-        return bool(self.verrous)
+        return self.verrou.actif
 
     def verrouille(self) -> bool:
         return self.verrou_stop
@@ -309,7 +309,7 @@ class Selecteur:
     def relayer_stop(self, source: str, now: float) -> None:
         """« stop » : relayé TOUT DE SUITE, sans score ; verrou jusqu'au « go »."""
         self.sorties.append(("chat_move", STOP))
-        self.verrous.add(source)
+        self.verrou.poser(source)
         self.arret_didier = None    # arrêt de David : jamais de « go » automatique
         self.ordre = None
         self.leader = None
@@ -323,14 +323,10 @@ class Selecteur:
     def relayer_go(self, source: str, now: float) -> None:
         """« go » : la console (David) lève tout verrou ; la bouche ne lève que
         le sien — un stop de David ne se lève qu'à la console."""
-        if source != "console" and "console" in self.verrous:
+        if not self.verrou.lever(source):
             self._journal("refus", "la bouche dit « go » mais c'est David qui a arrêté : "
                           "seul un go de la console le relance", source=source)
             return
-        if source == "console":
-            self.verrous.clear()
-        else:
-            self.verrous.discard(source)
         self.sorties.append(("chat_move", GO))
         self.arret_didier = None
         self._journal("relais_go", f"go de {source} relayé : verrou levé", source=source)
@@ -381,7 +377,7 @@ class Selecteur:
 
     def _refus_deplacement(self, now: float) -> Optional[str]:
         if self.verrou_stop:
-            return f"verrou d'arrêt ({', '.join(sorted(self.verrous))}) jusqu'au go"
+            return f"verrou d'arrêt ({', '.join(sorted(self.verrou.sources))}) jusqu'au go"
         if self.superviseur_absent():
             return "superviseur absent"
         if self.pulsions.deplacement_interdit():

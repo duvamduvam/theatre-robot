@@ -21,8 +21,9 @@ jeu:=true (lot A1, spec theatre-robot/docs/spec-A1-selecteur-de-jeu.md §1) :
 UN SEUL DÉCIDEUR DU CORPS. Le régisseur écoute alors `jeu/chat_move` (le
 sélecteur didier_jeu, lancé à part : ros2 run didier_jeu jeu_node) au lieu de
 `rehearsal/chat_move` (la bouche, dont les demandes deviennent des intentions
-que le sélecteur pondère ; son « stop » est relayé sans arbitrage). Remap
-SEUL : director ne change pas. Défaut false = séance Chantiers inchangée.
+que le sélecteur pondère ; son « stop » est relayé sans arbitrage), et CE
+launch démarre lui-même le sélecteur (respawn) : jamais de remap sans relais.
+director ne change pas. Défaut false = séance Chantiers inchangée.
 """
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -89,6 +90,18 @@ def generate_launch_description():
         # package ; égalité gravée par test_rehearsal_contract.py).
         _director(scenario_file, route_file, IfCondition(LaunchConfiguration("jeu")),
                   [("rehearsal/chat_move", "jeu/chat_move")]),
+        # Le sélecteur de jeu (packages/didier_jeu) — lancé ICI, sous la MÊME
+        # condition que le remap (revue A1, bloquant 2) : le régisseur n'écoute
+        # plus la bouche que si celui qui relaie son « stop » tourne. respawn
+        # comme route_driver ; répertoire illisible -> il démarre quand même en
+        # relais stop/go seul. Pas d'exec_depend didier_jeu dans package.xml :
+        # didier_jeu dépend déjà de robot_rehearsal (cycle colcon) — le nom du
+        # package n'est résolu qu'au lancement.
+        Node(
+            package="didier_jeu", executable="jeu_node", name="jeu_node", output="screen",
+            condition=IfCondition(LaunchConfiguration("jeu")),
+            respawn=True, respawn_delay=2.0,
+        ),
     ])
 
 

@@ -19,7 +19,10 @@ Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
 
 SÉCURITÉ : AUCUN éditeur de Twist ici (gravé par test_contrat_node.py). Les
 roues ne bougent que par le régisseur, qui arbitre, puis route_driver.
-Lancement : ros2 run didier_jeu jeu_node (après rehearsal.launch.py jeu:=true).
+Lancement : par rehearsal.launch.py jeu:=true (respawn), jamais à part : le remap
+de la bouche n'y est actif QUE s'il lance aussi ce node (revue A1, bloquant 2).
+Répertoire ou réglages illisibles -> MODE DÉGRADÉ (relais.RelaisSeul) : relais
+stop/go seul, journal `degrade`.
 """
 import json
 import math
@@ -34,6 +37,7 @@ from theatre_contrats import stringtime, topics
 from didier_jeu.journal import Journal
 from didier_jeu.reglages import charger_reglages
 from didier_jeu.repertoire import candidates, charger_deplacements, par_emploi
+from didier_jeu.relais import RelaisSeul
 from didier_jeu.selecteur import Selecteur
 
 # « regarder » (lot M2) : littéral gravé avec gaze_follower_node.LOOK_TOPIC
@@ -72,11 +76,27 @@ def main(args=None):
             self.declare_parameter("sequences_dir", "/home/ros2_ws/json/sequences")
             self.declare_parameter("journal_dir", "/home/ros2_ws/log/jeu")
             p = lambda n: self.get_parameter(n).value  # noqa: E731
-            self.reglages = charger_reglages(p("reglages_file"))
-            pools, sans_emploi = par_emploi(candidates(p("sequences_dir")), self.reglages.get("emplois"))
-            self.sel = Selecteur(self.reglages, pools, charger_deplacements(p("deplacements_file")))
-            self.journal = Journal(p("journal_dir"))
-            self.get_logger().info(f"journal : {self.journal.chemin}")
+            self.journal = None
+            try:
+                self.journal = Journal(p("journal_dir"))
+                self.get_logger().info(f"journal : {self.journal.chemin}")
+            except OSError as e:   # sans journal, le jeu (et surtout le relais) vit quand même
+                self.get_logger().error(f"journal impossible : {e!r}")
+            tick_s = 0.1
+            try:
+                self.reglages = charger_reglages(p("reglages_file"))
+                tick_s = self.reglages.get("tick_s")
+                pools, sans_emploi = par_emploi(candidates(p("sequences_dir")), self.reglages.get("emplois"))
+                self.sel = Selecteur(self.reglages, pools, charger_deplacements(p("deplacements_file")))
+                demarrage = {"pourquoi": "le sélecteur de jeu démarre (simulation seulement, domaine 43)",
+                             "repertoire": {k: [s.nom for s in v] for k, v in pools.items()},
+                             "sans_emploi": sans_emploi, "superviseur": self.reglages.get("superviseur.mode")}
+            except Exception as e:  # noqa: BLE001 — répertoire, réglages, vocabulaire illisibles
+                # MODE DÉGRADÉ (revue A1, bloquant 2) : avec jeu:=true le régisseur
+                # n'écoute plus la bouche ; sans ce relais, son « stop » serait perdu.
+                self.get_logger().error(f"MODE DÉGRADÉ, relais stop/go seul : {e!r}")
+                self.sel = RelaisSeul(repr(e))
+                demarrage = None
 
             self.pub_move = self.create_publisher(StringTime, topics.JEU_CHAT_MOVE, 10)
             self.pub_anim = self.create_publisher(StringTime, topics.ANIMATION, 10)
@@ -84,11 +104,8 @@ def main(args=None):
             self.pub_intention = self.create_publisher(StringTime, topics.JEU_INTENTION, qos.latched())
             self.pub_journal = self.create_publisher(StringTime, topics.JEU_JOURNAL, 10)
 
-            self._journaliser("demarrage", {
-                "pourquoi": "sélecteur de jeu démarré (SIM-ONLY, domaine 43)",
-                "repertoire": {k: [s.nom for s in v] for k, v in pools.items()},
-                "sans_emploi": sans_emploi,
-                "superviseur": self.reglages.get("superviseur.mode")})
+            if demarrage is not None:
+                self._journaliser("demarrage", demarrage)
 
             self.create_subscription(PointStamped, topics.VISION_PERSON_BOX, self._on_box, 10)
             self.create_subscription(StringTime, POI_EVENT_TOPIC, self._json(self.sel.sur_poi_event), 10)
@@ -104,7 +121,7 @@ def main(args=None):
             self.create_subscription(StringTime, OBJECTS_TOPIC, self._on_objects, qos.latched())
             self.create_subscription(Odometry, ODOM_TOPIC, self._on_odom, 10)
             self._t_intention = 0.0
-            self.create_timer(self.reglages.get("tick_s"), self._tick)
+            self.create_timer(tick_s, self._tick)
             self._vider()
 
         # --- entrées ------------------------------------------------------
@@ -178,10 +195,13 @@ def main(args=None):
                     self._journaliser(sortie[1], sortie[2])
 
         def _journaliser(self, type_, payload):
+            if self.journal is None:
+                self.get_logger().info(f"{type_} {str(payload.get('pourquoi', ''))[:120]}")
+                return
             try:
                 ligne = self.journal.ecrire(int(time.monotonic() * 1000), type_, payload)
             except (OSError, ValueError) as e:
-                # Disque plein, ligne sans pourquoi : le journal est perdu, PAS le jeu.
+                # Disque plein : le journal est perdu, PAS le jeu.
                 self.get_logger().error(f"journal : {e!r}")
                 return
             self.get_logger().info(f"{type_} {payload.get('pourquoi', '')[:120]}")
@@ -194,7 +214,8 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        node.journal.fermer()
+        if node.journal is not None:
+            node.journal.fermer()
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
