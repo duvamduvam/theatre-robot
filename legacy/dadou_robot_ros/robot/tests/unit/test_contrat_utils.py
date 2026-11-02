@@ -30,7 +30,7 @@ from dadou_utils_ros.utils_static import (
     NECK, LEFT_ARM, RIGHT_ARM, LEFT_EYE, RIGHT_EYE, MOUTH,
     SYSTEM, SPEAK, RELAY,
     KEY, KEYS, NAME, TYPE, MODE, METHOD, COLOR, BRIGHTNESS,
-    DURATION, LOOP, SPEED, EXPRESSION, SEQUENCES, DEVICES, FILES, INCLINO, JOYSTICK,
+    DURATION, LOOP, SPEED, EXPRESSION, SEQUENCES, DEVICES, INCLINO, JOYSTICK,
     DEFAULT, NORMAL, RANDOM, ORANGE, MSG_SIZE, SERIAL_ID,
     JSON_AUDIOS, JSON_CONFIG, JSON_DIRECTORY, JSON_EXPRESSIONS,
     JSON_LIGHTS, JSON_LIGHTS_BASE,
@@ -123,7 +123,6 @@ class TestContratClesPayload:
         assert EXPRESSION == 'expression'
         assert SEQUENCES == 'sequences'
         assert DEVICES == 'devices'
-        assert FILES == 'files'
         assert INCLINO == "inclino"
         assert JOYSTICK == 'self.gamepad'
         assert DEFAULT == 'default'

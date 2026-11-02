@@ -1,77 +1,31 @@
-"""Contrat inter-machines du parc Didier (robot / télécommande / vision).
+"""SHIM de transition (lot L1a, 2026-11-02) — ce fichier DISPARAÎT au lot L5.
 
-RÈGLE (chantier 2026-07-11, après le bug MODE c08eb82) : ce fichier ne contient
-QUE ce qui est partagé entre au moins deux dépôts — noms de topics StringTime,
-clés des payloads JSON échangés sur le réseau, conventions de nommage communes —
-plus quelques constantes des modules internes de cette lib. Les constantes
-propres à un seul dépôt vivent CHEZ LUI (robot/robot_static.py,
-controller/control_static.py). Toute valeur modifiée ici doit l'être de façon
-coordonnée : les tests de contrat des consommateurs (test_contrat_utils.py côté
-robot, test_utils_static_contract.py côté control) figent ces valeurs et
-rougissent à la moindre dérive.
+Le CONTRAT inter-machines (noms de topics, clés de payload, organes) vit
+désormais dans le package `theatre_contrats` (packages/theatre_contrats du
+mono-dépôt theatre-robot) ; il est ré-exporté ici pour que les 129 imports
+existants `from dadou_utils_ros.utils_static import X` continuent de marcher
+sans réécriture. Pour un code NEUF : importer theatre_contrats directement.
+
+CONSÉQUENCE : tout environnement qui importe cette lib doit avoir
+theatre_contrats sur son chemin — colcon (package dans src/ du workspace) dans
+les conteneurs, conftest.py (sys.path) pour les tests hôte. Sans lui, TOUS les
+nodes tombent à l'import, wheels_node compris.
+
+Restent DÉFINIES ici (pas un contrat, jusqu'à L5) : chemins/répertoires,
+logging, plateforme, couleurs, constantes internes à dadou_utils_ros.
+Supprimées au lot L1a car importées par personne (tools/inventaire.py) :
+JSON_NOTES, NOTE, FILES. IP n'est plus utilisée que par com/ws_server.py et
+com/ws_com.py, modules eux-mêmes morts : à supprimer ensemble en L5.
+
+Les tests de contrat des consommateurs (test_contrat_utils.py côté robot,
+test_utils_static_contract.py côté control) figent les valeurs à travers ce
+shim et rougissent à la moindre dérive.
 """
 
-# ---------------------------------------------------------------- TOPICS StringTime (noms des canaux ROS entre machines)
-ANIMATION = 'animation'
-# État d'activité des animations (arbitrage amont, étude 2026-07-12 côté robot :
-# docs/etude-arbitrage-actionneurs.md). Publié LATCHÉ par animations_node :
-# msg = json.dumps(nom de la séquence en cours) ou json.dumps("") au repos.
-# Consommé par les comportements autonomes (gaze côté robot, chat côté vision)
-# qui se taisent tant qu'une séquence a la main sur visage + tête.
-ANIMATION_STATE = 'animation_state'
-AUDIO = 'audio'
-EXPRESSION = 'expression'
-FACE = 'face'
-LEFT_ARM = 'left_arm'
-LEFT_EYE = 'left_eye'
-LIGHTS = 'lights'
-NECK = 'neck'
-RELAY = 'relay'
-RIGHT_ARM = 'right_arm'
-RIGHT_EYE = 'right_eye'
-ROBOT_LIGHTS = 'robot_lights'
-SPEAK = 'speak'
-SYSTEM = 'system'
-WHEELS = 'wheels'
-
-# ---------------------------------------------------------------- CLÉS des payloads JSON (contenu des messages)
-A = 'A'
-ANGLO = 'anglo'
-AUDIOS = 'audios'
-B = 'B'
-BACKWARD = 'backward'
-BRIGHTNESS = 'brightness'
-COLOR = 'color'
-DEFAULT = 'default'
-DEVICES = 'devices'
-DOWN = 'down'
-DURATION = 'duration'
-FACES = 'faces'
-FILES = 'files'
-FORWARD = 'forward'
-INCLINO = "inclino"
-JOYSTICK = 'self.gamepad'
-KEY = 'key'
-KEYS = 'keys'
-LOOP = 'loop'
-METHOD = 'method'
-# 'mode' MINUSCULE : c'est la clé des keyframes servo des séquences JSON
-# ({"mode": "random", ...}). Passée à 'MODE' par c08eb82 (2025-09-27) → le mode
-# random ne s'armait plus jamais depuis les animations (bras/yeux inertes).
-MODE = 'mode'
-MOUTH = 'mouth'
-NAME = 'name'
-NORMAL = 'normal'
-RANDOM = 'random'
-SEQUENCES = 'sequences'
-SPEED = 'speed'
-STOP = 'stop'
-TYPE = 'type'
-UP = "UP"
-WHEEL_LEFT = 'wheel_left'
-WHEEL_RIGHT = 'wheel_right'
-X = 'X'
-Y = 'Y'
+# ---------------------------------------------------------------- CONTRAT (ré-exporté de theatre_contrats)
+from theatre_contrats.organs import *  # noqa: F401,F403
+from theatre_contrats.topics import *  # noqa: F401,F403
+from theatre_contrats.keys import *  # noqa: F401,F403
 
 # ---------------------------------------------------------------- FICHIERS JSON et RÉPERTOIRES partagés par convention
 AUDIOS_DIRECTORY = 'audios directory'
@@ -109,18 +63,14 @@ EYE = 'eye'
 EYE_VISUALS_PATH = 'eye visuals path'
 I2C_ENABLED = 'i2c_enabled'
 IP = "ip"
-JSON_NOTES = 'notes'
 LORA = 'lora'
 MOUTH_VISUALS_PATH = 'mouth visuals path'
 MSG = 'msg'
-NOTE = 'note'
 PAUSE = 'pause'
 PLAY = 'play'
 RESTART_PIN = 'restart pin'
 SHUTDOWN_PIN = 'shutdown pin'
 STATUS_LED_PIN = 'status pin'
 
-# ---------------------------------------------------------------- DIVERS (contrat, à re-classer à l'occasion)
-LEFT = 'left'
+# ---------------------------------------------------------------- COULEURS (clé de config de la télécommande)
 ORANGE = 'orange'
-RIGHT = 'right'
