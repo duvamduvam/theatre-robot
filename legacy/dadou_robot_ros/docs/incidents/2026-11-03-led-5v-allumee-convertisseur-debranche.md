@@ -250,3 +250,9 @@ convertisseur (charge interne probable, non vérifiée), le rail n'a pas de cour
 
 Convertisseur du rail 5 V : étiquette lue par David **`SD-50B-5`**, sortie à vide **5,07 V**. Bon
 modèle, bonne tension, pour la première fois lus sur le robot.
+
+Relevés câblage en place, interrupteur coupé (la batterie est câblée directement sur
+l'interrupteur et ne se déconnecte pas), cordons 0,8 Ω : 5 V « + »/« - » = 25 ; « - » 5 V / « - » 24 V
+= **2**, soit ~1,2 Ω ; « - » 24 V / « + » 24 V = `1`. Les masses sont reliées, mais 1,2 Ω n'est pas
+une liaison franche. Question ouverte : ce lien passe-t-il par un fil noir de servo ? Contrôle :
+débrancher la fiche du bras gauche et remesurer.
