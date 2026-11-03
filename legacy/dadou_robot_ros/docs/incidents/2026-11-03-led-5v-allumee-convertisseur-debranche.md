@@ -342,3 +342,8 @@ alimentation, RAM endommagée, firmware. Compte à confirmer.
 La carte passait tous les tests le 12/09 sur secteur : elle a pu s'abîmer depuis ou être mal
 alimentée ici. Séparation : Pi hors robot, sur son alimentation secteur. Mêmes 8 flashs = carte
 ou firmware ; démarrage normal = alimentation ou interface robot. **Pi coupé d'ici là.**
+
+Suite, 2026-11-04 : Pi 4 hors robot sur secteur, sans GPIO : **toujours 8 flashs**, avec sa SD
+puis avec une autre SD. Le rail du robot n'est donc pas la cause immédiate. Reste la récupération
+du bootloader avant de conclure à une carte morte. SD d'origine conservée intacte, non formatée.
+Une autre Pi branchée par David n'apparaît pas sur le réseau (aucun port SSH ouvert sur le /24).
