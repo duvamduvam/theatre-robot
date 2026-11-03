@@ -132,3 +132,27 @@ Conséquences :
   sur les **trois** ASME. Vérifier ensuite : LED 5 V éteinte convertisseur débranché.
 - Fiche du bras gauche : à remplacer (boîtier neuf). La cause de la chauffe (masse de
   puissance au bornier vert) reste à trouver sur ce bras en premier.
+
+## Mise à jour 2026-11-03 — fils 12 V volants (David)
+
+David se rend compte que **les fils à brancher sur le 12 V pour le servo se baladaient**, et
+ont pu toucher quelque chose. Sur la première vidéo (`f026.jpg`, aussi vue sur `f004`,
+`f010`), deux fils rouges à bouts étamés nus pendent au bord de la carte : peut-être ceux-là,
+**non confirmé**.
+
+Ce que ça change :
+- **Fiche déformée : troisième hypothèse, sérieuse.** Un contact accidentel a pu faire
+  passer un fort courant bref par le fil noir. Et si le « - » de puissance d'un servo était
+  débranché pendant que son « + » était alimenté, le fil noir était son **seul** retour :
+  tout le courant moteur y passait. Ce serait le retour moteur déjà suspecté, avec une
+  cause banale, et non une masse défaillante.
+- **LED 5 V : le fantôme reste à prouver.** David l'a isolé de façon répétable sur un servo,
+  ce qui va dans le sens du régulateur du servo plutôt que d'un contact au hasard. Mais la
+  preuve reste la mesure : fil rouge seul retiré → LED éteinte.
+- **Risque nouveau : du 12 V a pu toucher le 5 V ou un signal.** PCA9685, level shifters et
+  carte porteuse sont à contrôler avant tout retour d'un Pi. Une fumée le 12/09 pour la même
+  raison reste possible, seulement si les fils étaient déjà volants à cette date (à vérifier).
+
+À faire : isoler chaque bout nu avant toute remise sous tension ; à 12 V coupé, mesurer
+12 V ↔ 5 V et 5 V ↔ GND à l'ohmmètre (pas de court-circuit) ; garder les mesures de masse
+prévues, qui restent valables.
