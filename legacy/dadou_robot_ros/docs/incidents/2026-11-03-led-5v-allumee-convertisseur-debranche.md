@@ -177,3 +177,19 @@ Pistes, aucune mesurée, classées :
 
 Mesure : T1b de `../hardware/protocole-oscillo.md`. Retirer le fil rouge peut changer ce
 comportement : à observer, trajectoire dégagée, avant de conclure.
+
+## Mise à jour 2026-11-03 — le servo du « 360 » est le bras gauche ; essai décidé
+
+David confirme : **le tour à l'allumage, c'est le bras gauche**, le même que la fiche
+déformée et les fils volants. Lien possible, non mesuré : un tour qui finit en butée
+bloque le moteur, qui tire alors son courant maximal.
+
+Essai proposé par David, retenu : **5 V coupé, 12 V rebranché sur ce servo**. Conditions :
+connecteur 3 points **entièrement débranché du PCA9685** (sinon le fil rouge réalimente le
+PCA9685 et l'essai ne prouve rien), bouts nus isolés, polarité contrôlée au multimètre (le
+manuel : inversion = servo grillé), 12 V sur l'entrée d'alimentation et **pas sur le bornier
+M1/M2** (sortie moteur, sérigraphie visible sur `a-f11.jpg`), « - » raccordé avant le « + »,
+trajectoire dégagée. Une dizaine d'allumages, le défaut étant intermittent.
+
+Lecture : le bras tourne sans aucun signal → cause dans le servo (piste 4). Il reste immobile
+→ cause côté signal ou démarrage (pistes 1 à 3), et on rebranche blanc + noir, rouge retiré.
