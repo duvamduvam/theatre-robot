@@ -291,3 +291,6 @@ Des fiches 3 points reçoivent noir + jaune + rouge.
 montrent leur cuivre nu au ras du dessus, et un troisième bout noir à cuivre nu est recourbé à côté.
 Possibles fils mal enfoncés ou non serrés : cela pourrait expliquer une liaison de masse résistive
 ou intermittente. Non confirmé à l'image.
+
+Contrôle David, 2026-11-04 : les fils noirs de `rails-f12.jpg` sont **bien serrés**. Suspect écarté,
+le cuivre visible n'indique pas un mauvais contact. La liaison de ~1,7 Ω reste inexpliquée.
