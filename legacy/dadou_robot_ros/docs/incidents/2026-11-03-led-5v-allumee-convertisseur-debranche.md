@@ -233,3 +233,13 @@ Le multimètre de David (`OHMTEC 254089`) a une résolution de 0,1 Ω et une pr�
 les pointes, noter la valeur, la retrancher ; résultat attendu proche de 0, sous environ
 0,5 Ω. Le bip de continuité sonne sous 50 Ω et ne qualifie pas une masse de puissance. Le vrai
 contrôle d'une masse reste la chute de tension sous charge, en calibre 200 mV DC.
+
+## Relevés ohmmètre 2026-11-03 (calibre 200 Ω, cordons 0,8 Ω)
+
+| Points | Lecture | Lecture |
+|---|---|---|
+| Côté 24 V, « + » contre « - » | `1` seul à gauche | Circuit ouvert : pas de court-circuit |
+| Côté 5 V (points présumés : « + » contre « - ») | 25, soit ~24 Ω cordons retranchés | Pas un court franc, mais bas pour un test à 700 mV : origine à localiser |
+
+Non mesurés encore : « - » sortie 5 V contre « - » batterie, et 12 V contre 5 V. À localiser :
+convertisseur déconnecté du rail, mesurer chaque côté séparément, batterie déconnectée.
