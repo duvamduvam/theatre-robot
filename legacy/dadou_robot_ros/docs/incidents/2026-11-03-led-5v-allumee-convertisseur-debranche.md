@@ -243,3 +243,7 @@ contrôle d'une masse reste la chute de tension sous charge, en calibre 200 mV D
 
 Non mesurés encore : « - » sortie 5 V contre « - » batterie, et 12 V contre 5 V. À localiser :
 convertisseur déconnecté du rail, mesurer chaque côté séparément, batterie déconnectée.
+
+Localisation (calibre 200 Ω) : convertisseur seul, sortie débranchée = **25** ; rail seul = **`1`**,
+soit plus de 200 Ω sur ce calibre, pas forcément un circuit ouvert. Les 25 Ω viennent du
+convertisseur (charge interne probable, non vérifiée), le rail n'a pas de court-circuit.
