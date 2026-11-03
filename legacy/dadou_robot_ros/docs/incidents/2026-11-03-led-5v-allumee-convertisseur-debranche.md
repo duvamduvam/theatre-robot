@@ -193,3 +193,11 @@ trajectoire dégagée. Une dizaine d'allumages, le défaut étant intermittent.
 
 Lecture : le bras tourne sans aucun signal → cause dans le servo (piste 4). Il reste immobile
 → cause côté signal ou démarrage (pistes 1 à 3), et on rebranche blanc + noir, rouge retiré.
+
+## Résultat 2026-11-03 — essai 12 V sans signal
+
+David : 12 V rebranché sur tous les servos, tous les connecteurs débranchés du PCA9685,
+**5 redémarrages, rien ne bouge**. Le servo seul, sans signal, ne part donc pas (piste 4
+affaiblie, pas éliminée : 5 essais sur un défaut intermittent). La cause probable est côté
+signal ou démarrage (pistes 1 à 3). Suite : bras gauche seul, blanc + noir, rouge retiré,
+5 V coupé (signal flottant), puis 5 V présent sans Pi (PCA9685 alimenté, non configuré).
