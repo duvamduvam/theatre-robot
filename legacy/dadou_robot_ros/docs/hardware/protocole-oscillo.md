@@ -82,6 +82,18 @@ estimée de la séance : 1 h 30, dont la moitié en câblage des points de test.
   TP1 entre 5,0 et 5,25 V convertisseur branché, ondulation < 50 mV (coupleur AC).
 - C'est la mesure qui débloque le retour du Pi 4 (cf. fiche fumée du 12/09).
 
+### T1b — Mouvement parasite à l'allumage (le « 360 » signalé par David)
+
+- CH1 = TP4 (12 V, ×10), CH2 = TP6 (signal du servo concerné). Déclenchement sur le front
+  montant du 12 V. Longue fenêtre : de la mise sous tension à la fin du démarrage des nœuds.
+- Étapes : (a) sans Pi, PCA9685 alimenté ; (b) sans Pi, fil rouge du servo remis, pour voir
+  l'effet du 5 V fantôme ; (c) avec le Pi 4, une fois T1 réussi.
+- Attendu : signal plat tant que le Pi n'a pas configuré le PCA9685, puis impulsions à
+  **50 Hz** de largeur stable. **Toute impulsion erratique, ou une fréquence à 60 Hz**
+  (`wheels.py` règle la même puce à 60 Hz), désigne la cause. Signal propre et servo qui
+  tourne quand même : le problème est dans le servo (réglages, capteur).
+- **Sécurité** : personne ni câble dans la trajectoire du bras à chaque mise sous tension.
+
 ### T2 — Retour moteur par la masse signal (le cœur du problème)
 
 - CH1 = TP3 (GND du PCA9685), CH2 = TP7 (masse côté servo). Plage la plus sensible.

@@ -156,3 +156,24 @@ Ce que ça change :
 À faire : isoler chaque bout nu avant toute remise sous tension ; à 12 V coupé, mesurer
 12 V ↔ 5 V et 5 V ↔ GND à l'ohmmètre (pas de court-circuit) ; garder les mesures de masse
 prévues, qui restent valables.
+
+## Mise à jour 2026-11-03 — pourquoi les fils étaient débranchés : le « 360 » à l'allumage
+
+David avait débranché l'alimentation du servo parce que **souvent, à l'allumage, il faisait
+un tour complet** (servo exact à confirmer). Défaut intermittent, jamais documenté, et
+problème de sécurité à part entière : 380 kg·cm, environ 9 kg au bout d'un bras de 40 cm.
+
+Pistes, aucune mesurée, classées :
+1. **Ordre d'allumage + 5 V fantôme.** Le 12 V arrive avant que le Pi ait configuré le
+   PCA9685. Le fil rouge d'un ASME peut alors alimenter le PCA9685 en sous-tension, avec un
+   signal indéfini sur les servos. Intermittent, comme le symptôme.
+2. **Course à la fréquence PWM** (déjà notée, `etude-architecture-actionneurs.md` §3.2) :
+   `ServoKit` règle 50 Hz, `wheels.py` règle 60 Hz sur la même puce. À 60 Hz les impulsions
+   sont 17 % plus courtes, ce qui sur un servo 360° fait un saut d'angle important.
+3. **Écriture directe au démarrage** : `Servo.__init__` écrit `default_pos` sans rampe,
+   position réelle inconnue (`etude-architecture-actionneurs.md` §3.1, point 2). Le servo
+   rejoint le repos à pleine vitesse, peut-être par le long chemin.
+4. **Réaction du servo à l'absence de signal** : non documentée pour l'ASME-MR.
+
+Mesure : T1b de `../hardware/protocole-oscillo.md`. Retirer le fil rouge peut changer ce
+comportement : à observer, trajectoire dégagée, avant de conclure.
