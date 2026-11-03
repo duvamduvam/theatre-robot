@@ -256,3 +256,19 @@ l'interrupteur et ne se déconnecte pas), cordons 0,8 Ω : 5 V « + »/« - » =
 = **2**, soit ~1,2 Ω ; « - » 24 V / « + » 24 V = `1`. Les masses sont reliées, mais 1,2 Ω n'est pas
 une liaison franche. Question ouverte : ce lien passe-t-il par un fil noir de servo ? Contrôle :
 débrancher la fiche du bras gauche et remesurer.
+
+## Correction 2026-11-04 — la liaison de 1,2 Ω entre masses n'est pas reproduite
+
+Nouvelle mesure de David, calibre 200 Ω, PCA9685 branché puis débranché : « - » 5 V / « - » 24 V
+= **`1` dans les deux cas** ; « + » 12 V / « + » 5 V = `1` ; « + » 5 V / « + » 24 V = `1` ; 0 V à l'entrée
+du convertisseur, interrupteur coupé.
+
+**La conclusion « masses reliées par ~1,2 Ω » écrite plus haut est donc à retirer tant qu'elle
+n'est pas reproduite.** La lecture de 2 contredit celle-ci à configuration annoncée égale : points
+différents, mauvais contact, ou liaison intermittente. Le test « le fil noir du bras gauche est-il
+le seul lien ? » ne conclut pas : le lien a disparu fiche branchée aussi. État retenu : sur ce
+calibre, masses 5 V et 24 V séparées de plus de 200 Ω, cohérent avec un convertisseur isolé.
+Pas de liaison 12 V vers 5 V ni 5 V vers 24 V côté « + ».
+
+À mesurer : « - » 5 V / « - » 24 V sur un grand calibre, « - » 5 V / « - » 12 V fiche branchée et
+débranchée, « - » 12 V / « - » 24 V.
