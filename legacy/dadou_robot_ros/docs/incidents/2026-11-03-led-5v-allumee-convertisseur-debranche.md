@@ -206,3 +206,9 @@ David, même configuration (12 V présent, convertisseur 5 V débranché, câble
 débranchés du PCA9685) : **LED 5 V éteinte**. Le 5 V fantôme passe donc bien par les câbles
 3 points. Reste à départager rouge et blanc : à l'essai suivant (blanc + noir, rouge
 retiré), LED éteinte = fil rouge confirmé ; LED allumée = retour par la ligne signal.
+
+## Résultat 2026-11-03 — fils rouges coupés et isolés
+
+David : fils rouges coupés et protégés, blanc + noir branchés, convertisseur 5 V débranché :
+**aucun mouvement, LED 5 V éteinte**. Le 5 V fantôme passait donc par le **fil rouge**, pas
+par la ligne signal. Un signal flottant ne déclenche pas le tour. Suite : 5 V présent sans Pi.
