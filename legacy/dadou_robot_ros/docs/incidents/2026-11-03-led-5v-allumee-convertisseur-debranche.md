@@ -201,3 +201,8 @@ David : 12 V rebranché sur tous les servos, tous les connecteurs débranchés d
 affaiblie, pas éliminée : 5 essais sur un défaut intermittent). La cause probable est côté
 signal ou démarrage (pistes 1 à 3). Suite : bras gauche seul, blanc + noir, rouge retiré,
 5 V coupé (signal flottant), puis 5 V présent sans Pi (PCA9685 alimenté, non configuré).
+
+David, même configuration (12 V présent, convertisseur 5 V débranché, câbles servos
+débranchés du PCA9685) : **LED 5 V éteinte**. Le 5 V fantôme passe donc bien par les câbles
+3 points. Reste à départager rouge et blanc : à l'essai suivant (blanc + noir, rouge
+retiré), LED éteinte = fil rouge confirmé ; LED allumée = retour par la ligne signal.
