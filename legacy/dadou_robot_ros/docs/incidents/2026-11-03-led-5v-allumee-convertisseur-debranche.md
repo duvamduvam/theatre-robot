@@ -212,3 +212,15 @@ retiré), LED éteinte = fil rouge confirmé ; LED allumée = retour par la lign
 David : fils rouges coupés et protégés, blanc + noir branchés, convertisseur 5 V débranché :
 **aucun mouvement, LED 5 V éteinte**. Le 5 V fantôme passait donc par le **fil rouge**, pas
 par la ligne signal. Un signal flottant ne déclenche pas le tour. Suite : 5 V présent sans Pi.
+
+## Note 2026-11-03 — borne FG et isolation du convertisseur
+
+La borne du milieu du Mean Well SD-50 est **FG, masse de châssis, pas le 0 V** (fiche
+technique ; `../hardware/alim-5v-pi.md` §3 et §7.4). Laissée non raccordée pour ces essais.
+
+La fiche donne aussi **1500 VAC d'isolation entrée/sortie** : le « - » de sortie 5 V n'est
+pas relié au « - » batterie par le convertisseur. À mesurer : continuité entre « - » sortie et
+« - » entrée, câblage en place. Si elle est ouverte, les fils noirs des servos sont peut-être
+le seul lien entre masses 5 V et 12 V. Et les noirs se rejoignent au PCA9685 : un servo sans
+« - » de puissance peut renvoyer son courant moteur par son noir vers le noir d'un autre servo,
+sans passer par le convertisseur. Hypothèse non mesurée, cohérente avec la fiche déformée.

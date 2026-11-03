@@ -37,6 +37,10 @@ SSH/Wi-Fi) et déclenche les mouvements du robot. Personne ne tient de pince pen
    après le remède de l'incident du 03/11 (fils rouges des ASME retirés, masse de
    puissance du bras gauche refaite).
 
+5. **Avant T0** : vérifier la continuité entre le « - » 5 V et `TP0`. Les convertisseurs
+   SD-50 sont isolés (1500 VAC entrée/sortie) : si cette liaison n'existe pas, le rail 5 V
+   flotte par rapport à `TP0` et les mesures de TP1 et TP2 n'ont pas de sens.
+
 ## 3. Points de test à câbler (une fois pour toutes)
 
 Chaque point = un **fil soudé ou serré dans un bornier, terminé par une broche mâle
