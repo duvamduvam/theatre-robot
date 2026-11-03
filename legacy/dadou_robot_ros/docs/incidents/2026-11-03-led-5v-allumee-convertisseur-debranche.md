@@ -307,3 +307,21 @@ coupés. Le tour peut donc venir du fil rouge (piste 1, supprimée de fait) ou d
 
 Reste avant de rendre un Pi : inspection visuelle du Pi 4, remplacement de la fiche du bras
 gauche, contrôle de sa masse de puissance, décision sur la liaison des masses.
+
+## Relevés 2026-11-04 — masse de puissance du bras gauche : `1`
+
+Calibre 200 Ω, cordons 0,8 Ω, interrupteur coupé :
+
+| Points | Lecture | Lecture provisoire |
+|---|---|---|
+| « - » bornier du bras gauche / « - » rail 12 V, fiche débranchée | `1` | **Pas de liaison mesurée** : le « - » de puissance du bras serait ouvert (ou mauvais points) |
+| « - » rail 24 V / « - » rail 5/12 V, 3 fiches débranchées | 0,7 | Égal aux cordons : rails reliés franchement |
+
+Retirer des chemins parallèles ne peut pas faire baisser une résistance : passer de 2,5 à 0,7
+montre que **les ~1,7 Ω étaient une erreur de contact des pointes**. Cette alerte est retirée.
+
+Si le premier relevé se confirme, le fil noir du signal était le **seul retour** du moteur du bras
+gauche : c'est l'explication directe de la fiche déformée. Conséquence sur les essais : sans fiche,
+ce bras n'était peut-être pas alimenté, donc l'essai « sans signal » ne vaut pas pour lui. Contrôle
+décisif : tension au bornier d'alimentation du bras, fiche débranchée, sous tension.
+**Ne pas rebrancher la fiche du bras gauche avant ce contrôle.**
