@@ -325,3 +325,9 @@ gauche : c'est l'explication directe de la fiche déformée. Conséquence sur le
 ce bras n'était peut-être pas alimenté, donc l'essai « sans signal » ne vaut pas pour lui. Contrôle
 décisif : tension au bornier d'alimentation du bras, fiche débranchée, sous tension.
 **Ne pas rebrancher la fiche du bras gauche avant ce contrôle.**
+
+Contrôle décisif, 2026-11-04 : **0 V au bornier d'alimentation du bras gauche, 12 V au
+convertisseur**, fiche débranchée. Coupure confirmée sur l'alimentation du servo, « + » ou « - »
+à déterminer. L'essai « sans signal » ne vaut donc pas pour ce bras. Bouche et bras droit pas
+encore contrôlés. Pi 4 : pas avant inspection, et d'abord sans aucune fiche servo, moteurs de
+roues coupés.
