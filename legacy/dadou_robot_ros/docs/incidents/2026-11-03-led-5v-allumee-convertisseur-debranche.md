@@ -247,3 +247,6 @@ convertisseur déconnecté du rail, mesurer chaque côté séparément, batterie
 Localisation (calibre 200 Ω) : convertisseur seul, sortie débranchée = **25** ; rail seul = **`1`**,
 soit plus de 200 Ω sur ce calibre, pas forcément un circuit ouvert. Les 25 Ω viennent du
 convertisseur (charge interne probable, non vérifiée), le rail n'a pas de court-circuit.
+
+Convertisseur du rail 5 V : étiquette lue par David **`SD-50B-5`**, sortie à vide **5,07 V**. Bon
+modèle, bonne tension, pour la première fois lus sur le robot.
