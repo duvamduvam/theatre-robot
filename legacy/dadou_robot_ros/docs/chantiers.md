@@ -30,6 +30,7 @@ journal de bord illisible).*
 > coupé (il alimentait le rail depuis le 12 V). Fiche du bras gauche déformée par la chaleur.
 > Le gel reste en place : inspection du Pi 4, fiche et masse de puissance du bras gauche,
 > liaison des masses. Détail : `incidents/2026-11-03-led-5v-allumee-convertisseur-debranche.md`.
+> ⚠️ Le Pi 4 ne démarre plus sur le rail (environ 8 flashs verts, défaut SDRAM probable) : test hors robot à faire.
 >
 > Post-mortem complet, relevés et pièges de diagnostic : **`incidents/2026-09-12-fumee-rpi4.md`**
 > (⚠️ y lire le piège `fake-hwclock` : sans RTC, `uptime`, `who -b` et `docker ps` se

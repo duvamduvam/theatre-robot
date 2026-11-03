@@ -331,3 +331,14 @@ convertisseur**, fiche débranchée. Coupure confirmée sur l'alimentation du se
 à déterminer. L'essai « sans signal » ne vaut donc pas pour ce bras. Bouche et bras droit pas
 encore contrôlés. Pi 4 : pas avant inspection, et d'abord sans aucune fiche servo, moteurs de
 roues coupés.
+
+## Pi 4 rebranché, 2026-11-04 : ne démarre pas, 8 flashs verts
+
+Pi 4 sur le rail 5 V, fiches servos débranchées. Aucune réponse réseau (Wi-Fi, puis RJ45 : rien
+d'affiché). David compte **environ 8 clignotements verts répétés**. Sur Pi 4, 8 flashs courts =
+**défaut SDRAM** selon des sources secondaires (table officielle non relue). Causes citées :
+alimentation, RAM endommagée, firmware. Compte à confirmer.
+
+La carte passait tous les tests le 12/09 sur secteur : elle a pu s'abîmer depuis ou être mal
+alimentée ici. Séparation : Pi hors robot, sur son alimentation secteur. Mêmes 8 flashs = carte
+ou firmware ; démarrage normal = alimentation ou interface robot. **Pi coupé d'ici là.**
