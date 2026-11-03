@@ -585,3 +585,10 @@ Donc, pour la prochaine passe :
 3. **Une règle ou un pied à coulisse dans le cadre** dès qu'un pas ou un filetage compte.
 4. Lumière rasante, pas de flash.
 5. Et surtout : **ce qui est dans une boîte fermée ne se filme pas — ça s'ouvre.** Voir §3.
+
+## Appareils de mesure de l'atelier (déclarés par David, 2026-11-03)
+
+| Appareil | Référence | Ce qu'il fait | Limites à connaître |
+|---|---|---|---|
+| Multimètre | `OHMTEC 254089`, CAT III 600 V, notice dans `datasheets/OHMTEC-254089-multimetre-notice.pdf` | DC 200 mV à 600 V (résolution 0,1 mV), résistance 200 Ω à 200 MΩ (résolution 0,1 Ω), courant jusqu'à 10 A, diode, continuité | Le bip sonne **sous 50 Ω** : il ne prouve pas une bonne masse. Sur 200 Ω, précision ±(0,8 % + 3 digits) : il ne lit pas une limite de 0,1 Ω. Retrancher les cordons |
+| Oscilloscope USB | `Hantek DSO-6022BE` (USB `04b4:6022`) | 2 voies, voir `protocole-oscillo.md` | Couplage DC seul. Masse reliée à l'USB : ne pas le brancher au PC sur le robot |

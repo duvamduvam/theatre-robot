@@ -224,3 +224,12 @@ pas relié au « - » batterie par le convertisseur. À mesurer : continuité en
 le seul lien entre masses 5 V et 12 V. Et les noirs se rejoignent au PCA9685 : un servo sans
 « - » de puissance peut renvoyer son courant moteur par son noir vers le noir d'un autre servo,
 sans passer par le convertisseur. Hypothèse non mesurée, cohérente avec la fiche déformée.
+
+## Correction 2026-11-03 — limite de 0,1 Ω non mesurable
+
+Le multimètre de David (`OHMTEC 254089`) a une résolution de 0,1 Ω et une précision de
+±(0,8 % + 3 digits) sur 200 Ω, et ses cordons ajoutent leur propre résistance : **la limite
+« < 0,1 Ω » écrite plus haut n'est pas mesurable avec lui**. Méthode retenue : court-circuiter
+les pointes, noter la valeur, la retrancher ; résultat attendu proche de 0, sous environ
+0,5 Ω. Le bip de continuité sonne sous 50 Ω et ne qualifie pas une masse de puissance. Le vrai
+contrôle d'une masse reste la chute de tension sous charge, en calibre 200 mV DC.
