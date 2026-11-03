@@ -113,3 +113,22 @@ Conséquences :
   (fait, même commit).
 - Toute remise sous tension des Pi (protocole du 12/09) passe par la mesure **rail 5 V
   = 0 V convertisseur débranché**, avant la mesure « 5 V présent ».
+
+## Mise à jour 2026-11-03, 00h55 — deux vidéos de plus (muettes)
+
+- **La fiche déformée venait plutôt du BRAS GAUCHE**, pas de la bouche (David). Les trois
+  ASME (bouche + 2 bras) ont la même carte : `ASME-MR`, sérigraphie « 360° Magnetic »
+  (`../hardware/photos/2026-11-03-led-5v/a-f11.jpg`). Un bras porte bien plus de couple
+  que la bouche : cohérent avec un **retour de courant moteur par le fil noir**.
+- Fiche du bras gauche (`b-f19.jpg`) : dessus du boîtier **lustré et boursouflé** sur
+  toute la longueur — le plastique a coulé en surface, pas seulement « un peu ».
+- **Cavalier introuvable sur la vidéo** : la carte MR n'a pas le même dessin que la
+  carte ASME-02 du manuel. On voit deux barrettes jaunes en bas à gauche (un double
+  cavalier rose/bleu, un cavalier bleu seul), sérigraphie illisible. **Ne pas toucher
+  aux cavaliers à l'aveugle** : ils règlent aussi le mode de commande (PWM / analogique).
+- **Remède qui ne dépend d'aucun cavalier** : retirer le fil ROUGE de la fiche côté
+  PCA9685 (soulever la languette du boîtier avec une aiguille, extraire le contact,
+  isoler le bout à la gaine). Le manuel le dit : le « + » n'a pas à être câblé. À faire
+  sur les **trois** ASME. Vérifier ensuite : LED 5 V éteinte convertisseur débranché.
+- Fiche du bras gauche : à remplacer (boîtier neuf). La cause de la chauffe (masse de
+  puissance au bornier vert) reste à trouver sur ce bras en premier.
