@@ -272,3 +272,10 @@ Pas de liaison 12 V vers 5 V ni 5 V vers 24 V côté « + ».
 
 À mesurer : « - » 5 V / « - » 24 V sur un grand calibre, « - » 5 V / « - » 12 V fiche branchée et
 débranchée, « - » 12 V / « - » 24 V.
+
+Relevé 2026-11-04 : `1` partout, sauf **2,5 entre le « - » du rail 24 V et le « - » du rail 5/12 V**,
+soit ~1,7 Ω cordons retranchés. David signale **plusieurs rails de distribution** : un rail
+24 V, un rail 5/12 V, un rail 5/12/24 V (disposition non documentée, photo demandée). Lecture
+provisoire : les mesures faites aux bornes et aux rails n'ont pas porté sur les mêmes points, ce
+qui expliquerait 2 puis 1. Si les rails sont reliés par ~1,7 Ω, c'est une liaison résistive à
+trouver : à 5 A elle ferait chuter plus de 8 V.
