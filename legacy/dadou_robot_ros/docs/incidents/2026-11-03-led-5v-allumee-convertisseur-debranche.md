@@ -279,3 +279,15 @@ soit ~1,7 Ω cordons retranchés. David signale **plusieurs rails de distributio
 provisoire : les mesures faites aux bornes et aux rails n'ont pas porté sur les mêmes points, ce
 qui expliquerait 2 puis 1. Si les rails sont reliés par ~1,7 Ω, c'est une liaison résistive à
 trouver : à 5 A elle ferait chuter plus de 8 V.
+
+## Vidéo des rails, 2026-11-04 (muette, `rails-f04/f12/f19.jpg`)
+
+Vu, sérigraphies illisibles donc polarités non confirmées : convertisseur à 5 vis, paire
+jaune/noir sur la sortie, borne du milieu vide, paire rouge/noir sur l'entrée. Rails = cartes vertes
+à fiches débrochables dans un cadre gris imprimé, bus rouge visible dans les fenêtres dessous.
+Des fiches 3 points reçoivent noir + jaune + rouge.
+
+**Suspect à contrôler** (`rails-f12.jpg`) : sur une fiche, deux fils noirs d'un câble double
+montrent leur cuivre nu au ras du dessus, et un troisième bout noir à cuivre nu est recourbé à côté.
+Possibles fils mal enfoncés ou non serrés : cela pourrait expliquer une liaison de masse résistive
+ou intermittente. Non confirmé à l'image.
