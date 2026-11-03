@@ -294,3 +294,16 @@ ou intermittente. Non confirmé à l'image.
 
 Contrôle David, 2026-11-04 : les fils noirs de `rails-f12.jpg` sont **bien serrés**. Suspect écarté,
 le cuivre visible n'indique pas un mauvais contact. La liaison de ~1,7 Ω reste inexpliquée.
+
+## Résultat 2026-11-04 — PCA9685 alimenté, sans Pi
+
+David : 5 V mesuré au PCA9685 = **5,04 V** (5,07 V à vide au convertisseur). Bras gauche seul,
+blanc + noir, rouge coupé : **5 allumages, aucun mouvement**.
+
+Bilan des essais du tour à l'allumage, 5 allumages chacun, aucun mouvement : sans signal ;
+signal flottant ; PCA9685 alimenté non configuré. Limite : tous ont été faits fils rouges
+coupés. Le tour peut donc venir du fil rouge (piste 1, supprimée de fait) ou du démarrage du Pi
+(pistes 2 et 3), non testé. Rebrancher le rouge pour trancher n'a pas d'intérêt.
+
+Reste avant de rendre un Pi : inspection visuelle du Pi 4, remplacement de la fiche du bras
+gauche, contrôle de sa masse de puissance, décision sur la liaison des masses.

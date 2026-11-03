@@ -26,6 +26,11 @@ journal de bord illisible).*
 > (`firmware/pico_test_5v`), ne rien réalimenter et ne recoupler aucun Pi.** Cela gèle de
 > fait tout travail sur le robot réel (chantiers 0 et 1).
 >
+> **Point du 2026-11-04** : le rail 5 V tient 5,04 V au PCA9685, sans Pi. Fil rouge des ASME
+> coupé (il alimentait le rail depuis le 12 V). Fiche du bras gauche déformée par la chaleur.
+> Le gel reste en place : inspection du Pi 4, fiche et masse de puissance du bras gauche,
+> liaison des masses. Détail : `incidents/2026-11-03-led-5v-allumee-convertisseur-debranche.md`.
+>
 > Post-mortem complet, relevés et pièges de diagnostic : **`incidents/2026-09-12-fumee-rpi4.md`**
 > (⚠️ y lire le piège `fake-hwclock` : sans RTC, `uptime`, `who -b` et `docker ps` se
 > contredisent après une coupure — seul `/proc/uptime` dit vrai).
