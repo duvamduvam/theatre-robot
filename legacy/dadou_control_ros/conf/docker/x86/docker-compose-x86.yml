@@ -23,6 +23,10 @@ services:
       - QT_X11_NO_MITSHM=1
       - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
+      # Nom du robot = namespace ROS ABSOLU de tous les nœuds (lot L1b) : /didier/…
+      # par défaut. Robot, vision et télécommande d'un même Didier DOIVENT avoir le
+      # même nom (sinon ils ne s'entendent plus) ; la CLI ros2 doit préfixer.
+      - ROBOT_NAME=${ROBOT_NAME:-didier}
       # Profil du boîtier de faders (controller/input/sliders_mapping.py) :
       # "default" (cou / roues, historique) ou "repetition" (fader 1 = vitesse du
       # cheminement de Didier en salle de répétition simulée — à utiliser AVEC

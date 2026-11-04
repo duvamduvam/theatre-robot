@@ -9,9 +9,9 @@ en horloge simulée -- un opérateur humain de l'autre côté du WebSocket vit e
 temps réel, que le Gazebo tourne à 1x, en pause ou accéléré n'y change rien.
 """
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument, GroupAction
+from launch.substitutions import EnvironmentVariable, LaunchConfiguration
+from launch_ros.actions import Node, PushRosNamespace
 from launch_ros.parameter_descriptions import ParameterValue
 
 
@@ -64,23 +64,34 @@ def generate_launch_description():
                                            " camera_ext/image_raw), servi en LECTURE SEULE sur"
                                            " /exterior. Vide (défaut) = désactivé, aucun abonnement."),
 
-        Node(
-            package="robot_web",
-            executable="web_bridge",
-            name="web_bridge_node",
-            parameters=[{
-                "web_port": web_port,
-                "token": LaunchConfiguration("token"),
-                "json_dir": LaunchConfiguration("json_dir"),
-                "drive_enabled": drive_enabled,
-                "max_linear": max_linear,
-                "max_angular": max_angular,
-                "rehearsal_enabled": rehearsal_enabled,
-                "perception_topic": LaunchConfiguration("perception_topic"),
-                "exterior_topic": LaunchConfiguration("exterior_topic"),
-                "camera_topic": LaunchConfiguration("camera_topic"),
-                "camera_compressed": ParameterValue(
-                    LaunchConfiguration("camera_compressed"), value_type=bool),
-            }],
-        ),
+        DeclareLaunchArgument("robot_name",
+                              default_value=EnvironmentVariable("ROBOT_NAME", default_value="didier"),
+                              description="Nom du robot = namespace ABSOLU de tous les nœuds"
+                                          " (défaut : variable ROBOT_NAME, sinon didier)"),
+
+        # Lot L1b : UN groupe, UN PushRosNamespace absolu (/didier/... par défaut),
+        # jamais de namespace= par nœud (on l'oublierait au prochain).
+        GroupAction([
+            PushRosNamespace(["/", LaunchConfiguration("robot_name")]),
+
+            Node(
+                package="robot_web",
+                executable="web_bridge",
+                name="web_bridge_node",
+                parameters=[{
+                    "web_port": web_port,
+                    "token": LaunchConfiguration("token"),
+                    "json_dir": LaunchConfiguration("json_dir"),
+                    "drive_enabled": drive_enabled,
+                    "max_linear": max_linear,
+                    "max_angular": max_angular,
+                    "rehearsal_enabled": rehearsal_enabled,
+                    "perception_topic": LaunchConfiguration("perception_topic"),
+                    "exterior_topic": LaunchConfiguration("exterior_topic"),
+                    "camera_topic": LaunchConfiguration("camera_topic"),
+                    "camera_compressed": ParameterValue(
+                        LaunchConfiguration("camera_compressed"), value_type=bool),
+                }],
+            ),
+        ]),
     ])

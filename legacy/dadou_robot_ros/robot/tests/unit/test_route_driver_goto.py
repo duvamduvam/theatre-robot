@@ -135,7 +135,7 @@ def _odom(noeud, x, y, yaw, ms):
     pose = types.SimpleNamespace(
         position=types.SimpleNamespace(x=x, y=y, z=0.0),
         orientation=types.SimpleNamespace(x=0.0, y=0.0, z=math.sin(yaw / 2), w=math.cos(yaw / 2)))
-    noeud.abonnements["/ground_truth/odom"](types.SimpleNamespace(pose=types.SimpleNamespace(pose=pose)))
+    noeud.abonnements["ground_truth/odom"](types.SimpleNamespace(pose=types.SimpleNamespace(pose=pose)))
 
 
 def _recevoir(noeud, topic, texte):

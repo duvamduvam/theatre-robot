@@ -6,9 +6,10 @@ cf. leur docstring respective).
 Rejoue en sim la sémantique de robot/actions/servo.py (voir robot_sim_lib/
 servos_logic.py pour le détail des divergences assumées et les tests), pour
 piloter les 5 JointPositionController gz (neck, left_arm, right_arm, left_eye,
-right_eye) déclarés dans dadou_robot_gz.urdf.xacro : topic /<servo>/position
+right_eye) déclarés dans dadou_robot_gz.urdf.xacro : topic gz /<servo>/position
 (std_msgs/Float64, RADIANS -- contrat vérifié par robot/tests/unit/test_urdf.py
-et gz_bridge.yaml).
+et gz_bridge.yaml). Côté ROS le nom est RELATIF (<servo>/position, lot L1b) :
+il suit le namespace du robot (/didier/neck/position), le bridge fait le lien.
 
 Abonnements (StringTime -- mêmes noms de topic que le vrai robot, publiés par
 animations_node/servo_node : ce sont les valeurs de dadou_utils_ros.utils_static
@@ -62,7 +63,9 @@ class ServosSimNode(Node):
         now_ms = self._now_ms()
         self._servos = {name: ServoSim(default_pos=DEFAULT_POS, now_ms=now_ms) for name in SERVO_NAMES}
         self._publishers = {
-            name: self.create_publisher(Float64, "/{}/position".format(name), 10)
+            # RELATIF (lot L1b) : un « / » initial sortirait du namespace et le
+            # bridge (namespacé lui aussi) ne le relaierait plus vers gz.
+            name: self.create_publisher(Float64, "{}/position".format(name), 10)
             for name in SERVO_NAMES
         }
 

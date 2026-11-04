@@ -44,7 +44,9 @@ CMD_VEL_TOPIC = "cmd_vel_follow"
 # téléportation (set_pose au départ) et dérive au premier patinage sur une
 # bordure (constaté le 2026-10-07). SIM-ONLY par construction : ce topic
 # n'existe que dans Gazebo, le vrai robot n'a aucune odométrie.
-ODOM_TOPIC = "/ground_truth/odom"
+# RELATIF depuis le lot L1b : /<robot>/ground_truth/odom côté ROS (le bridge
+# est namespacé) ; le topic GZ, lui, reste /ground_truth/odom (xacro).
+ODOM_TOPIC = "ground_truth/odom"
 # Événements de proximité aux points d'intérêt : StringTime JSON
 # {"poi": nom, "event": "enter"|"exit", "distance": m}. Consommés par le
 # régisseur : un « enter » déclenche les éléments de scénario `t: poi` (R3).

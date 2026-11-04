@@ -9,8 +9,9 @@ une validation du rendu physique du ruban.
 
 Mécanisme : le monde `stage` (robot_sim/worlds/stage.sdf) charge le système gz
 UserCommands, qui expose /world/stage/material_color (gz.msgs.MaterialColor).
-Le bridge ros_gz (config/gz_bridge.yaml) route notre topic ROS /material_color
-dessus : publier dessus change en direct le matériau (diffuse/emissive) d'un
+Le bridge ros_gz (config/gz_bridge.yaml) route notre topic ROS material_color
+(RELATIF depuis le lot L1b : /<robot>/material_color, le bridge est namespacé
+comme nous) dessus : publier dessus change en direct le matériau (diffuse/emissive) d'un
 visual nommé, sans reconstruire la scène. Voir CLAUDE.md / commit de la
 bascule cmd_vel pour le même principe appliqué au bridge topics roues.
 
@@ -85,7 +86,8 @@ class LedsSimNode(Node):
         self._face_expression = None  # dernière expression reçue sur `face` (ou None/"stop")
         self._last_published = {}    # visual_name -> dernier RGB publié (anti-spam)
 
-        self.material_color_pub = self.create_publisher(MaterialColor, "/material_color", 10)
+        # RELATIF (lot L1b) : même namespace que le bridge, sinon le topic n'arrive plus à gz.
+        self.material_color_pub = self.create_publisher(MaterialColor, "material_color", 10)
 
         self.create_subscription(StringTime, "robot_lights", self._on_robot_lights, 10)
         self.create_subscription(StringTime, "face", self._on_face, 10)

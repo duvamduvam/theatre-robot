@@ -2,7 +2,7 @@
 """Node `gaze_follower` : le robot suit une personne DU REGARD (cou seulement).
 
 SÉCURITÉ (cf. CLAUDE.md) :
- - Ce node ne publie QUE sur le cou (`neck` en mode robot, `/neck/position` en
+ - Ce node ne publie QUE sur le cou (`neck` en mode robot, `neck/position` en
    mode sim). Il ne touche JAMAIS wheels/cmd_vel*/e_stop — aucun de ces topics
    n'apparaît ici. Le regard ne déplace pas les 50 kg du robot.
  - Il démarre DÉSACTIVÉ (enabled=False) : télécommande > autonome, toujours.
@@ -64,7 +64,9 @@ GAZE_CMD_TOPIC = "gaze"             # StringTime "on"/"off" : activation en dire
 # deux côtés (LOOK_TOPIC de chat_node, dépôt vision).
 LOOK_TOPIC = "look"
 NECK_TOPIC_ROBOT = "neck"          # StringTime : consigne 0-99 (vrai robot)
-NECK_TOPIC_SIM = "/neck/position"  # Float64 en radians (JointPositionController gz)
+# Float64 en radians (JointPositionController gz). RELATIF depuis le lot L1b :
+# /<robot>/neck/position côté ROS, relayé vers le topic gz /neck/position par le bridge.
+NECK_TOPIC_SIM = "neck/position"
 LEFT_EYE_TOPIC = "left_eye"        # StringTime : consigne 0-99 (servo œil gauche)
 RIGHT_EYE_TOPIC = "right_eye"      # StringTime : consigne 0-99 (servo œil droit)
 # StringTime latché : json.dumps(nom séquence) ou "" (contrat animations_node,

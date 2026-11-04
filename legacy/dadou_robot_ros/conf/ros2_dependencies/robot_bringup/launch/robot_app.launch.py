@@ -1,8 +1,8 @@
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import PathJoinSubstitution
-from launch_ros.actions import Node
+from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node, PushRosNamespace
 from launch_ros.substitutions import FindPackageShare
 
 # Contrat inter-machines (noms des topics servo) : reste sur la lib partagée.
@@ -14,7 +14,11 @@ from robot.robot_config import config
 
 
 def generate_launch_description():
-    ld = LaunchDescription()
+    # Lot L1b : tous les nœuds du robot (et la chaîne roues incluse) vivent sous
+    # /<ROBOT_NAME>/ (défaut /didier/). Les actions sont collectées dans `group`
+    # puis enveloppées dans UN GroupAction + PushRosNamespace ABSOLU en fin de
+    # fonction — jamais de namespace= par nœud (on l'oublierait au prochain).
+    group = []
 
     # name= rename node
     # remap topic remappings=
@@ -176,19 +180,28 @@ def generate_launch_description():
         )
     )
 
-    #ld.add_action(ai_server_node)
-    ld.add_action(animations_server_node)
-    ld.add_action(audio_server_node)
-    #ld.add_action(face_server_node)
-    ld.add_action(lights_server_node)
-    ld.add_action(relays_server_node)
-    ld.add_action(system_server_node)
-    ld.add_action(wheels_server_node)
-    ld.add_action(neck_server_node)
-    ld.add_action(left_arm_server_node)
-    ld.add_action(right_arm_server_node)
-    ld.add_action(left_eye_server_node)
-    ld.add_action(right_eye_server_node)
-    ld.add_action(web_bridge_node)
-    ld.add_action(drive_launch)
-    return ld
+    #group.append(ai_server_node)
+    group.append(animations_server_node)
+    group.append(audio_server_node)
+    #group.append(face_server_node)
+    group.append(lights_server_node)
+    group.append(relays_server_node)
+    group.append(system_server_node)
+    group.append(wheels_server_node)
+    group.append(neck_server_node)
+    group.append(left_arm_server_node)
+    group.append(right_arm_server_node)
+    group.append(left_eye_server_node)
+    group.append(right_eye_server_node)
+    group.append(web_bridge_node)
+    group.append(drive_launch)
+
+    # drive.launch.py pousse lui aussi /<robot_name> en absolu : inclus ici, il
+    # reçoit la même LaunchConfiguration robot_name, le résultat est identique.
+    return LaunchDescription([
+        DeclareLaunchArgument("robot_name",
+                              default_value=EnvironmentVariable("ROBOT_NAME", default_value="didier"),
+                              description="Nom du robot = namespace ABSOLU de tous les nœuds"
+                                          " (défaut : variable ROBOT_NAME, sinon didier)"),
+        GroupAction([PushRosNamespace(["/", LaunchConfiguration("robot_name")]), *group]),
+    ])

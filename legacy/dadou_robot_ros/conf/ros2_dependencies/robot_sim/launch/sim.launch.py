@@ -11,7 +11,7 @@ robot_description, robot_state_publisher et le bridge ros_gz.
     # défaut, comme gaze_follower : lancement explicite requis) :
     ros2 launch robot_sim sim.launch.py animations:=true
     # puis, dans un autre terminal (même domaine ROS que la sim, 43) :
-    #   ros2 topic pub -1 animation robot_interfaces/msg/StringTime '{msg: "\\"parle\\""}'
+    #   ros2 topic pub -1 /didier/animation robot_interfaces/msg/StringTime '{msg: "\\"parle\\""}'
 
     # Aperçu web du visage LED (face_sim, package "robot" -- les matrices LED
     # n'ont aucun rendu dans Gazebo) -- OFF par défaut, même prudence :
@@ -19,13 +19,19 @@ robot_description, robot_state_publisher et le bridge ros_gz.
     # puis http://localhost:8766 (face_port pour changer le port).
 
 Tout tourne en use_sim_time (horloge /clock bridgée depuis gz).
+
+Namespace (lot L1b) : tout vit sous /<ROBOT_NAME>/ (défaut /didier/, variable
+d'environnement posée par docker-compose-sim.yml, ou robot_name:=…). La CLI ne
+suit PAS : un nom relatif tapé dans `ros2 topic pub` se résout à la racine —
+préfixer (/didier/animation) ou `--ros-args -r __ns:=/didier` pour un ros2 run.
 """
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
-from launch_ros.actions import Node
+from launch.substitutions import (Command, EnvironmentVariable, LaunchConfiguration, PathJoinSubstitution,
+                                  PythonExpression)
+from launch_ros.actions import Node, PushRosNamespace
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
@@ -119,113 +125,127 @@ def generate_launch_description():
                               description="Port HTTP du flux MJPEG de l'aperçu visage (8765 déjà pris"
                                            " par le pont web, cf. web_port)."),
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution([FindPackageShare("ros_gz_sim"), "launch", "gz_sim.launch.py"])
+        DeclareLaunchArgument("robot_name",
+                              default_value=EnvironmentVariable("ROBOT_NAME", default_value="didier"),
+                              description="Nom du robot = namespace ABSOLU de tous les nœuds"
+                                          " (défaut : variable ROBOT_NAME, sinon didier)"),
+
+        # Lot L1b : UN groupe, UN PushRosNamespace absolu (/didier/... par défaut),
+        # jamais de namespace= par nœud. Le bridge (gz_bridge.yaml : noms ROS
+        # relatifs sauf /clock et /tf), robot_state_publisher (robot_description,
+        # joint_states) et le spawn (-topic robot_description) sont DANS le groupe :
+        # ils se suivent. Les noms côté gz ne changent pas (le monde ignore ROS).
+        GroupAction([
+            PushRosNamespace(["/", LaunchConfiguration("robot_name")]),
+
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([FindPackageShare("ros_gz_sim"), "launch", "gz_sim.launch.py"])
+                ),
+                launch_arguments={"gz_args": gz_args}.items(),
             ),
-            launch_arguments={"gz_args": gz_args}.items(),
-        ),
 
-        Node(
-            package="robot_state_publisher",
-            executable="robot_state_publisher",
-            parameters=[{"robot_description": robot_description, "use_sim_time": True}],
-        ),
+            Node(
+                package="robot_state_publisher",
+                executable="robot_state_publisher",
+                parameters=[{"robot_description": robot_description, "use_sim_time": True}],
+            ),
 
-        Node(
-            package="ros_gz_sim",
-            executable="create",
-            arguments=["-topic", "robot_description", "-name", "dadou_robot", "-z", SPAWN_Z],
-            output="screen",
-        ),
+            Node(
+                package="ros_gz_sim",
+                executable="create",
+                arguments=["-topic", "robot_description", "-name", "dadou_robot", "-z", SPAWN_Z],
+                output="screen",
+            ),
 
-        Node(
-            package="ros_gz_bridge",
-            executable="parameter_bridge",
-            parameters=[{
-                "config_file": PathJoinSubstitution([
-                    FindPackageShare("robot_sim"), "config", "gz_bridge.yaml",
-                ]),
-                "use_sim_time": True,
-            }],
-            output="screen",
-        ),
+            Node(
+                package="ros_gz_bridge",
+                executable="parameter_bridge",
+                parameters=[{
+                    "config_file": PathJoinSubstitution([
+                        FindPackageShare("robot_sim"), "config", "gz_bridge.yaml",
+                    ]),
+                    "use_sim_time": True,
+                }],
+                output="screen",
+            ),
 
-        # Visualisation LED (matériaux émissifs gz, cf. robot_sim_lib/leds_logic.py) :
-        # écoute robot_lights/face côté ROS, publie /material_color (bridgé vers
-        # /world/stage/material_color, système gz UserCommands du monde `stage`).
-        Node(
-            package="robot_sim",
-            executable="leds_sim_node",
-            parameters=[{"use_sim_time": True}],
-            output="screen",
-        ),
+            # Visualisation LED (matériaux émissifs gz, cf. robot_sim_lib/leds_logic.py) :
+            # écoute robot_lights/face côté ROS, publie material_color (relatif, bridgé vers
+            # /world/stage/material_color, système gz UserCommands du monde `stage`).
+            Node(
+                package="robot_sim",
+                executable="leds_sim_node",
+                parameters=[{"use_sim_time": True}],
+                output="screen",
+            ),
 
-        # Rejeu des servos (neck/left_arm/right_arm/left_eye/right_eye, cf.
-        # robot_sim_lib/servos_logic.py) : écoute les 5 topics StringTime,
-        # publie /<servo>/position (radians) sur les JointPositionController gz.
-        Node(
-            package="robot_sim",
-            executable="servos_sim_node",
-            parameters=[{"use_sim_time": True}],
-            output="screen",
-        ),
+            # Rejeu des servos (neck/left_arm/right_arm/left_eye/right_eye, cf.
+            # robot_sim_lib/servos_logic.py) : écoute les 5 topics StringTime,
+            # publie <servo>/position (relatif, radians) sur les JointPositionController gz.
+            Node(
+                package="robot_sim",
+                executable="servos_sim_node",
+                parameters=[{"use_sim_time": True}],
+                output="screen",
+            ),
 
-        # Rejeu des séquences JSON (paquet "robot", le VRAI code du robot --
-        # PAS un paquet robot_sim, cf. Dockerfile-sim/docker-compose-sim.yml
-        # pour comment il est construit dans le conteneur sim). OFF par défaut
-        # (animations:=false) : même prudence que gaze_follower, activation
-        # explicite. LIMITE ASSUMÉE : AnimationManager/Animation utilisent
-        # TimeUtils.current_milli_time() (horloge MURALE partout, jamais
-        # get_clock()) -- comme sur le vrai robot, donc pas une régression,
-        # mais le rejeu ne suit PAS l'horloge simulée (use_sim_time n'aurait
-        # aucun effet ici ; on ne le passe donc pas, contrairement aux autres
-        # nodes de ce fichier).
-        Node(
-            package="robot",
-            executable="animations_node",
-            output="screen",
-            condition=IfCondition(animations),
-        ),
+            # Rejeu des séquences JSON (paquet "robot", le VRAI code du robot --
+            # PAS un paquet robot_sim, cf. Dockerfile-sim/docker-compose-sim.yml
+            # pour comment il est construit dans le conteneur sim). OFF par défaut
+            # (animations:=false) : même prudence que gaze_follower, activation
+            # explicite. LIMITE ASSUMÉE : AnimationManager/Animation utilisent
+            # TimeUtils.current_milli_time() (horloge MURALE partout, jamais
+            # get_clock()) -- comme sur le vrai robot, donc pas une régression,
+            # mais le rejeu ne suit PAS l'horloge simulée (use_sim_time n'aurait
+            # aucun effet ici ; on ne le passe donc pas, contrairement aux autres
+            # nodes de ce fichier).
+            Node(
+                package="robot",
+                executable="animations_node",
+                output="screen",
+                condition=IfCondition(animations),
+            ),
 
-        # Aperçu web du visage LED (paquet "robot", le VRAI code du visage --
-        # robot.actions.face.Face + ImageMapping, réutilisés tels quels sur un
-        # strip factice, cf. robot/nodes/face_sim_node.py). Aucune libs
-        # matérielle requise (contrairement à animations_node dont le rejeu
-        # des séquences peut piloter des actions qui, elles, en dépendraient
-        # si jamais activées) -- mais OFF par défaut quand même (face:=false),
-        # même prudence que animations/web : lancement explicite requis.
-        Node(
-            package="robot",
-            executable="face_sim",
-            output="screen",
-            parameters=[{"face_port": face_port}],
-            condition=IfCondition(face),
-        ),
+            # Aperçu web du visage LED (paquet "robot", le VRAI code du visage --
+            # robot.actions.face.Face + ImageMapping, réutilisés tels quels sur un
+            # strip factice, cf. robot/nodes/face_sim_node.py). Aucune libs
+            # matérielle requise (contrairement à animations_node dont le rejeu
+            # des séquences peut piloter des actions qui, elles, en dépendraient
+            # si jamais activées) -- mais OFF par défaut quand même (face:=false),
+            # même prudence que animations/web : lancement explicite requis.
+            Node(
+                package="robot",
+                executable="face_sim",
+                output="screen",
+                parameters=[{"face_port": face_port}],
+                condition=IfCondition(face),
+            ),
 
-        # Pont web W0 (paquet robot_web, autonome façon robot_drive). Pas de
-        # use_sim_time (voir web.launch.py) : les timeouts de session sont en
-        # horloge murale. json_dir par défaut ("/home/ros2_ws/json") est déjà
-        # le bon montage en sim (docker-compose-sim.yml), pas de param à passer.
-        # web_port surchargable (WEB_PORT côté compose) : le conteneur est en
-        # réseau host, une collision de port avec le PC de dev est vite arrivée
-        # (vécue avec 8088, pris par Superset).
-        Node(
-            package="robot_web",
-            executable="web_bridge",
-            name="web_bridge_node",
-            output="screen",
-            # drive_enabled = web_drive et rehearsal_enabled = rehearsal : SIM-ONLY,
-            # défauts false. camera_topic laissé au défaut du node
-            # ("camera/image_raw", bridgé depuis gz). perception_topic : ce que
-            # voit person_tracker (webcam du PC, conteneur vision, même domaine 43),
-            # servi en lecture seule sur /perception -> panneau « Ce que Didier voit ».
-            # exterior_topic : caméra de poursuite gz (xacro, chase_camera_link),
-            # servie en lecture seule sur /exterior -> « Didier vu de l'extérieur ».
-            parameters=[{"web_port": web_port, "drive_enabled": web_drive,
-                         "rehearsal_enabled": rehearsal,
-                         "perception_topic": "camera/image_raw/compressed",
-                         "exterior_topic": "camera_ext/image_raw"}],
-            condition=IfCondition(web),
-        ),
+            # Pont web W0 (paquet robot_web, autonome façon robot_drive). Pas de
+            # use_sim_time (voir web.launch.py) : les timeouts de session sont en
+            # horloge murale. json_dir par défaut ("/home/ros2_ws/json") est déjà
+            # le bon montage en sim (docker-compose-sim.yml), pas de param à passer.
+            # web_port surchargable (WEB_PORT côté compose) : le conteneur est en
+            # réseau host, une collision de port avec le PC de dev est vite arrivée
+            # (vécue avec 8088, pris par Superset).
+            Node(
+                package="robot_web",
+                executable="web_bridge",
+                name="web_bridge_node",
+                output="screen",
+                # drive_enabled = web_drive et rehearsal_enabled = rehearsal : SIM-ONLY,
+                # défauts false. camera_topic laissé au défaut du node
+                # ("camera/image_raw", bridgé depuis gz). perception_topic : ce que
+                # voit person_tracker (webcam du PC, conteneur vision, même domaine 43),
+                # servi en lecture seule sur /perception -> panneau « Ce que Didier voit ».
+                # exterior_topic : caméra de poursuite gz (xacro, chase_camera_link),
+                # servie en lecture seule sur /exterior -> « Didier vu de l'extérieur ».
+                parameters=[{"web_port": web_port, "drive_enabled": web_drive,
+                             "rehearsal_enabled": rehearsal,
+                             "perception_topic": "camera/image_raw/compressed",
+                             "exterior_topic": "camera_ext/image_raw"}],
+                condition=IfCondition(web),
+            ),
+        ]),
     ])

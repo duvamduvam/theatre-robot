@@ -38,7 +38,8 @@ def test_plafonds_identiques_au_suivi():
 def test_sortie_sur_le_creneau_du_suivi_jamais_cmd_vel_final():
     assert contracts.CMD_VEL_TOPIC == "cmd_vel_follow"
     assert contracts.CMD_VEL_TOPIC != "cmd_vel"
-    assert contracts.ODOM_TOPIC == "/ground_truth/odom"
+    # RELATIF depuis L1b (namespace par robot) ; le topic gz reste absolu, cf. ci-dessous.
+    assert contracts.ODOM_TOPIC == "ground_truth/odom"
     assert contracts.ROUTE_STATE_TOPIC == "route_state"
     # Revue I1 (22/10) : cause latchée de l'état, "boot" | "cmd".
     assert contracts.ROUTE_STATE_CAUSE_TOPIC == "route_state_cause"
@@ -48,17 +49,20 @@ def test_sortie_sur_le_creneau_du_suivi_jamais_cmd_vel_final():
 def test_verite_terrain_declaree_dans_le_xacro_et_le_bridge():
     """Le topic de pose consommé par le cheminement doit exister de bout en
     bout : plugin OdometryPublisher dans le xacro gz ET entrée GZ_TO_ROS du
-    bridge, avec le MÊME nom que le contrat. Lu dans les vrais fichiers."""
+    bridge, avec le MÊME nom que le contrat côté ROS (relatif depuis L1b) et le
+    nom gz du plugin (absolu, le monde gz ignore les namespaces ROS). Lu dans
+    les vrais fichiers."""
     xacro = (ROOT / "conf" / "ros2_dependencies" / "robot_description" / "urdf"
              / "dadou_robot_gz.urdf.xacro").read_text(encoding="utf-8")
     assert "gz::sim::systems::OdometryPublisher" in xacro
-    assert f"<odom_topic>{contracts.ODOM_TOPIC}</odom_topic>" in xacro
+    assert "<odom_topic>/ground_truth/odom</odom_topic>" in xacro
     bridge = yaml.safe_load((ROOT / "conf" / "ros2_dependencies" / "robot_sim" / "config"
                              / "gz_bridge.yaml").read_text(encoding="utf-8"))
     entries = [e for e in bridge if e["ros_topic_name"] == contracts.ODOM_TOPIC]
     assert len(entries) == 1
     assert entries[0]["ros_type_name"] == "nav_msgs/msg/Odometry"
     assert entries[0]["direction"] == "GZ_TO_ROS"
+    assert entries[0]["gz_topic_name"] == "/ground_truth/odom"
 
 
 def test_anti_fuite_aucune_reference_dans_le_code_embarque():
@@ -280,8 +284,11 @@ def test_launch_jeu_remappe_le_regisseur_seulement_sur_demande():
     from theatre_contrats.topics import JEU_CHAT_MOVE
     src = (PKG / "launch" / "rehearsal.launch.py").read_text(encoding="utf-8")
     tree = ast.parse(src)
+    # Défauts LITTÉRAUX seulement : robot_name (L1b) a pour défaut un appel
+    # EnvironmentVariable("ROBOT_NAME"…), pas une constante.
     defaults = {c.args[0].value: c.keywords[0].value.value for c in ast.walk(tree)
-                if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "DeclareLaunchArgument"}
+                if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "DeclareLaunchArgument"
+                and isinstance(c.keywords[0].value, ast.Constant)}
     assert defaults["jeu"] == "false"
     calls = [c for c in ast.walk(tree) if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "_director"]
     assert len(calls) == 2

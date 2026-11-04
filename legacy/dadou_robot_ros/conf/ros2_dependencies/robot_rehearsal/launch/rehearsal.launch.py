@@ -4,8 +4,9 @@
     ros2 launch robot_rehearsal rehearsal.launch.py speed:=0.3 scenario:=demo seed:=42
     ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers   # lot R3
     ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true   # lot A1
-    # partir :      ros2 topic pub -1 route robot_interfaces/msg/StringTime '{msg: "on"}'
-    # régisseur :   ros2 topic pub -1 rehearsal/cmd robot_interfaces/msg/StringTime '{msg: "start"}'   (stop | abort)
+    # partir :      ros2 topic pub -1 /didier/route robot_interfaces/msg/StringTime '{msg: "on"}'
+    # régisseur :   ros2 topic pub -1 /didier/rehearsal/cmd robot_interfaces/msg/StringTime '{msg: "start"}'   (stop | abort)
+    # (lot L1b : les nœuds sont sous /<ROBOT_NAME>/, défaut /didier/ — la CLI doit préfixer)
 
 Topologie : route_driver publie `cmd_vel_follow_raw` (remap) -> fault_relay
 (passant par défaut) -> `cmd_vel_follow` -> twist_mux prio 20. Le régisseur
@@ -26,10 +27,10 @@ launch démarre lui-même le sélecteur (respawn) : jamais de remap sans relais.
 director ne change pas. Défaut false = séance Chantiers inchangée.
 """
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, GroupAction
 from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node, PushRosNamespace
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
@@ -60,48 +61,59 @@ def generate_launch_description():
                                           " sélecteur didier_jeu) au lieu de rehearsal/chat_move (la"
                                           " bouche). Défaut false : séance inchangée."),
 
-        # Cheminement : publie vers l'AMONT du relais. respawn : une panne
-        # « kill » le fait renaître après respawn_delay (le reboot-prétexte) ;
-        # il renaît OFF, le régisseur renvoie « route on » (reenable).
-        Node(
-            package="robot_rehearsal", executable="route_driver", name="route_driver", output="screen",
-            parameters=[{
-                "route_file": route_file,
-                "speed": ParameterValue(LaunchConfiguration("speed"), value_type=float),
-                "enabled": ParameterValue(LaunchConfiguration("enabled"), value_type=bool),
-            }],
-            remappings=[("cmd_vel_follow", "cmd_vel_follow_raw")],
-            respawn=True, respawn_delay=5.0,
-        ),
-        # Relais de pannes sur cmd_vel_follow (passant par défaut, chien de garde 1 s).
-        Node(
-            package="robot_rehearsal", executable="fault_relay", name="fault_relay_cmd_vel_follow",
-            output="screen", parameters=[{"relay": "cmd_vel_follow"}],
-            respawn=True, respawn_delay=2.0,   # relais mort = mux sans entrée = deadman ; il renaît passant
-        ),
-        # Régisseur : charge le scénario, attend « start ». Il lit le MÊME
-        # itinéraire que route_driver (noms de POI, textes des lubies) : un
-        # scénario qui référence un POI absent de `route` est refusé au démarrage.
-        # Et la MÊME vitesse initiale : c'est celle qu'il rend à la fin d'un
-        # speed / d'une lubie tant qu'aucun fader n'a parlé.
-        _director(scenario_file, route_file, UnlessCondition(LaunchConfiguration("jeu")), []),
-        # Littéraux = robot_rehearsal.contracts.CHAT_MOVE_TOPIC et
-        # theatre_contrats.topics.JEU_CHAT_MOVE (le launch n'importe pas le
-        # package ; égalité gravée par test_rehearsal_contract.py).
-        _director(scenario_file, route_file, IfCondition(LaunchConfiguration("jeu")),
-                  [("rehearsal/chat_move", "jeu/chat_move")]),
-        # Le sélecteur de jeu (packages/didier_jeu) — lancé ICI, sous la MÊME
-        # condition que le remap (revue A1, bloquant 2) : le régisseur n'écoute
-        # plus la bouche que si celui qui relaie son « stop » tourne. respawn
-        # comme route_driver ; répertoire illisible -> il démarre quand même en
-        # relais stop/go seul. Pas d'exec_depend didier_jeu dans package.xml :
-        # didier_jeu dépend déjà de robot_rehearsal (cycle colcon) — le nom du
-        # package n'est résolu qu'au lancement.
-        Node(
-            package="didier_jeu", executable="jeu_node", name="jeu_node", output="screen",
-            condition=IfCondition(LaunchConfiguration("jeu")),
-            respawn=True, respawn_delay=2.0,
-        ),
+        DeclareLaunchArgument("robot_name",
+                              default_value=EnvironmentVariable("ROBOT_NAME", default_value="didier"),
+                              description="Nom du robot = namespace ABSOLU de tous les nœuds"
+                                          " (défaut : variable ROBOT_NAME, sinon didier)"),
+
+        # Lot L1b : UN groupe, UN PushRosNamespace absolu (/didier/... par défaut),
+        # jamais de namespace= par nœud (on l'oublierait au prochain).
+        GroupAction([
+            PushRosNamespace(["/", LaunchConfiguration("robot_name")]),
+
+            # Cheminement : publie vers l'AMONT du relais. respawn : une panne
+            # « kill » le fait renaître après respawn_delay (le reboot-prétexte) ;
+            # il renaît OFF, le régisseur renvoie « route on » (reenable).
+            Node(
+                package="robot_rehearsal", executable="route_driver", name="route_driver", output="screen",
+                parameters=[{
+                    "route_file": route_file,
+                    "speed": ParameterValue(LaunchConfiguration("speed"), value_type=float),
+                    "enabled": ParameterValue(LaunchConfiguration("enabled"), value_type=bool),
+                }],
+                remappings=[("cmd_vel_follow", "cmd_vel_follow_raw")],
+                respawn=True, respawn_delay=5.0,
+            ),
+            # Relais de pannes sur cmd_vel_follow (passant par défaut, chien de garde 1 s).
+            Node(
+                package="robot_rehearsal", executable="fault_relay", name="fault_relay_cmd_vel_follow",
+                output="screen", parameters=[{"relay": "cmd_vel_follow"}],
+                respawn=True, respawn_delay=2.0,   # relais mort = mux sans entrée = deadman ; il renaît passant
+            ),
+            # Régisseur : charge le scénario, attend « start ». Il lit le MÊME
+            # itinéraire que route_driver (noms de POI, textes des lubies) : un
+            # scénario qui référence un POI absent de `route` est refusé au démarrage.
+            # Et la MÊME vitesse initiale : c'est celle qu'il rend à la fin d'un
+            # speed / d'une lubie tant qu'aucun fader n'a parlé.
+            _director(scenario_file, route_file, UnlessCondition(LaunchConfiguration("jeu")), []),
+            # Littéraux = robot_rehearsal.contracts.CHAT_MOVE_TOPIC et
+            # theatre_contrats.topics.JEU_CHAT_MOVE (le launch n'importe pas le
+            # package ; égalité gravée par test_rehearsal_contract.py).
+            _director(scenario_file, route_file, IfCondition(LaunchConfiguration("jeu")),
+                      [("rehearsal/chat_move", "jeu/chat_move")]),
+            # Le sélecteur de jeu (packages/didier_jeu) — lancé ICI, sous la MÊME
+            # condition que le remap (revue A1, bloquant 2) : le régisseur n'écoute
+            # plus la bouche que si celui qui relaie son « stop » tourne. respawn
+            # comme route_driver ; répertoire illisible -> il démarre quand même en
+            # relais stop/go seul. Pas d'exec_depend didier_jeu dans package.xml :
+            # didier_jeu dépend déjà de robot_rehearsal (cycle colcon) — le nom du
+            # package n'est résolu qu'au lancement.
+            Node(
+                package="didier_jeu", executable="jeu_node", name="jeu_node", output="screen",
+                condition=IfCondition(LaunchConfiguration("jeu")),
+                respawn=True, respawn_delay=2.0,
+            ),
+        ]),
     ])
 
 
