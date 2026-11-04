@@ -27,6 +27,31 @@
 > Aisler : prix lu sur carrier-m seule, TVA allemande 19 % affichée, multiplié par 4 sans
 > vérifier de remise ou de frais par commande. Le §4 ci-dessous (110-150 €) est périmé.
 
+> **Devis réel du 04/11/2026** (calculateur public JLCPCB, Gerber de `fab/*.zip`
+> déposés, sans compte, panier non atteint). Les 4 cartes sont reconnues en
+> 2 couches, 100 × 100 mm ; options par défaut (FR-4, 1,6 mm, vert, HASL au
+> plomb, cuivre 1 oz), 5 pièces, production 2 jours.
+>
+> | Poste | Montant lu |
+> |---|---|
+> | Chaque carte, 5 pièces (« Special Offer ») | **4,00 $** (2,00 $ via l'appli JLCONE) |
+> | Port France, Global Standard Direct Line, 10-12 j | **14,14 $** |
+> | Port France, DHL Express (DDP), 2-4 j | **26,88 $** |
+> | Port France, FedEx Express (DDP), 3-5 j | **27,64 $** |
+> | Port France, EuroPacket, 6-9 j | **23,86 $** |
+>
+> **Total : 30,14 $ au plus bas (Direct Line), 42,88 $ en DHL DDP.** Le port est
+> mesuré sur une carte à 20 pièces (0,82 kg), en substitut du poids de 4 × 5.
+> **Non vérifié, faute de panier** : l'offre à 4 $ cumulée sur 4 cartes dans une
+> même commande (sans elle, 20 pièces d'une carte = 23,30 $ dont 4 $ de frais
+> d'ingénierie), la TVA, le droit de 3 €/catégorie, et les frais de gestion
+> douanière UE du 01/11/2026. Direct Line n'est pas marqué DDP.
+> ⚠️ Le calculateur chiffre le port vers les **États-Unis par défaut** (26,86 $) :
+> passer la destination sur France avant de lire.
+> Aisler : seule une page ancienne est lisible (12 € + 0,067 €/cm² × 3 pièces,
+> exemple de la page incohérent avec sa table) — non retenu comme prix actuel.
+> PCBWay : calculateur non piloté, pas de nouveau chiffre.
+
 Première estimation chiffrée de la fabrication des cartes du robot. Elle complète
 [`inventaire-stock.md`](inventaire-stock.md) (ce qu'on possède) et
 [`croisement-etudes.md`](croisement-etudes.md) (ce qu'il faut acheter) par la
