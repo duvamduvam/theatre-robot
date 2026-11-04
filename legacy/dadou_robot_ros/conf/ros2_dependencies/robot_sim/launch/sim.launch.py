@@ -222,6 +222,15 @@ def generate_launch_description():
                 condition=IfCondition(face),
             ),
 
+            # Catalogue + sha (L1c) : toujours lancé, comme sur le robot. json_dir par
+            # défaut (montage sim) ; pas de deploy_sha_file -> deploy_sha = "dev".
+            Node(
+                package="robot_web",
+                executable="catalogue",
+                name="catalogue_node",
+                output="screen",
+            ),
+
             # Pont web W0 (paquet robot_web, autonome façon robot_drive). Pas de
             # use_sim_time (voir web.launch.py) : les timeouts de session sont en
             # horloge murale. json_dir par défaut ("/home/ros2_ws/json") est déjà

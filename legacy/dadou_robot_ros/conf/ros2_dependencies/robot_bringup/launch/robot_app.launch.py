@@ -170,6 +170,21 @@ def generate_launch_description():
         }],
     )
 
+    # Catalogue + version (L1c) : le robot publie, latchés, ce qu'il sait jouer
+    # (`catalogue`) et le sha git déployé (`deploy_sha`). Toujours lancé (la
+    # télécommande s'en sert même sans pont web). DEPLOY_SHA est écrit par
+    # Ansible dans conf/ (monté dans le conteneur, survit aux rsync) ; absent
+    # -> "dev". Mêmes chemins que web_bridge_node (json/ à plat dans src/robot/).
+    catalogue_node = Node(
+        package="robot_web",
+        executable="catalogue",
+        name="catalogue_node",
+        parameters=[{
+            "json_dir": "/home/ros2_ws/src/robot/json",
+            "deploy_sha_file": "/home/ros2_ws/src/robot/conf/DEPLOY_SHA",
+        }],
+    )
+
     # Chaîne de commande roues (twist_mux -> twist_deadman -> cmd_vel + wheels_bridge).
     # Inoffensive en mode legacy : personne ne consomme /cmd_vel tant que
     # WHEELS_CMD_VEL_ENABLED est False. Nécessaire en mode /cmd_vel pour alimenter
@@ -194,6 +209,7 @@ def generate_launch_description():
     group.append(left_eye_server_node)
     group.append(right_eye_server_node)
     group.append(web_bridge_node)
+    group.append(catalogue_node)
     group.append(drive_launch)
 
     # drive.launch.py pousse lui aussi /<robot_name> en absolu : inclus ici, il
