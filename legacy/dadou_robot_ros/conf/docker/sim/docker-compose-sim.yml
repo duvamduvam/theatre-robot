@@ -106,6 +106,9 @@ services:
       # L1b : preuve du namespace par robot (tout sous /<ROBOT_NAME>/ sauf les
       # 5 exceptions globales gravées), rejouable avec ROBOT_NAME=didier2 puis didier.
       - ../../scripts/validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro
+      # L1c : preuve que le robot publie catalogue + deploy_sha et que le catalogue
+      # suit json/ (dépose puis supprime une séquence temporaire, nettoyée en sortant).
+      - ../../scripts/validate-catalogue.sh:/home/ros2_ws/validate-catalogue.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
       - ../../../json:/home/ros2_ws/json
