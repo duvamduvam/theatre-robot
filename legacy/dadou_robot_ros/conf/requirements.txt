@@ -6,7 +6,11 @@ adafruit-circuitpython-pcf8574~=1.0.8
 adafruit-circuitpython-servokit~=1.3.17
 # Blinka fournit le module `board` mais PAS le backend GPIO : RPi.GPIO reste requis.
 # (le paquet PyPI `board` est un homonyme sans rapport, ne pas le remettre)
-adafruit-blinka
+# Épinglé : non épinglé, un rebuild du 2026-11-04 a tiré Blinka 10.1.0, qui exige gpiod et
+# son backend PWM sur Pi ; sans eux, le launch du robot tombe à l'import et le conteneur boucle.
+adafruit-blinka==10.1.0
+gpiod>=2.2.2,<3 ; platform_machine == "aarch64"
+Adafruit-Blinka-Raspberry-Pi-PWM>=1.0.2 ; platform_machine == "aarch64"
 RPi.GPIO~=0.7.1 ; platform_machine == "aarch64"
 # Même famille de piège : le backend NeoPixel de Blinka (_rpi_ws281x) n'est pas
 # déclaré non plus — sans lui, lights_node (visage + bandeau LED) meurt à l'import.
