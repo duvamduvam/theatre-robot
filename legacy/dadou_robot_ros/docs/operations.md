@@ -10,6 +10,14 @@
   Pi: 192.168.1.151.
 - Application log: `/home/ros2_ws/log/robot.log` INSIDE the container.
 
+## Réinstallation d'un Pi vierge (vécu le 2026-11-04)
+- `ansible-playbook -i hosts install-pios-lite.yml -e target_group=robot` depuis
+  `dadou_utils_ros/ansible`, puis retirer l'ancienne empreinte SSH de `robot.local`.
+- ⚠️ Le service tire `dadouuu/dadou-robot-arm:latest` du Hub : image Humble de 2024, inutilisable.
+  Construire ensuite sur le Pi : `~/scripts/compose-up-pi.sh build` (environ 35 min), puis
+  `sudo` pour créer `robot/change` (fichier root) si la compilation doit être relancée.
+- Avant de remettre le Pi sur le robot : fiches servos débranchées, moteurs de roues coupés.
+
 ## Calibration & verification tooling
 - **Face LED patterns** (expressions, publish on `face`): `"calib"` (digits
   123 + E + eye F — fine orientation), `"calib-couleurs"` (one colour per

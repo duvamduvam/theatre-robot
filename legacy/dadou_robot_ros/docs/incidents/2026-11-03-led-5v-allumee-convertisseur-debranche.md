@@ -357,3 +357,11 @@ Docker, ni code, ni I²C activé. SD de 119 Go, taille proche de celle d'origine
 **à vérifier que ce n'est pas la SD d'origine reformatée.** Le code reste dans le dépôt ; seuls l'état
 local et les journaux du Pi seraient perdus. Déploiement à faire fiches servos débranchées et
 moteurs de roues coupés.
+
+## Pi 4 de remplacement réinstallé, 2026-11-04
+
+`install-pios-lite.yml` réussi (Docker, I²C, service `robot`). Image du Hub écartée (Humble, 2024) ;
+image Jazzy construite sur le Pi, Blinka épinglé en 10.1.0 avec gpiod et son backend PWM. Conteneur
+stable, `restart=0`, nœuds lancés, `throttled=0x0`, 851 Mi utilisés et 993 Mi disponibles, Pi hors du
+robot. `relays_node` meurt faute de PCF8574 à 0x21 : attendu sans matériel. Visage LED, servos,
+roues et Blinka 10.1.0 non testés sur le matériel.
