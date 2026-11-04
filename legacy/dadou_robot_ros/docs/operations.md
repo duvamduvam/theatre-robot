@@ -45,6 +45,34 @@
   (6 familles non vides, sha `dev`, une séquence déposée apparaît en <= 5 s).
   À la main : `ros2 topic echo /didier/catalogue --once --qos-durability transient_local --field msg`.
 
+## Premier déploiement d'une branche sur les Pi hors robot (vécu le 2026-11-04, L1b+L1c)
+
+- Déployer une BRANCHE sans la fusionner : Ansible rsync l'arbre de travail du checkout
+  pointé par `local_projects_dir`. Depuis une copie de travail git (worktree) :
+  `ansible-playbook deploy-pios.yml -i hosts -e target_group=robot -e local_projects_dir=<worktree>/legacy
+  -e packages_dir=<worktree>/packages -e ansible_host=192.168.1.162` (mDNS cassé côté PC :
+  passer l'IP ; clé `~/.ssh/keys/didier`). Le sha écrit dans `conf/DEPLOY_SHA` est celui du
+  worktree, suffixé `-dirty` si l'arbre diffère du commit.
+- ⚠️ **Droits sur un Pi réinstallé** : Docker crée en ROOT les dossiers de montage absents au
+  premier `compose up` (`json/`, `medias/`, `robot/`, `dadou_utils_ros/`) ; le rsync suivant,
+  en `pi`, échoue en code 23 (« Permission denied »). Remède avant tout déploiement :
+  `sudo chown -R pi:pi ~/ros2_ws/src` (le conteneur tourne en root, il lit tout).
+  À ajouter au playbook d'installation (pas fait).
+- ⚠️ **`docker restart` ne relit PAS le compose** : si le déploiement change les volumes ou
+  l'environnement (L1a : montage `theatre_contrats` ; L1b : `ROBOT_NAME`), il faut RECRÉER
+  le conteneur : `cd ~/ros2_ws/src/<projet>/conf/docker/arm && sudo docker compose -f
+  docker-compose-arm.yml up -d` (avec la sentinelle de build posée). Vécu sur le Pi vision :
+  après `restart`, colcon n'a compilé que 2 packages et les nœuds sont tombés sur
+  `No module named 'theatre_contrats'`.
+- ⚠️ `ros2 topic echo --once` sur un topic latché rend souvent VIDE sur le Pi (piège CLI
+  connu) : utiliser `--spin-time 6` sans `--once`, ou `curl localhost:8765/api/catalog`.
+- Résultat du 04/11 (Pi 4 à 192.168.1.162 en filaire, Pi 5 vision à .151, tous deux HORS
+  robot, aucun actionneur) : 16 nœuds sous `/didier/`, `deploy_sha` = sha de la branche,
+  catalogue 6 familles via HTTP, twist_mux chargé (remote 100, anim 10, verrou `e_stop` 255,
+  `use_stamped` false) et abonné à `/didier/e_stop`, seuls `/rosout` et `/parameter_events`
+  hors namespace, `/didier/vision/status` publié par le Pi 5 et vu du Pi 4. `relays_node`
+  sans PCF8574 et `person_tracker` sans webcam : attendus hors robot.
+
 ## Réinstallation d'un Pi vierge (vécu le 2026-11-04)
 - `ansible-playbook -i hosts install-pios-lite.yml -e target_group=robot` depuis
   `dadou_utils_ros/ansible`, puis retirer l'ancienne empreinte SSH de `robot.local`.

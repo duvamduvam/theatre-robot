@@ -365,3 +365,5 @@ image Jazzy construite sur le Pi, Blinka épinglé en 10.1.0 avec gpiod et son b
 stable, `restart=0`, nœuds lancés, `throttled=0x0`, 851 Mi utilisés et 993 Mi disponibles, Pi hors du
 robot. `relays_node` meurt faute de PCF8574 à 0x21 : attendu sans matériel. Visage LED, servos,
 roues et Blinka 10.1.0 non testés sur le matériel.
+
+Suite, 2026-11-04 23:50 : branche L1b+L1c déployée sur ce Pi (hors robot) et sur le Pi 5 vision, conteneurs stables (`restarts=0`), détail dans `operations.md`. Rien de plus testé sur le matériel du robot.
