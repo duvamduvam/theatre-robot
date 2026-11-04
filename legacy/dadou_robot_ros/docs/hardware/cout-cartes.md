@@ -27,6 +27,10 @@
 > Aisler : prix lu sur carrier-m seule, TVA allemande 19 % affichée, multiplié par 4 sans
 > vérifier de remise ou de frais par commande. Le §4 ci-dessous (110-150 €) est périmé.
 
+> **Mise à jour du 05/11 : 5ᵉ carte au panier** (`odometry`, 92 × 84 mm, violet, HASL au
+> plomb) : +3,57 €, port inchangé à 23,99 € (0,97 kg), **sous-total 32,92 €**, avant TVA et
+> douane, non commandé. Gravée avant validation sur robot, par décision de David.
+
 > **Panier JLCPCB lu le 04/11/2026** (compte achats@duvam.net, non commandé) :
 > 4 cartes × 5, 1,6 mm, **HASL au plomb**, une couleur par carte (M vert, L bleu,
 > P rouge, audio noir) : 4 × 3,57 € = **14,28 €**, port estimé **23,99 €**

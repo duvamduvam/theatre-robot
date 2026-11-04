@@ -1019,6 +1019,20 @@ Dans les deux cas : **masse de mesure = moins batterie**, à vérifier identique
 12 V de la carte (le Mean Well 12 V est-il isolé ?), et mesure **filtrée/au repos** (la
 tension chute sous la charge des moteurs).
 
+### Branche C (proposée le 05/11, à valider) : un 3ᵉ INA226 côté puissance
+
+Question de David : intégrer une mesure 24 V à la carte. Sur la carte odométrie, elle devrait
+traverser la barrière. Mais la carte P porte déjà `+24V` fusé et GND sur **J32 VOLTMETRE**, et
+la carte M sort le bus I²C 5 V sur **J11**. Un module INA226 de plus (adresse 0x46) branché sur
+J11, sa broche VBS reliée à J32, lirait le 24 V du côté puissance : l'I²C remonte déjà au Pi à
+travers l'ISO1540, et **aucune carte n'est à modifier**. Plage 36 V, pack 29,4 V plein.
+À vérifier : VBS accessible sur le module acheté (la table de P le suppose, broche 6), présence
+d'un module de rechange, et que le `24V_IN` de J20 vient bien du pack. Ne donne qu'une tension,
+pas le SOC du BMS.
+
+**Carte gravée du 05/11** : deux voies isolées non peuplées, U6/U7 + J7, sont prévues pour les
+branches A/B, sur **GP28/GP29** (UART0) et non GP8/GP9 : GP9 n'a pas de broche dans ce montage.
+
 ### Côté Pi (commun aux deux branches)
 
 Un champ de plus dans la trame (forme exacte à figer avec la branche), publié en
@@ -1292,6 +1306,10 @@ objective du chemin roues depuis le début du projet. Rejouer
 `conf/scripts/validate-cmdvel-protocol.sh` en enregistrant l'odométrie en parallèle.
 
 ### Étape 4 — PCB KiCad
+
+> **05/11 : gravée en avance, contre l'ordre de ce plan, par décision de David** (3,57 € de
+> risque, un lot de commande de moins). Source : `didier/pcb/kicad/odometry/`. Non commandée à
+> ce jour, jamais sous tension ; les étapes 1-3 restent à faire.
 
 Seulement là, et seulement si les étapes 1–3 sont vertes. Fente fraisée sous les PC817, Pico
 sur **supports tulipe** (un Pico grillé se change en dix secondes dans une loge, sans fer à
