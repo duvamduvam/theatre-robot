@@ -367,6 +367,9 @@ Outillage (tout rejouable, `/usr/bin/python3 generate_pcb.py` par carte) :
 (alignement mécanique de la pile), `make_fab.sh`, et Freerouting pour les seuls
 signaux de nappe de P (session `.ses` versionnée, réimportée à l'identique).
 
+**Plan de la pile** : [`plan-pile-cartes.png`](plan-pile-cartes.png), généré par
+`didier/pcb/kicad/render_stack.py` (écarts entre étages non à l'échelle).
+
 **Écarts avec les §3-§8, à connaître :**
 
 1. **Les deux nappes sont des IDC 2×8** (le §8 prévoyait P↔L en 2×5 : les I²C
