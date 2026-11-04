@@ -105,6 +105,10 @@ Ce launch démarre **lui-même** `jeu_node` (respawn), sous la même condition q
 le remap de la bouche. Il ne faut jamais le lancer à part : un remap sans relais
 perdrait le `stop` de la bouche.
 
+Namespace (lot L1b) : `jeu_node` vit sous `/<ROBOT_NAME>/` (défaut `/didier/`),
+posé par le launch — ses topics sont `/didier/jeu/intention`, `/didier/jeu/console`…
+À la CLI, toujours préfixer (`ros2 topic echo /didier/jeu/journal`).
+
 Le journal est écrit dans `/home/ros2_ws/log/jeu/<horodatage>_<pid>_jeu.jsonl`.
 Vérification rejouable : `validate-jeu-a1.sh` (voir `legacy/dadou_robot_ros/docs/operations.md`).
 

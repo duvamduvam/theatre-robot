@@ -41,9 +41,12 @@ python3 -m venv .venv
 ```bash
 cd conf/docker/sim && ANIMATIONS=true docker compose -f docker-compose-sim.yml up -d
 # Play an animation in sim (arms/eyes/neck + face):
-docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub --once animation robot_interfaces/msg/StringTime "{msg: \"\\\"parle\\\"\", time: 45000, anim: false}"'
+docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub --once /didier/animation robot_interfaces/msg/StringTime "{msg: \"\\\"parle\\\"\", time: 45000, anim: false}"'
 ```
 `ROS_DOMAIN_ID` separates worlds: 42 = real robot, 43 = simulation.
+`ROBOT_NAME` (default `didier`) is the ROS namespace of every node (lot L1b):
+CLI topics must be prefixed (`/didier/animation`), `ros2 run` needs
+`--ros-args -r __ns:=/didier` — see docs/operations.md §Namespace.
 
 ## Deployment on the robot
 ```bash

@@ -10,6 +10,24 @@
   Pi: 192.168.1.151.
 - Application log: `/home/ros2_ws/log/robot.log` INSIDE the container.
 
+## Namespace par robot — `ROBOT_NAME` (lot L1b, 04/11)
+- Tous les nœuds (robot, vision, télécommande, sim) vivent sous
+  `/<ROBOT_NAME>/`, défaut **`/didier/`** : `/didier/face`, `/didier/cmd_vel`,
+  `/didier/vision/person_box`… La variable est posée par chaque docker-compose
+  (`ROBOT_NAME=${ROBOT_NAME:-didier}`) ; robot, vision et télécommande d'un même
+  Didier doivent porter le même nom. Restent globaux : `/clock`, `/tf`,
+  `/tf_static`, `/rosout`, `/parameter_events`.
+- **La CLI ne suit pas** : un nom relatif tapé dans `ros2 topic pub/echo` se
+  résout à la racine. Toujours préfixer (`ros2 topic pub /didier/face …`) et
+  lancer les `ros2 run` avec `--ros-args -r __ns:=/didier`. Les scripts de
+  `conf/scripts/` posent `NS="/${ROBOT_NAME:-didier}"` et préfixent tout.
+- Vérif en sim (démarrer la sim avec `ROBOT_NAME=didier2`, puis sans) :
+  `docker exec dadou-sim-container bash /home/ros2_ws/validate-namespace.sh`
+  — tout topic/nœud sous le namespace, twist_mux configuré, bridge relayé.
+- ⚠️ **Vrai robot** : les topics roues ont changé de nom (namespace, pas le
+  code) — **protocole caméra à rejouer** (`validate-cmdvel-protocol.sh`, roues
+  hors sol) AVANT tout usage au sol. Validé en sim seulement au 04/11.
+
 ## Réinstallation d'un Pi vierge (vécu le 2026-11-04)
 - `ansible-playbook -i hosts install-pios-lite.yml -e target_group=robot` depuis
   `dadou_utils_ros/ansible`, puis retirer l'ancienne empreinte SSH de `robot.local`.
@@ -25,7 +43,7 @@
   offset breaks a ring, no left/right interpretation needed). The wiring is
   locked by `test_image_mapping.py`; re-run the patterns after ANY change on
   the face path. Publish example:
-  `ros2 topic pub --once /face robot_interfaces/msg/StringTime "{msg: '\"calib\"', time: 0, anim: false}"`
+  `ros2 topic pub --once /didier/face robot_interfaces/msg/StringTime "{msg: '\"calib\"', time: 0, anim: false}"`
 - **Brightness** (non-persistent, default 0.05):
   `{msg: '{"brightness": 0.15}'}` on `robot_lights` — 0.15 is comfortable to
   read patterns, LED patterns are unreadable on webcams (fixed-focus + PWM
@@ -96,8 +114,8 @@ ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -
   habituelle : pas de mouvement automatique) :
 ```bash
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot person_follower'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot person_follower --ros-args -r __ns:=/didier'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
 ```
   (puis activer le suivi roues : topic `follow` « on » — il démarre OFF.)
 
@@ -108,8 +126,8 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
 CHAT=true docker compose -f docker-compose-x86.yml up -d
 ```
 - MÊME image que le Pi 5 (Dockerfile-arm réutilisé tel quel, base multi-arch) ;
-  `person_tracker` lit la webcam `/dev/video0`, publie `/vision/person` (gaze)
-  et `/vision/person_box` (suivi roues) ; `CHAT=true` lance `chat_node`
+  `person_tracker` lit la webcam `/dev/video0`, publie `/didier/vision/person` (gaze)
+  et `/didier/vision/person_box` (suivi roues) ; `CHAT=true` lance `chat_node`
   (micro → whisper → OpenRouter → piper → sortie audio).
 - Les alias ALSA `casque_mic`/`mixette` sont fournis par `asound-pc.conf`
   (monté dans le conteneur) : `casque_mic` = ReSpeaker en `hw:Array` (direct,
@@ -158,7 +176,7 @@ Tout sur le domaine **43**.
 WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
 ```
 - `REHEARSAL=true` : la page scène obtient les boutons route / vitesse /
   séance (SIM-ONLY, jamais sur le robot). `seed:=N` sur le launch rehearsal
@@ -249,7 +267,8 @@ journal, fermeture au fader, pannes chat publiées, couverture des 20 bugs).
 ⚠️ **Piège du PC de dev (14/10) : le CLI `ros2` est capricieux, les nodes non.**
 Avec ~50 conteneurs et autant d'interfaces, FastDDS logue des erreurs
 multicast (`Error setting socket option (IP_ADD_MEMBERSHIP)`) et un
-`ros2 topic pub -1` / `ros2 topic echo --once` lancé à la main part souvent
+`ros2 topic pub -1` / `ros2 topic echo --once` lancé à la main (topic préfixé
+`/didier/…` depuis L1b) part souvent
 AVANT d'être découvert : `route on` perdu, Didier immobile, `ros2 topic list`
 incomplet — alors que les nodes entre eux (régisseur, route_driver, chat_node,
 pont web) se parlent sans perte. Règles : commander la séance depuis la **page
@@ -272,7 +291,7 @@ cd conf/docker/sim
 WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d --build
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
 ```
 - Le launch `jeu:=true` démarre **lui-même** le sélecteur (`jeu_node`, respawn).
   Ne pas le lancer à part. Si le répertoire de séquences est illisible, il
@@ -294,7 +313,7 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
   silence**, et toute parole entendue relance le compte. Jamais après un stop ni
   une Route OFF de David.
 - **Perception** : en A1, elle est **scriptée**. Une personne se simule à la main :
-  `ros2 topic pub -r 16 /vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.3, y: 0.4, z: 0.9}}"`.
+  `ros2 topic pub -r 16 /didier/vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.3, y: 0.4, z: 0.9}}"`.
   On peut aussi brancher la tête vision et sa webcam.
 - **Journal « pourquoi »** (à relire avec David, ligne par ligne) :
   `/home/ros2_ws/log/jeu/<horodatage>_<pid>_jeu.jsonl` dans le conteneur
@@ -323,13 +342,13 @@ cd conf/docker/sim && WORLD=rue HEADLESS=true ANIMATIONS=true FACE=true WEB=true
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py'
 # partir / s'arrêter / reprendre au début : topic `route` = "on" | "off" | "restart" ; vitesse 0..1 : topic `route_speed`
-docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 route robot_interfaces/msg/StringTime "{msg: \"on\"}"'
+docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route robot_interfaces/msg/StringTime "{msg: \"on\"}"'
 # vérification rejouable V-R1 (départ, POI, télécommande qui écrase, zéro franc, arrivée) :
 docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-route.sh
 ```
 
 - **Régisseur de pannes** (lot R2) : lancé par `rehearsal.launch.py` avec le scénario
-  `demo` (chargé, en attente) ; `ros2 topic pub -1 rehearsal/cmd … "{msg: \"start\"}"`
+  `demo` (chargé, en attente) ; `ros2 topic pub -1 /didier/rehearsal/cmd … "{msg: \"start\"}"`
   pour dérouler, `abort` pour tout révoquer ; journal JSONL dans
   `/home/ros2_ws/log/rehearsal/` (conteneur). Vérif : `validate-rehearsal-faults.sh`.
 - La route publie sur `cmd_vel_follow` (prio 20) : **le suivi de personne doit
@@ -475,9 +494,9 @@ Sauvegarde de la version précédente sur le Pi :
 1. Inspect hardware (wheels locked, arms secure, LED strips intact).
 2. Power on robot and remote controller (Pi 5 vision needs the 27 W PSU).
 3. The robot app autostarts with the container; check
-   `ros2 topic info /face` shows a subscriber.
+   `ros2 topic info /didier/face` shows a subscriber (namespace since L1b).
 4. Remote controller GUI: quick input test (eyes, mouth, wheels, audio cue).
-5. Test one full animation (`ros2 topic pub --once /animation ... '"parle"'`).
+5. Test one full animation (`ros2 topic pub --once /didier/animation ... '"parle"'`).
 
 ## During the show
 - Stage tech monitors the GUI.
