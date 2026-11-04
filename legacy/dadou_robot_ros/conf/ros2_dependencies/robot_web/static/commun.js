@@ -13,7 +13,7 @@
  * que robot_drive/wheels_payload.py.
  *
  * CONTRAT avec la page hôte : elle fournit les éléments du bandeau (ids
- * badge-mode, badge-connexion, badge-ecriture, rtt, btn-prendre-main, token-box,
+ * badge-mode, badge-version, badge-connexion, badge-ecriture, rtt, btn-prendre-main, token-box,
  * token-input, btn-token, journal-erreurs) et, pour la vidéo, video,
  * video-placeholder, btn-video-refresh. Ce qui est PROPRE à la page passe par
  * les crochets de `liaison` ci-dessous (tous optionnels), posés AVANT connecter().
@@ -188,6 +188,7 @@ function traiterMessageServeur(msg) {
     case "state":
       $("badge-connexion").title = msg.clients + " client(s) connecté(s), écriture "
           + (msg.writer_present ? "détenue" : "libre");
+      majBadgeVersion(msg.topics?.deploy_sha?.msg);
       liaison.surEtat?.(msg);
       break;
     case "feed":
@@ -257,6 +258,24 @@ function majBadgeMode(mode, domainId) {
   badge.className = "badge " + (CLASSE_BADGE_PAR_MODE[mode] || "badge-inconnu");
   // Propre à la page (ex. la console prévient qu'en sim les sons sont muets).
   liaison.surMode?.(mode);
+}
+
+// Version déployée (topic deploy_sha, lot L1c) : "dev" en sim, sinon les 7
+// premiers caractères du sha. Le suffixe "-dirty" (arbre non commité au rsync)
+// est CONSERVÉ et passe le badge en alerte : un sha propre mentirait sur ce qui
+// tourne vraiment. Masqué tant que le robot n'a rien publié.
+function majBadgeVersion(sha) {
+  const badge = $("badge-version");
+  if (typeof sha !== "string" || sha === "") {
+    badge.hidden = true;
+    return;
+  }
+  const sale = sha.endsWith("-dirty");
+  const court = sha === "dev" ? "dev" : sha.replace(/-dirty$/, "").slice(0, 7) + (sale ? "-dirty" : "");
+  badge.textContent = court;
+  badge.title = "version déployée : " + sha;
+  badge.className = "badge " + (sale ? "badge-alerte" : "badge-off");
+  badge.hidden = false;
 }
 
 function majBadgeEcriture() {

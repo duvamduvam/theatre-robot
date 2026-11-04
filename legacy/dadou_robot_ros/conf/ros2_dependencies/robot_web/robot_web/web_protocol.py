@@ -115,9 +115,12 @@ def effective_whitelist(rehearsal_enabled: bool) -> frozenset:
 # ({"action", "cible", "pourquoi", "reste_ms", "jauges"…}), latchée par lui ;
 # rehearsal/objects (02/11) : le vocabulaire d'objets du régisseur (latché), pour
 # que « va là » propose les objets connus. Lecture seule, comme les autres.
+# deploy_sha (04/11, lot L1c) : version déployée, latchée par catalogue_node -> badge
+# version des deux pages. `catalogue` n'y est PAS : la page garde /api/catalog.
 TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chain",
                   "rehearsal/state", "camera_state", "camera_source_state",
-                  "camera_sources", "jeu/intention", "rehearsal/objects"}
+                  "camera_sources", "jeu/intention", "rehearsal/objects",
+                  "deploy_sha"}
 
 # Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
 # clients (message "feed"), contrairement à `state` qui ne porte que la

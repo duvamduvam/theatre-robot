@@ -103,9 +103,11 @@ def test_topics_lecture_jamais_publiables():
     # camera_source_state / camera_sources (31/10) : source d'images réelle de la
     # perception et liste des sources disponibles, latchées côté vision.
     # jeu/intention, rehearsal/objects (02/11, lot A1) : panneau « Jeu » de la page scène.
+    # deploy_sha (04/11, lot L1c) : badge version ; `catalogue` n'y entre PAS.
     assert TOPICS_LECTURE == {"chat_state", "persona_state", "route_state", "chat_audio_chain",
                               "rehearsal/state", "camera_state", "camera_source_state",
-                              "camera_sources", "jeu/intention", "rehearsal/objects"}
+                              "camera_sources", "jeu/intention", "rehearsal/objects",
+                              "deploy_sha"}
     assert TOPICS_LECTURE.isdisjoint(WHITELIST)
     assert TOPICS_LECTURE.isdisjoint(WHITELIST_REPETITION)
 
