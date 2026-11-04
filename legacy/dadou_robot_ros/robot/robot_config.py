@@ -10,6 +10,7 @@ The rest of the codebase imports `config` to access runtime settings instead of
 hard-coding constants.
 """
 
+import logging
 import os
 import sys
 
@@ -81,11 +82,20 @@ print("is raspberry {}".format(Misc.is_raspberrypi()))
 if Misc.is_raspberrypi():
     # Physical GPIO pins only exist on the Pi; the board module (Adafruit-Blinka)
     # is only importable there, hence the local import.
-    import board
-    config[SHUTDOWN_PIN] = board.D16
-    config[RESTART_PIN] = board.D20
-    config[STATUS_LED_PIN] = board.D12
-    config[LIGHTS_PIN] = board.D18
+    # Ce module est chargé par le fichier de lancement : une exception ici empêche TOUS
+    # les nœuds de partir (vécu le 2026-11-04, dépendance de Blinka absente). Blinka lève
+    # des types variés (RuntimeError, NotImplementedError...), d'où le except large. Pins
+    # à None : seul le nœud qui en a besoin tombe, avec son erreur à lui.
+    try:
+        import board
+        config[SHUTDOWN_PIN] = board.D16
+        config[RESTART_PIN] = board.D20
+        config[STATUS_LED_PIN] = board.D12
+        config[LIGHTS_PIN] = board.D18
+    except Exception as err:
+        logging.error("board indisponible, broches GPIO désactivées : %s", err)
+        for pin in (SHUTDOWN_PIN, RESTART_PIN, STATUS_LED_PIN, LIGHTS_PIN):
+            config[pin] = None
 
 config[LIGHTS_LED_COUNT] = 1000
 config[LIGHTS_START_LED] = 513

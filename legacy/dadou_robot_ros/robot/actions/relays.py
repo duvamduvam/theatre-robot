@@ -34,11 +34,18 @@ class RelaysManager(AbstractJsonActions):
         self.json_manager = json_manager
 
         # Les libs Adafruit ne sont importables que sur le Pi (I2C présent).
-        import adafruit_pcf8574
-        import board
+        # Carte absente ou lib cassée : le nœud reste en vie, relais désactivés (même règle
+        # que Servo). Un nœud ne doit pas mourir pour un périphérique non essentiel.
+        try:
+            import adafruit_pcf8574
+            import board
 
-        i2c = board.I2C()  # uses board.SCL and board.SDA
-        pcf = adafruit_pcf8574.PCF8574(i2c, address=0x21)
+            i2c = board.I2C()  # uses board.SCL and board.SDA
+            pcf = adafruit_pcf8574.PCF8574(i2c, address=0x21)
+        except (ImportError, OSError, RuntimeError, ValueError) as err:
+            logging.error("relais désactivés, PCF8574 indisponible : %s", err)
+            self.i2c_enabled = False
+            return
 
         self.power_hf = pcf.get_pin(3)
         self.power_hf.value = True
