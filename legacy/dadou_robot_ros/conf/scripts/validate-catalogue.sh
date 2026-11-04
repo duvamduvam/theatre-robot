@@ -25,11 +25,13 @@ verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  �
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 # Dernier message latché d'un topic, champ msg, sans démon (pas de graphe périmé).
-# Le champ msg est une chaîne : yaml.safe_load la déquote, python en fait du JSON.
+# --field msg d'une chaîne imprime le texte BRUT (pas de YAML) suivi de "---" : on
+# coupe au séparateur. --spin-time : sans démon, la découverte du type du topic a
+# besoin de quelques secondes (sinon « does not appear to be published yet »).
 lire() { # lire <topic> -> JSON du champ msg sur stdout
-  timeout 15 ros2 topic echo $1 --once --no-daemon --qos-durability transient_local \
+  timeout 20 ros2 topic echo $1 --once --no-daemon --spin-time 5 --qos-durability transient_local \
     --qos-reliability reliable --field msg 2>/dev/null \
-    | python3 -c 'import sys, yaml; print(yaml.safe_load(sys.stdin.read().split("\n---")[0]))'
+    | python3 -c 'import sys; print(sys.stdin.read().split("\n---")[0].strip())'
 }
 
 echo "=== catalogue attendu sous $NS/ $(date +%T) ==="
@@ -64,6 +66,8 @@ attendre() { # attendre <présent|absent> : poll le catalogue jusqu'à $DELAI s
   local voulu=$1 debut=$SECONDS
   while [ $((SECONDS - debut)) -le "$DELAI" ]; do
     local c; c=$(lire $NS/catalogue)
+    # Lecture vide = écho raté, PAS « absent » : sinon la disparition passerait à vide.
+    [ -z "$c" ] && { sleep 0.5; continue; }
     if grep -q "'$NOM_TEST'\|\"$NOM_TEST\"" <<<"$c"; then [ "$voulu" = présent ] && return 0
     else [ "$voulu" = absent ] && return 0; fi
     sleep 0.5
