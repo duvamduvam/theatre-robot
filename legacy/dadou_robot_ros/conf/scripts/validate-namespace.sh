@@ -91,8 +91,10 @@ done <<<"$nodes"
 verdict "$([ -z "$intrus_n" ] && echo 1 || echo 0)" "tout nœud sous $NS/${intrus_n:+ — INTRUS :$intrus_n}"
 
 # twist_mux namespacé : sa config doit être CHARGÉE (sinon mux sans entrées ni verrou).
-prio=$(timeout 15 ros2 param get $NS/twist_mux locks.e_stop.priority 2>/dev/null | grep -oE '[0-9]+$')
-remote=$(timeout 15 ros2 param get $NS/twist_mux topics.remote.priority 2>/dev/null | grep -oE '[0-9]+$')
+# Sans démon + --timeout : au tout premier appel, le démon ros2 naît avec un
+# graphe vide et répond « node not found » (vécu le 04/11 : faux KO).
+pget() { timeout 20 ros2 param get $NS/twist_mux "$1" --no-daemon --timeout 10 2>/dev/null | grep -oE '[0-9]+$'; }
+prio=$(pget locks.e_stop.priority); remote=$(pget topics.remote.priority)
 echo "  $NS/twist_mux : locks.e_stop.priority=${prio:-absent}, topics.remote.priority=${remote:-absent}"
 verdict "$([ "$prio" = 255 ] && [ "$remote" = 100 ] && echo 1 || echo 0)" "twist_mux a chargé twist_mux.yaml sous namespace (e_stop 255, remote 100)"
 
