@@ -347,3 +347,13 @@ Suite, 2026-11-04 : Pi 4 hors robot sur secteur, sans GPIO : **toujours 8 flashs
 puis avec une autre SD. Le rail du robot n'est donc pas la cause immédiate. Reste la récupération
 du bootloader avant de conclure à une carte morte. SD d'origine conservée intacte, non formatée.
 Une autre Pi branchée par David n'apparaît pas sur le réseau (aucun port SSH ouvert sur le /24).
+
+## Autre Pi 4 en service, 2026-11-04
+
+David a branché « l'ancienne Pi qui était dessus » avec une SD formatée, la SD d'origine n'étant
+pas retrouvée. Lu en SSH : Pi 4 Model B Rev 1.5, 2 Go, série `10000000e79839cb`, Debian 13,
+`robot.local` en 192.168.1.162 (RJ45) et .2 (Wi-Fi), `throttled=0x0`, 29,7 °C. Système vierge : ni
+Docker, ni code, ni I²C activé. SD de 119 Go, taille proche de celle d'origine (117 Go le 12/09) :
+**à vérifier que ce n'est pas la SD d'origine reformatée.** Le code reste dans le dépôt ; seuls l'état
+local et les journaux du Pi seraient perdus. Déploiement à faire fiches servos débranchées et
+moteurs de roues coupés.
