@@ -16,7 +16,7 @@ control:
         local_project_dir: dadou_control_ros
         project_ros_dir: controller
         project_name: controller
-        launch_cmd: ros2 run controller controller_node
+        launch_cmd: ros2 run controller controller_node --ros-args -r __ns:=/didier
 
 integration:
   hosts:
@@ -54,7 +54,7 @@ vision:
         project_name: vision
         # Heartbeat V0 (robot_bringup était un copier-coller du groupe robot,
         # ce package n'existe pas côté vision). Deviendra un launch file en V1.
-        launch_cmd: ros2 run vision vision_status
+        launch_cmd: ros2 run vision vision_status --ros-args -r __ns:=/didier
 
 robot-test:
   hosts:
@@ -74,7 +74,7 @@ glove-left:
         local_utils_dir: dadou_utils_ros_ros
         project_ros_dir: controller
         project_name: controller
-        launch_cmd: ros2 run controller controller_node
+        launch_cmd: ros2 run controller controller_node --ros-args -r __ns:=/didier
 
 
 glove-right:
@@ -88,4 +88,4 @@ glove-right:
         local_utils_dir: dadou_utils_ros_ros
         project_ros_dir: controller
         project_name: controller
-        launch_cmd: ros2 run controller controller_node
+        launch_cmd: ros2 run controller controller_node --ros-args -r __ns:=/didier

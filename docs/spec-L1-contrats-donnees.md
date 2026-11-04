@@ -178,6 +178,95 @@ Ansible au rsync, ou `dev` en sim). La page scène affiche le sha ; la télécom
 Ansible écrit `DEPLOY_SHA` au rsync. Porte : en sim, `ros2 topic echo catalogue --once`
 rend les 6 familles ; test télécommande vert.
 
+#### L1c — conception détaillée (04/11, Fable ; spec FERMÉE pour l'implémenteur)
+
+**Faits relevés le 04/11** :
+- `robot_web/web_catalog.py` construit déjà 5 familles en logique PURE (stdlib) : `faces`
+  (clés de `expressions.json`), `audios` (`{label, value=path}` depuis `audios.json`, entrées à
+  path vide exclues), `animations` (noms sous `json/sequences/**`), `relays`, `robot_lights`.
+  Servi par `GET /api/catalog` du pont web, consommé par la page. La 6ᵉ famille de l'étude,
+  les **visuels**, vit dans `json/visuals.json` : `{"visual": [{"name", "path"}, …]}`.
+- La télécommande : `controller/buttons/button_config.py` `BUTTONS_LAYOUT[mode][bouton] =
+  {NAME, CMD: {clé: valeur}}` ; les clés visées par le catalogue sont `ANIMATION` (str, ou
+  `STOP`, ou `{TYPE: "bug"}` = tirage par type), `AUDIO` (valeur publiée telle quelle, le
+  robot attend un **chemin** — `AudioManager.play_sound(msg[AUDIO])`), `RELAY`, `FACE`,
+  `ROBOT_LIGHTS`. Le test existant `test_button_config.py` ne vérifie que les TOPICS, pas les
+  valeurs : un bouton peut viser une séquence ou un audio qui n'existe pas.
+- Déploiement : rôle Ansible `synchronise` (rsync de l'arbre de travail, SANS `--delete`,
+  `local_projects_dir` = `theatre-robot/legacy`). Le conteneur robot monte
+  `conf/ → /home/ros2_ws/src/robot/conf` (arm et x86) : un fichier déposé dans `conf/` sur le
+  Pi est visible du conteneur et survit aux rsync suivants.
+- Pont web : `TOPICS_LECTURE` (web_protocol.py) = topics latchés lus en TRANSIENT_LOCAL et
+  rediffusés dans le message `state` (2 Hz) ; la page les affiche en badge (`badge-mode`…).
+
+**Décisions (ne pas rouvrir)** :
+1. **Deux topics, dans `theatre_contrats.topics`** : `CATALOGUE = 'catalogue'` et
+   `DEPLOY_SHA = 'deploy_sha'` (ajoutés à l'inventaire gravé `test_inventaire.py`). Les deux
+   sont **StringTime latchés** (`qos.latched()`), `msg` = JSON : le catalogue = l'objet des 6
+   familles ; le sha = une chaîne JSON (`"a1b2c3…"` ou `"dev"`).
+2. **Un nœud dédié, `robot_web/catalogue_node.py`, exécutable `catalogue`** (pas dans
+   `web_bridge_node` : le catalogue sert la télécommande même sans pont web, et le pont web
+   est optionnel en sim). Paramètres : `json_dir` (défaut `/home/ros2_ws/json`),
+   `deploy_sha_file` (défaut `""` = pas de fichier = `dev`), `refresh_period_s` (défaut 2.0).
+   Au démarrage il publie les deux ; puis à chaque période il reconstruit le catalogue et ne
+   **republie que si le JSON a changé** (comparaison de la chaîne sérialisée : c'est ce qui
+   rend L1d trivial — écrire un fichier suffit, le catalogue suit). Le sha ne change jamais
+   en cours de vie : lu une fois.
+3. **Logique pure dans `web_catalog.py`** : `build_catalog()` gagne la famille `visuals`
+   (liste triée des `name` de `visuals.json["visual"]`, `[]` + WARNING si absent/illisible,
+   jamais d'exception — même contrat que les 5 autres) ; nouvelle fonction
+   `read_deploy_sha(path: str) -> str` : fichier absent/vide/illisible → `"dev"`, sinon
+   contenu `strip()`. Les clés existantes (`faces`, `audios`, `animations`, `relays`,
+   `robot_lights`) **ne sont pas renommées** (la page les consomme). Le nœud reste mince :
+   timer + comparaison + publication, rien d'autre.
+4. **Lancement** : `robot_app.launch.py` ajoute `catalogue` (toujours, pas conditionné) avec
+   `json_dir=/home/ros2_ws/src/robot/json` et `deploy_sha_file=/home/ros2_ws/src/robot/conf/DEPLOY_SHA` ;
+   `sim.launch.py` l'ajoute toujours (`json_dir` par défaut, pas de fichier sha → `dev`).
+   Dans le groupe namespace de L1b, comme les autres.
+5. **Ansible écrit le sha** : tâche ajoutée à la FIN du rôle `synchronise` (robot uniquement
+   pour L1c ; vision/télécommande = quand `machines/` existera, L1e) : `copy` avec
+   `content: "{{ lookup('pipe', 'git -C ' ~ local_projects_dir ~ ' rev-parse HEAD') }}{{ '-dirty' if lookup('pipe', 'git -C ' ~ local_projects_dir ~ ' status --porcelain') else '' }}"`
+   vers `{{ ros2_ws }}/src/robot/conf/DEPLOY_SHA`. Le suffixe `-dirty` est OBLIGATOIRE :
+   le rsync copie l'arbre de travail, pas un commit — un sha propre mentirait. Côté PC, le
+   fichier `conf/DEPLOY_SHA` ne doit JAMAIS exister : ajouté au `.gitignore` de
+   `legacy/dadou_robot_ros` avec un commentaire (sinon la sim afficherait un faux sha).
+6. **Page scène et console** : `deploy_sha` entre dans `TOPICS_LECTURE` ; `index.html` et
+   `scene.html` affichent un badge `badge-version` à côté de `badge-mode`, rempli depuis
+   `state` (chaîne `dev` ou les 7 premiers caractères du sha, suffixe `-dirty` conservé
+   et affiché en badge d'alerte). `catalogue` N'entre PAS en lecture (la page garde
+   `/api/catalog`, même fonction donc même contenu).
+7. **Test gravé télécommande** :
+   `legacy/dadou_control_ros/controller/tests/unit/test_buttons_vs_catalogue.py`. Le conftest
+   de la télécommande ajoute `legacy/dadou_robot_ros/conf/ros2_dependencies/robot_web` au
+   `sys.path` (module pur, stdlib) ; le catalogue est construit depuis
+   `legacy/dadou_robot_ros/json` (chemin relatif au dépôt, calculé depuis le fichier de
+   test). Pour chaque bouton de chaque mode : `ANIMATION` str ∈ `animations` (formes
+   acceptées gravées : `STOP`, `{TYPE: …}`) ; `AUDIO` ∈ valeurs `value` (chemins) de
+   `audios` ; `RELAY` ∈ `relays` ; `FACE` ∈ `faces` ; `ROBOT_LIGHTS` ∈ `robot_lights`.
+   Message d'échec : mode, bouton, libellé, valeur, et la famille où elle manque.
+   ⚠️ Attendu : ce test va probablement **rougir sur des boutons existants** (ex. `AUDIO:
+   'ca-va'` n'est pas un chemin). Règle : **ne corrige un bouton que si la cible voulue est
+   sans ambiguïté** (un audio dont le label est exactement `ca-va` → sa `value`) ; sinon
+   laisse le test rouge, marque-le `xfail(strict=True)` avec la raison, et liste-le dans
+   le rapport : c'est David qui tranche ce qu'un bouton doit jouer.
+8. **Preuve sim** : `conf/scripts/validate-catalogue.sh` (monté dans le compose comme les
+   autres) : `ros2 topic echo $NS/catalogue --once --qos-durability transient_local --field msg`
+   → JSON à **6 clés** toutes non vides (sauf `visuals` qui peut l'être si le JSON est vide :
+   non, il contient des entrées, exiger non vide) ; `$NS/deploy_sha` → `"dev"` ; puis
+   `touch`/ajout d'une séquence temporaire sous `json/sequences/tmp-l1c/` → en ≤ 5 s le
+   catalogue republié contient le nouveau nom ; suppression → disparaît. KO = sortie 1.
+9. **Tests host** : `test_web_catalog.py` étendu (visuals, `read_deploy_sha` : absent → dev,
+   vide → dev, contenu → strip) avec valeurs GRAVÉES ; `test_catalogue_node.py` sur la
+   logique « republie seulement si changé » (le nœud expose une fonction pure
+   `next_publication(previous_json, current_json) -> str | None`, testée sans rclpy).
+10. **Porte de sortie L1c** : pytest robot + télécommande + contrats verts (ou xfail
+    gravés listés) ; `validate-catalogue.sh` OK en sim ; `validate-namespace.sh` toujours OK
+    (le nouveau nœud est sous le namespace) ; doc : README de `robot_web` (le nœud, les deux
+    topics), `docs/interfaces.md` (legacy robot : les deux topics), operations.md (badge
+    version : à quoi sert `-dirty`), README Ansible (le sha), `packages/README.md`,
+    tableau de bord `chantiers.md` (L1c fait en sim ; verrou = premier déploiement robot
+    affiche le sha).
+
 ### L1d — édition à travers le robot
 
 Topic `data_edit` (StringTime, payload JSON `{kind, name, content}`) ; le robot **valide**
