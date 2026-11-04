@@ -28,6 +28,23 @@
   code) — **protocole caméra à rejouer** (`validate-cmdvel-protocol.sh`, roues
   hors sol) AVANT tout usage au sol. Validé en sim seulement au 04/11.
 
+## Version déployée et catalogue publié (lot L1c, 04/11)
+- Le robot publie, latchés, `catalogue` (ce qu'il sait jouer : faces, audios,
+  animations, relais, lumières, visuels) et `deploy_sha` (sa version). Nœud
+  `catalogue_node`, lancé par `robot_app.launch.py` et par la sim.
+- **Badge version** dans le bandeau de la console et de la page scène : `dev` en
+  sim, sinon les 7 premiers caractères du sha. **`-dirty`** (badge orange) = l'arbre
+  rsyncé n'était PAS un commit propre : le sha seul mentirait, il faut lire le
+  `git status` du PC au moment du déploiement pour savoir ce qui tourne.
+  Pas de badge = le robot n'a rien publié (nœud absent, ancien déploiement).
+- ⚠️ État au 04/11 : la tâche Ansible qui écrit `conf/DEPLOY_SHA` n'est PAS
+  encore faite (zone déploiement, en attente de validation) : un robot déployé
+  afficherait `dev`. `conf/DEPLOY_SHA` est dans le `.gitignore` : il ne doit jamais
+  exister côté PC (la sim afficherait un faux sha).
+- Vérif en sim : `docker exec dadou-sim-container bash /home/ros2_ws/validate-catalogue.sh`
+  (6 familles non vides, sha `dev`, une séquence déposée apparaît en <= 5 s).
+  À la main : `ros2 topic echo /didier/catalogue --once --qos-durability transient_local --field msg`.
+
 ## Réinstallation d'un Pi vierge (vécu le 2026-11-04)
 - `ansible-playbook -i hosts install-pios-lite.yml -e target_group=robot` depuis
   `dadou_utils_ros/ansible`, puis retirer l'ancienne empreinte SSH de `robot.local`.
