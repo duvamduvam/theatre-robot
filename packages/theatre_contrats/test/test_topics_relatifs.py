@@ -30,6 +30,14 @@ def test_topics_du_jeu_graves():
     assert topics.JEU_JOURNAL == "jeu/journal"
 
 
+def test_topics_catalogue_graves():
+    # Lot L1c : valeurs DE FIL, lues par la page scène (deploy_sha), la
+    # télécommande et validate-catalogue.sh.
+    assert topics.CATALOGUE == "catalogue"
+    assert topics.DEPLOY_SHA == "deploy_sha"
+
+
 def test_nombre_de_topics_grave():
-    # 10 organes + 6 StringTime hors organes + 3 perception + 4 jeu (lot A1).
-    assert len(_noms_de_topics()) == 23
+    # 10 organes + 6 StringTime hors organes + 3 perception + 4 jeu (lot A1)
+    # + 2 catalogue/version (lot L1c).
+    assert len(_noms_de_topics()) == 25

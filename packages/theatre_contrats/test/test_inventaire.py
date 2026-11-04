@@ -25,6 +25,8 @@ TOPICS_JEU = {
     "JEU_CONSOLE": "jeu/console", "JEU_INTENTION": "jeu/intention",
     "JEU_CHAT_MOVE": "jeu/chat_move", "JEU_JOURNAL": "jeu/journal",
 }
+# Nouveaux au lot L1c (le robot publie catalogue + sha) : PAS repris de utils_static.
+TOPICS_CATALOGUE = {"CATALOGUE": "catalogue", "DEPLOY_SHA": "deploy_sha"}
 CLES = {
     "A": "A", "ANGLO": "anglo", "AUDIOS": "audios", "B": "B", "BACKWARD": "backward",
     "BRIGHTNESS": "brightness", "COLOR": "color", "DEFAULT": "default", "DEVICES": "devices",
@@ -47,7 +49,8 @@ def test_organes():
 
 
 def test_topics():
-    assert _constantes(topics) == {**ORGANES, **TOPICS_HORS_ORGANES, **TOPICS_PERCEPTION, **TOPICS_JEU}
+    assert _constantes(topics) == {**ORGANES, **TOPICS_HORS_ORGANES, **TOPICS_PERCEPTION, **TOPICS_JEU,
+                                         **TOPICS_CATALOGUE}
 
 
 def test_cles():
