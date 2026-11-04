@@ -26,6 +26,12 @@ préfixe `/` des noms de nets générés : c'est pour ça que la comparaison ind
 écrite. **Limite de tout ce tableau** : il prouve que les cartes sont cohérentes avec leurs
 schémas, pas que les schémas sont justes ni que les pièces rentrent.
 
+> **05/11, après ce tableau** : la carte L a reçu deux sorties Dupont du bus I²C du Pi
+> (J13, J14). Contrôles refaits sur L : aucune pastille existante ne change de net, aucune
+> piste existante ne disparaît, ERC 0, DRC 0, parité 0 écart, pile 0 défaut. Le panier porte
+> les nouveaux Gerber de L. **Commande suspendue par David le 05/11 : les vérifications
+> d'abord.**
+
 ## 2. BLOQUANT trouvé — carte P : les pistes des départs 10 A sont trop étroites
 
 Mesuré dans `carrier-p.kicad_pcb` : aucun plan de cuivre sur les rails de puissance
@@ -70,7 +76,7 @@ pièce sur ses pastilles. C'est le seul contrôle qui confronte les empreintes a
 | P | un module INA226 **CJMCU-226** (6 broches) si tu en as | les supports M7/M8 attendent ce brochage ; taille supposée 26 × 20 |
 | M | PCA9685, PCF8574 HW-171 | entraxe 35,56 mm du HW-171 « à vérifier » depuis juillet |
 | L | un support DIP-14 et DIP-16, la nappe GPIO, un ISO1540 | |
-| L | **le câble du BNO055 sur J10** | écart trouvé le 05/11 : `main-carrier/DESIGN.md` dit Qwiic = **JST-SH 1,0 mm**, l'empreinte posée est une **JST-PH 2,0 mm** (`jstph4`). Un câble Qwiic n'y entre pas. J10 est aussi le seul accès au bus I²C du Pi : BNO055 et INA226 24 V devraient le partager |
+| L | **le câble du BNO055 sur J10** | écart trouvé le 05/11 : `main-carrier/DESIGN.md` dit Qwiic = **JST-SH 1,0 mm**, l'empreinte posée est une **JST-PH 2,0 mm** (`jstph4`). Un câble Qwiic n'y entre pas. L'accès au bus du Pi pour l'INA226 est réglé le 05/11 par deux barrettes Dupont **J13/J14** (3V3 · SDA · SCL · GND) ; l'empreinte de J10, elle, reste à trancher |
 | audio | une RCA, le transfo 600:600, un relais G5V-2 et un G5LE | empreintes RCA et transfo **provisoires** ; brochage G5V-2 à lire sur la fiche Omron |
 | odométrie | un JST 4 points et 2 points de ta boîte, un PC817, le RP2040-Zero sur ses deux barrettes, la PTC, le TVS, le 100 µF | pas XH 2,50 non confirmé ; entraxe du Zero 15,24 |
 

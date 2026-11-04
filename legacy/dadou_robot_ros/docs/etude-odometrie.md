@@ -1033,7 +1033,8 @@ fil 24 V près du bus 3,3 V du Pi : mettre **1 kΩ en série au départ de J32**
 court-circuit ne débite alors que 24 mA), et ne jamais confondre ses bornes. La seule barrière
 galvanique du projet reste la carte odométrie.
 
-**Correction du même jour** : brancher ce module sur **J10 de L (bus I²C du Pi)** plutôt que
+**Correction du même jour** : brancher ce module sur le **bus I²C du Pi, carte L** — barrettes
+Dupont **J13/J14** ajoutées pour ça le 05/11 (3V3 · SDA · SCL · GND ; J10 est pris par le BNO055) — plutôt que
 sur J11 — J11 est le bus 5 V du PCA9685 des roues, et un INA226 sort d'usine à l'adresse
 **0x40, celle du PCA9685 des roues** (fiche Tinytronics du module 20 A, lue le 05/11 :
 « I2C address: 0x40 (can be changed using the solder pads) »). Sur le bus du Pi, 0x40 est
