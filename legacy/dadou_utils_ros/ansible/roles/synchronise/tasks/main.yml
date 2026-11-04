@@ -79,3 +79,19 @@
     copy_links: yes
     rsync_opts: "{{ ['--exclude=.git/', '--exclude=__pycache__/', '--exclude=*.egg-info/', '--exclude=README.md']
                     + (packages_sim_only | default([]) | map('regex_replace', '^(.*)$', '--exclude=\\1/') | list) }}"
+
+# Lot L1c (2026-11-04) : le robot publie le sha déployé (topic `deploy_sha`, nœud
+# catalogue_node de robot_web ; badge « version » de la console web). Le fichier est
+# lu dans le conteneur à /home/ros2_ws/src/robot/conf/DEPLOY_SHA (conf/ est monté).
+# Le lookup `pipe` s'exécute sur le PC (le git n'existe pas sur le Pi) ; `-C` sur
+# legacy/ remonte au dépôt theatre-robot. Suffixe `-dirty` OBLIGATOIRE si l'arbre
+# de travail diffère du commit : le rsync copie l'arbre, pas le commit — un sha
+# propre mentirait. Robot seulement pour L1c (vision/télécommande : quand
+# machines/<hôte>/ existera, L1e). Côté PC, conf/DEPLOY_SHA n'existe jamais
+# (gitignoré) : la sim affiche « dev ».
+- name: Write the deployed git sha (robot only, read by catalogue_node)
+  copy:
+    content: "{{ lookup('pipe', 'git -C ' ~ local_projects_dir ~ ' rev-parse HEAD') }}{{ '-dirty' if lookup('pipe', 'git -C ' ~ local_projects_dir ~ ' status --porcelain') else '' }}\n"
+    dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/DEPLOY_SHA"
+    mode: "0644"
+  when: project_ros_dir == 'robot'

@@ -37,10 +37,10 @@
   rsyncé n'était PAS un commit propre : le sha seul mentirait, il faut lire le
   `git status` du PC au moment du déploiement pour savoir ce qui tourne.
   Pas de badge = le robot n'a rien publié (nœud absent, ancien déploiement).
-- ⚠️ État au 04/11 : la tâche Ansible qui écrit `conf/DEPLOY_SHA` n'est PAS
-  encore faite (zone déploiement, en attente de validation) : un robot déployé
-  afficherait `dev`. `conf/DEPLOY_SHA` est dans le `.gitignore` : il ne doit jamais
-  exister côté PC (la sim afficherait un faux sha).
+- Tâche Ansible (rôle `synchronise`, robot seulement) : écrit `conf/DEPLOY_SHA` au rsync,
+  jamais exécutée à ce jour (04/11) — le premier déploiement robot doit afficher son sha.
+  `conf/DEPLOY_SHA` est dans le `.gitignore` : il ne doit jamais exister côté PC (la
+  sim afficherait un faux sha).
 - Vérif en sim : `docker exec dadou-sim-container bash /home/ros2_ws/validate-catalogue.sh`
   (6 familles non vides, sha `dev`, une séquence déposée apparaît en <= 5 s).
   À la main : `ros2 topic echo /didier/catalogue --once --qos-durability transient_local --field msg`.
