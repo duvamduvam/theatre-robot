@@ -385,3 +385,9 @@ CPU bridé à 600 MHz, 56 °C, Docker et conteneur actifs. Les défauts vus sur 
 instables) peuvent venir de son alimentation : le verdict « mémoire suspecte » n'est plus retenu tant
 qu'il n'est pas retesté sur une bonne alimentation. Test mémoire reporté : résultat non concluant sous
 sous-tension, et risque pour la SD en cas de coupure.
+
+Pi de 4 Go sur chargeur Dell 50 W, sans HAT : `throttled=0x0` avant et après charge, 1,8 GHz, 66 °C.
+Test mémoire : 2 Go hachés 8 fois en 90 s, **0 divergence** ; `dockerd` relu 3 fois caches vidés,
+**empreinte identique** (`c693ba24…`) ; conteneur `restart=0`. La sous-tension venait du chargeur USB
+utilisé juste avant. Le Pi est sain sur ce test court. Reste à expliquer les 8 flashs vus sur le
+rail du robot, avec le HAT : le HAT et la tenue du rail sous charge ne sont pas mis hors de cause.
