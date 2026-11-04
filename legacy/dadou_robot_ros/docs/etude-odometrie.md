@@ -1026,6 +1026,13 @@ traverser la barrière. Mais la carte P porte déjà `+24V` fusé et GND sur **J
 la carte M sort le bus I²C 5 V sur **J11**. Un module INA226 de plus (adresse 0x46) branché sur
 J11, sa broche VBS reliée à J32, lirait le 24 V du côté puissance : l'I²C remonte déjà au Pi à
 travers l'ISO1540, et **aucune carte n'est à modifier**. Plage 36 V, pack 29,4 V plein.
+**Correction du même jour** : brancher ce module sur **J10 de L (bus I²C du Pi)** plutôt que
+sur J11 — J11 est le bus 5 V du PCA9685 des roues, et un INA226 sort d'usine à l'adresse
+**0x40, celle du PCA9685 des roues** (fiche Tinytronics du module 20 A, lue le 05/11 :
+« I2C address: 0x40 (can be changed using the solder pads) »). Sur le bus du Pi, 0x40 est
+libre et rien ne peut gêner les roues. Module à bornier (4 broches, shunt R002) : convient ici,
+**pas** aux supports M7/M8 de P qui attendent un CJMCU-226 à 6 broches. Toujours passer
+`i2cdetect` sur table avant de le relier au robot.
 À vérifier : VBS accessible sur le module acheté (la table de P le suppose, broche 6), présence
 d'un module de rechange, et que le `24V_IN` de J20 vient bien du pack. Ne donne qu'une tension,
 pas le SOC du BMS.

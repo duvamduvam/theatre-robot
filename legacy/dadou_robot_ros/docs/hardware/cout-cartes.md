@@ -27,6 +27,9 @@
 > Aisler : prix lu sur carrier-m seule, TVA allemande 19 % affichée, multiplié par 4 sans
 > vérifier de remise ou de frais par commande. Le §4 ci-dessous (110-150 €) est périmé.
 
+> ⛔ **Ne pas commander avant [`plan-verification-cartes.md`](plan-verification-cartes.md)** :
+> pistes 10 A de P trop étroites en 1 oz (2 oz = +32,49 € pour P, lu le 05/11).
+
 > **Mise à jour du 05/11 : 5ᵉ carte au panier** (`odometry`, 92 × 84 mm, violet, HASL au
 > plomb) : +3,57 €, port inchangé à 23,99 € (0,97 kg), **sous-total 32,92 €**, avant TVA et
 > douane, non commandé. Gravée avant validation sur robot, par décision de David.
