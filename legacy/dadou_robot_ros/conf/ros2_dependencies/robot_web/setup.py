@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'web_bridge = robot_web.web_bridge_node:main',
+            'catalogue = robot_web.catalogue_node:main',
         ],
     },
 )

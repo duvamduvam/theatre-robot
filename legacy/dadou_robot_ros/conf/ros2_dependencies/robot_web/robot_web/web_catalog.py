@@ -135,3 +135,14 @@ def read_deploy_sha(path: str) -> str:
     except OSError:
         return "dev"
     return contenu or "dev"
+
+
+def next_publication(previous_json: str | None, current_json: str) -> str | None:
+    """Décision « republier ? » de catalogue_node, pure (testée sans rclpy).
+
+    Rend le JSON à publier, ou None si rien n'a changé depuis la dernière
+    publication (previous_json = None au démarrage : on publie toujours).
+    On compare les chaînes SÉRIALISÉES : build_catalog() est déterministe
+    (listes triées), donc deux catalogues identiques donnent la même chaîne.
+    """
+    return None if current_json == previous_json else current_json
