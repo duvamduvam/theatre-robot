@@ -6,6 +6,27 @@
 > cinq** (pages PCBWay du 26/09). Les §2.x ci-dessous décrivent la situation
 > AVANT bascule ; l'étude : [`etude-cartes-100x100.md`](etude-cartes-100x100.md) §10.
 
+> **Devis réels du 04/11** : les 4 zip de `didier/pcb/kicad/fab/` ont été déposés dans
+> les calculateurs, sans compte et sans rien commander (navigateur headless, profil
+> vierge). Options par défaut : 2 couches, 1,6 mm, cuivre 35 µm/1 oz, vert.
+>
+> | | JLCPCB | Aisler (Europe) |
+> |---|---|---|
+> | Carte, 5 pièces | **4,00 $** les 4 cartes lues à l'identique (2,00 $ via l'app JLCONE) | **54,06 € HT / 64,33 € TTC** (carrier-m seule) |
+> | Carte, 3 pièces | — (minimum 5) | **34,03 € HT / 40,50 € TTC** |
+> | Port vers la France, 1 carte (0,29 kg) | Global Standard 7,60 $ (10-12 j) · EuroPacket 16,11 $ · DHL Express (DDP) 23,44 $ · FedEx (DDP) 23,79 $ | « Shipping worldwide for free » (page d'accueil) |
+> | Port, poids de 20 cartes (0,82 kg) | Global Standard 14,14 $ · EuroPacket 23,86 $ · DHL (DDP) 26,88 $ · FedEx (DDP) 27,64 $ | idem |
+> | **Les 4 designs, 5 pièces** | **16 $ + 14,14 à 26,88 $ de port = 30 à 43 $**, hors TVA et droit de 3 € | **≈ 257 € TTC** (4 × 64,33) |
+> | Les 4 designs, 3 pièces | — | **≈ 162 € TTC** (4 × 40,50) |
+>
+> **Ce qui n'est PAS établi** : le panier JLCPCB exige un compte, donc ni la TVA, ni le
+> droit de douane, ni les frais UE du 01/11 n'ont été vus ; rien ne prouve non plus que
+> le 4,00 $ s'applique aux 4 designs d'une même commande ni que Global Standard
+> (≤ 1,5 kg, ≤ 150 $) est DDP. Le poids groupé est une approximation : 4 × 0,29 kg font
+> 1,16 kg, au-dessus des 0,82 kg lus, donc le port réel peut dépasser ces chiffres.
+> Aisler : prix lu sur carrier-m seule, TVA allemande 19 % affichée, multiplié par 4 sans
+> vérifier de remise ou de frais par commande. Le §4 ci-dessous (110-150 €) est périmé.
+
 Première estimation chiffrée de la fabrication des cartes du robot. Elle complète
 [`inventaire-stock.md`](inventaire-stock.md) (ce qu'on possède) et
 [`croisement-etudes.md`](croisement-etudes.md) (ce qu'il faut acheter) par la
