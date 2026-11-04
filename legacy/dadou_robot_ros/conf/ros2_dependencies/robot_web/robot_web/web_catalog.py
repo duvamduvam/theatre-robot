@@ -31,6 +31,9 @@ pas supposées) :
                      'robot_lights.json' dans robot/robot_config.py, c'est le
                      fichier réellement chargé par Lights pour le topic
                      robot_lights).
+ - "visuals"      : noms de visuals.json (`{"visual": [{"name", "path"}]}`) --
+                     la 6e famille du catalogue publié par catalogue_node (L1c) ;
+                     la page web ne la consomme pas encore.
 
 Fichier manquant/illisible -> entrée vide + WARNING loggué, JAMAIS d'exception
 (le robot doit pouvoir tourner sans catalogue complet, ex. json/ pas encore
@@ -71,6 +74,17 @@ def _build_robot_lights(json_dir: pathlib.Path) -> list:
     return sorted(_load_json_dict(json_dir / "robot_lights.json").keys())
 
 
+def _build_visuals(json_dir: pathlib.Path) -> list:
+    """Noms triés de visuals.json["visual"] ; [] + WARNING si absent, illisible
+    ou mal formé (même contrat « jamais d'exception » que les autres familles)."""
+    visuals = _load_json_dict(json_dir / "visuals.json").get("visual")
+    if not isinstance(visuals, list):
+        logger.warning("catalogue web : visuals.json sans liste \"visual\"")
+        return []
+    return sorted({v["name"] for v in visuals
+                   if isinstance(v, dict) and isinstance(v.get("name"), str)})
+
+
 def _build_audios(json_dir: pathlib.Path) -> list:
     """[{"label": clé, "value": path}] -- entrées à path vide exclues (voir
     docstring de module : "stop" n'est pas une valeur AUDIO publiable)."""
@@ -103,4 +117,21 @@ def build_catalog(json_dir: pathlib.Path) -> dict:
         "animations": _build_animations(json_dir),
         "relays": _build_relays(json_dir),
         "robot_lights": _build_robot_lights(json_dir),
+        "visuals": _build_visuals(json_dir),
     }
+
+
+def read_deploy_sha(path: str) -> str:
+    """Sha git déployé, lu dans le fichier écrit par Ansible au rsync.
+
+    Fichier absent, vide ou illisible -> "dev" (sim, poste de dev : jamais de
+    fichier). Le suffixe "-dirty" éventuel est conservé tel quel : il dit que
+    l'arbre rsyncé n'était pas un commit propre.
+    """
+    if not path:
+        return "dev"
+    try:
+        contenu = pathlib.Path(path).read_text().strip()
+    except OSError:
+        return "dev"
+    return contenu or "dev"

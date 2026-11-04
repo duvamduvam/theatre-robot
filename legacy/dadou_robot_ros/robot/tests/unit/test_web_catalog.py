@@ -8,7 +8,7 @@ structure (ex. si expressions.json changeait de forme demain).
 import json
 import pathlib
 
-from robot_web.web_catalog import build_catalog
+from robot_web.web_catalog import build_catalog, read_deploy_sha
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 JSON_DIR = REPO_ROOT / "json"
@@ -100,6 +100,7 @@ def test_dossier_json_manquant_donne_un_catalogue_vide_sans_exception(tmp_path):
     catalogue = build_catalog(tmp_path / "inexistant")
     assert catalogue == {
         "faces": [], "audios": [], "animations": [], "relays": [], "robot_lights": [],
+        "visuals": [],
     }
 
 
@@ -113,3 +114,59 @@ def test_sequences_dossier_absent_donne_animations_vides_sans_exception(tmp_path
     (tmp_path / "expressions.json").write_text("{}")
     catalogue = build_catalog(tmp_path)
     assert catalogue["animations"] == []
+
+
+# --- visuals (L1c) ----------------------------------------------------------------
+
+def test_catalogue_a_les_six_familles():
+    assert set(build_catalog(JSON_DIR)) == {
+        "faces", "audios", "animations", "relays", "robot_lights", "visuals"}
+
+
+def test_visuals_couvre_les_noms_de_visuals_json_trie():
+    catalogue = build_catalog(JSON_DIR)
+    with (JSON_DIR / "visuals.json").open() as f:
+        noms = {v["name"] for v in json.load(f)["visual"]}
+    assert set(catalogue["visuals"]) == noms
+    assert catalogue["visuals"] == sorted(catalogue["visuals"])
+    assert "mferme1" in catalogue["visuals"]  # json/visuals.json, bouche fermée
+
+
+def test_visuals_valeurs_gravees(tmp_path):
+    (tmp_path / "visuals.json").write_text(
+        '{"visual": [{"name": "b", "path": "x"}, {"name": "a", "path": "y"}, {"path": "z"}]}')
+    assert build_catalog(tmp_path)["visuals"] == ["a", "b"]
+
+
+def test_visuals_mal_formes_donnent_liste_vide_sans_exception(tmp_path):
+    (tmp_path / "visuals.json").write_text('{"visual": "pas une liste"}')
+    assert build_catalog(tmp_path)["visuals"] == []
+    (tmp_path / "visuals.json").write_text("{illisible")
+    assert build_catalog(tmp_path)["visuals"] == []
+
+
+# --- read_deploy_sha (L1c) -----------------------------------------------------------
+
+def test_deploy_sha_fichier_absent_donne_dev(tmp_path):
+    assert read_deploy_sha(str(tmp_path / "DEPLOY_SHA")) == "dev"
+
+
+def test_deploy_sha_chemin_vide_donne_dev():
+    assert read_deploy_sha("") == "dev"
+
+
+def test_deploy_sha_fichier_vide_donne_dev(tmp_path):
+    f = tmp_path / "DEPLOY_SHA"
+    f.write_text("  \n")
+    assert read_deploy_sha(str(f)) == "dev"
+
+
+def test_deploy_sha_contenu_strippe_et_dirty_conserve(tmp_path):
+    f = tmp_path / "DEPLOY_SHA"
+    f.write_text("a1b2c3d4e5f6-dirty\n")
+    assert read_deploy_sha(str(f)) == "a1b2c3d4e5f6-dirty"
+
+
+def test_deploy_sha_illisible_donne_dev(tmp_path):
+    # Un dossier à la place du fichier : OSError (IsADirectoryError), pas d'exception.
+    assert read_deploy_sha(str(tmp_path)) == "dev"
