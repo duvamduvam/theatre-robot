@@ -95,6 +95,80 @@ variable) ; test gravé : avec `ROBOT_NAME=didier2`, `ros2 topic list` en sim ne
 change de nom de topic (pas de code) → sim + **protocole caméra à la prochaine séance
 robot** (noté au tableau de bord, verrou de déploiement).
 
+#### L1b — conception détaillée (04/11, Fable ; spec FERMÉE pour l'implémenteur)
+
+**Faits relevés le 04/11** (balayage du dépôt, repris dans cette conception) :
+- 7 launch files, aucun ne pose de namespace : `robot_bringup/robot_app`, `robot_drive/drive`
+  (inclus par le précédent ET lancé seul en sim), `robot_sim/sim`, `robot_web/web`,
+  `robot_rehearsal/rehearsal` (lance aussi `didier_jeu`), `robot_description/display`,
+  `vision/vision`. La télécommande n'a pas de launch : `ros2 run controller controller_node`
+  dans ses deux scripts `launch-*-docker.sh`.
+- Noms absolus restants dans le code : `robot_rehearsal/contracts.py` `ODOM_TOPIC =
+  "/ground_truth/odom"`, `robot/nodes/gaze_follower_node.py` `NECK_TOPIC_SIM = "/neck/position"`.
+  Tout le reste est relatif (L1a), le pont web et la page scène ne manipulent que des noms
+  relatifs (whitelist) : ils suivent le namespace de leur node sans changement.
+- `robot_sim/config/gz_bridge.yaml` : 13 entrées, côté ROS **absolues** (`/cmd_vel`, `/odom`,
+  `/ground_truth/odom`, `/joint_states`, `/<servo>/position` ×5, `/material_color`, `/clock`,
+  `/tf`) sauf les 2 caméras déjà relatives.
+- 7 scripts shell utilisent la CLI `ros2 topic pub/echo` avec des noms relatifs ou absolus
+  (`validate-rehearsal-{route,faults,chantiers}.sh`, `validate-jeu-a1.sh` — pilote rclpy
+  `rclpy.init()` + `Node(...)` sans namespace —, `validate-cmdvel-protocol.sh` ⚠️ protocole
+  caméra du robot : `/wheels`, `/e_stop`, `pub.sh`, `collect-incident.sh`). **Un nom relatif
+  tapé dans la CLI se résout à la racine, pas dans le namespace** : ces scripts cassent en
+  silence dès que les nœuds sont namespacés.
+- Commandes manuelles documentées (CLAUDE.md legacy, operations.md, README de didier_jeu,
+  person_follower, teleop clavier) : mêmes noms relatifs en CLI.
+
+**Décisions (ne pas rouvrir)** :
+1. **Une seule variable, `ROBOT_NAME`**, défaut `didier`, lue par les launch via
+   `EnvironmentVariable("ROBOT_NAME", default_value="didier")` et exposée en argument
+   `robot_name:=` (défaut = la variable). Posée dans les 6 compose (`robot` arm/x86, `vision`
+   arm/x86, `control` arm/x86, `sim`) comme `ROS_DOMAIN_ID` : `ROBOT_NAME=${ROBOT_NAME:-didier}`.
+2. **Namespace ABSOLU** : chaque launch enveloppe ses nœuds dans
+   `GroupAction([PushRosNamespace(["/", robot_name]), …])`. Absolu = idempotent : `drive.launch`
+   inclus par `robot_app.launch` OU lancé seul donne `/didier/…` dans les deux cas (launch_ros
+   ignore le namespace parent quand le poussé commence par `/`). Jamais de `namespace=` par
+   nœud (on l'oublierait au prochain nœud).
+3. **Exceptions GRAVÉES, globales par construction ROS** : `/clock` (TimeSource rclcpp/rclpy
+   s'abonne à `/clock` absolu), `/tf` et `/tf_static` (TransformBroadcaster), `/rosout`,
+   `/parameter_events`. Rien d'autre. `robot_description` et `joint_states` passent sous le
+   namespace (`robot_state_publisher` et `ros_gz_sim create -topic robot_description` sont dans
+   le groupe, ils se suivent).
+4. **`gz_bridge.yaml`** : `ros_topic_name` relatifs (on retire le `/` initial) pour tout sauf
+   `/clock` et `/tf` ; les `gz_topic_name` ne changent PAS (le monde gz ignore ROS). Le
+   `parameter_bridge` est dans le groupe : rclcpp étend les relatifs avec son namespace.
+   Commentaire en tête du YAML qui dit pourquoi ces deux-là restent absolus.
+5. **Code** : `ODOM_TOPIC` et `NECK_TOPIC_SIM` deviennent relatifs (`ground_truth/odom`,
+   `neck/position`), rien d'autre ne change dans les nœuds. **Interdit** : toucher
+   `wheels_bridge_node.py`, `twist_mux.yaml`, `twist_deadman`, `wheels_node` — leurs topics
+   changent de nom PAR le namespace, pas par le code (c'est l'objet du protocole caméra).
+6. **CLI** : les scripts posent `NS="/${ROBOT_NAME:-didier}"` et préfixent CHAQUE topic
+   (`$NS/route`, `$NS/ground_truth/odom`, `$NS/wheels`, `$NS/e_stop`…) ; le pilote rclpy de
+   `validate-jeu-a1.sh` reçoit `namespace=NS`. La télécommande : `ros2 run controller
+   controller_node --ros-args -r __ns:=/${ROBOT_NAME:-didier}`. Lancements manuels documentés
+   (`ros2 run robot person_follower`, `gaze_follower`, `didier_jeu jeu_node`, teleop) : même
+   `--ros-args -r __ns:=/didier` ; `ros2 topic pub /didier/animation …` dans CLAUDE.md
+   (legacy) et operations.md.
+7. **Preuve gravée, deux niveaux** :
+   - host (pytest, sans ROS) : `legacy/dadou_robot_ros/robot/tests/unit/test_namespace_contract.py`
+     — (a) chaque `*.launch.py` des 3 dépôts contient `PushRosNamespace` ET `ROBOT_NAME` ;
+     (b) dans `gz_bridge.yaml`, tout `ros_topic_name` est relatif sauf la liste gravée
+     `{"/clock", "/tf"}` ; (c) le grep des noms absolus de L1a étendu aux constantes
+     `ODOM_TOPIC`/`NECK_TOPIC_SIM` ; (d) chaque script `conf/scripts/validate-*.sh` et `pub.sh`
+     qui appelle `ros2 topic` définit `NS=` et n'a aucun `ros2 topic (pub|echo|hz) [^$/]`
+     (regex gravée).
+   - sim : `conf/scripts/validate-namespace.sh` (monté dans le conteneur comme les autres) —
+     lance drive + rehearsal(jeu:=true) + web dans la sim démarrée avec `ROBOT_NAME=didier2`,
+     attend 10 s, puis `ros2 topic list` : **tout** commence par `/didier2/` sauf les 5
+     exceptions gravées ; `ros2 node list` : tout sous `/didier2/`. KO = sortie 1 avec la
+     liste des intrus. Rejouable avec `ROBOT_NAME=didier` (le défaut) : même règle.
+8. **Porte de sortie L1b** : pytest robot/vision/télécommande/contrats verts ;
+   `validate-namespace.sh` OK avec `didier2` puis `didier` ; **V-R3 Chantiers 21/21** et
+   **validate-jeu-a1 13/13** rejoués (les scripts préfixés) ; animation `parle` jouée en sim ;
+   doc : operations.md, CLAUDE.md legacy (commandes), `packages/README.md`, tableau de bord
+   (`chantiers.md` : L1b fait en sim, **verrou = protocole caméra à la prochaine séance robot,
+   `validate-cmdvel-protocol.sh` préfixé à rejouer**).
+
 ### L1c — le robot publie catalogue + sha
 
 `didier` publie, latché : `catalogue` (JSON : séquences, expressions, visuels, audios,
