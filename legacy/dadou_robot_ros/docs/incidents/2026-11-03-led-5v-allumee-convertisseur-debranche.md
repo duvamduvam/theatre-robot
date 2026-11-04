@@ -379,3 +379,9 @@ en SIGILL ; `/usr/bin/dockerd` relu 3 fois caches vidés a donné 2 empreintes d
 lecture correspond au paquet. Puis David voit les clignotements revenir. Mémoire suspecte, contact SD
 non exclu : test en RAM interrompu, non mesuré. La SD a été éteinte brutalement (`orphan cleanup`) :
 à contrôler dans le Pi de 2 Go.
+
+Pi de 4 Go, 22h12 : `throttled=0x50005` stable, **sous-tension active** depuis 16 s après le boot,
+CPU bridé à 600 MHz, 56 °C, Docker et conteneur actifs. Les défauts vus sur ce Pi (8 flashs, lectures
+instables) peuvent venir de son alimentation : le verdict « mémoire suspecte » n'est plus retenu tant
+qu'il n'est pas retesté sur une bonne alimentation. Test mémoire reporté : résultat non concluant sous
+sous-tension, et risque pour la SD en cas de coupure.

@@ -598,5 +598,5 @@ Donc, pour la prochaine passe :
 | Carte | Mémoire | N° de série | État | Notes |
 |---|---|---|---|---|
 | Pi 4 Model B Rev 1.5 | 2 Go | `10000000e79839cb` | Démarre, programme robot installé et lancé le 04/11 | MAC Ethernet `d8:3a:dd:67:d6:30`, Wi-Fi fixe en .2 |
-| Pi 4 Model B Rev 1.4 | 4 Go | `10000000365ba865` | **Instable, ne pas monter sur le robot** : 8 flashs verts, a démarré une fois sans HAT, puis clignotements revenus | MAC `e4:5f:01:25:6e:ec` ; même fichier lu avec 2 empreintes différentes, `dockerd` en SIGILL |
+| Pi 4 Model B Rev 1.4 | 4 Go | `10000000365ba865` | **Instable, ne pas monter sur le robot avant retest** : 8 flashs verts, sous-tension constatée le 04/11, alimentation à vérifier | MAC `e4:5f:01:25:6e:ec` ; même fichier lu avec 2 empreintes différentes, `dockerd` en SIGILL |
 | 3ᵉ Pi | ? | ? | À tester | Relevé à compléter |
