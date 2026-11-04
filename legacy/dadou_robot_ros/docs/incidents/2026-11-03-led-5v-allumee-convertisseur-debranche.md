@@ -365,3 +365,9 @@ image Jazzy construite sur le Pi, Blinka épinglé en 10.1.0 avec gpiod et son b
 stable, `restart=0`, nœuds lancés, `throttled=0x0`, 851 Mi utilisés et 993 Mi disponibles, Pi hors du
 robot. `relays_node` meurt faute de PCF8574 à 0x21 : attendu sans matériel. Visage LED, servos,
 roues et Blinka 10.1.0 non testés sur le matériel.
+
+## Isolation du démarrage, 2026-11-04 (commit 7a0876b)
+
+Panne rejouée sur le Pi, `gpiod` désinstallé dans un conteneur jetable : les 15 processus partent,
+seul `system_node` meurt. `relays_node` reste vivant sans PCF8574, relais désactivés. Limite connue :
+un nœud mort n'est pas relancé, et la mort de `wheels_node` ne stoppe pas les autres nœuds.
