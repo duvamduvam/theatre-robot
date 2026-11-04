@@ -401,3 +401,13 @@ coupé, Pi débranché, entre SDA et SCL de l'isolateur côté Pi et les trous d
 
 À revoir aussi : l'hypothèse d'un courant moteur traversant le GPIO du Pi. Elle suppose une masse
 commune Pi/robot, que l'isolateur écarte pour l'I²C. Reste à vérifier pour les signaux LED (D18).
+
+## Pi de 4 Go branché sur la nappe, 2026-11-04 : LED rouge et verte fixes
+
+David choisit le sens en mesurant le 5 V aux deux bouts, branche : la LED 12 V reste éteinte, et
+revient dès la nappe retirée. Depuis, le Pi de 4 Go a les deux LED fixes, comme la 3ᵉ Pi. Le Pi de 2 Go
+a démarré ses LED et son RJ45, mais aucun Pi n'apparaît sur le réseau à ce moment. La nappe agit donc
+sur l'alimentation : elle n'est pas seulement reliée au côté isolé de l'ISO1540. Sens et câblage non
+établis. **Aucune nappe sur aucun Pi avant relevé complet de son brochage, rail coupé.** Erreur de
+consigne : le test de tension de la nappe donné le 04/11 était faux, et le sens annoncé n'était
+qu'une convention.
