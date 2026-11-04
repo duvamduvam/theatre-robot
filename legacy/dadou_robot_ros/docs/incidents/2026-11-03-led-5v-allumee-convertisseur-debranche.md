@@ -391,3 +391,13 @@ Test mémoire : 2 Go hachés 8 fois en 90 s, **0 divergence** ; `dockerd` relu 3
 **empreinte identique** (`c693ba24…`) ; conteneur `restart=0`. La sous-tension venait du chargeur USB
 utilisé juste avant. Le Pi est sain sur ce test court. Reste à expliquer les 8 flashs vus sur le
 rail du robot, avec le HAT : le HAT et la tenue du rail sous charge ne sont pas mis hors de cause.
+
+## Correction 2026-11-04 — nappe GPIO et isolateur I²C
+
+David : pas de 5 V sur la nappe sans Pi, l'I²C est isolé. `overview.md` confirme un ISO1540 entre le
+Pi et le bus actionneurs. Le côté Pi de l'isolateur est alimenté par le Pi : les tests de tension à
+vide et de masse Pi/rail donnés pour la nappe ne valent rien. Méthode retenue : continuité, rail
+coupé, Pi débranché, entre SDA et SCL de l'isolateur côté Pi et les trous de la nappe (broches 3 et 5).
+
+À revoir aussi : l'hypothèse d'un courant moteur traversant le GPIO du Pi. Elle suppose une masse
+commune Pi/robot, que l'isolateur écarte pour l'I²C. Reste à vérifier pour les signaux LED (D18).
