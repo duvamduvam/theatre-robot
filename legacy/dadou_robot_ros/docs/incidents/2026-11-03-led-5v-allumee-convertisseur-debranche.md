@@ -411,3 +411,11 @@ sur l'alimentation : elle n'est pas seulement reliée au côté isolé de l'ISO1
 établis. **Aucune nappe sur aucun Pi avant relevé complet de son brochage, rail coupé.** Erreur de
 consigne : le test de tension de la nappe donné le 04/11 était faux, et le sens annoncé n'était
 qu'une convention.
+
+## Pi de 2 Go sur la nappe dans l'autre sens, 2026-11-04 : fumée
+
+David branche le Pi de 2 Go sur la nappe dans l'autre sens : **fumée, câble d'alimentation du Pi chaud**,
+origine non localisée. Rebranché, démarrage difficile. Consigne : tout couper, plus de Pi sur la nappe.
+Les deux sens de nappe ont maintenant fait défaut : le câblage de la nappe ou de sa carte est suspect,
+pas seulement le sens. Un courant passant par le câble d'alimentation du Pi signale un chemin entre
+l'alimentation du Pi et celle du robot.
