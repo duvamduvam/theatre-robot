@@ -103,6 +103,9 @@ services:
       - ../../scripts/validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
       # A1 : porte de sortie du sélecteur de jeu (T1-T7, spec A1 §6), 15 min.
       - ../../scripts/validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
+      # L1b : preuve du namespace par robot (tout sous /<ROBOT_NAME>/ sauf les
+      # 5 exceptions globales gravées), rejouable avec ROBOT_NAME=didier2 puis didier.
+      - ../../scripts/validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
       - ../../../json:/home/ros2_ws/json
