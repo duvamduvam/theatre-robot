@@ -27,10 +27,21 @@
 > Aisler : prix lu sur carrier-m seule, TVA allemande 19 % affichée, multiplié par 4 sans
 > vérifier de remise ou de frais par commande. Le §4 ci-dessous (110-150 €) est périmé.
 
+> **Panier JLCPCB lu le 04/11/2026** (compte achats@duvam.net, non commandé) :
+> 4 cartes × 5, 1,6 mm, **HASL au plomb**, une couleur par carte (M vert, L bleu,
+> P rouge, audio noir) : 4 × 3,57 € = **14,28 €**, port estimé **23,99 €**
+> (0,83 kg ; égal au DHL Express lu en $, mode non affiché au panier), coupon
+> **−8,93 €**, **sous-total 29,35 €**. Départ estimé le 08/11. La couleur et le
+> HASL au plomb sont sans surcoût ; sans plomb +1,16 €/carte, ENIG +15,80 €/carte.
+> Bleu, rouge et noir : 3 jours de production au lieu de 2. L'offre à ~4 $ se
+> cumule bien sur 4 cartes. **Toujours non vus** (avant l'étape de paiement) :
+> TVA, droit de 3 €/catégorie, frais de gestion douanière du 01/11.
+> ⚠️ La finition par défaut est **OSP** : à changer pour une soudure à la main.
+
 > **Devis réel du 04/11/2026** (calculateur public JLCPCB, Gerber de `fab/*.zip`
 > déposés, sans compte, panier non atteint). Les 4 cartes sont reconnues en
-> 2 couches, 100 × 100 mm ; options par défaut (FR-4, 1,6 mm, vert, HASL au
-> plomb, cuivre 1 oz), 5 pièces, production 2 jours.
+> 2 couches, 100 × 100 mm ; options par défaut (FR-4, 1,6 mm, vert, **OSP**,
+> cuivre 1 oz), 5 pièces, production 2 jours.
 >
 > | Poste | Montant lu |
 > |---|---|
