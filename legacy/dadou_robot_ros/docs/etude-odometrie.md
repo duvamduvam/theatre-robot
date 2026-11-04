@@ -1024,8 +1024,15 @@ tension chute sous la charge des moteurs).
 Question de David : intégrer une mesure 24 V à la carte. Sur la carte odométrie, elle devrait
 traverser la barrière. Mais la carte P porte déjà `+24V` fusé et GND sur **J32 VOLTMETRE**, et
 la carte M sort le bus I²C 5 V sur **J11**. Un module INA226 de plus (adresse 0x46) branché sur
-J11, sa broche VBS reliée à J32, lirait le 24 V du côté puissance : l'I²C remonte déjà au Pi à
-travers l'ISO1540, et **aucune carte n'est à modifier**. Plage 36 V, pack 29,4 V plein.
+J11, sa broche VBS reliée à J32, lirait le 24 V du côté puissance, et **aucune carte n'est à modifier**. Plage 36 V, pack 29,4 V plein.
+**Ce montage n'est PAS isolé, et il ne peut pas l'être sur ces cartes** (question de David,
+05/11) : M, L et P n'ont qu'un seul net `GND`, commun au 5 V, au 12 V, au 24 V et au Pi (alimenté
+par J26). L'ISO1540 sépare deux segments de bus, ses deux côtés partagent cette masse : ce n'est
+pas une barrière galvanique. L'INA226 n'ajoute donc aucun lien de masse nouveau, mais il amène un
+fil 24 V près du bus 3,3 V du Pi : mettre **1 kΩ en série au départ de J32** (un fil de mesure en
+court-circuit ne débite alors que 24 mA), et ne jamais confondre ses bornes. La seule barrière
+galvanique du projet reste la carte odométrie.
+
 **Correction du même jour** : brancher ce module sur **J10 de L (bus I²C du Pi)** plutôt que
 sur J11 — J11 est le bus 5 V du PCA9685 des roues, et un INA226 sort d'usine à l'adresse
 **0x40, celle du PCA9685 des roues** (fiche Tinytronics du module 20 A, lue le 05/11 :
