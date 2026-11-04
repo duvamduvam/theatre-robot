@@ -371,3 +371,11 @@ roues et Blinka 10.1.0 non testés sur le matériel.
 Panne rejouée sur le Pi, `gpiod` désinstallé dans un conteneur jetable : les 15 processus partent,
 seul `system_node` meurt. `relays_node` reste vivant sans PCF8574, relais désactivés. Limite connue :
 un nœud mort n'est pas relancé, et la mort de `wheels_node` ne stoppe pas les autres nœuds.
+
+## Pi 4 de 4 Go, 2026-11-04 : instable
+
+Série `10000000365ba865`. Sans HAT il a démarré une fois, sur la SD du Pi de 2 Go. `dockerd` y plantait
+en SIGILL ; `/usr/bin/dockerd` relu 3 fois caches vidés a donné 2 empreintes différentes, alors qu'une
+lecture correspond au paquet. Puis David voit les clignotements revenir. Mémoire suspecte, contact SD
+non exclu : test en RAM interrompu, non mesuré. La SD a été éteinte brutalement (`orphan cleanup`) :
+à contrôler dans le Pi de 2 Go.
