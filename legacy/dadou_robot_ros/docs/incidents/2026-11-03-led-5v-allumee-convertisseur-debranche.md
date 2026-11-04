@@ -419,3 +419,6 @@ origine non localisée. Rebranché, démarrage difficile. Consigne : tout couper
 Les deux sens de nappe ont maintenant fait défaut : le câblage de la nappe ou de sa carte est suspect,
 pas seulement le sens. Un courant passant par le câble d'alimentation du Pi signale un chemin entre
 l'alimentation du Pi et celle du robot.
+
+Pi de 2 Go hors robot après la fumée, 2026-11-04 : répond sur RJ45, `throttled=0x0`, `dockerd` relu avec
+une empreinte stable, Docker actif. Les broches GPIO, l'I²C et le signal LED ne sont pas testés.
