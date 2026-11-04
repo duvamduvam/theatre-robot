@@ -599,4 +599,4 @@ Donc, pour la prochaine passe :
 |---|---|---|---|---|
 | Pi 4 Model B Rev 1.5 | 2 Go | `10000000e79839cb` | Démarre, programme robot installé et lancé le 04/11 | MAC Ethernet `d8:3a:dd:67:d6:30`, Wi-Fi fixe en .2 |
 | Pi 4 Model B Rev 1.4 | 4 Go | `10000000365ba865` | Sain au test du 04/11 sur chargeur Dell 50 W, sans HAT (mémoire, lectures, 0 sous-tension). Instable sur chargeur USB faible. 8 flashs vus avec HAT : à éclaircir avant montage | MAC `e4:5f:01:25:6e:ec` ; lectures instables et `dockerd` en SIGILL sur chargeur faible |
-| 3ᵉ Pi | ? | ? | À tester | Relevé à compléter |
+| 3ᵉ Pi, modèle non relevé | ? | ? | **Ne démarre pas** le 04/11 : LED rouge et verte fixes, rien sur le réseau, avec la SD et le chargeur Dell qui font marcher le Pi de 4 Go | Récupération du bootloader non tentée |
