@@ -14,9 +14,17 @@
 #                        journal (aucun fault_error), et scenario_end présent
 source /opt/ros/${ROS_DISTRO}/setup.sh
 source /home/ros2_ws/install/setup.bash
+# Namespace du robot (lot L1b) : les nœuds vivent sous /<ROBOT_NAME>/ (défaut
+# /didier/). Un nom RELATIF tapé dans la CLI se résout à la RACINE, pas dans ce
+# namespace : chaque topic est donc préfixé par $NS, placé JUSTE APRÈS le verbe
+# (`ros2 topic pub $NS/x …`, options après) — forme gravée par
+# robot/tests/unit/test_namespace_contract.py.
+NS="/${ROBOT_NAME:-didier}"
 JDIR=/home/ros2_ws/log/rehearsal
-num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo --once "$1" --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
-P() { timeout 15 ros2 topic pub -1 "$1" robot_interfaces/msg/StringTime "{msg: \"$2\"}" >/dev/null 2>&1; }
+# num <topic préfixé $NS/…> <champ>
+num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo $1 --once --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
+# P <topic RELATIF au robot (route, rehearsal/cmd…)> <msg> : préfixé ici.
+P() { timeout 15 ros2 topic pub $NS/$1 robot_interfaces/msg/StringTime "{msg: \"$2\"}" -1 >/dev/null 2>&1; }
 ok=0; ko=0
 # PRÉCONDITIONS (vérifiées avant de dérouler : un processus absent donnerait un
 # fault_error légitime du régisseur, mais ce serait le banc qui est faux, pas
@@ -38,9 +46,9 @@ verdict "$(has scenario_start && echo 1 || echo 0)" "journal : scenario_start"
 
 echo "=== T2 chien de garde (attente de zero1, t≈50 s) $(date +%T) ==="
 for i in $(seq 1 70); do hasid fault_start zero1 && break; sleep 1; done
-sleep 1.5; c0=$(num cmd_vel_follow linear.x); echo "  cmd_vel_follow pendant zero : $c0"
+sleep 1.5; c0=$(num $NS/cmd_vel_follow linear.x); echo "  cmd_vel_follow pendant zero : $c0"
 pkill -STOP -f "[d]irector$|[d]irector "; echo "  régisseur gelé $(date +%T.%3N)"
-sleep 2.5; c1=$(num cmd_vel_follow linear.x); echo "  cmd_vel_follow 2,5 s après gel : $c1"
+sleep 2.5; c1=$(num $NS/cmd_vel_follow linear.x); echo "  cmd_vel_follow 2,5 s après gel : $c1"
 pkill -CONT -f "[d]irector$|[d]irector "
 verdict "$(python3 -c "print(1 if '$c0'!='NaN' and abs(float('$c0'))<1e-6 else 0)")" "zero1 : cmd_vel_follow nul pendant la panne"
 verdict "$(python3 -c "print(1 if '$c1'!='NaN' and abs(float('$c1'))>1e-3 else 0)")" "régisseur gelé -> relais passant -> Didier repart"

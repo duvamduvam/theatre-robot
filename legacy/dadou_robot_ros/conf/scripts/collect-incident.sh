@@ -20,6 +20,10 @@
 set -u
 CONTAINER="${CONTAINER:-dadou-robot-container}"
 LOG_DIR="${LOG_DIR:-$HOME/ros2_ws/log}"
+# Namespace du robot (lot L1b) : /didier/… par défaut. Les noms relatifs tapés
+# dans la CLI se résolvant à la racine, chaque topic interrogé est préfixé.
+# (Exécuté sur le HOST : ROBOT_NAME y est d'ordinaire absent -> /didier.)
+NS="/${ROBOT_NAME:-didier}"
 OUT_ROOT="${1:-$HOME/incidents}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 OUT="$OUT_ROOT/incident-$STAMP"
@@ -77,11 +81,11 @@ ros_nodes() {
 run ros-nodes.txt  ros_nodes
 run ros-topics.txt in_ros "ros2 topic list"
 for t in cmd_vel animation face audio; do
-  run "ros-info-$t.txt" in_ros "ros2 topic info /$t"
+  run "ros-info-$t.txt" in_ros "ros2 topic info $NS/$t"
 done
 # hz seulement sur cmd_vel : les topics de contenu sont événementiels (muets au
 # repos, hz y bloquerait pour rien). cmd_vel bat à 20 Hz si la chaîne roues tourne.
-run ros-hz-cmdvel.txt in_ros "timeout 6 ros2 topic hz /cmd_vel"
+run ros-hz-cmdvel.txt in_ros "timeout 6 ros2 topic hz $NS/cmd_vel"
 
 # --- 5. Empaquetage -------------------------------------------------------------
 tar -czf "$OUT.tar.gz" -C "$OUT_ROOT" "incident-$STAMP"
