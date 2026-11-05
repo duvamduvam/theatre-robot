@@ -264,6 +264,29 @@ consommation maximale : l'ampli tire donc moins de 25 A, mais rien ne dit combie
 Ce qui départage : **le courant réel de l'ampli**, donné par son modèle exact (étiquette de
 l'ampli, puis sa fiche) ou mesuré à fort volume. Ne rien acheter avant.
 
+**L'ampli : Focal Impulse 4.320** (David, 06/11). Notice officielle lue et archivée
+(`datasheets/focal-impulse-4320-notice.pdf`) : 4 × 55 W RMS sous 4 Ω, 4 × 80 W sous 2 Ω,
+2 × 160 W ponté ; **fusible 25 A (15 A en montage sur faisceau ISO)** ; 750 mA en veille ;
+protections dont **chute de tension** ; câble d'alimentation 3,3 mm² (12 AWG) jusqu'à 3 m.
+**La notice ne donne pas sa consommation.**
+
+Ce qu'on en tire :
+- **les redémarrages s'expliquent** : l'ampli se protège lui-même sur chute de tension ; dès
+  que la SD-50B-12 plie sous sa demande, il se coupe et redémarre ;
+- **ordre de grandeur, calcul et non mesure** : 220 W RMS sur 4 canaux, avec un rendement de
+  classe D supposé à 80 % (pas sur la fiche), font ~23 A sous 12 V à pleine puissance, ce qui
+  colle avec le fusible de 25 A. La voix et la musique en tirent bien moins tant que l'ampli
+  ne sature pas ; Focal accepte d'ailleurs un fusible de 15 A dans un autre montage ;
+- **« ça crache » = l'ampli sature** : c'est précisément là qu'il tire le plus. Régler son gain
+  (0,2 à 5 V) pour qu'il ne sature jamais au niveau maximal de la mixette améliore le son et
+  divise le courant de pointe.
+
+**Avis : SD-150B-12 + gain de l'ampli réglé pour ne jamais saturer.** Silencieuse, redémarre
+seule si elle décroche quand même (2,5 s de coupure plutôt que le silence jusqu'à remise sous
+tension), trois fois le courant d'aujourd'hui, et la plus compacte. **Si une mesure montre plus
+de 12 A en spectacle**, passer à la SD-200B-12 (16,7 A, silencieuse, mais coupure maintenue).
+La SD-350B-12 n'est utile qu'à pleine puissance permanente, avec son ventilateur.
+
 **Combien de convertisseurs 12 V, et où (06/11, question de David) :** deux. La SD-50B-12 en
 place reste où elle est et ne garde que les petites charges (yeux, sécurité, cou si 12 V) :
 **un seul boîtier de plus**, celui de l'audio. Il ne va **pas** dans la caisse basse, avec les
