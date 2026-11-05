@@ -93,7 +93,16 @@ pour y toucher. C'est l'argument pour sortir M de la pile. Si la place le permet
 de la pile du haut garde l'accès et tient les fils 10 A loin de l'audio : mieux que la zone
 audio, à vérifier sur le robot.
 
-## 2. BLOQUANT trouvé — carte P : les pistes des départs 10 A sont trop étroites
+## 2. BLOQUANT trouvé — carte P : les pistes des départs 10 A sont trop étroites — ✅ LEVÉ le 05/11
+
+> ✅ **Levé le 05/11 au soir par la sortie A** (élargir), sans cuivre 2 oz ni surcoût : chaque
+> rail a reçu une plage de cuivre, aucune pastille n'a bougé. Un contrôle neuf,
+> `carrier-p/check_power.py`, mesure le goulot de cuivre de 35 trajets et le convertit en
+> ampères : 19 étaient sous leur exigence, **0 aujourd'hui**. ERC, DRC, sérigraphie, parité
+> et pile à 0. **Trois limites restent**, détaillées dans `pcb/kicad/carrier-p/DESIGN.md` :
+> fusibles amont à poser au coffre (15 A sur le 12 V, 10 A sur le 5 V), cavaliers JP1 et JP3
+> limités à 3 A, col de 5,4 mm sur le 12 V vers l'ouest. **Gerber du panier à remplacer par
+> `fab/carrier-p.zip`.** Le tableau ci-dessous décrit la carte d'AVANT.
 
 Mesuré dans `carrier-p.kicad_pcb` : aucun plan de cuivre sur les rails de puissance
 (seul GND en a), tout passe en pistes.

@@ -124,7 +124,9 @@ Angers, Ancenis et Beaupréau (aucun lieu trouvé). Polycarbonate : plus résist
 | D1 | Refonte avant ou après le premier essai au sol | **DÉCIDÉ par David le 05/11 : avant.** Pas de roulage au sol sans arrêt matériel |
 | D2 | Plexiglas ou polycarbonate, et qui découpe | Voir §5 bis : PMMA coulé 5 mm au laser d'eMode, une plaque d'essai d'abord |
 | D3 | Emplacement de la carte Moteurs | Avis du relevé (§5.3) : à côté de la pile en haut **si elle y tient** — 12 mm de marge sur 212 mm, à trancher au gabarit carton dans le robot |
-| D4 | Pistes 10 A de la carte Puissance | Élargir, sinon cuivre 2 oz. **Tronc 5 V compris** ; les fusibles plus petits ne règlent rien (relevé §4.4) |
+| D4 | Pistes 10 A de la carte Puissance | ✅ **Fait le 05/11 : élargies par plages de cuivre**, 1 oz, aucune pastille déplacée ; 35 trajets mesurés, 0 sous son exigence. En découlent : fusibles amont au coffre (15 A / 10 A) et cavaliers JP1, JP3 à 3 A max (`carrier-p/DESIGN.md`) |
+| D8 | Fusibles amont du 12 V et du 5 V au coffre | **À inscrire au cahier de câblage** : 15 A et 10 A, sans quoi les troncs de la carte Puissance ne sont pas protégés |
+| D9 | Alimentation des servos | Externe sur J28, ou 12 V carte par JP1 à 3 A au plus : à trancher avec les courants réels |
 | D5 | Échange des broches 7 et 8 de la nappe Sécurité-Moteurs | À faire si la nappe s'allonge — donc tant que sa longueur réelle n'est pas mesurée |
 | D6 | Point de masse en étoile | Quatre questions à répondre d'abord (relevé §5.3) : masse des sorties isolées des convertisseurs, barrière de la carte Odométrie, masse du 12 V, retour par l'USB du Pi 5 |
 | D7 | Fiches du faisceau | ✅ **Clos le 05/11** : fiches 5,08 simples, réutilisées telles quelles ; embases des cartes dans la même série (relevé §4.3) |
