@@ -338,7 +338,21 @@ Marge sous les 30 V absolus de la notice ASME : **1,6 V**. Hors de la plage de s
 (12-24 V), mais sous le maximum absolu. Conséquences :
 - **ne jamais passer le chargeur en mode « high » (29,4 V)** : la marge tomberait à 0,6 V ;
 - il reste à lire l'étiquette d'un ASME-MR : si elle donne la même plage que l'ASME-02
-  (30 V max), le branchement direct est acceptable ; si elle s'arrête plus bas, repli. Repli : un convertisseur 24 V régulé pour les ASME, ou les garder en 12 V
+  (30 V max), le branchement direct est acceptable ; si elle s'arrête plus bas, repli.
+
+**Étiquette ASME-MR lue par David le 06/11 : « 12-24 V ».** Elle ne donne pas de maximum
+absolu ; les 30 V viennent de la notice de l'ASME-02, même carte électronique. **Le risque, à
+assumer en connaissance de cause** : un pack Li-ion de « 24 V » passe l'essentiel de sa vie
+entre 25 et 28,4 V, donc **au-dessus de la plage marquée**, sous le maximum de la notice voisine.
+C'est le cas courant des appareils « 24 V » sur batterie (les réseaux 24 V des véhicules
+chargent aussi vers 28-29 V), mais rien sur l'ASME-MR lui-même ne le garantit. Mitigation :
+jamais le mode « high » du chargeur, et toucher les servos (température) après les premiers
+essais. Un convertisseur 24 V régulé supprimerait ce risque mais ramènerait le problème de
+saturation (3 servos à 5 A max = 15 A). **Avis : branchement direct.**
+
+**Répartition retenue en conséquence** : la SD-50B-12 actuelle est **gardée** pour les yeux,
+la boucle du coup-de-poing et la bobine du relais 40 A ; **seule la SD-150B-12 de l'audio est à
+acheter**, puisque l'ampli seul fait décrocher la SD-50B-12. Repli : un convertisseur 24 V régulé pour les ASME, ou les garder en 12 V
    sur un convertisseur dédié aux actionneurs (option B).
 
 Au recâblage, **le fil rouge du connecteur 3 points des ASME reste non raccordé** : c'est une
