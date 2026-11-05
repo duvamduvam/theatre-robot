@@ -317,6 +317,25 @@ fusiblés à la distribution 24 V du coffre) ; le V+ des modules PCA9685 (yeux, 
 **J28 câblé depuis la SD-50B-12, JP1 ouvert**, pour ne pas faire passer les servos par un
 cavalier limité à 3 A.
 
+**État réel confirmé par David le 06/11** : bouche, bras et yeux sont aujourd'hui tous sur
+le 12 V. David pense que les ASME pourraient se brancher directement sur la batterie.
+
+**Le point à vérifier avant de les brancher sur le pack : la tension batterie pleine.** La
+notice ASME donne **12 à 24 V en service** et **30 V au maximum absolu**. Un pack 7S Li-ion
+monte à **29,4 V** pleine charge (le chargeur Victron a un mode 28,8 V et un mode 29,4 V) :
+c'est sous le maximum absolu, mais **au-dessus de la plage de service**, avec 0,6 V de marge.
+La chimie et le nombre de cellules du pack ne sont toujours pas établis. Donc, avant tout
+branchement :
+1. **lire la plage de tension sur l'étiquette d'un ASME-MR** (la notice du dépôt est celle de
+   l'ASME-02) ;
+2. **mesurer la tension du pack juste après une charge complète**, au multimètre ;
+3. si la plage de l'ASME-MR s'arrête à 24 V et que le pack monte au-dessus de 28 V : ne pas
+   brancher en direct. Repli : un convertisseur 24 V régulé pour les ASME, ou les garder en 12 V
+   sur un convertisseur dédié aux actionneurs (option B).
+
+Au recâblage, **le fil rouge du connecteur 3 points des ASME reste non raccordé** : c'est une
+sortie 5 V (incident du 03/11).
+
 **Réserve sur la sécurité** : elle partage encore la SD-50B-12 avec deux servos. Le courant
 de blocage du servo des yeux n'est pas publié (fiche JX lue : 12 V, 38 à 47 kg·cm, rien sur le
 courant). **À mesurer** : yeux et cou bloqués ensemble. S'ils approchent les 4,2 A, la boucle
