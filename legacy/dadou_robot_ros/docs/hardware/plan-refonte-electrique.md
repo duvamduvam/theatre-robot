@@ -166,6 +166,26 @@ garde une alimentation que rien de gros ne partage**, ce qui va dans le sens de 
    réelle en rampe au lieu de laisser les servos sauter à leur dernière consigne. Le Pi 4 est
    sur la SD-50B-5, séparée : il survit à une chute du 12 V.
 
+### Isolation contre le bruit audio (question de David, 06/11)
+
+Possible à quatre niveaux, du moins cher au plus cher :
+
+1. **L'alimentation de l'audio, isolée** : les SD-50 sont des convertisseurs isolés (fiche :
+   1,5 kV entre entrée et sortie). Une SD-50B-12 qui n'alimente que l'audio (option A ou B)
+   sépare donc galvaniquement l'audio du pack et des moteurs. **Coût nul dans l'option A.**
+2. **Le signal, par transformateur** : l'isolateur rouge déjà monté sur la porte, et les
+   emplacements de transformateurs 600:600 prévus sur la carte Audio.
+3. **La liaison USB Pi 5 → mixette** : c'est par elle que la masse du Pi entre dans l'audio.
+   Un isolateur USB la coupe, mais la plupart plafonnent à 12 Mbit/s : vérifier d'abord que la
+   mixette fonctionne à cette vitesse.
+4. **La commande** : déjà isolée, les relais audio sont pilotés par le bus I²C derrière l'ISO1540.
+
+**La limite** : une isolation est annulée par un seul fil de masse en trop (blindage RCA, USB,
+châssis). C'est pour ça que la masse en étoile (D6) reste la décision qui compte. Et la source
+du ronflement mesurée le 30/08 est l'alimentation secteur du Pi 5 : sur batterie elle disparaît.
+Le bruit des moteurs, lui, n'a jamais été mesuré. **Mesurer avant d'acheter** : 1 est gratuit,
+3 ne s'achète que si une mesure le montre.
+
 ### Avis
 
 **A + 2 + 4 tout de suite, 3 à instruire.** A supprime la cause (pas de convertisseur sur les
