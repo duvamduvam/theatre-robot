@@ -171,8 +171,13 @@ garde une alimentation que rien de gros ne partage**, ce qui va dans le sens de 
 Possible à quatre niveaux, du moins cher au plus cher :
 
 1. **L'alimentation de l'audio, isolée** : les SD-50 sont des convertisseurs isolés (fiche :
-   1,5 kV entre entrée et sortie). Une SD-50B-12 qui n'alimente que l'audio (option A ou B)
-   sépare donc galvaniquement l'audio du pack et des moteurs. **Coût nul dans l'option A.**
+   1,5 kV entre entrée et sortie). Une SD-50B-12 qui n'alimente **que** l'audio sépare donc
+   galvaniquement l'audio du pack et des moteurs.
+   ⚠️ *Corrigé le 06/11 (David)* : ce n'est **pas gratuit**. Dans l'option A, la SD-50B-12
+   existante n'est pas réservée à l'audio : elle garde aussi le servo des yeux et la boucle
+   d'arrêt. A retire les grosses pointes (les bras), sans rien acheter, mais l'audio partage
+   encore son alimentation. Une alimentation audio vraiment seule demande **un second
+   convertisseur** (une SD-50B-12 de plus, par exemple), à acheter.
 2. **Le signal, par transformateur** : l'isolateur rouge déjà monté sur la porte, et les
    emplacements de transformateurs 600:600 prévus sur la carte Audio.
 3. **La liaison USB Pi 5 → mixette** : c'est par elle que la masse du Pi entre dans l'audio.
@@ -184,7 +189,7 @@ Possible à quatre niveaux, du moins cher au plus cher :
 châssis). C'est pour ça que la masse en étoile (D6) reste la décision qui compte. Et la source
 du ronflement mesurée le 30/08 est l'alimentation secteur du Pi 5 : sur batterie elle disparaît.
 Le bruit des moteurs, lui, n'a jamais été mesuré. **Mesurer avant d'acheter** : 1 est gratuit,
-3 ne s'achète que si une mesure le montre.
+1 et 3 ne s'achètent que si une mesure le montre.
 
 ### Avis
 
