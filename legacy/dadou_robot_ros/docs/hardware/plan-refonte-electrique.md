@@ -217,6 +217,37 @@ rien acheter : à vérifier en premier, en débranchant simplement les bras du 1
 **mesurés** (ampli à fort volume, et ce qui partage son alimentation), pas sur une marge au
 jugé. Et pour l'audio, la taille compte moins que d'être seul sur son alimentation.
 
+**Confirmé par David le 06/11** : l'ampli est bien sur la SD-50B-12, et **l'ampli seul**, quand
+il sature, suffit à la faire décrocher. Les bras n'y sont pour rien dans ce cas-là : l'option A
+ne règle donc pas les redémarrages d'ampli. **Il faut un convertisseur dédié à l'audio.**
+
+### Convertisseur audio : choix (fiches Mean Well lues le 06/11, archivées dans `datasheets/`)
+
+| Modèle | 12 V | Surcharge | Encombrement |
+|---|---|---|---|
+| SD-50B-12 (en place) | 4,2 A | coupe et **redémarre seul** (2,5 s) | — |
+| SD-100B-12 | 8,5 A | coupe et redémarre seul | 199 × 98 × 38 mm |
+| **SD-150B-12** | **12,5 A** | coupe et redémarre seul | 199 × 110 × 50 mm |
+| SD-200B-12 | 16,7 A | **coupe et reste coupé** jusqu'à remise sous tension | 215 × 115 × 50 mm |
+| SD-350B-12 | 27,5 A | coupe et reste coupé ; entrée 20-36 V | 215 × 115 × 50 mm |
+
+Entrée de toutes les versions B : 19 (ou 20) à 36 V, isolée 1,5 kV, réglable de 11 à 16 V.
+
+**Piège de choix** : à partir du SD-200, une surcharge **coupe l'audio jusqu'à ce qu'on
+éteigne et rallume**. En spectacle, c'est pire qu'un redémarrage de 2,5 s. Soit on prend un
+modèle qui redémarre seul (SD-150 au plus), soit on prend un modèle si large qu'il ne sature
+jamais.
+
+**Le chiffre qui décide : le courant maximal de l'ampli.** On le lit sur **le fusible de
+l'ampli** (sur son boîtier) ou sur **le porte-fusible à lame en ligne** vu sur la porte : un
+ampli auto est fusiblé à sa consommation maximale. Règle : convertisseur ≥ fusible de l'ampli
++ TC Helicon + carte Audio (moins de 1 A). Exemple : fusible de 10 A → SD-150B-12 ; au-delà,
+le SD-150 ne suffit plus et il faut choisir entre une coupure maintenue et un bridage du
+volume de l'ampli.
+
+Attention aussi à la fin de batterie : si le pack est en 7S, il descend vers 19-21 V en fin de
+décharge, là où ces convertisseurs B s'arrêtent. C'est déjà le cas de la SD-50B-12.
+
 ### Avis
 
 **A + 2 + 4 tout de suite, 3 à instruire.** A supprime la cause (pas de convertisseur sur les
