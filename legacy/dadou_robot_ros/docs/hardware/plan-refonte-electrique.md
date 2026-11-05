@@ -350,6 +350,12 @@ jamais le mode « high » du chargeur, et toucher les servos (température) apr�
 essais. Un convertisseur 24 V régulé supprimerait ce risque mais ramènerait le problème de
 saturation (3 servos à 5 A max = 15 A). **Avis : branchement direct.**
 
+**Le cou est aussi un ASME-MR** (David, 06/11) : **quatre ASME** passent donc sur le pack (deux
+bras, bouche, cou), soit 20 A au pire s'ils sont tous bloqués ensemble, ce que la batterie
+encaisse. ⚠️ **En 24 V, un ASME va deux fois plus vite** (0,5 s/60° au lieu de 1 s) : le réglage
+du regard (amortissement 0,15 / 1,5, validé en réel le 12/07 en 12 V) et `RAMP_SPEED` sont à
+**revalider** après le passage, roues hors sol et à vitesse réduite d'abord.
+
 **Répartition retenue en conséquence** : la SD-50B-12 actuelle est **gardée** pour les yeux,
 la boucle du coup-de-poing et la bobine du relais 40 A ; **seule la SD-150B-12 de l'audio est à
 acheter**, puisque l'ampli seul fait décrocher la SD-50B-12. Repli : un convertisseur 24 V régulé pour les ASME, ou les garder en 12 V
