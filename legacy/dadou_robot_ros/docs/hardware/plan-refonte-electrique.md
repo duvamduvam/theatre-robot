@@ -191,6 +191,32 @@ du ronflement mesurée le 30/08 est l'alimentation secteur du Pi 5 : sur batteri
 Le bruit des moteurs, lui, n'a jamais été mesuré. **Mesurer avant d'acheter** : 1 est gratuit,
 1 et 3 ne s'achètent que si une mesure le montre.
 
+### Symptôme rapporté par David le 06/11 : l'ampli redémarre souvent
+
+Hypothèse forte, **non prouvée** : l'ampli Focal (ampli auto, 12 V) est sur la SD-50B-12, et
+celle-ci décroche quand les bras tirent ; ou l'ampli lui-même la sature à fort volume. Signature
+attendue : la fiche donne **2,5 s de démarrage** à la SD-50, donc des coupures de quelques
+secondes, au rythme des gestes ou des forts volumes.
+
+Ce qui la prouverait, dans l'ordre :
+1. **Où l'ampli prend son 12 V** (question encore ouverte) : s'il n'est pas sur la SD-50B-12,
+   l'hypothèse tombe.
+2. **Corrélation** : musique forte, bras immobiles, puis bras en mouvement. Les redémarrages
+   suivent-ils les bras ?
+3. **Mesure** : la tension aux bornes de l'ampli pendant un geste, à l'oscilloscope (Hantek,
+   pince de masse au moins batterie seulement). Un 12 V qui tombe et revient en ~2,5 s signe
+   le décrochage.
+
+Autres causes à écarter : protection thermique de l'ampli (enfermé dans le bois), protection
+de sous-tension propre aux amplis auto, fil de commande à distance (REM) mal raccordé.
+
+**Si c'est confirmé**, l'option A (bras en 24 V) devrait faire cesser les redémarrages sans
+rien acheter : à vérifier en premier, en débranchant simplement les bras du 12 V pour l'essai.
+
+**Un convertisseur plus gros ?** Oui si on en achète un, mais dimensionné sur des courants
+**mesurés** (ampli à fort volume, et ce qui partage son alimentation), pas sur une marge au
+jugé. Et pour l'audio, la taille compte moins que d'être seul sur son alimentation.
+
 ### Avis
 
 **A + 2 + 4 tout de suite, 3 à instruire.** A supprime la cause (pas de convertisseur sur les
