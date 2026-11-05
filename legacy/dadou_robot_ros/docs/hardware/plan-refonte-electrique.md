@@ -245,6 +245,19 @@ ampli auto est fusiblé à sa consommation maximale. Règle : convertisseur ≥ 
 le SD-150 ne suffit plus et il faut choisir entre une coupure maintenue et un bridage du
 volume de l'ampli.
 
+**Combien de convertisseurs 12 V, et où (06/11, question de David) :** deux. La SD-50B-12 en
+place reste où elle est et ne garde que les petites charges (yeux, sécurité, cou si 12 V) :
+**un seul boîtier de plus**, celui de l'audio. Il ne va **pas** dans la caisse basse, avec les
+cartes des moteurs, mais dans le coffre des alims, **vertical sur la paroi**, au plus près de
+la porte audio : câbles 12 V courts jusqu'à l'ampli, et loin des moteurs, ce qui sert aussi le
+bruit. La place se libère au même endroit : le TC Helicon monte à l'étage audio, le bornier gris
+perd l'essentiel de son rôle. Encombrement lu sur les fiches : SD-150 199 × 110 × 50 mm contre
+159 × 97 × 38 pour une SD-50 (4 cm de long et 1,2 cm d'épaisseur de plus). À mesurer : la
+place libre sur cette paroi.
+
+Alternative sans boîtier de plus : un ampli qui accepte le 24 V, branché directement sur le
+pack. Écartée par défaut : l'audio perdrait l'isolement du convertisseur, donc l'objectif bruit.
+
 Attention aussi à la fin de batterie : si le pack est en 7S, il descend vers 19-21 V en fin de
 décharge, là où ces convertisseurs B s'arrêtent. C'est déjà le cas de la SD-50B-12.
 
