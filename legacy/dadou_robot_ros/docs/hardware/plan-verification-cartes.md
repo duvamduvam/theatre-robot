@@ -8,6 +8,16 @@ perdre trois semaines, ou — pour L et P — de monter une chaîne de sécurit�
 pas. Le plan va donc du moins cher au plus cher : la machine, puis le papier, puis une
 relecture indépendante, puis le banc.
 
+## Noms des cartes
+
+| Nom | Dossier KiCad | Ancienne lettre | Rôle |
+|---|---|---|---|
+| **Puissance** | `carrier-p` | P | fusibles, borniers d'alimentation, mesure de courant |
+| **Sécurité** | `carrier-l` | L | raccord du Pi, chien de garde, verrou d'armement, arrêt des roues |
+| **Moteurs** | `carrier-m` | M | commande des roues et des servos (PCA9685), extension PCF8574 |
+| **Audio** | `audio-relays` | — | relais audio, départs 12 V |
+| **Odométrie** | `odometry` | — | lecture de la rotation des roues |
+
 ## 1. Ce que la machine a vérifié le 05/11 — FAIT
 
 | Contrôle | Résultat |
