@@ -251,8 +251,9 @@ consommation maximale : l'ampli tire donc moins de 25 A, mais rien ne dit combie
 
 - **SD-350B-12 (27,5 A), avis** : au-dessus du fusible, donc le fusible de l'ampli saute avant
   que le convertisseur ne sature ; sa coupure sans redémarrage ne joue plus. Contre : plus gros
-  (215 × 115 × 50 mm), entrée à partir de 20 V au lieu de 19, et à pleine charge il chauffe
-  (~75 W perdus à 80 % de rendement) : ventilation du coffre à prévoir.
+  (215 × 115 × 50 mm), entrée à partir de 20 V au lieu de 19, et **un ventilateur intégré**
+  (fiche : « Forced air cooling by built-in DC Fan ») : un bruit permanent dans un robot de
+  théâtre qui porte des micros. À écouter avant de l'adopter.
 - **SD-150B-12 + gain de l'ampli bridé** pour rester sous 12,5 A : plus petit, moins cher,
   mais repose sur un réglage que quelqu'un peut remonter.
 
