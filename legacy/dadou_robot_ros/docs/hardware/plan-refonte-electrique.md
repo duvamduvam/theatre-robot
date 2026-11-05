@@ -117,6 +117,65 @@ Non vérifiés : Systeal (site bloqué, prix écartés), plexiglasssurmesure.fr 
 Angers, Ancenis et Beaupréau (aucun lieu trouvé). Polycarbonate : plus résistant aux chocs
 (fournisseur et SendCutSend), mais orienté fraise plutôt que laser.
 
+## 5 ter. Alimentations des actionneurs et de l'audio — options (06/11, proposé, rien de tranché)
+
+Question de David : plutôt que sortir les bras du 12 V, séparer les servos et l'audio, et
+gérer les redémarrages.
+
+**Ce qui est sur le 12 V aujourd'hui** (une seule SD-50B-12, 4,2 A, coupure et redémarrage
+automatique au-delà de 105-150 %) : trois servos ASME-MR (deux bras, la bouche), le servo des
+yeux, la carte Audio (relais, klaxon, récepteur HF, 7805/7809), le TC Helicon, la boucle du
+coup-de-poing et la bobine du relais 40 A. **Inconnus** : ce qui alimente l'ampli Focal, et le
+type du servo du cou.
+
+**Deux faits lus dans la doc qui changent la question :**
+- la notice ASME du dépôt (`datasheets/ASME-02-series-wingxine-manual.pdf`, série ASME-02)
+  donne une tension de service de **12 à 24 V** et un **courant limité à 5 A ± 0,2 par servo**.
+  Le « ~10 A pic pièce » de nos documents ne vient donc pas de cette notice. Les ASME-MR ont
+  la même carte (incident du 03/11), **mais la notice n'est pas la leur : à confirmer sur
+  l'étiquette d'un ASME-MR** ;
+- le servo des yeux (JX CLS-12V7346) est un servo **12 V** : il ne va pas sur le 24 V.
+
+### Les options
+
+| | Principe | Pour | Contre |
+|---|---|---|---|
+| **A. ASME en 24 V direct** (avis) | les 3 ASME prennent le 24 V du pack, **après le relais 40 A** et un fusible chacun ; la SD-50B-12 ne garde que les petites charges : yeux, cou si 12 V, audio, sécurité | plus de convertisseur sur les grosses charges, donc plus de décrochage en jeu ; les bras sont **enfin coupés par l'arrêt d'urgence** (220 à 340 kg·cm, ce n'est pas anodin) ; bras deux fois plus rapides possibles (0,5 s/60° au lieu de 1 s) ; rien à acheter | bras plus violents : la limite de vitesse logicielle (`RAMP_SPEED`) devient une sécurité ; ASME-MR en 24 V à confirmer ; câbles des bras depuis la caisse basse ; J36/J37 de la carte Puissance ne servent plus aux bras |
+| **B. Deux 12 V** (proposition de David) | un convertisseur « actionneurs » dimensionné pour les pointes (3 × 5 A au pire), la SD-50B-12 actuelle pour audio et sécurité | garde le 12 V partout ; l'audio ne voit plus les pointes des moteurs ; un décrochage ne touche plus que les actionneurs | un convertisseur à acheter et à loger ; bras toujours lents ; les bras restent hors de l'arrêt d'urgence |
+| **C. Un seul 12 V, pointes limitées** | ne jamais lancer deux bras à fond ensemble (logiciel), petit convertisseur dédié à la sécurité | le moins de matériel | la puissance repose sur le logiciel ; l'audio continue de voir les pointes : contraire au chantier ronflement |
+
+A et B règlent aussi la séparation audio demandée par David. Dans A comme dans B, **l'audio
+garde une alimentation que rien de gros ne partage**, ce qui va dans le sens de la masse en
+étoile (D6).
+
+### Gérer les redémarrages — quatre mesures, cumulables
+
+1. **Ne pas en avoir** : aucune grosse charge sur un convertisseur qu'elle peut saturer
+   (options A ou B).
+2. **Une source qui ne décroche jamais pour la sécurité** : la boucle du coup-de-poing et la
+   bobine du relais 40 A sur une alimentation que rien d'autre ne charge (la SD-50B-12 dans A,
+   ou un petit convertisseur à part). La carte Sécurité reste en 12 V : la passer en 24 V
+   changerait ses résistances de relecture.
+3. **Relais 40 A à auto-maintien** : après toute coupure, le relais reste ouvert jusqu'à un
+   réarmement humain. C'est la règle des machines industrielles contre le redémarrage
+   intempestif. Aujourd'hui seul le verrou logique est maintenu, pas le relais ; c'est lui qui
+   s'use en cas de coupures répétées. **Touche la chaîne d'arrêt** : schéma, relecture
+   indépendante, protocole caméra.
+4. **Redémarrage doux côté logiciel** : l'INA226 du rail servos (carte Puissance) mesure sa
+   tension ; sur une chute, le Pi gèle les consignes, et au retour il repart de la position
+   réelle en rampe au lieu de laisser les servos sauter à leur dernière consigne. Le Pi 4 est
+   sur la SD-50B-5, séparée : il survit à une chute du 12 V.
+
+### Avis
+
+**A + 2 + 4 tout de suite, 3 à instruire.** A supprime la cause (pas de convertisseur sur les
+moteurs), met les bras sous l'arrêt d'urgence, et ne coûte rien. 2 et 4 rendent les chutes
+restantes sans danger. 3 est la vraie protection contre le redémarrage, mais elle touche la
+chaîne d'arrêt : elle se conçoit à part.
+
+**Avant de trancher** : l'étiquette d'un ASME-MR (tension), ce qui alimente l'ampli Focal, le
+type du servo du cou, et le courant réel d'un bras en mouvement puis bloqué.
+
 ## 6. Décisions à prendre
 
 | # | Décision | Avis |
@@ -126,7 +185,7 @@ Angers, Ancenis et Beaupréau (aucun lieu trouvé). Polycarbonate : plus résist
 | D3 | Emplacement de la carte Moteurs | Avis du relevé (§5.3) : à côté de la pile en haut **si elle y tient** — 12 mm de marge sur 212 mm, à trancher au gabarit carton dans le robot |
 | D4 | Pistes 10 A de la carte Puissance | ✅ **Fait le 05/11 : élargies par plages de cuivre**, 1 oz, aucune pastille déplacée ; 35 trajets mesurés, 0 sous son exigence. En découlent : fusibles amont au coffre (15 A / 10 A) et cavaliers JP1, JP3 à 3 A max (`carrier-p/DESIGN.md`) |
 | D8 | Fusibles amont du 12 V et du 5 V au coffre | **À inscrire au cahier de câblage** : 15 A et 10 A, sans quoi les troncs de la carte Puissance ne sont pas protégés |
-| D10 | 12 V des bras séparé du 12 V de la sécurité | **Recommandé** : le 12 V est une SD-50B-12 (4,2 A, David 05/11), deux bras à ~10 A en pointe la font décrocher, et elle porte aussi la boucle du coup-de-poing. Mesurer d'abord le courant réel d'un bras (relevé §4.4) |
+| D10 | 12 V des bras séparé du 12 V de la sécurité | **Options A, B, C au §5 ter (06/11) ; avis : ASME en 24 V direct après le relais 40 A.** Constat de départ : le 12 V est une SD-50B-12 (4,2 A, David 05/11), deux bras à ~10 A en pointe la font décrocher, et elle porte aussi la boucle du coup-de-poing. Mesurer d'abord le courant réel d'un bras (relevé §4.4) |
 | D9 | Alimentation des servos | Externe sur J28, ou 12 V carte par JP1 à 3 A au plus : à trancher avec les courants réels |
 | D5 | Échange des broches 7 et 8 de la nappe Sécurité-Moteurs | À faire si la nappe s'allonge — donc tant que sa longueur réelle n'est pas mesurée |
 | D6 | Point de masse en étoile | Quatre questions à répondre d'abord (relevé §5.3) : masse des sorties isolées des convertisseurs, barrière de la carte Odométrie, masse du 12 V, retour par l'USB du Pi 5 |
