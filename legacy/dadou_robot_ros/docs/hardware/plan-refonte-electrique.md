@@ -126,6 +126,7 @@ Angers, Ancenis et Beaupréau (aucun lieu trouvé). Polycarbonate : plus résist
 | D3 | Emplacement de la carte Moteurs | Avis du relevé (§5.3) : à côté de la pile en haut **si elle y tient** — 12 mm de marge sur 212 mm, à trancher au gabarit carton dans le robot |
 | D4 | Pistes 10 A de la carte Puissance | ✅ **Fait le 05/11 : élargies par plages de cuivre**, 1 oz, aucune pastille déplacée ; 35 trajets mesurés, 0 sous son exigence. En découlent : fusibles amont au coffre (15 A / 10 A) et cavaliers JP1, JP3 à 3 A max (`carrier-p/DESIGN.md`) |
 | D8 | Fusibles amont du 12 V et du 5 V au coffre | **À inscrire au cahier de câblage** : 15 A et 10 A, sans quoi les troncs de la carte Puissance ne sont pas protégés |
+| D10 | 12 V des bras séparé du 12 V de la sécurité | **Recommandé** : le 12 V est une SD-50B-12 (4,2 A, David 05/11), deux bras à ~10 A en pointe la font décrocher, et elle porte aussi la boucle du coup-de-poing. Mesurer d'abord le courant réel d'un bras (relevé §4.4) |
 | D9 | Alimentation des servos | Externe sur J28, ou 12 V carte par JP1 à 3 A au plus : à trancher avec les courants réels |
 | D5 | Échange des broches 7 et 8 de la nappe Sécurité-Moteurs | À faire si la nappe s'allonge — donc tant que sa longueur réelle n'est pas mesurée |
 | D6 | Point de masse en étoile | Quatre questions à répondre d'abord (relevé §5.3) : masse des sorties isolées des convertisseurs, barrière de la carte Odométrie, masse du 12 V, retour par l'USB du Pi 5 |
