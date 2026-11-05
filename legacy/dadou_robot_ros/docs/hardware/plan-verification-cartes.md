@@ -60,6 +60,26 @@ ne pas laisser sur 30 cm. Correction proposée : échanger les broches 7 et 8 de
 (GND en 7, OE en 8, la 9 est libre), ce qui met une masse entre SCL et OE. Touche la route
 d'OE sur L et M, donc les deux cartes repassent tous les contrôles et la relecture.
 
+### Hauteur de la pile de 3 (estimation du 05/11, rien n'est mesuré)
+
+Lu dans les modèles 3D KiCad : supports 8,5 mm, IDC 9,1 mm, MSTBA 8,6 mm, bornier MKDS
+13,8 mm. Le reste est **estimé** (modules, fiches, câbles) : à remplacer par des mesures.
+
+| Tranche | Sans fiches | Avec fiches et fils |
+|---|---|---|
+| Pattes sous M + M | 4,6 | 4,6 |
+| M → L (PCA9685 enfiché : support 8,5 + carte 1,6 + picots servos ≈ 8,5) | ≈ 20 | ≈ 30 avec les fiches servos |
+| L + L → P (IDC et ISO1540 enfiché) | ≈ 17 | ≈ 22 |
+| P + au-dessus de P (bornier, condensateurs, fiches) | ≈ 17 | ≈ 22 |
+| **Total pile de 3** | **≈ 6 cm** | **≈ 8 cm** |
+| Pile P + L seule | ≈ 4 cm | ≈ 5 cm |
+
+Emprise : 100 × 100 mm plus les fiches et les fils sur les bords, à prévoir largement.
+**Accès** : dans la pile, M est au fond et ses fiches servos sont sous L, il faut démonter
+pour y toucher. C'est l'argument pour sortir M de la pile. Si la place le permet, M **à côté**
+de la pile du haut garde l'accès et tient les fils 10 A loin de l'audio : mieux que la zone
+audio, à vérifier sur le robot.
+
 ## 2. BLOQUANT trouvé — carte P : les pistes des départs 10 A sont trop étroites
 
 Mesuré dans `carrier-p.kicad_pcb` : aucun plan de cuivre sur les rails de puissance
