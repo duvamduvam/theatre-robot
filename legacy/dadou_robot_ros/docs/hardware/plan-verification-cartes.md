@@ -136,7 +136,7 @@ Détail et preuves dans [`releve-2026-11-05.md`](releve-2026-11-05.md) §4.
 | # | Vérification | Carte ou achat concerné |
 |---|---|---|
 | 1 | **Entraxe des rangées de l'isolateur I²C** réellement monté, contre les 10,16 mm de M4/M5. Jamais vérifié ; le module violet du robot paraît plus large | Sécurité — **avant** de la commander |
-| 2 | **Fiches du robot** : ✅ pas de 5,08 confirmé par David le 05/11 ; restent la largeur et les vis de verrouillage. Les embases des cartes sont des MSTBA sans brides : une fiche à vis ne s'y verrouille pas. J20 et J36 n'ont que ≈ 3,8 mm entre boîtiers | Puissance, Sécurité |
+| 2 | ~~Fiches du robot~~ ✅ **clos le 05/11** : pas de 5,08, fiches simples sans vis latérales, corps large de n × 5,08 mm (fiche technique KF2EDGWB fournie par David) — elles tiennent côte à côte sur J20 et J36. Commander les embases dans la même série 2EDG 5,08 | Puissance, Sécurité |
 | 3 | **PCA9685 à acheter** : la ligne de `cout-cartes.md` est un shield, il faut un module au format du `HW-170` (62,2 × 25,4). **INA226** : brochage CJMCU-226 à confirmer sur la référence choisie | liste d'achats |
 | 4 | **Second PCA9685** : cavalier 0x41, `i2cdetect`, « kill de la chaîne » module par module ; l'entrée de coupure du module servos est à la masse, il n'est pas dans la chaîne d'arrêt. Fréquence PWM des roues à relever avant et après | Moteurs, protocole caméra |
 | 5 | **Relais 40 A sur un 12 V qui décroche** : refermetures répétées sur les condensateurs des drivers. À donner à la relecture du §4 et à provoquer au banc | Sécurité |

@@ -127,4 +127,4 @@ Angers, Ancenis et Beaupréau (aucun lieu trouvé). Polycarbonate : plus résist
 | D4 | Pistes 10 A de la carte Puissance | Élargir, sinon cuivre 2 oz. **Tronc 5 V compris** ; les fusibles plus petits ne règlent rien (relevé §4.4) |
 | D5 | Échange des broches 7 et 8 de la nappe Sécurité-Moteurs | À faire si la nappe s'allonge — donc tant que sa longueur réelle n'est pas mesurée |
 | D6 | Point de masse en étoile | Quatre questions à répondre d'abord (relevé §5.3) : masse des sorties isolées des convertisseurs, barrière de la carte Odométrie, masse du 12 V, retour par l'USB du Pi 5 |
-| D7 | Fiches du faisceau | Embases à brides sur les cartes, ou fiches neuves sans vis (relevé §4.3) |
+| D7 | Fiches du faisceau | ✅ **Clos le 05/11** : fiches 5,08 simples, réutilisées telles quelles ; embases des cartes dans la même série (relevé §4.3) |
