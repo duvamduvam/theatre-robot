@@ -1,5 +1,8 @@
 # Plan de vérification des 5 cartes avant commande (2026-11-05)
 
+> Ce plan est l'étape 4 de [`plan-refonte-electrique.md`](plan-refonte-electrique.md), qui prime.
+> Il remplace notamment « garder l'ancienne carte montée », impossible si tout le câblage change.
+
 Demande de David : « un plan solide pour revérifier les cartes et limiter les risques ».
 Panier JLCPCB prêt (5 cartes, 32,92 € avant TVA et douane), **rien n'est commandé**.
 
