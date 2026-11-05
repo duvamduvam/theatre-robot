@@ -32,6 +32,34 @@ schémas, pas que les schémas sont justes ni que les pièces rentrent.
 > les nouveaux Gerber de L. **Commande suspendue par David le 05/11 : les vérifications
 > d'abord.**
 
+## 1 bis. Implantation décidée le 05/11 : haut P+L, zone audio M+audio
+
+David veut deux cartes en haut et deux vers l'audio, nappe de moins de 30 cm, répartition
+laissée à l'agent. Plan : `plan-pile-cartes.png`. Ce choix annule le §4 de l'étude 100×100
+pour M (la pile à trois) ; P sur L ne bouge pas. L'odométrie reste sur le coffre des alims.
+
+Pourquoi celle-là : la seule liaison longue est L↔M, dont la coupure est sûre (R10 sur M
+coupe les PWM) ; P, ses fusibles et ses 10 A restent loin de l'audio ; J11 (I²C vers
+`audio-relays`) arrive à côté de sa cible. Mettre P près de l'audio aggravait la ronflette ;
+éloigner L des deux autres doublait les nappes longues.
+
+Conséquences :
+
+| Sujet | Effet |
+|---|---|
+| Cartes | **aucune à refaire** ; seule la sérigraphie « BAS DE LA PILE » de M est à corriger |
+| +5V et GND de la nappe, 30 cm de 28 AWG (≈ 0,213 Ω/m) | 32 mΩ (2 fils) + 21 mΩ (3 fils) : 16 mV à 0,3 A, négligeable |
+| I²C 5 V sur 30 cm | à contrôler à l'oscillo au banc (fronts) ; un Hantek est disponible |
+| **OE_WHEELS (broche 7) voisin de SCL (broche 6)**, sans masse entre eux | **à corriger** : voir ci-dessous |
+| Fils V+ 10 A vers les PCA9685 | plus longs et **près de l'audio** : courants de servos pulsés. Paire torsadée, passés loin de MIC et du transfo |
+| Coupure de la nappe | nouveau mode de panne réaliste (câble long dans le robot) : à inclure au protocole caméra |
+
+**OE_WHEELS** : R10 (10 kΩ) tient OE haut quand Q1 est ouvert, donc le signal de sûreté est à
+haute impédance, le long du fil d'horloge I²C actif en permanence. Sans risque sur 3 cm, à
+ne pas laisser sur 30 cm. Correction proposée : échanger les broches 7 et 8 de la nappe L↔M
+(GND en 7, OE en 8, la 9 est libre), ce qui met une masse entre SCL et OE. Touche la route
+d'OE sur L et M, donc les deux cartes repassent tous les contrôles et la relecture.
+
 ## 2. BLOQUANT trouvé — carte P : les pistes des départs 10 A sont trop étroites
 
 Mesuré dans `carrier-p.kicad_pcb` : aucun plan de cuivre sur les rails de puissance
