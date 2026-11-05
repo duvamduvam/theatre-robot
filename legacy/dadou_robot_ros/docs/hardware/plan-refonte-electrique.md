@@ -245,6 +245,19 @@ ampli auto est fusiblé à sa consommation maximale. Règle : convertisseur ≥ 
 le SD-150 ne suffit plus et il faut choisir entre une coupure maintenue et un bridage du
 volume de l'ampli.
 
+**Fusible de l'audio lu par David le 06/11 : 25 A.** Un fusible est calibré au-dessus de la
+consommation maximale : l'ampli tire donc moins de 25 A, mais rien ne dit combien. La SD-150B-12
+(12,5 A) **ne couvre pas** ce cas : elle décrocherait encore quand l'ampli sature. Deux voies :
+
+- **SD-350B-12 (27,5 A), avis** : au-dessus du fusible, donc le fusible de l'ampli saute avant
+  que le convertisseur ne sature ; sa coupure sans redémarrage ne joue plus. Contre : plus gros
+  (215 × 115 × 50 mm), entrée à partir de 20 V au lieu de 19, et à pleine charge il chauffe
+  (~75 W perdus à 80 % de rendement) : ventilation du coffre à prévoir.
+- **SD-150B-12 + gain de l'ampli bridé** pour rester sous 12,5 A : plus petit, moins cher,
+  mais repose sur un réglage que quelqu'un peut remonter.
+
+La consommation réelle de l'ampli à fort volume, mesurée, départagerait les deux.
+
 **Combien de convertisseurs 12 V, et où (06/11, question de David) :** deux. La SD-50B-12 en
 place reste où elle est et ne garde que les petites charges (yeux, sécurité, cou si 12 V) :
 **un seul boîtier de plus**, celui de l'audio. Il ne va **pas** dans la caisse basse, avec les
