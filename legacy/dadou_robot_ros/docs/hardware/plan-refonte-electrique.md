@@ -303,6 +303,25 @@ pack. Écartée par défaut : l'audio perdrait l'isolement du convertisseur, don
 Attention aussi à la fin de batterie : si le pack est en 7S, il descend vers 19-21 V en fin de
 décharge, là où ces convertisseurs B s'arrêtent. C'est déjà le cas de la SD-50B-12.
 
+### Répartition proposée le 06/11 (après le choix du convertisseur audio)
+
+| Source | Charges | Pourquoi |
+|---|---|---|
+| **Pack 24 V direct, après le relais 40 A** | roues (SmartDrive), **3 ASME** (deux bras, bouche), un fusible par ASME | la batterie encaisse (constat de David) ; plus de convertisseur sur les moteurs ; les bras deviennent coupés par l'arrêt d'urgence. ASME-MR en 24 V à confirmer sur l'étiquette |
+| **SD-150B-12, nouvelle** | ampli Focal, TC Helicon, carte Audio (relais, klaxon, récepteur HF) | audio seul et isolé |
+| **SD-50B-12, en place** | servo des yeux (JX CLS-12V7346), servo du cou (type à lire), boucle du coup-de-poing, bobine du relais 40 A | petites charges seulement |
+| **SD-50B-5 ×2** | Pi 4 et logique ; Pi 5 et vision | décidé le 12/09 |
+
+Conséquences sur la carte Puissance : J36/J37 et F7 ne servent plus aux bras (alimentés et
+fusiblés à la distribution 24 V du coffre) ; le V+ des modules PCA9685 (yeux, cou) se prend sur
+**J28 câblé depuis la SD-50B-12, JP1 ouvert**, pour ne pas faire passer les servos par un
+cavalier limité à 3 A.
+
+**Réserve sur la sécurité** : elle partage encore la SD-50B-12 avec deux servos. Le courant
+de blocage du servo des yeux n'est pas publié (fiche JX lue : 12 V, 38 à 47 kg·cm, rien sur le
+courant). **À mesurer** : yeux et cou bloqués ensemble. S'ils approchent les 4,2 A, la boucle
+d'arrêt passe sur un petit convertisseur à elle.
+
 ### Avis
 
 **A + 2 + 4 tout de suite, 3 à instruire.** A supprime la cause (pas de convertisseur sur les
