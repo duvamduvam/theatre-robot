@@ -123,6 +123,25 @@ Trois sorties, à choisir **avant** de commander P :
 
 Recommandation : tenter A ; si la place manque, B. C seule revient à déplacer le problème.
 
+**05/11, après le relevé filmé — C est écartée, et le tronc +5 V est à traiter comme le 12 V.**
+Un fusible tient 1,5 fois son calibre pendant une heure : un 5 A ne protège pas une piste
+donnée pour 3,9 à 5,4 A. Et la source du 5 V est lue : SD-50B-5, 10 A, que la fiche Mean Well
+laisse monter à 105-150 % avant de décrocher. L'arrivée J20 n'a qu'une broche +5 V. Détail :
+[`releve-2026-11-05.md`](releve-2026-11-05.md) §4.4.
+
+## 2 bis. Vérifications ajoutées par le relevé du 05/11 — avant commande
+
+Détail et preuves dans [`releve-2026-11-05.md`](releve-2026-11-05.md) §4.
+
+| # | Vérification | Carte ou achat concerné |
+|---|---|---|
+| 1 | **Entraxe des rangées de l'isolateur I²C** réellement monté, contre les 10,16 mm de M4/M5. Jamais vérifié ; le module violet du robot paraît plus large | Sécurité — **avant** de la commander |
+| 2 | **Fiches du robot** : pas (5,08 ou 7,62), largeur, vis de verrouillage. Les embases des cartes sont des MSTBA sans brides : une fiche à vis ne s'y verrouille pas. J20 et J36 n'ont que ≈ 3,8 mm entre boîtiers | Puissance, Sécurité |
+| 3 | **PCA9685 à acheter** : la ligne de `cout-cartes.md` est un shield, il faut un module au format du `HW-170` (62,2 × 25,4). **INA226** : brochage CJMCU-226 à confirmer sur la référence choisie | liste d'achats |
+| 4 | **Second PCA9685** : cavalier 0x41, `i2cdetect`, « kill de la chaîne » module par module ; l'entrée de coupure du module servos est à la masse, il n'est pas dans la chaîne d'arrêt. Fréquence PWM des roues à relever avant et après | Moteurs, protocole caméra |
+| 5 | **Relais 40 A sur un 12 V qui décroche** : refermetures répétées sur les condensateurs des drivers. À donner à la relecture du §4 et à provoquer au banc | Sécurité |
+| 6 | **Hors cartes** : fusible général, distribution 24 V fusiblée, alimentation 12 V du VoiceTone C1 | cahier de câblage, achats |
+
 ## 3. Gabarits papier 1:1 — toi, pièces en main (≈ 30 min)
 
 `didier/pcb/kicad/gabarits/*.pdf` : pastilles, sérigraphie et contour à l'échelle 1.

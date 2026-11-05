@@ -231,8 +231,8 @@ important que le tableau.
 | Transfo d'isolation 600:600 Ω CI | 1 | 2,20 € TTC | 2,20 € | Gotronic TI600 |
 | Fiches débrochables 5,08 mm (2/3/6 pôles) | 13 | 0,42 / 0,62 / 0,66 € | ≈ 6,10 € | Reichelt, série CamdenBoss CTB9209 |
 | Adafruit **ISO1540** (isolateur I²C) | 2 | 10,29 € TTC | 20,58 € | Mchobby.be |
-| Module **INA226** | 2 | 9,20 € TTC | 18,40 € | Gotronic (INA226-1A) |
-| Module **PCA9685** | 1 *(1 déjà en stock)* | 24,50 € TTC | 24,50 € | Gotronic ADA1411 — **shield Adafruit, majorant** : un breakout générique coûte bien moins, non chiffré |
+| Module **INA226** | 2 | 9,20 € TTC | 18,40 € | Gotronic (INA226-1A) — ⚠️ 05/11 : brochage à confirmer contre le CJMCU-226 6 broches qu'attendent M7/M8 |
+| Module **PCA9685** | 1 *(1 déjà en stock)* | 24,50 € TTC | 24,50 € | Gotronic ADA1411 — ⚠️ **05/11 : NE PAS COMMANDER cette référence**, un shield ne s'enfiche pas sur le support 1×6 de la carte Moteurs ; il faut un module au format du `HW-170` (62,2 × 25,4). — **shield Adafruit, majorant** : un breakout générique coûte bien moins, non chiffré |
 | | | | **≈ 81 €** | |
 
 Deux réserves sur ce tableau : les deux relais sont vendus sous une désignation

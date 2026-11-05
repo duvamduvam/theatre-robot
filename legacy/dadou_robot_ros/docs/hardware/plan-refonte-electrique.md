@@ -56,6 +56,11 @@ des heures, pas des minutes. À assumer avant de démonter.
 
 Les étapes 4 et 5 peuvent avancer en parallèle une fois 3 fini.
 
+> **Étape 1 commencée le 05/11** : relevé à l'image dans
+> [`releve-2026-11-05.md`](releve-2026-11-05.md) (état de chaque niveau, conformité de la doc,
+> proposition d'implantation). **Les cotes et l'étiquetage des fils restent à faire** : liste
+> fermée au §6 du relevé.
+
 ## 4. Câblage
 
 **Trois familles, séparées physiquement :** puissance (batterie, moteurs, 12 V et 24 V),
@@ -118,6 +123,8 @@ Angers, Ancenis et Beaupréau (aucun lieu trouvé). Polycarbonate : plus résist
 |---|---|---|
 | D1 | Refonte avant ou après le premier essai au sol | **DÉCIDÉ par David le 05/11 : avant.** Pas de roulage au sol sans arrêt matériel |
 | D2 | Plexiglas ou polycarbonate, et qui découpe | Voir §5 bis : PMMA coulé 5 mm au laser d'eMode, une plaque d'essai d'abord |
-| D3 | Emplacement de la carte Moteurs | Après le relevé |
-| D4 | Pistes 10 A de la carte Puissance | Élargir, sinon cuivre 2 oz |
-| D5 | Échange des broches 7 et 8 de la nappe Sécurité-Moteurs | À faire si la nappe s'allonge |
+| D3 | Emplacement de la carte Moteurs | Avis du relevé (§5.3) : à côté de la pile en haut **si elle y tient** — 12 mm de marge sur 212 mm, à trancher au gabarit carton dans le robot |
+| D4 | Pistes 10 A de la carte Puissance | Élargir, sinon cuivre 2 oz. **Tronc 5 V compris** ; les fusibles plus petits ne règlent rien (relevé §4.4) |
+| D5 | Échange des broches 7 et 8 de la nappe Sécurité-Moteurs | À faire si la nappe s'allonge — donc tant que sa longueur réelle n'est pas mesurée |
+| D6 | Point de masse en étoile | Quatre questions à répondre d'abord (relevé §5.3) : masse des sorties isolées des convertisseurs, barrière de la carte Odométrie, masse du 12 V, retour par l'USB du Pi 5 |
+| D7 | Fiches du faisceau | Embases à brides sur les cartes, ou fiches neuves sans vis (relevé §4.3) |

@@ -1,5 +1,11 @@
 # Inventaire du matériel EMBARQUÉ sur Didier (2026-09-03)
 
+> **Complété le 2026-11-05** par un second tour filmé, robot remonté :
+> [`releve-2026-11-05.md`](releve-2026-11-05.md). Il corrige ici quatre lectures (haut-parleurs
+> `ICU 570`, TC Helicon **VoiceTone C1** tenu par une sangle, alimentation **SD-50B-5** lue,
+> isolateur audio confirmé monté) et porte l'état des étages, la proposition d'implantation
+> et les vérifications à faire avant la commande des cartes.
+
 > **État : première passe.** 139 des 185 images d'une vidéo d'atelier de 3 min 05 s ont été
 > lues (les 46 écartées sont sous le seuil de netteté). C'est le **troisième gisement** de
 > matériel du projet, et le seul qui n'avait jamais été relevé : l'inventaire du stock du
@@ -179,7 +185,7 @@ pignon roue.** Sans ça, l'odométrie sortira des mètres faux.
 
 ### 1.8 La chaîne audio est entièrement de la hi-fi automobile
 
-Références lues : haut-parleurs **`FOCAL UNIVERSAL ICU S70`** (`t0008`, `t0158`), ampli
+Références lues : haut-parleurs **`FOCAL UNIVERSAL ICU 570`** (`t0008`, `t0158` ; lu `S70` le 03/09, corrigé le 05/11 sur deux images nettes), ampli
 **`FOCAL` « THE SPIRIT OF SOUND »**, `…D CLASS COMPACT AMPLIFIER` (`t0165`), mixette
 **`the t.mix MicroMix 2USB`** — `USB AUDIO INTERFACE`, `XLR-MIC`, `1/4"-LINE IN`, `GAIN`,
 `HEADSET` (`t0159`, `t0161`). Étiquetage des fils au standard autoradio : `RR+`, `RR−`,
@@ -255,16 +261,17 @@ Confiance : **H** = référence lue ou forme sans ambiguïté · **M** = famille
 | Connecteurs de puissance type XT, gaine thermo rouge | — | dans le faisceau, **état de branchement indéterminable** | t0131, t0135 | B |
 | Connecteurs ronds jaunes 2 pts (bullet) | — | faisceau moteur de roue | t0173 | M |
 | **Pack batterie lithium** | — | **PRÉSENT — confirmé par David le 03/09**, au **fond de la caisse** ; jamais dans le cadre (angle mort, pas un écart) | — | H (parole de David) |
-| **BMS Daly / Mean Well SD-50B** | — | **NON OBSERVÉS** (réf. jamais lue sur les boîtiers perforés) | — | — |
+| **Mean Well `SD-50B-5`** | `INPUT DC24V(19-36V) 3A` / `OUTPUT +5V 10A` — **lu au zoom le 05/11** | posée de biais sur le rebord de la caisse, apparemment non fixée ; un second boîtier perforé sombre, non lu, est dans la caisse basse | `releve-2026-11-05.md` | H |
+| **BMS Daly** | — | **NON OBSERVÉ** | — | — |
 
 ### 2.4 Audio et voix
 
 | Élément | Référence lue | Montage observé | Repère | Conf. |
 |---|---|---|---|---|
 | **Récepteur HF** | `MODEL: BLX4` / `FREQ: 662-686 MHz` (Shure BLX4, bande M17) | dans le châssis, connecteur d'antenne, jack 3,5 | t0029 | H |
-| **Processeur de voix** | `TC HELICON`, molette `GENDER`, `HARD`, `POWER` — **modèle non lu** | **posé en vrac, non fixé**, faisceaux libres autour | t0113-t0116, t0122 | H |
+| **Processeur de voix** | `TC HELICON` **`VOICETONE C1`** (lu le 05/11), molette `GENDER`, `HARD`, `POWER` | tenu par une **sangle noire** contre la paroi du fond du coffre (05/11), noyé sous les faisceaux — le 03/09 il paraissait posé en vrac | t0113-t0116, t0122 | H |
 | Mixette / interface USB | `the t.mix MicroMix 2USB`, `USB AUDIO INTERFACE`, `XLR-MIC`, `1/4"-LINE IN`, `GAIN`, `HEADSET` | sur équerres alu vissées aux montants bois | t0158, t0159, t0161, t0162 | H |
-| Haut-parleurs | `FOCAL UNIVERSAL ICU S70` | sur panneaux bois du torse (≥ 2 vus) | t0008, t0158 | H |
+| Haut-parleurs | `FOCAL UNIVERSAL ICU 570` (corrigé le 05/11) | sur panneaux bois du torse (≥ 2 vus) | t0008, t0158 | H |
 | Amplificateur | `FOCAL`, `THE SPIRIT OF SOUND`, `…D CLASS COMPACT AMPLIFIER` | sous une traverse bois, RCA en façade | t0165, t0179-t0184 | H |
 | Petite carte d'isolation/adaptation audio | `Car Audio Hi-Fi` / `HIFI` (générique, **pas une référence**) — 2 composants moulés jaunes | vissée sur montant bois, cosses serties vers un HP | t0163 | M |
 | Étiquetage des fils au standard autoradio | `RR+`, `RR−`, `RL−`, `RF−`, `GND` | sur le faisceau HP | t0164, t0165 | H |
@@ -296,7 +303,7 @@ classés par ce qu'ils coûteraient s'ils étaient réels.
 | 3 | **Ligne sombre nette traversant une équerre métallique** de fixation | t0166 | *J'ai relu l'image :* **on ne peut pas trancher entre fissure et rayure.** Si c'est une fissure, c'est une fixation structurelle sur 50 kg mobiles |
 | 4 | **Réparations improvisées** : ruban adhésif sur mousse déchirée, ruban alu enroulé à la main, épissure sous gaine thermo | t0043, t0044, t0124, t0177 | Montages provisoires devenus permanents — à recenser et reprendre |
 | 5 | ~~Routeur 4G suspendu par ses câbles, sans fixation~~ → **❌ DÉMENTI le 13/09** : il est **sur un support**, le cadrage le masquait (§1.5). Reste un vrai sujet, mais moindre : **le support existant est perfectible** (avis de David), un support imprimé le remplacera | t0108 | C'est le lien de la télé-présence et du télédiagnostic — et c'est le 2ᵉ « absent de l'image » pris à tort pour un « absent du robot » |
-| 6 | **TC Helicon posé en vrac**, non fixé | t0113-t0122 | Idem : organe de la voix, en vrac dans une caisse qui roule |
+| 6 | **TC Helicon** ~~posé en vrac, non fixé~~ → sanglé au fond du coffre, sous les câbles (05/11) | t0113-t0122 | Idem : organe de la voix, en vrac dans une caisse qui roule |
 | 7 | **Gaine tressée effilochée** à la base d'une pièce mécanique | t0019 | À regarder de près (usure ou échauffement — indécidable à l'image) |
 | 8 | **Tige filetée longue pendant librement** sous le châssis | t0168 | Fonction non identifiée ; si c'est un tirant, il ne tire rien |
 | 9 | **Pince crocodile de mesure laissée en place** | t0156 | Un cordon de test oublié dans une caisse sous tension |
