@@ -330,7 +330,15 @@ branchement :
    l'ASME-02) ;
 2. **mesurer la tension du pack juste après une charge complète**, au multimètre ;
 3. si la plage de l'ASME-MR s'arrête à 24 V et que le pack monte au-dessus de 28 V : ne pas
-   brancher en direct. Repli : un convertisseur 24 V régulé pour les ASME, ou les garder en 12 V
+   brancher en direct.
+
+**Mesure du 06/11 (David, lue dans VictronConnect) : 28,41 V**, chargeur en mode li-ion. C'est
+la tension d'absorption de ce mode, donc **le maximum que le pack voit avec ce chargeur**.
+Marge sous les 30 V absolus de la notice ASME : **1,6 V**. Hors de la plage de service
+(12-24 V), mais sous le maximum absolu. Conséquences :
+- **ne jamais passer le chargeur en mode « high » (29,4 V)** : la marge tomberait à 0,6 V ;
+- il reste à lire l'étiquette d'un ASME-MR : si elle donne la même plage que l'ASME-02
+  (30 V max), le branchement direct est acceptable ; si elle s'arrête plus bas, repli. Repli : un convertisseur 24 V régulé pour les ASME, ou les garder en 12 V
    sur un convertisseur dédié aux actionneurs (option B).
 
 Au recâblage, **le fil rouge du connecteur 3 points des ASME reste non raccordé** : c'est une
