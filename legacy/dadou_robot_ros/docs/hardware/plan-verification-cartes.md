@@ -135,7 +135,7 @@ Détail et preuves dans [`releve-2026-11-05.md`](releve-2026-11-05.md) §4.
 
 | # | Vérification | Carte ou achat concerné |
 |---|---|---|
-| 1 | ⛔ **ERREUR CONFIRMÉE le 05/11 sur le plan coté Adafruit** : rangées de l'isolateur I²C à **12,70 mm**, M4/M5 sont à 10,16 ; ordre des pastilles VCC·SCL·SDA·GND, la carte a VCC·SDA·SCL·GND. Corriger, détromper, puis refaire tous les contrôles et la relecture | Sécurité — **bloque sa commande** |
+| 1 | ✅ **Erreur confirmée puis CORRIGÉE le 05/11** : supports de l'isolateur I²C passés de 10,16 à **12,70 mm**, ordre VCC·SCL·SDA·GND, détrompage sérigraphié ; ERC, DRC, sérigraphie, parité, pile à 0, plus `carrier-l/check_iso1540.py` (cotes gravées du module). **Restent : module posé sur le gabarit régénéré, relecture du §4, et Gerber du panier à remplacer par `fab/carrier-l.zip`** | Sécurité |
 | 2 | ~~Fiches du robot~~ ✅ **clos le 05/11** : pas de 5,08, fiches simples sans vis latérales, corps large de n × 5,08 mm (fiche technique KF2EDGWB fournie par David) — elles tiennent côte à côte sur J20 et J36. Commander les embases dans la même série 2EDG 5,08 | Puissance, Sécurité |
 | 3 | **PCA9685 à acheter** : la ligne de `cout-cartes.md` est un shield, il faut un module au format du `HW-170` (62,2 × 25,4). **INA226** : brochage CJMCU-226 à confirmer sur la référence choisie | liste d'achats |
 | 4 | **Second PCA9685** : cavalier 0x41, `i2cdetect`, « kill de la chaîne » module par module ; l'entrée de coupure du module servos est à la masse, il n'est pas dans la chaîne d'arrêt. Fréquence PWM des roues à relever avant et après | Moteurs, protocole caméra |
