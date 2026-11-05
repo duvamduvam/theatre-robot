@@ -98,12 +98,26 @@ tiennent côte à côte : la carte Moteurs pourrait rester à côté de Puissanc
 **Méthode :** modèle paramétrique (OpenSCAD, export DXF), comme le reste du dépôt `plans/`,
 gabarit d'abord. Le moyen de découpe reste à trancher.
 
+## 5 bis. Découpe : prix lus le 05/11
+
+Base de calcul : 5 plaques de 167 × 212 mm, soit 0,177 m² (hypothèse, nombre réel à l'étape 2).
+
+| Option | Ce qui est lu | Limites |
+|---|---|---|
+| **eMode, Cholet** (association, 20 rue du Carteron) | Laser 60 W, plateau 726 × 432 mm, acrylique jusqu'à 1 cm, PVC interdit ; CNC 30 × 18 × 4,5 cm. Adhésion « à partir de 24 € / an », réservation 1 h minimum, initiation requise | Grille : **42 €** pour le laser, **6 €** pour la CNC, unité et catégorie du particulier à confirmer ; le polycarbonate n'est pas dans la liste du laser. Tél. 02 41 71 69 33 |
+| **ICI Nantes** | Trotec et CNC selon fablabs.io ; abonnement atelier privatif 255 € HT / mois | Inadapté à un besoin ponctuel, sauf tarif à l'heure non trouvé |
+| **Plexi Cindar** (en ligne) | PMMA coulé 5 mm 51,85 € HT/m² (62,22 € TTC) ; polycarbonate 4 mm 43,80 € HT/m² (52,56 € TTC) ; découpe laser et CNC annoncées | Matière seule ≈ 11 € ou 9,30 € TTC pour 0,177 m². Option « Découpe sur mesure » à 7 € TTC, dont l'unité n'est pas claire ; minimum, port et découpe de trous sur fichier **non lus**, devis à demander |
+
+Non vérifiés : Systeal (site bloqué, prix écartés), plexiglasssurmesure.fr (aucun prix lu),
+Angers, Ancenis et Beaupréau (aucun lieu trouvé). Polycarbonate : plus résistant aux chocs
+(fournisseur et SendCutSend), mais orienté fraise plutôt que laser.
+
 ## 6. Décisions à prendre
 
 | # | Décision | Avis |
 |---|---|---|
-| D1 | Refonte avant ou après le premier essai au sol | **Avant** : ne pas faire rouler 50 kg sans arrêt matériel. Change la priorité 1 de `CLAUDE.md` |
-| D2 | Plexiglas ou polycarbonate, et qui découpe | Comparer sur une plaque d'essai |
+| D1 | Refonte avant ou après le premier essai au sol | **DÉCIDÉ par David le 05/11 : avant.** Pas de roulage au sol sans arrêt matériel |
+| D2 | Plexiglas ou polycarbonate, et qui découpe | Voir §5 bis : PMMA coulé 5 mm au laser d'eMode, une plaque d'essai d'abord |
 | D3 | Emplacement de la carte Moteurs | Après le relevé |
 | D4 | Pistes 10 A de la carte Puissance | Élargir, sinon cuivre 2 oz |
 | D5 | Échange des broches 7 et 8 de la nappe Sécurité-Moteurs | À faire si la nappe s'allonge |
