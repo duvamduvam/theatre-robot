@@ -223,13 +223,13 @@ ne règle donc pas les redémarrages d'ampli. **Il faut un convertisseur dédié
 
 ### Convertisseur audio : choix (fiches Mean Well lues le 06/11, archivées dans `datasheets/`)
 
-| Modèle | 12 V | Surcharge | Encombrement |
-|---|---|---|---|
-| SD-50B-12 (en place) | 4,2 A | coupe et **redémarre seul** (2,5 s) | — |
-| SD-100B-12 | 8,5 A | coupe et redémarre seul | 199 × 98 × 38 mm |
-| **SD-150B-12** | **12,5 A** | coupe et redémarre seul | 199 × 110 × 50 mm |
-| SD-200B-12 | 16,7 A | **coupe et reste coupé** jusqu'à remise sous tension | 215 × 115 × 50 mm |
-| SD-350B-12 | 27,5 A | coupe et reste coupé ; entrée 20-36 V | 215 × 115 × 50 mm |
+| Modèle | 12 V | Surcharge | Refroidissement | Encombrement |
+|---|---|---|---|---|
+| SD-50B-12 (en place) | 4,2 A | coupe et **redémarre seul** (2,5 s) | sans ventilateur | 159 × 97 × 38 mm |
+| SD-100B-12 | 8,5 A | coupe et redémarre seul | sans ventilateur | 199 × 98 × 38 mm |
+| SD-150B-12 | 12,5 A | coupe et redémarre seul | sans ventilateur | 199 × 110 × 50 mm |
+| SD-200B-12 | 16,7 A | **coupe et reste coupé** jusqu'à remise sous tension | convection, sans ventilateur | 215 × 115 × 50 mm |
+| SD-350B-12 | 27,5 A | coupe et reste coupé ; entrée 20-36 V | **ventilateur intégré** | 215 × 115 × 50 mm |
 
 Entrée de toutes les versions B : 19 (ou 20) à 36 V, isolée 1,5 kV, réglable de 11 à 16 V.
 
@@ -257,7 +257,12 @@ consommation maximale : l'ampli tire donc moins de 25 A, mais rien ne dit combie
 - **SD-150B-12 + gain de l'ampli bridé** pour rester sous 12,5 A : plus petit, moins cher,
   mais repose sur un réglage que quelqu'un peut remonter.
 
-La consommation réelle de l'ampli à fort volume, mesurée, départagerait les deux.
+- **SD-200B-12 (16,7 A)** : silencieuse, mais si l'ampli dépasse ~17 à 25 A, elle coupe le son
+  jusqu'à remise sous tension.
+
+**Aucun modèle n'est à la fois silencieux, assez fort pour 25 A et à redémarrage automatique.**
+Ce qui départage : **le courant réel de l'ampli**, donné par son modèle exact (étiquette de
+l'ampli, puis sa fiche) ou mesuré à fort volume. Ne rien acheter avant.
 
 **Combien de convertisseurs 12 V, et où (06/11, question de David) :** deux. La SD-50B-12 en
 place reste où elle est et ne garde que les petites charges (yeux, sécurité, cou si 12 V) :
