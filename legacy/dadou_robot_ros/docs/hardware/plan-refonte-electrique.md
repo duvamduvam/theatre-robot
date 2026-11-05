@@ -350,9 +350,13 @@ jamais le mode « high » du chargeur, et toucher les servos (température) apr�
 essais. Un convertisseur 24 V régulé supprimerait ce risque mais ramènerait le problème de
 saturation (3 servos à 5 A max = 15 A). **Avis : branchement direct.**
 
-**Le cou est aussi un ASME-MR** (David, 06/11) : **quatre ASME** passent donc sur le pack (deux
-bras, bouche, cou), soit 20 A au pire s'ils sont tous bloqués ensemble, ce que la batterie
-encaisse. ⚠️ **En 24 V, un ASME va deux fois plus vite** (0,5 s/60° au lieu de 1 s) : le réglage
+**Inventaire corrigé par David le 06/11 : trois ASME-MR et deux servos 12 V pour les yeux.**
+Le code déclare cinq servos : cou (canal 4), bras gauche (5), bras droit (15), œil gauche (7),
+œil droit (8) ; aucun servo de bouche séparé. Les trois ASME sont donc **les deux bras et le
+cou**, qui passent sur le pack : 15 A au pire s'ils sont tous bloqués ensemble, ce que la
+batterie encaisse. ⚠️ À réconcilier : l'incident du 03/11 parle d'un « servo de la bouche
+(ASME-MR) » et la carte Puissance a un départ « 12V BOUCHE » (J38) ; si la bouche est en
+réalité le servo du cou, c'est ce départ qui est à renommer. ⚠️ **En 24 V, un ASME va deux fois plus vite** (0,5 s/60° au lieu de 1 s) : le réglage
 du regard (amortissement 0,15 / 1,5, validé en réel le 12/07 en 12 V) et `RAMP_SPEED` sont à
 **revalider** après le passage, roues hors sol et à vitesse réduite d'abord.
 

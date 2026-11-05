@@ -985,7 +985,7 @@ Disc geometry (diameter, slot count, read radius, sensor spacing) is pending thr
 `docs/etude-odometrie.md`.
 
 ### Arms, eyes and mouth servos
-The arms, mouth **and neck** are controlled by **ASME-MR 380 kg·cm** servos (neck confirmed by David on 2026-11-06; label: 12-24 V). Planned power: directly from the battery pack, see `plan-refonte-electrique.md` §5 ter.
+The **two arms and the neck** are controlled by **ASME-MR 380 kg·cm** servos — three in total (David, 2026-11-06; label: 12-24 V). Earlier text said « arms and mouth »: the code declares no separate mouth servo (channels: neck 4, arms 5 and 15, eyes 7 and 8). Planned power: directly from the battery pack, see `plan-refonte-electrique.md` §5 ter.
 
 > ⚠️ **CORRECTED 2026-09-26.** This line previously said *« continuous-rotation »*. That is
 > **wrong**, and the mistake matters: a continuous-rotation servo takes a *speed* command, which
@@ -1011,7 +1011,7 @@ The arms, mouth **and neck** are controlled by **ASME-MR 380 kg·cm** servos (n
 > [`../incidents/2026-11-03-led-5v-allumee-convertisseur-debranche.md`](../incidents/2026-11-03-led-5v-allumee-convertisseur-debranche.md),
 > manuel `datasheets/ASME-02-series-wingxine-manual.pdf`.
 
-The eyes use a JX Servo CLS-12V7346 (46 kg·cm, 12 V).
+The eyes use a JX Servo CLS-12V7346 (46 kg·cm, 12 V). **Two of them**, one per eye (channels 7 and 8; David, 2026-11-06). They stay on the 12 V converter.
 ![JX CLS-12V servo](../../docs/pictures/consumable-parts/servo-cls-12V.png)
 *JX CLS-12V7346 servo dedicated to the eyes.*
 
