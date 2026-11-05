@@ -354,9 +354,15 @@ saturation (3 servos à 5 A max = 15 A). **Avis : branchement direct.**
 Le code déclare cinq servos : cou (canal 4), bras gauche (5), bras droit (15), œil gauche (7),
 œil droit (8) ; aucun servo de bouche séparé. Les trois ASME sont donc **les deux bras et le
 cou**, qui passent sur le pack : 15 A au pire s'ils sont tous bloqués ensemble, ce que la
-batterie encaisse. ⚠️ À réconcilier : l'incident du 03/11 parle d'un « servo de la bouche
-(ASME-MR) » et la carte Puissance a un départ « 12V BOUCHE » (J38) ; si la bouche est en
-réalité le servo du cou, c'est ce départ qui est à renommer. ⚠️ **En 24 V, un ASME va deux fois plus vite** (0,5 s/60° au lieu de 1 s) : le réglage
+batterie encaisse. ✅ **Réconcilié le 06/11 (David)** : « bouche » et « cou » désignent **le même ASME**, celui
+qui fait tourner le cylindre portant les panneaux de LED de la bouche. L'incident du 03/11 et
+le départ J38 « 12V BOUCHE » parlent donc du servo du cou.
+
+**Avant commande, sérigraphie de la carte Puissance à mettre d'accord avec la décision finale** :
+si les trois ASME passent sur le pack, J36 « BRAS G », J37 « BRAS D » et J38 « BOUCHE » ne les
+alimentent plus et deviennent des départs 12 V libres ; leurs noms tromperaient au câblage.
+Ne pas renommer avant que le passage en 24 V ait passé le protocole caméra : en cas d'échec,
+les ASME reviennent sur ces départs. ⚠️ **En 24 V, un ASME va deux fois plus vite** (0,5 s/60° au lieu de 1 s) : le réglage
 du regard (amortissement 0,15 / 1,5, validé en réel le 12/07 en 12 V) et `RAMP_SPEED` sont à
 **revalider** après le passage, roues hors sol et à vitesse réduite d'abord.
 

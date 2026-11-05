@@ -985,7 +985,7 @@ Disc geometry (diameter, slot count, read radius, sensor spacing) is pending thr
 `docs/etude-odometrie.md`.
 
 ### Arms, eyes and mouth servos
-The **two arms and the neck** are controlled by **ASME-MR 380 kg·cm** servos — three in total (David, 2026-11-06; label: 12-24 V). Earlier text said « arms and mouth »: the code declares no separate mouth servo (channels: neck 4, arms 5 and 15, eyes 7 and 8). Planned power: directly from the battery pack, see `plan-refonte-electrique.md` §5 ter.
+The **two arms and the neck** are controlled by **ASME-MR 380 kg·cm** servos — three in total (David, 2026-11-06; label: 12-24 V). The neck ASME rotates the cylinder that carries the LED panels of the mouth: « mouth servo » and « neck servo » in older notes are the same servo. Earlier text said « arms and mouth »: the code declares no separate mouth servo (channels: neck 4, arms 5 and 15, eyes 7 and 8). Planned power: directly from the battery pack, see `plan-refonte-electrique.md` §5 ter.
 
 > ⚠️ **CORRECTED 2026-09-26.** This line previously said *« continuous-rotation »*. That is
 > **wrong**, and the mistake matters: a continuous-rotation servo takes a *speed* command, which
