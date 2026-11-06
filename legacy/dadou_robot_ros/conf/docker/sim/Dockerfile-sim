@@ -33,23 +33,25 @@ WORKDIR /home/ros2_ws
 
 # Les sources sont aussi montées en volume par le compose (itération sans
 # rebuild) ; la copie permet de lancer l'image seule.
-COPY conf/ros2_dependencies/robot_description /home/ros2_ws/src/robot_description
-COPY conf/ros2_dependencies/robot_sim /home/ros2_ws/src/robot_sim
+# Packages du robot (L1e-1) : packages/ du mono-dépôt, contextes nommés du compose
+# (additional_contexts) — ils ont déménagé de conf/ du robot vers packages/, noms inchangés.
+COPY --from=robot_description . /home/ros2_ws/src/robot_description
+COPY --from=robot_sim . /home/ros2_ws/src/robot_sim
 # robot_interfaces et theatre_contrats : packages/ du mono-dépôt (lot L1a),
 # contextes nommés fournis par docker-compose-sim.yml (additional_contexts).
 COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
 # didier_jeu (lot A1, SIM-ONLY) : sélecteur de jeu, packages/ du mono-dépôt.
 COPY --from=didier_jeu . /home/ros2_ws/src/didier_jeu
-COPY conf/ros2_dependencies/robot_drive /home/ros2_ws/src/robot_drive
-COPY conf/ros2_dependencies/robot_web /home/ros2_ws/src/robot_web
-COPY conf/ros2_dependencies/robot_rehearsal /home/ros2_ws/src/robot_rehearsal
+COPY --from=robot_drive . /home/ros2_ws/src/robot_drive
+COPY --from=robot_web . /home/ros2_ws/src/robot_web
+COPY --from=robot_rehearsal . /home/ros2_ws/src/robot_rehearsal
 COPY conf/scripts/launch-sim-in-docker.sh /home/ros2_ws/
 
 # json/ : robot_lights.json, lights_base.json, colors.json lus par leds_sim_node
 # (mêmes fichiers que le vrai robot, cf. robot/robot_config.py) pour que la visu
 # LED en sim résolve les mêmes séquences/couleurs. Monté aussi en volume par le
-# compose (itération sans rebuild), comme les paquets ros2_dependencies.
+# compose (itération sans rebuild), comme les packages de packages/.
 COPY json/ /home/ros2_ws/json/
 
 # --- Paquet "robot" (animations_node, param animations:=true du launch sim) ---

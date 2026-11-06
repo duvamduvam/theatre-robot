@@ -19,6 +19,13 @@ services:
         robot_interfaces: ../../../../../packages/robot_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
         didier_jeu: ../../../../../packages/didier_jeu
+        # L1e-1 : les packages ROS autonomes du robot ont déménagé de
+        # conf/ du robot vers packages/ (même motif, noms inchangés).
+        robot_description: ../../../../../packages/robot_description
+        robot_sim: ../../../../../packages/robot_sim
+        robot_drive: ../../../../../packages/robot_drive
+        robot_web: ../../../../../packages/robot_web
+        robot_rehearsal: ../../../../../packages/robot_rehearsal
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
@@ -79,22 +86,22 @@ services:
       # Accès GPU pour le rendu de la GUI Gazebo (Intel/AMD).
       - /dev/dri:/dev/dri
       # Sources montées par-dessus la copie de l'image : itération sans rebuild.
-      - ../../ros2_dependencies/robot_description:/home/ros2_ws/src/robot_description
-      - ../../ros2_dependencies/robot_sim:/home/ros2_ws/src/robot_sim
+      - ../../../../../packages/robot_description:/home/ros2_ws/src/robot_description
+      - ../../../../../packages/robot_sim:/home/ros2_ws/src/robot_sim
       # Packages communs du mono-dépôt (lot L1a) : robot_interfaces (copie
-      # UNIQUE, ex-conf/ros2_dependencies) et theatre_contrats (contrat, importé
+      # UNIQUE) et theatre_contrats (contrat, importé
       # par dadou_utils_ros/utils_static.py — sans lui, tout node tombe à l'import).
       - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # didier_jeu (lot A1, SIM-ONLY : refus hors domaine 43) : sélecteur de
       # jeu, lancé À LA MAIN (ros2 run didier_jeu jeu_node), cf. son README.
       - ../../../../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
-      - ../../ros2_dependencies/robot_drive:/home/ros2_ws/src/robot_drive
-      - ../../ros2_dependencies/robot_web:/home/ros2_ws/src/robot_web
+      - ../../../../../packages/robot_drive:/home/ros2_ws/src/robot_drive
+      - ../../../../../packages/robot_web:/home/ros2_ws/src/robot_web
       # robot_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
       # bringup du robot) — cheminement de Didier dans la rue, lancé À LA
       # MAIN (rehearsal.launch.py), cf. son README.
-      - ../../ros2_dependencies/robot_rehearsal:/home/ros2_ws/src/robot_rehearsal
+      - ../../../../../packages/robot_rehearsal:/home/ros2_ws/src/robot_rehearsal
       - ../../scripts/launch-sim-in-docker.sh:/home/ros2_ws/launch-sim-in-docker.sh
       # V-R1 : protocole de vérification du cheminement (robot_rehearsal/README.md).
       - ../../scripts/validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro

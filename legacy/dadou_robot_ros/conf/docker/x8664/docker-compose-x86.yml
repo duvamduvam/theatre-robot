@@ -11,6 +11,13 @@ services:
       additional_contexts:
         robot_interfaces: ../../../../../packages/robot_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
+        # L1e-1 : les 6 packages ROS autonomes (ex-conf/ du robot).
+        robot_bringup: ../../../../../packages/robot_bringup
+        robot_description: ../../../../../packages/robot_description
+        robot_drive: ../../../../../packages/robot_drive
+        robot_rehearsal: ../../../../../packages/robot_rehearsal
+        robot_sim: ../../../../../packages/robot_sim
+        robot_web: ../../../../../packages/robot_web
     environment:
       # Allow RViz et al to display on host X server.
       - DISPLAY=${DISPLAY}
@@ -29,7 +36,7 @@ services:
       - ../../../dadou_utils_ros:/home/ros2_ws/src/robot/dadou_utils_ros
       - ../../../json:/home/ros2_ws/src/robot/json
       - ../../../medias:/home/ros2_ws/src/robot/medias
-      - ../../../conf/ros2_dependencies/robot_bringup:/home/ros2_ws/src/robot_bringup
+      - ../../../../../packages/robot_bringup:/home/ros2_ws/src/robot_bringup
       - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       - ../../../conf/ros2/setup.py:/home/ros2_ws/src/robot/setup.py

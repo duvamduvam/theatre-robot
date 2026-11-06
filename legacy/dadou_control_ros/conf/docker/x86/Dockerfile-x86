@@ -26,7 +26,7 @@ COPY conf/ros2/setup.py /home/ros2_ws/src/controller/
 COPY conf/ros2/package.xml /home/ros2_ws/src/controller/
 COPY conf/ros2/setup.cfg /home/ros2_ws/src/controller/
 COPY conf/ros2/resource/controller /home/ros2_ws/src/controller/resource
-# robot_interfaces (copie UNIQUE, ex-conf/ros2_dependencies) et theatre_contrats
+# robot_interfaces (copie UNIQUE) et theatre_contrats
 # (importé par le shim dadou_utils_ros/utils_static.py) : packages/ du
 # mono-dépôt (lot L1a), contextes NOMMÉS fournis par le compose.
 COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces

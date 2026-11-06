@@ -13,6 +13,14 @@ services:
       additional_contexts:
         robot_interfaces: ../../../../robot_interfaces
         theatre_contrats: ../../../../theatre_contrats
+        # L1e-1 : les 6 packages du robot, eux aussi dans ros2_ws/src/<package> (liste
+        # `packages` de l'hôte robot dans ansible/hosts) — remplace l'ancienne COPY du dossier conf/ du robot.
+        robot_bringup: ../../../../robot_bringup
+        robot_description: ../../../../robot_description
+        robot_drive: ../../../../robot_drive
+        robot_rehearsal: ../../../../robot_rehearsal
+        robot_sim: ../../../../robot_sim
+        robot_web: ../../../../robot_web
     # Supervision par le DÉMON Docker (assainissement 2026-07-11) : relance
     # sur crash et au boot, sauf arrêt volontaire (docker stop / systemctl
     # stop robot). robot.service n'est plus qu'un interrupteur up -d / stop —
@@ -44,7 +52,7 @@ services:
       # — sans lui, TOUS les nodes tombent à l'import, wheels_node compris.
       - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # Chaîne cmd_vel (bridge/mux/deadman) — rsyncée sur le Pi par la tâche
-      # ansible "ros2_dependencies -> src/", comme robot_bringup/robot_interfaces.
+      # ansible (liste `packages` de l'hôte robot -> src/), comme robot_bringup/robot_interfaces.
       - ../../../../robot_drive:/home/ros2_ws/src/robot_drive
       # Pont web (console navigateur, contenus/supervision — drive_enabled
       # reste false sur le robot, cf. robot_app.launch.py). Même mécanique de
