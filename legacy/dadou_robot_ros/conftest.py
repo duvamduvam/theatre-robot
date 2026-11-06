@@ -10,10 +10,10 @@ sys.path.insert(0, ROOT)
 # déménagé de conf/ du robot, sans changer de nom).
 PACKAGES = os.path.join(os.path.dirname(os.path.dirname(ROOT)), "packages")
 
-# robot_drive n'est pas un package installé (pas de colcon build sur l'hôte
+# didier_drive n'est pas un package installé (pas de colcon build sur l'hôte
 # de dev) : on l'ajoute au path pour que les tests fassent
-# `from robot_drive... import ...` comme si le package était sourcé.
-sys.path.insert(0, os.path.join(PACKAGES, "robot_drive"))
+# `from didier_drive... import ...` comme si le package était sourcé.
+sys.path.insert(0, os.path.join(PACKAGES, "didier_drive"))
 
 # Même logique pour robot_sim_lib (logique pure du node leds_sim_node,
 # paquet robot_sim) : `from robot_sim_lib... import ...` sans colcon build.

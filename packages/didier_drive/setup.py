@@ -3,7 +3,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = 'robot_drive'
+package_name = 'didier_drive'
 
 setup(
     name=package_name,
@@ -25,8 +25,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'wheels_bridge = robot_drive.wheels_bridge_node:main',
-            'twist_deadman = robot_drive.twist_deadman_node:main',
+            'wheels_bridge = didier_drive.wheels_bridge_node:main',
+            'twist_deadman = didier_drive.twist_deadman_node:main',
         ],
     },
 )

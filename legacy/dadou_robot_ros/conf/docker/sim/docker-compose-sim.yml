@@ -23,7 +23,7 @@ services:
         # conf/ du robot vers packages/ (même motif, noms inchangés).
         robot_description: ../../../../../packages/robot_description
         robot_sim: ../../../../../packages/robot_sim
-        robot_drive: ../../../../../packages/robot_drive
+        didier_drive: ../../../../../packages/didier_drive
         robot_web: ../../../../../packages/robot_web
         robot_rehearsal: ../../../../../packages/robot_rehearsal
     environment:
@@ -96,7 +96,7 @@ services:
       # didier_jeu (lot A1, SIM-ONLY : refus hors domaine 43) : sélecteur de
       # jeu, lancé À LA MAIN (ros2 run didier_jeu jeu_node), cf. son README.
       - ../../../../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
-      - ../../../../../packages/robot_drive:/home/ros2_ws/src/robot_drive
+      - ../../../../../packages/didier_drive:/home/ros2_ws/src/didier_drive
       - ../../../../../packages/robot_web:/home/ros2_ws/src/robot_web
       # robot_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
       # bringup du robot) — cheminement de Didier dans la rue, lancé À LA

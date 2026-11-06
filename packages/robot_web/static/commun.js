@@ -10,7 +10,7 @@
  * plus les flux MJPEG (vidéo, visage) et le bouton « catalogue » (data-topic/data-value).
  * Les constantes numériques ci-dessous sont DUPLIQUÉES volontairement (pas de
  * partage possible entre Python serveur et JS navigateur) -- même choix assumé
- * que robot_drive/wheels_payload.py.
+ * que didier_drive/wheels_payload.py.
  *
  * CONTRAT avec la page hôte : elle fournit les éléments du bandeau (ids
  * badge-mode, badge-version, badge-connexion, badge-ecriture, rtt, btn-prendre-main, token-box,

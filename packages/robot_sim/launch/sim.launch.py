@@ -231,7 +231,7 @@ def generate_launch_description():
                 output="screen",
             ),
 
-            # Pont web W0 (paquet robot_web, autonome façon robot_drive). Pas de
+            # Pont web W0 (paquet robot_web, autonome façon didier_drive). Pas de
             # use_sim_time (voir web.launch.py) : les timeouts de session sont en
             # horloge murale. json_dir par défaut ("/home/ros2_ws/json") est déjà
             # le bon montage en sim (docker-compose-sim.yml), pas de param à passer.

@@ -15,7 +15,7 @@ robot:
             - robot_interfaces
             - robot_bringup
             - robot_description
-            - robot_drive
+            - didier_drive
             - robot_rehearsal
             - robot_sim
             - robot_web

@@ -7,8 +7,8 @@ from robot.robot_static import CMD_FORWARD, CMD_BACKWARD, CMD_LEFT, CMD_RIGHT, I
     STRAIGHT, DIGITAL_CHANNELS_ENABLED
 from dadou_utils_ros.utils_static import ANGLO, WHEEL_RIGHT, WHEEL_LEFT, WHEELS, KEY, ANIMATION, \
     STOP, FORWARD, BACKWARD, LEFT, RIGHT, INCLINO, SPEED, JOYSTICK, X, Y, DURATION
-from robot_drive.diff_drive import DiffDrive
-from robot_drive.joystick_mixer import translate
+from didier_drive.diff_drive import DiffDrive
+from didier_drive.joystick_mixer import translate
 from robot.robot_config import MAX_PWM_L, MAX_PWM_R
 from robot.actions.action import Action
 
@@ -34,7 +34,7 @@ class Wheels(Action):
     FREQUENCY = 500
 
     # Cinématique différentielle du mode /cmd_vel : mêmes défauts que le
-    # wheels_bridge (robot_drive) pour que sim et vrai robot partagent la même
+    # wheels_bridge (didier_drive) pour que sim et vrai robot partagent la même
     # conversion Twist -> paire roues.
     WHEEL_SEPARATION = 0.58
     MAX_WHEEL_SPEED = 1.0

@@ -1,7 +1,7 @@
 """Chaîne de commande roues complète : twist_mux -> twist_deadman -> cmd_vel.
 
-    ros2 launch robot_drive drive.launch.py
-    ros2 launch robot_drive drive.launch.py use_sim_time:=true
+    ros2 launch didier_drive drive.launch.py
+    ros2 launch didier_drive drive.launch.py use_sim_time:=true
 
 twist_mux arbitre cmd_vel_remote (télécommande, priorité haute) et cmd_vel_anim
 (animations, priorité basse) sur cmd_vel_mux ; twist_deadman est le dernier
@@ -37,7 +37,7 @@ def _twist_mux_parameters():
     lui, est réécrit par launch_ros sous le nom complet du nœud : les mêmes
     paramètres, mêmes types, quel que soit le namespace (vérifié par
     `ros2 param get /didier2/twist_mux …` et gravé par test_namespace_contract)."""
-    path = os.path.join(get_package_share_directory("robot_drive"), "config", "twist_mux.yaml")
+    path = os.path.join(get_package_share_directory("didier_drive"), "config", "twist_mux.yaml")
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)["twist_mux"]["ros__parameters"]
 
@@ -70,14 +70,14 @@ def generate_launch_description():
             ),
 
             Node(
-                package="robot_drive",
+                package="didier_drive",
                 executable="twist_deadman",
                 name="twist_deadman",
                 parameters=[{"use_sim_time": use_sim_time}],
             ),
 
             Node(
-                package="robot_drive",
+                package="didier_drive",
                 executable="wheels_bridge",
                 name="wheels_bridge",
                 parameters=[{"use_sim_time": use_sim_time}],

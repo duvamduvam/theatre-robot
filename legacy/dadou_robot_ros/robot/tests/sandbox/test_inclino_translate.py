@@ -1,6 +1,6 @@
 import unittest
 
-from robot_drive.joystick_mixer import translate
+from didier_drive.joystick_mixer import translate
 
 
 class MyTestCase(unittest.TestCase):

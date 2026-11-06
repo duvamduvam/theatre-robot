@@ -3,7 +3,7 @@ topics, les plafonds durs et les bornes. Les tests (test_rehearsal_contract.py)
 lisent CE module et le comparent aux contrats voisins (chaîne roues, suivi).
 
 SÉCURITÉ : le suiveur d'itinéraire publie sur le créneau PRIORITÉ 20 du
-twist_mux (celui du suivi de personne, cf. robot_drive/config/twist_mux.yaml) —
+twist_mux (celui du suivi de personne, cf. didier_drive/config/twist_mux.yaml) —
 structurellement SOUS la télécommande (100) et le web (50) ; le twist_deadman
 (400 ms) reste derrière. Il n'existe AUCUN autre chemin de ce package vers les
 roues : /cmd_vel final n'est jamais publié ici.

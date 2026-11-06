@@ -59,9 +59,9 @@ def test_les_sept_launch_sont_inventories():
     noms = sorted(str(p.relative_to(MONO)) for p in _launch_files())
     assert noms == [
         "legacy/dadou_vision_ros/conf/ros2/launch/vision.launch.py",
+        "packages/didier_drive/launch/drive.launch.py",
         "packages/robot_bringup/launch/robot_app.launch.py",
         "packages/robot_description/launch/display.launch.py",
-        "packages/robot_drive/launch/drive.launch.py",
         "packages/robot_rehearsal/launch/rehearsal.launch.py",
         "packages/robot_sim/launch/sim.launch.py",
         "packages/robot_web/launch/web.launch.py",
@@ -122,7 +122,7 @@ def test_twist_mux_recoit_sa_config_en_dictionnaire():
     """Mesuré le 04/11 : passé en --params-file, twist_mux.yaml (clé racine
     `twist_mux:`) ne s'applique PAS à /didier/twist_mux — mux sans entrées NI
     verrou e_stop. drive.launch lit le fichier et passe le dictionnaire."""
-    src = (DEPS / "robot_drive" / "launch" / "drive.launch.py").read_text(encoding="utf-8")
+    src = (DEPS / "didier_drive" / "launch" / "drive.launch.py").read_text(encoding="utf-8")
     arbre = ast.parse(src)
     mux = [c for c in _appels(arbre, "Node")
            if any(k.arg == "executable" and getattr(k.value, "value", None) == "twist_mux" for k in c.keywords)]
@@ -132,7 +132,7 @@ def test_twist_mux_recoit_sa_config_en_dictionnaire():
     assert ast.literal_eval(kw["remappings"]) == [("cmd_vel_out", "cmd_vel_mux"), ("/diagnostics", "diagnostics")]
     assert '["twist_mux"]["ros__parameters"]' in src and '"twist_mux.yaml"' in src
     # Le dictionnaire passé est bien celui du fichier, verrou e_stop compris.
-    conf = yaml.safe_load((DEPS / "robot_drive" / "config" / "twist_mux.yaml").read_text(encoding="utf-8"))
+    conf = yaml.safe_load((DEPS / "didier_drive" / "config" / "twist_mux.yaml").read_text(encoding="utf-8"))
     params = conf["twist_mux"]["ros__parameters"]
     assert params["locks"]["e_stop"] == {"topic": "e_stop", "timeout": 0.0, "priority": 255}
     assert {k: v["priority"] for k, v in params["topics"].items()} == \

@@ -14,7 +14,7 @@ services:
         # L1e-1 : les 6 packages ROS autonomes (ex-conf/ du robot).
         robot_bringup: ../../../../../packages/robot_bringup
         robot_description: ../../../../../packages/robot_description
-        robot_drive: ../../../../../packages/robot_drive
+        didier_drive: ../../../../../packages/didier_drive
         robot_rehearsal: ../../../../../packages/robot_rehearsal
         robot_sim: ../../../../../packages/robot_sim
         robot_web: ../../../../../packages/robot_web

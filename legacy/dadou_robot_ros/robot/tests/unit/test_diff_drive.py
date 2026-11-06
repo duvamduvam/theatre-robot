@@ -2,7 +2,7 @@
 
 import pytest
 
-from robot_drive.diff_drive import DiffDrive
+from didier_drive.diff_drive import DiffDrive
 
 SEPARATION = 0.42
 MAX_SPEED = 1.0

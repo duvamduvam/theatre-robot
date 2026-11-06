@@ -48,7 +48,7 @@ trap arreter EXIT
 
 echo "=== namespace attendu : $NS/ (ROBOT_NAME=${ROBOT_NAME:-<absent>}) $(date +%T) ==="
 pgrep -f "parameter_bridge" >/dev/null || { echo "PRÉCONDITION : bridge gz absent (sim démarrée ?)"; exit 2; }
-lance "/twist_deadman( |$)" drive ros2 launch robot_drive drive.launch.py use_sim_time:=true
+lance "/twist_deadman( |$)" drive ros2 launch didier_drive drive.launch.py use_sim_time:=true
 # Une séance déjà lancée (avec ou sans jeu) suffit : deux régisseurs se battraient.
 lance "lib/robot_rehearsal/director" rehearsal \
   ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true

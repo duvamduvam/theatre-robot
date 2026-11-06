@@ -17,7 +17,7 @@ services:
         # `packages` de l'hôte robot dans ansible/hosts) — remplace l'ancienne COPY du dossier conf/ du robot.
         robot_bringup: ../../../../robot_bringup
         robot_description: ../../../../robot_description
-        robot_drive: ../../../../robot_drive
+        didier_drive: ../../../../didier_drive
         robot_rehearsal: ../../../../robot_rehearsal
         robot_sim: ../../../../robot_sim
         robot_web: ../../../../robot_web
@@ -53,10 +53,10 @@ services:
       - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # Chaîne cmd_vel (bridge/mux/deadman) — rsyncée sur le Pi par la tâche
       # ansible (liste `packages` de l'hôte robot -> src/), comme robot_bringup/robot_interfaces.
-      - ../../../../robot_drive:/home/ros2_ws/src/robot_drive
+      - ../../../../didier_drive:/home/ros2_ws/src/didier_drive
       # Pont web (console navigateur, contenus/supervision — drive_enabled
       # reste false sur le robot, cf. robot_app.launch.py). Même mécanique de
-      # rsync que robot_drive.
+      # rsync que didier_drive.
       - ../../../../robot_web:/home/ros2_ws/src/robot_web
       - ../../../../../build:/home/ros2_ws/build
       - ../../../../../install:/home/ros2_ws/install

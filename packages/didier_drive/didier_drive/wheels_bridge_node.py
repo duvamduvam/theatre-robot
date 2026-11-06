@@ -15,8 +15,8 @@ import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
 
-from robot_drive.diff_drive import DiffDrive
-from robot_drive.wheels_payload import WHEELS, payload_to_pair, payload_to_speed
+from didier_drive.diff_drive import DiffDrive
+from didier_drive.wheels_payload import WHEELS, payload_to_pair, payload_to_speed
 from robot_interfaces.msg import StringTime
 
 CMD_VEL_ANIM_TOPIC = "cmd_vel_anim"

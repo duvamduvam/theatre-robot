@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Node de simulation des servos en Gazebo (paquet robot_sim, AUTONOME : aucun
-import de robot.* ni dadou_utils_ros -- même règle que leds_sim_node/robot_drive,
+import de robot.* ni dadou_utils_ros -- même règle que leds_sim_node/didier_drive,
 cf. leur docstring respective).
 
 Rejoue en sim la sémantique de robot/actions/servo.py (voir robot_sim_lib/

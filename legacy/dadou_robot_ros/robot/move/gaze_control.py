@@ -5,7 +5,7 @@ Le robot suit une personne DU REGARD : ce module ne pilote QUE le cou (servo
 roues — aucune sortie ici ne concerne wheels/cmd_vel/e_stop (règle de sécurité
 non négociable : télécommande > autonome, le regard ne déplace pas 50 kg).
 
-Découpage volontaire (même philosophie que robot_drive) :
+Découpage volontaire (même philosophie que didier_drive) :
  - ICI : toute la logique de décision (mapping, lissage, slew, timeout, états),
    avec l'horloge passée en paramètre (now_ms) pour être testée sans ROS ni sleep.
  - DANS le node (gaze_follower_node.py) : uniquement les entrées/sorties ROS.

@@ -23,7 +23,7 @@ tzdata
 ros-jazzy-urdf-tutorial
 # xacro pour générer l'URDF du robot
 ros-jazzy-xacro
-# Arbitre de priorités de la chaîne cmd_vel (robot_drive/drive.launch.py) :
+# Arbitre de priorités de la chaîne cmd_vel (didier_drive/drive.launch.py) :
 # remote > anim, verrou e_stop. Requis même à WHEELS_CMD_VEL_ENABLED=False
 # (la chaîne est lancée par robot_app.launch.py, seule la consommation change).
 ros-jazzy-twist-mux

@@ -27,7 +27,7 @@ COPY dadou_utils_ros/ /home/ros2_ws/src/robot/dadou_utils_ros/
 # du mono-dépôt) : contextes nommés du compose.
 COPY --from=robot_bringup . /home/ros2_ws/src/robot_bringup
 COPY --from=robot_description . /home/ros2_ws/src/robot_description
-COPY --from=robot_drive . /home/ros2_ws/src/robot_drive
+COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
 COPY --from=robot_rehearsal . /home/ros2_ws/src/robot_rehearsal
 COPY --from=robot_sim . /home/ros2_ws/src/robot_sim
 COPY --from=robot_web . /home/ros2_ws/src/robot_web

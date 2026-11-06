@@ -13,7 +13,7 @@ Trois responsabilités :
 Horloge injectée partout (paramètre `now_s`) plutôt que time.time() interne :
 c'est ce qui permet de tester le timeout heartbeat en avançant une horloge
 factice à la main, sans time.sleep() ni monkeypatch (même philosophie que
-TwistDeadman.is_expired(now_ms) dans robot_drive.deadman).
+TwistDeadman.is_expired(now_ms) dans didier_drive.deadman).
 """
 
 import json
@@ -21,7 +21,7 @@ import math
 
 # --- Whitelist des topics publiables --------------------------------------
 # Chaînes littérales dupliquées volontairement (pas d'import dadou_utils_ros.
-# utils_static) : robot_web est un package AUTONOME façon robot_drive, le
+# utils_static) : robot_web est un package AUTONOME façon didier_drive, le
 # conteneur de simulation ne l'embarque pas. wheels/cmd_vel_*/e_stop sont
 # ABSENTS ici par construction -- c'est la garantie W0 (pas d'accès roues ni
 # verrou e_stop tant que W1/W3 ne sont pas faits, voir etude-interface-web.md).

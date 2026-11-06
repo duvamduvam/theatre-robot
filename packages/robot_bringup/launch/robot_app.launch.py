@@ -191,7 +191,7 @@ def generate_launch_description():
     # wheels_node depuis la télécommande / les animations.
     drive_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            PathJoinSubstitution([FindPackageShare("robot_drive"), "launch", "drive.launch.py"])
+            PathJoinSubstitution([FindPackageShare("didier_drive"), "launch", "drive.launch.py"])
         )
     )
 

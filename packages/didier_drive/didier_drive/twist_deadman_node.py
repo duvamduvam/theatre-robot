@@ -17,7 +17,7 @@ import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
 
-from robot_drive.deadman import TwistDeadman
+from didier_drive.deadman import TwistDeadman
 
 CMD_VEL_MUX_TOPIC = "cmd_vel_mux"
 CMD_VEL_TOPIC = "cmd_vel"

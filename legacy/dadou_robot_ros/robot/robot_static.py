@@ -127,7 +127,7 @@ LORA_SCK_PIN = 'lora sck pin'
 # bloque ~31 ms par show() : attente de fin de trame INDISPENSABLE (sa
 # suppression corrompait les trames, incident 2026-07-13). lights_node
 # s'auto-limite de fait, les autres nodes (servos…) tiennent la cadence.
-# NE PAS appliquer à la chaîne roues (wheels_node / robot_drive : gelée).
+# NE PAS appliquer à la chaîne roues (wheels_node / didier_drive : gelée).
 TICK_PERIOD_S = 0.05
 
 ############### Boucle principale / logging ###############

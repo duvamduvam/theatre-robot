@@ -1,6 +1,6 @@
 """Mixage joystick / inclinomètre -> paire moteurs, indépendant de ROS (stdlib).
 
-Déplacé depuis robot/move/anglo_meter_translator.py pour que robot_drive reste
+Déplacé depuis robot/move/anglo_meter_translator.py pour que didier_drive reste
 100% autonome : le conteneur de simulation n'embarque ni dadou_utils_ros ni
 robot.*. La sémantique est identique à l'original :
 

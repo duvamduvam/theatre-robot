@@ -18,7 +18,7 @@ un seul process `ros2 launch` supervise proprement l'arrêt de tous les nodes
 bash à maintenir), et les paramètres de person_tracker (camera_device,
 model_path, score_threshold, ema_alpha) sont déclarés ici avec leurs défauts
 plutôt qu'éparpillés en arguments CLI dans le script bash. Pattern déjà en
-place côté robot pour la chaîne roues (packages/robot_drive/
+place côté robot pour la chaîne roues (packages/didier_drive/
 launch/drive.launch.py du mono-dépôt) : même choix pour rester cohérent dans le parc.
 
 Défauts alignés sur person_tracker_node.py (DEFAULT_MODEL_PATH etc.) — s'ils

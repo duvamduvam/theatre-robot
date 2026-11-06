@@ -51,7 +51,7 @@
 # conditionnel). Chaque machine reçoit une LISTE EXPLICITE : `packages` de l'hôte
 # (ansible/hosts), à défaut `packages_default` (vars/main.yml). Pourquoi explicite
 # et non « tout packages/ » : le `colcon build` d'un Pi compile TOUT ros2_ws/src/ ;
-# un package qui n'a rien à y faire (didier_jeu, sim-only ; robot_drive et son
+# un package qui n'a rien à y faire (didier_jeu, sim-only ; didier_drive et son
 # twist_mux sur le Pi vision...) y casserait la compilation sur ses dépendances
 # manquantes, ou y tournerait pour rien. Les communs (theatre_contrats,
 # robot_interfaces) sont obligatoires partout : dadou_utils_ros/utils_static.py

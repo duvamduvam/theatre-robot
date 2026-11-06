@@ -7,7 +7,7 @@ la constante STOP, ou None si non reconnu / non pertinent.
 
 Les constantes du protocole StringTime sont dupliquées ici depuis
 dadou_utils_ros.utils_static : ce sont des clés JSON FIGÉES (47 fichiers
-séquences en dépendent) et robot_drive doit rester autonome — le conteneur
+séquences en dépendent) et didier_drive doit rester autonome — le conteneur
 de simulation n'embarque pas dadou_utils_ros. Un test unitaire
 (test_wheels_payload.py) vérifie qu'elles ne dérivent pas des originales.
 """
