@@ -287,6 +287,94 @@ refusé et visible. Les 71 JSON de la télécommande : **supprimés** (ils sont 
 mis à jour ; `machines/sim/` reçoit le compose de la sim. Porte : V-R3 21/21 **depuis
 `machines/sim/`**, Ansible déploie depuis `packages/` (dry-run `--check` vert).
 
+#### L1e — conception détaillée (06/11, Fable) : quatre étapes, la sim verte à chacune
+
+**Pourquoi L1e passe AVANT L1d (écart d'ordre assumé, 06/11)** : L1d demande une conception
+validée par David ; L1e est mécanique et ne dépend pas de L1d. Et le roulage au sol attend
+désormais la refonte électrique : geler le déménagement jusqu'au protocole caméra le
+bloquerait des semaines. Tout se fait sur la branche `l1-namespace-catalogue` ; la fusion
+dans `main` reste verrouillée par le protocole caméra (L1b), inchangé.
+
+**Faits relevés le 06/11** :
+- 6 packages ament bien formés vivent dans `legacy/dadou_robot_ros/conf/ros2_dependencies/` :
+  `robot_drive` (13 fichiers suivis), `robot_web` (17), `robot_sim` (12), `robot_description`
+  (5), `robot_bringup` (3), `robot_rehearsal` (25). Une trentaine de fichiers hors `.md`
+  citent ce chemin (compose sim/arm/x86, Dockerfiles, 3 `conftest.py`, ~10 tests qui lisent
+  des fichiers par chemin, 2 rôles Ansible, quelques sources).
+- Sur un Pi, la disposition est `ros2_ws/src/<package>/` à plat : Ansible y copie
+  `conf/ros2_dependencies/*` ET `packages/*`. **Cette disposition côté Pi ne change pas**
+  dans L1e-1 ni L1e-2 (seuls les noms changent en L1e-2).
+- ⚠️ La tâche Ansible « packages communs » copie TOUT `packages/` sur CHAQUE machine
+  (sauf `packages_sim_only`). Y déménager les packages du robot sans rien changer les
+  enverrait sur le Pi vision et la télécommande, dont le `colcon build` (tout `src/`)
+  échouerait sur leurs dépendances (twist_mux, ros_gz…).
+- Le package `robot` (cœur) n'a PAS la forme ament : code dans `legacy/dadou_robot_ros/robot/`,
+  `setup.py`/`package.xml` dans `conf/ros2/`, assemblés par montages Docker ; la lib
+  `dadou_utils_ros` y est montée comme sous-dossier. Idem `vision` et `controller`. Leur
+  déménagement est une étape à part (L1e-3), pas un `git mv`.
+
+**Les quatre étapes** (chacune : commit(s), tests, sim, doc ; on ne commence pas la suivante
+si la porte n'est pas franchie) :
+
+| Étape | Quoi | Porte |
+|---|---|---|
+| **L1e-1** | Les 6 packages ament déménagent dans `packages/` **sans changer de nom** ; Ansible passe à une **liste de packages par machine** | pytest verts ; V-R3 21/21 ; namespace 5/5 ; catalogue 4/4 ; `ansible-playbook --syntax-check` |
+| **L1e-2** | Renommage des 6 : `robot_drive`→`didier_drive`, `robot_web`→`didier_web`, `robot_sim`→`didier_sim`, `robot_description`→`didier_description`, `robot_bringup`→`didier_bringup`, `robot_rehearsal`→`didier_rehearsal` (dossier, package, module Python, launch, share) | mêmes portes + A1 14/14 ; `grep` des anciens noms = 0 hors études et historique |
+| **L1e-3** | `robot`→`packages/didier_core`, `vision`→`packages/didier_vision` (forme ament vraie), `robot_interfaces`→`theatre_interfaces` ; sort de la lib `dadou_utils_ros` à décider | conception séparée (touche ~tous les imports ; place de la lib = arbitrage) |
+| **L1e-4** | `machines/sim/` reçoit le compose de la sim ; `machines/<hôte>/` porte les listes de packages ; Ansible déploie depuis `packages/` + `machines/` | V-R3 21/21 **depuis `machines/sim/`** ; dry-run `--check` sur un Pi allumé |
+
+##### L1e-1 — spec FERMÉE (implémenteur Sonnet)
+
+1. `git mv legacy/dadou_robot_ros/conf/ros2_dependencies/<p> packages/<p>` pour les 6 ;
+   le dossier `conf/ros2_dependencies/` disparaît (vide). **Aucun renommage**, aucun
+   changement de contenu des packages au-delà des chemins qu'ils citent eux-mêmes.
+2. **Compose et Dockerfiles côté PC** (sim, x86 robot) : les 6 packages se montent et se
+   copient depuis `packages/<p>`, **avec le motif déjà posé par L1a** pour
+   `theatre_contrats`/`robot_interfaces` (volumes `../../../../../packages/<p>` ;
+   `additional_contexts` nommés + `COPY --from=<p>`). Pas de nouveau motif. Les chemins
+   DANS les conteneurs (`/home/ros2_ws/src/<p>`) ne changent pas.
+3. **Compose et Dockerfiles ARM** (robot, vision, télécommande) : la disposition sur le Pi
+   ne change pas → ne modifier que ce qui cite réellement l'ancien chemin PC (souvent des
+   commentaires). Ne rien « améliorer ».
+4. **Ansible — liste de packages par machine** (rôle `synchronise`) : la tâche « packages
+   communs » ne copie plus l'arbre `packages/` entier ; elle boucle sur
+   `{{ packages | default(packages_default) }}` et copie `{{ packages_dir }}/<p>/` vers
+   `{{ ros2_ws }}/src/<p>/` (mêmes exclusions). `vars/main.yml` : `packages_default:
+   [theatre_contrats, robot_interfaces]` ; la variable `packages_sim_only` est SUPPRIMÉE
+   (une liste explicite la remplace). `hosts` : l'hôte robot (`r`) déclare `packages:` =
+   les 2 communs + les 6 déménagés — **exactement ce que le Pi reçoit aujourd'hui**
+   (aucun changement de comportement ; le tri « sim-only hors du Pi » est L1e-4). La
+   tâche qui copiait `conf/ros2_dependencies/` (conditionnée par un `stat`) est supprimée
+   avec son `stat` ; le rôle `ros_dependencies` : le lire, le corriger ou le signaler s'il
+   est mort. Commentaires français qui disent POURQUOI la liste est explicite (le
+   `colcon build` d'un Pi compile tout `src/`).
+5. **Tests et conftest** : chemins mis à jour (les 3 `conftest.py`, `packages/didier_jeu/test`,
+   les tests qui lisent launch/yaml/xacro par chemin, les listes gravées de
+   `test_namespace_contract.py`). Un test gravé nouveau, dans
+   `legacy/dadou_robot_ros/robot/tests/unit/test_arborescence.py` : (a)
+   `conf/ros2_dependencies` n'existe plus ; (b) chacun des 6 packages est dans `packages/`
+   avec `package.xml` ; (c) dans `ansible/hosts`, la liste `packages` de l'hôte robot est
+   égale à la liste gravée des 8 ; (d) tout package cité dans une liste `packages`/
+   `packages_default` existe dans `packages/`.
+6. **Scripts et sources** qui citent le chemin (`gen.py` du monde chantiers,
+   `servos_logic.py`, `control_static.py`, `chat_node.py`, `vision.launch.py`…) : corriger
+   le chemin ou le commentaire, sans toucher à la logique.
+7. **Doc vivante** : `README.md` racine (table de migration : L1b/L1c faits sur la
+   branche, L1e-1 fait), `packages/README.md` (les 6 arrivés, encore sous leur ancien
+   nom), `legacy/dadou_robot_ros/docs/operations.md`, `architecture.md`, README des
+   packages déplacés, tableau de bord `chantiers.md` (ligne « Architecture globale »).
+   Les études (`etude-*.md`) et les fiches d'incident sont de l'HISTOIRE : ne pas les
+   réécrire. `CLAUDE.md` : ne pas y toucher (liste dans le rapport ce qu'il faut y changer).
+8. **Interdits** : modifier la logique d'un nœud ; toucher `twist_mux.yaml`,
+   `wheels_bridge_node.py`, `twist_deadman`, `wheels_node` au-delà d'un chemin en
+   commentaire ; renommer quoi que ce soit ; `git push` ; ssh ; exécuter Ansible
+   (seulement `--syntax-check`).
+9. **Porte L1e-1** : pytest robot (≥ 1543 + nouveaux), télécommande, vision, contrats,
+   jeu verts ; sim depuis la copie de travail : `validate-rehearsal-chantiers.sh` 21/21,
+   `validate-namespace.sh` 5/5, `validate-catalogue.sh` 4/4 ;
+   `ansible-playbook deploy-pios.yml -i hosts --syntax-check` OK ;
+   `grep -rn "ros2_dependencies"` hors `docs/etude-*`, incidents et historique = 0.
+
 ## 3. Ordre, délégation, gates
 
 | Sous-lot | Qui | Gate avant le suivant |
