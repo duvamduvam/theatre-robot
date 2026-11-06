@@ -27,21 +27,28 @@ Fiches officielles archivées, lues le 06/11 :
 
 ## 2. Les suspects, par ordre de gain probable
 
-### 2.1 L'alimentation — probablement LE goulot (et la cause des redémarrages du 06/11)
+### 2.1 L'alimentation : LE goulot, confirmé (cause des redémarrages du 06/11)
 
-Le 12 V du robot est une **SD-50B-12 : 4,2 A, 50 W**, déjà partagée avec les servos
-(`plan-refonte-electrique.md` §5 ter). L'ampli est fait pour en tirer jusqu'à **25 A**.
-**Si l'ampli est sur cette SD-50B-12** (c'est la question ouverte de la refonte), il ne
-dispose au mieux que de quelques dizaines de watts, partagés avec les bras. Au premier
-pic, la SD-50 coupe puis redémarre, ce qui correspond au symptôme rapporté le 06/11.
+**Confirmé par David le 06/11 : l'ampli est sur la SD-50B-12** (4,2 A, 50 W, partagée avec
+les petites charges), alors que sa notice le fusible à **25 A**. Au premier pic, la SD-50
+plie, l'ampli se met en protection puis redémarre.
 
-Ordre de grandeur, sur la fiche ICU 570 : 94 dB à 2 W. À 55 W, on aurait ~108 dB à 1 m
-par haut-parleur ; à ~10 W, ~101 dB. Un écart de **~7 dB**, soit un son nettement moins
-fort que ce que le matériel sait faire, et sans aucune marge pour les pics de la voix.
+Ordre de grandeur, sur la fiche ICU 570 : 94 dB à 2 W. À 55 W, ~108 dB à 1 m par
+haut-parleur ; avec ~10 W disponibles, ~101 dB. Soit **~7 dB perdus**, nettement moins fort
+que ce que le matériel sait faire, et aucune marge pour les pics de la voix.
 
-→ **À vérifier en premier : d'où l'ampli tire son 12 V.** S'il est bien sur la SD-50B-12,
-la refonte électrique doit lui donner une alimentation à lui, dimensionnée sur son
-fusible. Ça rejoint l'option « audio sur un 12 V isolé ».
+**Cible décidée côté refonte** (`plan-refonte-electrique.md`, « Convertisseur audio »,
+conduite dans une autre conversation, ne pas la re-trancher ici) : une **SD-150B-12
+dédiée à l'audio** (12,5 A, environ 150 W), avec le **gain de l'ampli réglé pour ne
+jamais saturer**. Ce que ça donne côté son, en ordre de grandeur : environ 150 W en
+entrée, soit une centaine de watts de sortie pour un ampli classe D, à partager entre
+les haut-parleurs. On n'est plus qu'à **~2-3 dB** des 55 W par canal, et c'est le
+réglage du gain qui fixe le plafond, plus l'alimentation. Pour de la voix, dont la
+puissance moyenne est très inférieure aux crêtes, c'est suffisant.
+
+→ Le réglage du gain (§2.3) devient donc une **condition de la SD-150** : il se fait à la
+mesure, une fois le convertisseur posé, en vérifiant au multimètre (pince ou shunt) que
+l'ampli reste sous ~12 A à plein volume.
 
 ### 2.2 Le montage sur panneau ouvert (« court-circuit acoustique »)
 
@@ -81,7 +88,8 @@ haut-parleurs en opposition s'annulent dans le grave. On le vérifie à la pile 
 
 ## 3. Ce qui manque pour conclure
 
-1. **D'où l'ampli prend son 12 V**, et la section de son câble d'alimentation.
+1. ~~D'où l'ampli prend son 12 V~~ → SD-50B-12, confirmé le 06/11 (§2.1). Reste la
+   section de son câble d'alimentation : la notice demande ≥ 3,3 mm² (12 AWG) jusqu'à 3 m.
 2. Photos : dos de la porte audio, le volume derrière quand elle est fermée, l'étiquette
    du haut-parleur central, les commutateurs et boutons de l'ampli, et le câblage
    ampli → haut-parleurs.
