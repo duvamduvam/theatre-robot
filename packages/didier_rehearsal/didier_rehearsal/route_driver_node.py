@@ -20,7 +20,7 @@ SÉCURITÉ (cf. CLAUDE.md — ce node publie une consigne roues) :
    Gazebo : sur le vrai robot, ce node n'aurait aucune pose et resterait à zéro.
  - Lot M1 « aller voir » (spec-aller-voir.md) : un ordre `route_goto` du
    régisseur SUSPEND le suivi (zéro franc) et lance une manœuvre bornée
-   (robot_rehearsal.goto) sur la MÊME sortie unique. État "goto" puis
+   (didier_rehearsal.goto) sur la MÊME sortie unique. État "goto" puis
    "arrived" (ou "off" si abandonnée). `cancel`, `route off`, `route on`
    l'abandonnent avec un zéro franc IMMÉDIAT (publié dans le callback, sans
    attendre le tick). Ceinture : un ordre est refusé ici aussi tant que la
@@ -39,7 +39,7 @@ SÉCURITÉ (cf. CLAUDE.md — ce node publie une consigne roues) :
    objet d'« aller voir » ; un tour dans l'autre sens est un nouvel ordre.
 
 Node volontairement FIN : I/O seulement, toute la logique est dans
-robot_rehearsal.route et robot_rehearsal.goto (pures, testées sans ROS).
+didier_rehearsal.route et didier_rehearsal.goto (pures, testées sans ROS).
 """
 
 import json
@@ -56,17 +56,17 @@ from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 from theatre_contrats import stringtime
 
-from robot_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
+from didier_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
                                        ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL, ROUTE_GOTO_RESULT_TOPIC,
                                        ROUTE_GOTO_TOPIC,
                                        ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
-from robot_rehearsal.goto import (ARRIVED, ForwardOrder, GotoConfig, GotoError, GotoManeuver, GotoOrder,
+from didier_rehearsal.goto import (ARRIVED, ForwardOrder, GotoConfig, GotoError, GotoManeuver, GotoOrder,
                                    OrbitOrder, TurnOrder, parse_order)
 
 # Latché : un abonné arrivé après coup (régisseur relancé) reçoit l'état courant.
 LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
-from robot_rehearsal.route import (PoiWatcher, RouteConfig, RouteError, RouteFollower,
+from didier_rehearsal.route import (PoiWatcher, RouteConfig, RouteError, RouteFollower,
                                    load_route, yaw_from_quaternion)
 
 

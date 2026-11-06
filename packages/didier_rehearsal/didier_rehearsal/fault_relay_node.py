@@ -3,7 +3,7 @@
 défaut, piloté par le régisseur (rehearsal/relay_cmd) et protégé par son
 battement (rehearsal/heartbeat) : sans battement > 1 s, retour en passant.
 
-Toute la décision est dans robot_rehearsal.fault_relay (pure, testée) ; ici
+Toute la décision est dans didier_rehearsal.fault_relay (pure, testée) ; ici
 seulement l'I/O : abonnement amont, publication aval, traduction du sentinel
 ZERO en message nul du bon type. Paramètre `relay` = clé de contracts.RELAYS.
 """
@@ -17,8 +17,8 @@ from rclpy.node import Node
 from robot_interfaces.msg import StringTime
 from theatre_contrats import stringtime
 
-from robot_rehearsal.contracts import HEARTBEAT_TOPIC, RELAYS, RELAY_CMD_TOPIC, check_domain
-from robot_rehearsal.fault_relay import ZERO, FaultRelay
+from didier_rehearsal.contracts import HEARTBEAT_TOPIC, RELAYS, RELAY_CMD_TOPIC, check_domain
+from didier_rehearsal.fault_relay import ZERO, FaultRelay
 
 TYPES = {"twist": Twist, "string_time": StringTime}
 

@@ -16,7 +16,7 @@ robot:
             - didier_bringup
             - didier_description
             - didier_drive
-            - robot_rehearsal
+            - didier_rehearsal
             - didier_sim
             - didier_web
 

@@ -42,13 +42,13 @@ from typing import Dict, List, Tuple
 
 from theatre_contrats import stringtime
 
-from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
+from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
                                        FORWARD_MAX_M, FORWARD_MIN_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
                                        ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
                                        TURN_DEG_COMPAT, TURN_MAX_DEG)
-from robot_rehearsal.goto import forward_name, tour_name, turn_name
-from robot_rehearsal.route import Poi, Tour, normalize_name
-from robot_rehearsal.scenario import Fault, Scenario
+from didier_rehearsal.goto import forward_name, tour_name, turn_name
+from didier_rehearsal.route import Poi, Tour, normalize_name
+from didier_rehearsal.scenario import Fault, Scenario
 
 
 @dataclass(frozen=True)

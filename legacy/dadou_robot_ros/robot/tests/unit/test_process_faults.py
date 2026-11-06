@@ -1,4 +1,4 @@
-"""Pannes de processus (robot_rehearsal.process_faults) — listes blanches
+"""Pannes de processus (didier_rehearsal.process_faults) — listes blanches
 GRAVÉES, refus avant tout appel système, correspondance exacte.
 Mutation (2026-10-08) : élargir PAUSABLE -> test_listes_blanches_exactes ;
 retirer check() de apply() -> test_apply_refuse_sans_signal."""
@@ -6,8 +6,8 @@ import signal
 
 import pytest
 
-from robot_rehearsal import contracts
-from robot_rehearsal.process_faults import ProcessFaultError, apply, check, find_pids
+from didier_rehearsal import contracts
+from didier_rehearsal.process_faults import ProcessFaultError, apply, check, find_pids
 
 
 def test_listes_blanches_exactes():
@@ -68,14 +68,14 @@ def test_pid_disparu_ignore():
 
 
 def test_resume_command_gravee():
-    from robot_rehearsal.process_faults import resume_command
+    from didier_rehearsal.process_faults import resume_command
     assert resume_command([12, 34], 5.0) == [
         "sh", "-c", "sleep 5.000 ; kill -CONT 12 2>/dev/null || true ; kill -CONT 34 2>/dev/null || true"]
     assert resume_command([], 5.0) == [] and resume_command([12], 0.0) == []
 
 
 def test_pause_bounded_lance_le_gardien_detache():
-    from robot_rehearsal.process_faults import pause_bounded
+    from didier_rehearsal.process_faults import pause_bounded
     spawned, signaled = [], []
     pids = pause_bounded("face_sim", 3.0, spawn=lambda cmd: spawned.append(cmd),
                          kill=lambda pid, sig: signaled.append((pid, sig)), pgrep=lambda a: "7\n")

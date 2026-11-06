@@ -62,9 +62,9 @@ def test_les_sept_launch_sont_inventories():
         "packages/didier_bringup/launch/robot_app.launch.py",
         "packages/didier_description/launch/display.launch.py",
         "packages/didier_drive/launch/drive.launch.py",
+        "packages/didier_rehearsal/launch/rehearsal.launch.py",
         "packages/didier_sim/launch/sim.launch.py",
         "packages/didier_web/launch/web.launch.py",
-        "packages/robot_rehearsal/launch/rehearsal.launch.py",
     ]
 
 
@@ -196,7 +196,7 @@ def test_aucune_constante_de_topic_absolue():
 
 
 def test_constantes_sim_gravees_relatives():
-    from robot_rehearsal import contracts
+    from didier_rehearsal import contracts
     assert contracts.ODOM_TOPIC == "ground_truth/odom"
     gaze = (ROBOT / "robot" / "nodes" / "gaze_follower_node.py").read_text(encoding="utf-8")
     assert re.search(r'^NECK_TOPIC_SIM = "neck/position"$', gaze, re.M)

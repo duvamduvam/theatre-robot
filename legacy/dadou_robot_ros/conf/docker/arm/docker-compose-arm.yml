@@ -18,7 +18,7 @@ services:
         didier_bringup: ../../../../didier_bringup
         didier_description: ../../../../didier_description
         didier_drive: ../../../../didier_drive
-        robot_rehearsal: ../../../../robot_rehearsal
+        didier_rehearsal: ../../../../didier_rehearsal
         didier_sim: ../../../../didier_sim
         didier_web: ../../../../didier_web
     # Supervision par le DÉMON Docker (assainissement 2026-07-11) : relance

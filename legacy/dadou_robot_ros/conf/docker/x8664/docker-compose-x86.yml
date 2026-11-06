@@ -15,7 +15,7 @@ services:
         didier_bringup: ../../../../../packages/didier_bringup
         didier_description: ../../../../../packages/didier_description
         didier_drive: ../../../../../packages/didier_drive
-        robot_rehearsal: ../../../../../packages/robot_rehearsal
+        didier_rehearsal: ../../../../../packages/didier_rehearsal
         didier_sim: ../../../../../packages/didier_sim
         didier_web: ../../../../../packages/didier_web
     environment:

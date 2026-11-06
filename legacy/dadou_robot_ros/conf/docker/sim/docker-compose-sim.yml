@@ -25,7 +25,7 @@ services:
         didier_sim: ../../../../../packages/didier_sim
         didier_drive: ../../../../../packages/didier_drive
         didier_web: ../../../../../packages/didier_web
-        robot_rehearsal: ../../../../../packages/robot_rehearsal
+        didier_rehearsal: ../../../../../packages/didier_rehearsal
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
@@ -98,12 +98,12 @@ services:
       - ../../../../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
       - ../../../../../packages/didier_drive:/home/ros2_ws/src/didier_drive
       - ../../../../../packages/didier_web:/home/ros2_ws/src/didier_web
-      # robot_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
+      # didier_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
       # bringup du robot) — cheminement de Didier dans la rue, lancé À LA
       # MAIN (rehearsal.launch.py), cf. son README.
-      - ../../../../../packages/robot_rehearsal:/home/ros2_ws/src/robot_rehearsal
+      - ../../../../../packages/didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
       - ../../scripts/launch-sim-in-docker.sh:/home/ros2_ws/launch-sim-in-docker.sh
-      # V-R1 : protocole de vérification du cheminement (robot_rehearsal/README.md).
+      # V-R1 : protocole de vérification du cheminement (didier_rehearsal/README.md).
       - ../../scripts/validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro
       - ../../scripts/validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
       # V-R3 : séance « chantiers » (monde chantiers, 20 bugs + 30 lubies), étude §13.8.

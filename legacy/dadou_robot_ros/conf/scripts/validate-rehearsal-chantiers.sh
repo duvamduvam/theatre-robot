@@ -28,8 +28,8 @@ source /home/ros2_ws/install/setup.bash
 # robot/tests/unit/test_namespace_contract.py.
 NS="/${ROBOT_NAME:-didier}"
 JDIR=/home/ros2_ws/log/rehearsal
-ROUTE_YAML=/home/ros2_ws/src/robot_rehearsal/config/chantiers.yaml
-SCEN_YAML=/home/ros2_ws/src/robot_rehearsal/config/scenarios/chantiers.yaml
+ROUTE_YAML=/home/ros2_ws/src/didier_rehearsal/config/chantiers.yaml
+SCEN_YAML=/home/ros2_ws/src/didier_rehearsal/config/scenarios/chantiers.yaml
 CAP=/tmp/vr3-capture; mkdir -p $CAP
 # TYPE EXPLICITE sur chaque `ros2 topic echo` (06/11) : sans lui, le CLI interroge
 # d'abord le graphe (daemon) pour deviner le type ; s'il ne voit pas encore l'éditeur il

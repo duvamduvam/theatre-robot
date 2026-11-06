@@ -1,4 +1,4 @@
-"""robot_rehearsal — salle de répétition simulée (SIM-ONLY).
+"""didier_rehearsal — salle de répétition simulée (SIM-ONLY).
 
 Package AUTONOME au sens de didier_drive : aucun import de dadou_utils_ros ni de
 robot_config/matériel ; la SEULE dépendance vers robot.* est le module PUR

@@ -893,7 +893,7 @@ def test_robot_web_ne_cite_jamais_le_package_de_repetition():
     for chemin in PACKAGE_WEB.rglob("*"):
         if not chemin.is_file() or "__pycache__" in chemin.parts:
             continue
-        if "robot_rehearsal" in chemin.read_text(encoding="utf-8", errors="ignore"):
+        if "didier_rehearsal" in chemin.read_text(encoding="utf-8", errors="ignore"):
             fuites.append(str(chemin.relative_to(PACKAGE_WEB)))
     assert fuites == []
 

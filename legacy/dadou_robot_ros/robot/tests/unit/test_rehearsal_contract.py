@@ -1,4 +1,4 @@
-"""Contrats GELÉS de la salle de répétition (robot_rehearsal) — lus dans les
+"""Contrats GELÉS de la salle de répétition (didier_rehearsal) — lus dans les
 VRAIS fichiers (package, itinéraire, launch de bringup), jamais des copies.
 
 Trois garanties :
@@ -18,12 +18,12 @@ import pytest
 import yaml
 
 from robot.move.follow_control import ABS_MAX_ANG as FOLLOW_MAX_ANG, ABS_MAX_LIN as FOLLOW_MAX_LIN
-from robot_rehearsal import contracts
-from robot_rehearsal.route import load_route
+from didier_rehearsal import contracts
+from didier_rehearsal.route import load_route
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 PACKAGES = ROOT.parents[1] / "packages"          # packages/ du mono-dépôt (L1e-1)
-PKG = PACKAGES / "robot_rehearsal"
+PKG = PACKAGES / "didier_rehearsal"
 
 # Géométrie du trottoir de rue.sdf (dupliquée depuis la spec du monde, étude
 # §12 : trottoir 70 x 3 centré (30, 0) -> x ∈ [-5, 65], y ∈ [-1.5, 1.5]).
@@ -81,9 +81,9 @@ def test_anti_fuite_aucune_reference_dans_le_code_embarque():
                 continue
             if "tests" in path.parts:   # les tests ont le droit d'en parler
                 continue
-            if "robot_rehearsal" in path.read_text(encoding="utf-8", errors="ignore"):
+            if "didier_rehearsal" in path.read_text(encoding="utf-8", errors="ignore"):
                 fuites.append(str(path.relative_to(ROOT)))
-    assert fuites == [], f"robot_rehearsal référencé dans le code embarqué : {fuites}"
+    assert fuites == [], f"didier_rehearsal référencé dans le code embarqué : {fuites}"
 
 
 def test_itineraire_rue_valide_et_sur_le_trottoir():
@@ -119,7 +119,7 @@ def test_relais_jamais_sur_la_chaine_de_securite():
 def test_scenarios_livres_valides():
     """Chaque YAML de config/scenarios/ se charge (refus explicite sinon) et ne
     cible que des processus/relais des listes blanches — par construction."""
-    from robot_rehearsal.scenario import load_scenario
+    from didier_rehearsal.scenario import load_scenario
     files = sorted((PKG / "config" / "scenarios").glob("*.yaml"))
     assert [f.name for f in files] == ["chantiers.yaml", "demo.yaml", "jeu-a1.yaml"]
     for f in files:
@@ -140,13 +140,13 @@ def test_import_robot_limite_au_journal_pur():
     stdlib). Tout autre import de robot.* (robot_config, matériel…) ferait
     dépendre la sim du robot réel — refusé."""
     import re
-    for path in sorted((PKG / "robot_rehearsal").glob("*.py")):
+    for path in sorted((PKG / "didier_rehearsal").glob("*.py")):
         for m in re.finditer(r"^\s*(?:from|import)\s+(robot\.[\w.]*|robot)\b", path.read_text(encoding="utf-8"), re.M):
             assert m.group(1) == "robot.diagnostic.journal", (path.name, m.group(0))
 
 
 def test_garde_fou_domaine():
-    from robot_rehearsal.contracts import SIM_DOMAIN_ID, check_domain
+    from didier_rehearsal.contracts import SIM_DOMAIN_ID, check_domain
     assert SIM_DOMAIN_ID == 43
     assert check_domain({"ROS_DOMAIN_ID": "43"}) == 43
     for env in ({}, {"ROS_DOMAIN_ID": "42"}, {"ROS_DOMAIN_ID": "0"}, {"ROS_DOMAIN_ID": "abc"}):
@@ -232,7 +232,7 @@ def test_itineraire_chantiers():
 
 
 def test_scenario_chantiers_20_bugs_et_30_lubies():
-    from robot_rehearsal.scenario import load_scenario
+    from didier_rehearsal.scenario import load_scenario
     data = _yaml("config", "scenarios", "chantiers.yaml")
     assert (data["name"], data["seed"], data["duration_s"]) == ("chantiers", 0, 900)
     raw_bugs = [f for f in data["faults"] if f["type"] != "lubie"]

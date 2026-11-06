@@ -3,7 +3,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = 'robot_rehearsal'
+package_name = 'didier_rehearsal'
 
 setup(
     name=package_name,
@@ -25,9 +25,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'route_driver = robot_rehearsal.route_driver_node:main',
-            'fault_relay = robot_rehearsal.fault_relay_node:main',
-            'director = robot_rehearsal.director_node:main',
+            'route_driver = didier_rehearsal.route_driver_node:main',
+            'fault_relay = didier_rehearsal.fault_relay_node:main',
+            'director = didier_rehearsal.director_node:main',
         ],
     },
 )

@@ -1,9 +1,9 @@
 """Répétition simulée — cheminement de Didier + relais + régisseur (SIM-ONLY).
 
-    ros2 launch robot_rehearsal rehearsal.launch.py                 # route OFF, scénario demo chargé, en attente de « start »
-    ros2 launch robot_rehearsal rehearsal.launch.py speed:=0.3 scenario:=demo seed:=42
-    ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers   # lot R3
-    ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true   # lot A1
+    ros2 launch didier_rehearsal rehearsal.launch.py                 # route OFF, scénario demo chargé, en attente de « start »
+    ros2 launch didier_rehearsal rehearsal.launch.py speed:=0.3 scenario:=demo seed:=42
+    ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers   # lot R3
+    ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true   # lot A1
     # partir :      ros2 topic pub -1 /didier/route robot_interfaces/msg/StringTime '{msg: "on"}'
     # régisseur :   ros2 topic pub -1 /didier/rehearsal/cmd robot_interfaces/msg/StringTime '{msg: "start"}'   (stop | abort)
     # (lot L1b : les nœuds sont sous /<ROBOT_NAME>/, défaut /didier/ — la CLI doit préfixer)
@@ -36,7 +36,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    share = FindPackageShare("robot_rehearsal")
+    share = FindPackageShare("didier_rehearsal")
     route_file = PathJoinSubstitution([share, "config", [LaunchConfiguration("route"), ".yaml"]])
     scenario_file = PathJoinSubstitution([share, "config", "scenarios",
                                           [LaunchConfiguration("scenario"), ".yaml"]])
@@ -75,7 +75,7 @@ def generate_launch_description():
             # « kill » le fait renaître après respawn_delay (le reboot-prétexte) ;
             # il renaît OFF, le régisseur renvoie « route on » (reenable).
             Node(
-                package="robot_rehearsal", executable="route_driver", name="route_driver", output="screen",
+                package="didier_rehearsal", executable="route_driver", name="route_driver", output="screen",
                 parameters=[{
                     "route_file": route_file,
                     "speed": ParameterValue(LaunchConfiguration("speed"), value_type=float),
@@ -86,7 +86,7 @@ def generate_launch_description():
             ),
             # Relais de pannes sur cmd_vel_follow (passant par défaut, chien de garde 1 s).
             Node(
-                package="robot_rehearsal", executable="fault_relay", name="fault_relay_cmd_vel_follow",
+                package="didier_rehearsal", executable="fault_relay", name="fault_relay_cmd_vel_follow",
                 output="screen", parameters=[{"relay": "cmd_vel_follow"}],
                 respawn=True, respawn_delay=2.0,   # relais mort = mux sans entrée = deadman ; il renaît passant
             ),
@@ -96,7 +96,7 @@ def generate_launch_description():
             # Et la MÊME vitesse initiale : c'est celle qu'il rend à la fin d'un
             # speed / d'une lubie tant qu'aucun fader n'a parlé.
             _director(scenario_file, route_file, UnlessCondition(LaunchConfiguration("jeu")), []),
-            # Littéraux = robot_rehearsal.contracts.CHAT_MOVE_TOPIC et
+            # Littéraux = didier_rehearsal.contracts.CHAT_MOVE_TOPIC et
             # theatre_contrats.topics.JEU_CHAT_MOVE (le launch n'importe pas le
             # package ; égalité gravée par test_rehearsal_contract.py).
             _director(scenario_file, route_file, IfCondition(LaunchConfiguration("jeu")),
@@ -106,7 +106,7 @@ def generate_launch_description():
             # plus la bouche que si celui qui relaie son « stop » tourne. respawn
             # comme route_driver ; répertoire illisible -> il démarre quand même en
             # relais stop/go seul. Pas d'exec_depend didier_jeu dans package.xml :
-            # didier_jeu dépend déjà de robot_rehearsal (cycle colcon) — le nom du
+            # didier_jeu dépend déjà de didier_rehearsal (cycle colcon) — le nom du
             # package n'est résolu qu'au lancement.
             Node(
                 package="didier_jeu", executable="jeu_node", name="jeu_node", output="screen",
@@ -121,7 +121,7 @@ def _director(scenario_file, route_file, condition, remappings):
     """Le régisseur — UNE définition, deux instances exclusives (jeu:=true ou
     non) : un remap ne se conditionne pas par une LaunchConfiguration."""
     return Node(
-        package="robot_rehearsal", executable="director", name="director", output="screen",
+        package="didier_rehearsal", executable="director", name="director", output="screen",
         parameters=[{
             "scenario_file": scenario_file,
             "route_file": route_file,

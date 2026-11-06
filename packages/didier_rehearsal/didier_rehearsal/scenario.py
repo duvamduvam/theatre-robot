@@ -39,7 +39,7 @@ import random
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Tuple
 
-from robot_rehearsal.contracts import (CHAT_FAULT_OPS, FAULT_MAX_DURATION_S, KILLABLE, PAUSABLE,
+from didier_rehearsal.contracts import (CHAT_FAULT_OPS, FAULT_MAX_DURATION_S, KILLABLE, PAUSABLE,
                                        RELAYS, RELAY_OPS)
 
 

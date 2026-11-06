@@ -16,7 +16,7 @@ import signal
 import subprocess
 from typing import Callable, List
 
-from robot_rehearsal.contracts import KILLABLE, PAUSABLE
+from didier_rehearsal.contracts import KILLABLE, PAUSABLE
 
 
 class ProcessFaultError(ValueError):

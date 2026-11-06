@@ -110,22 +110,22 @@ from robot_interfaces.msg import StringTime
 from theatre_contrats import stringtime
 
 from robot.diagnostic.journal import JournalWriter, make_event
-from robot_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
+from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
                                        CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC,
                                        OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
                                        RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_GOTO_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
-from robot_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
+from didier_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
                                       decide_forward, decide_goto, decide_tour, decide_turn, fader_moved,
                                       goto_order,
                                       messages, objects_payload,
                                       route_cmd_kind, speed_factor, speed_in_effect)
-from robot_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
-from robot_rehearsal.rehearsal_state import rehearsal_state
-from robot_rehearsal.route import RouteConfig, RouteError, load_route, load_tours, tours_path
-from robot_rehearsal.scenario import ScenarioError, load_scenario
+from didier_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
+from didier_rehearsal.rehearsal_state import rehearsal_state
+from didier_rehearsal.route import RouteConfig, RouteError, load_route, load_tours, tours_path
+from didier_rehearsal.scenario import ScenarioError, load_scenario
 
 
 def _mono_ms() -> int:

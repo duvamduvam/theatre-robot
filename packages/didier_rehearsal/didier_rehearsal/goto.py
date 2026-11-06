@@ -75,13 +75,13 @@ import math
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
-from robot_rehearsal.contracts import (ABS_MAX_ANG, ABS_MAX_LIN, FORWARD_MAX_M, FORWARD_MIN_M,
+from didier_rehearsal.contracts import (ABS_MAX_ANG, ABS_MAX_LIN, FORWARD_MAX_M, FORWARD_MIN_M,
                                        FORWARD_TIMEOUT_BASE_S,
                                        FORWARD_TIMEOUT_PER_M_S, GOTO_MAX_ANG, GOTO_MAX_DISTANCE_M,
                                        GOTO_MAX_TRAVEL_FACTOR, GOTO_MIN_STANDOFF_M, GOTO_TIMEOUT_S,
                                        TOUR_CRUISE_MS, TOUR_MAX_DEV_M, TOUR_MAX_RADIUS_M, TOUR_MIN_MS,
                                        TOUR_MIN_RADIUS_M, TURN_MAX_DEG, TURN_TIMEOUT_S)
-from robot_rehearsal.route import RouteConfig, wrap_angle
+from didier_rehearsal.route import RouteConfig, wrap_angle
 
 ALIGN = "align"
 DRIVE = "drive"

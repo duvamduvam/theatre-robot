@@ -1,4 +1,4 @@
-"""État de séance exposé à la page scène (robot_rehearsal.rehearsal_state) --
+"""État de séance exposé à la page scène (didier_rehearsal.rehearsal_state) --
 logique PURE, valeurs gravées en dur (un test qui recalcule l'attendu avec la
 fonction testée ne teste rien). Le publieur (node) : test_director_node.py ;
 la lecture seule côté pont : test_web_protocol.py."""
@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-from robot_rehearsal import contracts
-from robot_rehearsal.rehearsal_state import rehearsal_state
+from didier_rehearsal import contracts
+from didier_rehearsal.rehearsal_state import rehearsal_state
 
 
 @pytest.mark.parametrize("started,ended,hold,attendu", [

@@ -51,7 +51,7 @@ verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  �
 for proc in jeu_node route_driver fault_relay director twist_deadman animations_node gaze_follower servos_sim_node; do
   pgrep -f "/$proc\$|/$proc " >/dev/null || { echo "PRÉCONDITION : processus « $proc » absent (ANIMATIONS=true ? gaze_follower ? chaîne roues ? rehearsal.launch.py jeu:=true ?)"; exit 2; }
 done
-pgrep -af "lib/robot_rehearsal/[d]irector" | grep -q "rehearsal/chat_move:=jeu/chat_move" || { echo "PRÉCONDITION : le régisseur n'est pas remappé sur jeu/chat_move (rehearsal.launch.py jeu:=true)"; exit 2; }
+pgrep -af "lib/didier_rehearsal/[d]irector" | grep -q "rehearsal/chat_move:=jeu/chat_move" || { echo "PRÉCONDITION : le régisseur n'est pas remappé sur jeu/chat_move (rehearsal.launch.py jeu:=true)"; exit 2; }
 timeout 10 gz model --list 2>/dev/null | grep -q titan_grise || { echo "PRÉCONDITION : modèle titan_grise absent (WORLD=chantiers ?)"; exit 2; }
 JJ=$(ls -t $JDIR/*_jeu.jsonl 2>/dev/null | head -1)
 jpid=$(basename "$JJ" 2>/dev/null | cut -d_ -f2)

@@ -32,7 +32,7 @@
 
 # Vérité terrain (plugin OdometryPublisher du xacro, SIM-ONLY) : la pose
 # VRAIE de Didier dans le monde, pour le cheminement de la salle de
-# répétition (robot_rehearsal). /odom ci-dessus reste l'odométrie « comme
+# répétition (didier_rehearsal). /odom ci-dessus reste l'odométrie « comme
 # en vrai » (intégration des roues) — les deux coexistent volontairement.
 - ros_topic_name: "ground_truth/odom"
   gz_topic_name: "/ground_truth/odom"

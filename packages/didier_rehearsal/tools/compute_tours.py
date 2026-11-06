@@ -7,7 +7,7 @@ POURQUOI un fichier GÉNÉRÉ : l'ancre d'un POI n'est PAS le centre de l'objet
 (poubelle_tri : ancre (27 ; 1,4), bacs centrés en (27 ; 2,4)) ; le tour se
 calcule sur la géométrie de COLLISION du monde Gazebo, une fois, ici — jamais
 à la main, jamais au démarrage d'un node (le SDF n'est pas installé avec
-robot_rehearsal). test_tours.py regénère et compare : un monde retouché sans
+didier_rehearsal). test_tours.py regénère et compare : un monde retouché sans
 regénération rougit.
 
 Règles (spec §8.1), pour chaque POI de l'itinéraire, le modèle SDF de MÊME nom :
@@ -47,7 +47,7 @@ import yaml
 # Lancé depuis un checkout (pas installé) : le package Python est le voisin.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from robot_rehearsal.contracts import TOUR_CLEARANCE_M, TOUR_MAX_RADIUS_M, TOUR_MIN_RADIUS_M  # noqa: E402
+from didier_rehearsal.contracts import TOUR_CLEARANCE_M, TOUR_MAX_RADIUS_M, TOUR_MIN_RADIUS_M  # noqa: E402
 
 # Modèles SOL, seuls ignorés comme obstacles (on roule dessus). Liste
 # EXPLICITE, pas une règle de taille (décision du 01/11) : un grand modèle

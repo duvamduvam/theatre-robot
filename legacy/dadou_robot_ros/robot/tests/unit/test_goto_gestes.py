@@ -1,4 +1,4 @@
-"""Gestes chiffrés « tourner » / « avancer » (robot_rehearsal.goto, lot M2,
+"""Gestes chiffrés « tourner » / « avancer » (didier_rehearsal.goto, lot M2,
 spec-aller-voir.md §7.2-§7.3) — logique PURE, valeurs GRAVÉES à la main.
 Réglages par défaut : pivots ≤ 0,6 rad/s (rampe 0,15/tick, gain 1,5), tolérance
 de cap 0,1 rad, rampe linéaire 0,05/tick, arrivée à 0,3 m.
@@ -21,7 +21,7 @@ import math
 
 import pytest
 
-from robot_rehearsal.goto import (ABORTED, ARRIVED, DRIVE, FACE, ForwardOrder, GotoConfig, GotoError, GotoOrder,
+from didier_rehearsal.goto import (ABORTED, ARRIVED, DRIVE, FACE, ForwardOrder, GotoConfig, GotoError, GotoOrder,
                                   GotoManeuver, TurnOrder, parse_order)
 
 GAUCHE = TurnOrder("pivot +90°", math.pi / 2)

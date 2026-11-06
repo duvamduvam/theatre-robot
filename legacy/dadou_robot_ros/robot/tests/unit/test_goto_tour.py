@@ -1,4 +1,4 @@
-"""« Faire le tour de X » (robot_rehearsal.goto, OrbitOrder, lot M3,
+"""« Faire le tour de X » (didier_rehearsal.goto, OrbitOrder, lot M3,
 spec-aller-voir.md §8.4) — logique PURE, valeurs GRAVÉES à la main.
 Réglages par défaut : pivots ≤ 0,6 rad/s (rampe 0,15/tick, gain 1,5), rampe
 linéaire 0,05/tick, croisière orbite 0,35 m/s, correction radiale 1 rad/m
@@ -24,7 +24,7 @@ import math
 
 import pytest
 
-from robot_rehearsal.goto import (ABORTED, ALIGN, ARRIVED, DRIVE, FACE, ORBIT, GotoError, GotoManeuver,
+from didier_rehearsal.goto import (ABORTED, ALIGN, ARRIVED, DRIVE, FACE, ORBIT, GotoError, GotoManeuver,
                                   OrbitOrder, parse_order, tour_name)
 
 GAUCHE = OrbitOrder("tour de objet", 0.0, 0.0, 2.0, 1)

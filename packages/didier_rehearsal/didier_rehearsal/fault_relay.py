@@ -16,7 +16,7 @@ import random
 from collections import deque
 from typing import Any, Deque, List, Optional, Tuple
 
-from robot_rehearsal.contracts import FAULT_MAX_DURATION_S, HEARTBEAT_TIMEOUT_MS, RELAY_OPS
+from didier_rehearsal.contracts import FAULT_MAX_DURATION_S, HEARTBEAT_TIMEOUT_MS, RELAY_OPS
 
 ZERO = object()          # sentinel : « publie un message nul »
 DELAY_QUEUE_MAX = 200    # borne dure de la file de retard (20 Hz × 10 s)

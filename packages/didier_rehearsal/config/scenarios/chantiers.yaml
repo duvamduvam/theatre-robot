@@ -1,7 +1,7 @@
 # Scénario « chantiers » (lot R3, étude §13.5) : 20 bugs RÉELS à instants
 # tirés (graine) + 30 lubies déclenchées devant les objets du chemin.
 # À lancer avec l'itinéraire du même nom :
-#   ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers
+#   ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers
 #
 # Lecture scénique (étude §2, §13) — David ignore le tirage, le journal le dit après :
 # liaison -> perte de liaison, deadman ; arret_net -> arrêt franc ; pause_syndicale

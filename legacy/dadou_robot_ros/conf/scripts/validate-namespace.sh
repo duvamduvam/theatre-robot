@@ -50,8 +50,8 @@ echo "=== namespace attendu : $NS/ (ROBOT_NAME=${ROBOT_NAME:-<absent>}) $(date +
 pgrep -f "parameter_bridge" >/dev/null || { echo "PRÉCONDITION : bridge gz absent (sim démarrée ?)"; exit 2; }
 lance "/twist_deadman( |$)" drive ros2 launch didier_drive drive.launch.py use_sim_time:=true
 # Une séance déjà lancée (avec ou sans jeu) suffit : deux régisseurs se battraient.
-lance "lib/robot_rehearsal/director" rehearsal \
-  ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
+lance "lib/didier_rehearsal/director" rehearsal \
+  ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
 # Port à part : celui de la sim (WEB=true, 8765) serait déjà pris.
 lance "/web_bridge( |$)" web ros2 launch didier_web web.launch.py web_port:=${VALIDATE_WEB_PORT:-8775}
 sleep "$ATTENTE"

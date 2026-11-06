@@ -192,7 +192,7 @@
       <topic>/joint_states</topic>
     </plugin>
 
-    <!-- VÉRITÉ TERRAIN (SIM-ONLY, salle de répétition — robot_rehearsal) :
+    <!-- VÉRITÉ TERRAIN (SIM-ONLY, salle de répétition — didier_rehearsal) :
          pose du modèle dans le repère monde, publiée en gz.msgs.Odometry et
          bridgée vers ROS /ground_truth/odom (gz_bridge.yaml). POURQUOI pas
          /odom du DiffDrive : il INTÈGRE les roues — il ne se remet pas à

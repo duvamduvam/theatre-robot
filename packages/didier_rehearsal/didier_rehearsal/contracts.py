@@ -253,6 +253,6 @@ def check_domain(env: dict) -> int:
         domain = -1
     if domain != SIM_DOMAIN_ID:
         raise RuntimeError(
-            f"robot_rehearsal refuse de démarrer : ROS_DOMAIN_ID={raw!r}, attendu {SIM_DOMAIN_ID} "
+            f"didier_rehearsal refuse de démarrer : ROS_DOMAIN_ID={raw!r}, attendu {SIM_DOMAIN_ID} "
             "(domaine de la SIMULATION — 42 est le vrai robot)")
     return domain

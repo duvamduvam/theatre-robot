@@ -106,7 +106,7 @@ def garble_text(rng: random.Random, texts: Optional[Sequence[str]] = None) -> st
 def fault_duration_s(until_ms) -> float:
     """Durée (s) d'une panne à partir du champ `until_ms` du contrat. C'est
     une DURÉE relative à la réception (même convention que les ordres relais
-    du régisseur, robot_rehearsal/contracts.py : `"until_ms": durée` — les
+    du régisseur, didier_rehearsal/contracts.py : `"until_ms": durée` — les
     horloges du Pi vision et du conteneur sim ne sont pas partagées, un
     instant absolu n'aurait pas de sens). None, booléen, non-nombre, NaN,
     ≤ 0 ou au-delà du plafond = LE PLAFOND : une valeur absurde ne doit

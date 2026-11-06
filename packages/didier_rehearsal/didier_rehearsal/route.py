@@ -27,7 +27,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from robot_rehearsal.contracts import (ABS_MAX_ANG, ABS_MAX_LIN, POI_EXIT_FACTOR, TOUR_MAX_RADIUS_M,
+from didier_rehearsal.contracts import (ABS_MAX_ANG, ABS_MAX_LIN, POI_EXIT_FACTOR, TOUR_MAX_RADIUS_M,
                                        TOUR_MIN_RADIUS_M)
 
 

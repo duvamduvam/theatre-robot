@@ -24,10 +24,10 @@ sys.path.insert(0, os.path.join(PACKAGES, "didier_sim"))
 # de rclpy/aiohttp, absents de l'environnement de dev hôte).
 sys.path.insert(0, os.path.join(PACKAGES, "didier_web"))
 
-# Idem pour robot_rehearsal (salle de répétition simulée, SIM-ONLY) : logique
+# Idem pour didier_rehearsal (salle de répétition simulée, SIM-ONLY) : logique
 # pure du cheminement (route.py) et contrats ; route_driver_node.py n'est
 # jamais importé par les tests (rclpy/nav_msgs absents de l'hôte).
-sys.path.insert(0, os.path.join(PACKAGES, "robot_rehearsal"))
+sys.path.insert(0, os.path.join(PACKAGES, "didier_rehearsal"))
 
 # Le firmware du Pico (odom_protocol.py) : logique PURE du décodage quadrature
 # et du protocole de trame, partagée entre le Pico (MicroPython), le futur

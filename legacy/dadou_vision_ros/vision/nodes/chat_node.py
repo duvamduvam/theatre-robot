@@ -250,7 +250,7 @@ CHAT_TEXT_TOPIC = "chat_text"
 CHAT_INSTRUCTION_TOPIC = "chat_instruction"
 
 # Panne de conversation injectée par le régisseur de la répétition simulée
-# (robot_rehearsal, dadou_robot_ros) : le nom `rehearsal/…` EST le contrat de
+# (didier_rehearsal, dadou_robot_ros) : le nom `rehearsal/…` EST le contrat de
 # ce régisseur (§13.4 point 3, mêmes chaînes gravées dans les tests des deux
 # dépôts). Consommé aussi en prod, SANS effet tant que personne ne publie --
 # le régisseur ne tourne qu'en domaine 43 (sim) et n'entre jamais dans le
@@ -271,7 +271,7 @@ ASOUND_CONF = "/etc/asound.conf"
 
 # Ordre de marche demandé par Didier (lot I1, cf. docstring de module) :
 # StringTime, payload json.dumps("go"|"stop"). Le nom `rehearsal/…` EST le
-# contrat du régisseur (CHAT_MOVE_TOPIC de robot_rehearsal/contracts.py,
+# contrat du régisseur (CHAT_MOVE_TOPIC de didier_rehearsal/contracts.py,
 # dadou_robot_ros, gravé des deux côtés). Sans régisseur (vrai robot) : sans
 # effet, personne n'écoute.
 CHAT_MOVE_TOPIC = "rehearsal/chat_move"
@@ -299,7 +299,7 @@ LOOK_TOPIC = "look"
 
 # Issue d'un geste (lot M4, dadou_robot_ros/docs/spec-aller-voir.md §9.3) :
 # StringTime JSON {"name", "result", "reason", "travelled"} publié par
-# route_driver — contrat robot_rehearsal/contracts.py ROUTE_GOTO_RESULT_TOPIC
+# route_driver — contrat didier_rehearsal/contracts.py ROUTE_GOTO_RESULT_TOPIC
 # (dadou_robot_ros), aucun changement côté robot. Écouté SEULEMENT si le
 # mouvement à la voix est branché : c'est lui qui fait enchaîner la tâche en
 # cours (vision.ai.move_task). QoS VOLATILE (comme côté robot) : une vieille

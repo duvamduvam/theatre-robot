@@ -1,4 +1,4 @@
-"""Node `route_driver` (robot_rehearsal.route_driver_node) avec rclpy SIMULÉ —
+"""Node `route_driver` (didier_rehearsal.route_driver_node) avec rclpy SIMULÉ —
 même procédé que test_director_node.py : rclpy, robot_interfaces,
 geometry_msgs et nav_msgs remplacés par des modules factices ; tout le reste
 est RÉEL (yaml, route, contracts).
@@ -96,14 +96,14 @@ def pilote(monkeypatch, tmp_path):
     }
     for nom, module in faux.items():
         monkeypatch.setitem(sys.modules, nom, module)
-    monkeypatch.delitem(sys.modules, "robot_rehearsal.route_driver_node", raising=False)
-    module = importlib.import_module("robot_rehearsal.route_driver_node")
+    monkeypatch.delitem(sys.modules, "didier_rehearsal.route_driver_node", raising=False)
+    module = importlib.import_module("didier_rehearsal.route_driver_node")
     monkeypatch.setenv("ROS_DOMAIN_ID", "43")
     route = tmp_path / "route.yaml"
     route.write_text(yaml.safe_dump(ROUTE), encoding="utf-8")
     monkeypatch.setattr(_NodeFactice, "imposes", {"route_file": str(route)})
     yield module.RouteDriverNode()
-    sys.modules.pop("robot_rehearsal.route_driver_node", None)
+    sys.modules.pop("didier_rehearsal.route_driver_node", None)
 
 
 def _etat(noeud):

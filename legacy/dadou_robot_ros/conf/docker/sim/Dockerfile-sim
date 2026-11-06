@@ -45,7 +45,7 @@ COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
 COPY --from=didier_jeu . /home/ros2_ws/src/didier_jeu
 COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
 COPY --from=didier_web . /home/ros2_ws/src/didier_web
-COPY --from=robot_rehearsal . /home/ros2_ws/src/robot_rehearsal
+COPY --from=didier_rehearsal . /home/ros2_ws/src/didier_rehearsal
 COPY conf/scripts/launch-sim-in-docker.sh /home/ros2_ws/
 
 # json/ : robot_lights.json, lights_base.json, colors.json lus par leds_sim_node
