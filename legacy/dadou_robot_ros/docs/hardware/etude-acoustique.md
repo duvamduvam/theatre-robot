@@ -283,3 +283,33 @@ de la chaîne.
    la voix.
 4. Étanchéité du torse (caches du dessus) au remontage.
 5. SD-150B-12 audio (refonte électrique) et alimentation propre de la mixette (§5).
+
+### 6.4 Réglage des 4 potentiomètres (procédure, d'après la notice p. 23-25)
+
+Écoute du 06/11 après correction des commutateurs : **« ça a l'air mieux »** (David).
+
+Les quatre potentiomètres : `FRONT GAIN` (ICU), `REAR GAIN` (10″), `FREQ`, `PHASE`. La
+notice donne la règle pour les gains (p. 24) : **gain au maximum le plus tôt possible
+dans la chaîne, au minimum ensuite**. Ici, la « source » est la **mixette** (le Pi
+reste au volume logiciel du spectacle).
+
+0. **Repérer au feutre la position actuelle** de chaque fente, pour pouvoir y revenir.
+   Faire jouer **la voix de Didier**, sa phrase la plus forte, en boucle.
+1. **Gains** : `FRONT GAIN` et `REAR GAIN` **au minimum**. Monter le `MAIN MIX` de la
+   mixette aux **3/4** de sa course, sans que son voyant `CLIP` ne s'allume.
+2. **`FRONT GAIN`** : monter jusqu'au volume voulu pour la voix. **Redescendre un peu au
+   premier signe de distorsion.**
+3. **`FREQ`** : départ **entre les repères 90 et 140** (~110 Hz). Voix qui « boume » ou
+   sonne dans la poitrine → descendre vers 90. Creux entre le grave et la voix → monter
+   vers 140.
+4. **`REAR GAIN`** : monter jusqu'à ce que le grave donne du corps à la voix sans la
+   dominer. Si le torse **vibre ou grésille**, redescendre.
+5. **`PHASE`** : se placer **là où sera le public, 2-3 m devant**. Tourner de 0 vers 180
+   et garder la position où **le grave est le plus plein**. Un aide tourne le bouton,
+   ou on procède par allers-retours.
+6. Revérifier `FRONT GAIN` et `REAR GAIN` ensemble.
+
+⚠️ **Tant que l'ampli est sur la SD-50B-12**, s'il **redémarre pendant qu'on monte un gain**,
+c'est la limite du convertisseur, pas de l'ampli : redescendre en dessous et noter la
+position. **Refaire les étapes 1 à 4 après la pose de la SD-150B-12**, en vérifiant le
+courant (§2.1).
