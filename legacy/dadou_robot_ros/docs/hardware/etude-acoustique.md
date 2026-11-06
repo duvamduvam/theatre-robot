@@ -241,7 +241,7 @@ point 3).
 porte les deux sérigraphies (connexions et réglages) et, dans un puits, les potentiomètres
 `PHASE` et `FREQ`, puis les trois commutateurs, de gauche à droite : `FRONT CH. (1/2)`,
 `X-OVER MODE`, `INPUT SELECT`. Sur la sérigraphie, les positions vont de bas en haut :
-`75Hz HPF`→`FULL`, `LPF`→`FULL`→`HPF`, `1+2`→`3/4`→`1/2`. N° de série `C1BELF0105048`.
+`75Hz HPF`→`FULL`, `LPF`→`FULL`→`HPF`, `1+2`→`3/4`→`1/2`.
 
 **Lecture des commutateurs : BASSE confiance.** Les curseurs sont petits, au fond du
 puits, et la photo est floue à cet endroit. Lecture tentée, en prenant le pavé gris pour
