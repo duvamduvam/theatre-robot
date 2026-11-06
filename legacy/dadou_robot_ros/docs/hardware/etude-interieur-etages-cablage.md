@@ -12,6 +12,7 @@ Pièces jointes :
 | Fichier | Ce que c'est |
 |---|---|
 | [`schema-interieur-niveaux.svg`](schema-interieur-niveaux.svg) | le torse en coupe, niveau par niveau, avec les deux colonnes montantes |
+| [`cablage/schema-alim.svg`](cablage/schema-alim.svg) | la distribution d'énergie câble par câble, plus et masses, générée depuis le cahier par `cablage/schema_alim.py` ; pointillés = câbles absents du cahier, proposés le 07/11 |
 | [`cablage/cahier-cablage.csv`](cablage/cahier-cablage.csv) | **le cahier de câblage** : 74 fils, un par ligne, dérivés des connecteurs des 5 cartes ; `cablage/check_cablage.py` vérifie section contre fusible (0 erreur, 66 longueurs à mesurer) |
 | `~/Nextcloud/dev/didier/plans/elec/etages/` (dépôt `didier`, hors de ce dépôt) | le modèle paramétrique OpenSCAD des plaques et des rails, rendus et DXF de démonstration |
 
