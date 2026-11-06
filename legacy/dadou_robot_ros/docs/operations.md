@@ -209,17 +209,29 @@ tourne la tête (gaze) et pivote/avance (suivi, si activé) ; on parle dans le
 micro → réponse dans les enceintes, gestes « parle » dans Gazebo
 (`ANIMATIONS=true` requis), didascalies sur l'aperçu visage 8766.
 
-## ⚠️ V-R3 instable depuis le 06/11 (19/21, même sur l'ancien code)
+## V-R3 : pourquoi il a baissé le 06/11, et ce qui l'a rendu fiable (élucidé le 06/11 au soir)
 
-Trois séances le 06/11 (deux sur L1e-1, une sur le commit d'avant) donnent 18 à 19/21 là où le
-04/11 donnait 21/21. Les deux KO sont toujours les mêmes : la capture CLI de `route_speed` est
-vide (le CLI `ros2 topic echo` ne découvre pas le publieur : « does not appear to be published
-yet », avec ~46 conteneurs actifs sur le PC) alors que T2 prouve l'arrêt par `cmd_vel_follow` ;
-et l'arrivée à la Titan grise manquée de ~7 m après le `reboot_sans_reprise`. Avant de conclure
-à une régression ou à un flake : rejouer sur un hôte calme, comparer le facteur temps réel gz,
-et remplacer les captures CLI par un pilote rclpy (validate-jeu-a1.sh le fait déjà). Rappel :
-le script EXIGE que drive, rehearsal (scenario chantiers) et gaze_follower soient lancés AVANT
-(sinon « PRÉCONDITION … absent », code 2).
+Trois séances à 18-19/21 (avant ET après le déménagement L1e-1) là où le 04/11 donnait 21/21.
+Deux causes distinctes, toutes deux mesurées :
+
+1. **Gazebo tournait à 0,49 du temps réel** (sim headless sans GPU : les deux caméras 640×480 à
+   15 et 10 Hz sont rendues par le CPU, le serveur gz à 150 % de CPU). Or le régisseur déroule le
+   scénario à l'HORLOGE MURALE (voulu : c'est l'horloge du vrai robot) alors que Didier avance à
+   l'horloge simulée → à moitié vitesse il manquait l'arrivée de ~7 m. Mesures : caméras à 5 Hz
+   chacune → 0,88 ; pas de physique 4 ms seul → 0,54 (inutile, et risqué pour les servos).
+   **Correctif : caméras à 5 Hz** (`dadou_robot_gz.urdf.xacro`, le pont web ne sert que ~5 i/s).
+   Le facteur dépend de la charge du PC : vérifier qu'il reste ≥ 0,8 si le test rebaisse (sonde
+   rclpy sur /clock, 20 s).
+2. **Les captures `ros2 topic echo` sans TYPE restaient vides** : le CLI interroge d'abord le graphe,
+   ne voit pas encore l'éditeur, sort aussitôt. Avec le type explicite il s'abonne tout de suite
+   (premier message en 0,8 s). Et un topic LATCHÉ exige en plus `--qos-reliability reliable` : un
+   lecteur best-effort (défaut du CLI avec type) ne reçoit pas l'historique. **Correctif :** type
+   sur chaque `echo` de `validate-rehearsal-chantiers.sh` + reliable sur `route_state`.
+   À reporter dans `validate-rehearsal-route.sh` et `-faults.sh` (même `num()`), pas fait.
+
+Résultat : 21/21 le 06/11 à 23:16 (x final 142,1 m en 575 s, 9 arrêts-lubies sur 9 capturés).
+Rappel : le script EXIGE que drive, rehearsal (scenario chantiers) et gaze_follower soient lancés
+AVANT (sinon « PRÉCONDITION … absent », code 2).
 
 ## Séance « Chantiers » — répétition simulée complète (lot R3, 14/10)
 

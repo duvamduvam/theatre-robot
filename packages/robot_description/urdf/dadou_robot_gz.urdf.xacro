@@ -93,7 +93,13 @@
         </clip>
       </camera>
       <always_on>1</always_on>
-      <update_rate>15</update_rate>
+      <!-- 5 Hz (mesuré le 06/11, sim headless sans GPU : le rendu des deux caméras
+           640x480 est fait par le CPU) : à 15 Hz + 10 Hz, Gazebo tournait à 0,49 du
+           temps réel et la répétition Chantiers manquait l'arrivée (le régisseur vit
+           à l'horloge murale, Didier à l'horloge simulée). À 5 Hz chacune : 0,88.
+           Le pont web ne sert que ~5 images/s de toute façon ; le pas de physique
+           (1 ms) n'y est pour rien (4 ms seul : 0,54). -->
+      <update_rate>5</update_rate>
       <topic>camera/image_raw</topic>
     </sensor>
   </gazebo>
@@ -141,7 +147,8 @@
         </clip>
       </camera>
       <always_on>1</always_on>
-      <update_rate>10</update_rate>
+      <!-- 5 Hz (même mesure du 06/11 que la caméra embarquée, voir le 06/11, sim headless sans GPU : le rendu des deux caméras -->
+      <update_rate>5</update_rate>
       <topic>camera_ext/image_raw</topic>
     </sensor>
   </gazebo>
