@@ -151,6 +151,23 @@ Détail et preuves dans [`releve-2026-11-05.md`](releve-2026-11-05.md) §4.
 | 5 | **Relais 40 A sur un 12 V qui décroche** : refermetures répétées sur les condensateurs des drivers. À donner à la relecture du §4 et à provoquer au banc | Sécurité |
 | 6 | **Hors cartes** : fusible général, distribution 24 V fusiblée, alimentation 12 V du VoiceTone C1 | cahier de câblage, achats |
 
+## 2 ter. Relecture indépendante du 06/11 — un lot de corrections avant commande
+
+Les deux cartes modifiées le 05/11 ont été relues par un agent distinct. **Résultat : ni
+Sécurité ni Puissance ne sont commandables en l'état.** Détail et décisions dans
+`pcb/kicad/carrier-l/DESIGN.md` et `pcb/kicad/carrier-p/DESIGN.md`, sections « Relecture
+indépendante du 2026-11-06 ».
+
+- **Sécurité** : WD_OK sans tirage (une broche ou une diode ouverte = « tout va bien ») ;
+  nappe retournée côté Pi = masse sur le 5 V du Pi (probable mécanisme de l'incident du
+  04/11). Plus R14, HEARTBEAT, 74HCT123, broches 7/8 de la nappe, relecture d'OE.
+- **Puissance** : plages à 0,3-0,45 mm de pastilles d'une autre tension (pont de soudure =
+  12/24 V sur le 5 V) ; exception d'échauffement injustifiée ; 24 V sans vrai fusible ;
+  12 V de la sécurité partagé avec les départs bras.
+
+Décisions attendues de David avant le lot : entrée 12 V séparée pour la sécurité sur la
+carte Puissance (recommandé) ; calibre de F5.
+
 ## 3. Gabarits papier 1:1 — toi, pièces en main (≈ 30 min)
 
 `didier/pcb/kicad/gabarits/*.pdf` : pastilles, sérigraphie et contour à l'échelle 1.
