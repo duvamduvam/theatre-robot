@@ -1,5 +1,5 @@
 # RÔLE ORPHELIN, NEUTRALISÉ au lot L1e-1 (2026-11-06) : aucun playbook ne l'appelle
-# (vérifié par grep le 06/11), et son unique tâche copiait conf/ros2_dependencies/, dossier
+# (vérifié par grep le 06/11), et son unique tâche copiait l'ancien dossier des packages du robot, dossier
 # qui n'existe plus (les packages sont dans theatre-robot/packages/ et partent par la
 # liste `packages` du rôle `synchronise`). Gardé vide plutôt que supprimé : l'étude
 # d'architecture (etude-architecture-globale.md §5) prévoit de purger les rôles

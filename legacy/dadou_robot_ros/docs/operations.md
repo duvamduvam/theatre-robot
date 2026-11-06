@@ -379,7 +379,7 @@ il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
 
 Monde `rue` + package SIM-ONLY `robot_rehearsal` (étude
 [`etude-repetition-simulee.md`](etude-repetition-simulee.md) §12). Mode d'emploi
-complet et règles de séance : `conf/ros2_dependencies/robot_rehearsal/README.md`.
+complet et règles de séance : `packages/robot_rehearsal/README.md` (racine du mono-dépôt).
 
 ```bash
 cd conf/docker/sim && WORLD=rue HEADLESS=true ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
@@ -435,7 +435,7 @@ Déploiement (fait le 2026-07-11 — pont web actif sur le robot) :
    changement de `packages-docker.txt`/`requirements.txt` demandera le même
    (`docker compose ... build` sur le Pi).
 2. Déploiement habituel : Ansible depuis `../dadou_utils_ros` (rsync du
-   checkout — `robot_web` part avec `conf/ros2_dependencies/`), sentinelle
+   checkout — `robot_web` part avec la liste `packages` de l'hôte, `ansible/hosts`, depuis L1e-1), sentinelle
    `robot/change` pour déclencher le colcon build au redémarrage.
 3. **Supervision (assainie le 2026-07-11)** : le conteneur est relancé par le
    **démon Docker** (`restart: unless-stopped` dans le compose — crashs et

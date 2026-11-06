@@ -7,7 +7,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 
 # packages/ du mono-dépôt theatre-robot (L1e-1 : les packages ROS autonomes y ont
-# déménagé de conf/ros2_dependencies/, sans changer de nom).
+# déménagé de conf/ du robot, sans changer de nom).
 PACKAGES = os.path.join(os.path.dirname(os.path.dirname(ROOT)), "packages")
 
 # robot_drive n'est pas un package installé (pas de colcon build sur l'hôte

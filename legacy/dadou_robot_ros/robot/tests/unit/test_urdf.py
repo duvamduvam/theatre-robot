@@ -11,7 +11,7 @@ import pytest
 import xacro
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-# packages/ du mono-dépôt (L1e-1) : robot_description y a déménagé de conf/ros2_dependencies/.
+# packages/ du mono-dépôt (L1e-1) : robot_description y a déménagé de conf/ du robot.
 PACKAGES_DIR = os.path.join(REPO_ROOT, "..", "..", "packages")
 XACRO_PATH = os.path.join(PACKAGES_DIR, "robot_description",
                           "urdf", "dadou_robot.urdf.xacro")

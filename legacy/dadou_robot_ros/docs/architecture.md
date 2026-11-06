@@ -10,8 +10,8 @@ physical subsystems.
 - **`robot/`** — the Python application (imported as `robot.*`), coupled to the
   shared library `dadou_utils_ros` (symlink, no versioning — protected by
   contract tests and a cross-repo CI job).
-- **`conf/ros2_dependencies/`** — five standalone ROS 2 (ament) packages built
-  by colcon:
+- **`packages/`** (mono-repo root; they lived in this repo's `conf/` until L1e-1,
+  2026-11-06, names unchanged) — standalone ROS 2 (ament) packages built by colcon:
 
 | Package | Role | Depends on |
 |---|---|---|
