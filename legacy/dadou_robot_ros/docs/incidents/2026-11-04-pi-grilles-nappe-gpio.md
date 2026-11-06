@@ -38,7 +38,7 @@
 - **Prévention** :
   - **ne plus jamais brancher un Pi sur l'ancienne carte** : la refonte la remplace ;
   - la nouvelle carte Sécurité ne fait **pas** passer le 5 V par la nappe (broches 2 et 4 non
-    connectées, `pcb/kicad/carrier_design.py`) ; son connecteur est un IDC à détrompeur ;
+    connectées, `pcb/kicad/carrier_design.py`) ; son connecteur est détrompé **côté carte seulement** : le connecteur du Pi est nu, et la nappe retournée côté Pi mettait la broche 39 (GND) sur le 5 V du Pi (relecture du 06/11 ; correction : J1.39 non connectée) ;
   - avant tout Pi sur une carte neuve : continuité broche par broche hors tension, puis la
     carte témoin RP2040 (`firmware/pico_test_5v`) à la place du Pi, sous alimentation limitée
     en courant ; enfin le Pi ;
