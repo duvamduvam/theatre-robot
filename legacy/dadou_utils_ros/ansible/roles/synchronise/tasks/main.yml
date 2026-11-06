@@ -45,6 +45,20 @@
     #rsync_opts:
     #  - "--delete"
 
+# Nettoyage des packages RENOMMÉS (lot L1e-2) : chaque ancien nom de
+# `packages_retires` (vars/main.yml) est effacé de src/, build/ et install/ AVANT
+# la copie ci-dessous — le rsync n'efface rien et `colcon build` compilerait sinon
+# les anciens ET les nouveaux. `become` : build/ et install/ sont écrits par le
+# colcon du conteneur, donc par root. Chemin ABSOLU (ansible_env.HOME = l'utilisateur
+# de connexion, faits relevés sans become) : avec sudo, un chemin relatif dépendrait
+# du répertoire courant. La liste ne se vide jamais (un Pi resté éteint rattrape).
+- name: Remove renamed package "{{ item.0 }}" from "{{ ros2_ws }}/{{ item.1 }}/"
+  become: yes
+  file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item.1 }}/{{ item.0 }}"
+    state: absent
+  loop: "{{ packages_retires | product(['src', 'build', 'install']) | list }}"
+
 # Packages du mono-dépôt (theatre-robot/packages/) : lot L1a (2026-11-02) pour les
 # communs, lot L1e-1 (2026-11-06) pour les 6 packages ROS autonomes du robot qui
 # vivaient dans conf/ du robot (le dossier a disparu — plus de stat ni de rsync
