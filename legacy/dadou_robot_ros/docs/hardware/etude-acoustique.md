@@ -234,3 +234,31 @@ point 3).
 - **Les réglages de filtre ne sont PAS sur cette face.** `FRONT CH. (1/2)`,
   `X-OVER MODE`, `FREQ`, `PHASE` et `INPUT SELECT` sont sur **la face opposée**
   (fig. 11, gauche). Il faut une photo de cette face-là pour trancher le §6.
+
+### 6.2 Photo de l'ampli, face réglages (06/11)
+
+`../pictures/acoustique-2026-11-06/photo-ampli-face-reglages.jpg`. Le dessous de l'ampli
+porte les deux sérigraphies (connexions et réglages) et, dans un puits, les potentiomètres
+`PHASE` et `FREQ`, puis les trois commutateurs, de gauche à droite : `FRONT CH. (1/2)`,
+`X-OVER MODE`, `INPUT SELECT`. Sur la sérigraphie, les positions vont de bas en haut :
+`75Hz HPF`→`FULL`, `LPF`→`FULL`→`HPF`, `1+2`→`3/4`→`1/2`. N° de série `C1BELF0105048`.
+
+**Lecture des commutateurs : BASSE confiance.** Les curseurs sont petits, au fond du
+puits, et la photo est floue à cet endroit. Lecture tentée, en prenant le pavé gris pour
+le curseur :
+
+| Commutateur | Lu (incertain) | Cible | Pourquoi |
+|---|---|---|---|
+| `FRONT CH. (1/2)` | `FULL` ? | **`75Hz HPF`** | les ICU n'ont pas à faire le grave, le 10″ s'en charge |
+| `X-OVER MODE` | `FULL` ? | **`LPF`** | sinon le 10″ reçoit toute la voix ; c'est LE réglage qui compte |
+| `INPUT SELECT` | `1+2` ? | **`1+2`** | « 3 canaux » d'après la notice p. 25 : les voies 3/4 reçoivent la somme mono de 1/2 pour piloter le caisson. Avec une seule paire RCA, `3/4` laisserait le 10″ muet |
+| `FREQ` | illisible (fente sans index) | **entre les repères 90 et 140**, ~110 Hz | |
+| `PHASE` | illisible | **0**, puis comparer à 180 au balayage | |
+
+**Bonus possible sur les redémarrages :** si `X-OVER MODE` est bien sur `FULL`, le 10″
+bridgé (le plus gros consommateur) prend toute la voix. Le passer en `LPF` devrait
+**baisser le courant tiré sur la SD-50B-12** dès maintenant, avant la SD-150B-12. À
+observer, sans en faire une solution : la cible reste le convertisseur dédié.
+
+**Manipulation** : ampli **éteint** avant de bouger les commutateurs (pas de claquement
+dans les haut-parleurs). Ce chemin audio ne touche pas aux roues.
