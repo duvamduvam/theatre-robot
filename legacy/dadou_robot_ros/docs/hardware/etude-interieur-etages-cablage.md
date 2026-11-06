@@ -12,6 +12,7 @@ Pièces jointes :
 | Fichier | Ce que c'est |
 |---|---|
 | [`schema-interieur-niveaux.svg`](schema-interieur-niveaux.svg) | le torse en coupe, niveau par niveau, avec les deux colonnes montantes |
+| [`cablage/bornier-distribution.png`](cablage/bornier-distribution.png) | **le plan simple** : une ligne par tension, borniers verts 5,08 et cosses à vis, généré par `cablage/schema_bornier.py` depuis le cahier ; demandé par David le 07/11, à préférer pour lire la distribution |
 | [`cablage/schema-alim.svg`](cablage/schema-alim.svg) | la distribution d'énergie câble par câble, plus et masses, générée depuis le cahier par `cablage/schema_alim.py` ; pointillés = câbles absents du cahier, proposés le 07/11 |
 | [`cablage/schema-dessus.svg`](cablage/schema-dessus.svg) | les trois platines de distribution vues de dessus, à l'échelle, avec les 39 lignes de puissance et de masse ; générée par `cablage/schema_dessus.py` |
 | [`cablage/cahier-cablage.csv`](cablage/cahier-cablage.csv) | **le cahier de câblage** : 74 fils, un par ligne, dérivés des connecteurs des 5 cartes ; `cablage/check_cablage.py` vérifie section contre fusible (0 erreur, 66 longueurs à mesurer) |
