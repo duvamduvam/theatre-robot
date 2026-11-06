@@ -185,6 +185,9 @@ pignon roue.** Sans ça, l'odométrie sortira des mètres faux.
 
 ### 1.8 La chaîne audio est entièrement de la hi-fi automobile
 
+> Analyse du rendu des enceintes (alimentation de l'ampli, montage sur panneau, réglages) :
+> [`etude-acoustique.md`](etude-acoustique.md), ouverte le 06/11.
+
 Références lues : haut-parleurs **`FOCAL UNIVERSAL ICU 570`** (`t0008`, `t0158` ; lu `S70` le 03/09, corrigé le 05/11 sur deux images nettes), ampli
 **`FOCAL IMPULSE 4.320`** (modèle donné par David le 06/11 ; la vidéo n'avait lu que
 `FOCAL` « THE SPIRIT OF SOUND », `…D CLASS COMPACT AMPLIFIER`, `t0165`), mixette

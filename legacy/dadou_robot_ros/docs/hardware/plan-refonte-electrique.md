@@ -193,6 +193,9 @@ Le bruit des moteurs, lui, n'a jamais été mesuré. **Mesurer avant d'acheter**
 
 ### Symptôme rapporté par David le 06/11 : l'ampli redémarre souvent
 
+> L'ampli est un **Focal Impulse 4.320** : fusible **25 A** d'après sa notice, contre
+> 4,2 A pour la SD-50B-12. Calcul et conséquences sur le volume : [`etude-acoustique.md`](etude-acoustique.md) §2.1.
+
 Hypothèse forte, **non prouvée** : l'ampli Focal (ampli auto, 12 V) est sur la SD-50B-12, et
 celle-ci décroche quand les bras tirent ; ou l'ampli lui-même la sature à fort volume. Signature
 attendue : la fiche donne **2,5 s de démarrage** à la SD-50, donc des coupures de quelques
