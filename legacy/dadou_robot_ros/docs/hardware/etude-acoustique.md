@@ -181,3 +181,41 @@ trois cas : batterie, 5 V du convertisseur, 5 V du convertisseur avec le jack C-
 débranché. Le spectre tranche : des raies à **50/100 Hz** et leurs harmoniques signent
 une boucle de masse, des raies en **kHz** ou un souffle large signent le découpage du
 convertisseur. Si le bruit disparaît jack débranché, c'est la boucle.
+
+## 6. Le haut-parleur central identifié par la mesure (06/11)
+
+**Mesures de David :** **3,5 Ω** au multimètre entre les cosses, aimant de **12 cm**, largeur
+totale **25 cm**. **Origine (David) : il vient du caisson de grave d'un système LD Systems**,
+référence oubliée.
+
+**Ce qu'on en déduit :**
+
+- **3,5 Ω en continu = 4 Ω nominal.** C'est compatible avec toutes les configurations de
+  l'Impulse 4.320, y compris le bridge, qui demande 4 Ω au minimum (notice p.22).
+- **25 cm hors-tout = un 10 pouces.** Hypothèse, **non confirmée** : le caisson d'un
+  LD Systems **DAVE 10**, un système de sonorisation compact avec caisson 10″ dont le
+  haut-parleur est une fabrication propre de la marque (pages revendeurs, résultat de
+  recherche non chargé). Le code `09…` de l'étiquette pourrait être un lot de 2009. Ça ne
+  change pas le raisonnement.
+- **C'est un haut-parleur de grave, fait pour être filtré.** Dans un caisson de sono, il
+  ne reçoit que le grave, sous ~100-150 Hz. Ici, s'il est bien sur une voie avant
+  (`FL+`, §3), **il reçoit toute la voix** sans passe-bas. Un 10″ de caisson rend mal le
+  médium : il brouille la voix, gaspille la puissance de l'ampli, et c'est lui qui
+  fatigue la SD-50B-12 sur les basses.
+
+**Configuration cible de l'ampli** (à régler à la mesure, pas d'office) :
+
+| Voies | Haut-parleur | Réglage |
+|---|---|---|
+| 1/2 | les deux ICU 570 | passe-haut 75 Hz activé (ou FULL si le balayage montre qu'il ne manque pas de grave) |
+| 3/4 **bridgées** | le 10″ central, 4 Ω | **LPF**, coupure de départ ~100-120 Hz, puis la **phase** 0/180° réglée pour que le grave et les ICU s'additionnent |
+
+C'est précisément l'usage pour lequel les voies 3/4 ont un filtre réglable et une
+phase. En bridge, **brancher exactement selon la fig. 9 de la notice** (le câblage
+n'y est donné qu'en schéma : le relire sur le PDF, ne pas le déduire), avec 4 Ω minimum,
+ce qui est le cas ici.
+Le budget de puissance reste borné par la SD-150B-12 et le réglage de gain (§2.1).
+
+**Pour une voix intelligible**, le 10″ n'apporte que le corps sous ~120 Hz. Les
+2-5 kHz viennent des tweeters des ICU, d'où l'importance de leur orientation (§4,
+point 3).
