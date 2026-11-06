@@ -72,7 +72,8 @@ une mesure à faire (§7). « Niveau » est la proposition du §3.
 | Capteurs d'odométrie LJ18A3 ×2 + disques | berceau v5.1 dessiné (M18) | sur les paliers | caisse basse |
 | SD-50B-5 ×2, SD-50B-12 | 159 × 97 × 38 chacune (fiche) | **debout**, 38 mm de pan chacune, support `support-sd50b5` (2 joues, PETG) | coffre |
 | SD-150B-12 (à acheter) | 199 × 110 × 50 (fiche) | debout, même principe, support à dessiner (4 cm plus long) | coffre, paroi côté porte |
-| Bloc de distribution 24 V fusiblé + barre de masse | à choisir : porte-fusibles à lames, 6 voies, bus commun | platine imprimée | coffre |
+| Bloc de distribution 24 V fusiblé + barre de masse | proposé le 07/11, non validé : Blue Sea 5046 (8 voies, 146 × 43,8 × 32,5) + barre 2301 ; **6 voies ne laissaient aucune réserve** | platine imprimée `plans/elec/bloc-24v` | coffre |
+| Bloc 24 V moteurs fusiblé + barre moins moteurs | proposé le 07/11, non validé : même platine, marquage différent ; 5 voies dont 2 à 25 A | platine imprimée `plans/elec/bloc-24v` | caisse basse |
 | Routeur RUT955 | support en conception (`plans/supports/support-teltonika-rut955`), face avant vers la porte | debout sur la tranche | coffre |
 | Carte Odométrie | 92 × 84 | entretoises M3 sur le coffre (décision 02/09) | coffre |
 | Carte Audio | 100 × 100, entraxe 90 × 90 | entretoises M3 traversantes | étage milieu |
@@ -367,8 +368,8 @@ Cette étude est l'étape 2 du plan. Ce qui suit la referme :
 
 Les **supports imprimés** à dessiner, dans l'ordre d'utilité : joues de la SD-150B-12 (copie
 du support SD-50B-5 avec les cotes de la fiche), platine fusible + relais 40 A, platine des
-SmartDrive, tiroir du pack, support du VoiceTone, platine du bloc 24 V et de la barre de
-masse. Tous en PETG, vis à bois Ø4 × 20 max, modèle paramétrique avec rendu avant impression.
+SmartDrive, tiroir du pack, support du VoiceTone, platines des blocs 24 V et des barres de
+moins (dessinées le 07/11 dans `plans/elec/bloc-24v`, à recaler sur les pièces reçues). Tous en PETG, vis à bois Ø4 × 20 max, modèle paramétrique avec rendu avant impression.
 
 ---
 
