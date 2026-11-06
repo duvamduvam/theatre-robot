@@ -186,7 +186,8 @@ pignon roue.** Sans ça, l'odométrie sortira des mètres faux.
 ### 1.8 La chaîne audio est entièrement de la hi-fi automobile
 
 Références lues : haut-parleurs **`FOCAL UNIVERSAL ICU 570`** (`t0008`, `t0158` ; lu `S70` le 03/09, corrigé le 05/11 sur deux images nettes), ampli
-**`FOCAL` « THE SPIRIT OF SOUND »**, `…D CLASS COMPACT AMPLIFIER` (`t0165`), mixette
+**`FOCAL IMPULSE 4.320`** (modèle donné par David le 06/11 ; la vidéo n'avait lu que
+`FOCAL` « THE SPIRIT OF SOUND », `…D CLASS COMPACT AMPLIFIER`, `t0165`), mixette
 **`the t.mix MicroMix 2USB`** — `USB AUDIO INTERFACE`, `XLR-MIC`, `1/4"-LINE IN`, `GAIN`,
 `HEADSET` (`t0159`, `t0161`). Étiquetage des fils au standard autoradio : `RR+`, `RR−`,
 `RL−`, `RF−`, `GND` (`t0164`, `t0165`).
@@ -272,7 +273,7 @@ Confiance : **H** = référence lue ou forme sans ambiguïté · **M** = famille
 | **Processeur de voix** | `TC HELICON` **`VOICETONE C1`** (lu le 05/11), molette `GENDER`, `HARD`, `POWER` | tenu par une **sangle noire** contre la paroi du fond du coffre (05/11), noyé sous les faisceaux — le 03/09 il paraissait posé en vrac | t0113-t0116, t0122 | H |
 | Mixette / interface USB | `the t.mix MicroMix 2USB`, `USB AUDIO INTERFACE`, `XLR-MIC`, `1/4"-LINE IN`, `GAIN`, `HEADSET` | sur équerres alu vissées aux montants bois | t0158, t0159, t0161, t0162 | H |
 | Haut-parleurs | `FOCAL UNIVERSAL ICU 570` (corrigé le 05/11) | sur panneaux bois du torse (≥ 2 vus) | t0008, t0158 | H |
-| Amplificateur | `FOCAL`, `THE SPIRIT OF SOUND`, `…D CLASS COMPACT AMPLIFIER` | sous une traverse bois, RCA en façade | t0165, t0179-t0184 | H |
+| Amplificateur | **`FOCAL IMPULSE 4.320`** (déclaré par David le 06/11) — vidéo : `FOCAL`, `THE SPIRIT OF SOUND`, `…D CLASS COMPACT AMPLIFIER` | sous une traverse bois, RCA en façade | t0165, t0179-t0184 | H |
 | Petite carte d'isolation/adaptation audio | `Car Audio Hi-Fi` / `HIFI` (générique, **pas une référence**) — 2 composants moulés jaunes | vissée sur montant bois, cosses serties vers un HP | t0163 | M |
 | Étiquetage des fils au standard autoradio | `RR+`, `RR−`, `RL−`, `RF−`, `GND` | sur le faisceau HP | t0164, t0165 | H |
 | **ReSpeaker XVF3800 (anneau 4 micros)** | — | **NON OBSERVÉ** — la tête est très peu filmée | — | — |
