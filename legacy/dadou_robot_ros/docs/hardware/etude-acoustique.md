@@ -262,3 +262,24 @@ observer, sans en faire une solution : la cible reste le convertisseur dédié.
 
 **Manipulation** : ampli **éteint** avant de bouger les commutateurs (pas de claquement
 dans les haut-parleurs). Ce chemin audio ne touche pas aux roues.
+
+### 6.3 Réglages corrigés par David (06/11)
+
+**Lecture confirmée par David sur pièce** : l'ampli était réglé `FRONT CH.` = `FULL`,
+`X-OVER MODE` = `FULL`, `INPUT SELECT` = `1+2`. Autrement dit, **le 10″ de caisson
+bridgé recevait toute la voix, sans passe-bas.** C'était le principal défaut de réglage
+de la chaîne.
+
+**Réglages après correction** (David, 06/11) : `FRONT CH.` = **`75Hz HPF`**,
+`X-OVER MODE` = **`LPF`**, `INPUT SELECT` = **`1+2`** (inchangé). Les positions de
+`FREQ` et `PHASE` ne sont pas relevées : à régler au balayage.
+
+**Reste à faire, dans l'ordre :**
+1. Écoute de la voix : plus claire ? moins de redémarrages de l'ampli sur la SD-50B-12 ?
+2. Balayage enregistré à 1 m (§3) pour caler `FREQ` (départ ~110 Hz) et `PHASE` (0 contre
+   180), puis les gains selon la procédure de la notice.
+3. Plaque à trous de la grille du 10″ (§4) : ne compte plus que pour le grave
+   transmis. Toujours à tester, mais l'enjeu baisse maintenant que le 10″ ne porte plus
+   la voix.
+4. Étanchéité du torse (caches du dessus) au remontage.
+5. SD-150B-12 audio (refonte électrique) et alimentation propre de la mixette (§5).

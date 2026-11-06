@@ -1019,6 +1019,17 @@ unifie le **timbre mais pas la prosodie** (donc la garantie s'amincit sur les
 du clone** — enregistrer en lisant proprement donne un clone plat à vie ; il
 faut jouer, pas lire.
 
+## Rendu des enceintes (acoustique)
+
+Ouvert le 2026-11-06. Étude : [`hardware/etude-acoustique.md`](hardware/etude-acoustique.md).
+**Fait le 06/11** : ampli identifié (Focal Impulse 4.320, sur la SD-50B-12), 10″ central
+= caisson LD Systems 4 Ω bridgé sur 3/4. **Défaut principal trouvé et corrigé :** le 10″
+recevait toute la voix (`X-OVER MODE` = FULL) → passé en LPF, avec le passe-haut 75 Hz
+sur les ICU. **Suite** : écoute, puis balayage enregistré pour caler la fréquence de
+coupure, la phase et les gains ; grille du 10″ ; étanchéité du torse ; SD-150B-12
+audio (refonte électrique) ; alimentation propre de la mixette (bruit sur le 5 V du
+convertisseur, à enregistrer dans 3 cas).
+
 ## Suivi de personne aux roues
 
 CODE COMPLET, VALIDÉ EN SIM 5/5 (11/07 soir) : chaîne `/vision/person_box`
