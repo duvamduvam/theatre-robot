@@ -91,7 +91,16 @@ haut-parleurs en opposition s'annulent dans le grave. On le vérifie à la pile 
 1. ~~D'où l'ampli prend son 12 V~~ → SD-50B-12, confirmé le 06/11 (§2.1). Reste la
    section de son câble d'alimentation : la notice demande ≥ 3,3 mm² (12 AWG) jusqu'à 3 m.
 2. ~~Dos de la porte, volume arrière~~ → relevé vidéo du 06/11 (§4). Restent :
-   l'**étiquette du haut-parleur central** (aucune visible au dos de l'aimant), les
+   l'**identité du haut-parleur central** : son étiquette (photo du 06/11,
+   `../pictures/acoustique-2026-11-06/photo-etiquette-hp-central.jpg`) ne porte que
+   `20100023` / `09101645` (2ᵉ ligne : un chiffre masqué), **sans marque ni modèle**, et
+   la recherche web sur ce code ne donne rien. Probablement un code de pièce et de lot,
+   d'un haut-parleur d'origine automobile. → l'identifier **par la mesure** : résistance
+   au multimètre (environ 3 Ω pour un 4 Ω nominal, environ 6 Ω pour un 8 Ω), diamètre
+   du saladier et de l'aimant. Repères de fils lus près de ses cosses : `FL+` et `RL…`.
+   Ça laisse penser qu'il est branché sur une sortie « avant gauche » (voies 1/2, où il
+   n'y a qu'un passe-haut fixe, pas de passe-bas). À confirmer en suivant les fils jusqu'à
+   l'ampli. les
    **commutateurs et boutons de l'ampli** (hors champ), et **quel fil va à quel
    haut-parleur** (couleurs vues, extrémités non suivies).
 3. **Mesure** : balayage joué par le robot, enregistré au téléphone à 1 m dans l'axe,
