@@ -56,6 +56,12 @@ des heures, pas des minutes. À assumer avant de démonter.
 
 Les étapes 4 et 5 peuvent avancer en parallèle une fois 3 fini.
 
+> **Étape 2 écrite le 06/11** : [`etude-interieur-etages-cablage.md`](etude-interieur-etages-cablage.md)
+> — cadre tranché par David (tout l'intérieur, **octogone**, 5 pans, étages **coulissants** sortant par
+> la porte audio, câbles de la tête aux roues), implantation niveau par niveau, cahier de câblage
+> (`cablage/`, 74 fils, contrôle section/fusible), masse en étoile (D6 proposée), modèle OpenSCAD
+> des plaques (`plans/elec/etages`), 14 mesures qui ferment l'étude (§7). D2 avis : PMMA 5 mm laser.
+>
 > **Étape 1 commencée le 05/11** : relevé à l'image dans
 > [`releve-2026-11-05.md`](releve-2026-11-05.md) (état de chaque niveau, conformité de la doc,
 > proposition d'implantation). **Les cotes et l'étiquetage des fils restent à faire** : liste

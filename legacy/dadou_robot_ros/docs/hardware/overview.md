@@ -11,8 +11,11 @@
 
 ## Physical Specification
 - Weight: ~50 kg wood & metal frame
-- **Corps : un prisme HEXAGONAL en sapin massif 18 mm** (confirmé par David le
-  2026-09-13). Les six faces s'appellent des **pans** ; chaque pan est une **paroi
+- **Corps : un prisme OCTOGONAL en sapin massif 18 mm** (confirmé par David le
+  2026-09-13 ; ⚠️ cette ligne disait « hexagonal » jusqu'au 2026-11-06 — **c'est un
+  octogone**, corrigé par David ce jour-là : 8 pans, dont les 3 pans avant forment la
+  porte audio ; les étages vivent dans les 5 pans fixes — voir
+  `etude-interieur-etages-cablage.md`). Les huit faces s'appellent des **pans** ; chaque pan est une **paroi
   extérieure**, accessible au public. Une **porte** donne accès à l'intérieur.
   Conséquences pratiques pour toute pièce qui se visse au corps :
   - la vis à bois tient directement dans le sapin, **pas besoin d'insert** ;
@@ -560,7 +563,7 @@ single blocking item before `chat_node` V2 can run on real hardware.
 
 The reasoning that predicted this, kept as written:
 
-The robot's chassis **is the speaker enclosure** (hexagonal body, audio deck, HF receiver, octaver;
+The robot's chassis **is the speaker enclosure** (octagonal body, audio deck, HF receiver, octaver;
 `pièces techniques/support-baffle` in the CAD plans). There is no "far from the speakers". This
 inverts the naive advice, and it is the single most important audio decision:
 

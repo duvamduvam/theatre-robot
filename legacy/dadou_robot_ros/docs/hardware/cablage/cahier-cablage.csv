@@ -1,0 +1,75 @@
+repere;de;a;famille;tension;section_mm2;fusible_A;connecteur;chemin;longueur_cm;couleur;statut;note
+P01;Pack + (sortie BMS);Fusible général;puissance;24V;6;40;cosse œillet M6;caisse basse;;rouge;a_cabler;calibre du fusible général à fixer sur le courant mesuré des 2 roues (jamais mesuré) ; lame MIDI ou verre 6×32 selon support
+P02;Fusible général;Barre 24 V permanente;puissance;24V;6;40;cosse œillet;caisse basse;;rouge;a_cabler;la barre permanente alimente ce qui doit survivre à l'arrêt d'urgence
+P03;Barre 24 V permanente;Relais 40 A (contact);puissance;24V;6;40;cosse œillet;caisse basse;;rouge;a_cabler;relais au plus près du pack (relevé §5.2)
+P04;Relais 40 A (contact);Barre 24 V moteurs;puissance;24V_MOT;6;40;cosse œillet;caisse basse;;orange;a_cabler;tout ce qui est en aval est coupé par le coup-de-poing et le chien de garde
+P05;Barre 24 V moteurs;SmartDrive40 gauche B+;puissance;24V_MOT;4;25;bornier vert SmartDrive;caisse basse;;orange;a_cabler;fusible par driver au bloc 24 V moteurs ; calibre = courant roue mesuré × 1,5
+P06;Barre 24 V moteurs;SmartDrive40 droit B+;puissance;24V_MOT;4;25;bornier vert SmartDrive;caisse basse;;orange;a_cabler;idem P05
+P07;Barre 24 V moteurs;ASME bras gauche;puissance;24V_MOT;1.5;7.5;2EDG 5,08 2 pôles;colonne puissance → épaule G;;orange;a_cabler;notice ASME-02 : 5 A max par servo ; fil rouge du connecteur 3 points NON raccordé (sortie 5 V, incident 03/11)
+P08;Barre 24 V moteurs;ASME bras droit;puissance;24V_MOT;1.5;7.5;2EDG 5,08 2 pôles;colonne puissance → épaule D;;orange;a_cabler;idem P07
+P09;Barre 24 V moteurs;ASME cou (tambour bouche);puissance;24V_MOT;1.5;7.5;2EDG 5,08 2 pôles;colonne puissance → cou;;orange;a_cabler;idem P07 ; « bouche » et « cou » = le même ASME (06/11)
+P10;Barre 24 V permanente;SD-50B-5 n°2 (contrôle) IN;puissance;24V;1.5;5;bornier Mean Well;coffre;;rouge;a_cabler;fusible au bloc 24 V permanent ; SD-50 : 3 A d'entrée
+P11;Barre 24 V permanente;SD-50B-5 n°1 (vision) IN;puissance;24V;1.5;5;bornier Mean Well;coffre;;rouge;a_cabler;idem P10
+P12;Barre 24 V permanente;SD-50B-12 IN;puissance;24V;1.5;5;bornier Mean Well;coffre;;rouge;a_cabler;ne garde que yeux + boucle d'arrêt + bobine relais (06/11)
+P13;Barre 24 V permanente;SD-150B-12 (audio) IN;puissance;24V;2.5;10;bornier Mean Well;coffre;;rouge;a_commander;convertisseur audio à acheter (06/11) ; entrée ≈ 7,5 A à pleine charge
+P14;Barre 24 V permanente;Routeur RUT955 (9-30 VDC);puissance;24V;0.75;3;fiche verte 2 pôles du routeur;coffre;;rouge;a_cabler;
+P15;Barre 24 V permanente;Carte Puissance J20 24V_IN;puissance;24V;0.75;3;2EDG 5,08 6 pôles (J20);colonne puissance → étage haut;;rouge;a_cabler;ne sert qu'au voltmètre et à sa LED (F5 sur carte)
+P16;Chargeur Victron OUT;Pack (entrée BMS);puissance;24V;2.5;10;prise de charge en panneau;caisse basse;;rouge;a_cabler;chargeur FIXÉ, prise de charge en panneau (relevé §5.2) ; 5 A max
+P17;SD-50B-12 OUT;Fusible amont 12 V (15 A);puissance;12V;2.5;15;porte-fusible;coffre;;jaune;a_cabler;D8 du plan : les troncs de la carte Puissance ne portent pas la somme de leurs fusibles
+P18;Fusible amont 12 V;Carte Puissance J20 +12V (×2);puissance;12V;2.5;15;2EDG 5,08 6 pôles (J20);colonne puissance → étage haut;;jaune;a_cabler;2 broches +12V sur J20 : deux conducteurs
+P19;SD-50B-5 n°2 OUT;Fusible amont 5 V (10 A);puissance;5V;1.5;10;porte-fusible;coffre;;bleu;a_cabler;D8 du plan
+P20;Fusible amont 5 V;Carte Puissance J20 +5V;puissance;5V;1.5;10;2EDG 5,08 6 pôles (J20);colonne puissance → étage haut;;bleu;a_cabler;une seule broche +5V sur J20 (relevé §4.4)
+P21;SD-50B-5 n°1 OUT;Pi 5 (USB-C);puissance;5V;1.5;10;USB-C (piège PD : viser 5,1 V au Pi);coffre → étage haut;;bleu;a_cabler;alim-5v-pi.md ; domaine vision/audio
+P22;Carte Puissance J26 5V-RPI;Pi 4 (GPIO 5 V ou USB-C);puissance;5V;0.75;3;2EDG 5,08 2 pôles (J26);étage haut (câble court);;bleu;a_cabler;F1 3 A sur carte ; pas par la nappe
+P23;Carte Puissance J27 LEDSTRIP1;Ruban LED visage bas;puissance;5V;0.75;5;2EDG 5,08 3 pôles (J27);colonne puissance → tête;;bleu;a_cabler;5V_LED + LED_DATA_5V + GND ; data = signal, torsadé avec GND
+P24;Carte Puissance J33 LEDSTRIP2;Ruban LED visage haut (yeux);puissance;5V;0.75;5;2EDG 5,08 3 pôles (J33);colonne puissance → tête;;bleu;a_cabler;idem P23
+P25;SD-50B-12 OUT;Carte Puissance J28 VSERVO-IN-EXT;puissance;12V;1.5;10;2EDG 5,08 2 pôles (J28);colonne puissance → étage haut;;jaune;a_cabler;JP1 OUVERT (cavalier 3 A max) ; V+ des yeux par J28 (06/11)
+P26;Carte Puissance J29 VSERVO-M1;Carte Moteurs, bornier V+ du PCA9685 0x41;puissance;12V;1.5;10;2EDG 5,08 2 pôles (J29);étage haut → étage milieu;;jaune;a_cabler;F2 10 A ; par fil, hors nappe ; sert aux servos des yeux seulement si les ASME sont en 24 V
+P27;Carte Puissance J25 12V-AUX;Carte Odométrie J5 ENTREE-12V;puissance;12V;0.75;5;JST XH 2 pts (J5);étage haut → coffre;;jaune;a_cabler;F4 5 A ; la carte Odométrie a son PTC RXEF050
+P28;SD-150B-12 OUT;Ampli Focal Impulse 4.320 (+12 V / REM);puissance;12V_AUDIO;4;25;porte-fusible à lame en ligne existant;coffre → porte audio (charnière);;violet;a_commander;notice Focal : fusible 25 A, câble 12 AWG (3,3 mm²) ; SD-150 = 12,5 A : gain réglé pour ne jamais saturer (06/11) ; REM à raccorder
+P29;SD-150B-12 OUT;Carte Audio J1 12V-IN;puissance;12V_AUDIO;0.75;2;2EDG 5,08 2 pôles (J1);coffre → étage milieu (côté charnière);;violet;a_cabler;F1 T2A sur carte ; courant du klaxon inconnu
+P30;SD-150B-12 OUT;TC Helicon VoiceTone C1 (alim 12 V);puissance;12V_AUDIO;0.75;2;jack DC du VoiceTone (Ø à lire);coffre → étage milieu;;violet;a_cabler;audio-relays/DESIGN.md : alim hors carte → départ fusiblé au bloc 12 V audio ; polarité du jack à lire
+P31;Carte Audio J7 KLAXON-12V;Klaxon;puissance;12V_AUDIO;1.5;10;2EDG 5,08 2 pôles (J7);étage milieu → klaxon;;violet;a_cabler;relais K3 10 A ; courant du klaxon à mesurer
+P32;Carte Audio J8 HF-12V;Récepteur Shure BLX4;puissance;12V_AUDIO;0.75;2;2EDG 5,08 2 pôles (J8) → alim du BLX4;étage milieu;;violet;a_cabler;tension d'alimentation du BLX4 à lire sur son bloc (12-15 V ?) : non écrit
+P33;Carte Sécurité J43 RELAIS-PUISSANCE;Bobine du relais 40 A;logique;12V;0.75;3;2EDG 5,08 2 pôles (J43);colonne logique → caisse basse;;jaune;a_cabler;paire torsadée, toute la hauteur ; débranchement = protocole caméra ; courant bobine à mesurer
+P34;Carte Sécurité J42 COUP-DE-POING;Bouton coup-de-poing (NF);logique;12V;0.75;3;2EDG 5,08 2 pôles (J42);colonne logique → emplacement du bouton (à trouver);;jaune;a_cabler;boucle 12 V électromécanique ; emplacement accessible encore à choisir (relevé §4.7)
+P35;Carte Sécurité J41 ARM-DEPORTE;Bouton d'armement déporté;logique;3.3V;0.5;;2EDG 5,08 2 pôles (J41);colonne logique → emplacement du bouton;;blanc;a_cabler;
+L01;Pi 4 GPIO;Carte Sécurité J1 GPIO-RPI;logique;3.3V/5V;nappe;;IDC 2×20 (nappe 40 fils);étage haut (passage dans la plaque);;arc-en-ciel;a_cabler;⚠️ incident 04/11 : le détrompeur ne protège que côté carte ; repère rouge = broche 1 des deux côtés
+L02;Carte Sécurité J51 NAPPE-P;Carte Puissance J50;logique;5V/12V;nappe;PTC;IDC 2×8;dans la pile;5;arc-en-ciel;a_cabler;P tournée de 180° ; check_stack.py
+L03;Carte Sécurité J52 NAPPE-M;Carte Moteurs J53;logique;5V;nappe;PTC;IDC 2×8;étage haut → étage milieu, bord côté porte;;arc-en-ciel;a_cabler;< 30 cm (décision 05/11) ; porte OE_WHEELS : nappe absente = PWM coupés (R10) ; D5 : échange broches 7/8 si la nappe s'allonge
+L04;Carte Moteurs J11 I2C-5V;Carte Audio J2 I2C-5V-IN;logique;5V;0.25;;Dupont 1×4 → 2EDG 4 pôles;étage milieu;;blanc;a_cabler;broche +5V NC côté Audio ; bus 5 V isolé
+L05;Carte Sécurité J12 SYS;Dos : 2 boutons + LED de vie;logique;3.3V;0.25;;Dupont 1×4;colonne logique → dos;;blanc;a_cabler;GPIO16 arrêt, GPIO20 redémarrage, GPIO12 LED ; seconde LED du dos non pilotée
+L06;Carte Moteurs, PCA9685 0x40 canaux 0-1;SmartDrive40 gauche (DIR, PWM);logique;5V;0.25 blindé;;Dupont 1×3 → bornier SmartDrive;colonne logique → caisse basse;;gris;a_cabler;câble BLINDÉ avec embouts, remplace le câble réseau dégainé (anomalie 1 du relevé) ; chemin roues : protocole caméra
+L07;Carte Moteurs, PCA9685 0x40 canaux 2-3;SmartDrive40 droit (PWM, DIR);logique;5V;0.25 blindé;;Dupont 1×3 → bornier SmartDrive;colonne logique → caisse basse;;gris;a_cabler;idem L06
+L08;Carte Moteurs, PCA9685 0x41 canal 7;Servo œil gauche (JX CLS-12V7346) signal;logique;5V;0.25;;fiche servo 3 fils;colonne logique → tête;;gris;a_cabler;fiches servo tenues par barrette imprimée vissée, plus de colle chaude ; V+ 12 V via P26
+L09;Carte Moteurs, PCA9685 0x41 canal 8;Servo œil droit signal;logique;5V;0.25;;fiche servo 3 fils;colonne logique → tête;;gris;a_cabler;idem L08
+L10;Carte Moteurs, PCA9685 0x41 canal 4;ASME cou, signal;logique;5V;0.25;;fiche 3 points ASME (signal + GND, rouge NON raccordé);colonne logique → cou;;gris;a_cabler;retour de position ASME (capteur magnétique) : 2e connecteur à identifier (étude actionneurs)
+L11;Carte Moteurs, PCA9685 0x41 canal 5;ASME bras gauche, signal;logique;5V;0.25;;fiche 3 points ASME;colonne logique → épaule G;;gris;a_cabler;idem L10
+L12;Carte Moteurs, PCA9685 0x41 canal 15;ASME bras droit, signal;logique;5V;0.25;;fiche 3 points ASME;colonne logique → épaule D;;gris;a_cabler;idem L10
+L13;Pi 4 USB;Carte Odométrie (RP2040-Zero USB-C);logique;5V;câble USB;;USB-A → USB-C;étage haut → coffre;;noir;a_cabler;barrière GND/GNDPWR de la carte : seul lien entre les deux masses = l'étoile (étude §6)
+L14;Carte Odométrie JG ROUE-G;Capteur inductif roue gauche (LJ18A3 ×2);logique;12V;0.5;PTC;JST XH 4 pts;coffre → caisse basse → roue G;;gris;a_cabler;4 fils : SENS_A, +12V, GNDPWR, SENS_B ; capteurs NPN 12 V ; passe-fil au plancher du coffre
+L15;Carte Odométrie JD ROUE-D;Capteur inductif roue droite;logique;12V;0.5;PTC;JST XH 4 pts;coffre → caisse basse → roue D;;gris;a_cabler;idem L14
+L16;Pi 4 RJ45;Routeur RUT955 LAN;logique;;Cat5e;;RJ45;étage haut → coffre;;jaune (réseau);a_cabler;support routeur neuf : 2 RJ45 branchables (plans/supports/support-teltonika-rut955)
+L17;Pi 5 RJ45;Routeur RUT955 LAN;logique;;Cat5e;;RJ45;étage haut → coffre;;jaune (réseau);a_cabler;idem L16 ; aujourd'hui un seul RJ45 branchable
+L18;Pi 5 USB;Webcam USB (buste, devant la bouche);logique;5V;câble USB;;USB-A;étage haut → buste;;noir;a_cabler;caméra FIXE sur le buste, pas sur la tête (14/09)
+L19;Pi 5 USB;ReSpeaker XVF3800 (arceau de tête);logique;5V;câble USB;;USB-A → USB-C;étage haut → arceau de tête;;noir;a_cabler;support sur l'arceau 30×21 (plans/supports/support-respeaker-xvf3800)
+L20;Pi 5 CSI;Caméra OV5647 (plaque sous la tête, essai);logique;3.3V;nappe CSI;;FPC 15/22 broches;étage haut → sous la tête;;—;optionnel;essai ouvert le 30/08 ; nappe CSI longue = sensible au bruit : à l'écart de la colonne puissance
+L21;Pi 4 USB;Lidar 2D (à acheter, décision 02/11);logique;5V;câble USB;;USB;étage haut → emplacement lidar;;noir;a_venir;emplacement du lidar à fixer dans l'implantation (support-lidar-c1 existe)
+L22;Carte Puissance M7/M8 INA226;—;logique;;;;sur carte;—;;—;sur_carte;mesure 5 V Pi et V+ servos : pas de fil, sur la nappe
+A01;Récepteur Shure BLX4 sortie;Carte Audio J3 MICRO-IN;audio;;coax;;jack 6,35 / XLR → RCA;étage milieu;;noir coax;a_cabler;blindage = GND_A, jamais relié ailleurs
+A02;Carte Audio J4 DEPART-EFFET;VoiceTone C1 entrée MIC;audio;;coax;;RCA → XLR/jack;étage milieu;;noir coax;a_cabler;
+A03;VoiceTone C1 sortie;Carte Audio J5 RETOUR-EFFET;audio;;coax;;XLR/jack → RCA;étage milieu;;noir coax;a_cabler;
+A04;Carte Audio J6 SORTIE-MIXETTE;Mixette t.mix MicroMix 2USB, entrée ligne;audio;;coax;;RCA → jack 6,35;étage milieu → porte audio (charnière);;noir coax;a_cabler;transfo 600:600 T1 en option sur la carte (cavaliers JP1/JP2)
+A05;Mixette t.mix USB;Pi 5 USB;audio;5V;câble USB;;USB-B → USB-A;porte audio → étage haut;;noir;a_cabler;c'est par ce câble que la masse du Pi 5 entre dans l'audio (étude §6) ; isolateur USB seulement si une mesure le justifie
+A06;Mixette sortie;Isolateur rouge (Car Audio / HIFI);audio;;coax;;jack 3,5 / RCA;porte audio;;noir coax;existant;isolateur à transformateurs vissé sur la porte
+A07;Isolateur rouge;Ampli Focal entrées RCA;audio;;coax;;RCA;porte audio;;noir coax;existant;
+A08;Ampli Focal sorties HP;Haut-parleurs Focal ICU 570 ×2 + HP central;audio;;1.5;;cosses faston;porte audio;;HP (RR/RL/RF);existant;étiquetage autoradio RR+/RR−/RL−/RF− (robot-embarque §1.8)
+A09;Antenne BLX4 ×2;Récepteur BLX4;audio;;coax 50 Ω;;BNC/SMA;coffre → étage milieu, sous clips le long de la paroi;;cuivre;a_cabler;coaxiaux seuls sur leur paroi, loin des convertisseurs (anomalie 6)
+A10;Antennes 4G/Wi-Fi;Routeur RUT955;logique;;coax 50 Ω;;SMA;coffre;;noir;existant;
+G01;Pack − (sortie BMS);Barre de masse (ÉTOILE);masse;;6;;cosse œillet M6;caisse basse → coffre;;noir;a_cabler;point unique de masse, D6 ; une seule cosse par domaine
+G02;SD-50B-5 n°2 OUT −;Barre de masse (ÉTOILE);masse;;1.5;;cosse œillet;coffre;;noir;a_cabler;domaine contrôle
+G03;SD-50B-12 OUT −;Barre de masse (ÉTOILE);masse;;2.5;;cosse œillet;coffre;;noir;a_cabler;domaine contrôle (12 V)
+G04;SD-50B-5 n°1 OUT −;Barre de masse (ÉTOILE);masse;;1.5;;cosse œillet;coffre;;noir;a_cabler;domaine vision/audio
+G05;SD-150B-12 OUT −;Barre de masse (ÉTOILE);masse;;4;;cosse œillet;coffre;;noir;a_cabler;domaine vision/audio ; le − de l'ampli revient ICI, pas par un blindage RCA
+G06;SmartDrive40 ×2 B−;Barre 24 V moteurs −;masse;;4;;bornier;caisse basse;;noir;a_cabler;retour puissance moteurs, même barre que le + (paire serrée) ; la barre − moteurs rejoint l'étoile par UN câble
+G07;Carte Puissance J20 GND (×2);Barre de masse (ÉTOILE);masse;;2.5;;2EDG 5,08 6 pôles (J20);colonne puissance → étage haut;;noir;a_cabler;retour du tronc 12 V / 5 V de la pile ; 2 broches = 2 conducteurs
