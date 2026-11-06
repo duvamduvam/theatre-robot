@@ -13,6 +13,7 @@ Pièces jointes :
 |---|---|
 | [`schema-interieur-niveaux.svg`](schema-interieur-niveaux.svg) | le torse en coupe, niveau par niveau, avec les deux colonnes montantes |
 | [`cablage/schema-alim.svg`](cablage/schema-alim.svg) | la distribution d'énergie câble par câble, plus et masses, générée depuis le cahier par `cablage/schema_alim.py` ; pointillés = câbles absents du cahier, proposés le 07/11 |
+| [`cablage/schema-dessus.svg`](cablage/schema-dessus.svg) | les trois platines de distribution vues de dessus, à l'échelle, avec les 39 lignes de puissance et de masse ; générée par `cablage/schema_dessus.py` |
 | [`cablage/cahier-cablage.csv`](cablage/cahier-cablage.csv) | **le cahier de câblage** : 74 fils, un par ligne, dérivés des connecteurs des 5 cartes ; `cablage/check_cablage.py` vérifie section contre fusible (0 erreur, 66 longueurs à mesurer) |
 | `~/Nextcloud/dev/didier/plans/elec/etages/` (dépôt `didier`, hors de ce dépôt) | le modèle paramétrique OpenSCAD des plaques et des rails, rendus et DXF de démonstration |
 
@@ -74,6 +75,7 @@ une mesure à faire (§7). « Niveau » est la proposition du §3.
 | SD-150B-12 (à acheter) | 199 × 110 × 50 (fiche) | debout, même principe, support à dessiner (4 cm plus long) | coffre, paroi côté porte |
 | Bloc de distribution 24 V fusiblé + barre de masse | proposé le 07/11, non validé : Blue Sea 5046 (8 voies, 146 × 43,8 × 32,5) + barre 2301 ; **6 voies ne laissaient aucune réserve** | platine imprimée `plans/elec/bloc-24v` | coffre |
 | Bloc 24 V moteurs fusiblé + barre moins moteurs | proposé le 07/11, non validé : même platine, marquage différent ; 5 voies dont 2 à 25 A | platine imprimée `plans/elec/bloc-24v` | caisse basse |
+| Fusibles 12 V et 5 V en sortie des convertisseurs | proposé le 07/11, non validé : 2 × Blue Sea 5045 (12 V contrôle, 12 V audio) + 2 porte-fusibles 5 V individuels, référence à choisir ; quatre rails jamais reliés entre eux | platine imprimée `plans/elec/bloc-24v`, `BLOC="basse-tension"` | coffre |
 | Routeur RUT955 | support en conception (`plans/supports/support-teltonika-rut955`), face avant vers la porte | debout sur la tranche | coffre |
 | Carte Odométrie | 92 × 84 | entretoises M3 sur le coffre (décision 02/09) | coffre |
 | Carte Audio | 100 × 100, entraxe 90 × 90 | entretoises M3 traversantes | étage milieu |
