@@ -209,6 +209,18 @@ tourne la tête (gaze) et pivote/avance (suivi, si activé) ; on parle dans le
 micro → réponse dans les enceintes, gestes « parle » dans Gazebo
 (`ANIMATIONS=true` requis), didascalies sur l'aperçu visage 8766.
 
+## ⚠️ V-R3 instable depuis le 06/11 (19/21, même sur l'ancien code)
+
+Trois séances le 06/11 (deux sur L1e-1, une sur le commit d'avant) donnent 18 à 19/21 là où le
+04/11 donnait 21/21. Les deux KO sont toujours les mêmes : la capture CLI de `route_speed` est
+vide (le CLI `ros2 topic echo` ne découvre pas le publieur : « does not appear to be published
+yet », avec ~46 conteneurs actifs sur le PC) alors que T2 prouve l'arrêt par `cmd_vel_follow` ;
+et l'arrivée à la Titan grise manquée de ~7 m après le `reboot_sans_reprise`. Avant de conclure
+à une régression ou à un flake : rejouer sur un hôte calme, comparer le facteur temps réel gz,
+et remplacer les captures CLI par un pilote rclpy (validate-jeu-a1.sh le fait déjà). Rappel :
+le script EXIGE que drive, rehearsal (scenario chantiers) et gaze_follower soient lancés AVANT
+(sinon « PRÉCONDITION … absent », code 2).
+
 ## Séance « Chantiers » — répétition simulée complète (lot R3, 14/10)
 
 Le trajet des Nefs à la grue Titan grise (`docs/etude-repetition-simulee.md`
