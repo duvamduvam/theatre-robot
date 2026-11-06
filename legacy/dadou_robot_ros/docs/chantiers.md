@@ -1025,8 +1025,8 @@ Ouvert le 2026-11-06. Étude : [`hardware/etude-acoustique.md`](hardware/etude-a
 **Fait le 06/11** : ampli identifié (Focal Impulse 4.320, sur la SD-50B-12), 10″ central
 = caisson LD Systems 4 Ω bridgé sur 3/4. **Défaut principal trouvé et corrigé :** le 10″
 recevait toute la voix (`X-OVER MODE` = FULL) → passé en LPF, avec le passe-haut 75 Hz
-sur les ICU. **Suite** : écoute, puis balayage enregistré pour caler la fréquence de
-coupure, la phase et les gains ; grille du 10″ ; étanchéité du torse ; SD-150B-12
+sur les ICU. Écoute après correction : « ça a l'air mieux ». **Suite** : réglage des 4 potentiomètres
+(procédure §6.4) **une seule fois, APRÈS la pose de la SD-150B-12** (décision de David) ; grille du 10″ ; étanchéité du torse ; SD-150B-12
 audio (refonte électrique) ; alimentation propre de la mixette (bruit sur le 5 V du
 convertisseur, à enregistrer dans 3 cas).
 

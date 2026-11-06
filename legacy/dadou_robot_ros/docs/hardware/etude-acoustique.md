@@ -286,6 +286,10 @@ de la chaîne.
 
 ### 6.4 Réglage des 4 potentiomètres (procédure, d'après la notice p. 23-25)
 
+> **DÉCISION de David (06/11) : réglage REPORTÉ après la pose de la SD-150B-12.** On ne
+> le fait qu'une fois : sur la SD-50B-12, le plafond du convertisseur fausserait les gains.
+> Les potentiomètres restent en l'état d'ici là.
+
 Écoute du 06/11 après correction des commutateurs : **« ça a l'air mieux »** (David).
 
 Les quatre potentiomètres : `FRONT GAIN` (ICU), `REAR GAIN` (10″), `FREQ`, `PHASE`. La
