@@ -167,6 +167,12 @@ dans **un seul domaine d'alimentation isolé**, la future SD-150B-12 audio
 **et c'est là que l'isolateur à transformateurs a sa place**. À valider avant d'acheter
 quoi que ce soit.
 
+> **EN ATTENTE (06/11)** : il manque à David un connecteur USB pour alimenter la mixette
+> depuis le 5 V du convertisseur. Il est **commandé**, et les enregistrements suivront sa
+> réception. Protocole précisé : téléphone fixe à ~10 cm d'un ICU, volumes inchangés (repère
+> au feutre sur `MAIN MIX`), nom du cas dit à voix haute puis 10 s de silence ; cas A
+> batterie, B 5 V, C 5 V jack du Pi débranché ; baisser `MAIN MIX` avant chaque changement.
+
 **Ce qui le prouverait (enregistrement, pas vidéo) :** enregistrer 10 s de silence à la
 sortie de la mixette (ou au téléphone collé au haut-parleur central, volume fixe) dans
 trois cas : batterie, 5 V du convertisseur, 5 V du convertisseur avec le jack C-Media

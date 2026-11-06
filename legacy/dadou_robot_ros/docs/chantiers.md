@@ -1028,7 +1028,8 @@ recevait toute la voix (`X-OVER MODE` = FULL) → passé en LPF, avec le passe-h
 sur les ICU. Écoute après correction : « ça a l'air mieux ». **Suite** : réglage des 4 potentiomètres
 (procédure §6.4) **une seule fois, APRÈS la pose de la SD-150B-12** (décision de David) ; ~~grille du 10″~~ (écarté : déco, design gardé) ; étanchéité du torse ; SD-150B-12
 audio (refonte électrique) ; alimentation propre de la mixette (bruit sur le 5 V du
-convertisseur, à enregistrer dans 3 cas).
+convertisseur, à enregistrer dans 3 cas ; **en attente d'un connecteur USB commandé par
+David le 06/11**).
 
 ## Suivi de personne aux roues
 
