@@ -278,9 +278,9 @@ de la chaîne.
 1. Écoute de la voix : plus claire ? moins de redémarrages de l'ampli sur la SD-50B-12 ?
 2. Balayage enregistré à 1 m (§3) pour caler `FREQ` (départ ~110 Hz) et `PHASE` (0 contre
    180), puis les gains selon la procédure de la notice.
-3. Plaque à trous de la grille du 10″ (§4) : ne compte plus que pour le grave
-   transmis. Toujours à tester, mais l'enjeu baisse maintenant que le 10″ ne porte plus
-   la voix.
+3. ~~Plaque à trous de la grille du 10″ (§4)~~ → **ÉCARTÉ par David (06/11)** : c'est de
+   la décoration, le design ne change pas. Enjeu faible depuis que le 10″ ne joue plus
+   que le grave. Ne pas reproposer.
 4. Étanchéité du torse (caches du dessus) au remontage.
 5. SD-150B-12 audio (refonte électrique) et alimentation propre de la mixette (§5).
 
