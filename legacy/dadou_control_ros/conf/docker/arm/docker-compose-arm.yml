@@ -53,7 +53,7 @@ services:
       # que robot/vision) — ⚠️ à faire AVANT de déployer ce lot.
       - ../../../../robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
-      #- ../../../../robot_bringup:/home/ros2_ws/src/robot_bringup
+      #- ../../../../didier_bringup:/home/ros2_ws/src/didier_bringup
       - ../../../../../log:/home/ros2_ws/log
       - ../../../../../build:/home/ros2_ws/build
       - ../../../../../install:/home/ros2_ws/install

@@ -15,7 +15,7 @@ SÉCURITÉ (cf. CLAUDE.md — ce node publie une consigne roues) :
  - Le suivi de personne (person_follower) doit être OFF pendant la route :
    même créneau du mux. Rien ici ne le force — c'est une règle de séance,
    écrite dans le README et l'étude §12.
- - Ce package n'est JAMAIS dans robot_bringup (test anti-fuite). La pose
+ - Ce package n'est JAMAIS dans didier_bringup (test anti-fuite). La pose
    consommée ici (/ground_truth/odom, vérité terrain gz) n'existe que dans
    Gazebo : sur le vrai robot, ce node n'aurait aucune pose et resterait à zéro.
  - Lot M1 « aller voir » (spec-aller-voir.md) : un ordre `route_goto` du

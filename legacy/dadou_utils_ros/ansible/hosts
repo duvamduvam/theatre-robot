@@ -4,7 +4,7 @@ robot:
         local_project_dir: dadou_robot_ros
         project_ros_dir: robot
         project_name: robot
-        launch_cmd: ros2 launch robot_bringup robot_app.launch.py
+        launch_cmd: ros2 launch didier_bringup robot_app.launch.py
         # Packages poussés dans ros2_ws/src/ (rôle synchronise) : les 2 communs + les 6
         # packages ROS autonomes — EXACTEMENT ce que le Pi reçoit depuis avant L1e-1
         # (le tri « sim-only hors du Pi » viendra avec machines/<hôte>/, L1e-4). La liste
@@ -13,7 +13,7 @@ robot:
         packages:
             - theatre_contrats
             - robot_interfaces
-            - robot_bringup
+            - didier_bringup
             - didier_description
             - didier_drive
             - robot_rehearsal
@@ -66,7 +66,7 @@ vision:
         local_project_dir: dadou_vision_ros
         project_ros_dir: vision
         project_name: vision
-        # Heartbeat V0 (robot_bringup était un copier-coller du groupe robot,
+        # Heartbeat V0 (didier_bringup était un copier-coller du groupe robot,
         # ce package n'existe pas côté vision). Deviendra un launch file en V1.
         launch_cmd: ros2 run vision vision_status --ros-args -r __ns:=/didier
 

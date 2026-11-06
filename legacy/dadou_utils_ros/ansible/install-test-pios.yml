@@ -58,7 +58,7 @@
         #- "--delete"
         #- "--exclude=.editorconfig"
         #- "--exclude=.gitignore"
-        #- "--exclude=robot_bringup/"
+        #- "--exclude=didier_bringup/"
         #- "--exclude=robot_interfaces/"
 
   - name: Load mail notification password

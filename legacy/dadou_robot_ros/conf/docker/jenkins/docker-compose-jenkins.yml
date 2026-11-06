@@ -19,7 +19,7 @@ services:
       - ../../../robot:/home/ros2_ws/src/robot/robot
       - ../../../json:/home/ros2_ws/src/robot/json
       - ../../../medias:/home/ros2_ws/src/robot/medias
-      - ../../../../robot_bringup:/home/ros2_ws/src/robot_bringup
+      - ../../../../didier_bringup:/home/ros2_ws/src/didier_bringup
       - ../../../../robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../../build:/home/ros2_ws/build
       - ../../../../../install:/home/ros2_ws/install

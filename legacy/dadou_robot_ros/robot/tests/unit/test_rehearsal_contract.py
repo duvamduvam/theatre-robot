@@ -5,7 +5,7 @@ Trois garanties :
  1. plafonds durs IDENTIQUES à ceux du suivi de personne (même créneau du
     mux, mêmes 50 kg) ;
  2. ANTI-FUITE : le package sim-only n'est référencé nulle part dans le code
-    embarqué (robot/, robot_bringup, didier_drive, didier_web) ;
+    embarqué (robot/, didier_bringup, didier_drive, didier_web) ;
  3. l'itinéraire livré (config/rue.yaml) est valide, reste sur le trottoir du
     monde rue.sdf, et ses POI sont exactement ceux attendus ;
  4. lot R3 « chantiers » : itinéraire (30 POI dans l'ordre de la marche, étude
@@ -70,7 +70,7 @@ def test_anti_fuite_aucune_reference_dans_le_code_embarque():
     zones = [
         ROOT / "robot",
         ROOT / "conf" / "ros2",
-        PACKAGES / "robot_bringup",
+        PACKAGES / "didier_bringup",
         PACKAGES / "didier_drive",
         PACKAGES / "didier_web",
     ]

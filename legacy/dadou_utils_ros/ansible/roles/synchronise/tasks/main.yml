@@ -1,8 +1,8 @@
 
 
-#- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/robot_bringup" with "{{ ros2_ws }}/src/"
+#- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/didier_bringup" with "{{ ros2_ws }}/src/"
 #  synchronize:
-#    src: "{{ local_projects_dir }}/{{ local_project_dir }}/robot_bringup"
+#    src: "{{ local_projects_dir }}/{{ local_project_dir }}/didier_bringup"
 #    dest: "{{ ros2_ws }}/src/"
 #    recursive: yes
 #    delete: yes
@@ -33,7 +33,7 @@
       - "--exclude=venv/"
       - "--exclude=.editorconfig"
       - "--exclude=.gitignore"
-      #- "--exclude=robot_bringup/"
+      #- "--exclude=didier_bringup/"
       #- "--exclude=robot_interfaces/"
 
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/"

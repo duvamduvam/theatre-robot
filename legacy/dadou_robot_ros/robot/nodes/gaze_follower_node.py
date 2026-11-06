@@ -9,7 +9,7 @@ SÉCURITÉ (cf. CLAUDE.md) :
    Activation en direct via le topic `gaze` ("on"/"off") — un bouton télécommande
    pourra s'y brancher plus tard.
 
-NON AJOUTÉ au launch de prod (robot_bringup) POUR L'INSTANT : tant que le sens du
+NON AJOUTÉ au launch de prod (didier_bringup) POUR L'INSTANT : tant que le sens du
 cou (direction_sign) n'a pas été validé au protocole caméra, ce node se lance À LA
 MAIN. Voir le rapport de validation sim et « reste à valider sur le vrai robot ».
 
