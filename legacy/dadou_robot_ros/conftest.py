@@ -19,10 +19,10 @@ sys.path.insert(0, os.path.join(PACKAGES, "didier_drive"))
 # paquet robot_sim) : `from robot_sim_lib... import ...` sans colcon build.
 sys.path.insert(0, os.path.join(PACKAGES, "robot_sim"))
 
-# Même logique pour robot_web (protocole/catalogue purs du pont web W0,
+# Même logique pour didier_web (protocole/catalogue purs du pont web W0,
 # web_bridge_node.py lui-même n'est PAS importé par les tests -- il a besoin
 # de rclpy/aiohttp, absents de l'environnement de dev hôte).
-sys.path.insert(0, os.path.join(PACKAGES, "robot_web"))
+sys.path.insert(0, os.path.join(PACKAGES, "didier_web"))
 
 # Idem pour robot_rehearsal (salle de répétition simulée, SIM-ONLY) : logique
 # pure du cheminement (route.py) et contrats ; route_driver_node.py n'est

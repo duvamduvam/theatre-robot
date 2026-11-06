@@ -1,4 +1,4 @@
-"""Tests du protocole pur du pont web W0 (robot_web.web_protocol).
+"""Tests du protocole pur du pont web W0 (didier_web.web_protocol).
 
 Couvre : whitelist (garantie de sécurité W0 -- pas de roues/e_stop), parsing
 des 5 types de message client, auth/écriture exclusive/heartbeat de
@@ -21,8 +21,8 @@ import types
 
 import pytest
 
-from robot_web import web_catalog, web_protocol
-from robot_web.web_protocol import (
+from didier_web import web_catalog, web_protocol
+from didier_web.web_protocol import (
     DRIVE_TIMEOUT_S, HEARTBEAT_PERIOD_S, TOPICS_FLUX, TOPICS_LECTURE, WHITELIST,
     WHITELIST_REPETITION, WHITELIST_SPECTACLE, WHITELIST_TECHNIQUE,
     WRITE_TIMEOUT_S, DriveFlow, ProtocolError, SessionManager, build_ack,
@@ -32,7 +32,7 @@ from robot_web.web_protocol import (
     stop_all_commands,
 )
 
-# Racine du package robot_web (static/ est un frère de robot_web/ dans le dépôt).
+# Racine du package didier_web (static/ est un frère de didier_web/ dans le dépôt).
 PACKAGE_WEB = pathlib.Path(web_protocol.__file__).resolve().parent.parent
 STATIC = PACKAGE_WEB / "static"
 
@@ -44,7 +44,7 @@ TOPICS_INTERDITS = ["wheels", "cmd_vel", "cmd_vel_web", "cmd_vel_remote", "cmd_v
 
 def imported_roots(module):
     """Racines des paquets réellement importés par un module (via son AST).
-    Même motif que test_wheels_payload.py : robot_web doit rester un paquet
+    Même motif que test_wheels_payload.py : didier_web doit rester un paquet
     autonome, importable dans le conteneur sim sans rclpy ni dadou_utils_ros."""
     tree = ast.parse(pathlib.Path(module.__file__).read_text())
     roots = set()
@@ -999,10 +999,10 @@ def pont(monkeypatch):
     }
     for nom, module in faux.items():
         monkeypatch.setitem(sys.modules, nom, module)
-    monkeypatch.delitem(sys.modules, "robot_web.web_bridge_node", raising=False)
-    module = importlib.import_module("robot_web.web_bridge_node")
+    monkeypatch.delitem(sys.modules, "didier_web.web_bridge_node", raising=False)
+    module = importlib.import_module("didier_web.web_bridge_node")
     yield module
-    sys.modules.pop("robot_web.web_bridge_node", None)
+    sys.modules.pop("didier_web.web_bridge_node", None)
 
 
 def _creer_noeud(pont, monkeypatch, domaine="43", **params):

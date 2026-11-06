@@ -20,7 +20,7 @@ services:
         didier_drive: ../../../../didier_drive
         robot_rehearsal: ../../../../robot_rehearsal
         robot_sim: ../../../../robot_sim
-        robot_web: ../../../../robot_web
+        didier_web: ../../../../didier_web
     # Supervision par le DÉMON Docker (assainissement 2026-07-11) : relance
     # sur crash et au boot, sauf arrêt volontaire (docker stop / systemctl
     # stop robot). robot.service n'est plus qu'un interrupteur up -d / stop —
@@ -57,7 +57,7 @@ services:
       # Pont web (console navigateur, contenus/supervision — drive_enabled
       # reste false sur le robot, cf. robot_app.launch.py). Même mécanique de
       # rsync que didier_drive.
-      - ../../../../robot_web:/home/ros2_ws/src/robot_web
+      - ../../../../didier_web:/home/ros2_ws/src/didier_web
       - ../../../../../build:/home/ros2_ws/build
       - ../../../../../install:/home/ros2_ws/install
       - ../../../../../log:/home/ros2_ws/log

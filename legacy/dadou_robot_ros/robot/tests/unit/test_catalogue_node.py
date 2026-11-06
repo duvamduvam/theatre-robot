@@ -5,7 +5,7 @@ web_catalog.next_publication, pure. Les valeurs attendues sont GRAVÉES.
 """
 import json
 
-from robot_web.web_catalog import build_catalog, next_publication
+from didier_web.web_catalog import build_catalog, next_publication
 
 
 def test_premiere_publication_toujours_faite():

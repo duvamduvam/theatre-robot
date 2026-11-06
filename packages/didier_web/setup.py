@@ -3,7 +3,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = 'robot_web'
+package_name = 'didier_web'
 
 setup(
     name=package_name,
@@ -27,8 +27,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'web_bridge = robot_web.web_bridge_node:main',
-            'catalogue = robot_web.catalogue_node:main',
+            'web_bridge = didier_web.web_bridge_node:main',
+            'catalogue = didier_web.catalogue_node:main',
         ],
     },
 )

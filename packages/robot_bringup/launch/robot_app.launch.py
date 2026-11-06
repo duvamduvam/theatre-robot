@@ -148,7 +148,7 @@ def generate_launch_description():
     #    ]
     #)
 
-    # Pont web (robot_web) : supervision + contenus + panneau technique depuis
+    # Pont web (didier_web) : supervision + contenus + panneau technique depuis
     # un navigateur -- http://192.168.1.2:8765, badge rouge ROBOT RÉEL (domain 42).
     # SÉCURITÉ : drive_enabled n'est PAS passé -> false (défaut du node), le
     # publisher cmd_vel_web n'existe donc pas : le pilotage web reste SIM-ONLY
@@ -160,7 +160,7 @@ def generate_launch_description():
     # (zéro ré-encodage sur le Pi robot). json_dir = structure assemblée par
     # Ansible (json/ à plat dans src/robot/, cf. docker-compose-sim.yml).
     web_bridge_node = Node(
-        package="robot_web",
+        package="didier_web",
         executable="web_bridge",
         name="web_bridge_node",
         parameters=[{
@@ -176,7 +176,7 @@ def generate_launch_description():
     # Ansible dans conf/ (monté dans le conteneur, survit aux rsync) ; absent
     # -> "dev". Mêmes chemins que web_bridge_node (json/ à plat dans src/robot/).
     catalogue_node = Node(
-        package="robot_web",
+        package="didier_web",
         executable="catalogue",
         name="catalogue_node",
         parameters=[{

@@ -1,7 +1,7 @@
 "use strict";
 /*
  * Console de régie de Didier -- logique front, vanilla JS (pas de framework,
- * pas de build). Le contrat protocole est celui de robot_web/web_protocol.py
+ * pas de build). Le contrat protocole est celui de didier_web/web_protocol.py
  * côté serveur. La LIAISON (WebSocket, auth, heartbeat, envoi des cmd, bandeau,
  * vidéo MJPEG, bouton catalogue) vit dans commun.js, partagée avec la page
  * « scène » (scene.js) : ce fichier-ci ne garde que ce qui est propre à la

@@ -19,7 +19,7 @@ import pytest
 
 from dadou_utils_ros.utils_static import ANIMATION, AUDIO, FACE, RELAY, ROBOT_LIGHTS, STOP, TYPE
 from controller.buttons.button_config import BUTTONS_LAYOUT
-from robot_web.web_catalog import build_catalog
+from didier_web.web_catalog import build_catalog
 
 JSON_DIR = pathlib.Path(__file__).resolve().parents[4] / "dadou_robot_ros" / "json"
 CATALOGUE = build_catalog(JSON_DIR)

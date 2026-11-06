@@ -59,7 +59,7 @@ JEU_JOURNAL = 'jeu/journal'
 
 # ---------------------------------------------------------------- catalogue + version (lot L1c)
 # StringTime LATCHÉ (qos.latched() des DEUX côtés), publié par catalogue_node
-# (robot_web) : msg = JSON de l'objet des 6 familles {faces, audios, animations,
+# (didier_web) : msg = JSON de l'objet des 6 familles {faces, audios, animations,
 # relays, robot_lights, visuals}. Republié seulement quand il change (L1d : écrire
 # un fichier suffit). Sert la télécommande même sans pont web.
 CATALOGUE = 'catalogue'

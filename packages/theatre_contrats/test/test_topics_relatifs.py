@@ -23,7 +23,7 @@ def test_topics_de_la_vision_graves():
 
 def test_topics_du_jeu_graves():
     # Lot A1 (sélecteur de jeu) : valeurs DE FIL, partagées avec la page scène
-    # (robot_web) et le remap du régisseur (rehearsal.launch.py jeu:=true).
+    # (didier_web) et le remap du régisseur (rehearsal.launch.py jeu:=true).
     assert topics.JEU_CONSOLE == "jeu/console"
     assert topics.JEU_INTENTION == "jeu/intention"
     assert topics.JEU_CHAT_MOVE == "jeu/chat_move"

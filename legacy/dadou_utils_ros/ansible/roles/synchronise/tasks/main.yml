@@ -72,7 +72,7 @@
   loop: "{{ packages | default(packages_default) }}"
 
 # Lot L1c (2026-11-04) : le robot publie le sha déployé (topic `deploy_sha`, nœud
-# catalogue_node de robot_web ; badge « version » de la console web). Le fichier est
+# catalogue_node de didier_web ; badge « version » de la console web). Le fichier est
 # lu dans le conteneur à /home/ros2_ws/src/robot/conf/DEPLOY_SHA (conf/ est monté).
 # Le lookup `pipe` s'exécute sur le PC (le git n'existe pas sur le Pi) ; `-C` sur
 # legacy/ remonte au dépôt theatre-robot. Suffixe `-dirty` OBLIGATOIRE si l'arbre

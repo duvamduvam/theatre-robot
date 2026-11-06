@@ -60,8 +60,8 @@ from robot_interfaces.msg import StringTime
 # n'attrape que TypeError/JSONDecodeError (pas tout ValueError) et sa
 # sémantique générique est gardée à l'identique.
 from theatre_contrats import stringtime
-from robot_web.web_catalog import build_catalog
-from robot_web.web_protocol import (
+from didier_web.web_catalog import build_catalog
+from didier_web.web_protocol import (
     DRIVE_TIMEOUT_S, TOPICS_FLUX, TOPICS_LECTURE, WRITE_TIMEOUT_S, DriveFlow,
     ProtocolError, SessionManager, build_ack, build_err, build_feed,
     build_hb_ack, build_hello, build_state, drive_to_twist,
@@ -800,7 +800,7 @@ def build_app(node: WebBridgeNode) -> web.Application:
     app["node"] = node
     app["clients"] = {}  # client_id -> WebSocketResponse, pour le broadcast d'état
 
-    static_dir = pathlib.Path(get_package_share_directory("robot_web")) / "static"
+    static_dir = pathlib.Path(get_package_share_directory("didier_web")) / "static"
 
     async def index_handler(_request):
         return web.FileResponse(static_dir / "index.html")

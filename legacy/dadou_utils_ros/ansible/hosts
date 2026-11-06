@@ -18,7 +18,7 @@ robot:
             - didier_drive
             - robot_rehearsal
             - robot_sim
-            - robot_web
+            - didier_web
 
 # Console de pilotage sur Pi 4 + écran (hostname control, Pi OS Full trixie,
 # flashé le 2026-07-04). Alias ssh "c" (User pi, clé didier). Ne pas confondre

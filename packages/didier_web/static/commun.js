@@ -4,7 +4,7 @@
  * « scène » (scene.js). Chargé AVANT le script de la page. Vanilla JS, pas de
  * framework, pas de build.
  *
- * Contient tout ce qui touche au contrat protocole de robot_web/web_protocol.py
+ * Contient tout ce qui touche au contrat protocole de didier_web/web_protocol.py
  * côté navigateur -- connexion + reconnexion, auth, heartbeat/RTT, envoi des cmd,
  * bandeau (mode, connexion, écriture, prise de main, token), journal d'erreurs --
  * plus les flux MJPEG (vidéo, visage) et le bouton « catalogue » (data-topic/data-value).

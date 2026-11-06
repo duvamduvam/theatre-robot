@@ -152,9 +152,9 @@ SITES = [
      "stringtime.decode_or_raw(raw, CHAT_MOVE_TOPIC)"),
     ("../../packages/robot_rehearsal/robot_rehearsal/fault_relay_node.py", "_on_cmd",
      "stringtime.loads(msg.msg)"),
-    ("../../packages/robot_web/robot_web/web_bridge_node.py", "_on_message",
+    ("../../packages/didier_web/didier_web/web_bridge_node.py", "_on_message",
      "stringtime.loads(msg.msg)"),
-    ("../../packages/robot_web/robot_web/web_bridge_node.py", "_on_feed",
+    ("../../packages/didier_web/didier_web/web_bridge_node.py", "_on_feed",
      "stringtime.loads(msg.msg)"),
 ]
 

@@ -1,4 +1,4 @@
-"""Tests du catalogue pur du pont web W0 (robot_web.web_catalog) CONTRE LES
+"""Tests du catalogue pur du pont web W0 (didier_web.web_catalog) CONTRE LES
 VRAIS FICHIERS json/ du dépôt -- même motif que test_expressions_json.py /
 test_sequences_assets.py : les contrats de données courent sur les vrais
 assets, pas sur des fixtures synthétiques qui masqueraient une dérive de
@@ -8,7 +8,7 @@ structure (ex. si expressions.json changeait de forme demain).
 import json
 import pathlib
 
-from robot_web.web_catalog import build_catalog, read_deploy_sha
+from didier_web.web_catalog import build_catalog, read_deploy_sha
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 JSON_DIR = REPO_ROOT / "json"

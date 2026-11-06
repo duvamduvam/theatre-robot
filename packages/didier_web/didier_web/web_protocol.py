@@ -21,7 +21,7 @@ import math
 
 # --- Whitelist des topics publiables --------------------------------------
 # Chaînes littérales dupliquées volontairement (pas d'import dadou_utils_ros.
-# utils_static) : robot_web est un package AUTONOME façon didier_drive, le
+# utils_static) : didier_web est un package AUTONOME façon didier_drive, le
 # conteneur de simulation ne l'embarque pas. wheels/cmd_vel_*/e_stop sont
 # ABSENTS ici par construction -- c'est la garantie W0 (pas d'accès roues ni
 # verrou e_stop tant que W1/W3 ne sont pas faits, voir etude-interface-web.md).

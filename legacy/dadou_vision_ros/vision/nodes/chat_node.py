@@ -76,7 +76,7 @@ POURQUOI `diag_port` (lot du 2026-09-13, demande de David en séance -- « un
        `asyncio.new_event_loop()` + `AppRunner`/`TCPSite` (PAS `web.run_app` :
        il tente d'installer des handlers de signal, qui ne fonctionnent QUE
        dans le thread principal -- ça planterait ici). Même motif que
-       packages/robot_web/robot_web/web_bridge_node.py
+       packages/didier_web/didier_web/web_bridge_node.py
        (mono-dépôt) et robot/nodes/face_sim_node.py, à ceci près que
        CES DEUX nodes-là hébergent aiohttp dans leur thread PRINCIPAL (rclpy.
        spin y est le thread secondaire) -- chat_node ne peut pas faire pareil,
@@ -391,7 +391,7 @@ class _DiagState:
 
 
 # Page HTML AUTONOME (pas de CDN -- même contrainte que le reste du parc, cf.
-# robot_web/static et face_sim_node._INDEX_HTML : le robot n'a pas toujours de
+# didier_web/static et face_sim_node._INDEX_HTML : le robot n'a pas toujours de
 # réseau). Vumètre en échelle LOGARITHMIQUE (dBFS) : un vumètre linéaire en
 # unités int16 est illisible, la parole vit tout en bas de l'échelle -- cf.
 # spec du lot. FLOOR_DB (JS) : tout ce qui est plus bas est écrasé à 0% de
@@ -531,7 +531,7 @@ async def _diag_events_handler(request: web.Request) -> web.StreamResponse:
     WebSocket, inutilement complexe pour un simple flux de lecture seule.
     Chaque client est INDÉPENDANT (sa propre boucle d'envoi) ; déconnexion
     propre (onglet fermé) avalée, même motif que /video et /stream côté
-    robot_web/face_sim_node."""
+    didier_web/face_sim_node."""
     state: _DiagState = request.app["state"]
     resp = web.StreamResponse(status=200, headers={
         "Content-Type": "text/event-stream",
@@ -563,7 +563,7 @@ class DiagServer:
     `run_app` tente d'installer des handlers de signal, qui ne fonctionnent
     QUE dans le thread principal : ça planterait ici). Aucun arrêt propre
     exposé (pas demandé par la spec, même tolérance que le thread rclpy.spin
-    de robot_web/face_sim_node) : le thread daemon meurt avec le process."""
+    de didier_web/face_sim_node) : le thread daemon meurt avec le process."""
 
     def __init__(self, port: int, state: _DiagState):
         self._port = port
@@ -635,7 +635,7 @@ class ChatNode(Node):
         # personnage, cf. les autres ci-dessus) : serveur de diagnostic web
         # (vumètre + latences par tour, cf. docstring de module POURQUOI
         # `diag_port`). 0 = DÉSACTIVÉ (défaut) -- même philosophie que
-        # `web_port`/`drive_enabled` côté robot_web/web_bridge_node.py, un
+        # `web_port`/`drive_enabled` côté didier_web/web_bridge_node.py, un
         # toggle d'exploitation qui n'a pas sa place dans le socle de config
         # partagé du personnage (default_chat_parameters ci-dessus).
         self.declare_parameter("diag_port", 0)

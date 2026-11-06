@@ -24,7 +24,7 @@ services:
         robot_description: ../../../../../packages/robot_description
         robot_sim: ../../../../../packages/robot_sim
         didier_drive: ../../../../../packages/didier_drive
-        robot_web: ../../../../../packages/robot_web
+        didier_web: ../../../../../packages/didier_web
         robot_rehearsal: ../../../../../packages/robot_rehearsal
     environment:
       - DISPLAY=${DISPLAY}
@@ -46,7 +46,7 @@ services:
       # "robot" plus bas) : OFF par défaut, comme gaze_follower -- un lancement
       # explicite (ANIMATIONS=true docker compose ... up) est requis.
       - ANIMATIONS=${ANIMATIONS:-false}
-      # web_bridge_node (pont HTTP/WebSocket W0, paquet robot_web) : même
+      # web_bridge_node (pont HTTP/WebSocket W0, paquet didier_web) : même
       # prudence qu'ANIMATIONS -- OFF par défaut, activation explicite
       # (WEB=true docker compose ... up). http://localhost:8765 une fois lancé.
       # WEB_PORT : conteneur en réseau host, une collision avec un service du
@@ -97,7 +97,7 @@ services:
       # jeu, lancé À LA MAIN (ros2 run didier_jeu jeu_node), cf. son README.
       - ../../../../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
       - ../../../../../packages/didier_drive:/home/ros2_ws/src/didier_drive
-      - ../../../../../packages/robot_web:/home/ros2_ws/src/robot_web
+      - ../../../../../packages/didier_web:/home/ros2_ws/src/didier_web
       # robot_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
       # bringup du robot) — cheminement de Didier dans la rue, lancé À LA
       # MAIN (rehearsal.launch.py), cf. son README.

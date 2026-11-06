@@ -53,7 +53,7 @@ lance "/twist_deadman( |$)" drive ros2 launch didier_drive drive.launch.py use_s
 lance "lib/robot_rehearsal/director" rehearsal \
   ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
 # Port à part : celui de la sim (WEB=true, 8765) serait déjà pris.
-lance "/web_bridge( |$)" web ros2 launch robot_web web.launch.py web_port:=${VALIDATE_WEB_PORT:-8775}
+lance "/web_bridge( |$)" web ros2 launch didier_web web.launch.py web_port:=${VALIDATE_WEB_PORT:-8775}
 sleep "$ATTENTE"
 
 # --- Lecture du graphe (sans démon : pas de topics périmés d'une passe précédente) --

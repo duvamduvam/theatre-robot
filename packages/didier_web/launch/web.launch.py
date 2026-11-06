@@ -1,7 +1,7 @@
 """Pont web du robot (W0) : supervision + contenus + panneau technique.
 
-    ros2 launch robot_web web.launch.py
-    ros2 launch robot_web web.launch.py web_port:=8765 token:=secret
+    ros2 launch didier_web web.launch.py
+    ros2 launch didier_web web.launch.py web_port:=8765 token:=secret
 
 Pas de use_sim_time ici : les timeouts de session (heartbeat WRITE_TIMEOUT_S)
 sont mesurés en horloge MURALE (time.monotonic(), voir web_protocol.py), pas
@@ -75,7 +75,7 @@ def generate_launch_description():
             PushRosNamespace(["/", LaunchConfiguration("robot_name")]),
 
             Node(
-                package="robot_web",
+                package="didier_web",
                 executable="web_bridge",
                 name="web_bridge_node",
                 parameters=[{

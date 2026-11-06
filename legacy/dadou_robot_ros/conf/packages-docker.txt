@@ -27,7 +27,7 @@ ros-jazzy-xacro
 # remote > anim, verrou e_stop. Requis même à WHEELS_CMD_VEL_ENABLED=False
 # (la chaîne est lancée par robot_app.launch.py, seule la consommation change).
 ros-jazzy-twist-mux
-# Pont web robot_web (web_bridge_node, lancé par robot_app.launch.py) :
+# Pont web didier_web (web_bridge_node, lancé par robot_app.launch.py) :
 # serveur HTTP/WebSocket + encodage JPEG du retour vidéo. AJOUT 2026-07-11 :
 # nécessite un REBUILD de l'image ARM au prochain déploiement.
 python3-aiohttp

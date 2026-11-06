@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>robot_web</name>
+  <name>didier_web</name>
   <version>0.1.0</version>
   <description>Pont web (WebSocket + HTTP) du robot de théâtre Dadou : supervision, contenus (animation/face/audio/lights), panneau technique. W0 -- aucun accès roues ni verrou e_stop (voir docs/etude-interface-web.md).</description>
   <maintainer email="achats@duvam.net">dadou</maintainer>

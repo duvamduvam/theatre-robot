@@ -286,7 +286,7 @@ def _publisher_topics(tree, constants):
 #     CHAT_FAULT_TOPIC dans packages/robot_rehearsal/robot_rehearsal/contracts.py (mono-dépôt)
 #     (gravés par robot/tests/unit/test_rehearsal_contract.py, régisseur) ;
 #   - "chat_text" et "chat_transcript" : le pont web du robot
-#     (robot_web/web_protocol.py : WHITELIST_TECHNIQUE et TOPICS_FLUX, gravés
+#     (didier_web/web_protocol.py : WHITELIST_TECHNIQUE et TOPICS_FLUX, gravés
 #     par robot/tests/unit/test_web_protocol.py, page « scène »).
 # On compare donc à des LITTÉRAUX écrits ici, jamais à une valeur recalculée.
 

@@ -44,7 +44,7 @@ COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
 # didier_jeu (lot A1, SIM-ONLY) : sélecteur de jeu, packages/ du mono-dépôt.
 COPY --from=didier_jeu . /home/ros2_ws/src/didier_jeu
 COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
-COPY --from=robot_web . /home/ros2_ws/src/robot_web
+COPY --from=didier_web . /home/ros2_ws/src/didier_web
 COPY --from=robot_rehearsal . /home/ros2_ws/src/robot_rehearsal
 COPY conf/scripts/launch-sim-in-docker.sh /home/ros2_ws/
 
@@ -79,7 +79,7 @@ COPY json/ /home/ros2_ws/json/
 # SECOND point d'entrée du même paquet "robot" charge Face -> Visual, qui LUI
 # importe imageio (les PNG de medias/visuals/{mouth,eye}) -- d'où
 # python3-imageio ci-dessus -- et sert un flux MJPEG en aiohttp/PIL (déjà
-# installés pour robot_web). medias/ N'EST PAS copié dans l'image (seulement
+# installés pour didier_web). medias/ N'EST PAS copié dans l'image (seulement
 # monté en volume par docker-compose-sim.yml) : sans ce volume,
 # Face.load_visuals() échoue au démarrage avec un log actionnable (voir
 # face_sim_node.py) plutôt qu'un plantage silencieux.
