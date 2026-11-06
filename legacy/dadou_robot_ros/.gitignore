@@ -29,6 +29,7 @@ essais/voix/sorties/
 # Le livrable versionné, c'est docs/hardware/inventaire-stock.md — pas les images.
 docs/pictures/stock/
 docs/pictures/robot-2026-09-03/
+docs/pictures/robot-2026-11-05/
 
 # Sha git déployé (L1c) : écrit SUR LE ROBOT par Ansible au rsync, jamais sur le PC.
 # S'il existait ici, la sim (conf/ monté dans le conteneur) afficherait un faux sha

@@ -114,7 +114,8 @@ Le détail des décisions vit dans les `docs/etude-*.md` de chaque chantier.
 Priorités de tête (l'ordre compte) :
 0. **Protocole physique chat_node V2** — conversation complète sur le vrai
    matériel (le code est prêt et validé sim, jamais testé en réel).
-1. **Test scénique au sol** — première fois que cmd_vel roule au sol,
+1. **Refonte électrique** (`docs/hardware/plan-refonte-electrique.md`) — décidée le 05/11 AVANT tout roulage au sol : elle installe l'arrêt matériel.
+2. **Test scénique au sol** — première fois que cmd_vel roule au sol,
    télécommande en main. C'est LE verrou des roues web réelles et du suivi
    de personne réel.
 

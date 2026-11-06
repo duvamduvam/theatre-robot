@@ -592,3 +592,11 @@ Donc, pour la prochaine passe :
 |---|---|---|---|
 | Multimètre | `OHMTEC 254089`, CAT III 600 V, notice dans `datasheets/OHMTEC-254089-multimetre-notice.pdf` | DC 200 mV à 600 V (résolution 0,1 mV), résistance 200 Ω à 200 MΩ (résolution 0,1 Ω), courant jusqu'à 10 A, diode, continuité | Le bip sonne **sous 50 Ω** : il ne prouve pas une bonne masse. Sur 200 Ω, précision ±(0,8 % + 3 digits) : il ne lit pas une limite de 0,1 Ω. Retrancher les cordons |
 | Oscilloscope USB | `Hantek DSO-6022BE` (USB `04b4:6022`) | 2 voies, voir `protocole-oscillo.md` | Couplage DC seul. Masse reliée à l'USB : ne pas le brancher au PC sur le robot |
+
+## Raspberry Pi de l'atelier (relevés en SSH, 2026-11-04)
+
+| Carte | Mémoire | N° de série | État | Notes |
+|---|---|---|---|---|
+| Pi 4 Model B Rev 1.5 | 2 Go | `10000000e79839cb` | Démarre, programme robot installé et lancé le 04/11 | MAC Ethernet `d8:3a:dd:67:d6:30`, Wi-Fi fixe en .2 |
+| Pi 4 Model B Rev 1.4 | 4 Go | `10000000365ba865` | **Ne démarre plus depuis le branchement sur la nappe du robot, le 04/11** (LED rouge et verte fixes). Sain juste avant sur chargeur Dell. Récupération du bootloader à tenter | MAC `e4:5f:01:25:6e:ec` ; lectures instables et `dockerd` en SIGILL sur chargeur faible |
+| 3ᵉ Pi, modèle non relevé | ? | ? | **Ne démarre pas** le 04/11 : LED rouge et verte fixes, rien sur le réseau, avec la SD et le chargeur Dell qui font marcher le Pi de 4 Go | Récupération du bootloader non tentée |

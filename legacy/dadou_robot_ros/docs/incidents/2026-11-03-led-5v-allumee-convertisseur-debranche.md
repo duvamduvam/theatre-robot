@@ -366,4 +366,61 @@ stable, `restart=0`, nœuds lancés, `throttled=0x0`, 851 Mi utilisés et 993 Mi
 robot. `relays_node` meurt faute de PCF8574 à 0x21 : attendu sans matériel. Visage LED, servos,
 roues et Blinka 10.1.0 non testés sur le matériel.
 
+## Isolation du démarrage, 2026-11-04 (commit 7a0876b)
+
+Panne rejouée sur le Pi, `gpiod` désinstallé dans un conteneur jetable : les 15 processus partent,
+seul `system_node` meurt. `relays_node` reste vivant sans PCF8574, relais désactivés. Limite connue :
+un nœud mort n'est pas relancé, et la mort de `wheels_node` ne stoppe pas les autres nœuds.
+
+## Pi 4 de 4 Go, 2026-11-04 : instable
+
+Série `10000000365ba865`. Sans HAT il a démarré une fois, sur la SD du Pi de 2 Go. `dockerd` y plantait
+en SIGILL ; `/usr/bin/dockerd` relu 3 fois caches vidés a donné 2 empreintes différentes, alors qu'une
+lecture correspond au paquet. Puis David voit les clignotements revenir. Mémoire suspecte, contact SD
+non exclu : test en RAM interrompu, non mesuré. La SD a été éteinte brutalement (`orphan cleanup`) :
+à contrôler dans le Pi de 2 Go.
+
+Pi de 4 Go, 22h12 : `throttled=0x50005` stable, **sous-tension active** depuis 16 s après le boot,
+CPU bridé à 600 MHz, 56 °C, Docker et conteneur actifs. Les défauts vus sur ce Pi (8 flashs, lectures
+instables) peuvent venir de son alimentation : le verdict « mémoire suspecte » n'est plus retenu tant
+qu'il n'est pas retesté sur une bonne alimentation. Test mémoire reporté : résultat non concluant sous
+sous-tension, et risque pour la SD en cas de coupure.
+
+Pi de 4 Go sur chargeur Dell 50 W, sans HAT : `throttled=0x0` avant et après charge, 1,8 GHz, 66 °C.
+Test mémoire : 2 Go hachés 8 fois en 90 s, **0 divergence** ; `dockerd` relu 3 fois caches vidés,
+**empreinte identique** (`c693ba24…`) ; conteneur `restart=0`. La sous-tension venait du chargeur USB
+utilisé juste avant. Le Pi est sain sur ce test court. Reste à expliquer les 8 flashs vus sur le
+rail du robot, avec le HAT : le HAT et la tenue du rail sous charge ne sont pas mis hors de cause.
+
+## Correction 2026-11-04 — nappe GPIO et isolateur I²C
+
+David : pas de 5 V sur la nappe sans Pi, l'I²C est isolé. `overview.md` confirme un ISO1540 entre le
+Pi et le bus actionneurs. Le côté Pi de l'isolateur est alimenté par le Pi : les tests de tension à
+vide et de masse Pi/rail donnés pour la nappe ne valent rien. Méthode retenue : continuité, rail
+coupé, Pi débranché, entre SDA et SCL de l'isolateur côté Pi et les trous de la nappe (broches 3 et 5).
+
+À revoir aussi : l'hypothèse d'un courant moteur traversant le GPIO du Pi. Elle suppose une masse
+commune Pi/robot, que l'isolateur écarte pour l'I²C. Reste à vérifier pour les signaux LED (D18).
+
+## Pi de 4 Go branché sur la nappe, 2026-11-04 : LED rouge et verte fixes
+
+David choisit le sens en mesurant le 5 V aux deux bouts, branche : la LED 12 V reste éteinte, et
+revient dès la nappe retirée. Depuis, le Pi de 4 Go a les deux LED fixes, comme la 3ᵉ Pi. Le Pi de 2 Go
+a démarré ses LED et son RJ45, mais aucun Pi n'apparaît sur le réseau à ce moment. La nappe agit donc
+sur l'alimentation : elle n'est pas seulement reliée au côté isolé de l'ISO1540. Sens et câblage non
+établis. **Aucune nappe sur aucun Pi avant relevé complet de son brochage, rail coupé.** Erreur de
+consigne : le test de tension de la nappe donné le 04/11 était faux, et le sens annoncé n'était
+qu'une convention.
+
+## Pi de 2 Go sur la nappe dans l'autre sens, 2026-11-04 : fumée
+
+David branche le Pi de 2 Go sur la nappe dans l'autre sens : **fumée, câble d'alimentation du Pi chaud**,
+origine non localisée. Rebranché, démarrage difficile. Consigne : tout couper, plus de Pi sur la nappe.
+Les deux sens de nappe ont maintenant fait défaut : le câblage de la nappe ou de sa carte est suspect,
+pas seulement le sens. Un courant passant par le câble d'alimentation du Pi signale un chemin entre
+l'alimentation du Pi et celle du robot.
+
+Pi de 2 Go hors robot après la fumée, 2026-11-04 : répond sur RJ45, `throttled=0x0`, `dockerd` relu avec
+une empreinte stable, Docker actif. Les broches GPIO, l'I²C et le signal LED ne sont pas testés.
+
 Suite, 2026-11-04 23:50 : branche L1b+L1c déployée sur ce Pi (hors robot) et sur le Pi 5 vision, conteneurs stables (`restarts=0`), détail dans `operations.md`. Rien de plus testé sur le matériel du robot.

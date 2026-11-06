@@ -6,6 +6,70 @@
 > cinq** (pages PCBWay du 26/09). Les §2.x ci-dessous décrivent la situation
 > AVANT bascule ; l'étude : [`etude-cartes-100x100.md`](etude-cartes-100x100.md) §10.
 
+> **Devis réels du 04/11** : les 4 zip de `didier/pcb/kicad/fab/` ont été déposés dans
+> les calculateurs, sans compte et sans rien commander (navigateur headless, profil
+> vierge). Options par défaut : 2 couches, 1,6 mm, cuivre 35 µm/1 oz, vert.
+>
+> | | JLCPCB | Aisler (Europe) |
+> |---|---|---|
+> | Carte, 5 pièces | **4,00 $** les 4 cartes lues à l'identique (2,00 $ via l'app JLCONE) | **54,06 € HT / 64,33 € TTC** (carrier-m seule) |
+> | Carte, 3 pièces | — (minimum 5) | **34,03 € HT / 40,50 € TTC** |
+> | Port vers la France, 1 carte (0,29 kg) | Global Standard 7,60 $ (10-12 j) · EuroPacket 16,11 $ · DHL Express (DDP) 23,44 $ · FedEx (DDP) 23,79 $ | « Shipping worldwide for free » (page d'accueil) |
+> | Port, poids de 20 cartes (0,82 kg) | Global Standard 14,14 $ · EuroPacket 23,86 $ · DHL (DDP) 26,88 $ · FedEx (DDP) 27,64 $ | idem |
+> | **Les 4 designs, 5 pièces** | **16 $ + 14,14 à 26,88 $ de port = 30 à 43 $**, hors TVA et droit de 3 € | **≈ 257 € TTC** (4 × 64,33) |
+> | Les 4 designs, 3 pièces | — | **≈ 162 € TTC** (4 × 40,50) |
+>
+> **Ce qui n'est PAS établi** : le panier JLCPCB exige un compte, donc ni la TVA, ni le
+> droit de douane, ni les frais UE du 01/11 n'ont été vus ; rien ne prouve non plus que
+> le 4,00 $ s'applique aux 4 designs d'une même commande ni que Global Standard
+> (≤ 1,5 kg, ≤ 150 $) est DDP. Le poids groupé est une approximation : 4 × 0,29 kg font
+> 1,16 kg, au-dessus des 0,82 kg lus, donc le port réel peut dépasser ces chiffres.
+> Aisler : prix lu sur carrier-m seule, TVA allemande 19 % affichée, multiplié par 4 sans
+> vérifier de remise ou de frais par commande. Le §4 ci-dessous (110-150 €) est périmé.
+
+> ⛔ **Ne pas commander avant [`plan-verification-cartes.md`](plan-verification-cartes.md)** :
+> pistes 10 A de P trop étroites en 1 oz (2 oz = +32,49 € pour P, lu le 05/11).
+
+> **Mise à jour du 05/11 : 5ᵉ carte au panier** (`odometry`, 92 × 84 mm, violet, HASL au
+> plomb) : +3,57 €, port inchangé à 23,99 € (0,97 kg), **sous-total 32,92 €**, avant TVA et
+> douane, non commandé. Gravée avant validation sur robot, par décision de David.
+
+> **Panier JLCPCB lu le 04/11/2026** (compte achats@duvam.net, non commandé) :
+> 4 cartes × 5, 1,6 mm, **HASL au plomb**, une couleur par carte (M vert, L bleu,
+> P rouge, audio noir) : 4 × 3,57 € = **14,28 €**, port estimé **23,99 €**
+> (0,83 kg ; égal au DHL Express lu en $, mode non affiché au panier), coupon
+> **−8,93 €**, **sous-total 29,35 €**. Départ estimé le 08/11. La couleur et le
+> HASL au plomb sont sans surcoût ; sans plomb +1,16 €/carte, ENIG +15,80 €/carte.
+> Bleu, rouge et noir : 3 jours de production au lieu de 2. L'offre à ~4 $ se
+> cumule bien sur 4 cartes. **Toujours non vus** (avant l'étape de paiement) :
+> TVA, droit de 3 €/catégorie, frais de gestion douanière du 01/11.
+> ⚠️ La finition par défaut est **OSP** : à changer pour une soudure à la main.
+
+> **Devis réel du 04/11/2026** (calculateur public JLCPCB, Gerber de `fab/*.zip`
+> déposés, sans compte, panier non atteint). Les 4 cartes sont reconnues en
+> 2 couches, 100 × 100 mm ; options par défaut (FR-4, 1,6 mm, vert, **OSP**,
+> cuivre 1 oz), 5 pièces, production 2 jours.
+>
+> | Poste | Montant lu |
+> |---|---|
+> | Chaque carte, 5 pièces (« Special Offer ») | **4,00 $** (2,00 $ via l'appli JLCONE) |
+> | Port France, Global Standard Direct Line, 10-12 j | **14,14 $** |
+> | Port France, DHL Express (DDP), 2-4 j | **26,88 $** |
+> | Port France, FedEx Express (DDP), 3-5 j | **27,64 $** |
+> | Port France, EuroPacket, 6-9 j | **23,86 $** |
+>
+> **Total : 30,14 $ au plus bas (Direct Line), 42,88 $ en DHL DDP.** Le port est
+> mesuré sur une carte à 20 pièces (0,82 kg), en substitut du poids de 4 × 5.
+> **Non vérifié, faute de panier** : l'offre à 4 $ cumulée sur 4 cartes dans une
+> même commande (sans elle, 20 pièces d'une carte = 23,30 $ dont 4 $ de frais
+> d'ingénierie), la TVA, le droit de 3 €/catégorie, et les frais de gestion
+> douanière UE du 01/11/2026. Direct Line n'est pas marqué DDP.
+> ⚠️ Le calculateur chiffre le port vers les **États-Unis par défaut** (26,86 $) :
+> passer la destination sur France avant de lire.
+> Aisler : seule une page ancienne est lisible (12 € + 0,067 €/cm² × 3 pièces,
+> exemple de la page incohérent avec sa table) — non retenu comme prix actuel.
+> PCBWay : calculateur non piloté, pas de nouveau chiffre.
+
 Première estimation chiffrée de la fabrication des cartes du robot. Elle complète
 [`inventaire-stock.md`](inventaire-stock.md) (ce qu'on possède) et
 [`croisement-etudes.md`](croisement-etudes.md) (ce qu'il faut acheter) par la
@@ -167,8 +231,8 @@ important que le tableau.
 | Transfo d'isolation 600:600 Ω CI | 1 | 2,20 € TTC | 2,20 € | Gotronic TI600 |
 | Fiches débrochables 5,08 mm (2/3/6 pôles) | 13 | 0,42 / 0,62 / 0,66 € | ≈ 6,10 € | Reichelt, série CamdenBoss CTB9209 |
 | Adafruit **ISO1540** (isolateur I²C) | 2 | 10,29 € TTC | 20,58 € | Mchobby.be |
-| Module **INA226** | 2 | 9,20 € TTC | 18,40 € | Gotronic (INA226-1A) |
-| Module **PCA9685** | 1 *(1 déjà en stock)* | 24,50 € TTC | 24,50 € | Gotronic ADA1411 — **shield Adafruit, majorant** : un breakout générique coûte bien moins, non chiffré |
+| Module **INA226** | 2 | 9,20 € TTC | 18,40 € | Gotronic (INA226-1A) — ⚠️ 05/11 : brochage à confirmer contre le CJMCU-226 6 broches qu'attendent M7/M8 |
+| Module **PCA9685** | 1 *(1 déjà en stock)* | 24,50 € TTC | 24,50 € | Gotronic ADA1411 — ⚠️ **05/11 : NE PAS COMMANDER cette référence**, un shield ne s'enfiche pas sur le support 1×6 de la carte Moteurs ; il faut un module au format du `HW-170` (62,2 × 25,4). — **shield Adafruit, majorant** : un breakout générique coûte bien moins, non chiffré |
 | | | | **≈ 81 €** | |
 
 Deux réserves sur ce tableau : les deux relais sont vendus sous une désignation
