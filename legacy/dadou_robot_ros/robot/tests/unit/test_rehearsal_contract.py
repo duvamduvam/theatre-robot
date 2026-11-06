@@ -53,7 +53,7 @@ def test_verite_terrain_declaree_dans_le_xacro_et_le_bridge():
     bridge, avec le MÊME nom que le contrat côté ROS (relatif depuis L1b) et le
     nom gz du plugin (absolu, le monde gz ignore les namespaces ROS). Lu dans
     les vrais fichiers."""
-    xacro = (PACKAGES / "robot_description" / "urdf"
+    xacro = (PACKAGES / "didier_description" / "urdf"
              / "dadou_robot_gz.urdf.xacro").read_text(encoding="utf-8")
     assert "gz::sim::systems::OdometryPublisher" in xacro
     assert "<odom_topic>/ground_truth/odom</odom_topic>" in xacro

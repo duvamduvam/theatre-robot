@@ -1,7 +1,7 @@
 """Affiche le robot dans RViz avec des sliders pour bouger cou, bras et yeux.
 
 Usage (dans le conteneur x86 avec DISPLAY) :
-    ros2 launch robot_description display.launch.py
+    ros2 launch didier_description display.launch.py
 """
 import os
 
@@ -15,8 +15,11 @@ from launch.substitutions import Command, EnvironmentVariable, LaunchConfigurati
 
 def generate_launch_description():
     urdf_path = os.path.join(
-        get_package_share_directory("robot_description"), "urdf", "dadou_robot.urdf.xacro")
+        get_package_share_directory("didier_description"), "urdf", "dadou_robot.urdf.xacro")
 
+    # ⚠️ `robot_description` (variable, paramètre de robot_state_publisher, topic du
+    # spawn) = nom STANDARD ROS de l'URDF, PAS le package (didier_description depuis
+    # L1e-2) : ne jamais le renommer — le robot disparaîtrait de la sim sans erreur claire.
     robot_description = ParameterValue(Command(["xacro ", urdf_path]), value_type=str)
 
     return LaunchDescription([

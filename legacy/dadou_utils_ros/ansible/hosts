@@ -14,7 +14,7 @@ robot:
             - theatre_contrats
             - robot_interfaces
             - robot_bringup
-            - robot_description
+            - didier_description
             - didier_drive
             - robot_rehearsal
             - didier_sim

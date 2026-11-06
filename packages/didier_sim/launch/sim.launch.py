@@ -60,11 +60,14 @@ def generate_launch_description():
     # et le régisseur se lancent À LA MAIN, cf. README du package de répétition).
     rehearsal = ParameterValue(LaunchConfiguration("rehearsal"), value_type=bool)
 
+    # ⚠️ `robot_description` (variable, paramètre de robot_state_publisher, topic du
+    # spawn) = nom STANDARD ROS de l'URDF, PAS le package (didier_description depuis
+    # L1e-2) : ne jamais le renommer — le robot disparaîtrait de la sim sans erreur claire.
     robot_description = ParameterValue(
         Command([
             "xacro ",
             PathJoinSubstitution([
-                FindPackageShare("robot_description"), "urdf", "dadou_robot_gz.urdf.xacro",
+                FindPackageShare("didier_description"), "urdf", "dadou_robot_gz.urdf.xacro",
             ]),
         ]),
         value_type=str,

@@ -59,11 +59,11 @@ def test_les_sept_launch_sont_inventories():
     noms = sorted(str(p.relative_to(MONO)) for p in _launch_files())
     assert noms == [
         "legacy/dadou_vision_ros/conf/ros2/launch/vision.launch.py",
+        "packages/didier_description/launch/display.launch.py",
         "packages/didier_drive/launch/drive.launch.py",
         "packages/didier_sim/launch/sim.launch.py",
         "packages/didier_web/launch/web.launch.py",
         "packages/robot_bringup/launch/robot_app.launch.py",
-        "packages/robot_description/launch/display.launch.py",
         "packages/robot_rehearsal/launch/rehearsal.launch.py",
     ]
 

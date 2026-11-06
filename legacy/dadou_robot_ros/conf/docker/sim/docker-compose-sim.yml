@@ -21,7 +21,7 @@ services:
         didier_jeu: ../../../../../packages/didier_jeu
         # L1e-1 : les packages ROS autonomes du robot ont déménagé de
         # conf/ du robot vers packages/ (même motif, noms inchangés).
-        robot_description: ../../../../../packages/robot_description
+        didier_description: ../../../../../packages/didier_description
         didier_sim: ../../../../../packages/didier_sim
         didier_drive: ../../../../../packages/didier_drive
         didier_web: ../../../../../packages/didier_web
@@ -86,7 +86,7 @@ services:
       # Accès GPU pour le rendu de la GUI Gazebo (Intel/AMD).
       - /dev/dri:/dev/dri
       # Sources montées par-dessus la copie de l'image : itération sans rebuild.
-      - ../../../../../packages/robot_description:/home/ros2_ws/src/robot_description
+      - ../../../../../packages/didier_description:/home/ros2_ws/src/didier_description
       - ../../../../../packages/didier_sim:/home/ros2_ws/src/didier_sim
       # Packages communs du mono-dépôt (lot L1a) : robot_interfaces (copie
       # UNIQUE) et theatre_contrats (contrat, importé

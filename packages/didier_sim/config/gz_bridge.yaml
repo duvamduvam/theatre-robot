@@ -1,6 +1,6 @@
 # Bridge ros_gz : correspondance topics ROS 2 <-> Gazebo (Harmonic).
 # Les noms côté gz sont fixés par les plugins déclarés dans
-# robot_description/urdf/dadou_robot_gz.urdf.xacro.
+# didier_description/urdf/dadou_robot_gz.urdf.xacro.
 #
 # Namespace (lot L1b) : côté ROS, les noms sont RELATIFS — le parameter_bridge
 # est lancé dans le groupe PushRosNamespace de sim.launch.py, rclcpp les étend

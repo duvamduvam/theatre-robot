@@ -35,7 +35,7 @@ WORKDIR /home/ros2_ws
 # rebuild) ; la copie permet de lancer l'image seule.
 # Packages du robot (L1e-1) : packages/ du mono-dépôt, contextes nommés du compose
 # (additional_contexts) — ils ont déménagé de conf/ du robot vers packages/, noms inchangés.
-COPY --from=robot_description . /home/ros2_ws/src/robot_description
+COPY --from=didier_description . /home/ros2_ws/src/didier_description
 COPY --from=didier_sim . /home/ros2_ws/src/didier_sim
 # robot_interfaces et theatre_contrats : packages/ du mono-dépôt (lot L1a),
 # contextes nommés fournis par docker-compose-sim.yml (additional_contexts).

@@ -26,7 +26,7 @@ COPY dadou_utils_ros/ /home/ros2_ws/src/robot/dadou_utils_ros/
 # Les 6 packages ROS autonomes (L1e-1 : ils vivaient dans conf/ du robot, maintenant packages/
 # du mono-dépôt) : contextes nommés du compose.
 COPY --from=robot_bringup . /home/ros2_ws/src/robot_bringup
-COPY --from=robot_description . /home/ros2_ws/src/robot_description
+COPY --from=didier_description . /home/ros2_ws/src/didier_description
 COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
 COPY --from=robot_rehearsal . /home/ros2_ws/src/robot_rehearsal
 COPY --from=didier_sim . /home/ros2_ws/src/didier_sim

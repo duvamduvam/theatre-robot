@@ -13,7 +13,7 @@ services:
         theatre_contrats: ../../../../../packages/theatre_contrats
         # L1e-1 : les 6 packages ROS autonomes (ex-conf/ du robot).
         robot_bringup: ../../../../../packages/robot_bringup
-        robot_description: ../../../../../packages/robot_description
+        didier_description: ../../../../../packages/didier_description
         didier_drive: ../../../../../packages/didier_drive
         robot_rehearsal: ../../../../../packages/robot_rehearsal
         didier_sim: ../../../../../packages/didier_sim

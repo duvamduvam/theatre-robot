@@ -52,7 +52,7 @@ INPUT_MIN = 0
 INPUT_MAX = 99
 
 # Bornes des joints servo (radians) -- source : packages/
-# robot_description/urdf/dadou_robot.urdf.xacro, propriétés xacro
+# didier_description/urdf/dadou_robot.urdf.xacro, propriétés xacro
 # `servo_lower`/`servo_upper` (= -pi/2 / +pi/2), appliquées aux joints `neck`,
 # `${side}_arm`, `${side}_eye` (limit lower/upper, lignes ~72-73/198/220/243
 # au 2026-07). Les 5 joints partagent AUJOURD'HUI les mêmes bornes de

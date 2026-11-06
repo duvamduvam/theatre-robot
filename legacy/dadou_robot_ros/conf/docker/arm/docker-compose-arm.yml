@@ -16,7 +16,7 @@ services:
         # L1e-1 : les 6 packages du robot, eux aussi dans ros2_ws/src/<package> (liste
         # `packages` de l'hôte robot dans ansible/hosts) — remplace l'ancienne COPY du dossier conf/ du robot.
         robot_bringup: ../../../../robot_bringup
-        robot_description: ../../../../robot_description
+        didier_description: ../../../../didier_description
         didier_drive: ../../../../didier_drive
         robot_rehearsal: ../../../../robot_rehearsal
         didier_sim: ../../../../didier_sim

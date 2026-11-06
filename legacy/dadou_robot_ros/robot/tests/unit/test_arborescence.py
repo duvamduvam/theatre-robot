@@ -18,7 +18,7 @@ PACKAGES = MONO / "packages"
 HOSTS = LEGACY / "dadou_utils_ros" / "ansible" / "hosts"
 VARS = LEGACY / "dadou_utils_ros" / "ansible" / "vars" / "main.yml"
 
-SIX_DEMENAGES = ["robot_bringup", "robot_description", "didier_drive",
+SIX_DEMENAGES = ["robot_bringup", "didier_description", "didier_drive",
                  "robot_rehearsal", "didier_sim", "didier_web"]
 COMMUNS = ["theatre_contrats", "robot_interfaces"]
 # Liste GRAVÉE de l'hôte robot : exactement ce que le Pi reçoit depuis avant L1e-1
