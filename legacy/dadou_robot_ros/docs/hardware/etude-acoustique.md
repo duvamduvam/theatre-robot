@@ -90,9 +90,85 @@ haut-parleurs en opposition s'annulent dans le grave. On le vérifie à la pile 
 
 1. ~~D'où l'ampli prend son 12 V~~ → SD-50B-12, confirmé le 06/11 (§2.1). Reste la
    section de son câble d'alimentation : la notice demande ≥ 3,3 mm² (12 AWG) jusqu'à 3 m.
-2. Photos : dos de la porte audio, le volume derrière quand elle est fermée, l'étiquette
-   du haut-parleur central, les commutateurs et boutons de l'ampli, et le câblage
-   ampli → haut-parleurs.
+2. ~~Dos de la porte, volume arrière~~ → relevé vidéo du 06/11 (§4). Restent :
+   l'**étiquette du haut-parleur central** (aucune visible au dos de l'aimant), les
+   **commutateurs et boutons de l'ampli** (hors champ), et **quel fil va à quel
+   haut-parleur** (couleurs vues, extrémités non suivies).
 3. **Mesure** : balayage joué par le robot, enregistré au téléphone à 1 m dans l'axe,
    porte fermée, avant et après chaque correction. C'est elle qui valide chaque étape :
    pas de correction gardée sans courbe avant/après.
+
+## 4. Relevé vidéo du 2026-11-06 (sans son)
+
+Vidéo `VID_20261106_121544.mp4` (téléphone de David, 2 min 02, porte ouverte car Didier
+est en chantier). Images clés archivées dans
+[`../pictures/acoustique-2026-11-06/`](../pictures/acoustique-2026-11-06/), nommées
+par seconde de la vidéo.
+
+**Ce qu'on voit :**
+
+- **Les trois haut-parleurs sont sur la porte**, qui est la face avant du torse en trois
+  pans : les deux ICU 570 sur les **pans latéraux, tournés à ~45° vers les côtés**, la
+  mixette en haut du pan central, et le **grand haut-parleur central** en bas, derrière
+  une grille ronde en saillie (`t118`, `t92`).
+- **L'ampli Focal est vissé sur la porte**, à côté de l'aimant du haut-parleur central,
+  RCA rouge/blanc branchées. Faisceau haut-parleurs aux couleurs autoradio (vert,
+  violet, blanc, gris), qui part vers les trois haut-parleurs (`t92`).
+- L'isolateur rouge `Car Audio / HIFI` est **monté et câblé** sur la porte, sous l'ICU
+  gauche. Il reste à vérifier sur quelle liaison il est.
+- **Volume arrière = tout le torse**, porte fermée (David : « ça ferme complètement »).
+  Il est partagé avec l'électronique (cartes, convertisseurs, nappes) et **ouvert en haut**
+  tant que les caches du dessus ne sont pas remis. Les fentes verticales du pan central
+  sont fermées par un diffuseur blanc (`t100`) : ce ne sont pas des fuites.
+- **Grille du haut-parleur central** : deux fentes larges en haut, puis une **plaque
+  pleine percée de 8 petits trous** qui masque la moitié basse du cône (`t106`, `t100`).
+
+**Ce que ça change :**
+
+1. **Le §2.2 se resserre.** Ce n'est pas un panneau ouvert : porte fermée, caches
+   remis, les haut-parleurs chargent le volume du torse, donc un caisson clos de
+   plusieurs dizaines de litres, ce que demande l'ICU 570. **Le gain ne viendra que si ce
+   volume est étanche** : joints de la porte, haut du torse, passages de câbles vers la
+   caisse basse et vers le cou. Toute fuite ramène une part du court-circuit acoustique.
+   Autre point à surveiller : un torse plein de cartes et de fils libres **vibre et
+   grésille** dès que le haut-parleur central pousse. À écouter au balayage.
+2. **Nouveau suspect, la grille du haut-parleur central.** La moitié basse du cône ne
+   rayonne que par huit petits trous. Une surface ouverte aussi réduite freine l'air et
+   coupe l'aigu du haut-parleur central. Essai gratuit : **dévisser la plaque à trous** et
+   comparer au balayage.
+3. **Les ICU 570 visent les côtés, à ~45°.** Le tweeter coaxial est directif. Dans
+   l'axe de Didier, le public reçoit donc moins des 2-5 kHz qui portent l'intelligibilité.
+   C'est peut-être voulu (couverture large en déambulation). À trancher avec David, pas à
+   corriger d'office.
+
+## 5. Le bruit de la mixette sur le 5 V du convertisseur (06/11)
+
+**Constat de David :** la mixette, alimentée par sa **petite batterie** (pack maison
+scotché rouge, cellules vertes + modules USB, `t58`), est propre. Alimentée par le 5 V du
+convertisseur (SD-50B-5), elle souffle ou ronfle trop. Pas d'enregistrement : la vidéo
+n'a pas de son.
+
+**Lecture, à prouver :** sur ce chemin, le Pi 5 joue par une carte USB C-Media, en jack
+vers une entrée de la mixette. Le câble USB de la mixette ne sert donc qu'à
+l'**alimenter**. Brancher ce câble sur le 5 V du convertisseur fait deux choses :
+
+- il amène le **bruit de découpage** d'un 5 V chargé par le Pi et le reste ;
+- il **referme une boucle de masse** : la masse de la mixette rejoint celle du Pi par
+  le 5 V, en plus du blindage du jack C-Media, et celle de l'ampli par ses RCA.
+
+La batterie ouvre cette boucle, d'où le silence. C'est la même famille de boucle que le
+ronflement du 30/08.
+
+**Piste cohérente avec la refonte :** mettre toute l'audio (ampli, mixette, TC Helicon)
+dans **un seul domaine d'alimentation isolé**, la future SD-150B-12 audio
+(`plan-refonte-electrique.md`), et alimenter la mixette en 5 V **depuis ce domaine**
+(petit régulateur 12 → 5 V). Il ne reste alors qu'une liaison avec le Pi, le jack C-Media,
+**et c'est là que l'isolateur à transformateurs a sa place**. À valider avant d'acheter
+quoi que ce soit.
+
+**Ce qui le prouverait (enregistrement, pas vidéo) :** enregistrer 10 s de silence à la
+sortie de la mixette (ou au téléphone collé au haut-parleur central, volume fixe) dans
+trois cas : batterie, 5 V du convertisseur, 5 V du convertisseur avec le jack C-Media
+débranché. Le spectre tranche : des raies à **50/100 Hz** et leurs harmoniques signent
+une boucle de masse, des raies en **kHz** ou un souffle large signent le découpage du
+convertisseur. Si le bruit disparaît jack débranché, c'est la boucle.
