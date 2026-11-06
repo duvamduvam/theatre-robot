@@ -22,7 +22,8 @@ from robot_rehearsal import contracts
 from robot_rehearsal.route import load_route
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-PKG = ROOT / "conf" / "ros2_dependencies" / "robot_rehearsal"
+PACKAGES = ROOT.parents[1] / "packages"          # packages/ du mono-dépôt (L1e-1)
+PKG = PACKAGES / "robot_rehearsal"
 
 # Géométrie du trottoir de rue.sdf (dupliquée depuis la spec du monde, étude
 # §12 : trottoir 70 x 3 centré (30, 0) -> x ∈ [-5, 65], y ∈ [-1.5, 1.5]).
@@ -52,11 +53,11 @@ def test_verite_terrain_declaree_dans_le_xacro_et_le_bridge():
     bridge, avec le MÊME nom que le contrat côté ROS (relatif depuis L1b) et le
     nom gz du plugin (absolu, le monde gz ignore les namespaces ROS). Lu dans
     les vrais fichiers."""
-    xacro = (ROOT / "conf" / "ros2_dependencies" / "robot_description" / "urdf"
+    xacro = (PACKAGES / "robot_description" / "urdf"
              / "dadou_robot_gz.urdf.xacro").read_text(encoding="utf-8")
     assert "gz::sim::systems::OdometryPublisher" in xacro
     assert "<odom_topic>/ground_truth/odom</odom_topic>" in xacro
-    bridge = yaml.safe_load((ROOT / "conf" / "ros2_dependencies" / "robot_sim" / "config"
+    bridge = yaml.safe_load((PACKAGES / "robot_sim" / "config"
                              / "gz_bridge.yaml").read_text(encoding="utf-8"))
     entries = [e for e in bridge if e["ros_topic_name"] == contracts.ODOM_TOPIC]
     assert len(entries) == 1
@@ -69,9 +70,9 @@ def test_anti_fuite_aucune_reference_dans_le_code_embarque():
     zones = [
         ROOT / "robot",
         ROOT / "conf" / "ros2",
-        ROOT / "conf" / "ros2_dependencies" / "robot_bringup",
-        ROOT / "conf" / "ros2_dependencies" / "robot_drive",
-        ROOT / "conf" / "ros2_dependencies" / "robot_web",
+        PACKAGES / "robot_bringup",
+        PACKAGES / "robot_drive",
+        PACKAGES / "robot_web",
     ]
     fuites = []
     for zone in zones:

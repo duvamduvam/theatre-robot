@@ -22,7 +22,8 @@ import pytest
 from theatre_contrats import stringtime
 
 RACINE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-DEPS = os.path.join(RACINE, "conf", "ros2_dependencies")
+# packages/ du mono-dépôt (L1e-1) ; les SITES ci-dessous le citent en chemin relatif à RACINE.
+DEPS = os.path.join(os.path.dirname(os.path.dirname(RACINE)), "packages")
 
 ENTREES = [
     '"calib"', '{"brightness": 0.5}', 'false', 'true', 'null', '0', '1', '"1"', '0.5',
@@ -135,25 +136,25 @@ SITES = [
     ("robot/nodes/gaze_follower_node.py", "_on_gaze_cmd", "stringtime.decode_or_raw(raw, GAZE_CMD_TOPIC)"),
     ("robot/nodes/person_follower_node.py", "_on_follow_cmd",
      "stringtime.decode_or_raw(raw, FOLLOW_CMD_TOPIC)"),
-    ("conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/route_driver_node.py", "_decode",
+    ("../../packages/robot_rehearsal/robot_rehearsal/route_driver_node.py", "_decode",
      "stringtime.decode_or_raw(raw)"),
-    ("conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/director.py", "speed_factor",
+    ("../../packages/robot_rehearsal/robot_rehearsal/director.py", "speed_factor",
      "stringtime.decode_or_raw(raw, ROUTE_SPEED_TOPIC)"),
-    ("conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/director.py", "route_cmd_kind",
+    ("../../packages/robot_rehearsal/robot_rehearsal/director.py", "route_cmd_kind",
      "stringtime.decode_or_raw(raw, ROUTE_CMD_TOPIC)"),
-    ("conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/director_node.py", "_on_route_cause",
+    ("../../packages/robot_rehearsal/robot_rehearsal/director_node.py", "_on_route_cause",
      "stringtime.loads(msg.msg)"),
-    ("conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/director_node.py", "_on_goto_result",
+    ("../../packages/robot_rehearsal/robot_rehearsal/director_node.py", "_on_goto_result",
      "stringtime.loads(msg.msg)"),
-    ("conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/director_node.py", "_on_poi_event",
+    ("../../packages/robot_rehearsal/robot_rehearsal/director_node.py", "_on_poi_event",
      "stringtime.loads(msg.msg)"),
-    ("conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/director_node.py", "_on_chat_move",
+    ("../../packages/robot_rehearsal/robot_rehearsal/director_node.py", "_on_chat_move",
      "stringtime.decode_or_raw(raw, CHAT_MOVE_TOPIC)"),
-    ("conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/fault_relay_node.py", "_on_cmd",
+    ("../../packages/robot_rehearsal/robot_rehearsal/fault_relay_node.py", "_on_cmd",
      "stringtime.loads(msg.msg)"),
-    ("conf/ros2_dependencies/robot_web/robot_web/web_bridge_node.py", "_on_message",
+    ("../../packages/robot_web/robot_web/web_bridge_node.py", "_on_message",
      "stringtime.loads(msg.msg)"),
-    ("conf/ros2_dependencies/robot_web/robot_web/web_bridge_node.py", "_on_feed",
+    ("../../packages/robot_web/robot_web/web_bridge_node.py", "_on_feed",
      "stringtime.loads(msg.msg)"),
 ]
 

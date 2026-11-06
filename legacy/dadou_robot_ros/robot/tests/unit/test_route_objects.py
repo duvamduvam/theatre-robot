@@ -18,7 +18,8 @@ from robot_rehearsal.route import (Poi, Route, RouteConfig, RouteError, RouteFol
                                    nearest_ahead_index, normalize_name)
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-CHANTIERS = ROOT / "conf" / "ros2_dependencies" / "robot_rehearsal" / "config" / "chantiers.yaml"
+PACKAGES = ROOT.parents[1] / "packages"          # packages/ du mono-dépôt (L1e-1)
+CHANTIERS = PACKAGES / "robot_rehearsal" / "config" / "chantiers.yaml"
 LIGNE = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0), (30.0, 0.0))
 
 

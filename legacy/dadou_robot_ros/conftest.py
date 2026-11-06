@@ -6,24 +6,28 @@ import sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 
+# packages/ du mono-dépôt theatre-robot (L1e-1 : les packages ROS autonomes y ont
+# déménagé de conf/ros2_dependencies/, sans changer de nom).
+PACKAGES = os.path.join(os.path.dirname(os.path.dirname(ROOT)), "packages")
+
 # robot_drive n'est pas un package installé (pas de colcon build sur l'hôte
 # de dev) : on l'ajoute au path pour que les tests fassent
 # `from robot_drive... import ...` comme si le package était sourcé.
-sys.path.insert(0, os.path.join(ROOT, "conf", "ros2_dependencies", "robot_drive"))
+sys.path.insert(0, os.path.join(PACKAGES, "robot_drive"))
 
 # Même logique pour robot_sim_lib (logique pure du node leds_sim_node,
 # paquet robot_sim) : `from robot_sim_lib... import ...` sans colcon build.
-sys.path.insert(0, os.path.join(ROOT, "conf", "ros2_dependencies", "robot_sim"))
+sys.path.insert(0, os.path.join(PACKAGES, "robot_sim"))
 
 # Même logique pour robot_web (protocole/catalogue purs du pont web W0,
 # web_bridge_node.py lui-même n'est PAS importé par les tests -- il a besoin
 # de rclpy/aiohttp, absents de l'environnement de dev hôte).
-sys.path.insert(0, os.path.join(ROOT, "conf", "ros2_dependencies", "robot_web"))
+sys.path.insert(0, os.path.join(PACKAGES, "robot_web"))
 
 # Idem pour robot_rehearsal (salle de répétition simulée, SIM-ONLY) : logique
 # pure du cheminement (route.py) et contrats ; route_driver_node.py n'est
 # jamais importé par les tests (rclpy/nav_msgs absents de l'hôte).
-sys.path.insert(0, os.path.join(ROOT, "conf", "ros2_dependencies", "robot_rehearsal"))
+sys.path.insert(0, os.path.join(PACKAGES, "robot_rehearsal"))
 
 # Le firmware du Pico (odom_protocol.py) : logique PURE du décodage quadrature
 # et du protocole de trame, partagée entre le Pico (MicroPython), le futur

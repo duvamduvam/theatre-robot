@@ -11,7 +11,9 @@ import pytest
 import xacro
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-XACRO_PATH = os.path.join(REPO_ROOT, "conf", "ros2_dependencies", "robot_description",
+# packages/ du mono-dépôt (L1e-1) : robot_description y a déménagé de conf/ros2_dependencies/.
+PACKAGES_DIR = os.path.join(REPO_ROOT, "..", "..", "packages")
+XACRO_PATH = os.path.join(PACKAGES_DIR, "robot_description",
                           "urdf", "dadou_robot.urdf.xacro")
 
 SERVO_JOINTS = {"neck", "left_arm", "right_arm", "left_eye", "right_eye"}
@@ -69,7 +71,7 @@ def test_links_have_positive_mass(urdf):
 
 # ======== Extension Gazebo (dadou_robot_gz.urdf.xacro) ========
 
-GZ_XACRO_PATH = os.path.join(REPO_ROOT, "conf", "ros2_dependencies", "robot_description",
+GZ_XACRO_PATH = os.path.join(PACKAGES_DIR, "robot_description",
                              "urdf", "dadou_robot_gz.urdf.xacro")
 
 

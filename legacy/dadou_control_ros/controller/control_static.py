@@ -69,8 +69,8 @@ DESIGNATE = 'designate'   # "on" = « c'est moi » : verrouille le suivi sur la
 FOLLOW = 'follow'         # "on"/"off" : suivi de personne AUX ROUES.
 ROUTE_SPEED = 'route_speed'  # nombre 0..1 : vitesse du CHEMINEMENT de Didier en
                              # salle de répétition simulée (contrat ROUTE_SPEED_TOPIC de
-                             # dadou_robot_ros/conf/ros2_dependencies/robot_rehearsal/
-                             # robot_rehearsal/contracts.py). Sim-only : personne ne
+                             # packages/robot_rehearsal/robot_rehearsal/contracts.py
+                             # du mono-dépôt). Sim-only : personne ne
                              # l'écoute sur le vrai robot, il y est inoffensif.
 # Clé de config : profil de décodage du boîtier de faders (controller/input/
 # sliders_mapping.py). Valeur = nom de profil ; choisie par la variable

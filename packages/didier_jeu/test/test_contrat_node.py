@@ -66,8 +66,7 @@ def test_topics_de_la_reflexion_egaux_au_contrat_vision():
 def test_le_regisseur_ecoute_ce_que_le_selecteur_publie():
     from robot_rehearsal import contracts
     from theatre_contrats import topics
-    launch = (LEGACY / "dadou_robot_ros" / "conf" / "ros2_dependencies" / "robot_rehearsal" / "launch"
-              / "rehearsal.launch.py").read_text(encoding="utf-8")
+    launch = (MONO / "packages" / "robot_rehearsal" / "launch" / "rehearsal.launch.py").read_text(encoding="utf-8")
     assert f'("{contracts.CHAT_MOVE_TOPIC}", "{topics.JEU_CHAT_MOVE}")' in launch
 
 

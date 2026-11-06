@@ -27,7 +27,7 @@ LEGACY = ROBOT.parent
 MONO = LEGACY.parent
 VISION = LEGACY / "dadou_vision_ros"
 CONTROL = LEGACY / "dadou_control_ros"
-DEPS = ROBOT / "conf" / "ros2_dependencies"
+DEPS = MONO / "packages"      # L1e-1 : les packages ROS autonomes ont déménagé ici
 
 # Les SEULS noms globaux admis, par construction ROS (TimeSource, TF, logs,
 # événements de paramètres). Rien d'autre — validate-namespace.sh applique la
@@ -50,21 +50,21 @@ def _fichiers(racine, motif):
 
 
 def _launch_files():
-    return [p for r in (ROBOT, VISION, CONTROL) for p in _fichiers(r, "*.launch.py")]
+    return [p for r in (ROBOT, VISION, CONTROL, DEPS) for p in _fichiers(r, "*.launch.py")]
 
 
 # --- (a) launch files ---------------------------------------------------------
 
 def test_les_sept_launch_sont_inventories():
-    noms = sorted(str(p.relative_to(LEGACY)) for p in _launch_files())
+    noms = sorted(str(p.relative_to(MONO)) for p in _launch_files())
     assert noms == [
-        "dadou_robot_ros/conf/ros2_dependencies/robot_bringup/launch/robot_app.launch.py",
-        "dadou_robot_ros/conf/ros2_dependencies/robot_description/launch/display.launch.py",
-        "dadou_robot_ros/conf/ros2_dependencies/robot_drive/launch/drive.launch.py",
-        "dadou_robot_ros/conf/ros2_dependencies/robot_rehearsal/launch/rehearsal.launch.py",
-        "dadou_robot_ros/conf/ros2_dependencies/robot_sim/launch/sim.launch.py",
-        "dadou_robot_ros/conf/ros2_dependencies/robot_web/launch/web.launch.py",
-        "dadou_vision_ros/conf/ros2/launch/vision.launch.py",
+        "legacy/dadou_vision_ros/conf/ros2/launch/vision.launch.py",
+        "packages/robot_bringup/launch/robot_app.launch.py",
+        "packages/robot_description/launch/display.launch.py",
+        "packages/robot_drive/launch/drive.launch.py",
+        "packages/robot_rehearsal/launch/rehearsal.launch.py",
+        "packages/robot_sim/launch/sim.launch.py",
+        "packages/robot_web/launch/web.launch.py",
     ]
 
 
@@ -158,8 +158,8 @@ def test_bridge_noms_ros_relatifs_sauf_clock_et_tf():
 # --- (c) aucun nom absolu dans le code ----------------------------------------
 
 def _code_des_noeuds():
-    zones = [ROBOT / "robot", DEPS, VISION / "vision", CONTROL / "controller",
-             LEGACY / "dadou_utils_ros", MONO / "packages"]
+    zones = [ROBOT / "robot", VISION / "vision", CONTROL / "controller",
+             LEGACY / "dadou_utils_ros", DEPS]
     fichiers = []
     for z in zones:
         for p in _fichiers(z, "*"):

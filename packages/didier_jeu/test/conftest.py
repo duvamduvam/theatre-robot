@@ -17,7 +17,7 @@ PKG = os.path.dirname(ICI)
 MONO = os.path.dirname(os.path.dirname(PKG))
 LEGACY_ROBOT = os.path.join(MONO, "legacy", "dadou_robot_ros")
 for chemin in (PKG, os.path.join(MONO, "packages", "theatre_contrats"), LEGACY_ROBOT,
-               os.path.join(LEGACY_ROBOT, "conf", "ros2_dependencies", "robot_rehearsal")):
+               os.path.join(MONO, "packages", "robot_rehearsal")):
     if chemin not in sys.path:
         sys.path.insert(0, chemin)
 

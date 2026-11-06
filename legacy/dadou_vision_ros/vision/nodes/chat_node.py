@@ -76,8 +76,8 @@ POURQUOI `diag_port` (lot du 2026-09-13, demande de David en séance -- « un
        `asyncio.new_event_loop()` + `AppRunner`/`TCPSite` (PAS `web.run_app` :
        il tente d'installer des handlers de signal, qui ne fonctionnent QUE
        dans le thread principal -- ça planterait ici). Même motif que
-       dadou_robot_ros/conf/ros2_dependencies/robot_web/robot_web/
-       web_bridge_node.py et robot/nodes/face_sim_node.py, à ceci près que
+       packages/robot_web/robot_web/web_bridge_node.py
+       (mono-dépôt) et robot/nodes/face_sim_node.py, à ceci près que
        CES DEUX nodes-là hébergent aiohttp dans leur thread PRINCIPAL (rclpy.
        spin y est le thread secondaire) -- chat_node ne peut pas faire pareil,
        son thread principal est déjà pris par rclpy.spin (cf. main()).

@@ -28,8 +28,9 @@ import yaml
 from robot_rehearsal.route import RouteError, Tour, load_route, load_tours, tours_path
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-PKG = ROOT / "conf" / "ros2_dependencies" / "robot_rehearsal"
-SDF = ROOT / "conf" / "ros2_dependencies" / "robot_sim" / "worlds" / "chantiers.sdf"
+PACKAGES = ROOT.parents[1] / "packages"          # packages/ du mono-dépôt (L1e-1)
+PKG = PACKAGES / "robot_rehearsal"
+SDF = PACKAGES / "robot_sim" / "worlds" / "chantiers.sdf"
 ITINERAIRE = PKG / "config" / "chantiers.yaml"
 TOURS = PKG / "config" / "chantiers_tours.yaml"
 

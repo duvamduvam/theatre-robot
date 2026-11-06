@@ -283,7 +283,7 @@ def _publisher_topics(tree, constants):
 # l'autre côté (les renommer d'un seul côté coupe la liaison SANS erreur --
 # ROS accepte n'importe quel nom de topic, personne n'écoute plus, c'est tout) :
 #   - "chat_instruction" et "rehearsal/chat_fault" : INSTRUCTION_TOPIC et
-#     CHAT_FAULT_TOPIC dans /home/dadou/Nextcloud/dev/didier/python/dadou_robot_ros/conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/contracts.py
+#     CHAT_FAULT_TOPIC dans packages/robot_rehearsal/robot_rehearsal/contracts.py (mono-dépôt)
 #     (gravés par robot/tests/unit/test_rehearsal_contract.py, régisseur) ;
 #   - "chat_text" et "chat_transcript" : le pont web du robot
 #     (robot_web/web_protocol.py : WHITELIST_TECHNIQUE et TOPICS_FLUX, gravés

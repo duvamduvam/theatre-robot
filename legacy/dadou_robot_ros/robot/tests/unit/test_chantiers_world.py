@@ -29,8 +29,9 @@ import yaml
 from robot_rehearsal.route import load_route
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-SDF = ROOT / "conf" / "ros2_dependencies" / "robot_sim" / "worlds" / "chantiers.sdf"
-YAML = ROOT / "conf" / "ros2_dependencies" / "robot_rehearsal" / "config" / "chantiers.yaml"
+PACKAGES = ROOT.parents[1] / "packages"          # packages/ du mono-dépôt (L1e-1)
+SDF = PACKAGES / "robot_sim" / "worlds" / "chantiers.sdf"
+YAML = PACKAGES / "robot_rehearsal" / "config" / "chantiers.yaml"
 
 # ------------------------------------------------------------------ valeurs gravées
 
