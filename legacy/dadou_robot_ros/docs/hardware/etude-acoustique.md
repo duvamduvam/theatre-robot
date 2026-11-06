@@ -90,19 +90,11 @@ haut-parleurs en opposition s'annulent dans le grave. On le vérifie à la pile 
 
 1. ~~D'où l'ampli prend son 12 V~~ → SD-50B-12, confirmé le 06/11 (§2.1). Reste la
    section de son câble d'alimentation : la notice demande ≥ 3,3 mm² (12 AWG) jusqu'à 3 m.
-2. ~~Dos de la porte, volume arrière~~ → relevé vidéo du 06/11 (§4). Restent :
-   l'**identité du haut-parleur central** : son étiquette (photo du 06/11,
-   `../pictures/acoustique-2026-11-06/photo-etiquette-hp-central.jpg`) ne porte que
-   `20100023` / `09101645` (2ᵉ ligne : un chiffre masqué), **sans marque ni modèle**, et
-   la recherche web sur ce code ne donne rien. Probablement un code de pièce et de lot,
-   d'un haut-parleur d'origine automobile. → l'identifier **par la mesure** : résistance
-   au multimètre (environ 3 Ω pour un 4 Ω nominal, environ 6 Ω pour un 8 Ω), diamètre
-   du saladier et de l'aimant. Repères de fils lus près de ses cosses : `FL+` et `RL…`.
-   Ça laisse penser qu'il est branché sur une sortie « avant gauche » (voies 1/2, où il
-   n'y a qu'un passe-haut fixe, pas de passe-bas). À confirmer en suivant les fils jusqu'à
-   l'ampli. les
-   **commutateurs et boutons de l'ampli** (hors champ), et **quel fil va à quel
-   haut-parleur** (couleurs vues, extrémités non suivies).
+2. ~~Dos de la porte, volume arrière~~ → relevé vidéo du 06/11 (§4).
+   ~~Identité et branchement du haut-parleur central~~ → 10″ de caisson LD Systems,
+   4 Ω, **bridgé sur 3/4 (`RL+`/`RR−`), conforme à la notice** (§6). Reste : la **position
+   des commutateurs et boutons de l'ampli** (hors champ de la vidéo), qui sont la liste
+   de contrôle du §6.
 3. **Mesure** : balayage joué par le robot, enregistré au téléphone à 1 m dans l'axe,
    porte fermée, avant et après chaque correction. C'est elle qui valide chaque étape :
    pas de correction gardée sans courbe avant/après.
@@ -197,24 +189,27 @@ référence oubliée.
   haut-parleur est une fabrication propre de la marque (pages revendeurs, résultat de
   recherche non chargé). Le code `09…` de l'étiquette pourrait être un lot de 2009. Ça ne
   change pas le raisonnement.
-- **C'est un haut-parleur de grave, fait pour être filtré.** Dans un caisson de sono, il
-  ne reçoit que le grave, sous ~100-150 Hz. Ici, s'il est bien sur une voie avant
-  (`FL+`, §3), **il reçoit toute la voix** sans passe-bas. Un 10″ de caisson rend mal le
-  médium : il brouille la voix, gaspille la puissance de l'ampli, et c'est lui qui
-  fatigue la SD-50B-12 sur les basses.
+- **C'est un haut-parleur de grave, fait pour être filtré** : dans un caisson de sono,
+  il ne reçoit que le grave, sous ~100-150 Hz.
+- **Branchement relevé par David : `RL+` et `RR−`.** C'est **exactement le bridge des
+  voies arrière 3/4** de la fig. 9 de la notice (p. 22, schéma relu le 06/11 : `RR-` …
+  `RL+` sous l'accolade BRIDGE de gauche). Le repère `FL+` vu sur la photo appartenait
+  donc à un autre fil, qui passait près des cosses : **l'hypothèse « 10″ sur une voie
+  avant sans passe-bas » est fausse**, corrigée ici. Le câblage est le bon : le 10″
+  dispose de 2 × 160 W bridgés au catalogue (en 4 Ω, minimum requis en bridge) et du
+  filtre réglable des voies 3/4.
 
-**Configuration cible de l'ampli** (à régler à la mesure, pas d'office) :
+**Ce qui reste à vérifier, ce sont les réglages, pas le câblage** (commutateurs et
+boutons de l'ampli, notice p. 24-25) :
 
-| Voies | Haut-parleur | Réglage |
+| Commande | Réglage attendu | Pourquoi |
 |---|---|---|
-| 1/2 | les deux ICU 570 | passe-haut 75 Hz activé (ou FULL si le balayage montre qu'il ne manque pas de grave) |
-| 3/4 **bridgées** | le 10″ central, 4 Ω | **LPF**, coupure de départ ~100-120 Hz, puis la **phase** 0/180° réglée pour que le grave et les ICU s'additionnent |
-
-C'est précisément l'usage pour lequel les voies 3/4 ont un filtre réglable et une
-phase. En bridge, **brancher exactement selon la fig. 9 de la notice** (le câblage
-n'y est donné qu'en schéma : le relire sur le PDF, ne pas le déduire), avec 4 Ω minimum,
-ce qui est le cas ici.
-Le budget de puissance reste borné par la SD-150B-12 et le réglage de gain (§2.1).
+| `X-OVER MODE` (3/4) | **LPF** | sur FULL ou HPF, le 10″ reçoit toute la voix : il la brouille et gaspille la puissance |
+| `X-OVER FREQ` | ~100-120 Hz pour commencer (échelle 40-200) | au-dessus, il empiète sur la voix |
+| `PHASE` (3/4) | 0 ou 180°, au balayage | pour que le grave et les ICU s'additionnent au raccord |
+| `FRONT CH. (1/2)` | passe-haut 75 Hz **activé** | les ICU n'ont pas à faire le grave, le 10″ s'en charge |
+| `INPUT SELECT` | selon les RCA branchées | si seule une paire de RCA arrive, le mode doit recopier l'entrée vers 3/4, sinon le 10″ est muet ou ne reçoit qu'une voie |
+| `REAR GAIN (3/4)` | réglé au balayage avec `FRONT GAIN` | le 10″ bridgé est le **plus gros consommateur** de l'ampli : c'est lui qui fait plier la SD-50B-12 sur les graves (§2.1) |
 
 **Pour une voix intelligible**, le 10″ n'apporte que le corps sous ~120 Hz. Les
 2-5 kHz viennent des tweeters des ICU, d'où l'importance de leur orientation (§4,
