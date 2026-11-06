@@ -214,3 +214,23 @@ boutons de l'ampli, notice p. 24-25) :
 **Pour une voix intelligible**, le 10″ n'apporte que le corps sous ~120 Hz. Les
 2-5 kHz viennent des tweeters des ICU, d'où l'importance de leur orientation (§4,
 point 3).
+
+### 6.1 Photo de l'ampli, face connexions (06/11)
+
+`../pictures/acoustique-2026-11-06/photo-ampli-face-connexions.jpg`. C'est la face de la
+**fig. 11 (droite) de la notice, p. 24** : prise haut-parleurs/alimentation, prise
+`INPUTS` (entourée de ruban tissu), sélecteur `INPUTS LEVEL`, vis `FRONT GAIN` et
+`REAR GAIN`, voyant.
+
+- `INPUTS LEVEL` : le curseur paraît **à droite = LOW (RCA, niveau ligne)**. C'est
+  cohérent avec les RCA vues dans la vidéo. Lecture **moyenne** : le curseur est petit
+  et dans l'ombre.
+- `FRONT GAIN` / `REAR GAIN` : vis à fente **sans repère**. Une fente a deux bouts, et
+  la face ne porte pas l'arc min-max : **leur position ne se lit pas sur la photo**. Ça
+  tombe bien, la notice (p. 24) demande de les régler de toute façon : gain au minimum,
+  source montée aux 3/4 de sa course, puis gain remonté jusqu'au volume voulu, et
+  redescendu au premier signe de distorsion. C'est ce réglage qui borne aussi le courant
+  pour la SD-150B-12 (§2.1).
+- **Les réglages de filtre ne sont PAS sur cette face.** `FRONT CH. (1/2)`,
+  `X-OVER MODE`, `FREQ`, `PHASE` et `INPUT SELECT` sont sur **la face opposée**
+  (fig. 11, gauche). Il faut une photo de cette face-là pour trancher le §6.
