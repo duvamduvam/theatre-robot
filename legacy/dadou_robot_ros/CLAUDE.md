@@ -26,7 +26,7 @@ Objectif long terme : robot autonome qui suit l'acteur, parle, simule des émoti
 FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires) :
 - **Simulation Gazebo Harmonic** : `conf/docker/sim/` (conteneur dédié x86),
   packages `robot_description` (URDF xacro + plugins gz) et `robot_sim` (monde, bridge, launch).
-- **Chaîne cmd_vel** (`conf/ros2_dependencies/robot_drive`, package AUTONOME — aucun import
+- **Chaîne cmd_vel** (`packages/robot_drive` (racine du mono-dépôt ; L1e-1 du 06/11 : `conf/ros2_dependencies/` n'existe plus, les 6 packages ament vivent dans `packages/`, la liste poussée vers chaque Pi = variable `packages` de l'hôte dans `ansible/hosts`), package AUTONOME — aucun import
   dadou_utils_ros ni robot.*) : `wheels_bridge` (StringTime→Twist ; le fil ne porte que la
   VALEUR de la clé wheels) → `twist_mux` (remote 100 > anim 10, verrou `e_stop` latché,
   `use_stamped: false` obligatoire en Jazzy) → `twist_deadman` (zéros à 20 Hz si silence

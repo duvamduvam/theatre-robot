@@ -24,5 +24,8 @@ Ce fichier-ci grossira à mesure que `legacy/` se vide ; il ne doit jamais dupli
   de legacy s'exécutent depuis là (`cd legacy/dadou_robot_ros && .venv/bin/pytest -q` ;
   sim : `legacy/dadou_robot_ros/conf/docker/sim`). Le venv de test a été recréé dans legacy.
 - Déploiement Ansible : `legacy/dadou_utils_ros/ansible` (il rsync depuis `legacy/`).
+  Depuis L1e-1 (06/11) : les packages ROS viennent de `packages/`, copiés par LISTE EXPLICITE
+  par machine (`packages:` de l'hôte dans `ansible/hosts`, défaut `packages_default`) — un
+  package absent de la liste n'arrive jamais sur le Pi.
 - Skill `/diag` : `.claude/skills/diag` (copié de l'ancien dépôt ; ses chemins visent encore
   `docs/incidents/` de legacy — à déplacer avec la doc).

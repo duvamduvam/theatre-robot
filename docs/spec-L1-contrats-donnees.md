@@ -375,6 +375,75 @@ si la porte n'est pas franchie) :
    `ansible-playbook deploy-pios.yml -i hosts --syntax-check` OK ;
    `grep -rn "ros2_dependencies"` hors `docs/etude-*`, incidents et historique = 0.
 
+##### L1e-2 — spec FERMÉE (implémenteur Opus : le package de la chaîne roues change de nom)
+
+**Table de renommage (la seule ; rien d'autre ne change de nom)** :
+
+| Ancien package | Nouveau | Module(s) Python |
+|---|---|---|
+| `robot_drive` | `didier_drive` | `robot_drive` → `didier_drive` |
+| `robot_web` | `didier_web` | `robot_web` → `didier_web` |
+| `robot_sim` | `didier_sim` | `robot_sim_lib` → `didier_sim_lib` |
+| `robot_description` | `didier_description` | — |
+| `robot_bringup` | `didier_bringup` | — |
+| `robot_rehearsal` | `didier_rehearsal` | `robot_rehearsal` → `didier_rehearsal` |
+
+1. **Ce qui change, par package** : le dossier `packages/<ancien>` → `packages/<nouveau>`
+   (`git mv`) ; `package.xml` (`<name>`, et les `<depend>` des AUTRES packages qui le
+   citent, dont `didier_jeu`) ; `setup.py` (`package_name`, `packages`, `data_files`
+   `share/<nom>`, `entry_points` : le MODULE change, le nom de l'exécutable NON) ;
+   `setup.cfg` (`lib/<nom>`) ; le fichier marqueur `resource/<nom>` ; le dossier du module
+   Python ; tous les `import`/`from` ; `package="…"` dans les launch ; `FindPackageShare`,
+   `get_package_share_directory` ; `package://…` et `$(find …)` dans les xacro ; les
+   listes `colcon build --packages-select` ; les cibles de montage des compose
+   (`/home/ros2_ws/src/<nouveau>`) et les `additional_contexts`/`COPY` ; `ros2 launch
+   <pkg>` / `ros2 run <pkg>` dans les scripts, la liste blanche de processus du régisseur,
+   `launch_cmd` de `ansible/hosts`, la liste `packages` de l'hôte robot.
+2. **Ce qui NE change PAS (gravé)** : aucun nom de topic, de nœud, d'exécutable, de
+   paramètre, d'argument de launch, de fichier à l'intérieur d'un package, d'image ou de
+   conteneur Docker, de dossier de journaux. Le package `robot` (cœur), `vision`,
+   `controller`, `robot_interfaces`, `theatre_contrats`, `didier_jeu` gardent leur nom
+   (L1e-3). Le modèle gz s'appelle toujours `dadou_robot`, les fichiers
+   `dadou_robot*.urdf.xacro` aussi.
+3. ⚠️ **PIÈGE `robot_description`** : c'est AUSSI le nom STANDARD ROS du paramètre et du
+   topic qui portent l'URDF (`robot_state_publisher` : paramètre `robot_description` ;
+   `ros_gz_sim create -topic robot_description` ; variable Python locale du launch). Ces
+   usages-là NE SONT PAS le package : les laisser tels quels. Seuls changent
+   `FindPackageShare("robot_description")`, les chemins, `package.xml`, les montages. Un
+   remplacement aveugle fait disparaître le robot de la sim sans erreur claire.
+4. **Nettoyage des Pi (Ansible, rôle `synchronise`)** : le rsync n'efface rien — après le
+   renommage, les anciens `src/robot_*`, `build/robot_*`, `install/robot_*` resteraient
+   sur le Pi et `colcon build` compilerait anciens ET nouveaux. Nouvelle variable
+   `packages_retires` (liste gravée des 6 anciens noms) dans `vars/main.yml` et une tâche
+   `file: state=absent` (avec `become: yes` : build/install appartiennent à root) qui
+   boucle sur `src/`, `build/`, `install/` pour chaque nom retiré, AVANT la copie des
+   packages. Commentaire : pourquoi (doublons compilés), et que la liste ne se vide jamais
+   (un Pi resté éteint doit pouvoir rattraper).
+5. **Tests** : mise à jour des chemins/imports ; `test_arborescence.py` étendu — (a) les 6
+   nouveaux noms existent dans `packages/` avec un `package.xml` dont `<name>` est égal
+   au nom du dossier ; (b) aucun des 6 anciens noms n'existe dans `packages/` ; (c)
+   `packages_retires` est égal à la liste gravée des 6 anciens ; (d) la liste `packages`
+   de l'hôte robot est égale à la nouvelle liste gravée ; (e) le marqueur
+   `resource/<nom>` de chaque package ament_python porte le nom du package. Contrôle par
+   mutation : au moins 3 mutations (renommer un dossier, un `<name>`, un marqueur) font
+   rougir.
+6. **Doc vivante** : `README.md` racine, `packages/README.md`, README de chaque package,
+   `operations.md`, `architecture.md`, `interfaces.md`, tableau de bord. Études, fiches
+   d'incident, veille, journaux : HISTOIRE, ne pas réécrire. `CLAUDE.md` : ne pas y
+   toucher, lister dans le rapport les commandes à changer.
+7. **Interdits** : modifier la logique d'un nœud ; changer `twist_mux.yaml` (contenu),
+   `wheels_bridge_node.py`, `twist_deadman`, `wheels_node` au-delà des imports et chemins ;
+   `git push` ; ssh ; exécuter Ansible (seulement `--syntax-check`).
+8. **Porte L1e-2** : pytest robot, télécommande, vision, contrats, jeu verts ; sim depuis
+   la copie de travail (image reconstruite) : V-R3 **21/21**, A1 **14/14**, namespace
+   **5/5** (il relit les paramètres de twist_mux : c'est la preuve que le share du package
+   renommé est trouvé), catalogue **4/4**, animation `parle` jouée ;
+   `ansible-playbook … --syntax-check` OK ; pour chacun des 6 anciens noms,
+   `git grep -w <ancien>` ne rend que : études/incidents/veille, la liste
+   `packages_retires` + son test, la table de renommage de cette spec, et — pour
+   `robot_description` seulement — les usages paramètre/topic du point 3 (les lister dans
+   le rapport).
+
 ## 3. Ordre, délégation, gates
 
 | Sous-lot | Qui | Gate avant le suivant |
