@@ -25,7 +25,7 @@
        URDF->SDF (sinon leurs visuals fusionnent dans le lien parent, avec un nom
        du style "base_link_fixed_joint_lump__torso_link_visual_2" imprévisible).
        preserveFixedJoint garde <link>_visual comme visual distinct, avec un nom
-       stable pour le bridge MaterialColor (voir robot_sim/scripts/leds_sim_node
+       stable pour le bridge MaterialColor (voir didier_sim/scripts/leds_sim_node
        + config/gz_bridge.yaml).
        Les yeux ont désormais une COQUE (cloche en cylindres étagés) en plus de
        leur matrice : leur matrice a donc son propre link, comme le corps et la

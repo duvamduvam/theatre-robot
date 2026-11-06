@@ -19,7 +19,7 @@ services:
         robot_description: ../../../../robot_description
         didier_drive: ../../../../didier_drive
         robot_rehearsal: ../../../../robot_rehearsal
-        robot_sim: ../../../../robot_sim
+        didier_sim: ../../../../didier_sim
         didier_web: ../../../../didier_web
     # Supervision par le DÉMON Docker (assainissement 2026-07-11) : relance
     # sur crash et au boot, sauf arrêt volontaire (docker stop / systemctl

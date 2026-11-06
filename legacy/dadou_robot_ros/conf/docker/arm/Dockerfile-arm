@@ -24,7 +24,7 @@ COPY --from=robot_bringup . /home/ros2_ws/src/robot_bringup
 COPY --from=robot_description . /home/ros2_ws/src/robot_description
 COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
 COPY --from=robot_rehearsal . /home/ros2_ws/src/robot_rehearsal
-COPY --from=robot_sim . /home/ros2_ws/src/robot_sim
+COPY --from=didier_sim . /home/ros2_ws/src/didier_sim
 COPY --from=didier_web . /home/ros2_ws/src/didier_web
 # Packages communs du mono-dépôt (lot L1a) : contextes nommés du compose.
 COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces

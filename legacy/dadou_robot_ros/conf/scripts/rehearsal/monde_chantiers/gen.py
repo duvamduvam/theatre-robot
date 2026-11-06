@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Générateur de robot_sim/worlds/chantiers.sdf (lot R3, étude §13.2-13.3).
+"""Générateur de didier_sim/worlds/chantiers.sdf (lot R3, étude §13.2-13.3).
 
-    python3 gen.py ../../../../../../packages/robot_sim/worlds/chantiers.sdf
+    python3 gen.py ../../../../../../packages/didier_sim/worlds/chantiers.sdf
 
 Le SDF livré est GÉNÉRÉ par ce script (poses des liens relatives à l'ancre de
 chaque POI : illisibles à la main, c'est pour ça qu'on versionne le

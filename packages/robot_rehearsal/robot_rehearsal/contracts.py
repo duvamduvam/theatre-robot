@@ -39,7 +39,7 @@ ROUTE_STATE_CAUSES = ("boot", "cmd")
 # Le suivi de personne doit être OFF quand la route est ON (même créneau).
 CMD_VEL_TOPIC = "cmd_vel_follow"
 # Pose de Didier : VÉRITÉ TERRAIN de Gazebo (plugin OdometryPublisher du
-# xacro, bridgée par robot_sim/config/gz_bridge.yaml) — PAS /odom du
+# xacro, bridgée par didier_sim/config/gz_bridge.yaml) — PAS /odom du
 # DiffDrive, qui intègre les roues : il ne se remet pas à zéro à une
 # téléportation (set_pose au départ) et dérive au premier patinage sur une
 # bordure (constaté le 2026-10-07). SIM-ONLY par construction : ce topic

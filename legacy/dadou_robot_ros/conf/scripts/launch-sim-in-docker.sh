@@ -13,7 +13,7 @@ cd /home/ros2_ws/
 # dadou_utils_ros.utils_static (shim) ou le codec StringTime commun.
 # didier_jeu (lot A1) : sélecteur de jeu, SIM-ONLY ; dépend de robot_rehearsal
 # (garde-fou 43, contrats) et de robot (journal) — colcon ordonne seul.
-colcon build --packages-select theatre_contrats robot_description robot_sim robot_interfaces didier_drive didier_web robot_rehearsal robot didier_jeu
+colcon build --packages-select theatre_contrats robot_description didier_sim robot_interfaces didier_drive didier_web robot_rehearsal robot didier_jeu
 source /home/ros2_ws/install/setup.bash
 
-ros2 launch robot_sim sim.launch.py world:=${WORLD:-stage} headless:=${HEADLESS:-false} animations:=${ANIMATIONS:-false} web:=${WEB:-false} web_port:=${WEB_PORT:-8765} web_drive:=${WEB_DRIVE:-false} rehearsal:=${REHEARSAL:-false} face:=${FACE:-false} face_port:=${FACE_PORT:-8766}
+ros2 launch didier_sim sim.launch.py world:=${WORLD:-stage} headless:=${HEADLESS:-false} animations:=${ANIMATIONS:-false} web:=${WEB:-false} web_port:=${WEB_PORT:-8765} web_drive:=${WEB_DRIVE:-false} rehearsal:=${REHEARSAL:-false} face:=${FACE:-false} face_port:=${FACE_PORT:-8766}

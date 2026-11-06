@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Node de visualisation LED en simulation Gazebo (paquet robot_sim, AUTONOME :
+"""Node de visualisation LED en simulation Gazebo (paquet didier_sim, AUTONOME :
 aucun import de robot.* ni dadou_utils_ros, même règle que didier_drive).
 
 AVERTISSEMENT : ceci est une VISUALISATION, pas une réplique du rendu Adafruit
-LED Animation du vrai robot -- voir robot_sim_lib/leds_logic.py pour le détail
+LED Animation du vrai robot -- voir didier_sim_lib/leds_logic.py pour le détail
 des approximations (effets, "face"). Le but est un repère visuel en sim, pas
 une validation du rendu physique du ruban.
 
-Mécanisme : le monde `stage` (robot_sim/worlds/stage.sdf) charge le système gz
+Mécanisme : le monde `stage` (didier_sim/worlds/stage.sdf) charge le système gz
 UserCommands, qui expose /world/stage/material_color (gz.msgs.MaterialColor).
 Le bridge ros_gz (config/gz_bridge.yaml) route notre topic ROS material_color
 (RELATIF depuis le lot L1b : /<robot>/material_color, le bridge est namespacé
@@ -33,12 +33,12 @@ import json
 import os
 import sys
 
-# Bootstrap d'import : le script et robot_sim_lib sont installés côte à côte
-# dans lib/robot_sim/ (voir CMakeLists.txt -- ament_cmake n'a pas de mécanisme
+# Bootstrap d'import : le script et didier_sim_lib sont installés côte à côte
+# dans lib/didier_sim/ (voir CMakeLists.txt -- ament_cmake n'a pas de mécanisme
 # ament_python pour "juste" installer un module Python sur le PYTHONPATH).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from robot_sim_lib.leds_logic import (  # noqa: E402
+from didier_sim_lib.leds_logic import (  # noqa: E402
     LedsSimState,
     face_colors,
     is_animated_method,

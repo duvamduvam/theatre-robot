@@ -22,7 +22,7 @@ services:
         # L1e-1 : les packages ROS autonomes du robot ont déménagé de
         # conf/ du robot vers packages/ (même motif, noms inchangés).
         robot_description: ../../../../../packages/robot_description
-        robot_sim: ../../../../../packages/robot_sim
+        didier_sim: ../../../../../packages/didier_sim
         didier_drive: ../../../../../packages/didier_drive
         didier_web: ../../../../../packages/didier_web
         robot_rehearsal: ../../../../../packages/robot_rehearsal
@@ -36,7 +36,7 @@ services:
       # même nom (sinon ils ne s'entendent plus) ; la CLI ros2 doit préfixer.
       - ROBOT_NAME=${ROBOT_NAME:-didier}
       - HEADLESS=${HEADLESS:-false}
-      # Monde Gazebo : fichier worlds/<WORLD>.sdf de robot_sim (`stage` = le
+      # Monde Gazebo : fichier worlds/<WORLD>.sdf de didier_sim (`stage` = le
       # plateau nu historique, `rue` = la salle de répétition, étude
       # docs/etude-repetition-simulee.md §12, `chantiers` = des Nefs à la grue
       # Titan grise, 20 bugs + 30 lubies, §13). Le NOM interne du monde reste
@@ -87,7 +87,7 @@ services:
       - /dev/dri:/dev/dri
       # Sources montées par-dessus la copie de l'image : itération sans rebuild.
       - ../../../../../packages/robot_description:/home/ros2_ws/src/robot_description
-      - ../../../../../packages/robot_sim:/home/ros2_ws/src/robot_sim
+      - ../../../../../packages/didier_sim:/home/ros2_ws/src/didier_sim
       # Packages communs du mono-dépôt (lot L1a) : robot_interfaces (copie
       # UNIQUE) et theatre_contrats (contrat, importé
       # par dadou_utils_ros/utils_static.py — sans lui, tout node tombe à l'import).

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Node de simulation des servos en Gazebo (paquet robot_sim, AUTONOME : aucun
+"""Node de simulation des servos en Gazebo (paquet didier_sim, AUTONOME : aucun
 import de robot.* ni dadou_utils_ros -- même règle que leds_sim_node/didier_drive,
 cf. leur docstring respective).
 
-Rejoue en sim la sémantique de robot/actions/servo.py (voir robot_sim_lib/
+Rejoue en sim la sémantique de robot/actions/servo.py (voir didier_sim_lib/
 servos_logic.py pour le détail des divergences assumées et les tests), pour
 piloter les 5 JointPositionController gz (neck, left_arm, right_arm, left_eye,
 right_eye) déclarés dans dadou_robot_gz.urdf.xacro : topic gz /<servo>/position
@@ -14,7 +14,7 @@ il suit le namespace du robot (/didier/neck/position), le bridge fait le lien.
 Abonnements (StringTime -- mêmes noms de topic que le vrai robot, publiés par
 animations_node/servo_node : ce sont les valeurs de dadou_utils_ros.utils_static
 .NECK/.LEFT_ARM/.RIGHT_ARM/.LEFT_EYE/.RIGHT_EYE, recopiées ici en toutes lettres
-plutôt qu'importées -- robot_sim reste un paquet autonome) :
+plutôt qu'importées -- didier_sim reste un paquet autonome) :
   neck, left_arm, right_arm, left_eye, right_eye : payload JSON = valeur 0-99,
   "stop", {"default": x} ou {"mode": "random", ...} -- cf. servos_logic.py.
 
@@ -26,11 +26,11 @@ import json
 import os
 import sys
 
-# Bootstrap d'import : le script et robot_sim_lib sont installés côte à côte
-# dans lib/robot_sim/ (voir CMakeLists.txt -- même mécanisme que leds_sim_node).
+# Bootstrap d'import : le script et didier_sim_lib sont installés côte à côte
+# dans lib/didier_sim/ (voir CMakeLists.txt -- même mécanisme que leds_sim_node).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from robot_sim_lib.servos_logic import (  # noqa: E402
+from didier_sim_lib.servos_logic import (  # noqa: E402
     JOINT_LIMITS,
     ServoSim,
     pos99_to_radians,

@@ -9,7 +9,7 @@ La preuve en simulation est conf/scripts/validate-namespace.sh.
      tiré de ROBOT_NAME, et aucun Node n'a de namespace= à lui ;
  (b) gz_bridge.yaml : tout ros_topic_name est relatif sauf {/clock, /tf} ;
  (c) aucun nom de topic absolu dans le code des nœuds (grep de L1a étendu aux
-     scripts sans extension de robot_sim et aux constantes ODOM_TOPIC /
+     scripts sans extension de didier_sim et aux constantes ODOM_TOPIC /
      NECK_TOPIC_SIM, gravées relatives) ;
  (d) chaque script conf/scripts qui appelle `ros2 topic` définit NS= et ne
      tape aucun topic non préfixé (regex gravée) ;
@@ -60,11 +60,11 @@ def test_les_sept_launch_sont_inventories():
     assert noms == [
         "legacy/dadou_vision_ros/conf/ros2/launch/vision.launch.py",
         "packages/didier_drive/launch/drive.launch.py",
+        "packages/didier_sim/launch/sim.launch.py",
         "packages/didier_web/launch/web.launch.py",
         "packages/robot_bringup/launch/robot_app.launch.py",
         "packages/robot_description/launch/display.launch.py",
         "packages/robot_rehearsal/launch/rehearsal.launch.py",
-        "packages/robot_sim/launch/sim.launch.py",
     ]
 
 
@@ -142,7 +142,7 @@ def test_twist_mux_recoit_sa_config_en_dictionnaire():
 # --- (b) bridge gz ------------------------------------------------------------
 
 def test_bridge_noms_ros_relatifs_sauf_clock_et_tf():
-    entrees = yaml.safe_load((DEPS / "robot_sim" / "config" / "gz_bridge.yaml").read_text(encoding="utf-8"))
+    entrees = yaml.safe_load((DEPS / "didier_sim" / "config" / "gz_bridge.yaml").read_text(encoding="utf-8"))
     absolus = {e["ros_topic_name"] for e in entrees if e["ros_topic_name"].startswith("/")}
     assert absolus == BRIDGE_ABSOLUS
     assert BRIDGE_ABSOLUS <= EXCEPTIONS_GLOBALES
@@ -165,7 +165,7 @@ def _code_des_noeuds():
         for p in _fichiers(z, "*"):
             if "tests" in p.parts or "test" in p.parts:
                 continue
-            # .py ET scripts sans extension (robot_sim/scripts/*_sim_node : ils
+            # .py ET scripts sans extension (didier_sim/scripts/*_sim_node : ils
             # avaient échappé au balayage de la spec).
             if p.suffix == ".py" or (p.suffix == "" and p.read_bytes()[:2] == b"#!"):
                 fichiers.append(p)
@@ -200,7 +200,7 @@ def test_constantes_sim_gravees_relatives():
     assert contracts.ODOM_TOPIC == "ground_truth/odom"
     gaze = (ROBOT / "robot" / "nodes" / "gaze_follower_node.py").read_text(encoding="utf-8")
     assert re.search(r'^NECK_TOPIC_SIM = "neck/position"$', gaze, re.M)
-    sim = DEPS / "robot_sim" / "scripts"
+    sim = DEPS / "didier_sim" / "scripts"
     assert '"{}/position".format(name)' in (sim / "servos_sim_node").read_text(encoding="utf-8")
     assert 'create_publisher(MaterialColor, "material_color", 10)' in \
         (sim / "leds_sim_node").read_text(encoding="utf-8")

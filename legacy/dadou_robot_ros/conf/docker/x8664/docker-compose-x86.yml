@@ -16,7 +16,7 @@ services:
         robot_description: ../../../../../packages/robot_description
         didier_drive: ../../../../../packages/didier_drive
         robot_rehearsal: ../../../../../packages/robot_rehearsal
-        robot_sim: ../../../../../packages/robot_sim
+        didier_sim: ../../../../../packages/didier_sim
         didier_web: ../../../../../packages/didier_web
     environment:
       # Allow RViz et al to display on host X server.

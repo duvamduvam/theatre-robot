@@ -3,19 +3,19 @@
 Lance : serveur gz (+ GUI si headless:=false), spawn du robot depuis
 robot_description, robot_state_publisher et le bridge ros_gz.
 
-    ros2 launch robot_sim sim.launch.py            # avec GUI
-    ros2 launch robot_sim sim.launch.py headless:=true
-    ros2 launch robot_sim sim.launch.py world:=rue   # monde "rue" (étude répétition simulée)
+    ros2 launch didier_sim sim.launch.py            # avec GUI
+    ros2 launch didier_sim sim.launch.py headless:=true
+    ros2 launch didier_sim sim.launch.py world:=rue   # monde "rue" (étude répétition simulée)
 
     # Rejeu des séquences JSON (animations_node, package "robot" -- OFF par
     # défaut, comme gaze_follower : lancement explicite requis) :
-    ros2 launch robot_sim sim.launch.py animations:=true
+    ros2 launch didier_sim sim.launch.py animations:=true
     # puis, dans un autre terminal (même domaine ROS que la sim, 43) :
     #   ros2 topic pub -1 /didier/animation robot_interfaces/msg/StringTime '{msg: "\\"parle\\""}'
 
     # Aperçu web du visage LED (face_sim, package "robot" -- les matrices LED
     # n'ont aucun rendu dans Gazebo) -- OFF par défaut, même prudence :
-    ros2 launch robot_sim sim.launch.py face:=true
+    ros2 launch didier_sim sim.launch.py face:=true
     # puis http://localhost:8766 (face_port pour changer le port).
 
 Tout tourne en use_sim_time (horloge /clock bridgée depuis gz).
@@ -74,7 +74,7 @@ def generate_launch_description():
     # dans la LISTE gz_args (le launch concatène les substitutions d'une liste)
     # plutôt que d'imbriquer une sous-liste dans PathJoinSubstitution, dont le
     # support des éléments composites n'est pas garanti en Jazzy.
-    worlds_dir = PathJoinSubstitution([FindPackageShare("robot_sim"), "worlds"])
+    worlds_dir = PathJoinSubstitution([FindPackageShare("didier_sim"), "worlds"])
 
     # -r : la simulation démarre en lecture (pas en pause) ; -s : serveur seul.
     # Seul le FICHIER change avec `world` : le nom interne du monde reste `stage`
@@ -163,35 +163,35 @@ def generate_launch_description():
                 executable="parameter_bridge",
                 parameters=[{
                     "config_file": PathJoinSubstitution([
-                        FindPackageShare("robot_sim"), "config", "gz_bridge.yaml",
+                        FindPackageShare("didier_sim"), "config", "gz_bridge.yaml",
                     ]),
                     "use_sim_time": True,
                 }],
                 output="screen",
             ),
 
-            # Visualisation LED (matériaux émissifs gz, cf. robot_sim_lib/leds_logic.py) :
+            # Visualisation LED (matériaux émissifs gz, cf. didier_sim_lib/leds_logic.py) :
             # écoute robot_lights/face côté ROS, publie material_color (relatif, bridgé vers
             # /world/stage/material_color, système gz UserCommands du monde `stage`).
             Node(
-                package="robot_sim",
+                package="didier_sim",
                 executable="leds_sim_node",
                 parameters=[{"use_sim_time": True}],
                 output="screen",
             ),
 
             # Rejeu des servos (neck/left_arm/right_arm/left_eye/right_eye, cf.
-            # robot_sim_lib/servos_logic.py) : écoute les 5 topics StringTime,
+            # didier_sim_lib/servos_logic.py) : écoute les 5 topics StringTime,
             # publie <servo>/position (relatif, radians) sur les JointPositionController gz.
             Node(
-                package="robot_sim",
+                package="didier_sim",
                 executable="servos_sim_node",
                 parameters=[{"use_sim_time": True}],
                 output="screen",
             ),
 
             # Rejeu des séquences JSON (paquet "robot", le VRAI code du robot --
-            # PAS un paquet robot_sim, cf. Dockerfile-sim/docker-compose-sim.yml
+            # PAS un paquet didier_sim, cf. Dockerfile-sim/docker-compose-sim.yml
             # pour comment il est construit dans le conteneur sim). OFF par défaut
             # (animations:=false) : même prudence que gaze_follower, activation
             # explicite. LIMITE ASSUMÉE : AnimationManager/Animation utilisent

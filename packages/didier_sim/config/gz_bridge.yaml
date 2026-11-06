@@ -104,7 +104,7 @@
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS
 
-# LED (leds_sim_node, package robot_sim) : le monde `stage` charge le système
+# LED (leds_sim_node, package didier_sim) : le monde `stage` charge le système
 # gz UserCommands, qui expose /world/stage/material_color en écriture. Publier
 # dessus change en direct le matériau (diffuse/emissive/ambient) d'un visual
 # nommé de la scène -- pas besoin de republier le SDF ni de plugin dédié.

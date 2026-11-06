@@ -15,9 +15,9 @@ PACKAGES = os.path.join(os.path.dirname(os.path.dirname(ROOT)), "packages")
 # `from didier_drive... import ...` comme si le package était sourcé.
 sys.path.insert(0, os.path.join(PACKAGES, "didier_drive"))
 
-# Même logique pour robot_sim_lib (logique pure du node leds_sim_node,
-# paquet robot_sim) : `from robot_sim_lib... import ...` sans colcon build.
-sys.path.insert(0, os.path.join(PACKAGES, "robot_sim"))
+# Même logique pour didier_sim_lib (logique pure du node leds_sim_node,
+# paquet didier_sim) : `from didier_sim_lib... import ...` sans colcon build.
+sys.path.insert(0, os.path.join(PACKAGES, "didier_sim"))
 
 # Même logique pour didier_web (protocole/catalogue purs du pont web W0,
 # web_bridge_node.py lui-même n'est PAS importé par les tests -- il a besoin

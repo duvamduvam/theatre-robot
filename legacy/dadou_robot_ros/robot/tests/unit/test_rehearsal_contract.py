@@ -57,7 +57,7 @@ def test_verite_terrain_declaree_dans_le_xacro_et_le_bridge():
              / "dadou_robot_gz.urdf.xacro").read_text(encoding="utf-8")
     assert "gz::sim::systems::OdometryPublisher" in xacro
     assert "<odom_topic>/ground_truth/odom</odom_topic>" in xacro
-    bridge = yaml.safe_load((PACKAGES / "robot_sim" / "config"
+    bridge = yaml.safe_load((PACKAGES / "didier_sim" / "config"
                              / "gz_bridge.yaml").read_text(encoding="utf-8"))
     entries = [e for e in bridge if e["ros_topic_name"] == contracts.ODOM_TOPIC]
     assert len(entries) == 1

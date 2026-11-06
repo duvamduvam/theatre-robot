@@ -3,7 +3,7 @@
 # Ordre des POI = ordre RÉEL de la marche (Nefs -> Mail des Chantiers -> quai
 # des Antilles -> pointe ouest).
 #
-# POSITIONS RECALÉES sur le monde robot_sim/worlds/chantiers.sdf (lot monde) :
+# POSITIONS RECALÉES sur le monde didier_sim/worlds/chantiers.sdf (lot monde) :
 # - polyligne en 18 points tous les 8-10 m : le Mail le long de +x (y = 0) de
 #   (2, 0) à la COUDÉE (70, 0), puis le quai à +35° (vers y positif, côté
 #   bâtiments ; la Loire reste à y négatif) jusqu'à (144.38, 52.08), au pied
