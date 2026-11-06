@@ -1,14 +1,16 @@
 # Depuis le lot L0 (2026-11-02) les déploiements partent du mono-dépôt theatre-robot, dossier legacy/
 # (les anciens dépôts frères sont archivés). Changera de nouveau quand machines/<hôte>/ existera.
 local_projects_dir: "/home/dadou/Nextcloud/dev/didier/python/theatre-robot/legacy"
-# Packages COMMUNS du mono-dépôt (lot L1a : theatre_contrats, robot_interfaces) : rsync
-# vers ros2_ws/src/ de chaque Pi — les compose ARM les montent depuis là. Sans cette
-# copie, tous les nodes tombent à l'import (utils_static importe theatre_contrats).
+# Packages du mono-dépôt (rôle synchronise) : rsync vers ros2_ws/src/<package> de la
+# machine. Liste PAR MACHINE : variable `packages` de l'hôte dans `hosts`, à défaut
+# `packages_default` ci-dessous = les COMMUNS (lot L1a), obligatoires partout (le
+# shim utils_static.py importe theatre_contrats ; robot_interfaces porte StringTime).
+# Il n'y a plus de liste « sim-only à exclure » : un package sim-only (didier_jeu) n'est
+# simplement dans la liste d'aucun hôte. Voir le commentaire du rôle pour le pourquoi.
 packages_dir: "/home/dadou/Nextcloud/dev/didier/python/theatre-robot/packages"
-# Packages SIM-ONLY (garde-fou domaine 43) : inertes sur un Pi, et surtout jamais compilés
-# là-bas pour rien. À compléter à chaque package de simulation.
-packages_sim_only:
-  - didier_jeu
+packages_default:
+  - theatre_contrats
+  - robot_interfaces
 #controller_project_dir: "dadou_controller_ros"
 #utils_project_dir: "dadou_utils_ros_ros"
 #deploy_dir: "robot_base"

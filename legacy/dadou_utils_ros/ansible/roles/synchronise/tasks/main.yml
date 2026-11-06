@@ -45,40 +45,31 @@
     #rsync_opts:
     #  - "--delete"
 
-# Lot L1a (2026-11-02) : vision et télécommande n'ont PLUS de conf/ros2_dependencies
-# (robot_interfaces est passé dans theatre-robot/packages/). Un rsync sur un dossier
-# source absent échoue (code 23) et bloquerait les tâches suivantes — dont la copie des
-# packages communs ci-dessous. D'où le stat côté PC et la condition.
-- name: Check whether "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/" exists on the control node
-  stat:
-    path: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/"
-  delegate_to: localhost
-  become: no
-  register: ros2_dependencies_dir
-
-- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/" with "{{ ros2_ws }}/src/"
-  synchronize:
-    src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/"
-    dest: "{{ ros2_ws }}/src/"
-    recursive: yes
-    copy_links: yes
-    #rsync_opts:
-    #  - "--delete"
-  when: ros2_dependencies_dir.stat.exists
-
-# Lot L1a (2026-11-02) : les packages communs du mono-dépôt vivent dans
-# theatre-robot/packages/ (hors de l'ancien dépôt) ; ils doivent arriver dans
-# ros2_ws/src/<package> sur CHAQUE machine, car dadou_utils_ros/utils_static.py
+# Packages du mono-dépôt (theatre-robot/packages/) : lot L1a (2026-11-02) pour les
+# communs, lot L1e-1 (2026-11-06) pour les 6 packages ROS autonomes du robot qui
+# vivaient dans conf/ du robot (le dossier a disparu — plus de stat ni de rsync
+# conditionnel). Chaque machine reçoit une LISTE EXPLICITE : `packages` de l'hôte
+# (ansible/hosts), à défaut `packages_default` (vars/main.yml). Pourquoi explicite
+# et non « tout packages/ » : le `colcon build` d'un Pi compile TOUT ros2_ws/src/ ;
+# un package qui n'a rien à y faire (didier_jeu, sim-only ; robot_drive et son
+# twist_mux sur le Pi vision...) y casserait la compilation sur ses dépendances
+# manquantes, ou y tournerait pour rien. Les communs (theatre_contrats,
+# robot_interfaces) sont obligatoires partout : dadou_utils_ros/utils_static.py
 # importe theatre_contrats — sans lui, tous les nodes tombent au démarrage.
-# Copie de l'arbre entier (petit : pur Python + 4 .msg), exclusions comme ci-dessus.
-- name: Synchronize mono-repo packages "{{ packages_dir }}/" with "{{ ros2_ws }}/src/"
+# Un package absent de packages/ fait échouer le rsync (code 23) : c'est voulu,
+# test_arborescence.py le détecte avant. Ne PAS nommer `packages` une liste d'apt.
+- name: Synchronize mono-repo package "{{ item }}" with "{{ ros2_ws }}/src/{{ item }}/"
   synchronize:
-    src: "{{ packages_dir }}/"
-    dest: "{{ ros2_ws }}/src/"
+    src: "{{ packages_dir }}/{{ item }}/"
+    dest: "{{ ros2_ws }}/src/{{ item }}/"
     recursive: yes
     copy_links: yes
-    rsync_opts: "{{ ['--exclude=.git/', '--exclude=__pycache__/', '--exclude=*.egg-info/', '--exclude=README.md']
-                    + (packages_sim_only | default([]) | map('regex_replace', '^(.*)$', '--exclude=\\1/') | list) }}"
+    rsync_opts:
+      - "--exclude=.git/"
+      - "--exclude=__pycache__/"
+      - "--exclude=*.egg-info/"
+      - "--exclude=README.md"
+  loop: "{{ packages | default(packages_default) }}"
 
 # Lot L1c (2026-11-04) : le robot publie le sha déployé (topic `deploy_sha`, nœud
 # catalogue_node de robot_web ; badge « version » de la console web). Le fichier est

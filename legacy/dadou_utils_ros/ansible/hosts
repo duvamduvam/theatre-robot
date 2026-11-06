@@ -5,6 +5,20 @@ robot:
         project_ros_dir: robot
         project_name: robot
         launch_cmd: ros2 launch robot_bringup robot_app.launch.py
+        # Packages poussés dans ros2_ws/src/ (rôle synchronise) : les 2 communs + les 6
+        # packages ROS autonomes — EXACTEMENT ce que le Pi reçoit depuis avant L1e-1
+        # (le tri « sim-only hors du Pi » viendra avec machines/<hôte>/, L1e-4). La liste
+        # est gravée par test_arborescence.py ; vision et télécommande prennent
+        # packages_default (vars/main.yml).
+        packages:
+            - theatre_contrats
+            - robot_interfaces
+            - robot_bringup
+            - robot_description
+            - robot_drive
+            - robot_rehearsal
+            - robot_sim
+            - robot_web
 
 # Console de pilotage sur Pi 4 + écran (hostname control, Pi OS Full trixie,
 # flashé le 2026-07-04). Alias ssh "c" (User pi, clé didier). Ne pas confondre
@@ -66,7 +80,10 @@ robot-test:
 glove-left:
   hosts:
     gl:
-        packages:
+        # Paquets apt (information seule, aucun rôle ne les lit). Renommé : `packages` est
+        # désormais la liste des packages ROS du rôle synchronise — l'ancien nom aurait fait
+        # rsync-er des dossiers « vim »... inexistants.
+        apt_packages:
             - vim
             - libgirepository1.0-dev
             - libasound2-dev
@@ -80,7 +97,10 @@ glove-left:
 glove-right:
   hosts:
     gr:
-        packages:
+        # Paquets apt (information seule, aucun rôle ne les lit). Renommé : `packages` est
+        # désormais la liste des packages ROS du rôle synchronise — l'ancien nom aurait fait
+        # rsync-er des dossiers « vim »... inexistants.
+        apt_packages:
             - vim
             - libgirepository1.0-dev
             - libasound2-dev
