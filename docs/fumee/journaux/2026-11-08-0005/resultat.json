@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "id": "2026-11-08-0005",
+  "notes": [],
+  "sha": "9175320",
+  "sha_complet": "91753203b4554c0a2a8f939fcc57921f140e0b3c",
+  "sale": false,
+  "branche": "main",
+  "mode": "si-due",
+  "raison": "due : 3 commit(s) dans main depuis la dernière fumée verte (67bb206)",
+  "debut": "2026-11-08T00:05:31+01:00",
+  "fin": "2026-11-08T00:40:12+01:00",
+  "duree_s": 2081,
+  "rtf": 0.985,
+  "rtf_min": 0.8,
+  "charge_1min": 5.91,
+  "nb_coeurs": 32,
+  "essai": false,
+  "image_reconstruite": false,
+  "epreuves": [
+    {
+      "id": "image",
+      "statut": "vert",
+      "detail": "inchangée depuis la dernière fumée verte (67bb206), non reconstruite",
+      "duree_s": 0
+    },
+    {
+      "id": "demarrage",
+      "statut": "vert",
+      "detail": "conteneur dadou-sim-container, domaine 43, monde chantiers, headless",
+      "duree_s": 24,
+      "journal": "demarrage.log"
+    },
+    {
+      "id": "rtf",
+      "statut": "vert",
+      "obtenu": "0.985",
+      "detail": "seuil 0.8",
+      "duree_s": 23,
+      "journal": "rtf.log"
+    },
+    {
+      "id": "namespace",
+      "ok": 5,
+      "attendu": 5,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 43,
+      "journal": "namespace.log"
+    },
+    {
+      "id": "catalogue",
+      "ok": 4,
+      "attendu": 4,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 26,
+      "journal": "catalogue.log"
+    },
+    {
+      "id": "parle",
+      "ok": 3,
+      "attendu": 3,
+      "ko": 0,
+      "statut": "vert",
+      "detail": "ETATS=[\"\", \"parle\", \"\"]",
+      "duree_s": 4,
+      "journal": "parle.log"
+    },
+    {
+      "id": "chantiers",
+      "ok": 21,
+      "attendu": 21,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 928,
+      "journal": "chantiers.log"
+    },
+    {
+      "id": "a1",
+      "ok": 14,
+      "attendu": 14,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 910,
+      "journal": "a1.log"
+    }
+  ],
+  "verdict": "vert",
+  "bloquant": null,
+  "page": "2026-11-08.html"
+}

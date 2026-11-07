@@ -1,0 +1,55 @@
+  journal du jeu : /home/ros2_ws/log/jeu/20261107-232420_1179_jeu.jsonl
+  journal du régisseur : /home/ros2_ws/log/rehearsal/2026-11-07_23-24-20-176_1177_jeu-a1.jsonl
+=== T7 domaine : le garde-fou refuse hors 43, AVANT rclpy 23:24:43 ===
+  domaine 0 : REFUS didier_rehearsal refuse de démarrer : ROS_DOMAIN_ID='0', attendu 43 (domaine de la SIMULATION — 42 es
+  domaine absent : REFUS didier_rehearsal refuse de démarrer : ROS_DOMAIN_ID='', attendu 43 (domaine de la SIMULATION — 42 est
+  ✅ T7 jeu_node refuse hors domaine 43 (domaine 0 et absent), avant tout import rclpy
+=== mise en route puis 900 s de jeu (un seul pilote rclpy) 23:24:43 ===
+  route_state lu : off
+  téléportation à l'origine : code 0
+  route_state lu : on
+  [   0.0 s] depart 
+  [  61.6 s] ignore {'cible': 'p1'}
+  [ 104.0 s] va_la_piste {'cible': 'p1'}
+  [ 150.0 s] va_la {'cible': 'carrousel'}
+  [ 166.9 s] reviens 
+  [ 262.0 s] go_avant_stop 
+  [ 267.0 s] go_avant_stop 
+  [ 270.0 s] stop_console {'roule': True}
+  [ 330.0 s] go_console 
+  [ 420.0 s] stop_bouche 
+  [ 430.0 s] go_bouche 
+  [ 900.0 s] fin 
+=== verdicts (journal du jeu + captures du pilote) 23:39:51 ===
+   décisions : 94 ; écart minimal entre deux : 2.101 s ; retours A->B->A en < 5 s : []
+   initiatives spontanées : 82 ; écart minimal : 8.3 s
+   arrêts de Didier : lubie à 4 s, lubie à 185 s, lubie à 346 s, lubie à 480 s, lubie à 613 s, lubie à 737 s, lubie à 864 s
+     arrêt-lubie nefs : intention 3.1 s et regard 3.1 s avant le stop (regard=True)
+     arrêt-lubie table_basse : intention 3.1 s et regard 3.1 s avant le stop (regard=True)
+     arrêt-lubie poubelle_tri : intention 3.1 s et regard 3.1 s avant le stop (regard=True)
+     arrêt-lubie terrasse : intention 3.0 s et regard 3.0 s avant le stop (regard=True)
+     arrêt-lubie velo_cadenas : intention 3.0 s et regard 3.0 s avant le stop (regard=True)
+     arrêt-lubie rails : intention 3.0 s et regard 3.0 s avant le stop (regard=True)
+     arrêt-lubie anneaux : intention 3.0 s et regard 3.0 s avant le stop (regard=True)
+   offres nées : 2 personnes, 17 objets ; plus lentes réponses : [(0.7, 'objet', 'panneau_info'), (0.68, 'objet', 'poster_bizarre'), (0.68, 'objet', 'pigeon')]
+   ignore p1 : décisions vers elle dans les 30 s : []
+   va_la p1 : tourner [{'cmd': 'tourner', 'angle_deg': -10.8}] ; avancer [{'cmd': 'avancer', 'metres': 1.0}] ; régisseur avancer ['accepted']
+   va_la carrousel : régisseur ['accepted'] ; résultat ['arrived']
+   stop console : relayé en 1 ms ; vitesse avant 0.398 ; à zéro après 0.08 s ; max ensuite 0.0 ; demandes : [] ; déplacements décidés : []
+   stop de la bouche relayé en 1 ms ; journal relais_stop : 1
+   intentions reçues : 1599 ; plus long silence : 0.60 s ; vides : 0 ; lignes du topic jeu/journal : 237 dont sans pourquoi : 0
+  ✅ T1 zéro oscillation (toute décision >= 2 s après la précédente, aucun retour en < 5 s)
+  ✅ T2 initiatives spontanées espacées d'au moins 8 s
+  ✅ T2 au plus un arrêt de Didier (lubie, approche, bouche) par 120 s, au moins un joué
+  ✅ T2 chaque arrêt-lubie : regard ET intention publiés >= 3 s avant le stop
+  ✅ T3 réaction <= 1 s à chaque offre née (personnes et objets)
+  ✅ T4 ignore : aucune action vers la piste pendant 30 s
+  ✅ T4 va_la vers une piste : s'approcher (avancer 1 m) accepté par le régisseur
+  ✅ T4 va_la vers un objet : aller_voir accepté par le régisseur et route_goto_result reçu
+  ✅ T4 stop : Didier qui ROULAIT est à l'arrêt en < 1 s
+  ✅ T4 stop : aucune vitesse, aucune demande, aucun déplacement décidé jusqu'au go
+  ✅ T5 stop de la bouche relayé en < 200 ms, sans score (relais_stop)
+  ✅ T6 jeu/intention jamais muette ni vide plus de 1 s
+  ✅ T6 chaque ligne du topic jeu/journal porte un pourquoi (jamais « absent — bug »)
+  journal du jeu : /home/ros2_ws/log/jeu/20261107-232420_1179_jeu.jsonl
+=== A1 : 14 OK, 0 KO 23:39:51 ===
