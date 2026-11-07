@@ -1,0 +1,73 @@
+[0.542s] Invoking command in '/home/ros2_ws/src/didier_jeu': AMENT_PREFIX_PATH=/home/ros2_ws/install/didier_rehearsal:/home/ros2_ws/install/robot:/home/ros2_ws/install/dadou_utils_ros:/home/ros2_ws/install/theatre_interfaces:/home/ros2_ws/install/theatre_contrats:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ros2_ws/install/theatre_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/ros2_ws/install/theatre_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/ros2_ws/build/didier_jeu/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages:/home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages:/home/ros2_ws/install/robot/lib/python3.12/site-packages:/home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/didier_jeu build --build-base /home/ros2_ws/build/didier_jeu/build install --record /home/ros2_ws/build/didier_jeu/install.log --install-scripts $base/lib/didier_jeu --single-version-externally-managed install_data
+[0.716s] running egg_info
+[0.716s] creating ../../build/didier_jeu/didier_jeu.egg-info
+[0.725s] writing ../../build/didier_jeu/didier_jeu.egg-info/PKG-INFO
+[0.725s] writing dependency_links to ../../build/didier_jeu/didier_jeu.egg-info/dependency_links.txt
+[0.726s] writing entry points to ../../build/didier_jeu/didier_jeu.egg-info/entry_points.txt
+[0.726s] writing requirements to ../../build/didier_jeu/didier_jeu.egg-info/requires.txt
+[0.726s] writing top-level names to ../../build/didier_jeu/didier_jeu.egg-info/top_level.txt
+[0.726s] writing manifest file '../../build/didier_jeu/didier_jeu.egg-info/SOURCES.txt'
+[0.763s] reading manifest file '../../build/didier_jeu/didier_jeu.egg-info/SOURCES.txt'
+[0.764s] writing manifest file '../../build/didier_jeu/didier_jeu.egg-info/SOURCES.txt'
+[0.764s] running build
+[0.764s] running build_py
+[0.764s] creating /home/ros2_ws/build/didier_jeu/build
+[0.764s] creating /home/ros2_ws/build/didier_jeu/build/lib
+[0.764s] creating /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.764s] copying didier_jeu/journal.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.764s] copying didier_jeu/selecteur.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.765s] copying didier_jeu/offres.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.765s] copying didier_jeu/jeu_node.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.765s] copying didier_jeu/__init__.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.765s] copying didier_jeu/repertoire.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.765s] copying didier_jeu/phrases.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.765s] copying didier_jeu/reglages.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.766s] copying didier_jeu/arbre.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.766s] copying didier_jeu/pistes.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.766s] copying didier_jeu/pulsions.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.766s] copying didier_jeu/scores.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.766s] copying didier_jeu/relais.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+[0.766s] running install
+[0.772s] running install_lib
+[0.792s] creating /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.792s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/journal.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.792s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/selecteur.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.792s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/offres.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.793s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/jeu_node.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.793s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/__init__.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.793s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/repertoire.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.793s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/phrases.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.793s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/reglages.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.793s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/arbre.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.794s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/pistes.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.794s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/pulsions.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.794s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/scores.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.794s] copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/relais.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+[0.795s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/journal.py to journal.cpython-312.pyc
+[0.797s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/selecteur.py to selecteur.cpython-312.pyc
+[0.812s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/offres.py to offres.cpython-312.pyc
+[0.813s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/jeu_node.py to jeu_node.cpython-312.pyc
+[0.818s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/__init__.py to __init__.cpython-312.pyc
+[0.818s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/repertoire.py to repertoire.cpython-312.pyc
+[0.821s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/phrases.py to phrases.cpython-312.pyc
+[0.822s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/reglages.py to reglages.cpython-312.pyc
+[0.823s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/arbre.py to arbre.cpython-312.pyc
+[0.824s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/pistes.py to pistes.cpython-312.pyc
+[0.825s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/pulsions.py to pulsions.cpython-312.pyc
+[0.826s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/scores.py to scores.cpython-312.pyc
+[0.829s] byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/relais.py to relais.cpython-312.pyc
+[0.830s] running install_data
+[0.830s] creating /home/ros2_ws/install/didier_jeu/share/ament_index
+[0.830s] creating /home/ros2_ws/install/didier_jeu/share/ament_index/resource_index
+[0.830s] creating /home/ros2_ws/install/didier_jeu/share/ament_index/resource_index/packages
+[0.831s] copying resource/didier_jeu -> /home/ros2_ws/install/didier_jeu/share/ament_index/resource_index/packages
+[0.831s] copying package.xml -> /home/ros2_ws/install/didier_jeu/share/didier_jeu
+[0.831s] creating /home/ros2_ws/install/didier_jeu/share/didier_jeu/config
+[0.831s] copying config/reglages.yaml -> /home/ros2_ws/install/didier_jeu/share/didier_jeu/config
+[0.831s] copying config/deplacements.yaml -> /home/ros2_ws/install/didier_jeu/share/didier_jeu/config
+[0.831s] running install_egg_info
+[0.847s] Copying ../../build/didier_jeu/didier_jeu.egg-info to /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu-0.1.0-py3.12.egg-info
+[0.847s] running install_scripts
+[0.926s] Installing jeu_node script to /home/ros2_ws/install/didier_jeu/lib/didier_jeu
+[0.926s] writing list of installed files to '/home/ros2_ws/build/didier_jeu/install.log'
+[0.947s] Invoked command in '/home/ros2_ws/src/didier_jeu' returned '0': AMENT_PREFIX_PATH=/home/ros2_ws/install/didier_rehearsal:/home/ros2_ws/install/robot:/home/ros2_ws/install/dadou_utils_ros:/home/ros2_ws/install/theatre_interfaces:/home/ros2_ws/install/theatre_contrats:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ros2_ws/install/theatre_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/ros2_ws/install/theatre_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/ros2_ws/build/didier_jeu/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages:/home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages:/home/ros2_ws/install/robot/lib/python3.12/site-packages:/home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/didier_jeu build --build-base /home/ros2_ws/build/didier_jeu/build install --record /home/ros2_ws/build/didier_jeu/install.log --install-scripts $base/lib/didier_jeu --single-version-externally-managed install_data

@@ -1,0 +1,67 @@
+{"payload": {"duration_s": 3600.0, "name": "jeu-a1", "seed": 0, "timeline": [], "undrawn": []}, "source": "director", "t_mono_ms": 2020629, "t_wall": "2026-11-07T20:49:40.703+00:00", "type": "scenario_loaded"}
+{"payload": {"name": "jeu-a1", "seed": 0}, "source": "director", "t_mono_ms": 2049799, "t_wall": "2026-11-07T20:50:09.873+00:00", "type": "scenario_start"}
+{"payload": {"distance": 4.0, "poi": "nefs"}, "source": "director", "t_mono_ms": 2052268, "t_wall": "2026-11-07T20:50:12.343+00:00", "type": "poi_enter"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 2055699, "t_wall": "2026-11-07T20:50:15.774+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 2147499, "t_wall": "2026-11-07T20:51:47.574+00:00", "type": "voice_move"}
+{"payload": {"angle_deg": -10.7, "effect": "accepted", "name": "pivot -11°"}, "source": "director", "t_mono_ms": 2157900, "t_wall": "2026-11-07T20:51:57.975+00:00", "type": "tourner"}
+{"payload": {"name": "pivot -11°", "reason": "arrived", "result": "arrived", "travelled": 0.02}, "source": "director", "t_mono_ms": 2158453, "t_wall": "2026-11-07T20:51:58.528+00:00", "type": "goto_result"}
+{"payload": {"name": "pivot -11°"}, "source": "director", "t_mono_ms": 2158455, "t_wall": "2026-11-07T20:51:58.529+00:00", "type": "goto_arrived"}
+{"payload": {"effect": "accepted", "metres": 1.0, "name": "avancer 1 m"}, "source": "director", "t_mono_ms": 2158455, "t_wall": "2026-11-07T20:51:58.530+00:00", "type": "avancer"}
+{"payload": {"distance": 2.5, "poi": "elephant"}, "source": "director", "t_mono_ms": 2161211, "t_wall": "2026-11-07T20:52:01.285+00:00", "type": "poi_enter"}
+{"payload": {"name": "avancer 1 m"}, "source": "director", "t_mono_ms": 2165554, "t_wall": "2026-11-07T20:52:05.628+00:00", "type": "goto_arrived"}
+{"payload": {"name": "avancer 1 m", "reason": "arrived", "result": "arrived", "travelled": 0.95}, "source": "director", "t_mono_ms": 2165554, "t_wall": "2026-11-07T20:52:05.629+00:00", "type": "goto_result"}
+{"payload": {"distance": 6.71, "effect": "accepted", "name": "carrousel", "objet": "carrousel"}, "source": "director", "t_mono_ms": 2201899, "t_wall": "2026-11-07T20:52:41.974+00:00", "type": "aller_voir"}
+{"payload": {"distance": 5.21, "poi": "nefs"}, "source": "director", "t_mono_ms": 2207856, "t_wall": "2026-11-07T20:52:47.930+00:00", "type": "poi_exit"}
+{"payload": {"distance": 3.98, "poi": "carrousel"}, "source": "director", "t_mono_ms": 2210145, "t_wall": "2026-11-07T20:52:50.220+00:00", "type": "poi_enter"}
+{"payload": {"name": "carrousel"}, "source": "director", "t_mono_ms": 2216453, "t_wall": "2026-11-07T20:52:56.527+00:00", "type": "goto_arrived"}
+{"payload": {"name": "carrousel", "reason": "arrived", "result": "arrived", "travelled": 4.93}, "source": "director", "t_mono_ms": 2216453, "t_wall": "2026-11-07T20:52:56.528+00:00", "type": "goto_result"}
+{"payload": {"cmd": "go", "effect": "rejoin", "rejoin": true}, "source": "director", "t_mono_ms": 2218799, "t_wall": "2026-11-07T20:52:58.874+00:00", "type": "voice_move"}
+{"payload": {}, "source": "director", "t_mono_ms": 2218801, "t_wall": "2026-11-07T20:52:58.876+00:00", "type": "voice_relaunch_confirmed"}
+{"payload": {"distance": 3.26, "poi": "elephant"}, "source": "director", "t_mono_ms": 2220409, "t_wall": "2026-11-07T20:53:00.484+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "table_basse"}, "source": "director", "t_mono_ms": 2233133, "t_wall": "2026-11-07T20:53:13.207+00:00", "type": "poi_enter"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 2236599, "t_wall": "2026-11-07T20:53:16.673+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 2313438, "t_wall": "2026-11-07T20:54:33.512+00:00", "type": "voice_move"}
+{"payload": {"distance": 5.21, "poi": "carrousel"}, "source": "director", "t_mono_ms": 2315131, "t_wall": "2026-11-07T20:54:35.205+00:00", "type": "poi_exit"}
+{"payload": {"cmd": "go", "effect": "ignored", "reason": "deja_en_marche"}, "source": "director", "t_mono_ms": 2318450, "t_wall": "2026-11-07T20:54:38.524+00:00", "type": "voice_move"}
+{"payload": {"distance": 2.49, "poi": "poster_bizarre"}, "source": "director", "t_mono_ms": 2320889, "t_wall": "2026-11-07T20:54:40.963+00:00", "type": "poi_enter"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 2321440, "t_wall": "2026-11-07T20:54:41.514+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 2381448, "t_wall": "2026-11-07T20:55:41.522+00:00", "type": "voice_move"}
+{"payload": {"distance": 3.27, "poi": "table_basse"}, "source": "director", "t_mono_ms": 2382306, "t_wall": "2026-11-07T20:55:42.380+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.5, "poi": "poubelle_tri"}, "source": "director", "t_mono_ms": 2393888, "t_wall": "2026-11-07T20:55:53.962+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.25, "poi": "poster_bizarre"}, "source": "director", "t_mono_ms": 2394900, "t_wall": "2026-11-07T20:55:54.975+00:00", "type": "poi_exit"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 2397399, "t_wall": "2026-11-07T20:55:57.473+00:00", "type": "voice_move"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 2471434, "t_wall": "2026-11-07T20:57:11.508+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 2481433, "t_wall": "2026-11-07T20:57:21.507+00:00", "type": "voice_move"}
+{"payload": {"distance": 2.49, "poi": "pigeon"}, "source": "director", "t_mono_ms": 2490753, "t_wall": "2026-11-07T20:57:30.828+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "poubelle_tri"}, "source": "director", "t_mono_ms": 2491765, "t_wall": "2026-11-07T20:57:31.840+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "banc"}, "source": "director", "t_mono_ms": 2502523, "t_wall": "2026-11-07T20:57:42.597+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "pigeon"}, "source": "director", "t_mono_ms": 2503532, "t_wall": "2026-11-07T20:57:43.606+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "flaque"}, "source": "director", "t_mono_ms": 2513901, "t_wall": "2026-11-07T20:57:53.975+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.27, "poi": "banc"}, "source": "director", "t_mono_ms": 2516052, "t_wall": "2026-11-07T20:57:56.126+00:00", "type": "poi_exit"}
+{"payload": {"distance": 3.0, "poi": "terrasse"}, "source": "director", "t_mono_ms": 2526922, "t_wall": "2026-11-07T20:58:06.997+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "flaque"}, "source": "director", "t_mono_ms": 2530126, "t_wall": "2026-11-07T20:58:10.200+00:00", "type": "poi_exit"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 2531299, "t_wall": "2026-11-07T20:58:11.373+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 2624699, "t_wall": "2026-11-07T20:59:44.773+00:00", "type": "voice_move"}
+{"payload": {"distance": 3.99, "poi": "grue_jaune"}, "source": "director", "t_mono_ms": 2630232, "t_wall": "2026-11-07T20:59:50.306+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.9, "poi": "terrasse"}, "source": "director", "t_mono_ms": 2635976, "t_wall": "2026-11-07T20:59:56.050+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.99, "poi": "cale"}, "source": "director", "t_mono_ms": 2645714, "t_wall": "2026-11-07T21:00:05.788+00:00", "type": "poi_enter"}
+{"payload": {"distance": 5.21, "poi": "grue_jaune"}, "source": "director", "t_mono_ms": 2652080, "t_wall": "2026-11-07T21:00:12.154+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "velo_cadenas"}, "source": "director", "t_mono_ms": 2659509, "t_wall": "2026-11-07T21:00:19.584+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.92, "poi": "cale"}, "source": "director", "t_mono_ms": 2661784, "t_wall": "2026-11-07T21:00:21.859+00:00", "type": "poi_exit"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 2662999, "t_wall": "2026-11-07T21:00:23.073+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 2759799, "t_wall": "2026-11-07T21:01:59.873+00:00", "type": "voice_move"}
+{"payload": {"distance": 2.49, "poi": "panneau_info"}, "source": "director", "t_mono_ms": 2768394, "t_wall": "2026-11-07T21:02:08.468+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "velo_cadenas"}, "source": "director", "t_mono_ms": 2769430, "t_wall": "2026-11-07T21:02:09.504+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "rails"}, "source": "director", "t_mono_ms": 2779850, "t_wall": "2026-11-07T21:02:19.924+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.25, "poi": "panneau_info"}, "source": "director", "t_mono_ms": 2782776, "t_wall": "2026-11-07T21:02:22.851+00:00", "type": "poi_exit"}
+{"payload": {"distance": 3.26, "poi": "rails"}, "source": "director", "t_mono_ms": 2797201, "t_wall": "2026-11-07T21:02:37.276+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.5, "poi": "lampadaire"}, "source": "director", "t_mono_ms": 2799075, "t_wall": "2026-11-07T21:02:39.149+00:00", "type": "poi_enter"}
+{"payload": {"distance": 2.49, "poi": "anneaux"}, "source": "director", "t_mono_ms": 2812385, "t_wall": "2026-11-07T21:02:52.460+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "lampadaire"}, "source": "director", "t_mono_ms": 2813302, "t_wall": "2026-11-07T21:02:53.376+00:00", "type": "poi_exit"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 2815899, "t_wall": "2026-11-07T21:02:55.973+00:00", "type": "voice_move"}
+{"payload": {"cmd": "go", "effect": "resume"}, "source": "director", "t_mono_ms": 2906999, "t_wall": "2026-11-07T21:04:27.073+00:00", "type": "voice_move"}
+{"payload": {"distance": 3.26, "poi": "anneaux"}, "source": "director", "t_mono_ms": 2916654, "t_wall": "2026-11-07T21:04:36.728+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.5, "poi": "bollard"}, "source": "director", "t_mono_ms": 2918281, "t_wall": "2026-11-07T21:04:38.356+00:00", "type": "poi_enter"}
+{"payload": {"distance": 3.26, "poi": "bollard"}, "source": "director", "t_mono_ms": 2932368, "t_wall": "2026-11-07T21:04:52.442+00:00", "type": "poi_exit"}
+{"payload": {"distance": 2.49, "poi": "loire"}, "source": "director", "t_mono_ms": 2933996, "t_wall": "2026-11-07T21:04:54.070+00:00", "type": "poi_enter"}
+{"payload": {"cmd": "stop", "effect": "hold"}, "source": "director", "t_mono_ms": 2939199, "t_wall": "2026-11-07T21:04:59.273+00:00", "type": "voice_move"}

@@ -1,0 +1,288 @@
+-- The C compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Found rosidl_default_generators: 1.6.1 (/opt/ros/jazzy/share/rosidl_default_generators/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found rosidl_adapter: 4.6.9 (/opt/ros/jazzy/share/rosidl_adapter/cmake)
+-- Found Python3: /usr/include/python3.12 (found version "3.12.3") found components: Development NumPy Interpreter Development.Module Development.Embed 
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Found ament_cmake_ros: 0.12.2 (/opt/ros/jazzy/share/ament_cmake_ros/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found python_cmake_module: 0.11.1 (/opt/ros/jazzy/share/python_cmake_module/cmake)
+-- Found PythonExtra: /usr/bin/python3  
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter Development NumPy Development.Module Development.Embed 
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Configuring done (2.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/ros2_ws/build/theatre_interfaces
+[  2%] Generating type hashes for ROS interfaces
+[  4%] Generating Rust code for ROS interfaces
+[  4%] Built target ament_cmake_python_copy_theatre_interfaces
+[  4%] Built target theatre_interfaces__rosidl_generator_type_description
+[  4%] Built target theatre_interfaces__rs
+running egg_info
+creating theatre_interfaces.egg-info
+[  6%] Generating C code for ROS interfaces
+[  8%] Generating C++ code for ROS interfaces
+writing theatre_interfaces.egg-info/PKG-INFO
+writing dependency_links to theatre_interfaces.egg-info/dependency_links.txt
+writing top-level names to theatre_interfaces.egg-info/top_level.txt
+writing manifest file 'theatre_interfaces.egg-info/SOURCES.txt'
+reading manifest file 'theatre_interfaces.egg-info/SOURCES.txt'
+writing manifest file 'theatre_interfaces.egg-info/SOURCES.txt'
+[  8%] Built target ament_cmake_python_build_theatre_interfaces_egg
+[  8%] Built target theatre_interfaces__cpp
+[ 11%] Building C object CMakeFiles/theatre_interfaces__rosidl_generator_c.dir/rosidl_generator_c/theatre_interfaces/srv/detail/set_led_panel__type_support.c.o
+[ 13%] Building C object CMakeFiles/theatre_interfaces__rosidl_generator_c.dir/rosidl_generator_c/theatre_interfaces/msg/detail/string_time__description.c.o
+[ 15%] Building C object CMakeFiles/theatre_interfaces__rosidl_generator_c.dir/rosidl_generator_c/theatre_interfaces/msg/detail/string_time__functions.c.o
+[ 22%] Building C object CMakeFiles/theatre_interfaces__rosidl_generator_c.dir/rosidl_generator_c/theatre_interfaces/msg/detail/string_time__type_support.c.o
+[ 22%] Building C object CMakeFiles/theatre_interfaces__rosidl_generator_c.dir/rosidl_generator_c/theatre_interfaces/srv/detail/set_led_panel__functions.c.o
+[ 22%] Building C object CMakeFiles/theatre_interfaces__rosidl_generator_c.dir/rosidl_generator_c/theatre_interfaces/srv/detail/set_led_panel__description.c.o
+[ 24%] Linking C shared library libtheatre_interfaces__rosidl_generator_c.so
+[ 24%] Built target theatre_interfaces__rosidl_generator_c
+[ 26%] Generating C++ type support for eProsima Fast-RTPS
+[ 37%] Generating C type support dispatch for ROS interfaces
+[ 37%] Generating C type support for eProsima Fast-RTPS
+[ 37%] Generating C++ introspection for ROS interfaces
+[ 37%] Generating C introspection for ROS interfaces
+[ 37%] Generating C++ type support dispatch for ROS interfaces
+[ 42%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/theatre_interfaces/msg/string_time__type_support.cpp.o
+[ 42%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/theatre_interfaces/srv/set_led_panel__type_support.cpp.o
+[ 46%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/theatre_interfaces/srv/set_led_panel__type_support.cpp.o
+[ 46%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/theatre_interfaces/msg/string_time__type_support.cpp.o
+[ 48%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/theatre_interfaces/msg/detail/string_time__type_support.cpp.o
+[ 51%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/theatre_interfaces/srv/detail/set_led_panel__type_support.cpp.o
+[ 53%] Building C object CMakeFiles/theatre_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/theatre_interfaces/srv/detail/set_led_panel__type_support.c.o
+[ 55%] Building C object CMakeFiles/theatre_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/theatre_interfaces/msg/detail/string_time__type_support.c.o
+[ 57%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/theatre_interfaces/srv/detail/dds_fastrtps/set_led_panel__type_support.cpp.o
+[ 60%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/theatre_interfaces/msg/detail/dds_fastrtps/string_time__type_support.cpp.o
+[ 62%] Linking CXX shared library libtheatre_interfaces__rosidl_typesupport_c.so
+[ 66%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/theatre_interfaces/srv/detail/set_led_panel__type_support_c.cpp.o
+[ 66%] Building CXX object CMakeFiles/theatre_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/theatre_interfaces/msg/detail/string_time__type_support_c.cpp.o
+[ 68%] Linking C shared library libtheatre_interfaces__rosidl_typesupport_introspection_c.so
+[ 68%] Built target theatre_interfaces__rosidl_typesupport_introspection_c
+[ 68%] Built target theatre_interfaces__rosidl_typesupport_c
+[ 71%] Linking CXX shared library libtheatre_interfaces__rosidl_typesupport_cpp.so
+[ 73%] Linking CXX shared library libtheatre_interfaces__rosidl_typesupport_fastrtps_c.so
+[ 73%] Built target theatre_interfaces__rosidl_typesupport_cpp
+[ 75%] Linking CXX shared library libtheatre_interfaces__rosidl_typesupport_introspection_cpp.so
+[ 75%] Built target theatre_interfaces__rosidl_typesupport_fastrtps_c
+[ 75%] Built target theatre_interfaces__rosidl_typesupport_introspection_cpp
+[ 77%] Linking CXX shared library libtheatre_interfaces__rosidl_typesupport_fastrtps_cpp.so
+[ 77%] Built target theatre_interfaces__rosidl_typesupport_fastrtps_cpp
+[ 77%] Built target theatre_interfaces
+[ 80%] Generating Python code for ROS interfaces
+[ 80%] Built target theatre_interfaces__py
+[ 82%] Building C object CMakeFiles/theatre_interfaces__rosidl_generator_py.dir/rosidl_generator_py/theatre_interfaces/msg/_string_time_s.c.o
+[ 84%] Building C object CMakeFiles/theatre_interfaces__rosidl_generator_py.dir/rosidl_generator_py/theatre_interfaces/srv/_set_led_panel_s.c.o
+[ 86%] Linking C shared library libtheatre_interfaces__rosidl_generator_py.so
+[ 86%] Built target theatre_interfaces__rosidl_generator_py
+[ 88%] Building C object CMakeFiles/theatre_interfaces_s__rosidl_typesupport_introspection_c.dir/rosidl_generator_py/theatre_interfaces/_theatre_interfaces_s.ep.rosidl_typesupport_introspection_c.c.o
+[ 91%] Building C object CMakeFiles/theatre_interfaces_s__rosidl_typesupport_c.dir/rosidl_generator_py/theatre_interfaces/_theatre_interfaces_s.ep.rosidl_typesupport_c.c.o
+[ 93%] Building C object CMakeFiles/theatre_interfaces_s__rosidl_typesupport_fastrtps_c.dir/rosidl_generator_py/theatre_interfaces/_theatre_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c.o
+[ 97%] Linking C shared module rosidl_generator_py/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_introspection_c.so
+[ 97%] Linking C shared module rosidl_generator_py/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_c.so
+[100%] Linking C shared module rosidl_generator_py/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[100%] Built target theatre_interfaces_s__rosidl_typesupport_fastrtps_c
+[100%] Built target theatre_interfaces_s__rosidl_typesupport_introspection_c
+[100%] Built target theatre_interfaces_s__rosidl_typesupport_c
+-- Install configuration: ""
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/ament_index/resource_index/rosidl_interfaces/theatre_interfaces
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/msg/StringTime.json
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/srv/SetLedPanel.json
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/rosidl_generator_c__visibility_control.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__functions.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__description.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__type_support.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__type_support.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__struct.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__functions.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/string_time.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/set_led_panel.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__functions.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__type_support.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__struct.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__functions.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__type_support.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__description.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/environment/library_path.sh
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/environment/library_path.dsv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_generator_c.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_generator_c.so" to ""
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__rosidl_typesupport_fastrtps_c.h
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__rosidl_typesupport_fastrtps_c.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_fastrtps_c.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_fastrtps_c.so" to ""
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__type_support.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__rosidl_typesupport_introspection_c.h
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__type_support.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__rosidl_typesupport_introspection_c.h
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_introspection_c.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_introspection_c.so" to ""
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_c.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_c.so" to ""
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/string_time.hpp
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__struct.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__builder.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__traits.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__type_support.hpp
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/set_led_panel.hpp
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__builder.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__traits.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__struct.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__type_support.hpp
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__rosidl_typesupport_fastrtps_cpp.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/dds_fastrtps
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/dds_fastrtps
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__rosidl_typesupport_fastrtps_cpp.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_fastrtps_cpp.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_fastrtps_cpp.so" to ""
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__type_support.cpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/msg/detail/string_time__rosidl_typesupport_introspection_cpp.hpp
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv
+-- Up-to-date: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__rosidl_typesupport_introspection_cpp.hpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/include/theatre_interfaces/theatre_interfaces/srv/detail/set_led_panel__type_support.cpp
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_introspection_cpp.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_introspection_cpp.so" to ""
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_cpp.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_typesupport_cpp.so" to ""
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/environment/pythonpath.sh
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/environment/pythonpath.dsv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces-0.0.0-py3.12.egg-info
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces-0.0.0-py3.12.egg-info/top_level.txt
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces-0.0.0-py3.12.egg-info/PKG-INFO
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces-0.0.0-py3.12.egg-info/dependency_links.txt
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces-0.0.0-py3.12.egg-info/SOURCES.txt
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/msg
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/msg/_string_time_s.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/msg/_string_time.py
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/msg/__init__.py
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_fastrtps_c.so
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/_theatre_interfaces_s.ep.rosidl_typesupport_c.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/_theatre_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/__init__.py
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/_theatre_interfaces_s.ep.rosidl_typesupport_introspection_c.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_c.so
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_introspection_c.so
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/srv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/srv/_set_led_panel_s.c
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/srv/__init__.py
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/srv/_set_led_panel.py
+Listing '/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces'...
+Compiling '/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/__init__.py'...
+Listing '/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/msg'...
+Compiling '/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/msg/__init__.py'...
+Compiling '/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/msg/_string_time.py'...
+Listing '/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/srv'...
+Compiling '/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/srv/__init__.py'...
+Compiling '/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/srv/_set_led_panel.py'...
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_fastrtps_c.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_fastrtps_c.so" to ""
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_introspection_c.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_introspection_c.so" to ""
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_c.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages/theatre_interfaces/theatre_interfaces_s__rosidl_typesupport_c.so" to ""
+-- Installing: /home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_generator_py.so
+-- Set non-toolchain portion of runtime path of "/home/ros2_ws/install/theatre_interfaces/lib/libtheatre_interfaces__rosidl_generator_py.so" to ""
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/Cargo.toml
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/src
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/src/msg
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/src/msg/rmw.rs
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/src/msg.rs
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/src/srv.rs
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/src/srv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/src/srv/rmw.rs
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/src/lib.rs
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/rust/build.rs
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/msg/StringTime.idl
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/srv/SetLedPanel.idl
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/msg/StringTime.msg
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/srv/SetLedPanel.srv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/ament_index/resource_index/package_run_dependencies/theatre_interfaces
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/ament_index/resource_index/parent_prefix_path/theatre_interfaces
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/environment/ament_prefix_path.sh
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/environment/ament_prefix_path.dsv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/environment/path.sh
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/environment/path.dsv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/local_setup.bash
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/local_setup.sh
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/local_setup.zsh
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/local_setup.dsv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/package.dsv
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/ament_index/resource_index/packages/theatre_interfaces
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/export_theatre_interfaces__rosidl_generator_cExport.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/export_theatre_interfaces__rosidl_generator_cExport-noconfig.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/export_theatre_interfaces__rosidl_typesupport_fastrtps_cExport.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/export_theatre_interfaces__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfaces__rosidl_typesupport_introspection_cExport.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfaces__rosidl_typesupport_introspection_cExport-noconfig.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfaces__rosidl_typesupport_cExport.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfaces__rosidl_typesupport_cExport-noconfig.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/export_theatre_interfaces__rosidl_generator_cppExport.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/export_theatre_interfaces__rosidl_typesupport_fastrtps_cppExport.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/export_theatre_interfaces__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfaces__rosidl_typesupport_introspection_cppExport.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfaces__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfaces__rosidl_typesupport_cppExport.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfaces__rosidl_typesupport_cppExport-noconfig.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/export_theatre_interfaces__rosidl_generator_pyExport.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/export_theatre_interfaces__rosidl_generator_pyExport-noconfig.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/rosidl_cmake-extras.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/ament_cmake_export_dependencies-extras.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/ament_cmake_export_include_directories-extras.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/ament_cmake_export_libraries-extras.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/ament_cmake_export_targets-extras.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/rosidl_cmake_aggregate_target-extras.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfacesConfig.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/cmake/theatre_interfacesConfig-version.cmake
+-- Installing: /home/ros2_ws/install/theatre_interfaces/share/theatre_interfaces/package.xml

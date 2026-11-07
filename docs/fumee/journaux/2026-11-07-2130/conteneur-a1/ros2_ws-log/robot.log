@@ -1,0 +1,1001 @@
+2026-11-07 20:49:24,302 animation_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/audios.json[0m
+2026-11-07 20:49:24,303 animation_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/colors.json[0m
+2026-11-07 20:49:24,303 animation_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/expressions.json[0m
+2026-11-07 20:49:24,303 animation_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/robot_lights.json[0m
+2026-11-07 20:49:24,303 animation_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/lights_base.json[0m
+2026-11-07 20:49:24,303 animation_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/relays.json[0m
+2026-11-07 20:49:24,303 animation_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/piano.json[0m
+2026-11-07 20:49:24,304 animation_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/audios-data.json[0m
+2026-11-07 20:49:24,314 animation_node AnimationsNode __init__ |58: INFO[32m Starting animation_node[0m
+2026-11-07 20:49:24,327 face_sim_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/audios.json[0m
+2026-11-07 20:49:24,327 face_sim_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/colors.json[0m
+2026-11-07 20:49:24,327 face_sim_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/expressions.json[0m
+2026-11-07 20:49:24,328 face_sim_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/robot_lights.json[0m
+2026-11-07 20:49:24,328 face_sim_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/lights_base.json[0m
+2026-11-07 20:49:24,328 face_sim_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/relays.json[0m
+2026-11-07 20:49:24,328 face_sim_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/piano.json[0m
+2026-11-07 20:49:24,328 face_sim_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/audios-data.json[0m
+2026-11-07 20:49:24,329 face_sim_node RobotJsonManager open_json |30: INFO[32m import json /home/ros2_ws/src/robot/json/expressions.json[0m
+2026-11-07 20:49:24,435 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:49:24,435 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:49:24,439 face_sim_node FaceSimNode __init__ |119: INFO[32m face_sim_node prêt : aperçu sur http://localhost:8766[0m
+2026-11-07 20:49:44,473 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"c-est-qui-le-con"', time=0, anim=False)[0m
+2026-11-07 20:49:44,473 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'c-est-qui-le-con'}[0m
+2026-11-07 20:49:44,473 animation_node AnimationManager get_animation |102: INFO[32m start animation c-est-qui-le-con[0m
+2026-11-07 20:49:44,473 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/c-est-qui-le-con.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'c-est-qui-le-con'}[0m
+2026-11-07 20:49:44,516 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:49:44,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 6000}[0m
+2026-11-07 20:49:44,516 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:49:50,515 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:49:50,515 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:49:50,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:49:50,515 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:49:50,515 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:49:50,516 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:49:54,473 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-move"', time=0, anim=False)[0m
+2026-11-07 20:49:54,473 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-move'}[0m
+2026-11-07 20:49:54,473 animation_node AnimationManager get_animation |102: INFO[32m start animation little-move[0m
+2026-11-07 20:49:54,473 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 5000, 'types': ['little move'], 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'little-move'}[0m
+2026-11-07 20:49:59,515 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:49:59,515 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:49:59,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:49:59,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:49:59,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:50:03,473 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck"', time=0, anim=False)[0m
+2026-11-07 20:50:03,473 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck'}[0m
+2026-11-07 20:50:03,473 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck[0m
+2026-11-07 20:50:03,474 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E4', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'scooby-doo']], 'neck': [[0.15, 0.7], [0.5, 0.5], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck'}[0m
+2026-11-07 20:50:08,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "scooby-doo"[0m
+2026-11-07 20:50:08,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'scooby-doo', 'duration': 0}[0m
+2026-11-07 20:50:08,015 face_sim_node Face update |94: INFO[32m update face sequences : scooby-doo[0m
+2026-11-07 20:50:08,515 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:50:08,515 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:50:08,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:50:08,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:50:08,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:50:08,516 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:50:22,773 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck2"', time=0, anim=False)[0m
+2026-11-07 20:50:22,773 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck2'}[0m
+2026-11-07 20:50:22,774 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck2[0m
+2026-11-07 20:50:22,774 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E5', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'sexy']], 'neck': [[0.15, 0.55], [0.5, 0.68], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck2'}[0m
+2026-11-07 20:50:27,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "sexy"[0m
+2026-11-07 20:50:27,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'sexy', 'duration': 0}[0m
+2026-11-07 20:50:27,315 face_sim_node Face update |94: INFO[32m update face sequences : sexy[0m
+2026-11-07 20:50:27,815 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:50:27,815 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:50:27,815 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:50:27,815 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:50:27,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:50:27,816 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:50:31,773 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"neck-side-to-side"', time=0, anim=False)[0m
+2026-11-07 20:50:31,773 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'neck-side-to-side'}[0m
+2026-11-07 20:50:31,773 animation_node AnimationManager get_animation |102: INFO[32m start animation neck-side-to-side[0m
+2026-11-07 20:50:31,773 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E9', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'upgrade']], 'neck': [[0.1, 0.4], [0.2, 0.8], [0.3, 0.2], [0.4, 0.2], [0.45, 0.8], [0.5, 0.2], [0.6, 0.2], [1, 0.6]], 'name': 'neck-side-to-side'}[0m
+2026-11-07 20:50:36,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "upgrade"[0m
+2026-11-07 20:50:36,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'upgrade', 'duration': 0}[0m
+2026-11-07 20:50:36,316 face_sim_node Face update |94: INFO[32m update face sequences : upgrade[0m
+2026-11-07 20:50:36,815 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:50:36,815 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:50:36,815 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:50:36,815 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:50:36,815 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:50:36,816 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:50:40,873 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"aurore"', time=0, anim=False)[0m
+2026-11-07 20:50:40,873 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'aurore'}[0m
+2026-11-07 20:50:40,873 animation_node AnimationManager get_animation |102: INFO[32m start animation aurore[0m
+2026-11-07 20:50:40,873 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 7000, 'types': ['random'], 'audios': [[0, 'random/aurore.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'aurore'}[0m
+2026-11-07 20:50:40,915 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:50:40,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 7000}[0m
+2026-11-07 20:50:40,916 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:50:47,914 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:50:47,915 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:50:47,915 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:50:47,915 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:50:47,915 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:50:47,915 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:50:51,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"michel-sardou"', time=0, anim=False)[0m
+2026-11-07 20:50:51,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'michel-sardou'}[0m
+2026-11-07 20:50:51,973 animation_node AnimationManager get_animation |102: INFO[32m start animation michel-sardou[0m
+2026-11-07 20:50:51,973 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/michel-sardou.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'michel-sardou'}[0m
+2026-11-07 20:50:52,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:50:52,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:50:52,015 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:51:00,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:51:00,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:51:00,016 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:51:00,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:51:00,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:51:00,016 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:51:03,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"pour-votre-securite"', time=0, anim=False)[0m
+2026-11-07 20:51:03,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'pour-votre-securite'}[0m
+2026-11-07 20:51:03,973 animation_node AnimationManager get_animation |102: INFO[32m start animation pour-votre-securite[0m
+2026-11-07 20:51:03,973 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/pour-votre-securite.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'pour-votre-securite'}[0m
+2026-11-07 20:51:04,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:51:04,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 8000}[0m
+2026-11-07 20:51:04,016 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:51:12,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:51:12,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:51:12,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:51:12,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:51:12,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:51:12,015 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:51:17,173 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quand-on-voit"', time=0, anim=False)[0m
+2026-11-07 20:51:17,173 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quand-on-voit'}[0m
+2026-11-07 20:51:17,173 animation_node AnimationManager get_animation |102: INFO[32m start animation quand-on-voit[0m
+2026-11-07 20:51:17,173 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/qd-on-voit-ce-qu-on-voit.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'quand-on-voit'}[0m
+2026-11-07 20:51:17,216 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:51:17,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:51:17,216 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:51:25,215 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:51:25,215 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:51:25,215 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:51:25,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:51:25,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:51:25,216 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:51:29,173 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quoi-ma-geule"', time=0, anim=False)[0m
+2026-11-07 20:51:29,174 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quoi-ma-geule'}[0m
+2026-11-07 20:51:29,174 animation_node AnimationManager get_animation |102: INFO[32m start animation quoi-ma-geule[0m
+2026-11-07 20:51:29,174 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/quoi-ma-geule.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[1, {'mode': 'random', 'random move min': 15, 'random move max': 85, 'random time min': 500, 'random time max': 3000}]], 'right_eye': [[1, {'mode': 'random', 'random move min': 10, 'random move max': 90, 'random time min': 500, 'random time max': 3000}]], 'left_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'right_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'neck': [[1, {'mode': 'random', 'random move min': 35, 'random move max': 75, 'random time min': 500, 'random time max': 3000}]], 'name': 'quoi-ma-geule'}[0m
+2026-11-07 20:51:29,215 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:51:29,215 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 6000}[0m
+2026-11-07 20:51:29,215 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:51:35,215 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:51:35,215 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:51:35,216 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:51:35,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:51:35,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:51:35,216 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:51:39,273 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"eye-left"', time=0, anim=False)[0m
+2026-11-07 20:51:39,273 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'eye-left'}[0m
+2026-11-07 20:51:39,273 animation_node AnimationManager get_animation |102: INFO[32m start animation eye-left[0m
+2026-11-07 20:51:39,273 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 2000, 'types': ['little move'], 'left_eye': [[0, 0.56], [0.9, 0.28]], 'name': 'eye-left'}[0m
+2026-11-07 20:51:41,315 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:51:41,315 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:51:41,316 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:51:41,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:51:41,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:51:55,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"c-est-qui-le-con"', time=0, anim=False)[0m
+2026-11-07 20:51:55,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'c-est-qui-le-con'}[0m
+2026-11-07 20:51:55,974 animation_node AnimationManager get_animation |102: INFO[32m start animation c-est-qui-le-con[0m
+2026-11-07 20:51:55,974 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/c-est-qui-le-con.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'c-est-qui-le-con'}[0m
+2026-11-07 20:51:56,016 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:51:56,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 6000}[0m
+2026-11-07 20:51:56,016 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:52:02,014 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:52:02,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:52:02,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:52:02,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:52:02,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:52:02,016 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:52:09,573 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-move"', time=0, anim=False)[0m
+2026-11-07 20:52:09,573 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-move'}[0m
+2026-11-07 20:52:09,573 animation_node AnimationManager get_animation |102: INFO[32m start animation little-move[0m
+2026-11-07 20:52:09,573 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 5000, 'types': ['little move'], 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'little-move'}[0m
+2026-11-07 20:52:14,615 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:52:14,615 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:52:14,616 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:52:14,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:52:14,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:52:18,673 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck"', time=0, anim=False)[0m
+2026-11-07 20:52:18,673 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck'}[0m
+2026-11-07 20:52:18,673 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck[0m
+2026-11-07 20:52:18,673 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E4', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'scooby-doo']], 'neck': [[0.15, 0.7], [0.5, 0.5], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck'}[0m
+2026-11-07 20:52:23,215 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "scooby-doo"[0m
+2026-11-07 20:52:23,215 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'scooby-doo', 'duration': 0}[0m
+2026-11-07 20:52:23,216 face_sim_node Face update |94: INFO[32m update face sequences : scooby-doo[0m
+2026-11-07 20:52:23,715 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:52:23,715 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:52:23,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:52:23,716 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:52:23,716 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:52:23,716 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:52:27,773 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck2"', time=0, anim=False)[0m
+2026-11-07 20:52:27,773 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck2'}[0m
+2026-11-07 20:52:27,773 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck2[0m
+2026-11-07 20:52:27,773 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E5', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'sexy']], 'neck': [[0.15, 0.55], [0.5, 0.68], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck2'}[0m
+2026-11-07 20:52:32,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "sexy"[0m
+2026-11-07 20:52:32,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'sexy', 'duration': 0}[0m
+2026-11-07 20:52:32,315 face_sim_node Face update |94: INFO[32m update face sequences : sexy[0m
+2026-11-07 20:52:32,815 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:52:32,815 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:52:32,816 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:52:32,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:52:32,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:52:32,816 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:52:36,773 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"neck-side-to-side"', time=0, anim=False)[0m
+2026-11-07 20:52:36,773 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'neck-side-to-side'}[0m
+2026-11-07 20:52:36,773 animation_node AnimationManager get_animation |102: INFO[32m start animation neck-side-to-side[0m
+2026-11-07 20:52:36,773 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E9', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'upgrade']], 'neck': [[0.1, 0.4], [0.2, 0.8], [0.3, 0.2], [0.4, 0.2], [0.45, 0.8], [0.5, 0.2], [0.6, 0.2], [1, 0.6]], 'name': 'neck-side-to-side'}[0m
+2026-11-07 20:52:41,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "upgrade"[0m
+2026-11-07 20:52:41,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'upgrade', 'duration': 0}[0m
+2026-11-07 20:52:41,316 face_sim_node Face update |94: INFO[32m update face sequences : upgrade[0m
+2026-11-07 20:52:41,815 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:52:41,815 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:52:41,815 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:52:41,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:52:41,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:52:41,816 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:53:04,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"aurore"', time=0, anim=False)[0m
+2026-11-07 20:53:04,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'aurore'}[0m
+2026-11-07 20:53:04,973 animation_node AnimationManager get_animation |102: INFO[32m start animation aurore[0m
+2026-11-07 20:53:04,973 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 7000, 'types': ['random'], 'audios': [[0, 'random/aurore.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'aurore'}[0m
+2026-11-07 20:53:05,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:53:05,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 7000}[0m
+2026-11-07 20:53:05,016 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:53:12,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:53:12,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:53:12,016 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:53:12,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:53:12,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:53:12,016 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:53:23,773 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"michel-sardou"', time=0, anim=False)[0m
+2026-11-07 20:53:23,773 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'michel-sardou'}[0m
+2026-11-07 20:53:23,773 animation_node AnimationManager get_animation |102: INFO[32m start animation michel-sardou[0m
+2026-11-07 20:53:23,773 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/michel-sardou.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'michel-sardou'}[0m
+2026-11-07 20:53:23,815 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:53:23,815 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:53:23,816 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:53:31,815 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:53:31,815 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:53:31,815 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:53:31,815 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:53:31,815 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:53:31,816 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:53:35,773 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"pour-votre-securite"', time=0, anim=False)[0m
+2026-11-07 20:53:35,773 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'pour-votre-securite'}[0m
+2026-11-07 20:53:35,773 animation_node AnimationManager get_animation |102: INFO[32m start animation pour-votre-securite[0m
+2026-11-07 20:53:35,773 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/pour-votre-securite.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'pour-votre-securite'}[0m
+2026-11-07 20:53:35,815 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:53:35,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 8000}[0m
+2026-11-07 20:53:35,816 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:53:43,815 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:53:43,815 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:53:43,816 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:53:43,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:53:43,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:53:43,816 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:53:47,873 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quand-on-voit"', time=0, anim=False)[0m
+2026-11-07 20:53:47,873 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quand-on-voit'}[0m
+2026-11-07 20:53:47,873 animation_node AnimationManager get_animation |102: INFO[32m start animation quand-on-voit[0m
+2026-11-07 20:53:47,873 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/qd-on-voit-ce-qu-on-voit.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'quand-on-voit'}[0m
+2026-11-07 20:53:47,915 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:53:47,915 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:53:47,915 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:53:55,915 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:53:55,915 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:53:55,915 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:53:55,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:53:55,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:53:55,916 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:53:59,873 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quoi-ma-geule"', time=0, anim=False)[0m
+2026-11-07 20:53:59,873 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quoi-ma-geule'}[0m
+2026-11-07 20:53:59,873 animation_node AnimationManager get_animation |102: INFO[32m start animation quoi-ma-geule[0m
+2026-11-07 20:53:59,874 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/quoi-ma-geule.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[1, {'mode': 'random', 'random move min': 15, 'random move max': 85, 'random time min': 500, 'random time max': 3000}]], 'right_eye': [[1, {'mode': 'random', 'random move min': 10, 'random move max': 90, 'random time min': 500, 'random time max': 3000}]], 'left_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'right_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'neck': [[1, {'mode': 'random', 'random move min': 35, 'random move max': 75, 'random time min': 500, 'random time max': 3000}]], 'name': 'quoi-ma-geule'}[0m
+2026-11-07 20:53:59,915 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:53:59,915 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 6000}[0m
+2026-11-07 20:53:59,915 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:54:05,915 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:54:05,915 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:54:05,915 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:54:05,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:54:05,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:54:05,916 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:54:09,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"eye-left"', time=0, anim=False)[0m
+2026-11-07 20:54:09,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'eye-left'}[0m
+2026-11-07 20:54:09,973 animation_node AnimationManager get_animation |102: INFO[32m start animation eye-left[0m
+2026-11-07 20:54:09,974 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 2000, 'types': ['little move'], 'left_eye': [[0, 0.56], [0.9, 0.28]], 'name': 'eye-left'}[0m
+2026-11-07 20:54:12,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:54:12,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:54:12,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:54:12,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:54:12,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:54:18,473 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"c-est-qui-le-con"', time=0, anim=False)[0m
+2026-11-07 20:54:18,473 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'c-est-qui-le-con'}[0m
+2026-11-07 20:54:18,473 animation_node AnimationManager get_animation |102: INFO[32m start animation c-est-qui-le-con[0m
+2026-11-07 20:54:18,473 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/c-est-qui-le-con.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'c-est-qui-le-con'}[0m
+2026-11-07 20:54:18,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:54:18,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 6000}[0m
+2026-11-07 20:54:18,516 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:54:24,514 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:54:24,515 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:54:24,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:54:24,515 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:54:24,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:54:24,516 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:54:28,573 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-move"', time=0, anim=False)[0m
+2026-11-07 20:54:28,573 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-move'}[0m
+2026-11-07 20:54:28,573 animation_node AnimationManager get_animation |102: INFO[32m start animation little-move[0m
+2026-11-07 20:54:28,573 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 5000, 'types': ['little move'], 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'little-move'}[0m
+2026-11-07 20:54:33,615 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:54:33,615 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:54:33,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:54:33,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:54:33,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:54:37,673 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck"', time=0, anim=False)[0m
+2026-11-07 20:54:37,673 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck'}[0m
+2026-11-07 20:54:37,673 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck[0m
+2026-11-07 20:54:37,673 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E4', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'scooby-doo']], 'neck': [[0.15, 0.7], [0.5, 0.5], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck'}[0m
+2026-11-07 20:54:42,215 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "scooby-doo"[0m
+2026-11-07 20:54:42,215 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'scooby-doo', 'duration': 0}[0m
+2026-11-07 20:54:42,215 face_sim_node Face update |94: INFO[32m update face sequences : scooby-doo[0m
+2026-11-07 20:54:42,715 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:54:42,715 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:54:42,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:54:42,715 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:54:42,716 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:54:42,716 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:54:47,873 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck2"', time=0, anim=False)[0m
+2026-11-07 20:54:47,873 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck2'}[0m
+2026-11-07 20:54:47,873 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck2[0m
+2026-11-07 20:54:47,873 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E5', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'sexy']], 'neck': [[0.15, 0.55], [0.5, 0.68], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck2'}[0m
+2026-11-07 20:54:52,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "sexy"[0m
+2026-11-07 20:54:52,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'sexy', 'duration': 0}[0m
+2026-11-07 20:54:52,415 face_sim_node Face update |94: INFO[32m update face sequences : sexy[0m
+2026-11-07 20:54:52,915 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:54:52,915 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:54:52,915 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:54:52,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:54:52,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:54:52,916 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:54:56,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"neck-side-to-side"', time=0, anim=False)[0m
+2026-11-07 20:54:56,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'neck-side-to-side'}[0m
+2026-11-07 20:54:56,973 animation_node AnimationManager get_animation |102: INFO[32m start animation neck-side-to-side[0m
+2026-11-07 20:54:56,973 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E9', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'upgrade']], 'neck': [[0.1, 0.4], [0.2, 0.8], [0.3, 0.2], [0.4, 0.2], [0.45, 0.8], [0.5, 0.2], [0.6, 0.2], [1, 0.6]], 'name': 'neck-side-to-side'}[0m
+2026-11-07 20:55:01,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "upgrade"[0m
+2026-11-07 20:55:01,515 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'upgrade', 'duration': 0}[0m
+2026-11-07 20:55:01,515 face_sim_node Face update |94: INFO[32m update face sequences : upgrade[0m
+2026-11-07 20:55:02,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:55:02,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:55:02,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:55:02,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:55:02,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:55:02,016 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:55:05,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"aurore"', time=0, anim=False)[0m
+2026-11-07 20:55:05,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'aurore'}[0m
+2026-11-07 20:55:05,973 animation_node AnimationManager get_animation |102: INFO[32m start animation aurore[0m
+2026-11-07 20:55:05,974 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 7000, 'types': ['random'], 'audios': [[0, 'random/aurore.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'aurore'}[0m
+2026-11-07 20:55:06,016 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:55:06,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 7000}[0m
+2026-11-07 20:55:06,016 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:55:13,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:55:13,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:55:13,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:55:13,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:55:13,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:55:13,016 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:55:20,473 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"michel-sardou"', time=0, anim=False)[0m
+2026-11-07 20:55:20,473 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'michel-sardou'}[0m
+2026-11-07 20:55:20,473 animation_node AnimationManager get_animation |102: INFO[32m start animation michel-sardou[0m
+2026-11-07 20:55:20,473 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/michel-sardou.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'michel-sardou'}[0m
+2026-11-07 20:55:20,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:55:20,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:55:20,516 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:55:28,515 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:55:28,515 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:55:28,516 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:55:28,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:55:28,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:55:28,516 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:55:32,573 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"pour-votre-securite"', time=0, anim=False)[0m
+2026-11-07 20:55:32,573 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'pour-votre-securite'}[0m
+2026-11-07 20:55:32,573 animation_node AnimationManager get_animation |102: INFO[32m start animation pour-votre-securite[0m
+2026-11-07 20:55:32,573 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/pour-votre-securite.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'pour-votre-securite'}[0m
+2026-11-07 20:55:32,616 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:55:32,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 8000}[0m
+2026-11-07 20:55:32,616 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:55:40,614 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:55:40,615 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:55:40,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:55:40,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:55:40,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:55:40,616 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:55:44,673 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quand-on-voit"', time=0, anim=False)[0m
+2026-11-07 20:55:44,674 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quand-on-voit'}[0m
+2026-11-07 20:55:44,674 animation_node AnimationManager get_animation |102: INFO[32m start animation quand-on-voit[0m
+2026-11-07 20:55:44,674 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/qd-on-voit-ce-qu-on-voit.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'quand-on-voit'}[0m
+2026-11-07 20:55:44,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:55:44,715 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:55:44,716 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:55:52,715 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:55:52,715 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:55:52,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:55:52,716 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:55:52,716 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:55:52,716 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:56:04,573 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quoi-ma-geule"', time=0, anim=False)[0m
+2026-11-07 20:56:04,573 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quoi-ma-geule'}[0m
+2026-11-07 20:56:04,573 animation_node AnimationManager get_animation |102: INFO[32m start animation quoi-ma-geule[0m
+2026-11-07 20:56:04,573 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/quoi-ma-geule.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[1, {'mode': 'random', 'random move min': 15, 'random move max': 85, 'random time min': 500, 'random time max': 3000}]], 'right_eye': [[1, {'mode': 'random', 'random move min': 10, 'random move max': 90, 'random time min': 500, 'random time max': 3000}]], 'left_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'right_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'neck': [[1, {'mode': 'random', 'random move min': 35, 'random move max': 75, 'random time min': 500, 'random time max': 3000}]], 'name': 'quoi-ma-geule'}[0m
+2026-11-07 20:56:04,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:56:04,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 6000}[0m
+2026-11-07 20:56:04,615 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:56:10,614 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:56:10,615 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:56:10,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:56:10,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:56:10,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:56:10,616 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:56:14,573 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"eye-left"', time=0, anim=False)[0m
+2026-11-07 20:56:14,573 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'eye-left'}[0m
+2026-11-07 20:56:14,573 animation_node AnimationManager get_animation |102: INFO[32m start animation eye-left[0m
+2026-11-07 20:56:14,574 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 2000, 'types': ['little move'], 'left_eye': [[0, 0.56], [0.9, 0.28]], 'name': 'eye-left'}[0m
+2026-11-07 20:56:16,615 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:56:16,615 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:56:16,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:56:16,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:56:16,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:56:22,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"c-est-qui-le-con"', time=0, anim=False)[0m
+2026-11-07 20:56:22,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'c-est-qui-le-con'}[0m
+2026-11-07 20:56:22,973 animation_node AnimationManager get_animation |102: INFO[32m start animation c-est-qui-le-con[0m
+2026-11-07 20:56:22,974 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/c-est-qui-le-con.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'c-est-qui-le-con'}[0m
+2026-11-07 20:56:23,016 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:56:23,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 6000}[0m
+2026-11-07 20:56:23,016 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:56:29,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:56:29,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:56:29,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:56:29,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:56:29,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:56:29,016 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:56:33,073 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-move"', time=0, anim=False)[0m
+2026-11-07 20:56:33,073 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-move'}[0m
+2026-11-07 20:56:33,073 animation_node AnimationManager get_animation |102: INFO[32m start animation little-move[0m
+2026-11-07 20:56:33,073 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 5000, 'types': ['little move'], 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'little-move'}[0m
+2026-11-07 20:56:38,115 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:56:38,115 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:56:38,116 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:56:38,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:56:38,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:56:42,173 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck"', time=0, anim=False)[0m
+2026-11-07 20:56:42,173 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck'}[0m
+2026-11-07 20:56:42,173 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck[0m
+2026-11-07 20:56:42,173 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E4', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'scooby-doo']], 'neck': [[0.15, 0.7], [0.5, 0.5], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck'}[0m
+2026-11-07 20:56:46,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "scooby-doo"[0m
+2026-11-07 20:56:46,715 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'scooby-doo', 'duration': 0}[0m
+2026-11-07 20:56:46,715 face_sim_node Face update |94: INFO[32m update face sequences : scooby-doo[0m
+2026-11-07 20:56:47,215 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:56:47,215 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:56:47,217 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:56:47,217 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:56:47,217 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:56:47,218 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:56:51,174 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck2"', time=0, anim=False)[0m
+2026-11-07 20:56:51,174 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck2'}[0m
+2026-11-07 20:56:51,174 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck2[0m
+2026-11-07 20:56:51,175 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E5', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'sexy']], 'neck': [[0.15, 0.55], [0.5, 0.68], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck2'}[0m
+2026-11-07 20:56:55,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "sexy"[0m
+2026-11-07 20:56:55,715 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'sexy', 'duration': 0}[0m
+2026-11-07 20:56:55,716 face_sim_node Face update |94: INFO[32m update face sequences : sexy[0m
+2026-11-07 20:56:56,215 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:56:56,215 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:56:56,215 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:56:56,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:56:56,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:56:56,216 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:57:00,273 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"neck-side-to-side"', time=0, anim=False)[0m
+2026-11-07 20:57:00,273 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'neck-side-to-side'}[0m
+2026-11-07 20:57:00,273 animation_node AnimationManager get_animation |102: INFO[32m start animation neck-side-to-side[0m
+2026-11-07 20:57:00,273 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E9', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'upgrade']], 'neck': [[0.1, 0.4], [0.2, 0.8], [0.3, 0.2], [0.4, 0.2], [0.45, 0.8], [0.5, 0.2], [0.6, 0.2], [1, 0.6]], 'name': 'neck-side-to-side'}[0m
+2026-11-07 20:57:04,815 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "upgrade"[0m
+2026-11-07 20:57:04,815 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'upgrade', 'duration': 0}[0m
+2026-11-07 20:57:04,815 face_sim_node Face update |94: INFO[32m update face sequences : upgrade[0m
+2026-11-07 20:57:05,315 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:57:05,315 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:57:05,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:57:05,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:57:05,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:57:05,316 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:57:09,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"aurore"', time=0, anim=False)[0m
+2026-11-07 20:57:09,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'aurore'}[0m
+2026-11-07 20:57:09,373 animation_node AnimationManager get_animation |102: INFO[32m start animation aurore[0m
+2026-11-07 20:57:09,373 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 7000, 'types': ['random'], 'audios': [[0, 'random/aurore.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'aurore'}[0m
+2026-11-07 20:57:09,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:57:09,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 7000}[0m
+2026-11-07 20:57:09,416 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:57:16,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:57:16,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:57:16,416 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:57:16,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:57:16,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:57:16,416 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:57:20,473 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"michel-sardou"', time=0, anim=False)[0m
+2026-11-07 20:57:20,473 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'michel-sardou'}[0m
+2026-11-07 20:57:20,473 animation_node AnimationManager get_animation |102: INFO[32m start animation michel-sardou[0m
+2026-11-07 20:57:20,473 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/michel-sardou.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'michel-sardou'}[0m
+2026-11-07 20:57:20,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:57:20,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:57:20,516 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:57:28,515 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:57:28,515 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:57:28,516 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:57:28,517 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:57:28,517 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:57:28,517 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:57:35,573 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"pour-votre-securite"', time=0, anim=False)[0m
+2026-11-07 20:57:35,573 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'pour-votre-securite'}[0m
+2026-11-07 20:57:35,573 animation_node AnimationManager get_animation |102: INFO[32m start animation pour-votre-securite[0m
+2026-11-07 20:57:35,574 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/pour-votre-securite.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'pour-votre-securite'}[0m
+2026-11-07 20:57:35,616 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:57:35,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 8000}[0m
+2026-11-07 20:57:35,616 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:57:43,615 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:57:43,615 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:57:43,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:57:43,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:57:43,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:57:43,616 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:57:49,673 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quand-on-voit"', time=0, anim=False)[0m
+2026-11-07 20:57:49,673 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quand-on-voit'}[0m
+2026-11-07 20:57:49,673 animation_node AnimationManager get_animation |102: INFO[32m start animation quand-on-voit[0m
+2026-11-07 20:57:49,673 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/qd-on-voit-ce-qu-on-voit.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'quand-on-voit'}[0m
+2026-11-07 20:57:49,716 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:57:49,716 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:57:49,716 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:57:57,715 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:57:57,715 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:57:57,716 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:57:57,716 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:57:57,716 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:57:57,716 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:58:01,773 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quoi-ma-geule"', time=0, anim=False)[0m
+2026-11-07 20:58:01,773 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quoi-ma-geule'}[0m
+2026-11-07 20:58:01,773 animation_node AnimationManager get_animation |102: INFO[32m start animation quoi-ma-geule[0m
+2026-11-07 20:58:01,774 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/quoi-ma-geule.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[1, {'mode': 'random', 'random move min': 15, 'random move max': 85, 'random time min': 500, 'random time max': 3000}]], 'right_eye': [[1, {'mode': 'random', 'random move min': 10, 'random move max': 90, 'random time min': 500, 'random time max': 3000}]], 'left_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'right_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'neck': [[1, {'mode': 'random', 'random move min': 35, 'random move max': 75, 'random time min': 500, 'random time max': 3000}]], 'name': 'quoi-ma-geule'}[0m
+2026-11-07 20:58:01,815 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:58:01,815 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 6000}[0m
+2026-11-07 20:58:01,816 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:58:07,815 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:58:07,815 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:58:07,816 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:58:07,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:58:07,816 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:58:07,816 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:58:18,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"eye-left"', time=0, anim=False)[0m
+2026-11-07 20:58:18,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'eye-left'}[0m
+2026-11-07 20:58:18,373 animation_node AnimationManager get_animation |102: INFO[32m start animation eye-left[0m
+2026-11-07 20:58:18,373 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 2000, 'types': ['little move'], 'left_eye': [[0, 0.56], [0.9, 0.28]], 'name': 'eye-left'}[0m
+2026-11-07 20:58:20,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:58:20,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:58:20,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:58:20,417 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:58:20,417 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:58:26,873 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"c-est-qui-le-con"', time=0, anim=False)[0m
+2026-11-07 20:58:26,874 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'c-est-qui-le-con'}[0m
+2026-11-07 20:58:26,874 animation_node AnimationManager get_animation |102: INFO[32m start animation c-est-qui-le-con[0m
+2026-11-07 20:58:26,874 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/c-est-qui-le-con.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'c-est-qui-le-con'}[0m
+2026-11-07 20:58:26,916 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:58:26,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 6000}[0m
+2026-11-07 20:58:26,916 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:58:32,915 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:58:32,915 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:58:32,915 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:58:32,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:58:32,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:58:32,916 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:58:36,873 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-move"', time=0, anim=False)[0m
+2026-11-07 20:58:36,882 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-move'}[0m
+2026-11-07 20:58:36,882 animation_node AnimationManager get_animation |102: INFO[32m start animation little-move[0m
+2026-11-07 20:58:36,882 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 5000, 'types': ['little move'], 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'little-move'}[0m
+2026-11-07 20:58:41,915 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:58:41,915 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:58:41,916 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:58:41,917 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:58:41,917 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:58:45,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck"', time=0, anim=False)[0m
+2026-11-07 20:58:45,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck'}[0m
+2026-11-07 20:58:45,973 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck[0m
+2026-11-07 20:58:45,973 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E4', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'scooby-doo']], 'neck': [[0.15, 0.7], [0.5, 0.5], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck'}[0m
+2026-11-07 20:58:50,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "scooby-doo"[0m
+2026-11-07 20:58:50,515 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'scooby-doo', 'duration': 0}[0m
+2026-11-07 20:58:50,515 face_sim_node Face update |94: INFO[32m update face sequences : scooby-doo[0m
+2026-11-07 20:58:51,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:58:51,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:58:51,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:58:51,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:58:51,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:58:51,015 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:58:55,073 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck2"', time=0, anim=False)[0m
+2026-11-07 20:58:55,073 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck2'}[0m
+2026-11-07 20:58:55,073 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck2[0m
+2026-11-07 20:58:55,073 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E5', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'sexy']], 'neck': [[0.15, 0.55], [0.5, 0.68], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck2'}[0m
+2026-11-07 20:58:59,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "sexy"[0m
+2026-11-07 20:58:59,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'sexy', 'duration': 0}[0m
+2026-11-07 20:58:59,615 face_sim_node Face update |94: INFO[32m update face sequences : sexy[0m
+2026-11-07 20:59:00,115 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:59:00,115 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:59:00,116 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:59:00,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:59:00,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:59:00,116 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:59:04,173 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"neck-side-to-side"', time=0, anim=False)[0m
+2026-11-07 20:59:04,173 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'neck-side-to-side'}[0m
+2026-11-07 20:59:04,173 animation_node AnimationManager get_animation |102: INFO[32m start animation neck-side-to-side[0m
+2026-11-07 20:59:04,173 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E9', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'upgrade']], 'neck': [[0.1, 0.4], [0.2, 0.8], [0.3, 0.2], [0.4, 0.2], [0.45, 0.8], [0.5, 0.2], [0.6, 0.2], [1, 0.6]], 'name': 'neck-side-to-side'}[0m
+2026-11-07 20:59:08,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "upgrade"[0m
+2026-11-07 20:59:08,715 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'upgrade', 'duration': 0}[0m
+2026-11-07 20:59:08,715 face_sim_node Face update |94: INFO[32m update face sequences : upgrade[0m
+2026-11-07 20:59:09,215 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:59:09,215 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:59:09,215 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:59:09,215 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:59:09,215 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:59:09,215 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:59:13,273 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"aurore"', time=0, anim=False)[0m
+2026-11-07 20:59:13,273 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'aurore'}[0m
+2026-11-07 20:59:13,273 animation_node AnimationManager get_animation |102: INFO[32m start animation aurore[0m
+2026-11-07 20:59:13,273 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 7000, 'types': ['random'], 'audios': [[0, 'random/aurore.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'aurore'}[0m
+2026-11-07 20:59:13,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:59:13,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 7000}[0m
+2026-11-07 20:59:13,316 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:59:20,315 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:59:20,315 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:59:20,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:59:20,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:59:20,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:59:20,316 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:59:24,273 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"michel-sardou"', time=0, anim=False)[0m
+2026-11-07 20:59:24,273 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'michel-sardou'}[0m
+2026-11-07 20:59:24,273 animation_node AnimationManager get_animation |102: INFO[32m start animation michel-sardou[0m
+2026-11-07 20:59:24,273 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/michel-sardou.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'michel-sardou'}[0m
+2026-11-07 20:59:24,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:59:24,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:59:24,316 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 20:59:32,315 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:59:32,315 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:59:32,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:59:32,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:59:32,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:59:32,316 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:59:36,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"pour-votre-securite"', time=0, anim=False)[0m
+2026-11-07 20:59:36,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'pour-votre-securite'}[0m
+2026-11-07 20:59:36,373 animation_node AnimationManager get_animation |102: INFO[32m start animation pour-votre-securite[0m
+2026-11-07 20:59:36,373 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/pour-votre-securite.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'pour-votre-securite'}[0m
+2026-11-07 20:59:36,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 20:59:36,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 8000}[0m
+2026-11-07 20:59:36,416 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 20:59:44,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 20:59:44,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 20:59:44,416 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 20:59:44,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 20:59:44,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 20:59:44,416 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 20:59:53,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quand-on-voit"', time=0, anim=False)[0m
+2026-11-07 20:59:53,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quand-on-voit'}[0m
+2026-11-07 20:59:53,973 animation_node AnimationManager get_animation |102: INFO[32m start animation quand-on-voit[0m
+2026-11-07 20:59:53,973 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/qd-on-voit-ce-qu-on-voit.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'quand-on-voit'}[0m
+2026-11-07 20:59:54,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 20:59:54,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 20:59:54,016 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:00:02,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:00:02,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:00:02,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:00:02,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:00:02,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:00:02,015 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:00:06,073 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quoi-ma-geule"', time=0, anim=False)[0m
+2026-11-07 21:00:06,073 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quoi-ma-geule'}[0m
+2026-11-07 21:00:06,073 animation_node AnimationManager get_animation |102: INFO[32m start animation quoi-ma-geule[0m
+2026-11-07 21:00:06,073 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/quoi-ma-geule.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[1, {'mode': 'random', 'random move min': 15, 'random move max': 85, 'random time min': 500, 'random time max': 3000}]], 'right_eye': [[1, {'mode': 'random', 'random move min': 10, 'random move max': 90, 'random time min': 500, 'random time max': 3000}]], 'left_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'right_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'neck': [[1, {'mode': 'random', 'random move min': 35, 'random move max': 75, 'random time min': 500, 'random time max': 3000}]], 'name': 'quoi-ma-geule'}[0m
+2026-11-07 21:00:06,115 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 21:00:06,115 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 6000}[0m
+2026-11-07 21:00:06,115 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:00:12,115 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:00:12,115 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:00:12,115 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:00:12,115 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:00:12,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:00:12,116 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:00:16,073 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"eye-left"', time=0, anim=False)[0m
+2026-11-07 21:00:16,073 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'eye-left'}[0m
+2026-11-07 21:00:16,073 animation_node AnimationManager get_animation |102: INFO[32m start animation eye-left[0m
+2026-11-07 21:00:16,073 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 2000, 'types': ['little move'], 'left_eye': [[0, 0.56], [0.9, 0.28]], 'name': 'eye-left'}[0m
+2026-11-07 21:00:18,115 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:00:18,115 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:00:18,115 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:00:18,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:00:18,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:00:30,073 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"c-est-qui-le-con"', time=0, anim=False)[0m
+2026-11-07 21:00:30,073 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'c-est-qui-le-con'}[0m
+2026-11-07 21:00:30,073 animation_node AnimationManager get_animation |102: INFO[32m start animation c-est-qui-le-con[0m
+2026-11-07 21:00:30,073 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/c-est-qui-le-con.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'c-est-qui-le-con'}[0m
+2026-11-07 21:00:30,115 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 21:00:30,115 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 6000}[0m
+2026-11-07 21:00:30,116 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 21:00:36,115 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:00:36,115 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:00:36,115 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:00:36,115 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:00:36,115 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:00:36,115 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:00:40,073 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-move"', time=0, anim=False)[0m
+2026-11-07 21:00:40,073 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-move'}[0m
+2026-11-07 21:00:40,073 animation_node AnimationManager get_animation |102: INFO[32m start animation little-move[0m
+2026-11-07 21:00:40,073 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 5000, 'types': ['little move'], 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'little-move'}[0m
+2026-11-07 21:00:45,115 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:00:45,115 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:00:45,116 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:00:45,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:00:45,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:00:49,173 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck"', time=0, anim=False)[0m
+2026-11-07 21:00:49,173 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck'}[0m
+2026-11-07 21:00:49,173 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck[0m
+2026-11-07 21:00:49,173 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E4', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'scooby-doo']], 'neck': [[0.15, 0.7], [0.5, 0.5], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck'}[0m
+2026-11-07 21:00:53,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "scooby-doo"[0m
+2026-11-07 21:00:53,715 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'scooby-doo', 'duration': 0}[0m
+2026-11-07 21:00:53,715 face_sim_node Face update |94: INFO[32m update face sequences : scooby-doo[0m
+2026-11-07 21:00:54,215 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:00:54,215 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:00:54,215 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:00:54,215 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:00:54,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:00:54,216 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:00:58,173 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck2"', time=0, anim=False)[0m
+2026-11-07 21:00:58,173 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck2'}[0m
+2026-11-07 21:00:58,173 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck2[0m
+2026-11-07 21:00:58,173 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E5', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'sexy']], 'neck': [[0.15, 0.55], [0.5, 0.68], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck2'}[0m
+2026-11-07 21:01:02,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "sexy"[0m
+2026-11-07 21:01:02,715 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'sexy', 'duration': 0}[0m
+2026-11-07 21:01:02,715 face_sim_node Face update |94: INFO[32m update face sequences : sexy[0m
+2026-11-07 21:01:03,215 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:01:03,215 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:01:03,215 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:01:03,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:01:03,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:01:03,216 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:01:07,273 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"neck-side-to-side"', time=0, anim=False)[0m
+2026-11-07 21:01:07,273 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'neck-side-to-side'}[0m
+2026-11-07 21:01:07,273 animation_node AnimationManager get_animation |102: INFO[32m start animation neck-side-to-side[0m
+2026-11-07 21:01:07,273 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E9', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'upgrade']], 'neck': [[0.1, 0.4], [0.2, 0.8], [0.3, 0.2], [0.4, 0.2], [0.45, 0.8], [0.5, 0.2], [0.6, 0.2], [1, 0.6]], 'name': 'neck-side-to-side'}[0m
+2026-11-07 21:01:11,815 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "upgrade"[0m
+2026-11-07 21:01:11,815 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'upgrade', 'duration': 0}[0m
+2026-11-07 21:01:11,816 face_sim_node Face update |94: INFO[32m update face sequences : upgrade[0m
+2026-11-07 21:01:12,315 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:01:12,315 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:01:12,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:01:12,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:01:12,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:01:12,316 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:01:16,273 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"aurore"', time=0, anim=False)[0m
+2026-11-07 21:01:16,273 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'aurore'}[0m
+2026-11-07 21:01:16,273 animation_node AnimationManager get_animation |102: INFO[32m start animation aurore[0m
+2026-11-07 21:01:16,273 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 7000, 'types': ['random'], 'audios': [[0, 'random/aurore.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'aurore'}[0m
+2026-11-07 21:01:16,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 21:01:16,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 7000}[0m
+2026-11-07 21:01:16,316 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:01:23,315 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:01:23,315 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:01:23,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:01:23,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:01:23,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:01:23,316 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:01:27,273 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"michel-sardou"', time=0, anim=False)[0m
+2026-11-07 21:01:27,273 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'michel-sardou'}[0m
+2026-11-07 21:01:27,274 animation_node AnimationManager get_animation |102: INFO[32m start animation michel-sardou[0m
+2026-11-07 21:01:27,274 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/michel-sardou.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'michel-sardou'}[0m
+2026-11-07 21:01:27,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 21:01:27,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 21:01:27,316 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:01:35,315 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:01:35,315 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:01:35,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:01:35,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:01:35,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:01:35,315 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:01:39,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"pour-votre-securite"', time=0, anim=False)[0m
+2026-11-07 21:01:39,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'pour-votre-securite'}[0m
+2026-11-07 21:01:39,373 animation_node AnimationManager get_animation |102: INFO[32m start animation pour-votre-securite[0m
+2026-11-07 21:01:39,373 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/pour-votre-securite.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'pour-votre-securite'}[0m
+2026-11-07 21:01:39,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 21:01:39,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 8000}[0m
+2026-11-07 21:01:39,416 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 21:01:47,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:01:47,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:01:47,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:01:47,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:01:47,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:01:47,415 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:01:51,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quand-on-voit"', time=0, anim=False)[0m
+2026-11-07 21:01:51,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quand-on-voit'}[0m
+2026-11-07 21:01:51,373 animation_node AnimationManager get_animation |102: INFO[32m start animation quand-on-voit[0m
+2026-11-07 21:01:51,373 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/qd-on-voit-ce-qu-on-voit.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'quand-on-voit'}[0m
+2026-11-07 21:01:51,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 21:01:51,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 21:01:51,415 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:01:59,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:01:59,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:01:59,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:01:59,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:01:59,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:01:59,415 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:02:08,273 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quoi-ma-geule"', time=0, anim=False)[0m
+2026-11-07 21:02:08,274 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quoi-ma-geule'}[0m
+2026-11-07 21:02:08,274 animation_node AnimationManager get_animation |102: INFO[32m start animation quoi-ma-geule[0m
+2026-11-07 21:02:08,274 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/quoi-ma-geule.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[1, {'mode': 'random', 'random move min': 15, 'random move max': 85, 'random time min': 500, 'random time max': 3000}]], 'right_eye': [[1, {'mode': 'random', 'random move min': 10, 'random move max': 90, 'random time min': 500, 'random time max': 3000}]], 'left_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'right_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'neck': [[1, {'mode': 'random', 'random move min': 35, 'random move max': 75, 'random time min': 500, 'random time max': 3000}]], 'name': 'quoi-ma-geule'}[0m
+2026-11-07 21:02:08,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 21:02:08,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 6000}[0m
+2026-11-07 21:02:08,315 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:02:14,315 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:02:14,315 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:02:14,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:02:14,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:02:14,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:02:14,316 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:02:18,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"eye-left"', time=0, anim=False)[0m
+2026-11-07 21:02:18,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'eye-left'}[0m
+2026-11-07 21:02:18,373 animation_node AnimationManager get_animation |102: INFO[32m start animation eye-left[0m
+2026-11-07 21:02:18,373 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 2000, 'types': ['little move'], 'left_eye': [[0, 0.56], [0.9, 0.28]], 'name': 'eye-left'}[0m
+2026-11-07 21:02:20,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:02:20,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:02:20,416 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:02:20,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:02:20,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:02:26,873 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"c-est-qui-le-con"', time=0, anim=False)[0m
+2026-11-07 21:02:26,873 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'c-est-qui-le-con'}[0m
+2026-11-07 21:02:26,873 animation_node AnimationManager get_animation |102: INFO[32m start animation c-est-qui-le-con[0m
+2026-11-07 21:02:26,873 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/c-est-qui-le-con.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'c-est-qui-le-con'}[0m
+2026-11-07 21:02:26,916 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 21:02:26,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 6000}[0m
+2026-11-07 21:02:26,916 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 21:02:32,915 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:02:32,915 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:02:32,916 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:02:32,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:02:32,916 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:02:32,916 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:02:36,973 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-move"', time=0, anim=False)[0m
+2026-11-07 21:02:36,973 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-move'}[0m
+2026-11-07 21:02:36,973 animation_node AnimationManager get_animation |102: INFO[32m start animation little-move[0m
+2026-11-07 21:02:36,973 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 5000, 'types': ['little move'], 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'little-move'}[0m
+2026-11-07 21:02:42,015 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:02:42,015 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:02:42,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:02:42,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:02:42,016 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:02:46,173 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck"', time=0, anim=False)[0m
+2026-11-07 21:02:46,173 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck'}[0m
+2026-11-07 21:02:46,173 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck[0m
+2026-11-07 21:02:46,173 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E4', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'scooby-doo']], 'neck': [[0.15, 0.7], [0.5, 0.5], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck'}[0m
+2026-11-07 21:02:50,715 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "scooby-doo"[0m
+2026-11-07 21:02:50,715 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'scooby-doo', 'duration': 0}[0m
+2026-11-07 21:02:50,715 face_sim_node Face update |94: INFO[32m update face sequences : scooby-doo[0m
+2026-11-07 21:02:51,215 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:02:51,215 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:02:51,218 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:02:51,219 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:02:51,219 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:02:51,219 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:03:03,073 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck2"', time=0, anim=False)[0m
+2026-11-07 21:03:03,073 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck2'}[0m
+2026-11-07 21:03:03,073 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck2[0m
+2026-11-07 21:03:03,073 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E5', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'sexy']], 'neck': [[0.15, 0.55], [0.5, 0.68], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck2'}[0m
+2026-11-07 21:03:07,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "sexy"[0m
+2026-11-07 21:03:07,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'sexy', 'duration': 0}[0m
+2026-11-07 21:03:07,616 face_sim_node Face update |94: INFO[32m update face sequences : sexy[0m
+2026-11-07 21:03:08,115 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:03:08,115 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:03:08,116 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:03:08,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:03:08,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:03:08,116 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:03:12,073 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"neck-side-to-side"', time=0, anim=False)[0m
+2026-11-07 21:03:12,073 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'neck-side-to-side'}[0m
+2026-11-07 21:03:12,073 animation_node AnimationManager get_animation |102: INFO[32m start animation neck-side-to-side[0m
+2026-11-07 21:03:12,073 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E9', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'upgrade']], 'neck': [[0.1, 0.4], [0.2, 0.8], [0.3, 0.2], [0.4, 0.2], [0.45, 0.8], [0.5, 0.2], [0.6, 0.2], [1, 0.6]], 'name': 'neck-side-to-side'}[0m
+2026-11-07 21:03:16,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "upgrade"[0m
+2026-11-07 21:03:16,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'upgrade', 'duration': 0}[0m
+2026-11-07 21:03:16,616 face_sim_node Face update |94: INFO[32m update face sequences : upgrade[0m
+2026-11-07 21:03:17,115 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:03:17,115 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:03:17,115 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:03:17,115 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:03:17,116 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:03:17,116 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:03:21,173 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"aurore"', time=0, anim=False)[0m
+2026-11-07 21:03:21,173 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'aurore'}[0m
+2026-11-07 21:03:21,173 animation_node AnimationManager get_animation |102: INFO[32m start animation aurore[0m
+2026-11-07 21:03:21,173 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 7000, 'types': ['random'], 'audios': [[0, 'random/aurore.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'aurore'}[0m
+2026-11-07 21:03:21,215 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 21:03:21,215 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 7000}[0m
+2026-11-07 21:03:21,216 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:03:28,215 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:03:28,215 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:03:28,216 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:03:28,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:03:28,216 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:03:28,216 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:03:32,273 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"michel-sardou"', time=0, anim=False)[0m
+2026-11-07 21:03:32,273 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'michel-sardou'}[0m
+2026-11-07 21:03:32,273 animation_node AnimationManager get_animation |102: INFO[32m start animation michel-sardou[0m
+2026-11-07 21:03:32,273 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/michel-sardou.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'michel-sardou'}[0m
+2026-11-07 21:03:32,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 21:03:32,315 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 21:03:32,315 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:03:40,315 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:03:40,315 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:03:40,315 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:03:40,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:03:40,316 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:03:40,316 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:03:44,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"pour-votre-securite"', time=0, anim=False)[0m
+2026-11-07 21:03:44,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'pour-votre-securite'}[0m
+2026-11-07 21:03:44,373 animation_node AnimationManager get_animation |102: INFO[32m start animation pour-votre-securite[0m
+2026-11-07 21:03:44,373 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/pour-votre-securite.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'pour-votre-securite'}[0m
+2026-11-07 21:03:44,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 21:03:44,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 8000}[0m
+2026-11-07 21:03:44,416 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 21:03:52,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:03:52,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:03:52,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:03:52,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:03:52,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:03:52,415 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:03:56,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quand-on-voit"', time=0, anim=False)[0m
+2026-11-07 21:03:56,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quand-on-voit'}[0m
+2026-11-07 21:03:56,373 animation_node AnimationManager get_animation |102: INFO[32m start animation quand-on-voit[0m
+2026-11-07 21:03:56,373 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 8000, 'types': ['random'], 'audios': [[0, 'random/qd-on-voit-ce-qu-on-voit.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'quand-on-voit'}[0m
+2026-11-07 21:03:56,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 21:03:56,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 8000}[0m
+2026-11-07 21:03:56,415 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:04:04,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:04:04,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:04:04,416 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:04:04,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:04:04,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:04:04,416 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:04:08,473 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"quoi-ma-geule"', time=0, anim=False)[0m
+2026-11-07 21:04:08,473 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'quoi-ma-geule'}[0m
+2026-11-07 21:04:08,473 animation_node AnimationManager get_animation |102: INFO[32m start animation quoi-ma-geule[0m
+2026-11-07 21:04:08,473 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/quoi-ma-geule.mp3']], 'faces': [[0, 'speak']], 'robot_lights': [[0, 'trip'], [0.99, 'default']], 'keys': 'H9', 'left_eye': [[1, {'mode': 'random', 'random move min': 15, 'random move max': 85, 'random time min': 500, 'random time max': 3000}]], 'right_eye': [[1, {'mode': 'random', 'random move min': 10, 'random move max': 90, 'random time min': 500, 'random time max': 3000}]], 'left_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'right_arm': [[1, {'mode': 'random', 'random move min': 65, 'random move max': 95, 'random time min': 500, 'random time max': 3000}]], 'neck': [[1, {'mode': 'random', 'random move min': 35, 'random move max': 75, 'random time min': 500, 'random time max': 3000}]], 'name': 'quoi-ma-geule'}[0m
+2026-11-07 21:04:08,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak"[0m
+2026-11-07 21:04:08,515 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak', 'duration': 6000}[0m
+2026-11-07 21:04:08,515 face_sim_node Face update |94: INFO[32m update face sequences : speak[0m
+2026-11-07 21:04:14,515 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:04:14,515 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:04:14,516 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:04:14,516 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:04:14,517 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:04:14,517 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:04:18,573 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"eye-left"', time=0, anim=False)[0m
+2026-11-07 21:04:18,573 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'eye-left'}[0m
+2026-11-07 21:04:18,573 animation_node AnimationManager get_animation |102: INFO[32m start animation eye-left[0m
+2026-11-07 21:04:18,573 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 2000, 'types': ['little move'], 'left_eye': [[0, 0.56], [0.9, 0.28]], 'name': 'eye-left'}[0m
+2026-11-07 21:04:20,615 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:04:20,615 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:04:20,615 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:04:20,615 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:04:20,616 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:04:35,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"c-est-qui-le-con"', time=0, anim=False)[0m
+2026-11-07 21:04:35,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'c-est-qui-le-con'}[0m
+2026-11-07 21:04:35,373 animation_node AnimationManager get_animation |102: INFO[32m start animation c-est-qui-le-con[0m
+2026-11-07 21:04:35,373 animation_node AnimationManager get_animation |115: INFO[32m {'duration': 6000, 'types': ['random'], 'audios': [[0, 'random/c-est-qui-le-con.mp3']], 'faces': [[0, 'speak red']], 'robot_lights': [[0, 'devil']], 'keys': 'H9', 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'c-est-qui-le-con'}[0m
+2026-11-07 21:04:35,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "speak red"[0m
+2026-11-07 21:04:35,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'speak red', 'duration': 6000}[0m
+2026-11-07 21:04:35,416 face_sim_node Face update |94: INFO[32m update face sequences : speak red[0m
+2026-11-07 21:04:41,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:04:41,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:04:41,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:04:41,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:04:41,416 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:04:41,416 face_sim_node Face update |94: INFO[32m update face sequences : default[0m
+2026-11-07 21:04:45,373 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-move"', time=0, anim=False)[0m
+2026-11-07 21:04:45,373 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-move'}[0m
+2026-11-07 21:04:45,373 animation_node AnimationManager get_animation |102: INFO[32m start animation little-move[0m
+2026-11-07 21:04:45,373 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'H1', 'duration': 5000, 'types': ['little move'], 'left_eye': [[0, {'mode': 'random', 'random move min': 65, 'random move max': 85, 'random time min': 500, 'random time max': 1000}]], 'right_eye': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 90, 'random time min': 500, 'random time max': 1000}]], 'left_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'right_arm': [[0, {'mode': 'random', 'random move min': 60, 'random move max': 95, 'random time min': 500, 'random time max': 1000}]], 'name': 'little-move'}[0m
+2026-11-07 21:04:50,415 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:04:50,415 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:04:50,415 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:04:50,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:04:50,415 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:05:06,472 animation_node AnimationsNode listener_callback |74: INFO[32m input : theatre_interfaces.msg.StringTime(msg='"little-neck"', time=0, anim=False)[0m
+2026-11-07 21:05:06,473 animation_node AnimationManager update |77: INFO[32m incoming msg {'animation': 'little-neck'}[0m
+2026-11-07 21:05:06,473 animation_node AnimationManager get_animation |102: INFO[32m start animation little-neck[0m
+2026-11-07 21:05:06,473 animation_node AnimationManager get_animation |115: INFO[32m {'keys': 'E4', 'duration': 5000, 'types': ['random'], 'faces': [[0.9, 'scooby-doo']], 'neck': [[0.15, 0.7], [0.5, 0.5], [0.8, 0.5], [1, 0.5]], 'name': 'little-neck'}[0m
+2026-11-07 21:05:11,015 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "scooby-doo"[0m
+2026-11-07 21:05:11,015 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'scooby-doo', 'duration': 0}[0m
+2026-11-07 21:05:11,015 face_sim_node Face update |94: INFO[32m update face sequences : scooby-doo[0m
+2026-11-07 21:05:11,515 animation_node AnimationManager stop |133: INFO[32m stop animation[0m
+2026-11-07 21:05:11,515 animation_node AnimationsNode send_msgs |124: INFO[32m send animations stop[0m
+2026-11-07 21:05:11,515 face_sim_node FaceSimNode face_callback |144: INFO[32m Face (sim): "stop"[0m
+2026-11-07 21:05:11,515 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'stop', 'duration': 0}[0m
+2026-11-07 21:05:11,515 face_sim_node Face update |79: INFO[32m incoming msg {'face': 'default'}[0m
+2026-11-07 21:05:11,516 face_sim_node Face update |94: INFO[32m update face sequences : default[0m

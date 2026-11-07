@@ -1,0 +1,79 @@
+[0.520s] Invoking command in '/home/ros2_ws/src/didier_rehearsal': AMENT_PREFIX_PATH=/home/ros2_ws/install/robot:/home/ros2_ws/install/dadou_utils_ros:/home/ros2_ws/install/theatre_interfaces:/home/ros2_ws/install/theatre_contrats:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ros2_ws/install/theatre_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/ros2_ws/install/theatre_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/ros2_ws/build/didier_rehearsal/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages:/home/ros2_ws/install/robot/lib/python3.12/site-packages:/home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/didier_rehearsal build --build-base /home/ros2_ws/build/didier_rehearsal/build install --record /home/ros2_ws/build/didier_rehearsal/install.log --install-scripts $base/lib/didier_rehearsal --single-version-externally-managed install_data
+[0.718s] running egg_info
+[0.718s] creating ../../build/didier_rehearsal/didier_rehearsal.egg-info
+[0.729s] writing ../../build/didier_rehearsal/didier_rehearsal.egg-info/PKG-INFO
+[0.729s] writing dependency_links to ../../build/didier_rehearsal/didier_rehearsal.egg-info/dependency_links.txt
+[0.729s] writing entry points to ../../build/didier_rehearsal/didier_rehearsal.egg-info/entry_points.txt
+[0.729s] writing requirements to ../../build/didier_rehearsal/didier_rehearsal.egg-info/requires.txt
+[0.729s] writing top-level names to ../../build/didier_rehearsal/didier_rehearsal.egg-info/top_level.txt
+[0.729s] writing manifest file '../../build/didier_rehearsal/didier_rehearsal.egg-info/SOURCES.txt'
+[0.750s] reading manifest file '../../build/didier_rehearsal/didier_rehearsal.egg-info/SOURCES.txt'
+[0.750s] writing manifest file '../../build/didier_rehearsal/didier_rehearsal.egg-info/SOURCES.txt'
+[0.751s] running build
+[0.751s] running build_py
+[0.751s] creating /home/ros2_ws/build/didier_rehearsal/build
+[0.751s] creating /home/ros2_ws/build/didier_rehearsal/build/lib
+[0.751s] creating /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.751s] copying didier_rehearsal/fault_relay_node.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.753s] copying didier_rehearsal/fault_relay.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.753s] copying didier_rehearsal/goto.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.753s] copying didier_rehearsal/__init__.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.753s] copying didier_rehearsal/director_node.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.754s] copying didier_rehearsal/route_driver_node.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.754s] copying didier_rehearsal/rehearsal_state.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.754s] copying didier_rehearsal/route.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.754s] copying didier_rehearsal/contracts.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.754s] copying didier_rehearsal/process_faults.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.754s] copying didier_rehearsal/scenario.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.755s] copying didier_rehearsal/director.py -> /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal
+[0.755s] running install
+[0.760s] running install_lib
+[0.771s] creating /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.771s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/fault_relay_node.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.771s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/fault_relay.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.771s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/goto.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.771s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/__init__.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.771s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/director_node.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.771s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/route_driver_node.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.771s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/rehearsal_state.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.771s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/route.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.772s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/contracts.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.772s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/process_faults.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.772s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/scenario.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.772s] copying /home/ros2_ws/build/didier_rehearsal/build/lib/didier_rehearsal/director.py -> /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal
+[0.772s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/fault_relay_node.py to fault_relay_node.cpython-312.pyc
+[0.774s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/fault_relay.py to fault_relay.cpython-312.pyc
+[0.775s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/goto.py to goto.cpython-312.pyc
+[0.779s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/__init__.py to __init__.cpython-312.pyc
+[0.779s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/director_node.py to director_node.cpython-312.pyc
+[0.785s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/route_driver_node.py to route_driver_node.cpython-312.pyc
+[0.787s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/rehearsal_state.py to rehearsal_state.cpython-312.pyc
+[0.787s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/route.py to route.cpython-312.pyc
+[0.790s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/contracts.py to contracts.cpython-312.pyc
+[0.791s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/process_faults.py to process_faults.cpython-312.pyc
+[0.792s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/scenario.py to scenario.cpython-312.pyc
+[0.794s] byte-compiling /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal/director.py to director.cpython-312.pyc
+[0.800s] running install_data
+[0.800s] creating /home/ros2_ws/install/didier_rehearsal/share/ament_index
+[0.800s] creating /home/ros2_ws/install/didier_rehearsal/share/ament_index/resource_index
+[0.800s] creating /home/ros2_ws/install/didier_rehearsal/share/ament_index/resource_index/packages
+[0.800s] copying resource/didier_rehearsal -> /home/ros2_ws/install/didier_rehearsal/share/ament_index/resource_index/packages
+[0.800s] copying package.xml -> /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal
+[0.800s] creating /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/launch
+[0.800s] copying launch/rehearsal.launch.py -> /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/launch
+[0.801s] creating /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/config
+[0.801s] copying config/chantiers_tours.yaml -> /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/config
+[0.801s] copying config/rue.yaml -> /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/config
+[0.801s] copying config/chantiers.yaml -> /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/config
+[0.801s] creating /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/config/scenarios
+[0.801s] copying config/scenarios/demo.yaml -> /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/config/scenarios
+[0.801s] copying config/scenarios/jeu-a1.yaml -> /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/config/scenarios
+[0.801s] copying config/scenarios/chantiers.yaml -> /home/ros2_ws/install/didier_rehearsal/share/didier_rehearsal/config/scenarios
+[0.801s] running install_egg_info
+[0.813s] Copying ../../build/didier_rehearsal/didier_rehearsal.egg-info to /home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages/didier_rehearsal-0.1.0-py3.12.egg-info
+[0.814s] running install_scripts
+[0.892s] Installing director script to /home/ros2_ws/install/didier_rehearsal/lib/didier_rehearsal
+[0.892s] Installing fault_relay script to /home/ros2_ws/install/didier_rehearsal/lib/didier_rehearsal
+[0.892s] Installing route_driver script to /home/ros2_ws/install/didier_rehearsal/lib/didier_rehearsal
+[0.892s] writing list of installed files to '/home/ros2_ws/build/didier_rehearsal/install.log'
+[0.911s] Invoked command in '/home/ros2_ws/src/didier_rehearsal' returned '0': AMENT_PREFIX_PATH=/home/ros2_ws/install/robot:/home/ros2_ws/install/dadou_utils_ros:/home/ros2_ws/install/theatre_interfaces:/home/ros2_ws/install/theatre_contrats:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ros2_ws/install/theatre_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/ros2_ws/install/theatre_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/ros2_ws/build/didier_rehearsal/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ros2_ws/install/didier_rehearsal/lib/python3.12/site-packages:/home/ros2_ws/install/robot/lib/python3.12/site-packages:/home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/didier_rehearsal build --build-base /home/ros2_ws/build/didier_rehearsal/build install --record /home/ros2_ws/build/didier_rehearsal/install.log --install-scripts $base/lib/didier_rehearsal --single-version-externally-managed install_data

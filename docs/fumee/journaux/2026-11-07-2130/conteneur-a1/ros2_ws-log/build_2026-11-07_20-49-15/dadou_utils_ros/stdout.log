@@ -1,0 +1,164 @@
+running egg_info
+creating ../../build/dadou_utils_ros/dadou_utils_ros.egg-info
+writing ../../build/dadou_utils_ros/dadou_utils_ros.egg-info/PKG-INFO
+writing dependency_links to ../../build/dadou_utils_ros/dadou_utils_ros.egg-info/dependency_links.txt
+writing requirements to ../../build/dadou_utils_ros/dadou_utils_ros.egg-info/requires.txt
+writing top-level names to ../../build/dadou_utils_ros/dadou_utils_ros.egg-info/top_level.txt
+writing manifest file '../../build/dadou_utils_ros/dadou_utils_ros.egg-info/SOURCES.txt'
+reading manifest file '../../build/dadou_utils_ros/dadou_utils_ros.egg-info/SOURCES.txt'
+writing manifest file '../../build/dadou_utils_ros/dadou_utils_ros.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/ros2_ws/build/dadou_utils_ros/build
+creating /home/ros2_ws/build/dadou_utils_ros/build/lib
+creating /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros
+copying dadou_utils_ros/logging_conf.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros
+copying dadou_utils_ros/__init__.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros
+copying dadou_utils_ros/utils_static.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros
+copying dadou_utils_ros/misc.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros
+copying dadou_utils_ros/singleton.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros
+copying dadou_utils_ros/static_value.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros
+creating /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/audios
+copying dadou_utils_ros/audios/__init__.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/audios
+copying dadou_utils_ros/audios/sound_object.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/audios
+copying dadou_utils_ros/audios/time_singleton.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/audios
+creating /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils
+copying dadou_utils_ros/utils/thread_with_trace.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils
+copying dadou_utils_ros/utils/shutdown_restart.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils
+copying dadou_utils_ros/utils/__init__.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils
+copying dadou_utils_ros/utils/status.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils
+copying dadou_utils_ros/utils/thread_with_exception.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils
+copying dadou_utils_ros/utils/time_utils.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils
+creating /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+copying dadou_utils_ros/com/serial_devices_manager.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+copying dadou_utils_ros/com/ws_server.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+copying dadou_utils_ros/com/input_messages_list.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+copying dadou_utils_ros/com/ws_client.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+copying dadou_utils_ros/com/__init__.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+copying dadou_utils_ros/com/serial_device.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+copying dadou_utils_ros/com/ws_com.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+copying dadou_utils_ros/com/message.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+copying dadou_utils_ros/com/lora_radio.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com
+creating /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/files
+copying dadou_utils_ros/files/files_utils.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/files
+copying dadou_utils_ros/files/__init__.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/files
+copying dadou_utils_ros/files/abstract_json_manager.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/files
+creating /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_1inch28.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_1inch9.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_1inch14.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/lcdconfig.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/__init__.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_0inch96.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_1inch3.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_1inch47.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_2inch.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_2inch4.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_1inch54.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+copying dadou_utils_ros/lcd/LCD_1inch8.py -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd
+creating /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/fonts
+copying dadou_utils_ros/fonts/readme_CN.txt -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/fonts
+copying dadou_utils_ros/fonts/Font01.ttf -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/fonts
+copying dadou_utils_ros/fonts/Font00.ttf -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/fonts
+copying dadou_utils_ros/fonts/Font02.ttf -> /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/fonts
+running install
+running install_lib
+creating /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros
+creating /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/audios
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/audios/__init__.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/audios
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/audios/sound_object.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/audios
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/audios/time_singleton.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/audios
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/logging_conf.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros
+creating /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils/thread_with_trace.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils/shutdown_restart.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils/__init__.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils/status.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils/thread_with_exception.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils/time_utils.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/__init__.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/utils_static.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/misc.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros
+creating /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com/serial_devices_manager.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com/ws_server.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com/input_messages_list.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com/ws_client.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com/__init__.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com/serial_device.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com/ws_com.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com/message.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/com/lora_radio.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com
+creating /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/fonts
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/fonts/readme_CN.txt -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/fonts
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/fonts/Font01.ttf -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/fonts
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/fonts/Font00.ttf -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/fonts
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/fonts/Font02.ttf -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/fonts
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/singleton.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros
+creating /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/files
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/files/files_utils.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/files
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/files/__init__.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/files
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/files/abstract_json_manager.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/files
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/static_value.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros
+creating /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_1inch28.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_1inch9.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_1inch14.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/lcdconfig.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/__init__.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_0inch96.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_1inch3.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_1inch47.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_2inch.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_2inch4.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_1inch54.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+copying /home/ros2_ws/build/dadou_utils_ros/build/lib/dadou_utils_ros/lcd/LCD_1inch8.py -> /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/audios/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/audios/sound_object.py to sound_object.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/audios/time_singleton.py to time_singleton.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/logging_conf.py to logging_conf.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils/thread_with_trace.py to thread_with_trace.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils/shutdown_restart.py to shutdown_restart.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils/status.py to status.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils/thread_with_exception.py to thread_with_exception.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils/time_utils.py to time_utils.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/utils_static.py to utils_static.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/misc.py to misc.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com/serial_devices_manager.py to serial_devices_manager.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com/ws_server.py to ws_server.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com/input_messages_list.py to input_messages_list.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com/ws_client.py to ws_client.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com/serial_device.py to serial_device.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com/ws_com.py to ws_com.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com/message.py to message.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/com/lora_radio.py to lora_radio.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/singleton.py to singleton.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/files/files_utils.py to files_utils.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/files/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/files/abstract_json_manager.py to abstract_json_manager.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/static_value.py to static_value.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_1inch28.py to LCD_1inch28.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_1inch9.py to LCD_1inch9.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_1inch14.py to LCD_1inch14.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/lcdconfig.py to lcdconfig.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_0inch96.py to LCD_0inch96.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_1inch3.py to LCD_1inch3.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_1inch47.py to LCD_1inch47.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_2inch.py to LCD_2inch.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_2inch4.py to LCD_2inch4.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_1inch54.py to LCD_1inch54.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros/lcd/LCD_1inch8.py to LCD_1inch8.cpython-312.pyc
+running install_data
+creating /home/ros2_ws/install/dadou_utils_ros/share/ament_index
+creating /home/ros2_ws/install/dadou_utils_ros/share/ament_index/resource_index
+creating /home/ros2_ws/install/dadou_utils_ros/share/ament_index/resource_index/packages
+copying resource/dadou_utils_ros -> /home/ros2_ws/install/dadou_utils_ros/share/ament_index/resource_index/packages
+copying package.xml -> /home/ros2_ws/install/dadou_utils_ros/share/dadou_utils_ros
+running install_egg_info
+Copying ../../build/dadou_utils_ros/dadou_utils_ros.egg-info to /home/ros2_ws/install/dadou_utils_ros/lib/python3.12/site-packages/dadou_utils_ros-0.1.0-py3.12.egg-info
+running install_scripts
+writing list of installed files to '/home/ros2_ws/build/dadou_utils_ros/install.log'

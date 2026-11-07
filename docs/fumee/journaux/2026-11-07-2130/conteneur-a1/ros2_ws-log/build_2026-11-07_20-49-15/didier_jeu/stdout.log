@@ -1,0 +1,71 @@
+running egg_info
+creating ../../build/didier_jeu/didier_jeu.egg-info
+writing ../../build/didier_jeu/didier_jeu.egg-info/PKG-INFO
+writing dependency_links to ../../build/didier_jeu/didier_jeu.egg-info/dependency_links.txt
+writing entry points to ../../build/didier_jeu/didier_jeu.egg-info/entry_points.txt
+writing requirements to ../../build/didier_jeu/didier_jeu.egg-info/requires.txt
+writing top-level names to ../../build/didier_jeu/didier_jeu.egg-info/top_level.txt
+writing manifest file '../../build/didier_jeu/didier_jeu.egg-info/SOURCES.txt'
+reading manifest file '../../build/didier_jeu/didier_jeu.egg-info/SOURCES.txt'
+writing manifest file '../../build/didier_jeu/didier_jeu.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/ros2_ws/build/didier_jeu/build
+creating /home/ros2_ws/build/didier_jeu/build/lib
+creating /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/journal.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/selecteur.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/offres.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/jeu_node.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/__init__.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/repertoire.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/phrases.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/reglages.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/arbre.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/pistes.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/pulsions.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/scores.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+copying didier_jeu/relais.py -> /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu
+running install
+running install_lib
+creating /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/journal.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/selecteur.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/offres.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/jeu_node.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/__init__.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/repertoire.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/phrases.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/reglages.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/arbre.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/pistes.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/pulsions.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/scores.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+copying /home/ros2_ws/build/didier_jeu/build/lib/didier_jeu/relais.py -> /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/journal.py to journal.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/selecteur.py to selecteur.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/offres.py to offres.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/jeu_node.py to jeu_node.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/repertoire.py to repertoire.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/phrases.py to phrases.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/reglages.py to reglages.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/arbre.py to arbre.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/pistes.py to pistes.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/pulsions.py to pulsions.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/scores.py to scores.cpython-312.pyc
+byte-compiling /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu/relais.py to relais.cpython-312.pyc
+running install_data
+creating /home/ros2_ws/install/didier_jeu/share/ament_index
+creating /home/ros2_ws/install/didier_jeu/share/ament_index/resource_index
+creating /home/ros2_ws/install/didier_jeu/share/ament_index/resource_index/packages
+copying resource/didier_jeu -> /home/ros2_ws/install/didier_jeu/share/ament_index/resource_index/packages
+copying package.xml -> /home/ros2_ws/install/didier_jeu/share/didier_jeu
+creating /home/ros2_ws/install/didier_jeu/share/didier_jeu/config
+copying config/reglages.yaml -> /home/ros2_ws/install/didier_jeu/share/didier_jeu/config
+copying config/deplacements.yaml -> /home/ros2_ws/install/didier_jeu/share/didier_jeu/config
+running install_egg_info
+Copying ../../build/didier_jeu/didier_jeu.egg-info to /home/ros2_ws/install/didier_jeu/lib/python3.12/site-packages/didier_jeu-0.1.0-py3.12.egg-info
+running install_scripts
+Installing jeu_node script to /home/ros2_ws/install/didier_jeu/lib/didier_jeu
+writing list of installed files to '/home/ros2_ws/build/didier_jeu/install.log'

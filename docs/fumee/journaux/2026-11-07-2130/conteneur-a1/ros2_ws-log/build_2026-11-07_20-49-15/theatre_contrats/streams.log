@@ -1,0 +1,47 @@
+[0.565s] Invoking command in '/home/ros2_ws/src/theatre_contrats': PYTHONPATH=/home/ros2_ws/build/theatre_contrats/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/theatre_contrats build --build-base /home/ros2_ws/build/theatre_contrats/build install --record /home/ros2_ws/build/theatre_contrats/install.log --install-scripts $base/lib/theatre_contrats --single-version-externally-managed install_data
+[0.741s] running egg_info
+[0.741s] creating ../../build/theatre_contrats/theatre_contrats.egg-info
+[0.751s] writing ../../build/theatre_contrats/theatre_contrats.egg-info/PKG-INFO
+[0.751s] writing dependency_links to ../../build/theatre_contrats/theatre_contrats.egg-info/dependency_links.txt
+[0.751s] writing requirements to ../../build/theatre_contrats/theatre_contrats.egg-info/requires.txt
+[0.751s] writing top-level names to ../../build/theatre_contrats/theatre_contrats.egg-info/top_level.txt
+[0.751s] writing manifest file '../../build/theatre_contrats/theatre_contrats.egg-info/SOURCES.txt'
+[0.771s] reading manifest file '../../build/theatre_contrats/theatre_contrats.egg-info/SOURCES.txt'
+[0.772s] writing manifest file '../../build/theatre_contrats/theatre_contrats.egg-info/SOURCES.txt'
+[0.772s] running build
+[0.772s] running build_py
+[0.772s] creating /home/ros2_ws/build/theatre_contrats/build
+[0.772s] creating /home/ros2_ws/build/theatre_contrats/build/lib
+[0.772s] creating /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats
+[0.773s] copying theatre_contrats/topics.py -> /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats
+[0.773s] copying theatre_contrats/stringtime.py -> /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats
+[0.773s] copying theatre_contrats/__init__.py -> /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats
+[0.773s] copying theatre_contrats/qos.py -> /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats
+[0.773s] copying theatre_contrats/organs.py -> /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats
+[0.773s] copying theatre_contrats/keys.py -> /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats
+[0.773s] running install
+[0.778s] running install_lib
+[0.788s] creating /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats
+[0.788s] copying /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats/topics.py -> /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats
+[0.788s] copying /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats/stringtime.py -> /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats
+[0.788s] copying /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats/__init__.py -> /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats
+[0.789s] copying /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats/qos.py -> /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats
+[0.789s] copying /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats/organs.py -> /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats
+[0.789s] copying /home/ros2_ws/build/theatre_contrats/build/lib/theatre_contrats/keys.py -> /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats
+[0.789s] byte-compiling /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats/topics.py to topics.cpython-312.pyc
+[0.789s] byte-compiling /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats/stringtime.py to stringtime.cpython-312.pyc
+[0.790s] byte-compiling /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats/__init__.py to __init__.cpython-312.pyc
+[0.790s] byte-compiling /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats/qos.py to qos.cpython-312.pyc
+[0.790s] byte-compiling /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats/organs.py to organs.cpython-312.pyc
+[0.790s] byte-compiling /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats/keys.py to keys.cpython-312.pyc
+[0.790s] running install_data
+[0.791s] creating /home/ros2_ws/install/theatre_contrats/share/ament_index
+[0.791s] creating /home/ros2_ws/install/theatre_contrats/share/ament_index/resource_index
+[0.791s] creating /home/ros2_ws/install/theatre_contrats/share/ament_index/resource_index/packages
+[0.791s] copying resource/theatre_contrats -> /home/ros2_ws/install/theatre_contrats/share/ament_index/resource_index/packages
+[0.791s] copying package.xml -> /home/ros2_ws/install/theatre_contrats/share/theatre_contrats
+[0.791s] running install_egg_info
+[0.802s] Copying ../../build/theatre_contrats/theatre_contrats.egg-info to /home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages/theatre_contrats-0.1.0-py3.12.egg-info
+[0.802s] running install_scripts
+[0.880s] writing list of installed files to '/home/ros2_ws/build/theatre_contrats/install.log'
+[0.899s] Invoked command in '/home/ros2_ws/src/theatre_contrats' returned '0': PYTHONPATH=/home/ros2_ws/build/theatre_contrats/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ros2_ws/install/theatre_contrats/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/theatre_contrats build --build-base /home/ros2_ws/build/theatre_contrats/build install --record /home/ros2_ws/build/theatre_contrats/install.log --install-scripts $base/lib/theatre_contrats --single-version-externally-managed install_data

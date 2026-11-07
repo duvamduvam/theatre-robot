@@ -1,0 +1,57 @@
+[0.892s] Invoking command in '/home/ros2_ws/src/didier_drive': AMENT_PREFIX_PATH=/home/ros2_ws/install/theatre_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ros2_ws/install/theatre_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/ros2_ws/install/theatre_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/ros2_ws/build/didier_drive/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ros2_ws/install/didier_drive/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/didier_drive build --build-base /home/ros2_ws/build/didier_drive/build install --record /home/ros2_ws/build/didier_drive/install.log --install-scripts $base/lib/didier_drive --single-version-externally-managed install_data
+[1.064s] running egg_info
+[1.064s] creating ../../build/didier_drive/didier_drive.egg-info
+[1.074s] writing ../../build/didier_drive/didier_drive.egg-info/PKG-INFO
+[1.074s] writing dependency_links to ../../build/didier_drive/didier_drive.egg-info/dependency_links.txt
+[1.074s] writing entry points to ../../build/didier_drive/didier_drive.egg-info/entry_points.txt
+[1.074s] writing requirements to ../../build/didier_drive/didier_drive.egg-info/requires.txt
+[1.074s] writing top-level names to ../../build/didier_drive/didier_drive.egg-info/top_level.txt
+[1.074s] writing manifest file '../../build/didier_drive/didier_drive.egg-info/SOURCES.txt'
+[1.099s] reading manifest file '../../build/didier_drive/didier_drive.egg-info/SOURCES.txt'
+[1.099s] writing manifest file '../../build/didier_drive/didier_drive.egg-info/SOURCES.txt'
+[1.100s] running build
+[1.100s] running build_py
+[1.100s] creating /home/ros2_ws/build/didier_drive/build
+[1.100s] creating /home/ros2_ws/build/didier_drive/build/lib
+[1.100s] creating /home/ros2_ws/build/didier_drive/build/lib/didier_drive
+[1.101s] copying didier_drive/__init__.py -> /home/ros2_ws/build/didier_drive/build/lib/didier_drive
+[1.101s] copying didier_drive/deadman.py -> /home/ros2_ws/build/didier_drive/build/lib/didier_drive
+[1.101s] copying didier_drive/joystick_mixer.py -> /home/ros2_ws/build/didier_drive/build/lib/didier_drive
+[1.101s] copying didier_drive/twist_deadman_node.py -> /home/ros2_ws/build/didier_drive/build/lib/didier_drive
+[1.102s] copying didier_drive/diff_drive.py -> /home/ros2_ws/build/didier_drive/build/lib/didier_drive
+[1.102s] copying didier_drive/wheels_bridge_node.py -> /home/ros2_ws/build/didier_drive/build/lib/didier_drive
+[1.102s] copying didier_drive/wheels_payload.py -> /home/ros2_ws/build/didier_drive/build/lib/didier_drive
+[1.103s] running install
+[1.104s] running install_lib
+[1.111s] creating /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive
+[1.111s] copying /home/ros2_ws/build/didier_drive/build/lib/didier_drive/__init__.py -> /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive
+[1.111s] copying /home/ros2_ws/build/didier_drive/build/lib/didier_drive/deadman.py -> /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive
+[1.111s] copying /home/ros2_ws/build/didier_drive/build/lib/didier_drive/joystick_mixer.py -> /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive
+[1.111s] copying /home/ros2_ws/build/didier_drive/build/lib/didier_drive/twist_deadman_node.py -> /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive
+[1.111s] copying /home/ros2_ws/build/didier_drive/build/lib/didier_drive/diff_drive.py -> /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive
+[1.111s] copying /home/ros2_ws/build/didier_drive/build/lib/didier_drive/wheels_bridge_node.py -> /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive
+[1.111s] copying /home/ros2_ws/build/didier_drive/build/lib/didier_drive/wheels_payload.py -> /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive
+[1.112s] byte-compiling /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive/__init__.py to __init__.cpython-312.pyc
+[1.112s] byte-compiling /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive/deadman.py to deadman.cpython-312.pyc
+[1.112s] byte-compiling /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive/joystick_mixer.py to joystick_mixer.cpython-312.pyc
+[1.113s] byte-compiling /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive/twist_deadman_node.py to twist_deadman_node.cpython-312.pyc
+[1.113s] byte-compiling /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive/diff_drive.py to diff_drive.cpython-312.pyc
+[1.113s] byte-compiling /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive/wheels_bridge_node.py to wheels_bridge_node.cpython-312.pyc
+[1.114s] byte-compiling /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive/wheels_payload.py to wheels_payload.cpython-312.pyc
+[1.114s] running install_data
+[1.115s] creating /home/ros2_ws/install/didier_drive/share/ament_index
+[1.115s] creating /home/ros2_ws/install/didier_drive/share/ament_index/resource_index
+[1.115s] creating /home/ros2_ws/install/didier_drive/share/ament_index/resource_index/packages
+[1.115s] copying resource/didier_drive -> /home/ros2_ws/install/didier_drive/share/ament_index/resource_index/packages
+[1.115s] copying package.xml -> /home/ros2_ws/install/didier_drive/share/didier_drive
+[1.115s] creating /home/ros2_ws/install/didier_drive/share/didier_drive/launch
+[1.115s] copying launch/drive.launch.py -> /home/ros2_ws/install/didier_drive/share/didier_drive/launch
+[1.115s] creating /home/ros2_ws/install/didier_drive/share/didier_drive/config
+[1.115s] copying config/twist_mux.yaml -> /home/ros2_ws/install/didier_drive/share/didier_drive/config
+[1.115s] running install_egg_info
+[1.126s] Copying ../../build/didier_drive/didier_drive.egg-info to /home/ros2_ws/install/didier_drive/lib/python3.12/site-packages/didier_drive-0.1.0-py3.12.egg-info
+[1.127s] running install_scripts
+[1.204s] Installing twist_deadman script to /home/ros2_ws/install/didier_drive/lib/didier_drive
+[1.204s] Installing wheels_bridge script to /home/ros2_ws/install/didier_drive/lib/didier_drive
+[1.204s] writing list of installed files to '/home/ros2_ws/build/didier_drive/install.log'
+[1.223s] Invoked command in '/home/ros2_ws/src/didier_drive' returned '0': AMENT_PREFIX_PATH=/home/ros2_ws/install/theatre_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/ros2_ws/install/theatre_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/ros2_ws/install/theatre_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/ros2_ws/build/didier_drive/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ros2_ws/install/didier_drive/lib/python3.12/site-packages:/home/ros2_ws/install/theatre_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/didier_drive build --build-base /home/ros2_ws/build/didier_drive/build install --record /home/ros2_ws/build/didier_drive/install.log --install-scripts $base/lib/didier_drive --single-version-externally-managed install_data

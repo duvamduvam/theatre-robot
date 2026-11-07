@@ -1,0 +1,30 @@
+#  décisions : 93 ; écart minimal entre deux : 2.002 s ; retours A->B->A en < 5 s : []
+1	T1 zéro oscillation (toute décision >= 2 s après la précédente, aucun retour en < 5 s)
+#  initiatives spontanées : 81 ; écart minimal : 8.3 s
+1	T2 initiatives spontanées espacées d'au moins 8 s
+#  arrêts de Didier : lubie à 4 s, lubie à 185 s, lubie à 346 s, lubie à 480 s, lubie à 612 s, lubie à 764 s, lubie à 888 s
+1	T2 au plus un arrêt de Didier (lubie, approche, bouche) par 120 s, au moins un joué
+#    arrêt-lubie nefs : intention 3.0 s et regard 3.0 s avant le stop (regard=True)
+#    arrêt-lubie table_basse : intention 3.1 s et regard 3.1 s avant le stop (regard=True)
+#    arrêt-lubie poubelle_tri : intention 3.1 s et regard 3.1 s avant le stop (regard=True)
+#    arrêt-lubie terrasse : intention 3.1 s et regard 3.1 s avant le stop (regard=True)
+#    arrêt-lubie velo_cadenas : intention 3.0 s et regard 3.0 s avant le stop (regard=True)
+#    arrêt-lubie anneaux : intention 3.1 s et regard 3.1 s avant le stop (regard=True)
+#    arrêt-lubie loire : intention 3.0 s et regard 3.0 s avant le stop (regard=True)
+1	T2 chaque arrêt-lubie : regard ET intention publiés >= 3 s avant le stop
+#  offres nées : 2 personnes, 19 objets ; plus lentes réponses : [(0.7, 'objet', 'flaque'), (0.69, 'objet', 'elephant'), (0.68, 'objet', 'terrasse')]
+1	T3 réaction <= 1 s à chaque offre née (personnes et objets)
+#  ignore p1 : décisions vers elle dans les 30 s : []
+1	T4 ignore : aucune action vers la piste pendant 30 s
+#  va_la p1 : tourner [{'cmd': 'tourner', 'angle_deg': -10.7}] ; avancer [{'cmd': 'avancer', 'metres': 1.0}] ; régisseur avancer ['accepted']
+1	T4 va_la vers une piste : s'approcher (avancer 1 m) accepté par le régisseur
+#  va_la carrousel : régisseur ['accepted'] ; résultat ['arrived']
+1	T4 va_la vers un objet : aller_voir accepté par le régisseur et route_goto_result reçu
+#  stop console : relayé en 0 ms ; vitesse avant 0.398 ; à zéro après 0.01 s ; max ensuite 0.0 ; demandes : [] ; déplacements décidés : []
+1	T4 stop : Didier qui ROULAIT est à l'arrêt en < 1 s
+1	T4 stop : aucune vitesse, aucune demande, aucun déplacement décidé jusqu'au go
+#  stop de la bouche relayé en 1 ms ; journal relais_stop : 1
+1	T5 stop de la bouche relayé en < 200 ms, sans score (relais_stop)
+#  intentions reçues : 1600 ; plus long silence : 0.60 s ; vides : 0 ; lignes du topic jeu/journal : 239 dont sans pourquoi : 0
+1	T6 jeu/intention jamais muette ni vide plus de 1 s
+1	T6 chaque ligne du topic jeu/journal porte un pourquoi (jamais « absent — bug »)
