@@ -1,0 +1,17 @@
+# Lot F — fumée nocturne (spec theatre-robot/docs/spec-L1-contrats-donnees.md, « Lot F »).
+# Unité UTILISATEUR (pas root) : elle lance la sim Docker de David sur son PC.
+# Installée par installer-fumee.sh, qui remplace @FUMEE_SH@ par le chemin absolu du script
+# (le fichier versionné ne peut pas connaître le checkout de la machine).
+[Unit]
+Description=Didier — fumée nocturne (sim complète sur main, seulement si due)
+Documentation=file://@FUMEE_SH@
+
+[Service]
+Type=oneshot
+ExecStart=@FUMEE_SH@ --si-due
+# Le PC reste utilisable pendant une fumée : priorité basse pour le script lui-même.
+Nice=10
+# Une fumée dure ≈ 40 min ; marge pour une reconstruction d'image sur un PC lent.
+TimeoutStartSec=3h
+# Code 1 = fumée ROUGE : c'est un résultat (page + notification), pas une panne de l'unité.
+SuccessExitStatus=1

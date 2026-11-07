@@ -469,6 +469,91 @@ Le script contient sa propre perception scriptée et joue la console et la bouch
 il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
 `jeu:=true` reste vérifiée par `validate-rehearsal-chantiers.sh` (V-R3).
 
+## Fumée automatique — la sim rejouée toute seule (lot F, 07/11)
+
+Un script shell (`conf/scripts/fumee.sh`, zéro token) rejoue sur le **checkout de main** toutes
+les épreuves de la sim et compare chaque compteur à une valeur **gravée en tête du script** :
+namespace 5, catalogue 4, `parle` 3 états, V-R3 21, A1 14. Il **mesure, il ne juge pas** ; un
+agent n'intervient que pour lire une page rouge. Pourquoi : l'environnement bouge sans commit
+(paquets Gazebo, Docker, charge du PC — V-R3 est tombé de 21/21 à 18/21 le 06/11 sans
+régression du code) et chaque lot payait ≈ 1 h d'épreuves.
+
+**Ordre, arrêt au PREMIER rouge** (les suivantes restent « non lancée » sur la page) :
+image sim (reconstruite seulement si `conf/docker/sim` a changé depuis la dernière fumée verte,
+ou si elle manque) → sim headless domaine 43 + colcon → **sonde RTF 20 s** (rouge si < 0,8 : le
+reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.sh` → animation
+`parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) → chaîne roues + régisseur +
+regard puis `validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh`
+(A1). ≈ 40 min.
+
+**Trois façons de la lancer**
+- `fumee.sh --si-due` : appelé toutes les 30 min par la minuterie (voir plus bas). Ne fait RIEN
+  si rien n'est dû ; dû = un commit est entré dans `main` après le sha gravé dans la dernière
+  page VERTE (les commits de `docs/fumee/` ne comptent pas, sinon chaque page rappellerait la
+  suivante), OU 7 jours sans fumée verte. Dû mais PC occupé → note « reporté » dans
+  `~/.local/state/didier-fumee/journal.log` et sort 0 : **jamais de plage à réserver**, l'essai
+  de 30 min plus tard réessaie. Sont reportés : charge 1 min > nb de cœurs × 0,5 (seuil
+  `FUMEE_CHARGE_MAX`, 16 sur ce PC de 32 cœurs ; le RTF reste le vrai juge), RTF < 0,8 après
+  démarrage de la sim, **conteneur `dadou-sim-container` déjà présent** (la sim de quelqu'un :
+  jamais touchée), checkout qui n'est pas sur la branche `main`. Due depuis plus de 2 jours et
+  toujours reportée → `notify-send` + ligne « RAPPEL » au journal (au plus toutes les 12 h).
+- `fumee.sh` : à la main, déroule même si pas due. Le RTF reste juge (rouge si < 0,8).
+- `fumee.sh --et-dodo` : fumée forcée **puis `systemctl poweroff`** — à lancer en allant se
+  coucher, le PC s'éteint seul ≈ 45 min après, page commitée avant l'extinction. Refuse (code 2,
+  n'éteint pas) si une sim existe déjà ; si la minuterie a une fumée en cours, il l'attend (90 min
+  max) puis éteint sans en refaire une. **Essai à blanc : `FUMEE_DRY_POWEROFF=1`** remplace le
+  poweroff par un `echo`. **Garde-fou : l'extinction exige un vrai terminal** (stdin ET stdout
+  interactifs) ; sans terminal (agent, minuterie, script) `dodo()` refuse et l'écrit au journal.
+  Raison : le 07/11 à 21:07 un essai « à blanc » lancé sans `FUMEE_DRY_POWEROFF` a éteint le PC
+  de David. Pour tester une extinction : un faux `systemctl` en tête du PATH, jamais le vrai
+  (`test_fumee.py` le fait).
+
+**Lire une page** : `docs/fumee/index.html` (la plus récente en tête) → `AAAA-MM-JJ.html` : sha
+testé (`-dirty` = l'arbre de David n'était pas propre, ce qui a été testé n'est pas un commit),
+durée, RTF, charge, une ligne par épreuve avec son compteur (`21 / 21 OK, 0 KO`) et son journal.
+Les journaux sont COPIÉS hors du conteneur avant son arrêt : `docs/fumee/journaux/<id>/`
+(`<épreuve>.log`, `conteneur-<phase>.tar.gz` = logs ROS + journaux de séance + sortie du conteneur,
+les fichiers > 1 Mo réduits à leurs 3000 dernières lignes) et **`resultat.json`**, qui est la vérité
+(la page n'en est que le rendu : `python3 conf/scripts/fumee_page.py pages --sortie docs/fumee`
+la régénère). **Avant d'accuser une épreuve rouge, regarder le RTF** : sous 0,8 le régisseur
+(horloge murale) manque l'arrivée. Un arrêt propre (Ctrl-C, SIGTERM) en cours de route laisse une page
+rouge « interrompue » ; un SIGKILL ou une coupure de courant n'en laisse aucune.
+
+**Ce que le script ne fait jamais** : modifier l'arbre de travail hors `docs/fumee/` (le seul
+commit est `git commit -- docs/fumee`, sans `-a` ni `add .`, sans push) ; lancer quoi que ce soit
+hors du domaine ROS 43 (forcé dans la commande, revérifié dans le conteneur) ; laisser la sim
+tourner (arrêt en `trap EXIT`, quoi qu'il arrive). Seule trace transitoire : `validate-catalogue.sh`
+dépose puis supprime `json/sequences/tmp-l1c/` dans l'arbre.
+
+**Pièges connus**
+- La sim « headless » a quand même besoin d'une **autorité X valide** (le compose monte
+  `XAUTHORITY`) : sans elle Gazebo segfault au rendu (« Authorization required », exit 139, aucun
+  `/clock`). Sous la minuterie, GNOME importe `DISPLAY`/`XAUTHORITY` dans l'environnement
+  utilisateur de systemd ; à défaut le script cherche `/run/user/UID/.mutter-Xwaylandauth.*`.
+  Session fermée = démarrage rouge, avec la cause dans `demarrage.log`.
+- `validate-namespace.sh` lit `topic info` via le démon ros2, qui naît VIDE sur un conteneur neuf :
+  sans réchauffement il rend 4/5 (bridge « absent ») alors que tout est sain. La fumée réchauffe
+  le démon avant l'épreuve (`rechauffer_cli`). Le script de vérification lui-même n'a pas été touché.
+- Une fumée n'a de sens que sur `main` : si le checkout est sur une autre branche, la minuterie
+  reporte (une fumée à la main marque la branche sur la page).
+
+**Minuterie systemd utilisateur** (`conf/systemd/`, sans sudo) :
+```bash
+conf/systemd/installer-fumee.sh                 # copie didier-fumee.{service,timer} dans ~/.config/systemd/user/, active
+systemctl --user list-timers didier-fumee.timer # prochain essai (toutes les :00 et :30 ; Persistent=true rattrape un PC éteint)
+journalctl --user -u didier-fumee.service -e    # sortie du dernier essai
+tail ~/.local/state/didier-fumee/journal.log    # reporté / début / fin
+conf/systemd/installer-fumee.sh --desinstaller  # arrête, désactive, supprime les unités
+```
+Le chemin de `fumee.sh` écrit dans l'unité est celui du checkout d'où l'on lance l'installeur :
+**le relancer depuis le checkout de `main`** une fois le lot fusionné (un worktree peut disparaître).
+**Première page réelle** : la fumée complète a été jouée une fois à la main le 07/11 (verte :
+RTF 0,979 ; namespace 5/5, catalogue 4/4, parle 3/3, V-R3 21/21, A1 14/14 ; 35 min), mais sa page
+a été perdue avec /tmp lors de l'extinction accidentelle ci-dessus. Aucune page n'existe donc
+dans `docs/fumee/` : la fumée est « due » et c'est la minuterie qui écrira la première page réelle.
+Tests hôte : `robot/tests/unit/test_fumee.py` (décision « due ? », pages, garde-fous du script avec
+un faux `docker`).
+
 ## Salle de répétition simulée — Didier chemine seul dans la rue (lot R1, 2026-10-07)
 
 Monde `rue` + package SIM-ONLY `didier_rehearsal` (étude

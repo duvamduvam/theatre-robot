@@ -1,0 +1,14 @@
+# Lot F — essai toutes les 30 min. OPPORTUNISTE : le script décide s'il y a quelque chose à
+# faire (fumée due ?) et si le PC est assez calme ; sinon il sort en silence. Jamais de plage
+# à réserver (David : « je n'arrive jamais à garder une plage vide »).
+[Unit]
+Description=Didier — essai de fumée nocturne toutes les 30 min
+
+[Timer]
+OnCalendar=*:00,30
+# PC éteint à l'heure d'un essai : un essai de rattrapage part à l'allumage.
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
