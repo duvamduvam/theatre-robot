@@ -607,8 +607,11 @@ Donc, pour la prochaine passe :
 | Pi 4 Model B Rev 1.4 | 4 Go | `100000009dea877a` | **Sain** le 07/11 : démarre sur la SD du robot, `throttled=0x0` | MAC Ethernet `e4:5f:01:25:6f:30` ; DHCP en .23. 2ᵉ des Pi retrouvés |
 | Pi 4 Model B Rev 1.2 | 4 Go | `100000000a547d0e` | **Sain** le 07/11 : démarre sur la SD du robot, `throttled=0x0` | MAC Ethernet `dc:a6:32:65:57:eb` ; DHCP en .49. 3ᵉ des Pi retrouvés |
 | Pi 4 Model B Rev 1.4 | 4 Go | `10000000da66fc96` | **Sain, mais FENTE SD CASSÉE** (07/11) : démarre sur USB (SD du robot dans un lecteur USB, port USB-A), `throttled=0x0` | MAC Ethernet `e4:5f:01:71:5e:52` ; DHCP en .53. 4ᵉ des Pi retrouvés. Toujours démarrer sur clé, SSD ou lecteur USB ; bon candidat pour le banc témoin (support USB permanent) |
-**Stock déclaré par David le 2026-11-07, non relevé** : **5 Pi 4 retrouvés** (mémoire, état de
-démarrage et numéros de série inconnus) et **3 Pi 3, de mémoire** (« je crois »). On ignore si les
-5 Pi 4 incluent les deux qui ne démarrent plus ci-dessus. Chaque carte entre dans la table une fois
-relevée : modèle et mémoire lus sur la carte, essai avec une SD et un chargeur qui marchent,
-`cat /proc/device-tree/model`, `free -h`, numéro de série.
+| Pi 4 Model B Rev 1.5 | 4 Go | `10000000bec1ed98` | **Sain** le 07/11 : démarre sur la SD du robot, `throttled=0x0` | MAC Ethernet `d8:3a:dd:6d:da:73` ; DHCP en .131. 5ᵉ et dernier des Pi 4 retrouvés |
+**Bilan du relevé du 2026-11-07** : les **5 Pi 4 retrouvés** sont relevés ci-dessus, tous de
+4 Go, tous **sains** (aucune alerte d'alimentation), tous démarrés sur la SD du robot. Leurs numéros
+de série diffèrent de ceux du 04/11 : ce sont bien **5 cartes de plus**, et les deux Pi morts restent
+à part. Une seule réserve : le `da66fc96` a la **fente SD cassée** et ne démarre que sur USB. Chaque
+carte porte une étiquette (modèle, mémoire, fin du numéro de série, état). Outils :
+`atelier/outils/releve_pi.sh` et `atelier/outils/etiqueteuse_p15.py`.
+**Reste à relever : les 3 Pi 3** déclarés « de mémoire » par David.

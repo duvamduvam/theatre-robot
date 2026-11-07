@@ -190,8 +190,8 @@ il ne coûte que du temps d'atelier.
 
 ## 7. Si l'inventaire trouve des Pi en stock
 
-> **07/11, soir** : David a retrouvé **5 Pi 4**, et pense avoir **3 Pi 3**. Rien n'est encore relevé
-> (mémoire, démarrage). Le banc aura donc un Pi 4 à lui, et le mini-robot aussi le jour du lidar.
+> **07/11, soir** : David a retrouvé **5 Pi 4**, et pense avoir **3 Pi 3**. **Les 5 Pi 4 sont relevés
+> le même soir : tous de 4 Go et sains**, dont un à fente SD cassée qui démarre sur USB (voir l'inventaire). Le banc aura donc un Pi 4 à lui, et le mini-robot aussi le jour du lidar.
 > La récupération du bootloader des deux Pi 4 morts n'est plus urgente.
 
 **Ce qui change.**
