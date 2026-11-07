@@ -53,6 +53,10 @@
     copy_links: yes
     rsync_opts:
       #- "--delete"
+      # Dates des DOSSIERS non copiées : cette tâche et la suivante écrivent dans la même
+      # destination, chacune imposait la date de sa racine — rsync « changed » à chaque passage
+      # (de même pour vision/, touché par la sentinelle). Les dates des fichiers restent copiées.
+      - "--omit-dir-times"
       - "--exclude=.git/"
       - "--exclude=node_modules/"
       - "--exclude=.~tmp~/"
@@ -79,8 +83,15 @@
     dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
     recursive: yes
     copy_links: yes
-    #rsync_opts:
-    #  - "--delete"
+    rsync_opts:
+      #- "--delete"
+      - "--omit-dir-times"
+      # Points de montage vides créés EN ROOT dans conf/ros2/ par un Docker du PC (vu le 07/11,
+      # non suivis par git) : les copier imposait leurs droits 755 aux vrais json/, medias/ et
+      # robot/ du projet, que la tâche précédente remettait en 775 — « changed » sans fin.
+      - "--exclude=/json/"
+      - "--exclude=/medias/"
+      - "--exclude=/robot/"
 
 # Nettoyage des packages RENOMMÉS (lot L1e-2) : chaque ancien nom de
 # `packages_retires` (vars/main.yml) est effacé de src/, build/ et install/ AVANT
