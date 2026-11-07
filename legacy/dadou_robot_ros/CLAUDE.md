@@ -72,6 +72,7 @@ FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires
 
 ```bash
 .venv/bin/pytest -q                 # tests unitaires (host, sans ROS ni matériel)
+conf/scripts/fumee.sh               # fumée : rejoue toute la sim sur main (minuterie systemd, docs/operations.md § Fumée automatique)
 
 # ⚠️ Namespace (L1b) : la CLI ne suit PAS le namespace des nœuds — un nom relatif tapé
 # dans `ros2 topic pub/echo` se résout à la RACINE. Toujours préfixer (/didier/…) et

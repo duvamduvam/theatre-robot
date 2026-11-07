@@ -15,6 +15,9 @@ Ce fichier-ci grossira à mesure que `legacy/` se vide ; il ne doit jamais dupli
 - Documentation dans le même lot que le code ; état des chantiers dans `docs/chantiers.md`
   (encore dans `legacy/dadou_robot_ros/docs/` pendant L0).
 - Dépôt public : aucun secret, jamais (les secrets vivent hors git, voir l'étude architecture).
+- Jamais d'extinction du poste depuis un agent : ni `fumee.sh --et-dodo`, ni `systemctl
+  poweroff/reboot/suspend` (vécu le 07/11 : le PC de David éteint par un essai « à blanc »). Une
+  extinction ne se teste qu'avec un FAUX `systemctl` en tête du PATH.
 
 ## Choix du modèle
 
