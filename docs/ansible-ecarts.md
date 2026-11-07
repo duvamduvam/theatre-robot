@@ -12,7 +12,8 @@ dette du playbook, pas une note de doc.
 - **De temps en temps, et à chaque grosse mise à jour** (OS, ROS, image Docker) : David
   reflashe les deux cartes, l'agent déroule `install-pios-lite.yml` + `deploy-pios.yml` et
   consigne ici ce qui a manqué ; on comble, on repart de là.
-- **Une fois tout vert** : image `dd` de chaque SD = restauration rapide (≈ 10 min, sans Ansible).
+- ~~Image `dd` de chaque SD~~ **abandonnée** (David, 07/11 : « ce ne sera jamais la bonne version ») :
+  la restauration rapide = Ansible en une commande + images Docker publiées sur le Hub.
 - Jamais sur le robot câblé roues avant le protocole caméra (verrou L1b).
 
 ## État au 07/11 au soir — lot « Ansible nickel » FAIT (branche `l1e-3`)
@@ -29,17 +30,26 @@ après), puis `./ecart-pi.sh robot|vision` (vert = code 0).
 | 3. Système | **fait** dans `deploy-pios.yml` (rôle `config-hote`, rejoué à chaque déploiement donc vu par la détection) : `avahi-utils` + `avahi-alias-didier.service` (robot), `/etc/asound.conf` (vision, versionné dans `dadou_vision_ros/conf/rpi/asound.conf`). `~/.asoundrc` : c'était déjà le gabarit du rôle `usb-audio` (identique sur les deux Pi), désormais rejoué au déploiement. `.bashrc` : voir la correction du relevé ci-dessous ; `set-bashrc` rendu idempotent et rejoué au déploiement. Rsync : `.venv/`, `.pytest_cache/`, workspace x86, `conf/secret`, sentinelles commitées exclus ; `.venv` déjà poussés effacés (269 Mo robot, 342 Mo vision). |
 | 4. Images sur le Hub | **reste** (compte de David) : une réinstallation tire encore l'image Humble de 2024 puis reconstruit (≈ 35 min sur Pi 4). |
 | 5. Détection d'écart | **fait** : `ecart-pi.sh <groupe>` = (a) `--check --diff` + (b) inventaire comparé à `attendu/<groupe>.txt` (gravés le 07/11). Pas encore branché dans un `deploy-hors-robot.sh` (n'existe pas). Fichiers de `/etc` hors Ansible : non inventoriés (trop de bruit de l'OS ; à revoir si besoin). |
-| 6. Preuve | **partielle faite** : `~/ros2_ws` effacé sur la vision, une commande, tout revient (secret : même taille, même sha256). **Reste** : reflash des deux cartes par David, puis image `dd`. |
+| 6. Preuve | **partielle faite** : `~/ros2_ws` effacé sur la vision, une commande, tout revient (secret : même taille, même sha256). **Reste** : reflash des deux cartes par David. |
 
 Deuxième passage d'un déploiement : seules restent « changed » la **sentinelle** et la
 **recréation du conteneur**, voulues (chaque déploiement recompile et redémarre). En
 `--check` (détection d'écart), 0 tâche « changed » sur les deux Pi.
 
-**Outils d'atelier de la vision, hors Ansible, à trier avec David** (tolérés `?` dans
-`attendu/vision.txt`, rien n'a été supprimé) : `~/didier_proto` (son secret, lui, est posé par
-Ansible), `~/bench-v1`, `~/xvf_host`, `~/mic_test`, `~/asound.conf.bak-avant-micro-camera`,
-`~/photo-camera.jpg`, `~/photo_didier.jpg`. Garder = les mettre dans Ansible ; jeter = les
-effacer et retirer la ligne `?`.
+**Outils d'atelier de la vision : TRIÉS le 07/11 avec David** (« on supprime tout ce qui n'est
+pas utile ») : `~/didier_proto` (proto d'octobre, remplacé par `chat_node`), `~/bench-v1`,
+`~/xvf_host`, `~/mic_test`, la vieille sauvegarde `asound.conf`, 2 photos → archivés sur le PC
+(`~/Nextcloud/dev/didier/archives/vision-pi-outils-atelier-2026-11-07.tgz`, 109 Mo, sans venv ni
+secret) puis effacés du Pi ; lignes `?` et secret `didier_proto` retirés. Parler à Didier en
+simulation avec retour visuel = le **banc PC** (operations.md § « Banc PC »), sur le PC : il
+n'utilisait aucun de ces outils.
+
+**Voix de Didier (trouvé le 07/11 au soir)** : `medias/voices/didier.onnx` n'existait que sur la
+vision, déposée à la main ; `medias/` est bind-monté et MASQUE la voix que le Dockerfile met dans
+l'image ; la preuve à blanc (effacement de `~/ros2_ws`) l'a donc perdue sans qu'aucune épreuve le
+voie. Corrigé : `telechargements_hote` (rôle `config-hote`) la télécharge avec empreinte sha256
+gravée (= fichiers du proto validé le 10/07). Leçon : la preuve à blanc vérifiait les secrets, pas
+les fichiers lourds hors dépôt — `ecart-pi.sh` ne voit que `~` au premier niveau.
 
 **Corrections du relevé ci-dessous** (constatées pendant le lot) :
 - `.bashrc` : c'est le robot qui a ses deux blocs ; sur la vision le bloc projet est vide parce

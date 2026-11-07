@@ -9,3 +9,7 @@ paquets_hote: []
 unites_systemd: []
 # Fichiers de /etc versionnés : liste de {source, dest}, propriétaire root, mode 0644.
 fichiers_etc: []
+# Fichiers lourds téléchargés sur l'hôte (modèles, voix) : liste de {url, dest, sha256}, dest
+# relatif au $HOME de l'utilisateur. Téléchargés seulement s'ils manquent ou si l'empreinte
+# diffère (get_url + checksum) ; l'empreinte gravée garantit le BON fichier.
+telechargements_hote: []

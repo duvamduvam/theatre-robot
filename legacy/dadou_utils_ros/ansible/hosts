@@ -129,13 +129,19 @@ vision:
             - source: vision-conf-secret
               dest: ros2_ws/src/vision/conf/secret
               modele: "{{ local_projects_dir }}/dadou_vision_ros/conf/secret.example"
-            # Boucle d'atelier ~/didier_proto (hors Ansible, à trier avec David) : son
-            # secret est quand même restauré, sans lui l'outil est mort.
-            - source: didier_proto-secret
-              dest: didier_proto/secret
         # Monté par le compose (../../../medias) mais absent du dépôt de la vision.
         dossiers_montes:
             - medias
+        # Voix Piper de Didier (chat_node : vision_config « chat_piper_voice » =
+        # medias/voices/didier.onnx). Sous medias/ bind-monté : la copie de l'image est masquée,
+        # c'est donc CELLE-CI qui sert. Empreintes = fichiers du proto validé le 10/07.
+        telechargements_hote:
+            - url: https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx
+              dest: ros2_ws/src/vision/medias/voices/didier.onnx
+              sha256: 641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99
+            - url: https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json
+              dest: ros2_ws/src/vision/medias/voices/didier.onnx.json
+              sha256: 39479916c2db192b5ac9764daddd0c744d83e023ad890c6976c0633ae4df8959
         # person_tracker n'est pas exigé : sans webcam (Pi hors robot) il s'arrête.
         noeuds_attendus:
             - /didier/vision_status

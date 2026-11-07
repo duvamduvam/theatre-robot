@@ -1,15 +1,8 @@
 # Ce que le Pi vision (Pi 5, 192.168.1.151) doit porter — liste lue par ecart-pi.sh vision.
 # Gravée le 07/11 après le lot « Ansible nickel » (./ecart-pi.sh vision --graver, puis relue).
 # Une entrée par ligne `famille:nom` ; '?' = toléré (présent ou absent, jamais un écart).
-# Outils d'atelier HORS Ansible, à trier avec David (garder = les mettre dans Ansible ;
-# jeter = les effacer et retirer la ligne) — docs/ansible-ecarts.md :
-?home:didier_proto
-?home:bench-v1
-?home:xvf_host
-?home:mic_test
-?home:asound.conf.bak-avant-micro-camera
-?home:photo-camera.jpg
-?home:photo_didier.jpg
+# Outils d'atelier de la vision (didier_proto, bench-v1, xvf_host, mic_test, photos) : TRIÉS le
+# 07/11 avec David — archivés sur le PC (~/Nextcloud/dev/didier/archives/), effacés du Pi.
 apt:adduser
 apt:apt
 apt:apt-listchanges

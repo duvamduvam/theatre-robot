@@ -59,3 +59,25 @@
   loop: "{{ fichiers_etc }}"
   loop_control:
     label: "{{ item.dest }}"
+
+# Fichiers lourds hors dépôt (vu le 07/11 au soir : la voix de Didier n'existait que sur la
+# vision, déposée à la main sous medias/voices/ — bind-monté, il MASQUE la voix de l'image —
+# et l'effacement de ~/ros2_ws l'a perdue sans qu'aucune épreuve le voie).
+- name: Create download directories
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/{{ item.dest | dirname }}"
+    state: directory
+    mode: "0775"
+  loop: "{{ telechargements_hote }}"
+  loop_control:
+    label: "{{ item.dest | dirname }}"
+
+- name: Download pinned host files (models, voices)
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ ansible_env.HOME }}/{{ item.dest }}"
+    checksum: "sha256:{{ item.sha256 }}"
+    mode: "0644"
+  loop: "{{ telechargements_hote }}"
+  loop_control:
+    label: "{{ item.dest }}"
