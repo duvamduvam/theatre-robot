@@ -158,7 +158,8 @@ mono-dépôt, avec le venv du robot :
 cd packages/dadou_utils_ros && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=
 ```
 
-Les `conftest.py` des 3 dépôts legacy et de `packages/didier_jeu` y ajoutent
+Les `conftest.py` des dépôts legacy (vision, télécommande), de `packages/didier_core/test/` (le
+cœur, depuis L1e-3c) et de `packages/didier_jeu` y ajoutent
 `packages/dadou_utils_ros` au `sys.path` : pour vérifier que c'est bien CETTE copie qui est
 importée, `python -c 'import conftest, dadou_utils_ros; print(dadou_utils_ros.__file__)'`
 depuis chaque dépôt doit afficher `packages/dadou_utils_ros/dadou_utils_ros/__init__.py`.
@@ -179,6 +180,28 @@ tombent à l'import (même piège que `theatre_contrats` au 04/11 ; pas encore v
 Tests hôte : les modules ROS sont factices (`sys.modules["theatre_interfaces.msg"]`), rien
 à installer ; le garde-fou `test_arborescence.py` rougit si un fichier de code ou de conf
 cite encore l'ancien nom.
+
+## Le cœur `didier_core` (lot L1e-3c, 07/11)
+
+L'ex-package `robot` est `packages/didier_core/` (code `didier_core/`, tests `test/`) ;
+exécutables, nœuds et topics inchangés. Tests hôte, depuis la racine du mono-dépôt :
+
+```bash
+cd packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=
+```
+
+(il n'y a plus de tests ni de `conftest.py` à la racine de `legacy/dadou_robot_ros/`). Les
+DONNÉES (`json/`, `medias/`, `db/`, `conf/`) restent dans `legacy/dadou_robot_ros/`, montées
+sous `/home/ros2_ws/src/robot/` ; `robot_config.py` en lit la racine dans `DIDIER_DATA_DIR`
+(posée par les compose, et par le `conftest.py` vers `legacy/dadou_robot_ros/`). En CLI :
+`ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier`. Sentinelle de build :
+`src/didier_core/change` (sur le PC `packages/didier_core/change`, gitignorée ; `make build` de
+`conf/Makefile` la pose). Au déploiement, Ansible efface l'ancienne forme (`src/robot/robot`,
+`src/robot/{setup.py,package.xml,setup.cfg,resource,test}`, `build/robot`, `install/robot` —
+liste gravée `chemins_retires_robot`, seulement si présente) AVANT de pousser `src/didier_core`.
+⚠️ L'image ARM COPIE le code : après ce lot, la reconstruire sur le Pi
+(`sudo docker compose -f docker-compose-arm.yml build`) puis la pousser sur le Hub. Contrôle
+dans le conteneur : `ls /home/ros2_ws/src /home/ros2_ws/install` ne montre plus aucun `robot`.
 
 ## Calibration & verification tooling
 - **Face LED patterns** (expressions, publish on `face`): `"calib"` (digits
@@ -258,8 +281,8 @@ ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -
   habituelle : pas de mouvement automatique) :
 ```bash
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot person_follower --ros-args -r __ns:=/didier'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core person_follower --ros-args -r __ns:=/didier'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
 ```
   (puis activer le suivi roues : topic `follow` « on » — il démarre OFF.)
 
@@ -344,7 +367,7 @@ Tout sur le domaine **43**.
 WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
 ```
 - `REHEARSAL=true` : la page scène obtient les boutons route / vitesse /
   séance (SIM-ONLY, jamais sur le robot). `seed:=N` sur le launch rehearsal
@@ -459,7 +482,7 @@ cd conf/docker/sim
 WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d --build
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
 ```
 - Le launch `jeu:=true` démarre **lui-même** le sélecteur (`jeu_node`, respawn).
   Ne pas le lancer à part. Si le répertoire de séquences est illisible, il
@@ -580,7 +603,7 @@ Le chemin de `fumee.sh` écrit dans l'unité est celui du checkout d'où l'on la
 RTF 0,979 ; namespace 5/5, catalogue 4/4, parle 3/3, V-R3 21/21, A1 14/14 ; 35 min), mais sa page
 a été perdue avec /tmp lors de l'extinction accidentelle ci-dessus. Aucune page n'existe donc
 dans `docs/fumee/` : la fumée est « due » et c'est la minuterie qui écrira la première page réelle.
-Tests hôte : `robot/tests/unit/test_fumee.py` (décision « due ? », pages, garde-fous du script avec
+Tests hôte : `packages/didier_core/test/unit/test_fumee.py` (décision « due ? », pages, garde-fous du script avec
 un faux `docker`).
 
 ## Salle de répétition simulée — Didier chemine seul dans la rue (lot R1, 2026-10-07)

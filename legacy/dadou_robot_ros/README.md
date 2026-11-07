@@ -30,11 +30,12 @@ Related repositories:
 
 ## Quick start (tests, no hardware needed)
 ```bash
-git clone <repo-url> dadou_robot_ros   # + dadou_utils_ros as sibling (symlinked)
-cd dadou_robot_ros
+# theatre-robot mono-repo: the code is the package packages/didier_core (lot L1e-3c,
+# 2026-11-07); this folder keeps its data (json/, medias/, db/, conf/) and the test venv.
+cd legacy/dadou_robot_ros
 python3 -m venv .venv
-.venv/bin/pip install -r requirements-test.txt   # same file as CI
-.venv/bin/pytest -q        # 443 unit tests, hardware imports are deferred
+.venv/bin/pip install -r requirements-test.txt
+cd ../../packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=
 ```
 
 ## Simulation (Gazebo Harmonic, x86)
@@ -72,7 +73,7 @@ calibration patterns and the wheels camera protocol.
 - Keep the code clean and AI-maintainable: no dead code, one abstraction per
   concept, contracts tested, French comments explaining the WHY.
 - Physical acquisitions (wiring, calibration) must be locked by unit tests.
-- Run `.venv/bin/pytest -q` before any commit; CI runs it on every push.
+- Run the tests (Quick start above, from `packages/didier_core`) before any commit.
 
 ## For AI assistants
 - Working state and next steps (French): [`CLAUDE.md`](CLAUDE.md)

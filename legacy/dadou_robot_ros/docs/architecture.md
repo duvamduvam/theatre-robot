@@ -7,7 +7,10 @@ remote controller (`dadou_control_ros`) and to the vision Pi, and actuates the
 physical subsystems.
 
 ## Two worlds in one repository
-- **`robot/`** — the Python application (imported as `robot.*`), coupled to the
+- **`didier_core`** — the Python application, package `packages/didier_core/` of the
+  mono-repo since L1e-3c (2026-11-07; it was the `robot/` module of this repo, imported as
+  `robot.*`, now `didier_core.*`; executables unchanged). Its DATA (`json/`, `medias/`, `db/`,
+  `conf/`) stays in this repo, root read from `DIDIER_DATA_DIR`. It is coupled to the
   shared library `dadou_utils_ros` (a standalone package of `packages/` since L1e-3a,
   2026-11-07 — it used to be a symlink in this repo; no versioning, protected by
   contract tests and a cross-repo CI job).
@@ -21,7 +24,7 @@ physical subsystems.
 | `didier_drive` | cmd_vel chain (bridge, twist_mux config, deadman, kinematics) | `theatre_interfaces` only |
 | `didier_sim` | Gazebo Harmonic simulation (servos + LED logic re-implemented) | `theatre_interfaces` only |
 | `didier_description` | URDF (xacro) | — |
-| `didier_bringup` | launch of the real app | `robot.*` + utils (the one assumed exception) |
+| `didier_bringup` | launch of the real app | `didier_core.*` + utils (the one assumed exception) |
 
 `didier_drive` and `didier_sim` import **nothing** from the application: the
 sim/real boundary is code duplication by design (documented in their
@@ -29,12 +32,12 @@ docstrings), with mirror unit tests on both sides. Runtime isolation is doubled
 by `ROS_DOMAIN_ID` (42 = real robot, 43 = simulation) — a test command must
 never be able to reach the real Didier.
 
-## Layering inside `robot/` (strictly downward, no cycles)
+## Layering inside `didier_core/` (strictly downward, no cycles)
 
 ```
 nodes/      ROS boundary: decode StringTime payloads (nodes/payload.py,
             explicit rejection of invalid JSON), 20 Hz tick (TICK_PERIOD_S)
-  └─> actions/    one Action per subsystem (contract: robot/actions/action.py,
+  └─> actions/    one Action per subsystem (contract: didier_core/actions/action.py,
                   ABC update(msg) / process()) — Face, Lights, AudioManager,
                   Servo (linear ramp + I2C anti-spam + deadman), Wheels,
                   RelaysManager, AnimationManager
@@ -77,11 +80,12 @@ dies mid-animation, wheels stop and servos return to rest.
 - Face LED wiring (mouth serpentine entering bottom-right, eyes 384/448,
   bottom row and eyes mounted upside down) was established physically with the
   calibration test patterns on 2026-07-11 and is LOCKED by
-  `robot/tests/unit/test_image_mapping.py` — do not "fix" those tests without
+  `packages/didier_core/test/unit/test_image_mapping.py` — do not "fix" those tests without
   re-running the patterns on the robot.
 
 ## Tests
-443 unit tests (pytest, `robot/tests/unit`, no hardware — deferred hardware
+1618 unit tests on 2026-11-07 (pytest, `packages/didier_core/test/unit`, run from
+`packages/didier_core` with this repo's `.venv`; no hardware — deferred hardware
 imports pattern), run by CI on every push; `dadou_utils_ros` CI re-runs the
 consumers' tests to catch shared-contract breaks. Data contracts (expressions,
 lights, sequences, referenced assets) are tested too.

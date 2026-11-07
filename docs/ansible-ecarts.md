@@ -73,7 +73,7 @@ Les deux en Debian 13 trixie.
 | `sudo chown -R pi:pi ~/ros2_ws/src` | Docker crée en root les dossiers de montage absents ; rsync suivant en code 23 | non |
 | `-e ansible_user=pi --private-key ~/.ssh/keys/didier` | `hosts` ne donne ni utilisateur ni clé pour robot/vision (seul `integration` en a, avec un ancien chemin `~/Nextcloud/divers/keys/didier`) | non |
 | `touch` de la sentinelle de build | `chemins_retires_lib` efface `build/` et `install/` de robot ET vision **à chaque déploiement** (pensé pour une fois) : sans sentinelle, rien n'est recompilé et la vision meurt (`Package 'vision' not found`, vécu le 07/11) | non |
-| Nom de sentinelle différent par dépôt | robot : `src/robot/robot/change` ; vision : `src/vision/vision/CHANGE` (majuscules) | à unifier |
+| Nom de sentinelle différent par dépôt | robot : `src/robot/robot/change` (devenu `src/didier_core/change` au L1e-3c, 07/11) ; vision : `src/vision/vision/CHANGE` (majuscules) | oui, `sentinelle_build` par hôte (Ansible nickel) ; à unifier au 3d |
 | `docker compose up -d` (recréation) | `docker restart` ne relit pas le compose | non |
 | Reconstruction de l'image ARM du robot (≈ 35 min sur Pi 4) | image du 04/11 construite AVANT le renommage L1e-2 : elle embarquait `robot_bringup`, `robot_drive`, `robot_interfaces`… compilés à côté des `didier_*` (passé inaperçu au déploiement du matin) | non ; l'image du Hub `dadouuu/dadou-robot-arm:latest` est une Humble de 2024 |
 

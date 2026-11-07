@@ -457,7 +457,7 @@ décrit plus haut. Ce n'est plus une déduction : c'est mesuré.
    registres en direct, la ligne n'est donc pas réclamée côté noyau et une lecture
    extérieure n'entre en conflit avec rien. (Format piégeux : `$5` porte la valeur
    pour une **entrée**, mais `$6` pour une **sortie** — un champ de plus.)
-3. Relancer ensuite : `ros2 run robot system_node --ros-args -r __node:=system_node`
+3. Relancer ensuite : `ros2 run didier_core system_node --ros-args -r __node:=system_node` (package `robot` avant L1e-3c)
    en `docker exec -d`, puis **confirmer par la LED GPIO12 qui doit ré-alterner** —
    sans quoi on croit avoir remis le nœud alors qu'il a échoué au démarrage.
 
