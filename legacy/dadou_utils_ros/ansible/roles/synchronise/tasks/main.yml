@@ -92,6 +92,9 @@
       - "--exclude=/json/"
       - "--exclude=/medias/"
       - "--exclude=/robot/"
+      # Même artefact pour la lib (ancien point de montage du symlink, avant L1e-3a) : absent du
+      # worktree, présent dans le checkout de main → « changed » au --check (vu le 07/11 au soir).
+      - "--exclude=/dadou_utils_ros/"
 
 # Nettoyage des packages RENOMMÉS (lot L1e-2) : chaque ancien nom de
 # `packages_retires` (vars/main.yml) est effacé de src/, build/ et install/ AVANT
