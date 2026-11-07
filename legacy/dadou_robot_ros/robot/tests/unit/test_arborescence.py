@@ -41,7 +41,11 @@ HOTE_ROBOT_GRAVE = ["dadou_utils_ros", "didier_bringup", "didier_description", "
 # L1e-3a : chemins (sous ros2_ws/) des copies embarquées de la lib, effacés des Pi par la
 # liste `chemins_retires_lib`. Écrits en dur, comme ANCIENS_NOMS.
 CHEMINS_RETIRES_LIB = ["src/robot/dadou_utils_ros", "src/vision/dadou_utils_ros",
-                       "src/controller/dadou_utils_ros"]
+                       "src/controller/dadou_utils_ros",
+                       # + build/install des 3 packages qui embarquaient la lib : une copie
+                       # périmée dans install/<pkg> masquerait packages/dadou_utils_ros.
+                       "build/robot", "install/robot", "build/vision", "install/vision",
+                       "build/controller", "install/controller"]
 
 
 def _hosts():

@@ -40,6 +40,16 @@ chemins_retires_lib:
   - src/robot/dadou_utils_ros
   - src/vision/dadou_utils_ros
   - src/controller/dadou_utils_ros
+  # build/ et install/ des 3 packages qui EMBARQUAIENT la lib (find_packages la trouvait via
+  # le symlink) : colcon ne nettoie jamais un install, la copie périmée de dadou_utils_ros y
+  # resterait sur le PYTHONPATH et masquerait packages/dadou_utils_ros. Effacés → rebuild
+  # complet de ces 3 packages au prochain démarrage (sentinelle). Ajouté le 07/11 (revue 3a).
+  - build/robot
+  - install/robot
+  - build/vision
+  - install/vision
+  - build/controller
+  - install/controller
 #controller_project_dir: "dadou_controller_ros"
 #utils_project_dir: "dadou_utils_ros_ros"
 #deploy_dir: "robot_base"
