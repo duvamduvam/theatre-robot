@@ -206,6 +206,11 @@
     recursive: yes
     copy_links: yes
     rsync_opts:
+      # Dates des DOSSIERS non copiées (L1e-3c, 08/11) : la sentinelle de didier_core vit à la
+      # racine du package (posée par ce rôle, effacée par le conteneur après le build) et
+      # change la date de src/didier_core/ — rsync « changed » à chaque passage sinon (même
+      # remède que la copie du projet plus haut).
+      - "--omit-dir-times"
       - "--exclude=.git/"
       - "--exclude=__pycache__/"
       - "--exclude=.pytest_cache/"
