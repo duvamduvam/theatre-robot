@@ -82,6 +82,19 @@ chemins_retires_robot:
   - src/robot/test
   - build/robot
   - install/robot
+  # Ajout du déploiement du 08/11 (vécu) : src/robot/ n'étant PLUS un package, colcon descend
+  # désormais dedans (il ne fouille jamais l'intérieur d'un package) et y a trouvé les restes
+  # que le rsync du projet, sans --delete, n'avait jamais effacés — conf/ros2/{setup.py,
+  # package.xml} (re-compilait `robot`) et conf/ros2_dependencies/robot_* (d'avant L1e-1,
+  # re-compilait les six robot_*). Le dépôt ne les porte plus : effacés une fois, ils ne
+  # reviennent pas. Les points de montage vides de conf/ros2/ (json/, medias/, robot/ créés
+  # par Docker) ne sont pas listés : rsyncés depuis le PC, ils reviendraient à chaque passage.
+  - src/robot/conf/ros2/setup.py
+  - src/robot/conf/ros2/package.xml
+  - src/robot/conf/ros2/setup.cfg
+  - src/robot/conf/ros2/resource
+  - src/robot/conf/ros2/test
+  - src/robot/conf/ros2_dependencies
 
 # Déchets que l'ancien rsync a poussés dans ros2_ws/src/<projet>/ (relevé du 07/11) : venv de
 # test du PC (269 Mo robot, 342 Mo vision) et workspace colcon du banc x86 de la vision (50 Mo).

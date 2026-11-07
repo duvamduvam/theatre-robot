@@ -247,7 +247,12 @@ CORE = PACKAGES / "didier_core"
 # `chemins_retires_robot`. Écrits en dur, comme ANCIENS_NOMS.
 CHEMINS_RETIRES_ROBOT = ["src/robot/robot", "src/robot/dadou_utils_ros", "src/robot/setup.py",
                          "src/robot/package.xml", "src/robot/setup.cfg", "src/robot/resource",
-                         "src/robot/test", "build/robot", "install/robot"]
+                         "src/robot/test", "build/robot", "install/robot",
+                         # Restes sous conf/ que colcon trouve depuis que src/robot/ n'est plus un
+                         # package (déploiement du 08/11) : ils recompilaient `robot` et les robot_*.
+                         "src/robot/conf/ros2/setup.py", "src/robot/conf/ros2/package.xml",
+                         "src/robot/conf/ros2/setup.cfg", "src/robot/conf/ros2/resource",
+                         "src/robot/conf/ros2/test", "src/robot/conf/ros2_dependencies"]
 # Exécutables du cœur : NOMS INCHANGÉS par le déménagement (décision 9 : aucun exécutable
 # renommé — launch, scripts et ros2 run les tapent). Liste gravée, cibles comprises.
 EXECUTABLES_CORE = {
@@ -307,6 +312,28 @@ def test_chemins_retires_robot_est_la_liste_gravee_de_l_ancienne_forme():
     # Les DONNÉES de src/robot/ ne doivent jamais y entrer.
     for donnee in ("src/robot/json", "src/robot/medias", "src/robot/conf", "src/robot/db", "src/robot"):
         assert donnee not in retires, donnee
+
+
+def test_aucun_chemin_retire_du_coeur_n_existe_dans_l_arbre_rsynce():
+    """Idempotence : le rsync du projet copie legacy/dadou_robot_ros/ vers src/robot/ et
+    conf/ros2/ à plat dans src/robot/. Une entrée encore présente dans l'arbre reviendrait à
+    chaque passage — effacée puis recopiée, « changed » sans fin (ecart-pi.sh rouge) et, pour
+    un descripteur, un package fantôme compilé par colcon."""
+    retires = yaml.safe_load(VARS.read_text(encoding="utf-8"))["chemins_retires_robot"]
+    sources = [p[len("src/robot/"):] for p in retires if p.startswith("src/robot/")]
+    assert sources, "aucune entrée src/robot/ : le test ne vérifierait rien"
+    # Exclusions de la copie à plat de conf/ros2/ (points de montage vides créés en root par un
+    # Docker du PC, non suivis) : lues dans le rôle, pas recopiées ici.
+    taches = yaml.safe_load(SYNCHRONISE.read_text(encoding="utf-8"))
+    a_plat = next(t for t in taches if str(t.get("name", "")).startswith("Synchronize directory")
+                  and t["synchronize"]["src"].endswith("/conf/ros2/"))
+    exclus = {o[len("--exclude=/"):].strip("/") for o in a_plat["synchronize"]["rsync_opts"]
+              if o.startswith("--exclude=/")}
+    assert "robot" in exclus, exclus
+    for rel in sources:
+        assert not (ROBOT / rel).exists(), rel
+        if rel.split("/")[0] not in exclus:
+            assert not (ROBOT / "conf" / "ros2" / rel).exists(), f"conf/ros2/{rel} (copié à plat)"
 
 
 def test_le_nettoyage_du_coeur_est_conditionnel_et_precede_la_copie_des_packages():
