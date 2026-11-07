@@ -9,13 +9,9 @@ Bluetooth classique), alors que gatttool en BLE public marche. Protocole « L11 
 - on dessine 320 × 96 points, on tourne de 90°, on pose aux colonnes 144-239 ;
 - envoi par paquets de 95 octets, au rythme des crédits notifiés sur ff03
   (« 01 NN » ajoute NN crédits : 01 04 à la connexion, puis 01 01 par paquet) ;
+- négocier le MTU (« mtu 247 ») : sinon gatttool tronque chaque paquet à 20 octets ;
 - enchaîner les étiquettes cale l'imprimante : une connexion neuve et 15 s de
   pause par étiquette.
-
-ÉTAT AU 2026-11-07 : rien ne sort. L'imprimante répond aux requêtes (batterie 100 %, état 00,
-modèle P15, micrologiciel 1.0.18) et rend un crédit par paquet, mais ni l'étiquette ni la page
-d'autotest (1F 40) ne s'impriment. L'autotest muet désigne l'imprimante elle-même (rouleau,
-capot, mode), pas la trame : à vérifier sur la machine avant de toucher au code.
 
 Usage :
     etiqueteuse_p15.py "Pi 4 · 4 Go" "n° 365ba865"     # une étiquette, 1 à 3 lignes
@@ -172,6 +168,14 @@ def imprimer(image: Image.Image) -> bool:
         session.envoyer("connect")
         if session.attendre(r"Connection successful", 20) is None:
             print("Connexion BLE impossible (imprimante éteinte ou en veille ?)", file=sys.stderr)
+            return False
+        # Sans négociation, gatttool reste à l'ATT MTU de 23 et TRONQUE en silence chaque
+        # écriture à 20 octets : les requêtes courtes passent, l'image arrive en miettes et
+        # rien ne s'imprime (vécu le 07/11). L'imprimante annonce 220 (« 02 dc 00 »).
+        session.envoyer("mtu 247")
+        if session.attendre(r"MTU was exchanged successfully", 5) is None:
+            print("Négociation MTU refusée : les paquets de 95 octets seraient tronqués",
+                  file=sys.stderr)
             return False
         for poignee in (POIGNEE_OK, POIGNEE_CREDITS):  # active les notifications (CCCD = +1)
             session.envoyer(f"char-write-req 0x{poignee + 1:04x} 0100")
