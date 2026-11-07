@@ -15,6 +15,42 @@ dette du playbook, pas une note de doc.
 - **Une fois tout vert** : image `dd` de chaque SD = restauration rapide (≈ 10 min, sans Ansible).
 - Jamais sur le robot câblé roues avant le protocole caméra (verrou L1b).
 
+## État au 07/11 au soir — lot « Ansible nickel » FAIT (branche `l1e-3`)
+
+Mode d'emploi : `legacy/dadou_robot_ros/docs/operations.md` §« Déployer / réinstaller un Pi ».
+En bref, depuis `legacy/dadou_utils_ros/ansible/` :
+`ansible-playbook -i hosts deploy-pios.yml -e target_group=robot|vision` (rien avant, rien
+après), puis `./ecart-pi.sh robot|vision` (vert = code 0).
+
+| Plan | État |
+|---|---|
+| 1. Gestes manuels du déploiement | **fait** : utilisateur + clé (groupe `didier_pi`) et IP par défaut dans `hosts` ; chemins de l'arbre déduits du playbook (un worktree déploie sans `-e`) ; squelette `ros2_ws` + `chown` de `src/` avant le rsync ; sentinelle posée à chaque synchronisation (noms gardés : ceux que lisent les scripts d'entrée, plus personne ne les tape) ; `up -d --force-recreate` ; attente des nœuds attendus + `running` / `restarts=0`, sinon échec. `chemins_retires_lib` : build/install effacés seulement s'ils contiennent encore la lib embarquée (build incrémental : 4,6 s vision, 21 s robot). |
+| 2. Secrets | **fait** : rôle `secrets` (`~/.config/didier/` → Pi, 600, `no_log`, sans diff ; échec clair si une source ou une clé de `secret.example` manque). `secrets.env` (clé Anthropic) **non poussé** : aucun consommateur sur les Pi tant que la bascule de `chat_node` n'est pas faite. |
+| 3. Système | **fait** dans `deploy-pios.yml` (rôle `config-hote`, rejoué à chaque déploiement donc vu par la détection) : `avahi-utils` + `avahi-alias-didier.service` (robot), `/etc/asound.conf` (vision, versionné dans `dadou_vision_ros/conf/rpi/asound.conf`). `~/.asoundrc` : c'était déjà le gabarit du rôle `usb-audio` (identique sur les deux Pi), désormais rejoué au déploiement. `.bashrc` : voir la correction du relevé ci-dessous ; `set-bashrc` rendu idempotent et rejoué au déploiement. Rsync : `.venv/`, `.pytest_cache/`, workspace x86, `conf/secret`, sentinelles commitées exclus ; `.venv` déjà poussés effacés (269 Mo robot, 342 Mo vision). |
+| 4. Images sur le Hub | **reste** (compte de David) : une réinstallation tire encore l'image Humble de 2024 puis reconstruit (≈ 35 min sur Pi 4). |
+| 5. Détection d'écart | **fait** : `ecart-pi.sh <groupe>` = (a) `--check --diff` + (b) inventaire comparé à `attendu/<groupe>.txt` (gravés le 07/11). Pas encore branché dans un `deploy-hors-robot.sh` (n'existe pas). Fichiers de `/etc` hors Ansible : non inventoriés (trop de bruit de l'OS ; à revoir si besoin). |
+| 6. Preuve | **partielle faite** : `~/ros2_ws` effacé sur la vision, une commande, tout revient (secret : même taille, même sha256). **Reste** : reflash des deux cartes par David, puis image `dd`. |
+
+Deuxième passage d'un déploiement : seules restent « changed » la **sentinelle** et la
+**recréation du conteneur**, voulues (chaque déploiement recompile et redémarre). En
+`--check` (détection d'écart), 0 tâche « changed » sur les deux Pi.
+
+**Outils d'atelier de la vision, hors Ansible, à trier avec David** (tolérés `?` dans
+`attendu/vision.txt`, rien n'a été supprimé) : `~/didier_proto` (son secret, lui, est posé par
+Ansible), `~/bench-v1`, `~/xvf_host`, `~/mic_test`, `~/asound.conf.bak-avant-micro-camera`,
+`~/photo-camera.jpg`, `~/photo_didier.jpg`. Garder = les mettre dans Ansible ; jeter = les
+effacer et retirer la ligne `?`.
+
+**Corrections du relevé ci-dessous** (constatées pendant le lot) :
+- `.bashrc` : c'est le robot qui a ses deux blocs ; sur la vision le bloc projet est vide parce
+  que `dadou_vision_ros/conf/rpi/project_bash` est vide (rien ne manque côté Ansible). Le rôle
+  `set-bashrc` n'était pas idempotent (bloc posé avec `PROJECT=` puis réécrit par lineinfile).
+- Sentinelle : `robot/change` et `vision/change` (minuscules) sont **commités** depuis L0. Le
+  rsync recréait donc la sentinelle du robot à chaque passage (d'où un robot qui recompilait et
+  une vision qui ne recompilait pas : son script lit `CHANGE`).
+- `install-pios-lite.yml` lançait `synchronise` en `become` : tout `src/` en root, cause
+  probable des code 23 du déploiement suivant. Corrigé, **non rejoué** (pas de reflash).
+
 ## Relevé du 07/11 (lecture seule, Pi hors robot)
 
 Robot = Pi 4 de rechange en .131, SD réinstallée le 04/11 ; vision = Pi 5 en .151, SD d'origine.
@@ -60,7 +96,7 @@ Les deux en Debian 13 trixie.
 - Image `dadouuu/dadou-vision-arm:latest` vieille de 4 mois (le code est monté, elle
   fonctionne ; à reconstruire à la prochaine mise à jour).
 
-## Plan du lot (à faire, Opus)
+## Plan du lot (rédigé le 07/11 ; état ci-dessus)
 
 1. Playbook : utilisateur et clé dans `hosts` (`group_vars`), `chown` avant rsync, sentinelle
    posée par le rôle à chaque synchronisation (nom unique), recréation du conteneur

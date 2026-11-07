@@ -14,7 +14,14 @@ Each playbook expects the repositories to be available on the controller machine
 - `ansible/templates/scripts/launch-local-docker.sh`: Newly added; copied to the robot to launch ROS inside a container. The Ansible role updates placeholders (`CHANGE_FILE`, `LAUNCH_CMD_TO_CHANGE`).
 - `ansible/templates/scripts/launch-ros-in-docker.sh`, `compose-up-pi.sh`: Additional scripts used by specific deployment scenarios.
 
-## Typical Workflow
+## Robot et vision : une commande (lot « Ansible nickel », 07/11)
+`ansible-playbook -i hosts deploy-pios.yml -e target_group=robot|vision` depuis `ansible/`,
+sans sentinelle ni redémarrage à la main, puis `./ecart-pi.sh robot|vision` (détection
+d'écart). Procédure complète : `../dadou_robot_ros/docs/operations.md`, section « Déployer /
+réinstaller un Pi ». Le flux ci-dessous ne vaut plus que pour la télécommande (non reprise
+dans ce lot).
+
+## Typical Workflow (ancien, télécommande)
 1. Update source locally (controller, robot, utilities).
 2. Run tests (`dadou_control_ros/docs/testing.md`).
 3. Mark the project as changed: `echo "change" > controller/change` or `robot/change` as appropriate.

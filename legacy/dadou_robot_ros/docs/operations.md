@@ -1,14 +1,38 @@
 # Operations & Rehearsal Checklist
 
-## Deployment (workstation → robot)
-- `cd conf && make d` — creates the `robot/change` build marker and runs the
-  Ansible playbook (`dadou_utils_ros/ansible/deploy-pios.yml`, rsync of the
-  local checkout — no git on the Pi). Then restart the container:
-  `ssh r 'sudo docker restart dadou-robot-container'` (the marker triggers a
-  colcon build at startup).
-- SSH alias `r` = pi@robot (`robot.local`, 192.168.1.2 if mDNS fails). Vision
-  Pi: 192.168.1.151.
-- Application log: `/home/ros2_ws/log/robot.log` INSIDE the container.
+## Déployer / réinstaller un Pi (lot « Ansible nickel », 07/11)
+
+Tout part de `legacy/dadou_utils_ros/ansible/` du checkout à déployer (main ou un worktree :
+les chemins sont déduits du playbook, le sha publié est celui de CE checkout). Rien à faire
+avant ni après : pas de `chown`, pas de sentinelle, pas de `docker restart`.
+
+```bash
+cd legacy/dadou_utils_ros/ansible
+ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
+./ecart-pi.sh vision                                                 # vert = code 0
+```
+
+- Le playbook : système de l'hôte (alias `didier.local`, `/etc/asound.conf`, `.asoundrc`,
+  `.bashrc`), rsync du code, sentinelle de build, secrets depuis `~/.config/didier/` du PC
+  (échec clair s'il en manque un), `docker compose up -d --force-recreate`, attente des nœuds
+  attendus (`noeuds_attendus` dans `hosts`) puis `running` + `restarts=0` — sinon il échoue.
+  Durée : ≈ 1 min vision, ≈ 2-3 min robot (build incrémental).
+- IP par défaut dans `hosts` (robot .131, vision .151 ; mDNS cassé côté PC) ; une autre IP :
+  `-e ansible_host=192.168.1.x`. Utilisateur `pi` et clé `~/.ssh/keys/didier` : dans `hosts`.
+- `ecart-pi.sh <groupe>` : (a) le playbook en `--check --diff` doit ne rien changer ; (b) les
+  paquets apt manuels, unités activées, entrées de `~`, crontabs et images Docker du Pi doivent
+  égaler `attendu/<groupe>.txt` (`?` = toléré). Rouge = écart nommé. Après un changement voulu
+  (paquet ajouté par Ansible…) : `./ecart-pi.sh <groupe> --graver`, relire, commiter.
+- **Réinstallation d'un Pi reflashé** : `install-pios-lite.yml` (Docker, I²C, service) puis
+  `deploy-pios.yml` comme ci-dessus. ⚠️ Tant que les images ARM ne sont pas republiées sur le
+  Hub, l'image tirée est la Humble de 2024 : reconstruire sur le Pi
+  (`~/scripts/compose-up-pi.sh build`, ≈ 35 min Pi 4) avant le `deploy-pios.yml`.
+- Jamais sur le robot aux roues câblées avant le protocole caméra (verrou L1b).
+- Historique (gestes manuels d'avant ce lot, et pourquoi chacun existe) : sections
+  « Premier déploiement d'une branche… », « Déploiement de main… », « Déploiement de 3b… »
+  ci-dessous, et `docs/ansible-ecarts.md` à la racine.
+- SSH : alias `r` = pi@robot, `ai` = pi@vision (ils visent `.local`, cassé côté PC : passer
+  par l'IP). Log applicatif : `/home/ros2_ws/log/robot.log` DANS le conteneur.
 
 ## Namespace par robot — `ROBOT_NAME` (lot L1b, 04/11)
 - Tous les nœuds (robot, vision, télécommande, sim) vivent sous
@@ -46,6 +70,9 @@
   À la main : `ros2 topic echo /didier/catalogue --once --qos-durability transient_local --field msg`.
 
 ## Premier déploiement d'une branche sur les Pi hors robot (vécu le 2026-11-04, L1b+L1c)
+
+> Historique. Depuis le 07/11, tous les gestes ci-dessous (`-e …`, `chown`, sentinelle,
+> recréation) sont faits par le playbook : voir « Déployer / réinstaller un Pi » en tête.
 
 - Déployer une BRANCHE sans la fusionner : Ansible rsync l'arbre de travail du checkout
   pointé par `local_projects_dir`. Depuis une copie de travail git (worktree) :
@@ -112,6 +139,8 @@ vrai), `restarts=0` ; vision 4 packages (`dadou_utils_ros`, `theatre_contrats`,
 sur le PC dans `~/.config/didier/` (ils n'existaient que sur le Pi).
 
 ## Réinstallation d'un Pi vierge (vécu le 2026-11-04)
+
+> Historique : la procédure actuelle est « Déployer / réinstaller un Pi » en tête de fichier.
 - `ansible-playbook -i hosts install-pios-lite.yml -e target_group=robot` depuis
   `dadou_utils_ros/ansible`, puis retirer l'ancienne empreinte SSH de `robot.local`.
 - ⚠️ Le service tire `dadouuu/dadou-robot-arm:latest` du Hub : image Humble de 2024, inutilisable.
@@ -642,14 +671,9 @@ mDNS cassé** → y garder l'entrée IP du sélecteur. Mécanique : service syst
 `conf/systemd/avahi-alias-didier.service`) qui lance `avahi-publish` —
 `/etc/avahi/hosts` ne publie PAS sur le réseau (résolution locale seulement,
 vérifié). L'IP est relue au démarrage du service : le redémarrer si l'adresse
-du Pi change (réseau 4G de tournée). Réinstallation après reflash :
-
-```bash
-ssh r 'sudo apt-get install -y avahi-utils'
-scp conf/systemd/avahi-alias-didier.service r:/tmp/ && ssh r \
-  'sudo mv /tmp/avahi-alias-didier.service /etc/systemd/system/ \
-   && sudo systemctl daemon-reload && sudo systemctl enable --now avahi-alias-didier'
-```
+du Pi change (réseau 4G de tournée). Depuis le 07/11, paquet et service sont posés par
+Ansible à chaque déploiement (rôle `config-hote`, variables `paquets_hote` / `unites_systemd`
+de l'hôte robot) : plus de geste à la main après un reflash.
 
 ### Parole IA depuis la console (fait le 2026-07-12)
 
@@ -674,10 +698,11 @@ personnalité déjà active est sans effet. Défaut au démarrage : `bougon`
 
 ### Alias audio du Pi 5 vision — `/etc/asound.conf` (micro changé le 2026-08-26)
 
-**⚠️ Ce fichier n'est versionné NULLE PART et le Pi vision n'est pas dans
-l'inventaire Ansible** (`../dadou_utils_ros/ansible/hosts` ne contient que `r`
-et `c` ; le rôle `usb-audio` n'écrit que `~/.asoundrc`). Il est donc recopié
-ici pour qu'un reflashage du Pi ne l'emporte pas avec lui.
+**Versionné depuis le 07/11** dans `../dadou_vision_ros/conf/rpi/asound.conf` (copie
+exacte du Pi ; l'ancien fichier du même nom était une version périmée en `card 0` que rien ne
+posait) et posé par Ansible à chaque déploiement (rôle `config-hote`, `fichiers_etc` de l'hôte
+vision). **Modifier le fichier du dépôt, puis déployer** — le déploiement recrée le conteneur,
+ce qui règle aussi le piège d'inode ci-dessous.
 
 Les index ALSA (`card 0`, `card 1`…) dépendent de l'ordre de branchement : les
 alias ciblent les cartes **par nom**. Trois alias, sur trois cartes USB :
