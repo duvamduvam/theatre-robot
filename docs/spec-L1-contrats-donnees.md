@@ -533,6 +533,38 @@ si la porte n'est pas franchie) :
     (commandes de test : `cd packages/didier_core && <venv legacy> -m pytest`),
     `architecture.md`, tableau de bord. CLAUDE.md : listés au rapport, appliqués par Fable.
 
+##### Lot F — fumée nocturne (décidé le 07/11, à faire APRÈS 3b, AVANT 3c)
+
+**Pourquoi** : chaque lot paie aujourd'hui ses propres épreuves (≈ 1 h d'agent) ; et
+l'environnement bouge sans commit (paquets Gazebo à la reconstruction, Docker, nombre de
+conteneurs) — vécu le 06/11 : V-R3 de 21/21 à 18/21 sans régression du code.
+
+**Décisions** :
+1. **Zéro token** : un script shell (`conf/scripts/fumee.sh`, puis `machines/sim/` en L1e-4)
+   sous minuterie systemd utilisateur sur le PC de David. Aucun agent : la fumée mesure et
+   compare à des valeurs gravées, elle ne juge pas. Un agent n'intervient qu'à la demande,
+   pour lire une nuit rouge.
+2. **Déclenchement** : la nuit (machine calme : les épreuves longues exigent un facteur temps
+   réel ≥ 0,8) **si `main` a un commit depuis la dernière fumée verte** (sha gravé dans la
+   dernière page) ; plus **une passe forcée par semaine** même sans commit (dérive de
+   l'environnement).
+3. **Contenu, dans l'ordre, arrêt au premier rouge bloquant** : reconstruction de l'image si
+   un Dockerfile a changé (3-5 min) → sim headless + colcon (1 min) → sonde RTF 20 s (rouge
+   si < 0,8 : le reste n'est pas fiable) → `validate-namespace.sh`, `validate-catalogue.sh`,
+   animation `parle` (3 min) → chaîne roues + régisseur + regard puis
+   `validate-rehearsal-chantiers.sh` (16 min) → sim relancée, `validate-jeu-a1.sh` (16 min).
+   ≈ 40 min.
+4. **Sortie** : une page `docs/fumee/AAAA-MM-JJ.html` + `index.html` (même facture que la
+   veille) : sha testé, RTF, vert/rouge par épreuve avec le compteur (21/21, 14/14…), lien
+   vers les journaux copiés hors conteneur (les journaux de séance meurent avec lui). Commit
+   automatique de `docs/fumee/` seulement.
+5. **Déploiement hors robot** : hors de la fumée (il faut les Pi branchés, consigne de
+   David du 07/11) mais scripté de la même façon (`deploy-hors-robot.sh` : Ansible + contrôles
+   nœuds/mux/sha/catalogue, ≈ 5 min par Pi), lancé par David ou par un lot.
+6. **Taille** : 1 à 2 passes Sonnet (tout existe, il s'agit d'enchaîner) ; porte = une nuit
+   verte complète lue le matin, et une nuit rouge provoquée (ex. RTF forcé) correctement
+   signalée.
+
 ## 3. Ordre, délégation, gates
 
 | Sous-lot | Qui | Gate avant le suivant |
