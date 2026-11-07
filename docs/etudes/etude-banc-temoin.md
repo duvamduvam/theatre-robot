@@ -194,10 +194,19 @@ il ne coûte que du temps d'atelier.
 
 - **Le banc devient permanent.** Il ne rend plus de Pi au remontage du robot. Le risque n° 1 du
   §5 tombe, et le banc peut tourner après chaque fusion, robot remonté ou non.
-- **Le mini-robot perd son premier obstacle, pas les autres.** Rien ne se transfère toujours à
-  Didier, il ne montre toujours pas le visage, il manque toujours l'énergie embarquée, et le temps
-  de David reste rare. Le verdict « reporté à l'arrivée du lidar » tient. Le jour venu, il aura
-  simplement son calculateur.
+- **Le mini-robot perd ses deux obstacles matériels.** David déclare aussi « plein de 18650 »
+  (07/11, non inventoriées). Avec un Pi et des cellules, il ne manque plus que des supports et une
+  protection : un seul support 18650 vu en stock, la carte BMS n'est pas identifiée.
+- **Les obstacles de fond restent.** Rien ne se transfère à Didier, le mini-robot ne montre pas
+  le visage, et le temps de David reste rare. Le verdict tient : **pas maintenant, à l'arrivée du
+  lidar**. Mais il change de nature : ce jour-là, le mini-robot devient le porteur naturel du
+  lidar pour tester A1 en vrai pendant que Didier est en refonte. Ce n'est plus « peut-être »,
+  c'est le moment prévu pour le construire.
+
+**Les 18650, avec précaution.** Cellules d'origine et d'état inconnus : tension à vide mesurée une
+par une, jamais de cellule sous 2,5 V remise en service, cellules appairées en tension dans un même
+pack, et une protection (BMS) obligatoire. Vérifier aussi qu'elles ne sont pas les rechanges du pack
+de Didier avant de les prélever.
 
 **Quel Pi pour quoi** (à confirmer par l'essai, pas par la fiche) :
 
