@@ -1,6 +1,6 @@
 """Tests hôte de didier_jeu (sans ROS ni colcon build).
 
-Chemins : le package lui-même, theatre_contrats (contrat commun), la racine
+Chemins : le package lui-même, theatre_contrats (contrat commun), dadou_utils_ros (lib partagée), la racine
 de legacy/dadou_robot_ros (robot.diagnostic.journal, module PUR) et
 didier_rehearsal (garde-fou check_domain + contrats du régisseur, purs).
 Lancer : legacy/dadou_robot_ros/.venv/bin/python -m pytest packages/didier_jeu/test -q
@@ -16,7 +16,8 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(ICI)
 MONO = os.path.dirname(os.path.dirname(PKG))
 LEGACY_ROBOT = os.path.join(MONO, "legacy", "dadou_robot_ros")
-for chemin in (PKG, os.path.join(MONO, "packages", "theatre_contrats"), LEGACY_ROBOT,
+for chemin in (PKG, os.path.join(MONO, "packages", "theatre_contrats"),
+               os.path.join(MONO, "packages", "dadou_utils_ros"), LEGACY_ROBOT,
                os.path.join(MONO, "packages", "didier_rehearsal")):
     if chemin not in sys.path:
         sys.path.insert(0, chemin)

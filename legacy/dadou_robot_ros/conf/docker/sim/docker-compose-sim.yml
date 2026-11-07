@@ -18,6 +18,8 @@ services:
       additional_contexts:
         robot_interfaces: ../../../../../packages/robot_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
+        # L1e-3a : la lib partagée n'est plus un dépôt frère mais un package de packages/.
+        dadou_utils_ros: ../../../../../packages/dadou_utils_ros
         didier_jeu: ../../../../../packages/didier_jeu
         # L1e-1 : les packages ROS autonomes du robot ont déménagé de
         # conf/ du robot vers packages/ (même motif, noms inchangés).
@@ -93,6 +95,9 @@ services:
       # par dadou_utils_ros/utils_static.py — sans lui, tout node tombe à l'import).
       - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      # dadou_utils_ros (L1e-3a) : lib partagée, package à plat dans src/ (colcon la
+      # construit ; plus de montage dans src/robot/).
+      - ../../../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       # didier_jeu (lot A1, SIM-ONLY : refus hors domaine 43) : sélecteur de
       # jeu, lancé À LA MAIN (ros2 run didier_jeu jeu_node), cf. son README.
       - ../../../../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
@@ -122,17 +127,13 @@ services:
 
       # --- Paquet "robot" (animations_node, param animations:=true du launch sim) ---
       # Reproduit la structure assemblée par Ansible sur le vrai robot
-      # (setup.py/package.xml de conf/ros2/ + le module robot/ + dadou_utils_ros/
-      # + json/, tous à plat dans le même dossier ros2_ws/src/robot/, cf.
+      # (setup.py/package.xml de conf/ros2/ + le module robot/ + json/, tous à
+      # plat dans le même dossier ros2_ws/src/robot/, cf.
       # dadou_utils_ros/ansible/roles/synchronise + commentaire détaillé dans
-      # Dockerfile-sim). dadou_utils_ros/ est monté ici via son VRAI chemin
-      # (dépôt frère) et non via le symlink racine dadou_robot_ros/dadou_utils_ros :
-      # ce dernier sort du contexte de build Docker (testé : COPY échoue avec
-      # "too many links"), mais un volume compose n'a pas cette restriction --
-      # c'est le SEUL endroit d'où dadou_utils_ros arrive dans le conteneur sim.
+      # Dockerfile-sim). La lib dadou_utils_ros n'y est plus : depuis L1e-3a c'est
+      # un package de packages/ (montage plus haut, contexte nommé du build).
       - ../../ros2:/home/ros2_ws/src/robot
       - ../../../robot:/home/ros2_ws/src/robot/robot
-      - ../../../../dadou_utils_ros:/home/ros2_ws/src/robot/dadou_utils_ros
       - ../../../json:/home/ros2_ws/src/robot/json
       # medias/ : PNG bouche/yeux lus par Face.load_visuals() (config[MOUTH_VISUALS_PATH]/
       # [EYE_VISUALS_PATH] = <PROJECT_DIRECTORY>/medias/visuals/{mouth,eye}, cf.

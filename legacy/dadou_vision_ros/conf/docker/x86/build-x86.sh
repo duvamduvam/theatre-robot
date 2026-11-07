@@ -1,14 +1,11 @@
 #!/bin/bash
 # Construit l'image vision x86 du banc PC (dadouuu/dadou-vision-x86:latest).
 #
-# POURQUOI un script et pas `docker compose build` : le Dockerfile-arm fait
-# COPY dadou_utils_ros/ ; sur le PC ce chemin est un SYMLINK vers le dépôt
-# frère et BuildKit refuse le contexte (« too many links » — constaté le
-# 2026-09-13, même piège que celui documenté dans docker-compose-sim.yml côté
-# robot). Sur le Pi, rsync matérialise un vrai dossier : le build ARM ne voit
-# jamais le problème, on ne touche donc PAS au Dockerfile. Ici on streame le
-# contexte en tar avec -h (déréférence les symlinks) : dadou_utils_ros arrive
-# en vrai dossier et le Dockerfile-arm est réutilisé TEL QUEL.
+# POURQUOI un script et pas `docker compose build` : le Dockerfile-arm est réutilisé
+# TEL QUEL sur le PC ; le contexte est streamé en tar (-h : déréférence les
+# symlinks éventuels) et les packages du mono-dépôt (hors contexte) arrivent
+# en contextes NOMMÉS. Depuis L1e-3a la lib dadou_utils_ros en fait partie
+# (plus de symlink dans le dépôt vision).
 #
 # SÉCURITÉ (dépôt et registre publics) : le .dockerignore racine s'applique
 # aussi à un contexte streamé, mais conf/secret est EN PLUS exclu du tar —
@@ -27,4 +24,5 @@ tar -ch \
     . | docker build -t dadouuu/dadou-vision-x86:latest \
         --build-context robot_interfaces="$PACKAGES/robot_interfaces" \
         --build-context theatre_contrats="$PACKAGES/theatre_contrats" \
+        --build-context dadou_utils_ros="$PACKAGES/dadou_utils_ros" \
         -f conf/docker/arm/Dockerfile-arm -

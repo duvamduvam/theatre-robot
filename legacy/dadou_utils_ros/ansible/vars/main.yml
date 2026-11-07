@@ -3,14 +3,17 @@
 local_projects_dir: "/home/dadou/Nextcloud/dev/didier/python/theatre-robot/legacy"
 # Packages du mono-dépôt (rôle synchronise) : rsync vers ros2_ws/src/<package> de la
 # machine. Liste PAR MACHINE : variable `packages` de l'hôte dans `hosts`, à défaut
-# `packages_default` ci-dessous = les COMMUNS (lot L1a), obligatoires partout (le
-# shim utils_static.py importe theatre_contrats ; robot_interfaces porte StringTime).
+# `packages_default` ci-dessous = les COMMUNS (lot L1a + dadou_utils_ros au lot L1e-3a),
+# obligatoires partout (le shim utils_static.py importe theatre_contrats ; robot_interfaces
+# porte StringTime ; dadou_utils_ros est la lib partagée que tous les nodes importent —
+# elle n'arrive plus par le symlink des 3 dépôts, supprimé en L1e-3a).
 # Il n'y a plus de liste « sim-only à exclure » : un package sim-only (didier_jeu) n'est
 # simplement dans la liste d'aucun hôte. Voir le commentaire du rôle pour le pourquoi.
 packages_dir: "/home/dadou/Nextcloud/dev/didier/python/theatre-robot/packages"
 packages_default:
   - theatre_contrats
   - robot_interfaces
+  - dadou_utils_ros
 # Anciens noms des packages renommés au lot L1e-2 (07/11, robot_* -> didier_*), que
 # la tâche de nettoyage du rôle synchronise efface de src/, build/ et install/ AVANT
 # la copie. Pourquoi : le rsync n'efface rien — sans ce nettoyage, les anciens
@@ -26,6 +29,27 @@ packages_retires:
   - robot_rehearsal
   - robot_sim
   - robot_web
+# Chemins (relatifs à ros2_ws/) de la lib partagée qui vivait EMBARQUÉE dans chaque projet
+# (lien symbolique dépôt/dadou_utils_ros, copié par le rsync `copy_links` du projet entier)
+# avant le lot L1e-3a (07/11) : elle est désormais le package src/dadou_utils_ros. La tâche
+# `Remove ... embedded dadou_utils_ros` du rôle synchronise les efface AVANT la copie —
+# le rsync n'efface rien : sans ça, colcon verrait deux copies de la lib (celle de
+# src/robot/ ET le nouveau package) et l'ancienne pourrait masquer la neuve à l'import.
+# Cette liste NE SE VIDE JAMAIS (un Pi resté éteint rattrape). Gravée par test_arborescence.py.
+chemins_retires_lib:
+  - src/robot/dadou_utils_ros
+  - src/vision/dadou_utils_ros
+  - src/controller/dadou_utils_ros
+  # build/ et install/ des 3 packages qui EMBARQUAIENT la lib (find_packages la trouvait via
+  # le symlink) : colcon ne nettoie jamais un install, la copie périmée de dadou_utils_ros y
+  # resterait sur le PYTHONPATH et masquerait packages/dadou_utils_ros. Effacés → rebuild
+  # complet de ces 3 packages au prochain démarrage (sentinelle). Ajouté le 07/11 (revue 3a).
+  - build/robot
+  - install/robot
+  - build/vision
+  - install/vision
+  - build/controller
+  - install/controller
 #controller_project_dir: "dadou_controller_ros"
 #utils_project_dir: "dadou_utils_ros_ros"
 #deploy_dir: "robot_base"

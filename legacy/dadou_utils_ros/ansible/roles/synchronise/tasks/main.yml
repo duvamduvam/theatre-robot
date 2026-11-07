@@ -59,6 +59,18 @@
     state: absent
   loop: "{{ packages_retires | product(['src', 'build', 'install']) | list }}"
 
+# Lot L1e-3a (07/11) : la lib dadou_utils_ros est devenue le package src/dadou_utils_ros
+# (packages_default) ; ses copies embarquées d'avant (src/<projet>/dadou_utils_ros, issues du
+# lien symbolique suivi par le rsync `copy_links` ci-dessus) sont effacées AVANT la copie des
+# packages. Même motif que packages_retires : `become` (build/install du conteneur sont à
+# root), chemin ABSOLU, liste gravée qui ne se vide jamais (vars/main.yml).
+- name: Remove embedded dadou_utils_ros "{{ item }}"
+  become: yes
+  file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item }}"
+    state: absent
+  loop: "{{ chemins_retires_lib }}"
+
 # Packages du mono-dépôt (theatre-robot/packages/) : lot L1a (2026-11-02) pour les
 # communs, lot L1e-1 (2026-11-06) pour les 6 packages ROS autonomes du robot qui
 # vivaient dans conf/ du robot (le dossier a disparu — plus de stat ni de rsync

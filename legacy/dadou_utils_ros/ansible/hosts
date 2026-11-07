@@ -5,14 +5,15 @@ robot:
         project_ros_dir: robot
         project_name: robot
         launch_cmd: ros2 launch didier_bringup robot_app.launch.py
-        # Packages poussés dans ros2_ws/src/ (rôle synchronise) : les 2 communs + les 6
-        # packages ROS autonomes — EXACTEMENT ce que le Pi reçoit depuis avant L1e-1
-        # (le tri « sim-only hors du Pi » viendra avec machines/<hôte>/, L1e-4). La liste
+        # Packages poussés dans ros2_ws/src/ (rôle synchronise) : les 3 communs (dont la lib
+        # dadou_utils_ros, package à part depuis L1e-3a : plus de symlink dans le dépôt) + les
+        # 6 packages ROS autonomes (le tri « sim-only hors du Pi » viendra avec machines/<hôte>/, L1e-4). La liste
         # est gravée par test_arborescence.py ; vision et télécommande prennent
         # packages_default (vars/main.yml).
         packages:
             - theatre_contrats
             - robot_interfaces
+            - dadou_utils_ros
             - didier_bringup
             - didier_description
             - didier_drive

@@ -13,6 +13,7 @@ services:
       additional_contexts:
         robot_interfaces: ../../../../../packages/robot_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
+        dadou_utils_ros: ../../../../../packages/dadou_utils_ros
       args:
         GUI: ${GUI}
         CONTAINER_NAME: ${CONTAINER_NAME}
@@ -44,7 +45,6 @@ services:
       - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
       - ../../../conf:/home/ros2_ws/src/controller/conf
       - ../../../controller:/home/ros2_ws/src/controller/controller
-      - ../../../dadou_utils_ros:/home/ros2_ws/src/controller/dadou_utils_ros
       - ../../../json:/home/ros2_ws/src/controller/json
       - ../../../medias:/home/ros2_ws/src/controller/medias
       # robot_interfaces (copie UNIQUE) et theatre_contrats (contrat, importé par
@@ -52,6 +52,8 @@ services:
       # (lot L1a, ../../../../../ = racine theatre-robot).
       - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      # dadou_utils_ros (L1e-3a) : lib partagée, package de packages/.
+      - ../../../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       - /home/dadou/tmp/controller_logs:/home/ros2_ws/log
     #  - /dev/:/dev
     #  - /dev/null:/folder/fileToBeExcluded

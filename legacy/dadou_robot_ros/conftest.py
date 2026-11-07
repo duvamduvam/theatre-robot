@@ -1,8 +1,8 @@
 import os
 import sys
 
-# La racine du dépôt donne accès au package robot/ et, via le symlink
-# dadou_utils_ros -> ../dadou_utils_ros, à la lib partagée.
+# La racine du dépôt donne accès au package robot/ ; la lib partagée vient de
+# packages/dadou_utils_ros (voir plus bas).
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 
@@ -47,3 +47,8 @@ sys.path.insert(0, os.path.join(ROOT, "firmware", "remote_usb"))
 # tout import de la lib échoue sur l'hôte (pas de colcon build en dev).
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "packages", "theatre_contrats"))
+
+# dadou_utils_ros (lib partagée, packages/ du mono-dépôt depuis L1e-3a : plus de
+# symlink dans le dépôt) : son dossier porte le module du même nom.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))), "packages", "dadou_utils_ros"))

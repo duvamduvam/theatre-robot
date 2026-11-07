@@ -13,6 +13,8 @@
   <!-- Contrat commun (lot L1a, packages/theatre_contrats) : codec StringTime et noms
        de topics ; dadou_utils_ros/utils_static.py (shim) l'importe aussi. -->
   <exec_depend>theatre_contrats</exec_depend>
+  <!-- Lib partagée (L1e-3a : package de packages/, plus un symlink du dépôt). -->
+  <exec_depend>dadou_utils_ros</exec_depend>
 
   <exec_depend>python3-tk</exec_depend>
   <exec_depend>python3-spidev</exec_depend>

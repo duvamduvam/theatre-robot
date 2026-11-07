@@ -27,5 +27,8 @@ Ce fichier-ci grossira à mesure que `legacy/` se vide ; il ne doit jamais dupli
   Depuis L1e-1 (06/11) : les packages ROS viennent de `packages/`, copiés par LISTE EXPLICITE
   par machine (`packages:` de l'hôte dans `ansible/hosts`, défaut `packages_default`) — un
   package absent de la liste n'arrive jamais sur le Pi.
+  Depuis L1e-3a (07/11) : la lib `dadou_utils_ros` est un package de `packages/` (dans
+  `packages_default` ET la liste de l'hôte robot) ; `chemins_retires_lib` efface sur les Pi les
+  anciennes copies embarquées (src/, build/, install/ de robot, vision, controller).
 - Skill `/diag` : `.claude/skills/diag` (copié de l'ancien dépôt ; ses chemins visent encore
   `docs/incidents/` de legacy — à déplacer avec la doc).

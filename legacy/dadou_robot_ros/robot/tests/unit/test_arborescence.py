@@ -30,13 +30,22 @@ ANCIENS_NOMS = ["robot_bringup", "robot_description", "robot_drive",
 # Parmi les six, ceux en ament_python (marqueur resource/<nom> obligatoire) ; les
 # trois autres sont ament_cmake (pas de marqueur).
 SIX_AMENT_PYTHON = ["didier_drive", "didier_rehearsal", "didier_web"]
-COMMUNS = ["theatre_contrats", "robot_interfaces"]
+COMMUNS = ["theatre_contrats", "robot_interfaces", "dadou_utils_ros"]
 # Liste GRAVÉE de l'hôte robot : exactement ce que le Pi reçoit depuis avant L1e-1,
 # sous les noms de L1e-2 (aucun changement de comportement ; le tri « sim-only hors
 # du Pi » est L1e-4). didier_jeu (sim-only) n'y figure PAS, et ne doit jamais y
-# figurer sans décision.
-HOTE_ROBOT_GRAVE = ["didier_bringup", "didier_description", "didier_drive", "didier_rehearsal",
-                    "didier_sim", "didier_web", "robot_interfaces", "theatre_contrats"]
+# figurer sans décision. dadou_utils_ros (lib partagée) y est depuis L1e-3a.
+HOTE_ROBOT_GRAVE = ["dadou_utils_ros", "didier_bringup", "didier_description", "didier_drive",
+                    "didier_rehearsal", "didier_sim", "didier_web", "robot_interfaces",
+                    "theatre_contrats"]
+# L1e-3a : chemins (sous ros2_ws/) des copies embarquées de la lib, effacés des Pi par la
+# liste `chemins_retires_lib`. Écrits en dur, comme ANCIENS_NOMS.
+CHEMINS_RETIRES_LIB = ["src/robot/dadou_utils_ros", "src/vision/dadou_utils_ros",
+                       "src/controller/dadou_utils_ros",
+                       # + build/install des 3 packages qui embarquaient la lib : une copie
+                       # périmée dans install/<pkg> masquerait packages/dadou_utils_ros.
+                       "build/robot", "install/robot", "build/vision", "install/vision",
+                       "build/controller", "install/controller"]
 
 
 def _hosts():
@@ -65,7 +74,7 @@ def test_les_six_packages_sont_dans_packages_avec_leur_package_xml():
         assert (PACKAGES / nom / "package.xml").is_file(), nom
 
 
-def test_l_hote_robot_pousse_exactement_les_huit_packages_graves():
+def test_l_hote_robot_pousse_exactement_les_neuf_packages_graves():
     robot = _hosts()["robot"]["hosts"]["r"]
     assert sorted(robot["packages"]) == HOTE_ROBOT_GRAVE
     assert len(robot["packages"]) == len(set(robot["packages"])), "doublon dans la liste"
@@ -143,3 +152,44 @@ def test_le_marqueur_resource_de_chaque_ament_python_porte_le_nom_du_package():
     for nom in ament_python:
         ressources = sorted(f.name for f in (PACKAGES / nom / "resource").iterdir())
         assert ressources == [nom], (nom, ressources)
+
+
+# --- L1e-3a : la lib partagée dadou_utils_ros devient un package de packages/ ----
+
+def test_aucun_lien_symbolique_dadou_utils_ros_ne_subsiste_dans_legacy():
+    """Les 3 dépôts embarquaient la lib par un symlink (copié par le rsync copy_links) :
+    s'il revenait, le Pi aurait deux copies de la lib et la vieille pourrait masquer la neuve."""
+    liens = [str(p.relative_to(MONO)) for p in LEGACY.rglob("dadou_utils_ros")
+             if p.is_symlink() and ".venv" not in p.parts]
+    assert liens == [], liens
+
+
+def test_la_lib_est_un_package_dont_le_nom_est_celui_du_dossier():
+    xml = PACKAGES / "dadou_utils_ros" / "package.xml"
+    assert xml.is_file()
+    assert _nom_declare(xml) == "dadou_utils_ros"
+    assert _build_type(xml) == "ament_python"
+    assert (PACKAGES / "dadou_utils_ros" / "dadou_utils_ros" / "__init__.py").is_file()
+
+
+def test_la_lib_est_dans_packages_default():
+    defaut = yaml.safe_load(VARS.read_text(encoding="utf-8"))["packages_default"]
+    assert "dadou_utils_ros" in defaut
+
+
+def test_chemins_retires_lib_est_la_liste_gravee_des_trois_copies_embarquees():
+    retires = yaml.safe_load(VARS.read_text(encoding="utf-8"))["chemins_retires_lib"]
+    assert sorted(retires) == sorted(CHEMINS_RETIRES_LIB)
+    assert len(retires) == len(set(retires)), "doublon dans chemins_retires_lib"
+
+
+def test_la_tache_de_nettoyage_de_la_lib_precede_la_copie_des_packages():
+    taches = yaml.safe_load((LEGACY / "dadou_utils_ros" / "ansible" / "roles" / "synchronise"
+                             / "tasks" / "main.yml").read_text(encoding="utf-8"))
+    noms = [t.get("name", "") for t in taches]
+    nettoyage = next(i for i, t in enumerate(taches) if "chemins_retires_lib" in str(t.get("loop", "")))
+    copie = next(i for i, n in enumerate(noms) if n.startswith("Synchronize mono-repo package"))
+    assert nettoyage < copie
+    t = taches[nettoyage]
+    assert t["file"]["state"] == "absent" and t.get("become") is True
+    assert t["file"]["path"].startswith("{{ ansible_env.HOME }}/{{ ros2_ws }}/")
