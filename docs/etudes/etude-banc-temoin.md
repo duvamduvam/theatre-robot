@@ -14,6 +14,10 @@ qualité, `hardware/overview.md` (chaîne roues).
 
 ---
 
+> **Mise à jour du 07/11, même jour.** David pense avoir encore des Pi en stock, pas encore
+> inventoriés. Le constat « aucun Pi libre » ci-dessous ne vaut que pour les Pi **relevés** (table
+> « Raspberry Pi de l'atelier » de l'inventaire). Voir §7 : ce que l'inventaire des Pi change.
+
 ## 1. Réponse courte
 
 - **Mini-robot roulant : non, pas maintenant.** Le stock permet la mécanique (moteurs TT, roues,
@@ -181,3 +185,33 @@ Ordre conseillé : après le lot F, dont B1 réutilise la facture. B0 peut se fa
 il ne coûte que du temps d'atelier.
 
 **Ce que ça supprime** : rien. Le mini-robot n'est pas rejeté, il est reporté à l'arrivée du lidar.
+
+---
+
+## 7. Si l'inventaire trouve des Pi en stock
+
+**Ce qui change.**
+
+- **Le banc devient permanent.** Il ne rend plus de Pi au remontage du robot. Le risque n° 1 du
+  §5 tombe, et le banc peut tourner après chaque fusion, robot remonté ou non.
+- **Le mini-robot perd son premier obstacle, pas les autres.** Rien ne se transfère toujours à
+  Didier, il ne montre toujours pas le visage, il manque toujours l'énergie embarquée, et le temps
+  de David reste rare. Le verdict « reporté à l'arrivée du lidar » tient. Le jour venu, il aura
+  simplement son calculateur.
+
+**Quel Pi pour quoi** (à confirmer par l'essai, pas par la fiche) :
+
+| Modèle trouvé | Banc témoin | Mini-robot (plus tard) |
+|---|---|---|
+| Pi 4 ou Pi 5, 2 Go et plus | ✅ même famille que le robot, le meilleur choix | ✅ |
+| Pi 3 (1 Go) | ⚠️ à essayer : l'image du robot n'a jamais tourné sur 1 Go | ⚠️ juste |
+| Zero 2 W | ❌ 512 Mo, déjà jugé trop juste pour Docker (gant) | ❌ |
+
+**Le relevé à faire pour chaque Pi**, à recopier dans la table « Raspberry Pi de l'atelier » de
+l'inventaire :
+
+1. Modèle et mémoire lus sur la carte (sérigraphie près du SoC ou étiquette mémoire).
+2. Démarrage avec la carte SD **et** le chargeur qui font marcher un Pi connu. Noter les LED.
+3. S'il démarre : `cat /proc/device-tree/model`, `free -h`, `cat /proc/cpuinfo | grep Serial`.
+4. Pour un Pi destiné au banc : un test des GPIO avant tout usage. Un Pi aux GPIO douteuses donne
+   de faux rouges.
