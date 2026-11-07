@@ -604,6 +604,7 @@ Donc, pour la prochaine passe :
 | 3ᵉ Pi, modèle non relevé | ? | ? | **Ne démarre pas** le 04/11 : LED rouge et verte fixes, rien sur le réseau, avec la SD et le chargeur Dell qui font marcher le Pi de 4 Go | Récupération du bootloader non tentée |
 | Pi 4 Model B Rev 1.2 | 4 Go | `100000004986f895` | **Sain** le 07/11 : démarre sur la SD du robot, `throttled=0x0`, 2,8 Go libres au démarrage | MAC Ethernet `dc:a6:32:a4:e0:8d`, Wi-Fi `…:8e` ; DHCP en .160 (le .2 est réservé à la carte du Pi du robot). Premier des Pi retrouvés |
 
+| Pi 4 Model B Rev 1.4 | 4 Go | `100000009dea877a` | **Sain** le 07/11 : démarre sur la SD du robot, `throttled=0x0` | MAC Ethernet `e4:5f:01:25:6f:30` ; DHCP en .23. 2ᵉ des Pi retrouvés |
 **Stock déclaré par David le 2026-11-07, non relevé** : **5 Pi 4 retrouvés** (mémoire, état de
 démarrage et numéros de série inconnus) et **3 Pi 3, de mémoire** (« je crois »). On ignore si les
 5 Pi 4 incluent les deux qui ne démarrent plus ci-dessus. Chaque carte entre dans la table une fois
