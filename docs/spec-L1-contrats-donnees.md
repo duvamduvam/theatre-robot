@@ -544,10 +544,14 @@ conteneurs) — vécu le 06/11 : V-R3 de 21/21 à 18/21 sans régression du code
    sous minuterie systemd utilisateur sur le PC de David. Aucun agent : la fumée mesure et
    compare à des valeurs gravées, elle ne juge pas. Un agent n'intervient qu'à la demande,
    pour lire une nuit rouge.
-2. **Déclenchement** : la nuit (machine calme : les épreuves longues exigent un facteur temps
-   réel ≥ 0,8) **si `main` a un commit depuis la dernière fumée verte** (sha gravé dans la
-   dernière page) ; plus **une passe forcée par semaine** même sans commit (dérive de
-   l'environnement).
+2. **Déclenchement** (corrigé le 07/11 : David éteint son PC la nuit) : PAS de cron nocturne
+   aveugle. Minuterie systemd utilisateur avec `Persistent=true` (le tir manqué est rattrapé au
+   prochain démarrage du PC) **à condition** que `main` ait un commit depuis la dernière fumée
+   verte (sha gravé dans la dernière page) — sinon rien ; plus une passe forcée par semaine
+   (dérive de l'environnement). Et la règle humaine : **à chaque fusion dans `main`, l'agent
+   AVERTIT David qu'une fumée est due** (« lance `fumee.sh` quand le PC sera libre 45 min »),
+   David la lance à un moment calme (repas, sortie) ou la laisse à la minuterie. Les épreuves
+   longues exigent une machine calme (RTF ≥ 0,8) : la page le dit si ce n'était pas le cas.
 3. **Contenu, dans l'ordre, arrêt au premier rouge bloquant** : reconstruction de l'image si
    un Dockerfile a changé (3-5 min) → sim headless + colcon (1 min) → sonde RTF 20 s (rouge
    si < 0,8 : le reste n'est pas fiable) → `validate-namespace.sh`, `validate-catalogue.sh`,
