@@ -621,3 +621,9 @@ sains couvrent le robot, le banc témoin et le futur mini-robot (décision du 07
 Raison principale : le 2 Go a fumé sur la nappe le 04/11 et **ses GPIO n'ont jamais été testées**,
 alors que servos, visage et roues passent par elles. Le `da66fc96` (fente SD cassée) va plutôt
 au banc témoin.
+**Constat du 07/11 sur la SD du robot** (128 Go, vue 119,1 Go ; `ros2_ws` et `dadou-robot-container`
+présents) : **aucune adresse fixe ni profil Wi-Fi**, seulement « Wired connection 1 » en DHCP sur
+`eth0`. Le .2 du robot vient donc d'une **réservation par adresse MAC** (box et/ou routeur 4G du
+robot) liée à l'ancien Pi 2 Go (`d8:3a:dd:67:d6:30`). Avec le `bec1ed98` (`d8:3a:dd:6d:da:73`),
+il faut soit déplacer la réservation, soit fixer le .2 sur la SD elle-même (recommandé : l'adresse
+suit la carte, pas le Pi). Non fait, attend l'accord de David.
