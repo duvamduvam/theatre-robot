@@ -87,6 +87,30 @@ robot et 4 côté vision, `restarts=0` ; 16 nœuds sous `/didier/`, seuls `/roso
 familles ; lib importée depuis `install/dadou_utils_ros` sur les deux Pi. Images ARM : ce sont
 celles du 04/11, le code est monté ; aucune reconstruction n'a été nécessaire.
 
+## Déploiement de 3b (`theatre_interfaces`) sur les deux Pi hors robot — 2026-11-07 au soir
+
+Même séquence que le matin, plus trois leçons (toutes à intégrer au playbook, voir
+`docs/ansible-ecarts.md` à la racine) :
+- `hosts` ne donne ni utilisateur ni clé pour robot/vision : `-e ansible_user=pi --private-key
+  ~/.ssh/keys/didier`.
+- `chemins_retires_lib` efface `build/` et `install/` de robot ET vision à CHAQUE passage : la
+  sentinelle est donc obligatoire à chaque déploiement, et son nom diffère — robot
+  `src/robot/robot/change`, vision `src/vision/vision/CHANGE` (majuscules). Sans elle, la vision
+  est morte au démarrage (`Package 'vision' not found`).
+- L'image ARM du robot (04/11) précédait le renommage L1e-2 : elle COPIAIT encore les anciens
+  `robot_*` dans `src/`, compilés à côté des `didier_*` (déjà vrai au déploiement du matin, passé
+  inaperçu). Remède : `sudo docker compose -f docker-compose-arm.yml build` sur le Pi (≈ 25 min),
+  puis rejouer le playbook (`packages_retires` nettoie `build/`/`install/` de l'hôte), sentinelle,
+  `up -d --force-recreate`. Contrôle : `ls /home/ros2_ws/src /home/ros2_ws/install` dans le
+  conteneur ne montre aucun `robot_*` (seul `robot` = le cœur, jusqu'à 3c).
+
+Résultat : robot 10 packages compilés, 17 nœuds sous `/didier/` (vision comprise), seuls
+`/rosout` et `/parameter_events` hors namespace, mux remote 100 + verrou e_stop 255, catalogue 6
+familles, `deploy_sha` = `143ff37…-dirty` (un fichier non commité dans l'arbre, le suffixe dit
+vrai), `restarts=0` ; vision 4 packages (`dadou_utils_ros`, `theatre_contrats`,
+`theatre_interfaces`, `vision`), `vision_status` vu du robot. Secrets de la vision sauvegardés
+sur le PC dans `~/.config/didier/` (ils n'existaient que sur le Pi).
+
 ## Réinstallation d'un Pi vierge (vécu le 2026-11-04)
 - `ansible-playbook -i hosts install-pios-lite.yml -e target_group=robot` depuis
   `dadou_utils_ros/ansible`, puis retirer l'ancienne empreinte SSH de `robot.local`.
