@@ -1,6 +1,6 @@
-"""Tests du mixage joystick/inclinomètre -> roues (robot_drive.joystick_mixer).
+"""Tests du mixage joystick/inclinomètre -> roues (didier_drive.joystick_mixer).
 
-Ce module remplace robot/move/anglo_meter_translator.py (déplacé dans robot_drive
+Ce module remplace robot/move/anglo_meter_translator.py (déplacé dans didier_drive
 pour l'autonomie du conteneur sim). Les VALEURS DORÉES ci-dessous ont été relevées
 sur l'ancien AngloMeterTranslator avant déplacement : le mixage pur doit les
 reproduire EXACTEMENT (mapping en division entière plancher compris).
@@ -11,10 +11,10 @@ import pathlib
 
 import pytest
 
-from robot_drive import joystick_mixer
-from robot_drive.joystick_mixer import translate
+from didier_drive import joystick_mixer
+from didier_drive.joystick_mixer import translate
 
-# Paquets interdits dans robot_drive : le conteneur de simulation est autonome.
+# Paquets interdits dans didier_drive : le conteneur de simulation est autonome.
 FORBIDDEN_IMPORTS = ("rclpy", "dadou_utils_ros", "robot")
 
 
@@ -58,7 +58,7 @@ def test_sortie_toujours_bornee():
 
 
 def test_module_reste_autonome():
-    """robot_drive doit tourner dans le conteneur sim sans rclpy ni dadou_utils_ros
+    """didier_drive doit tourner dans le conteneur sim sans rclpy ni dadou_utils_ros
     ni robot.* : on vérifie les imports réels (AST), pas les mentions en commentaire."""
     roots = imported_roots(joystick_mixer)
     assert roots.isdisjoint(FORBIDDEN_IMPORTS), roots

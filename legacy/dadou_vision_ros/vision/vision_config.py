@@ -90,7 +90,7 @@ def move_enabled_from_env(environ=os.environ):
 
 # Domaine ROS de la SIMULATION : le seul où le mouvement à la voix a le droit
 # d'exister (revue adversariale I1, 22/10). Même valeur que SIM_DOMAIN_ID de
-# robot_rehearsal (dadou_robot_ros) ; 42 = le vrai robot.
+# didier_rehearsal (dadou_robot_ros) ; 42 = le vrai robot.
 MOVE_DOMAIN_ID = "43"
 
 

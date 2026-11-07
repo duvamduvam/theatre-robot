@@ -55,11 +55,11 @@ TRANSCRIPT_TOPIC = "chat_transcript"
 POI_EVENT_TOPIC = "rehearsal/poi_event"
 ROUTE_STATE_TOPIC = "route_state"
 # Facteur de vitesse 0..1 (json.dumps(float)), publié en VOLATILE par le
-# régisseur (dadou_robot_ros robot_rehearsal) : un node démarré après la
+# régisseur (dadou_robot_ros didier_rehearsal) : un node démarré après la
 # dernière consigne ne connaît pas la vitesse — inconnue = considéré à
 # l'arrêt (cf. SituationBoard.moving).
 ROUTE_SPEED_TOPIC = "route_speed"
-# COMMANDE de route (dadou_robot_ros robot_rehearsal, ROUTE_CMD_TOPIC) : lue
+# COMMANDE de route (dadou_robot_ros didier_rehearsal, ROUTE_CMD_TOPIC) : lue
 # SEULEMENT, pour son "restart" (nouvelle traversée) qui remet à neuf la
 # mémoire des objets commentés en marche. Ce node n'y publie JAMAIS.
 ROUTE_CMD_TOPIC = "route"

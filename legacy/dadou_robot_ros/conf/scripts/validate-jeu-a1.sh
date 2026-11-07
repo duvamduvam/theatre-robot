@@ -36,6 +36,10 @@
 #                      rclpy (sous-processus sans rclpy ; aucun node lancé hors 43)
 source /opt/ros/${ROS_DISTRO}/setup.sh
 source /home/ros2_ws/install/setup.bash
+# Namespace du robot (lot L1b) : les nœuds vivent sous /<ROBOT_NAME>/ (défaut
+# /didier/). Le pilote rclpy ci-dessous le reçoit en argument (namespace=NS) :
+# ses noms RELATIFS se résolvent alors comme ceux des nœuds qu'il observe.
+NS="/${ROBOT_NAME:-didier}"
 CAP=/tmp/vja1; rm -rf $CAP; mkdir -p $CAP
 JDIR=/home/ros2_ws/log/jeu
 RDIR=/home/ros2_ws/log/rehearsal
@@ -47,7 +51,7 @@ verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  �
 for proc in jeu_node route_driver fault_relay director twist_deadman animations_node gaze_follower servos_sim_node; do
   pgrep -f "/$proc\$|/$proc " >/dev/null || { echo "PRÉCONDITION : processus « $proc » absent (ANIMATIONS=true ? gaze_follower ? chaîne roues ? rehearsal.launch.py jeu:=true ?)"; exit 2; }
 done
-pgrep -af "lib/robot_rehearsal/[d]irector" | grep -q "rehearsal/chat_move:=jeu/chat_move" || { echo "PRÉCONDITION : le régisseur n'est pas remappé sur jeu/chat_move (rehearsal.launch.py jeu:=true)"; exit 2; }
+pgrep -af "lib/didier_rehearsal/[d]irector" | grep -q "rehearsal/chat_move:=jeu/chat_move" || { echo "PRÉCONDITION : le régisseur n'est pas remappé sur jeu/chat_move (rehearsal.launch.py jeu:=true)"; exit 2; }
 timeout 10 gz model --list 2>/dev/null | grep -q titan_grise || { echo "PRÉCONDITION : modèle titan_grise absent (WORLD=chantiers ?)"; exit 2; }
 JJ=$(ls -t $JDIR/*_jeu.jsonl 2>/dev/null | head -1)
 jpid=$(basename "$JJ" 2>/dev/null | cut -d_ -f2)
@@ -86,7 +90,7 @@ done
 verdict "$t7" "T7 jeu_node refuse hors domaine 43 (domaine 0 et absent), avant tout import rclpy"
 
 echo "=== mise en route puis $DUREE s de jeu (un seul pilote rclpy) $(date +%T) ==="
-python3 - "$CAP/capture.json" "$DUREE" <<'EOF'
+python3 - "$CAP/capture.json" "$DUREE" "$NS" <<'EOF'
 import json, math, subprocess, sys, time
 import rclpy
 from geometry_msgs.msg import PointStamped, Twist
@@ -95,7 +99,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from robot_interfaces.msg import StringTime
 
-SORTIE, DUREE = sys.argv[1], float(sys.argv[2])
+SORTIE, DUREE, NS = sys.argv[1], float(sys.argv[2]), sys.argv[3]
 LATCHE = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 TELEPORT = ["timeout", "10", "gz", "service", "-s", "/world/stage/set_pose", "--reqtype", "gz.msgs.Pose",
             "--reptype", "gz.msgs.Boolean", "--timeout", "3000", "--req",
@@ -108,7 +112,9 @@ class Echec(Exception):
 
 class Pilote(Node):
     def __init__(self):
-        super().__init__("validate_jeu_a1")
+        # namespace=NS : sans lui, tous les noms relatifs ci-dessous viseraient la
+        # racine (/route…) et le pilote parlerait dans le vide (lot L1b).
+        super().__init__("validate_jeu_a1", namespace=NS)
         self.cap = {"intention": [], "jeu_chat_move": [], "cmd_vel": [], "goto_result": [], "console": [],
                     "bouche": [], "evenements": {}, "objets": [], "journal": [], "look": [], "route_state": []}
         self.pub_box = self.create_publisher(PointStamped, "vision/person_box", 10)
@@ -125,7 +131,7 @@ class Pilote(Node):
         self.create_subscription(Twist, "cmd_vel_follow", self._cmd, 10)
         self.create_subscription(StringTime, "route_goto_result", self._goto, 10)
         self.create_subscription(StringTime, "rehearsal/objects", self._objets, LATCHE)
-        self.create_subscription(Odometry, "/ground_truth/odom", self._odom, 10)
+        self.create_subscription(Odometry, "ground_truth/odom", self._odom, 10)   # relatif (L1b)
         self.pose = None
         self.dernier_go = 0.0
         self.pistes = []          # (id, t) des naissances vues sur jeu/journal

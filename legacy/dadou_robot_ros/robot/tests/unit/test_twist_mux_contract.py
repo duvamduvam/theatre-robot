@@ -16,11 +16,11 @@ import pathlib
 
 import yaml
 
-# conf/ros2_dependencies/robot_drive/config/twist_mux.yaml, remonté depuis
-# robot/tests/unit/ (4 parents jusqu'à la racine du dépôt).
+# packages/didier_drive/config/twist_mux.yaml (mono-dépôt, L1e-1), remonté depuis
+# robot/tests/unit/ (5 parents jusqu'à la racine du mono-dépôt).
 TWIST_MUX_YAML = (
-    pathlib.Path(__file__).resolve().parents[3]
-    / "conf" / "ros2_dependencies" / "robot_drive" / "config" / "twist_mux.yaml"
+    pathlib.Path(__file__).resolve().parents[5]
+    / "packages" / "didier_drive" / "config" / "twist_mux.yaml"
 )
 
 

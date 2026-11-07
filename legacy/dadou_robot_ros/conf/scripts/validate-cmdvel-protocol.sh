@@ -10,10 +10,19 @@
 #    -> le deadman LOCAL de wheels_node doit couper < 1 s. Restart service après.
 source /opt/ros/${ROS_DISTRO}/setup.sh
 source /home/ros2_ws/install/setup.bash
+# Namespace du robot (lot L1b) : les nœuds vivent sous /<ROBOT_NAME>/ (défaut
+# /didier/). Un nom RELATIF tapé dans la CLI se résout à la RACINE, pas dans ce
+# namespace : chaque topic est donc préfixé par $NS, placé JUSTE APRÈS le verbe
+# (`ros2 topic pub $NS/x …`, options après) — forme gravée par
+# robot/tests/unit/test_namespace_contract.py.
+NS="/${ROBOT_NAME:-didier}"
+# ⚠️ Lot L1b : les topics roues sont devenus /didier/wheels, /didier/e_stop…
+# (namespace, aucun code changé) — ce protocole est À REJOUER, roues hors sol,
+# avant tout usage au sol (verrou noté dans docs/chantiers.md).
 
 # $1 = valeur JSON sur le fil (chaînes AVEC guillemets JSON : '"forward"'),
 # $2 = nombre de publications à 10 Hz, $3 = anim (défaut false)
-W() { ros2 topic pub -r 10 -t $2 /wheels robot_interfaces/msg/StringTime "{msg: '$1', time: 0, anim: ${3:-false}}" >/dev/null 2>&1; }
+W() { ros2 topic pub $NS/wheels robot_interfaces/msg/StringTime "{msg: '$1', time: 0, anim: ${3:-false}}" -r 10 -t $2 >/dev/null 2>&1; }
 
 echo "=== T1 bouton forward (3 s) $(date +%T.%3N) ==="
 W '"forward"' 30
@@ -25,10 +34,10 @@ W '"forward"' 20
 sleep 3
 
 echo "=== T3 e-stop $(date +%T.%3N) ==="
-ros2 topic pub --once /e_stop std_msgs/msg/Bool "{data: true}" >/dev/null 2>&1
+ros2 topic pub $NS/e_stop std_msgs/msg/Bool "{data: true}" --once >/dev/null 2>&1
 sleep 1
 W '[0.4, 0.4]' 20   # attendu : AUCUN update_cmd dans le log
-ros2 topic pub --once /e_stop std_msgs/msg/Bool "{data: false}" >/dev/null 2>&1
+ros2 topic pub $NS/e_stop std_msgs/msg/Bool "{data: false}" --once >/dev/null 2>&1
 sleep 1
 
 echo "=== T4 kill twist_deadman en plein mouvement $(date +%T.%3N) ==="

@@ -24,7 +24,7 @@ from theatre_contrats.organs import WHEELS
 
 # Dossier des séquences de PANNES (bugs joués par le régisseur) : jamais du jeu.
 DOSSIER_EXCLU = "bugs"
-# Commandes que le régisseur accepte sur chat_move (robot_rehearsal.contracts :
+# Commandes que le régisseur accepte sur chat_move (didier_rehearsal.contracts :
 # CHAT_MOVE_GOTO_CMD, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
 # CHAT_MOVE_FORWARD_CMD) ; égalité gravée par test_repertoire.py.
 COMMANDES_REGISSEUR = ("aller_voir", "tour_de", "tourner", "avancer")

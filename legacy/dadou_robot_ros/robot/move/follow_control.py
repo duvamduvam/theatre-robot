@@ -40,7 +40,7 @@ Découpage identique à robot.move.gaze_control (le modèle du genre) :
 from dataclasses import dataclass
 
 # Plafonds ABSOLUS (garde-fou ultime, mêmes valeurs que le plafond dur du
-# pilotage web, cf. robot_web drive_to_twist) : AUCUN paramètre ne peut les
+# pilotage web, cf. didier_web drive_to_twist) : AUCUN paramètre ne peut les
 # dépasser, ils bornent les paramètres eux-mêmes au constructeur.
 ABS_MAX_LIN = 0.5   # m/s
 ABS_MAX_ANG = 1.0   # rad/s

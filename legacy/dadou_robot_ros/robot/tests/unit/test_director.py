@@ -1,4 +1,4 @@
-"""Ordonnanceur du régisseur (robot_rehearsal.director) — valeurs gravées.
+"""Ordonnanceur du régisseur (didier_rehearsal.director) — valeurs gravées.
 Mutation (2026-10-08) : retirer l'exclusion par cible -> test_meme_cible_sautee ;
 retirer l'arrêt à duration_s -> test_fin_de_scenario_arrete_tout ; retirer le
 re-bornage FAULT_MAX_DURATION_S -> test_duree_rebornee ; cancel() qui laisse la cible
@@ -8,8 +8,8 @@ chat_node (messages) — mutations listées dans le rapport du lot.
 Revue adversariale R3 (2026-10-14) : abort avant start inerte, close_active
 (fermeture au fader), restore explicite, phantom sans « pass », vitesse en
 vigueur — mutations listées dans le rapport ; le node : test_director_node.py."""
-from robot_rehearsal.director import Director
-from robot_rehearsal.scenario import Fault, Scenario
+from didier_rehearsal.director import Director
+from didier_rehearsal.scenario import Fault, Scenario
 
 
 def _sc(*faults, duration=100.0):
@@ -99,7 +99,7 @@ def test_cancel_libere_la_cible_sans_stop():
 
 
 # --- ReenablePolicy (revue adversariale + bug vécu du 2026-10-08) -----------
-from robot_rehearsal.director import ReenablePolicy
+from didier_rehearsal.director import ReenablePolicy
 
 
 def test_relance_seulement_si_route_on_au_kill():
@@ -227,7 +227,7 @@ def test_abort_saute_les_poi_jamais_atteints():
 # --- Lot R3 : messages EXACTS (contrats partagés avec chat_node) ----------------
 import pytest
 
-from robot_rehearsal.director import messages
+from didier_rehearsal.director import messages
 
 
 def test_messages_lubie():
@@ -271,8 +271,8 @@ def test_messages_refuse_un_type_non_messager():
 
 
 # --- Revue adversariale R3 (2026-10-14) ---------------------------------------------
-from robot_rehearsal.director import fader_moved, speed_factor, speed_in_effect
-from robot_rehearsal.scenario import load_scenario
+from didier_rehearsal.director import fader_moved, speed_factor, speed_in_effect
+from didier_rehearsal.scenario import load_scenario
 
 
 def test_abort_avant_start_ne_fait_rien_et_la_seance_part_ensuite():
@@ -356,7 +356,7 @@ def test_speed_factor_decode_comme_route_driver():
 # Règles révisées par la revue adversariale I1 (D1 cause latchée, D3 « stop »
 # toujours republié, D5 pas d'anti-rebond sur « stop »). Mutations listées
 # dans le rapport du lot ; le node : test_director_node.py.
-from robot_rehearsal.director import VoiceDecision, VoiceMove, route_cmd_kind
+from didier_rehearsal.director import VoiceDecision, VoiceMove, route_cmd_kind
 
 # Contexte par défaut : en séance, en route, rien d'arrêté, vitesse en vigueur 0.7.
 _EN_ROUTE = dict(in_session=True, lubie_active=False,

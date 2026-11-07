@@ -4,8 +4,8 @@ chargement (route.load_tours / tours_path) — valeurs GRAVÉES.
 
 POURQUOI regénérer ici : le fichier est dérivé du monde Gazebo. Un monde
 retouché sans regénération enverrait Didier tourner autour d'un centre faux,
-sans bruit. Commande de regénération (depuis le package robot_rehearsal) :
-    python3 tools/compute_tours.py ../robot_sim/worlds/chantiers.sdf config/chantiers.yaml \\
+sans bruit. Commande de regénération (depuis le package didier_rehearsal) :
+    python3 tools/compute_tours.py ../didier_sim/worlds/chantiers.sdf config/chantiers.yaml \\
         > config/chantiers_tours.yaml
 
 Passe de mutation du lot M3 (chaque ligne doit rougir) :
@@ -25,11 +25,12 @@ import pathlib
 import pytest
 import yaml
 
-from robot_rehearsal.route import RouteError, Tour, load_route, load_tours, tours_path
+from didier_rehearsal.route import RouteError, Tour, load_route, load_tours, tours_path
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-PKG = ROOT / "conf" / "ros2_dependencies" / "robot_rehearsal"
-SDF = ROOT / "conf" / "ros2_dependencies" / "robot_sim" / "worlds" / "chantiers.sdf"
+PACKAGES = ROOT.parents[1] / "packages"          # packages/ du mono-dépôt (L1e-1)
+PKG = PACKAGES / "didier_rehearsal"
+SDF = PACKAGES / "didier_sim" / "worlds" / "chantiers.sdf"
 ITINERAIRE = PKG / "config" / "chantiers.yaml"
 TOURS = PKG / "config" / "chantiers_tours.yaml"
 

@@ -295,8 +295,9 @@ def test_node_sim_cou_en_radians(fabrique):
     n = fabrique(output_mode="sim")
     _recevoir(n, "look", json.dumps({"angle_deg": -20, "hold_ms": 1000}))
     _ticks(n, 0, 1500)
-    assert _dernier(n, "/neck/position") == 0.364932
-    assert {t for t, _ in n.publies} == {"/neck/position"}   # pas d'yeux en sim
+    # Relatif depuis L1b : /<robot>/neck/position une fois namespacé.
+    assert _dernier(n, "neck/position") == 0.364932
+    assert {t for t, _ in n.publies} == {"neck/position"}   # pas d'yeux en sim
 
 
 def test_node_direction_inconnue_rien(fabrique):

@@ -116,8 +116,8 @@ def pilote(monkeypatch, tmp_path):
     }
     for nom, module in faux.items():
         monkeypatch.setitem(sys.modules, nom, module)
-    monkeypatch.delitem(sys.modules, "robot_rehearsal.route_driver_node", raising=False)
-    module = importlib.import_module("robot_rehearsal.route_driver_node")
+    monkeypatch.delitem(sys.modules, "didier_rehearsal.route_driver_node", raising=False)
+    module = importlib.import_module("didier_rehearsal.route_driver_node")
     monkeypatch.setenv("ROS_DOMAIN_ID", "43")
     horloge = {"ms": 0}
     monkeypatch.setattr(module, "_now_ms", lambda: horloge["ms"])
@@ -127,7 +127,7 @@ def pilote(monkeypatch, tmp_path):
     noeud = module.RouteDriverNode()
     noeud.horloge = horloge
     yield noeud
-    sys.modules.pop("robot_rehearsal.route_driver_node", None)
+    sys.modules.pop("didier_rehearsal.route_driver_node", None)
 
 
 def _odom(noeud, x, y, yaw, ms):
@@ -135,7 +135,7 @@ def _odom(noeud, x, y, yaw, ms):
     pose = types.SimpleNamespace(
         position=types.SimpleNamespace(x=x, y=y, z=0.0),
         orientation=types.SimpleNamespace(x=0.0, y=0.0, z=math.sin(yaw / 2), w=math.cos(yaw / 2)))
-    noeud.abonnements["/ground_truth/odom"](types.SimpleNamespace(pose=types.SimpleNamespace(pose=pose)))
+    noeud.abonnements["ground_truth/odom"](types.SimpleNamespace(pose=types.SimpleNamespace(pose=pose)))
 
 
 def _recevoir(noeud, topic, texte):
@@ -261,7 +261,7 @@ def test_manoeuvre_plafonnee_par_la_croisiere(pilote):
 
 
 def test_manoeuvre_plafonnee_par_max_ang_du_node(monkeypatch, tmp_path, pilote):
-    module = sys.modules["robot_rehearsal.route_driver_node"]
+    module = sys.modules["didier_rehearsal.route_driver_node"]
     monkeypatch.setattr(_NodeFactice, "imposes", dict(_NodeFactice.imposes, max_ang=0.3))
     assert module.RouteDriverNode().goto_config.max_ang == 0.3
 

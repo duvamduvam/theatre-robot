@@ -34,18 +34,18 @@ def test_garde_fou_domaine_avant_rclpy_init():
     assert appels[0] == "check_domain"
     src = ast.unparse(main)
     assert src.index("check_domain(os.environ)") < src.index("rclpy.init(")
-    assert "from robot_rehearsal.contracts import" in NODE.read_text(encoding="utf-8")
+    assert "from didier_rehearsal.contracts import" in NODE.read_text(encoding="utf-8")
 
 
 def test_garde_fou_domaine_refuse_hors_43():
-    """Le test existant de robot_rehearsal, réutilisé sur la fonction importée par le node."""
-    from robot_rehearsal.contracts import SIM_DOMAIN_ID, check_domain
+    """Le test existant de didier_rehearsal, réutilisé sur la fonction importée par le node."""
+    from didier_rehearsal.contracts import SIM_DOMAIN_ID, check_domain
     assert SIM_DOMAIN_ID == 43
     assert check_domain({"ROS_DOMAIN_ID": "43"}) == 43
     for env in ({}, {"ROS_DOMAIN_ID": "42"}, {"ROS_DOMAIN_ID": "0"}, {"ROS_DOMAIN_ID": "abc"}):
         with pytest.raises(RuntimeError) as exc:
             check_domain(env)
-        # Message hérité de robot_rehearsal (« robot_rehearsal refuse de démarrer ») :
+        # Message hérité de didier_rehearsal (« didier_rehearsal refuse de démarrer ») :
         # connu, assumé — une seule définition du garde-fou.
         assert "42 est le vrai robot" in str(exc.value)
 
@@ -64,10 +64,9 @@ def test_topics_de_la_reflexion_egaux_au_contrat_vision():
 
 
 def test_le_regisseur_ecoute_ce_que_le_selecteur_publie():
-    from robot_rehearsal import contracts
+    from didier_rehearsal import contracts
     from theatre_contrats import topics
-    launch = (LEGACY / "dadou_robot_ros" / "conf" / "ros2_dependencies" / "robot_rehearsal" / "launch"
-              / "rehearsal.launch.py").read_text(encoding="utf-8")
+    launch = (MONO / "packages" / "didier_rehearsal" / "launch" / "rehearsal.launch.py").read_text(encoding="utf-8")
     assert f'("{contracts.CHAT_MOVE_TOPIC}", "{topics.JEU_CHAT_MOVE}")' in launch
 
 

@@ -27,6 +27,10 @@ services:
     image: dadouuu/dadou-vision-x86:latest
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-43}
+      # Nom du robot = namespace ROS ABSOLU de tous les nœuds (lot L1b) : /didier/…
+      # par défaut. Robot, vision et télécommande d'un même Didier DOIVENT avoir le
+      # même nom (sinon ils ne s'entendent plus) ; la CLI ros2 doit préfixer.
+      - ROBOT_NAME=${ROBOT_NAME:-didier}
       # chat_node (micro → whisper → OpenRouter → piper) : OFF par défaut,
       # même prudence que sur le Pi (micro physique + budget LLM payant).
       # Activation explicite : CHAT=true docker compose ... up.

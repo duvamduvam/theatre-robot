@@ -422,3 +422,5 @@ l'alimentation du Pi et celle du robot.
 
 Pi de 2 Go hors robot après la fumée, 2026-11-04 : répond sur RJ45, `throttled=0x0`, `dockerd` relu avec
 une empreinte stable, Docker actif. Les broches GPIO, l'I²C et le signal LED ne sont pas testés.
+
+Suite, 2026-11-04 23:50 : branche L1b+L1c déployée sur ce Pi (hors robot) et sur le Pi 5 vision, conteneurs stables (`restarts=0`), détail dans `operations.md`. Rien de plus testé sur le matériel du robot.

@@ -19,8 +19,8 @@ import pytest
 from robot.tests.unit.test_director_node import (LUBIE, _creer, _echos, _etat_route, _fader, _journal, _poi,
                                                  _publie, _recevoir, _voix, regisseur)  # noqa: F401 (fixture)
 from robot.tests.unit.test_director_node_goto import _odom
-from robot_rehearsal.director import decide_tour
-from robot_rehearsal.route import Tour, load_route
+from didier_rehearsal.director import decide_tour
+from didier_rehearsal.route import Tour, load_route
 
 POIS = load_route({"name": "r", "waypoints": [[0, 0], [1, 0]],
                    "pois": [{"name": "poubelle_tri", "x": 27.0, "y": 1.4, "radius": 2.5, "alias": ["poubelles"]},
@@ -168,7 +168,7 @@ def test_node_lubie_de_l_objet_tourne_sautee(regisseur, monkeypatch, tmp_path):
 
 def test_litteraux_partages_avec_chat_node():
     """Chaînes et bornes gravées des DEUX côtés (chat_node, dépôt vision)."""
-    from robot_rehearsal import contracts
+    from didier_rehearsal import contracts
     assert contracts.CHAT_MOVE_TOUR_CMD == "tour_de"
     assert contracts.TOUR_SENS == {"gauche": 1, "droite": -1} and contracts.TOUR_SENS_DEFAUT == "gauche"
     assert (contracts.TOUR_CLEARANCE_M, contracts.TOUR_MIN_RADIUS_M, contracts.TOUR_MAX_RADIUS_M) == (1.0, 1.5, 6.0)

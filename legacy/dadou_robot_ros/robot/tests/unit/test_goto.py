@@ -1,4 +1,4 @@
-"""Manœuvre « aller voir » (robot_rehearsal.goto, lot M1, spec-aller-voir.md
+"""Manœuvre « aller voir » (didier_rehearsal.goto, lot M1, spec-aller-voir.md
 §4) — logique PURE, valeurs GRAVÉES à la main (règle du 14/09 : un test qui
 recalcule l'attendu avec la fonction testée ne teste rien).
 
@@ -20,8 +20,8 @@ import math
 
 import pytest
 
-from robot_rehearsal.contracts import ABS_MAX_LIN, GOTO_MAX_ANG
-from robot_rehearsal.goto import (ABORTED, ALIGN, ARRIVED, DRIVE, FACE, GotoConfig, GotoError,
+from didier_rehearsal.contracts import ABS_MAX_LIN, GOTO_MAX_ANG
+from didier_rehearsal.goto import (ABORTED, ALIGN, ARRIVED, DRIVE, FACE, GotoConfig, GotoError,
                                   GotoManeuver, GotoOrder, parse_order)
 
 ANNEAUX = GotoOrder("anneaux", 10.0, 0.0, 1.5)   # P = (8,5 ; 0) depuis l'origine

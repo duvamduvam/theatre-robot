@@ -14,7 +14,7 @@ SÉCURITÉ (cf. CLAUDE.md — ce node commande les 50 kg du robot) :
    rempart). Toute la logique de décision (deadzones, plafonds durs, slew,
    timeout) vit dans robot.move.follow_control.FollowControl (pure, testée).
 
-NON AJOUTÉ au launch de prod (robot_bringup) : usage au sol conditionné au
+NON AJOUTÉ au launch de prod (didier_bringup) : usage au sol conditionné au
 test scénique (feuille de route priorité 1) PUIS à un protocole caméra roues
 hors sol (direction_sign azimut->rotation inconnu, comme le gaze). D'ici là :
 validation en SIMULATION uniquement, node lancé À LA MAIN.

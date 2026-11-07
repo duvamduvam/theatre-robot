@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<!--
+  Console de régie du robot Didier -- page UNIQUE, vanilla JS, zéro dépendance
+  externe (aucun CDN : la page fonctionne même hors ligne du reste d'Internet,
+  seuls le WebSocket et le flux vidéo vers le robot comptent). Pensée PC pour la
+  conduite (colonne DIRECT : vidéo + pad + manette + STOP) et téléphone pour le
+  backstage (colonne CONTENUS repliée sous, panneau technique).
+
+  SÉCURITÉ : le PILOTAGE ROUES (pad/manette -> message "drive" -> cmd_vel_web)
+  n'est actif que si le serveur l'autorise (hello.drive_enabled, WEB_DRIVE=true,
+  SIM-ONLY). Sinon le pad est grisé et rien n'est émis. Le plafond de vitesse
+  reste appliqué SERVEUR (drive_to_twist) : l'UI ne fait que le refléter. Les
+  contenus (animation/face/audio/lumières/technique) sont, eux, la surface W0
+  inchangée -- aucun accès roues par ce canal (whitelist côté serveur).
+-->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Didier -- console de régie</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Bandeau permanent : mode robot/sim, connexion, RTT, écriture/lecture,
+       prise de main, token. Toujours visible (sticky) : sécurité n°1 de l'UI,
+       "on doit TOUJOURS savoir à qui on parle". -->
+  <header id="bandeau">
+    <span class="marque">Didier</span>
+    <!-- Page « scène » : caméra + visage + conversation côte à côte (même pont,
+         mêmes sessions). Lien par origine de page, pas par la cible choisie ci-dessous. -->
+    <a class="scene-lien" href="/scene">Scène →</a>
+    <!-- Cible : la page (servie par n'importe quel pont) peut se connecter au
+         pont de la SIM ou à celui du VRAI robot -- une seule console sur le
+         PC, un sélecteur. La vérité du mode reste le hello du serveur
+         connecté (badge vert/rouge), jamais le libellé du sélecteur. -->
+    <select id="cible" title="Machine contrôlée par cette page"
+            aria-label="Machine contrôlée par cette page">
+      <option value="">Cette machine (page)</option>
+      <option value="http://localhost:8765">Sim locale</option>
+      <option value="http://192.168.1.2:8765">Didier réel</option>
+      <!-- Alias mDNS publié par avahi sur le Pi robot (/etc/avahi/hosts).
+           Pratique depuis téléphone/tablette ; le PC de dev a un mDNS cassé
+           (cf. operations.md) -> y préférer l'entrée IP ci-dessus. -->
+      <option value="http://didier.local:8765">Didier réel (didier.local)</option>
+      <option value="autre">Autre adresse…</option>
+    </select>
+    <span id="badge-mode" class="badge badge-inconnu">INCONNU</span>
+    <span id="badge-version" class="badge badge-off" title="version déployée (deploy_sha)" hidden></span>
+    <span id="badge-connexion" class="badge badge-off">déconnecté</span>
+    <span id="rtt">RTT -- ms</span>
+    <span id="badge-ecriture" class="badge badge-off">lecture seule</span>
+    <button id="btn-prendre-main" type="button">Prendre la main</button>
+    <span id="token-box" hidden>
+      <input id="token-input" type="password" placeholder="token" autocomplete="off">
+      <button id="btn-token" type="button">Connexion</button>
+    </span>
+  </header>
+
+  <main class="console">
+
+    <!-- ============================ COLONNE DIRECT ============================ -->
+    <!-- Placée en PREMIER dans le DOM : sur téléphone (une colonne), le pilotage
+         direct arrive donc avant les contenus. Sticky en desktop. -->
+    <section class="colonne colonne-direct">
+
+      <h2 class="titre-colonne">Direct</h2>
+
+      <!-- Retour vidéo caméra embarquée (flux MJPEG /video). Ratio 4:3. -->
+      <div class="carte carte-video">
+        <div class="video-wrap">
+          <img id="video" alt="flux caméra embarquée">
+          <div id="video-placeholder" class="video-placeholder">pas de vidéo</div>
+          <button id="btn-video-refresh" type="button" title="Recharger le flux">⟳</button>
+        </div>
+      </div>
+
+      <!-- Pad de pilotage : glisser = drive, relâcher = zéro. Haut = avant,
+           gauche = rotation à gauche. Grisé si pilotage désactivé ou lecture
+           seule (le message #pilotage-etat explique pourquoi). -->
+      <div class="carte carte-pad">
+        <div class="pad-entete">
+          <span id="pilotage-etat" class="pilotage-etat">Pilotage désactivé</span>
+          <span id="gamepad-indic" class="gamepad-indic" hidden>🎮 manette</span>
+        </div>
+        <div id="pad" class="pad disabled">
+          <div class="pad-croix pad-croix-v"></div>
+          <div class="pad-croix pad-croix-h"></div>
+          <div id="pad-curseur" class="pad-curseur"></div>
+          <span class="pad-repere pad-repere-haut">avant</span>
+          <span class="pad-repere pad-repere-bas">arrière</span>
+          <span class="pad-repere pad-repere-gauche">◄</span>
+          <span class="pad-repere pad-repere-droite">►</span>
+        </div>
+        <div class="pad-pied">
+          <label class="vitesse">
+            <span>Vitesse <b id="vitesse-val">50 %</b></span>
+            <input id="vitesse" type="range" min="10" max="100" step="5" value="50">
+          </label>
+          <div id="drive-readout" class="drive-readout">lin 0.00 m/s · ang 0.00 rad/s</div>
+          <div id="pilotage-limites" class="pilotage-limites">plafond -- · --</div>
+        </div>
+      </div>
+
+      <button id="btn-stop-contenus" type="button">■ STOP</button>
+
+    </section>
+
+    <!-- =========================== COLONNE CONTENUS =========================== -->
+    <section class="colonne colonne-contenus">
+
+      <!-- Onglets : SPECTACLE (défaut) / TECHNIQUE. Ne basculent QUE cette
+           colonne ; la colonne DIRECT reste visible en permanence. -->
+      <nav id="onglets">
+        <button class="onglet-btn actif" data-onglet="spectacle" type="button">Spectacle</button>
+        <button class="onglet-btn" data-onglet="technique" type="button">Technique</button>
+      </nav>
+
+      <!-- Recherche : filtre en direct toutes les sections de la colonne. -->
+      <div class="recherche-box">
+        <input id="recherche" type="search" placeholder="Rechercher une animation, un visage, un son…"
+               autocomplete="off">
+      </div>
+
+      <!-- ============================= SPECTACLE ============================= -->
+      <section id="onglet-spectacle" class="onglet actif">
+
+        <!-- Retour direct : ce que le robot a RÉELLEMENT reçu (broadcasts
+             "state", donc les topics ROS -- pas nos clics). Si une valeur ne
+             s'affiche pas ici, le robot ne l'a pas reçue. Marche sans Gazebo. -->
+        <div id="statut-direct"></div>
+        <p id="note-sim" hidden>Mode SIMULATION : les sons ne jouent pas (pas
+          d'audio_node en sim) et les mouvements/LED sont visibles dans la
+          fenêtre Gazebo, pas ici.</p>
+
+        <section class="groupe accent-anim">
+          <h2>Animations</h2>
+          <div id="grille-animations" class="grille"></div>
+        </section>
+
+        <section class="groupe accent-face">
+          <h2>Visages</h2>
+          <div id="grille-faces" class="grille"></div>
+        </section>
+
+        <section class="groupe accent-audio">
+          <h2>Sons</h2>
+          <div id="grille-audios" class="grille"></div>
+        </section>
+
+        <section class="groupe accent-light">
+          <h2>Lumières</h2>
+          <div id="grille-robot-lights" class="grille"></div>
+        </section>
+
+      </section>
+
+      <!-- ============================= TECHNIQUE ============================= -->
+      <section id="onglet-technique" class="onglet">
+
+        <section class="groupe">
+          <h2>Servos</h2>
+          <div id="servos"></div>
+        </section>
+
+        <section class="groupe">
+          <h2>Relais</h2>
+          <div id="grille-relais" class="grille"></div>
+        </section>
+
+        <section class="groupe">
+          <h2>Gaze (suivi de tête, cou)</h2>
+          <!-- id groupe-gaze : surbrillance en-cours pilotée par le DERNIER
+               ORDRE vu sur le topic `gaze` (gaze_follower ne publie pas
+               d'état propre — approximation documentée, cf. interfaces.md). -->
+          <span id="groupe-gaze">
+            <button class="bouton-catalogue" data-topic="gaze" data-value="on">Gaze ON</button>
+            <button class="bouton-catalogue" data-topic="gaze" data-value="off">Gaze OFF</button>
+          </span>
+        </section>
+
+        <!-- Parole IA : toggle du mode conversation (chat_node, Pi vision --
+             le topic `chat` traverse le réseau, même contrat StringTime
+             "on"/"off" que le gaze). OFF ne coupe pas une réplique en cours
+             (choix scénique : Didier finit sa phrase), il coupe le micro et
+             bloque les tours suivants ; ON = reprise instantanée (modèles
+             déjà chargés). -->
+        <section class="groupe">
+          <h2>Parole IA (conversation, Pi vision)</h2>
+          <!-- id groupe-chat : surbrillance pilotée par l'ÉTAT RÉEL du chat
+               (topic latché chat_state : off / listening / thinking /
+               speaking). chat_node pas lancé = aucun bouton vert — un
+               « Parole ON » vert sans node derrière serait un mensonge
+               (confusion vécue le 13/07). -->
+          <span id="groupe-chat">
+            <button class="bouton-catalogue" data-topic="chat" data-value="on">Parole ON</button>
+            <button class="bouton-catalogue" data-topic="chat" data-value="off">Parole OFF</button>
+          </span>
+        </section>
+
+        <!-- Personnalité de Didier (lot D3, atelier du 2026-07-13) : payload =
+             nom de variante, consommé par chat_node (Pi vision) qui recompose
+             le prompt ET ouvre une nouvelle session de conversation (cf.
+             vision.ai.personas côté dadou_vision_ros). Re-cliquer la
+             personnalité déjà active est sans effet (dédup côté node) ; défaut
+             au démarrage du node : bougon (config chat_persona). -->
+        <section class="groupe">
+          <h2>Personnalité (conversation, Pi vision)</h2>
+          <!-- id groupe-persona : surbrillance pilotée par persona_state
+               (latché, publié par chat_node : personnalité RÉELLEMENT active,
+               y compris le défaut bougon au démarrage — pas le dernier clic). -->
+          <span id="groupe-persona">
+            <button class="bouton-catalogue" data-topic="persona" data-value="bougon">Bougon</button>
+            <button class="bouton-catalogue" data-topic="persona" data-value="naif">Naïf</button>
+            <button class="bouton-catalogue" data-topic="persona" data-value="vantard">Vantard</button>
+            <!-- mauvaisefoi : persona du lot R3 (répétition simulée, 14/10), même
+                 contrat que les trois autres (vision.ai.personas). -->
+            <button class="bouton-catalogue" data-topic="persona" data-value="mauvaisefoi">Mauvaise foi</button>
+          </span>
+        </section>
+
+        <!-- Visages de CALIBRATION (mires) : hors Spectacle (ils ne servent qu'à
+             l'étalonnage du câblage LED, à lire à l'œil humain -- cf. CLAUDE.md).
+             Rempli depuis le catalogue (faces commençant par "calib"). -->
+        <section class="groupe">
+          <h2>Calibration (mires)</h2>
+          <div id="grille-calib" class="grille"></div>
+        </section>
+
+        <section class="groupe">
+          <h2>Système</h2>
+          <button id="btn-system-restart" type="button">Redémarrer</button>
+          <button id="btn-system-shutdown" type="button">Éteindre</button>
+        </section>
+
+        <section class="groupe">
+          <h2>État</h2>
+          <div id="etat-topics"></div>
+          <div id="etat-nodes"></div>
+        </section>
+
+      </section>
+
+    </section>
+  </main>
+
+  <!-- Journal des 5 dernières erreurs (visible partout). -->
+  <footer>
+    <h2>Erreurs récentes</h2>
+    <ul id="journal-erreurs"></ul>
+  </footer>
+
+  <!-- commun.js = liaison WebSocket, bandeau, flux MJPEG, partagés avec la page
+       « scène » ; il se charge AVANT app.js qui s'appuie dessus. -->
+  <script src="/static/commun.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -4,7 +4,21 @@ robot:
         local_project_dir: dadou_robot_ros
         project_ros_dir: robot
         project_name: robot
-        launch_cmd: ros2 launch robot_bringup robot_app.launch.py
+        launch_cmd: ros2 launch didier_bringup robot_app.launch.py
+        # Packages poussés dans ros2_ws/src/ (rôle synchronise) : les 2 communs + les 6
+        # packages ROS autonomes — EXACTEMENT ce que le Pi reçoit depuis avant L1e-1
+        # (le tri « sim-only hors du Pi » viendra avec machines/<hôte>/, L1e-4). La liste
+        # est gravée par test_arborescence.py ; vision et télécommande prennent
+        # packages_default (vars/main.yml).
+        packages:
+            - theatre_contrats
+            - robot_interfaces
+            - didier_bringup
+            - didier_description
+            - didier_drive
+            - didier_rehearsal
+            - didier_sim
+            - didier_web
 
 # Console de pilotage sur Pi 4 + écran (hostname control, Pi OS Full trixie,
 # flashé le 2026-07-04). Alias ssh "c" (User pi, clé didier). Ne pas confondre
@@ -16,7 +30,7 @@ control:
         local_project_dir: dadou_control_ros
         project_ros_dir: controller
         project_name: controller
-        launch_cmd: ros2 run controller controller_node
+        launch_cmd: ros2 run controller controller_node --ros-args -r __ns:=/didier
 
 integration:
   hosts:
@@ -52,9 +66,9 @@ vision:
         local_project_dir: dadou_vision_ros
         project_ros_dir: vision
         project_name: vision
-        # Heartbeat V0 (robot_bringup était un copier-coller du groupe robot,
+        # Heartbeat V0 (didier_bringup était un copier-coller du groupe robot,
         # ce package n'existe pas côté vision). Deviendra un launch file en V1.
-        launch_cmd: ros2 run vision vision_status
+        launch_cmd: ros2 run vision vision_status --ros-args -r __ns:=/didier
 
 robot-test:
   hosts:
@@ -66,7 +80,10 @@ robot-test:
 glove-left:
   hosts:
     gl:
-        packages:
+        # Paquets apt (information seule, aucun rôle ne les lit). Renommé : `packages` est
+        # désormais la liste des packages ROS du rôle synchronise — l'ancien nom aurait fait
+        # rsync-er des dossiers « vim »... inexistants.
+        apt_packages:
             - vim
             - libgirepository1.0-dev
             - libasound2-dev
@@ -74,13 +91,16 @@ glove-left:
         local_utils_dir: dadou_utils_ros_ros
         project_ros_dir: controller
         project_name: controller
-        launch_cmd: ros2 run controller controller_node
+        launch_cmd: ros2 run controller controller_node --ros-args -r __ns:=/didier
 
 
 glove-right:
   hosts:
     gr:
-        packages:
+        # Paquets apt (information seule, aucun rôle ne les lit). Renommé : `packages` est
+        # désormais la liste des packages ROS du rôle synchronise — l'ancien nom aurait fait
+        # rsync-er des dossiers « vim »... inexistants.
+        apt_packages:
             - vim
             - libgirepository1.0-dev
             - libasound2-dev
@@ -88,4 +108,4 @@ glove-right:
         local_utils_dir: dadou_utils_ros_ros
         project_ros_dir: controller
         project_name: controller
-        launch_cmd: ros2 run controller controller_node
+        launch_cmd: ros2 run controller controller_node --ros-args -r __ns:=/didier

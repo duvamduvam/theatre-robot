@@ -76,8 +76,8 @@ POURQUOI `diag_port` (lot du 2026-09-13, demande de David en séance -- « un
        `asyncio.new_event_loop()` + `AppRunner`/`TCPSite` (PAS `web.run_app` :
        il tente d'installer des handlers de signal, qui ne fonctionnent QUE
        dans le thread principal -- ça planterait ici). Même motif que
-       dadou_robot_ros/conf/ros2_dependencies/robot_web/robot_web/
-       web_bridge_node.py et robot/nodes/face_sim_node.py, à ceci près que
+       packages/didier_web/didier_web/web_bridge_node.py
+       (mono-dépôt) et robot/nodes/face_sim_node.py, à ceci près que
        CES DEUX nodes-là hébergent aiohttp dans leur thread PRINCIPAL (rclpy.
        spin y est le thread secondaire) -- chat_node ne peut pas faire pareil,
        son thread principal est déjà pris par rclpy.spin (cf. main()).
@@ -250,7 +250,7 @@ CHAT_TEXT_TOPIC = "chat_text"
 CHAT_INSTRUCTION_TOPIC = "chat_instruction"
 
 # Panne de conversation injectée par le régisseur de la répétition simulée
-# (robot_rehearsal, dadou_robot_ros) : le nom `rehearsal/…` EST le contrat de
+# (didier_rehearsal, dadou_robot_ros) : le nom `rehearsal/…` EST le contrat de
 # ce régisseur (§13.4 point 3, mêmes chaînes gravées dans les tests des deux
 # dépôts). Consommé aussi en prod, SANS effet tant que personne ne publie --
 # le régisseur ne tourne qu'en domaine 43 (sim) et n'entre jamais dans le
@@ -271,7 +271,7 @@ ASOUND_CONF = "/etc/asound.conf"
 
 # Ordre de marche demandé par Didier (lot I1, cf. docstring de module) :
 # StringTime, payload json.dumps("go"|"stop"). Le nom `rehearsal/…` EST le
-# contrat du régisseur (CHAT_MOVE_TOPIC de robot_rehearsal/contracts.py,
+# contrat du régisseur (CHAT_MOVE_TOPIC de didier_rehearsal/contracts.py,
 # dadou_robot_ros, gravé des deux côtés). Sans régisseur (vrai robot) : sans
 # effet, personne n'écoute.
 CHAT_MOVE_TOPIC = "rehearsal/chat_move"
@@ -299,7 +299,7 @@ LOOK_TOPIC = "look"
 
 # Issue d'un geste (lot M4, dadou_robot_ros/docs/spec-aller-voir.md §9.3) :
 # StringTime JSON {"name", "result", "reason", "travelled"} publié par
-# route_driver — contrat robot_rehearsal/contracts.py ROUTE_GOTO_RESULT_TOPIC
+# route_driver — contrat didier_rehearsal/contracts.py ROUTE_GOTO_RESULT_TOPIC
 # (dadou_robot_ros), aucun changement côté robot. Écouté SEULEMENT si le
 # mouvement à la voix est branché : c'est lui qui fait enchaîner la tâche en
 # cours (vision.ai.move_task). QoS VOLATILE (comme côté robot) : une vieille
@@ -391,7 +391,7 @@ class _DiagState:
 
 
 # Page HTML AUTONOME (pas de CDN -- même contrainte que le reste du parc, cf.
-# robot_web/static et face_sim_node._INDEX_HTML : le robot n'a pas toujours de
+# didier_web/static et face_sim_node._INDEX_HTML : le robot n'a pas toujours de
 # réseau). Vumètre en échelle LOGARITHMIQUE (dBFS) : un vumètre linéaire en
 # unités int16 est illisible, la parole vit tout en bas de l'échelle -- cf.
 # spec du lot. FLOOR_DB (JS) : tout ce qui est plus bas est écrasé à 0% de
@@ -531,7 +531,7 @@ async def _diag_events_handler(request: web.Request) -> web.StreamResponse:
     WebSocket, inutilement complexe pour un simple flux de lecture seule.
     Chaque client est INDÉPENDANT (sa propre boucle d'envoi) ; déconnexion
     propre (onglet fermé) avalée, même motif que /video et /stream côté
-    robot_web/face_sim_node."""
+    didier_web/face_sim_node."""
     state: _DiagState = request.app["state"]
     resp = web.StreamResponse(status=200, headers={
         "Content-Type": "text/event-stream",
@@ -563,7 +563,7 @@ class DiagServer:
     `run_app` tente d'installer des handlers de signal, qui ne fonctionnent
     QUE dans le thread principal : ça planterait ici). Aucun arrêt propre
     exposé (pas demandé par la spec, même tolérance que le thread rclpy.spin
-    de robot_web/face_sim_node) : le thread daemon meurt avec le process."""
+    de didier_web/face_sim_node) : le thread daemon meurt avec le process."""
 
     def __init__(self, port: int, state: _DiagState):
         self._port = port
@@ -635,7 +635,7 @@ class ChatNode(Node):
         # personnage, cf. les autres ci-dessus) : serveur de diagnostic web
         # (vumètre + latences par tour, cf. docstring de module POURQUOI
         # `diag_port`). 0 = DÉSACTIVÉ (défaut) -- même philosophie que
-        # `web_port`/`drive_enabled` côté robot_web/web_bridge_node.py, un
+        # `web_port`/`drive_enabled` côté didier_web/web_bridge_node.py, un
         # toggle d'exploitation qui n'a pas sa place dans le socle de config
         # partagé du personnage (default_chat_parameters ci-dessus).
         self.declare_parameter("diag_port", 0)

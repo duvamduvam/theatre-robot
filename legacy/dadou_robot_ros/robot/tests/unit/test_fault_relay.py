@@ -1,9 +1,9 @@
-"""Relais de pannes (robot_rehearsal.fault_relay) — valeurs gravées, graine 0.
+"""Relais de pannes (didier_rehearsal.fault_relay) — valeurs gravées, graine 0.
 Mutation (2026-10-08) : inverser la condition de drop -> test_drop ; retirer le
 chien de garde -> test_watchdog_retombe_en_passant ; retirer l'échéance ->
 test_expiration ; mettre à jour _last_msg pendant freeze -> test_freeze."""
-from robot_rehearsal.contracts import HEARTBEAT_TIMEOUT_MS
-from robot_rehearsal.fault_relay import DELAY_QUEUE_MAX, ZERO, FaultRelay
+from didier_rehearsal.contracts import HEARTBEAT_TIMEOUT_MS
+from didier_rehearsal.fault_relay import DELAY_QUEUE_MAX, ZERO, FaultRelay
 
 
 def _relay(op=None, params=None, until=10_000):
@@ -88,7 +88,7 @@ def test_operation_inconnue_refusee():
 # --- revue adversariale du 2026-10-08 : trous de mutation fermés -------------
 
 def test_duree_max_imposee_par_le_relais():
-    from robot_rehearsal.fault_relay import RELAY_MAX_MS
+    from didier_rehearsal.fault_relay import RELAY_MAX_MS
     assert RELAY_MAX_MS == 60_000
     r = _relay(); r.heartbeat(0)
     r.set_op("zero", {}, 1000, None)                 # sans échéance -> la borne

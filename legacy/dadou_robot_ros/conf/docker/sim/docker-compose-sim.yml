@@ -19,13 +19,24 @@ services:
         robot_interfaces: ../../../../../packages/robot_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
         didier_jeu: ../../../../../packages/didier_jeu
+        # L1e-1 : les packages ROS autonomes du robot ont déménagé de
+        # conf/ du robot vers packages/ (même motif, noms inchangés).
+        didier_description: ../../../../../packages/didier_description
+        didier_sim: ../../../../../packages/didier_sim
+        didier_drive: ../../../../../packages/didier_drive
+        didier_web: ../../../../../packages/didier_web
+        didier_rehearsal: ../../../../../packages/didier_rehearsal
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-43}
+      # Nom du robot = namespace ROS ABSOLU de tous les nœuds (lot L1b) : /didier/…
+      # par défaut. Robot, vision et télécommande d'un même Didier DOIVENT avoir le
+      # même nom (sinon ils ne s'entendent plus) ; la CLI ros2 doit préfixer.
+      - ROBOT_NAME=${ROBOT_NAME:-didier}
       - HEADLESS=${HEADLESS:-false}
-      # Monde Gazebo : fichier worlds/<WORLD>.sdf de robot_sim (`stage` = le
+      # Monde Gazebo : fichier worlds/<WORLD>.sdf de didier_sim (`stage` = le
       # plateau nu historique, `rue` = la salle de répétition, étude
       # docs/etude-repetition-simulee.md §12, `chantiers` = des Nefs à la grue
       # Titan grise, 20 bugs + 30 lubies, §13). Le NOM interne du monde reste
@@ -35,7 +46,7 @@ services:
       # "robot" plus bas) : OFF par défaut, comme gaze_follower -- un lancement
       # explicite (ANIMATIONS=true docker compose ... up) est requis.
       - ANIMATIONS=${ANIMATIONS:-false}
-      # web_bridge_node (pont HTTP/WebSocket W0, paquet robot_web) : même
+      # web_bridge_node (pont HTTP/WebSocket W0, paquet didier_web) : même
       # prudence qu'ANIMATIONS -- OFF par défaut, activation explicite
       # (WEB=true docker compose ... up). http://localhost:8765 une fois lancé.
       # WEB_PORT : conteneur en réseau host, une collision avec un service du
@@ -75,30 +86,36 @@ services:
       # Accès GPU pour le rendu de la GUI Gazebo (Intel/AMD).
       - /dev/dri:/dev/dri
       # Sources montées par-dessus la copie de l'image : itération sans rebuild.
-      - ../../ros2_dependencies/robot_description:/home/ros2_ws/src/robot_description
-      - ../../ros2_dependencies/robot_sim:/home/ros2_ws/src/robot_sim
+      - ../../../../../packages/didier_description:/home/ros2_ws/src/didier_description
+      - ../../../../../packages/didier_sim:/home/ros2_ws/src/didier_sim
       # Packages communs du mono-dépôt (lot L1a) : robot_interfaces (copie
-      # UNIQUE, ex-conf/ros2_dependencies) et theatre_contrats (contrat, importé
+      # UNIQUE) et theatre_contrats (contrat, importé
       # par dadou_utils_ros/utils_static.py — sans lui, tout node tombe à l'import).
       - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # didier_jeu (lot A1, SIM-ONLY : refus hors domaine 43) : sélecteur de
       # jeu, lancé À LA MAIN (ros2 run didier_jeu jeu_node), cf. son README.
       - ../../../../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
-      - ../../ros2_dependencies/robot_drive:/home/ros2_ws/src/robot_drive
-      - ../../ros2_dependencies/robot_web:/home/ros2_ws/src/robot_web
-      # robot_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
+      - ../../../../../packages/didier_drive:/home/ros2_ws/src/didier_drive
+      - ../../../../../packages/didier_web:/home/ros2_ws/src/didier_web
+      # didier_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
       # bringup du robot) — cheminement de Didier dans la rue, lancé À LA
       # MAIN (rehearsal.launch.py), cf. son README.
-      - ../../ros2_dependencies/robot_rehearsal:/home/ros2_ws/src/robot_rehearsal
+      - ../../../../../packages/didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
       - ../../scripts/launch-sim-in-docker.sh:/home/ros2_ws/launch-sim-in-docker.sh
-      # V-R1 : protocole de vérification du cheminement (robot_rehearsal/README.md).
+      # V-R1 : protocole de vérification du cheminement (didier_rehearsal/README.md).
       - ../../scripts/validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro
       - ../../scripts/validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
       # V-R3 : séance « chantiers » (monde chantiers, 20 bugs + 30 lubies), étude §13.8.
       - ../../scripts/validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
       # A1 : porte de sortie du sélecteur de jeu (T1-T7, spec A1 §6), 15 min.
       - ../../scripts/validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
+      # L1b : preuve du namespace par robot (tout sous /<ROBOT_NAME>/ sauf les
+      # 5 exceptions globales gravées), rejouable avec ROBOT_NAME=didier2 puis didier.
+      - ../../scripts/validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro
+      # L1c : preuve que le robot publie catalogue + deploy_sha et que le catalogue
+      # suit json/ (dépose puis supprime une séquence temporaire, nettoyée en sortant).
+      - ../../scripts/validate-catalogue.sh:/home/ros2_ws/validate-catalogue.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
       - ../../../json:/home/ros2_ws/json

@@ -1,11 +1,11 @@
-"""Contrats GELÉS de la salle de répétition (robot_rehearsal) — lus dans les
+"""Contrats GELÉS de la salle de répétition (didier_rehearsal) — lus dans les
 VRAIS fichiers (package, itinéraire, launch de bringup), jamais des copies.
 
 Trois garanties :
  1. plafonds durs IDENTIQUES à ceux du suivi de personne (même créneau du
     mux, mêmes 50 kg) ;
  2. ANTI-FUITE : le package sim-only n'est référencé nulle part dans le code
-    embarqué (robot/, robot_bringup, robot_drive, robot_web) ;
+    embarqué (robot/, didier_bringup, didier_drive, didier_web) ;
  3. l'itinéraire livré (config/rue.yaml) est valide, reste sur le trottoir du
     monde rue.sdf, et ses POI sont exactement ceux attendus ;
  4. lot R3 « chantiers » : itinéraire (30 POI dans l'ordre de la marche, étude
@@ -18,11 +18,12 @@ import pytest
 import yaml
 
 from robot.move.follow_control import ABS_MAX_ANG as FOLLOW_MAX_ANG, ABS_MAX_LIN as FOLLOW_MAX_LIN
-from robot_rehearsal import contracts
-from robot_rehearsal.route import load_route
+from didier_rehearsal import contracts
+from didier_rehearsal.route import load_route
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-PKG = ROOT / "conf" / "ros2_dependencies" / "robot_rehearsal"
+PACKAGES = ROOT.parents[1] / "packages"          # packages/ du mono-dépôt (L1e-1)
+PKG = PACKAGES / "didier_rehearsal"
 
 # Géométrie du trottoir de rue.sdf (dupliquée depuis la spec du monde, étude
 # §12 : trottoir 70 x 3 centré (30, 0) -> x ∈ [-5, 65], y ∈ [-1.5, 1.5]).
@@ -38,7 +39,8 @@ def test_plafonds_identiques_au_suivi():
 def test_sortie_sur_le_creneau_du_suivi_jamais_cmd_vel_final():
     assert contracts.CMD_VEL_TOPIC == "cmd_vel_follow"
     assert contracts.CMD_VEL_TOPIC != "cmd_vel"
-    assert contracts.ODOM_TOPIC == "/ground_truth/odom"
+    # RELATIF depuis L1b (namespace par robot) ; le topic gz reste absolu, cf. ci-dessous.
+    assert contracts.ODOM_TOPIC == "ground_truth/odom"
     assert contracts.ROUTE_STATE_TOPIC == "route_state"
     # Revue I1 (22/10) : cause latchée de l'état, "boot" | "cmd".
     assert contracts.ROUTE_STATE_CAUSE_TOPIC == "route_state_cause"
@@ -48,26 +50,29 @@ def test_sortie_sur_le_creneau_du_suivi_jamais_cmd_vel_final():
 def test_verite_terrain_declaree_dans_le_xacro_et_le_bridge():
     """Le topic de pose consommé par le cheminement doit exister de bout en
     bout : plugin OdometryPublisher dans le xacro gz ET entrée GZ_TO_ROS du
-    bridge, avec le MÊME nom que le contrat. Lu dans les vrais fichiers."""
-    xacro = (ROOT / "conf" / "ros2_dependencies" / "robot_description" / "urdf"
+    bridge, avec le MÊME nom que le contrat côté ROS (relatif depuis L1b) et le
+    nom gz du plugin (absolu, le monde gz ignore les namespaces ROS). Lu dans
+    les vrais fichiers."""
+    xacro = (PACKAGES / "didier_description" / "urdf"
              / "dadou_robot_gz.urdf.xacro").read_text(encoding="utf-8")
     assert "gz::sim::systems::OdometryPublisher" in xacro
-    assert f"<odom_topic>{contracts.ODOM_TOPIC}</odom_topic>" in xacro
-    bridge = yaml.safe_load((ROOT / "conf" / "ros2_dependencies" / "robot_sim" / "config"
+    assert "<odom_topic>/ground_truth/odom</odom_topic>" in xacro
+    bridge = yaml.safe_load((PACKAGES / "didier_sim" / "config"
                              / "gz_bridge.yaml").read_text(encoding="utf-8"))
     entries = [e for e in bridge if e["ros_topic_name"] == contracts.ODOM_TOPIC]
     assert len(entries) == 1
     assert entries[0]["ros_type_name"] == "nav_msgs/msg/Odometry"
     assert entries[0]["direction"] == "GZ_TO_ROS"
+    assert entries[0]["gz_topic_name"] == "/ground_truth/odom"
 
 
 def test_anti_fuite_aucune_reference_dans_le_code_embarque():
     zones = [
         ROOT / "robot",
         ROOT / "conf" / "ros2",
-        ROOT / "conf" / "ros2_dependencies" / "robot_bringup",
-        ROOT / "conf" / "ros2_dependencies" / "robot_drive",
-        ROOT / "conf" / "ros2_dependencies" / "robot_web",
+        PACKAGES / "didier_bringup",
+        PACKAGES / "didier_drive",
+        PACKAGES / "didier_web",
     ]
     fuites = []
     for zone in zones:
@@ -76,9 +81,9 @@ def test_anti_fuite_aucune_reference_dans_le_code_embarque():
                 continue
             if "tests" in path.parts:   # les tests ont le droit d'en parler
                 continue
-            if "robot_rehearsal" in path.read_text(encoding="utf-8", errors="ignore"):
+            if "didier_rehearsal" in path.read_text(encoding="utf-8", errors="ignore"):
                 fuites.append(str(path.relative_to(ROOT)))
-    assert fuites == [], f"robot_rehearsal référencé dans le code embarqué : {fuites}"
+    assert fuites == [], f"didier_rehearsal référencé dans le code embarqué : {fuites}"
 
 
 def test_itineraire_rue_valide_et_sur_le_trottoir():
@@ -114,7 +119,7 @@ def test_relais_jamais_sur_la_chaine_de_securite():
 def test_scenarios_livres_valides():
     """Chaque YAML de config/scenarios/ se charge (refus explicite sinon) et ne
     cible que des processus/relais des listes blanches — par construction."""
-    from robot_rehearsal.scenario import load_scenario
+    from didier_rehearsal.scenario import load_scenario
     files = sorted((PKG / "config" / "scenarios").glob("*.yaml"))
     assert [f.name for f in files] == ["chantiers.yaml", "demo.yaml", "jeu-a1.yaml"]
     for f in files:
@@ -135,13 +140,13 @@ def test_import_robot_limite_au_journal_pur():
     stdlib). Tout autre import de robot.* (robot_config, matériel…) ferait
     dépendre la sim du robot réel — refusé."""
     import re
-    for path in sorted((PKG / "robot_rehearsal").glob("*.py")):
+    for path in sorted((PKG / "didier_rehearsal").glob("*.py")):
         for m in re.finditer(r"^\s*(?:from|import)\s+(robot\.[\w.]*|robot)\b", path.read_text(encoding="utf-8"), re.M):
             assert m.group(1) == "robot.diagnostic.journal", (path.name, m.group(0))
 
 
 def test_garde_fou_domaine():
-    from robot_rehearsal.contracts import SIM_DOMAIN_ID, check_domain
+    from didier_rehearsal.contracts import SIM_DOMAIN_ID, check_domain
     assert SIM_DOMAIN_ID == 43
     assert check_domain({"ROS_DOMAIN_ID": "43"}) == 43
     for env in ({}, {"ROS_DOMAIN_ID": "42"}, {"ROS_DOMAIN_ID": "0"}, {"ROS_DOMAIN_ID": "abc"}):
@@ -227,7 +232,7 @@ def test_itineraire_chantiers():
 
 
 def test_scenario_chantiers_20_bugs_et_30_lubies():
-    from robot_rehearsal.scenario import load_scenario
+    from didier_rehearsal.scenario import load_scenario
     data = _yaml("config", "scenarios", "chantiers.yaml")
     assert (data["name"], data["seed"], data["duration_s"]) == ("chantiers", 0, 900)
     raw_bugs = [f for f in data["faults"] if f["type"] != "lubie"]
@@ -280,8 +285,11 @@ def test_launch_jeu_remappe_le_regisseur_seulement_sur_demande():
     from theatre_contrats.topics import JEU_CHAT_MOVE
     src = (PKG / "launch" / "rehearsal.launch.py").read_text(encoding="utf-8")
     tree = ast.parse(src)
+    # Défauts LITTÉRAUX seulement : robot_name (L1b) a pour défaut un appel
+    # EnvironmentVariable("ROBOT_NAME"…), pas une constante.
     defaults = {c.args[0].value: c.keywords[0].value.value for c in ast.walk(tree)
-                if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "DeclareLaunchArgument"}
+                if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "DeclareLaunchArgument"
+                and isinstance(c.keywords[0].value, ast.Constant)}
     assert defaults["jeu"] == "false"
     calls = [c for c in ast.walk(tree) if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "_director"]
     assert len(calls) == 2

@@ -10,19 +10,19 @@ physical subsystems.
 - **`robot/`** — the Python application (imported as `robot.*`), coupled to the
   shared library `dadou_utils_ros` (symlink, no versioning — protected by
   contract tests and a cross-repo CI job).
-- **`conf/ros2_dependencies/`** — five standalone ROS 2 (ament) packages built
-  by colcon:
+- **`packages/`** (mono-repo root; they lived in this repo's `conf/` until L1e-1,
+  2026-11-06, names unchanged) — standalone ROS 2 (ament) packages built by colcon:
 
 | Package | Role | Depends on |
 |---|---|---|
 | `robot_interfaces` | messages (`StringTime`, …) — **moved to `packages/robot_interfaces` of the theatre-robot mono-repo (lot L1a, 2026-11-02), single copy for robot/vision/remote** | nothing — the shared contract |
 | `theatre_contrats` | **`packages/theatre_contrats` (lot L1a)**: topic names (relative), payload keys, organ names, the StringTime codec, QoS profiles — pure Python | nothing (stdlib) |
-| `robot_drive` | cmd_vel chain (bridge, twist_mux config, deadman, kinematics) | `robot_interfaces` only |
-| `robot_sim` | Gazebo Harmonic simulation (servos + LED logic re-implemented) | `robot_interfaces` only |
-| `robot_description` | URDF (xacro) | — |
-| `robot_bringup` | launch of the real app | `robot.*` + utils (the one assumed exception) |
+| `didier_drive` | cmd_vel chain (bridge, twist_mux config, deadman, kinematics) | `robot_interfaces` only |
+| `didier_sim` | Gazebo Harmonic simulation (servos + LED logic re-implemented) | `robot_interfaces` only |
+| `didier_description` | URDF (xacro) | — |
+| `didier_bringup` | launch of the real app | `robot.*` + utils (the one assumed exception) |
 
-`robot_drive` and `robot_sim` import **nothing** from the application: the
+`didier_drive` and `didier_sim` import **nothing** from the application: the
 sim/real boundary is code duplication by design (documented in their
 docstrings), with mirror unit tests on both sides. Runtime isolation is doubled
 by `ROS_DOMAIN_ID` (42 = real robot, 43 = simulation) — a test command must

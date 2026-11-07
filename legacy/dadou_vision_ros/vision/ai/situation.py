@@ -223,7 +223,7 @@ def decode_transcript_line(raw) -> Optional[dict]:
 def decode_speed(raw) -> Optional[float]:
     """Payload de `route_speed` (json.dumps(float), 0..1) -> facteur ; None
     si illisible (l'appelant l'IGNORE et garde la vitesse connue). Calqué sur
-    le consommateur réel, route_driver (dadou_robot_ros robot_rehearsal,
+    le consommateur réel, route_driver (dadou_robot_ros didier_rehearsal,
     _decode + Route.set_speed) : JSON si possible sinon brut, float(),
     non fini refusé, borné à [0, 1] — le tableau doit dire ce que Didier
     FAIT, pas ce qu'un décodeur plus strict croirait (un "0.5" brut ou

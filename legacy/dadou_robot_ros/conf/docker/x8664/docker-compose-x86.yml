@@ -11,12 +11,23 @@ services:
       additional_contexts:
         robot_interfaces: ../../../../../packages/robot_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
+        # L1e-1 : les 6 packages ROS autonomes (ex-conf/ du robot).
+        didier_bringup: ../../../../../packages/didier_bringup
+        didier_description: ../../../../../packages/didier_description
+        didier_drive: ../../../../../packages/didier_drive
+        didier_rehearsal: ../../../../../packages/didier_rehearsal
+        didier_sim: ../../../../../packages/didier_sim
+        didier_web: ../../../../../packages/didier_web
     environment:
       # Allow RViz et al to display on host X server.
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
+      # Nom du robot = namespace ROS ABSOLU de tous les nœuds (lot L1b) : /didier/…
+      # par défaut. Robot, vision et télécommande d'un même Didier DOIVENT avoir le
+      # même nom (sinon ils ne s'entendent plus) ; la CLI ros2 doit préfixer.
+      - ROBOT_NAME=${ROBOT_NAME:-didier}
     network_mode: "host"
     volumes:
       # Sync configs, assets, and give access to host X11 + logs.
@@ -25,7 +36,7 @@ services:
       - ../../../dadou_utils_ros:/home/ros2_ws/src/robot/dadou_utils_ros
       - ../../../json:/home/ros2_ws/src/robot/json
       - ../../../medias:/home/ros2_ws/src/robot/medias
-      - ../../../conf/ros2_dependencies/robot_bringup:/home/ros2_ws/src/robot_bringup
+      - ../../../../../packages/didier_bringup:/home/ros2_ws/src/didier_bringup
       - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       - ../../../conf/ros2/setup.py:/home/ros2_ws/src/robot/setup.py

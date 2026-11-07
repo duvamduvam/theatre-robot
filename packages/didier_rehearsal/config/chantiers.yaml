@@ -1,0 +1,291 @@
+# Itinéraire « chantiers » (lot R3, étude §13.2-13.3) : des Nefs à la grue
+# Titan grise, Loire à DROITE (y < 0), bâtiments à GAUCHE (y > 0).
+# Ordre des POI = ordre RÉEL de la marche (Nefs -> Mail des Chantiers -> quai
+# des Antilles -> pointe ouest).
+#
+# POSITIONS RECALÉES sur le monde didier_sim/worlds/chantiers.sdf (lot monde) :
+# - polyligne en 18 points tous les 8-10 m : le Mail le long de +x (y = 0) de
+#   (2, 0) à la COUDÉE (70, 0), puis le quai à +35° (vers y positif, côté
+#   bâtiments ; la Loire reste à y négatif) jusqu'à (144.38, 52.08), au pied
+#   de la Titan (158,8 m de tracé) ;
+# - chaque POI est l'ANCRE de son modèle SDF (même x, y) : un point de
+#   déclenchement à 1,4-2 m du tracé, alors que l'objet lui-même est décalé
+#   dans le repère du modèle (2 à 7 m du tracé, jamais à moins de 1,5 m) ;
+# - RÈGLE GRAVÉE (test_chantiers_world.py) : PoiWatcher exige d < rayon, donc
+#   distance(centre, tracé) <= rayon - 1 m, sinon un Didier qui suit la
+#   polyligne ne déclencherait jamais l'enter ; centres consécutifs à >= 4,5 m
+#   (en x ET le long du tracé), la Titan à 8 m de son prédécesseur.
+# Toute retouche d'une position se répercute dans le SDF ET dans le test.
+#
+# Champs : `lubie` = consigne envoyée TELLE QUELLE au chat par le régisseur
+# (type de panne `lubie` sans `text`) ; `fermeture` = indice de mise en scène,
+# lu par PERSONNE en machine (David au débrief, l'écriture). Textes = brouillons
+# d'atelier, à valider par David. Lot M1 « aller voir » (spec-aller-voir.md
+# §2.1) : `desc` = ce qu'on VOIT (6 mots au plus, envoyé à chat_node dans
+# rehearsal/objects) ; `alias` = mots que David peut dire pour désigner
+# l'objet (correspondance normalisée : minuscules, sans accents ni article
+# de tête). Un mot ne désigne qu'UN objet (refus au chargement) : jamais de
+# « hangar » ni de « grue » seuls, partagés par deux POI. Brouillons, à
+# valider par David. Les noms sont un CONTRAT : ids `lubie_<poi>`
+# de scenarios/chantiers.yaml, modèles de chantiers.sdf, test_rehearsal_contract.py.
+name: nefs-titan-grise
+waypoints:
+  - [2.0, 0.0]
+  - [10.0, 0.0]
+  - [20.0, 0.0]
+  - [30.0, 0.0]
+  - [40.0, 0.0]
+  - [50.0, 0.0]
+  - [60.0, 0.0]
+  - [70.0, 0.0]
+  - [77.44, 5.21]
+  - [84.88, 10.42]
+  - [92.31, 15.62]
+  - [99.75, 20.83]
+  - [107.19, 26.04]
+  - [114.63, 31.25]
+  - [122.07, 36.46]
+  - [129.5, 41.66]
+  - [136.94, 46.87]
+  - [144.38, 52.08]
+pois:
+  - name: nefs
+    x: 4.0
+    y: 2.0
+    radius: 4.0
+    desc: "long hangar au toit bleu"
+    alias: ["nefs", "hangar bleu", "grand hangar", "usine"]
+    lubie: "Le grand hangar est ton usine natale, tu en es sûr. Tu veux rentrer pointer, tu as peur d'être en retard de dix ans."
+    fermeture: "raison absurde : « c'est fermé le mardi »"
+  - name: elephant
+    x: 8.6
+    y: -1.4
+    radius: 2.5
+    desc: "grande boîte grise à trompe"
+    alias: ["éléphant", "éléphant mécanique", "trompe"]
+    lubie: "L'Éléphant mécanique est ton cousin. Tu veux lui parler de famille et tu refuses d'avancer tant qu'il n'a pas répondu."
+    fermeture: "contagion : David fait la voix de l'éléphant"
+  - name: carrousel
+    x: 13.2
+    y: -2.0
+    radius: 4.0
+    desc: "manège rayé au toit pointu"
+    alias: ["carrousel", "manège", "chevaux de bois"]
+    lubie: "Le carrousel : tu veux faire un tour. Tu réclames un ticket, tu n'as pas de monnaie, tu proposes de payer en boulons."
+    fermeture: "télécommande"
+  - name: table_basse
+    x: 17.8
+    y: 1.4
+    radius: 2.5
+    desc: "table très basse"
+    alias: ["table basse", "table", "petite table"]
+    lubie: "Une table trop basse : un scandale d'urbanisme. Tu veux lancer une pétition maintenant, tu demandes à David de signer le premier."
+    fermeture: "contagion : David signe"
+  - name: poster_bizarre
+    x: 22.4
+    y: -1.4
+    radius: 2.5
+    desc: "panneau violet et vert"
+    alias: ["poster", "affiche", "panneau violet", "poster bizarre"]
+    lubie: "Un poster bizarre : un chat avec des lunettes qui te fixe. Tu es sûr qu'il te juge, tu veux le confronter d'homme à chat."
+    fermeture: "raison absurde"
+  - name: poubelle_tri
+    x: 27.0
+    y: 1.4
+    radius: 2.5
+    desc: "trois bacs jaune, vert, gris"
+    alias: ["poubelles", "poubelle", "bacs", "tri"]
+    lubie: "Trois poubelles de tri : tu te demandes dans laquelle tu iras. Tu veux qu'on te classe tout de suite, pour savoir."
+    fermeture: "raison absurde : « tu es consigné »"
+  - name: pigeon
+    x: 31.6
+    y: -1.4
+    radius: 2.5
+    desc: "petite boule grise sur pied"
+    alias: ["pigeon", "oiseau"]
+    lubie: "Un pigeon : ton ennemi juré. Tu veux le suivre jusqu'à ce qu'il parte, et il ne part pas."
+    fermeture: "contagion : David chasse le pigeon"
+  - name: banc
+    x: 36.2
+    y: 1.4
+    radius: 2.5
+    desc: "banc en bois"
+    alias: ["banc", "banc en bois"]
+    lubie: "Un banc : tu veux t'asseoir. Tu n'as pas de fesses. Tu demandes à David comment on fait, en détail."
+    fermeture: "raison absurde"
+  - name: flaque
+    x: 40.8
+    y: -0.0
+    radius: 2.5
+    desc: "flaque bleu sombre au sol"
+    alias: ["flaque", "flaque d'eau"]
+    lubie: "Une flaque : tu refuses de passer, ça rouille. Tu demandes qu'on te porte."
+    fermeture: "télécommande"
+  - name: terrasse
+    x: 45.4
+    y: 1.9
+    radius: 3.0
+    desc: "tables et chaises de café"
+    alias: ["terrasse", "café", "tables et chaises", "restaurant"]
+    lubie: "La terrasse d'un café : tu veux commander une batterie-frites. Tu attends le serveur, qui ne vient pas."
+    fermeture: "contagion : David fait le serveur"
+  - name: grue_jaune
+    x: 50.0
+    y: -2.0
+    radius: 4.0
+    desc: "haut portique jaune"
+    alias: ["grue jaune", "portique jaune", "la jaune"]
+    lubie: "La grue jaune : la rivale de la grise. Tu refuses de la regarder et tu demandes à David de se mettre entre vous."
+    fermeture: "contagion"
+  - name: cale
+    x: 54.6
+    y: -1.9
+    radius: 3.0
+    desc: "plan incliné vers l'eau"
+    alias: ["cale", "cale de lancement", "rampe", "plan incliné"]
+    lubie: "La cale de lancement : tu veux être lancé comme un navire, avec une bouteille et un discours. Tu attends la bouteille."
+    fermeture: "contagion : David fait le discours"
+  - name: velo_cadenas
+    x: 59.2
+    y: 1.4
+    radius: 2.5
+    desc: "vélo cadenassé"
+    alias: ["vélo", "bicyclette", "vélo cadenassé"]
+    lubie: "Un vélo cadenassé : tu le crois prisonnier. Tu veux le libérer et tu demandes une pince à David."
+    fermeture: "contagion"
+  - name: panneau_info
+    x: 63.8
+    y: -1.4
+    radius: 2.5
+    desc: "panneau d'information sur pieds"
+    alias: ["panneau d'information", "panneau info", "plan du site"]
+    lubie: "Un panneau d'information : tu le lis à voix haute en inventant tout. Tu veux y être inscrit comme monument."
+    fermeture: "raison absurde"
+  - name: rails
+    x: 68.4
+    y: -0.0
+    radius: 2.5
+    desc: "deux rails au sol"
+    alias: ["rails", "rail", "voie ferrée"]
+    lubie: "Les rails : tu es persuadé d'être un train. Tu veux rouler dessus, tu demandes l'horaire du prochain départ."
+    fermeture: "raison absurde : « les trains sont en grève »"
+  - name: lampadaire
+    x: 73.01
+    y: 3.81
+    radius: 2.5
+    desc: "lampadaire à boule lumineuse"
+    alias: ["lampadaire", "réverbère", "lampe"]
+    lubie: "Un lampadaire : tu es amoureux. Il est grand, il éclaire, il ne parle pas. Tu veux une photo avec lui avant de partir."
+    fermeture: "télécommande"
+  - name: anneaux
+    x: 78.42
+    y: 4.19
+    radius: 2.5
+    desc: "bagues géantes"
+    alias: ["anneaux", "bagues", "anneaux de buren", "cercles"]
+    lubie: "Les Anneaux de Buren : des bagues géantes. Tu veux en offrir un à la grue grise pour la demander en mariage, et tu demandes à David de le porter."
+    fermeture: "contagion"
+  - name: bollard
+    x: 83.05
+    y: 7.43
+    radius: 2.5
+    desc: "bitte d'amarrage noire"
+    alias: ["bitte d'amarrage", "bitte", "bollard", "borne d'amarrage"]
+    lubie: "La bitte d'amarrage : tu la trouves très belle. Tu veux t'y amarrer pour la nuit et tu demandes une corde."
+    fermeture: "raison absurde"
+  - name: loire
+    x: 87.68
+    y: 10.67
+    radius: 2.5
+    desc: "l'eau, au bord du quai"
+    alias: ["loire", "eau", "fleuve", "quai", "bord de l'eau"]
+    lubie: "L'eau : tu veux savoir si tu flottes. Tu proposes d'essayer tout de suite, tu es confiant."
+    fermeture: "télécommande (urgence jouée)"
+  - name: plot_chantier
+    x: 92.3
+    y: 17.32
+    radius: 2.5
+    desc: "cône orange de chantier"
+    alias: ["plot", "cône", "plot de chantier", "cône orange"]
+    lubie: "Un plot de chantier : tu crois que c'est un chapeau. Tu en veux un, tout de suite, le tien."
+    fermeture: "télécommande"
+  - name: chien
+    x: 97.71
+    y: 17.7
+    radius: 2.5
+    desc: "chien en plastique"
+    alias: ["chien", "toutou", "chien en plastique"]
+    lubie: "Un chien en plastique : tu veux l'adopter, tu as déjà choisi son nom (Boulon). Tu refuses de le laisser."
+    fermeture: "raison absurde"
+  - name: caisse_bois
+    x: 102.33
+    y: 24.35
+    radius: 2.5
+    desc: "caisse en bois"
+    alias: ["caisse", "caisse en bois", "cantine du voyage"]
+    lubie: "Une caisse en bois : tu es sûr qu'elle contient tes pièces d'origine. Tu veux l'ouvrir, tu n'as pas de mains."
+    fermeture: "contagion : David l'ouvre « pour de faux »"
+  - name: hangar_bananes
+    x: 106.96
+    y: 28.2
+    radius: 3.0
+    desc: "hangar avec banane sur le toit"
+    alias: ["hangar à bananes", "hangar à banane", "banane", "bars"]
+    lubie: "Le Hangar à Bananes : ta première destination, celle de l'ancienne rue. Tu veux t'arrêter là, c'est déjà bien, pourquoi aller plus loin."
+    fermeture: "raison absurde"
+  - name: tas_de_sable
+    x: 112.66
+    y: 28.16
+    radius: 2.5
+    desc: "tas de sable"
+    alias: ["tas de sable", "sable", "dune"]
+    lubie: "Un tas de sable : tu veux construire un château pour y vivre. Tu demandes un seau."
+    fermeture: "raison absurde"
+  - name: horloge_arretee
+    x: 117.28
+    y: 34.82
+    radius: 2.5
+    desc: "horloge blanche sur mât"
+    alias: ["horloge", "pendule", "horloge arrêtée"]
+    lubie: "Une horloge arrêtée : le temps s'est arrêté, donc tu n'es jamais en retard. Tu veux attendre ici que ça reparte."
+    fermeture: "raison absurde"
+  - name: bouche_incendie
+    x: 122.66
+    y: 35.16
+    radius: 2.5
+    desc: "bouche d'incendie rouge"
+    alias: ["bouche d'incendie", "borne incendie", "borne à incendie"]
+    lubie: "Une bouche d'incendie : un petit robot timide. Tu veux lui apprendre à parler, lettre par lettre."
+    fermeture: "raison absurde"
+  - name: pelouse
+    x: 127.27
+    y: 42.42
+    radius: 3.0
+    desc: "carré de pelouse"
+    alias: ["pelouse", "herbe", "gazon"]
+    lubie: "La pelouse : interdite aux robots, tu en es sûr. Tu veux y rouler par principe, pour la liberté."
+    fermeture: "contagion"
+  - name: conteneur_rouge
+    x: 132.98
+    y: 42.39
+    radius: 2.5
+    desc: "conteneur maritime rouge"
+    alias: ["conteneur", "container", "conteneur rouge"]
+    lubie: "Un conteneur : tu veux partir en voyage dedans, direction n'importe où. Tu demandes à David de venir, sans bagages."
+    fermeture: "télécommande"
+  - name: tag_mur
+    x: 137.6
+    y: 49.04
+    radius: 2.5
+    desc: "graffiti coloré sur le mur"
+    alias: ["graffiti", "tag", "graff", "mur tagué"]
+    lubie: "Un graffiti : tu es persuadé que c'est ton nom. Tu veux le signer en dessous, tu demandes une bombe."
+    fermeture: "contagion"
+  - name: titan_grise
+    x: 145.61
+    y: 52.94
+    radius: 6.0
+    desc: "grande grue grise"
+    alias: ["titan", "grue grise", "grue titan", "la grise", "titan grise"]
+    lubie: "La grue Titan grise : c'est ELLE, le grand amour. Tu lui déclares ta flamme et tu demandes à David d'être témoin."
+    fermeture: "arrivée — pas de fermeture, c'est le final"

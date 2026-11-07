@@ -10,12 +10,14 @@ from geometry_msgs.msg import Twist
 SHOTS = [float(x) for x in sys.argv[1].split(",")]
 DUR = float(sys.argv[2]); OUT = "/tmp/demo_out"
 import os; os.makedirs(OUT, exist_ok=True)
+# Namespace du robot (lot L1b) : noms relatifs + namespace=/<ROBOT_NAME>, comme les nœuds observés.
+NS = "/" + os.environ.get("ROBOT_NAME", "didier")
 class C(Node):
     def __init__(s):
-        super().__init__("demo_capture"); s.t0 = time.monotonic(); s.img = None; s.traj = []; s.cmd = 0.0; s.done = set()
+        super().__init__("demo_capture", namespace=NS); s.t0 = time.monotonic(); s.img = None; s.traj = []; s.cmd = 0.0; s.done = set()
         s.create_subscription(Image, "camera/image_raw", lambda m: setattr(s, "img", m), 1)
-        s.create_subscription(Twist, "/cmd_vel", lambda m: setattr(s, "cmd", m.linear.x), 1)
-        s.create_subscription(Odometry, "/ground_truth/odom", s.odom, 1)
+        s.create_subscription(Twist, "cmd_vel", lambda m: setattr(s, "cmd", m.linear.x), 1)
+        s.create_subscription(Odometry, "ground_truth/odom", s.odom, 1)
         s.create_timer(0.2, s.tick)
     def odom(s, m):
         t = time.monotonic() - s.t0; p = m.pose.pose.position

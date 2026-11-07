@@ -2,7 +2,7 @@
 
 Chemins : le package lui-même, theatre_contrats (contrat commun), la racine
 de legacy/dadou_robot_ros (robot.diagnostic.journal, module PUR) et
-robot_rehearsal (garde-fou check_domain + contrats du régisseur, purs).
+didier_rehearsal (garde-fou check_domain + contrats du régisseur, purs).
 Lancer : legacy/dadou_robot_ros/.venv/bin/python -m pytest packages/didier_jeu/test -q
 """
 import copy
@@ -17,7 +17,7 @@ PKG = os.path.dirname(ICI)
 MONO = os.path.dirname(os.path.dirname(PKG))
 LEGACY_ROBOT = os.path.join(MONO, "legacy", "dadou_robot_ros")
 for chemin in (PKG, os.path.join(MONO, "packages", "theatre_contrats"), LEGACY_ROBOT,
-               os.path.join(LEGACY_ROBOT, "conf", "ros2_dependencies", "robot_rehearsal")):
+               os.path.join(MONO, "packages", "didier_rehearsal")):
     if chemin not in sys.path:
         sys.path.insert(0, chemin)
 

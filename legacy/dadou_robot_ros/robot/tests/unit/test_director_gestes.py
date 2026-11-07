@@ -20,7 +20,7 @@ from robot.tests.unit.test_director_node import (LUBIE, _cmd, _creer, _echos, _e
                                                  _journal, _publie, _recevoir, _voix,
                                                  regisseur)  # noqa: F401 (fixture)
 from robot.tests.unit.test_director_node_goto import _odom
-from robot_rehearsal.director import decide_forward, decide_turn
+from didier_rehearsal.director import decide_forward, decide_turn
 
 
 def _t(intent, pose_known=True, off_by_david=False):
@@ -171,7 +171,7 @@ def test_node_go_apres_pivot_rejoint(regisseur, monkeypatch, tmp_path):
 
 def test_litteraux_partages_avec_chat_node():
     """Chaînes et bornes gravées des DEUX côtés (chat_node, dépôt vision)."""
-    from robot_rehearsal import contracts
+    from didier_rehearsal import contracts
     assert (contracts.CHAT_MOVE_TURN_CMD, contracts.CHAT_MOVE_FORWARD_CMD) == ("tourner", "avancer")
     assert contracts.TURN_DEG_COMPAT == {"gauche": 90.0, "droite": -90.0, "demi_tour": 180.0}
     assert (contracts.TURN_MAX_DEG, contracts.TURN_TIMEOUT_S) == (180.0, 15.0)

@@ -21,6 +21,10 @@ services:
       # toute connexion X. Sans la variable, Xlib retombe sur /root/.Xauthority
       # (monté ci-dessous depuis ~/.Xauthority de pi : cookie valide).
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
+      # Nom du robot = namespace ROS ABSOLU de tous les nœuds (lot L1b) : /didier/…
+      # par défaut. Robot, vision et télécommande d'un même Didier DOIVENT avoir le
+      # même nom (sinon ils ne s'entendent plus) ; la CLI ros2 doit préfixer.
+      - ROBOT_NAME=${ROBOT_NAME:-didier}
       # Profil du boîtier de faders (controller/input/sliders_mapping.py) :
       # "default" (cou / roues, historique) ou "repetition" (fader 1 = vitesse du
       # cheminement de Didier en salle de répétition simulée — à utiliser AVEC
@@ -49,7 +53,7 @@ services:
       # que robot/vision) — ⚠️ à faire AVANT de déployer ce lot.
       - ../../../../robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
-      #- ../../../../robot_bringup:/home/ros2_ws/src/robot_bringup
+      #- ../../../../didier_bringup:/home/ros2_ws/src/didier_bringup
       - ../../../../../log:/home/ros2_ws/log
       - ../../../../../build:/home/ros2_ws/build
       - ../../../../../install:/home/ros2_ws/install

@@ -1,9 +1,9 @@
-"""Tests du deadman logiciel cmd_vel (robot_drive.deadman).
+"""Tests du deadman logiciel cmd_vel (didier_drive.deadman).
 
 Horloge passée en paramètre : pas besoin de monkeypatcher le temps réel.
 """
 
-from robot_drive.deadman import TwistDeadman
+from didier_drive.deadman import TwistDeadman
 
 
 def test_never_fed_is_expired():

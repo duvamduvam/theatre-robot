@@ -30,3 +30,8 @@ essais/voix/sorties/
 docs/pictures/stock/
 docs/pictures/robot-2026-09-03/
 docs/pictures/robot-2026-11-05/
+
+# Sha git déployé (L1c) : écrit SUR LE ROBOT par Ansible au rsync, jamais sur le PC.
+# S'il existait ici, la sim (conf/ monté dans le conteneur) afficherait un faux sha
+# au lieu de "dev". catalogue_node ne le lit que si deploy_sha_file le désigne.
+conf/DEPLOY_SHA

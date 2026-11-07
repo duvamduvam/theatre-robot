@@ -16,7 +16,7 @@
   <exec_depend>theatre_contrats</exec_depend>
   <!-- Garde-fou SIM-ONLY (check_domain) et contrats du régisseur (topics
        rehearsal/*, route_*) : importés, jamais recopiés. -->
-  <exec_depend>robot_rehearsal</exec_depend>
+  <exec_depend>didier_rehearsal</exec_depend>
   <!-- Journal JSONL (robot.diagnostic.journal, module PUR du paquet robot). -->
   <exec_depend>robot</exec_depend>
   <!-- Behaviour trees (apt ros-jazzy-py-trees, 2.6.0 au 02/11 ; même version

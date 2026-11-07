@@ -1,4 +1,4 @@
-"""Arbitrage « aller voir » du régisseur (robot_rehearsal.director, lot M1,
+"""Arbitrage « aller voir » du régisseur (didier_rehearsal.director, lot M1,
 spec-aller-voir.md §2.1, §3) — logique PURE, valeurs GRAVÉES.
 
 Mutations du lot M1 (doivent rougir) :
@@ -9,9 +9,9 @@ Mutations du lot M1 (doivent rougir) :
 """
 import json
 
-from robot_rehearsal.director import (GotoPolicy, VoiceMove, decide_goto, goto_order, objects_payload,
+from didier_rehearsal.director import (GotoPolicy, VoiceMove, decide_goto, goto_order, objects_payload,
                                       resolve_object)
-from robot_rehearsal.route import Poi
+from didier_rehearsal.route import Poi
 
 ANNEAUX = Poi("anneaux", 78.42, 4.19, 2.5, desc="bagues géantes",
               alias=("anneaux", "bagues", "anneaux de buren", "cercles"))
@@ -169,8 +169,8 @@ def test_policy_fader_reprend_seulement_arrive_et_sur_un_geste():
 
 
 def test_skip_poi_saute_seulement_les_lubies_en_attente_de_ce_poi():
-    from robot_rehearsal.director import Director
-    from robot_rehearsal.scenario import load_scenario
+    from didier_rehearsal.director import Director
+    from didier_rehearsal.scenario import load_scenario
     sc = load_scenario({"name": "e", "seed": 0, "duration_s": 300, "faults": [
         {"id": "lubie_banc", "type": "lubie", "t": "poi", "poi": "banc", "duration_s": 60},
         {"id": "lubie_flaque", "type": "lubie", "t": "poi", "poi": "flaque", "duration_s": 60},

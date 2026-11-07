@@ -1,4 +1,4 @@
-"""Cheminement de Didier dans la rue simulée (robot_rehearsal.route) — logique
+"""Cheminement de Didier dans la rue simulée (didier_rehearsal.route) — logique
 PURE, valeurs GRAVÉES à la main (règle du 14/09 : un test qui recalcule
 l'attendu avec la fonction testée ne teste rien).
 
@@ -14,8 +14,8 @@ import math
 
 import pytest
 
-from robot_rehearsal.contracts import ABS_MAX_ANG, ABS_MAX_LIN
-from robot_rehearsal.route import (PoiWatcher, Route, RouteConfig, RouteError, RouteFollower,
+from didier_rehearsal.contracts import ABS_MAX_ANG, ABS_MAX_LIN
+from didier_rehearsal.route import (PoiWatcher, Route, RouteConfig, RouteError, RouteFollower,
                                    load_route, Poi, wrap_angle, yaw_from_quaternion)
 
 DROITE = Route("droite", ((0.0, 0.0), (10.0, 0.0)), ())

@@ -56,3 +56,13 @@ JEU_CHAT_MOVE = 'jeu/chat_move'
 # StringTime volatile : une ligne du journal JSONL du sélecteur par message
 # (format boîte noire, robot.diagnostic.journal), pour la page scène.
 JEU_JOURNAL = 'jeu/journal'
+
+# ---------------------------------------------------------------- catalogue + version (lot L1c)
+# StringTime LATCHÉ (qos.latched() des DEUX côtés), publié par catalogue_node
+# (didier_web) : msg = JSON de l'objet des 6 familles {faces, audios, animations,
+# relays, robot_lights, visuals}. Republié seulement quand il change (L1d : écrire
+# un fichier suffit). Sert la télécommande même sans pont web.
+CATALOGUE = 'catalogue'
+# StringTime LATCHÉ, même nœud : msg = json.dumps du sha git déployé (suffixe
+# "-dirty" si l'arbre de travail l'était au rsync) ou "dev" (sim, pas de fichier).
+DEPLOY_SHA = 'deploy_sha'

@@ -19,4 +19,4 @@ else
 fi
 
 source /home/ros2_ws/install/setup.bash
-ros2 launch robot_bringup robot_app.launch.py
+ros2 launch didier_bringup robot_app.launch.py

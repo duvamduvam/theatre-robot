@@ -1,0 +1,36 @@
+# Itinéraire de la rue (monde didier_sim/worlds/rue.sdf) : le trajet vers le
+# Hangar à Bananes, première marche de l'échelle (étude §1, §12).
+#
+# Repère = celui du monde : x le long de la rue, y en travers. Le trottoir
+# occupe y ∈ [-1,5 ; 1,5], x ∈ [-5 ; 65], façades à y = 1,5 ; la chaussée
+# (12 cm plus bas) commence à y = -1,5. Didier est posé en (0, 0).
+# Le tracé reste à y ≈ -0,3…-0,9 : loin des façades, et il S'ÉCARTE au niveau
+# du chien (36, 0.3) et de la terrasse (44-48, y ≥ 0,5). Pas d'évitement
+# dynamique : si Didier sort du tracé (télécommande, lubie), il se bloque sur
+# le mobilier — c'est voulu (étude §2).
+#
+# Les POI sont les « objets aimables » de la rue : chaque enter/exit devient
+# un événement (rehearsal/poi_event) que le régisseur (lot R2) traduit en
+# instruction de jeu. Les noms sont un CONTRAT (test_rehearsal_contract.py).
+name: hangar-a-bananes
+waypoints:
+  - [2.0, -0.3]
+  - [10.0, -0.3]
+  - [17.0, -0.6]
+  - [25.0, -0.3]
+  - [34.0, -0.8]
+  - [38.0, -0.8]
+  - [44.0, -0.9]
+  - [49.0, -0.9]
+  - [55.0, -0.3]
+  - [60.0, -0.3]
+pois:
+  - {name: lampadaire_1,   x: 10.0, y: 1.2,  radius: 2.5}
+  - {name: banc,           x: 18.0, y: 1.1,  radius: 2.5}
+  - {name: boulangerie,    x: 28.0, y: 1.45, radius: 4.0}
+  - {name: lampadaire_2,   x: 30.0, y: 1.2,  radius: 2.5}
+  - {name: chien,          x: 36.0, y: 0.3,  radius: 2.0}
+  - {name: poubelle,       x: 40.0, y: 1.15, radius: 2.5}
+  - {name: terrasse,       x: 46.0, y: 0.9,  radius: 3.0}
+  - {name: lampadaire_3,   x: 50.0, y: 1.2,  radius: 2.5}
+  - {name: hangar_bananes, x: 62.0, y: -1.0, radius: 6.0}

@@ -18,7 +18,14 @@ COPY medias/ /home/ros2_ws/src/robot/medias/
 
 COPY dadou_utils_ros/ /home/ros2_ws/src/robot/dadou_utils_ros/
 
-COPY conf/ros2_dependencies/ /home/ros2_ws/src/
+# Les 6 packages ROS autonomes (L1e-1 : ex-conf/ du robot) : contextes nommés
+# du compose, chemins de la disposition déployée ros2_ws/src/<package>.
+COPY --from=didier_bringup . /home/ros2_ws/src/didier_bringup
+COPY --from=didier_description . /home/ros2_ws/src/didier_description
+COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
+COPY --from=didier_rehearsal . /home/ros2_ws/src/didier_rehearsal
+COPY --from=didier_sim . /home/ros2_ws/src/didier_sim
+COPY --from=didier_web . /home/ros2_ws/src/didier_web
 # Packages communs du mono-dépôt (lot L1a) : contextes nommés du compose.
 COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats

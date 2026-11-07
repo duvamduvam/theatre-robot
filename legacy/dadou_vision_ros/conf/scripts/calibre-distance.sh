@@ -1,13 +1,13 @@
 #!/bin/bash
-# Calibration hauteur de silhouette (/vision/person_box, champ y) -> mètres
+# Calibration hauteur de silhouette (<namespace>/vision/person_box, champ y) -> mètres
 # réels (lot D0 outillage, cf. dadou_robot_ros/docs/
 # etude-declenchement-conversation.md §5.2/§8/§7 : "calibration hauteur de
 # silhouette -> mètres (1,2 / 2,4 / 3,6 m, adulte ET enfant)").
 #
-# QUOI : échantillonne 5 s le topic /vision/person_box (PointStamped : point.y
+# QUOI : échantillonne 5 s le topic $NS/vision/person_box (PointStamped : point.y
 #        = hauteur de silhouette, proxy monoculaire EMA, cf. §3 du plan),
 #        calcule moyenne et écart-type, ajoute une ligne au CSV cumulatif de
-#        campagne. À LANCER DANS LE CONTENEUR vision (ros2 topic echo exige
+#        campagne. À LANCER DANS LE CONTENEUR vision (la CLI ros2 exige
 #        l'environnement ROS sourcé -- ce script fait le sourcing lui-même,
 #        MÊME motif que conf/scripts/launch-ros-in-docker.sh) :
 #          docker exec -it dadou-vision-container \
@@ -50,17 +50,20 @@ CSV="$OUT_DIR/calibration-distance.csv"
 # être absent selon l'état du build, cf. sentinelle CHANGE du même script).
 source /opt/ros/"${ROS_DISTRO}"/setup.sh
 [ -f /home/ros2_ws/install/setup.bash ] && source /home/ros2_ws/install/setup.bash
+# Namespace du robot (lot L1b) : person_tracker publie /<ROBOT_NAME>/vision/person_box
+# (défaut /didier/) ; un nom relatif tapé dans la CLI se résoudrait à la racine.
+NS="/${ROBOT_NAME:-didier}"
 
-echo "Échantillonnage 5 s de /vision/person_box à ${DISTANCE_M} m..."
-RAW="$(timeout 5 ros2 topic echo /vision/person_box --csv 2>/dev/null)"
+echo "Échantillonnage 5 s de $NS/vision/person_box à ${DISTANCE_M} m..."
+RAW="$(timeout 5 ros2 topic echo $NS/vision/person_box --csv 2>/dev/null)"
 
 if [ -z "$RAW" ]; then
-  echo "Aucun échantillon reçu sur /vision/person_box -- person_tracker_node" \
+  echo "Aucun échantillon reçu sur $NS/vision/person_box -- person_tracker_node" \
        "est-il lancé et une personne bien visible par la caméra ?" >&2
   exit 1
 fi
 
-# Colonnes CSV de geometry_msgs/msg/PointStamped (ros2 topic echo --csv
+# Colonnes CSV de geometry_msgs/msg/PointStamped (la sortie --csv de ros2 topic echo
 # aplatit les champs dans l'ordre du message) : sec,nanosec,frame_id,x,y,z --
 # le champ y (5e colonne) est la hauteur de silhouette [0..1], cf. §3 du plan
 # ("hauteur de silhouette (proxy monoculaire, EMA)").

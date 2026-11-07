@@ -5,6 +5,12 @@
     ros2 launch vision vision.launch.py score_threshold:=0.5 ema_alpha:=0.3
     ros2 launch vision vision.launch.py chat_enabled:=true
 
+Namespace (lot L1b) : tous les nœuds vivent sous /<ROBOT_NAME>/ (défaut
+/didier/, variable posée par les docker-compose) : /didier/vision/person,
+/didier/vision/status… — le MÊME nom que le robot qu'ils servent, sinon le
+robot n'entend pas sa vision. La CLI doit préfixer (`ros2 topic echo
+/didier/vision/person_box`).
+
 POURQUOI un launch file plutôt que deux `ros2 run ... &` dans
 conf/scripts/launch-ros-in-docker.sh (option envisagée par la mission V1) :
 un seul process `ros2 launch` supervise proprement l'arrêt de tous les nodes
@@ -12,8 +18,8 @@ un seul process `ros2 launch` supervise proprement l'arrêt de tous les nodes
 bash à maintenir), et les paramètres de person_tracker (camera_device,
 model_path, score_threshold, ema_alpha) sont déclarés ici avec leurs défauts
 plutôt qu'éparpillés en arguments CLI dans le script bash. Pattern déjà en
-place côté robot pour la chaîne roues (conf/ros2_dependencies/robot_drive/
-launch/drive.launch.py) : même choix pour rester cohérent dans le parc.
+place côté robot pour la chaîne roues (packages/didier_drive/
+launch/drive.launch.py du mono-dépôt) : même choix pour rester cohérent dans le parc.
 
 Défauts alignés sur person_tracker_node.py (DEFAULT_MODEL_PATH etc.) — s'ils
 divergent un jour, ce fichier prime au runtime (les défauts du node ne
@@ -42,10 +48,10 @@ whisper_model:=tiny` — un lancement direct hors launch, pas un argument de
 ce fichier.
 """
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, GroupAction
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch.substitutions import EnvironmentVariable, LaunchConfiguration
+from launch_ros.actions import Node, PushRosNamespace
 from launch_ros.parameter_descriptions import ParameterValue
 
 
@@ -101,52 +107,63 @@ def generate_launch_description():
                         " CHAT_REFLEXION est aussi posé",
         ),
 
-        # V0 : heartbeat, preuve de vie ROS bout-en-bout (déjà validé sur le
-        # Pi 5, gardé tel quel — /vision/status ne doit jamais disparaître,
-        # même si person_tracker échoue à démarrer faute de caméra/modèle).
-        Node(package="vision", executable="vision_status", name="vision_status"),
+        DeclareLaunchArgument("robot_name",
+                              default_value=EnvironmentVariable("ROBOT_NAME", default_value="didier"),
+                              description="Nom du robot = namespace ABSOLU de tous les nœuds"
+                                          " (défaut : variable ROBOT_NAME, sinon didier)"),
 
-        # V1 : suivi de personne -> /vision/person (silence = personne perdue,
-        # cf. ARCHITECTURE.md et person_tracker_node.py).
-        Node(
-            package="vision",
-            executable="person_tracker",
-            name="person_tracker",
-            parameters=[{
-                "camera_device": camera_device,
-                "model_path": model_path,
-                "score_threshold": score_threshold,
-                "ema_alpha": ema_alpha,
-                "video_fps": video_fps,
-                # ParameterValue(str) : sans lui, launch_ros relit la chaîne comme du
-                # YAML et une valeur vide (robot réel) deviendrait None -> rejet.
-                "sim_camera_topic": ParameterValue(sim_camera_topic, value_type=str),
-            }],
-        ),
+        # Lot L1b : UN groupe, UN PushRosNamespace absolu (/didier/... par défaut),
+        # jamais de namespace= par nœud (on l'oublierait au prochain).
+        GroupAction([
+            PushRosNamespace(["/", LaunchConfiguration("robot_name")]),
 
-        # V2 : conversation temps réel -> topics face/animation existants du
-        # robot (cf. ARCHITECTURE.md, chat_node.py). Lancé UNIQUEMENT si
-        # chat_enabled:=true — sinon ce Node n'apparaît même pas dans la
-        # description résolue (IfCondition), pas de tentative de démarrage
-        # avortée qui polluerait les logs. Aucun paramètre transmis : le node
-        # construit ses propres défauts depuis vision_config.config (cf.
-        # POURQUOI en tête de fichier) — un réglage ponctuel passe par
-        # `ros2 run vision chat --ros-args -p <param>:=<valeur>`.
-        Node(
-            package="vision",
-            executable="chat",
-            name="chat",
-            condition=IfCondition(chat_enabled),
-        ),
+            # V0 : heartbeat, preuve de vie ROS bout-en-bout (déjà validé sur le
+            # Pi 5, gardé tel quel — vision/status ne doit jamais disparaître,
+            # même si person_tracker échoue à démarrer faute de caméra/modèle).
+            Node(package="vision", executable="vision_status", name="vision_status"),
 
-        # Metteur en scène intérieur (boucle de réflexion, étude dadou_robot_ros
-        # docs/etude-niveaux-reflexion.md) : lancé UNIQUEMENT si
-        # reflection_enabled:=true. Ne commande jamais le corps. Défauts
-        # (destination, modèles) : vision_config.config, comme pour chat.
-        Node(
-            package="vision",
-            executable="reflection",
-            name="reflection",
-            condition=IfCondition(reflection_enabled),
-        ),
+            # V1 : suivi de personne -> vision/person (silence = personne perdue,
+            # cf. ARCHITECTURE.md et person_tracker_node.py).
+            Node(
+                package="vision",
+                executable="person_tracker",
+                name="person_tracker",
+                parameters=[{
+                    "camera_device": camera_device,
+                    "model_path": model_path,
+                    "score_threshold": score_threshold,
+                    "ema_alpha": ema_alpha,
+                    "video_fps": video_fps,
+                    # ParameterValue(str) : sans lui, launch_ros relit la chaîne comme du
+                    # YAML et une valeur vide (robot réel) deviendrait None -> rejet.
+                    "sim_camera_topic": ParameterValue(sim_camera_topic, value_type=str),
+                }],
+            ),
+
+            # V2 : conversation temps réel -> topics face/animation existants du
+            # robot (cf. ARCHITECTURE.md, chat_node.py). Lancé UNIQUEMENT si
+            # chat_enabled:=true — sinon ce Node n'apparaît même pas dans la
+            # description résolue (IfCondition), pas de tentative de démarrage
+            # avortée qui polluerait les logs. Aucun paramètre transmis : le node
+            # construit ses propres défauts depuis vision_config.config (cf.
+            # POURQUOI en tête de fichier) — un réglage ponctuel passe par
+            # `ros2 run vision chat --ros-args -p <param>:=<valeur>`.
+            Node(
+                package="vision",
+                executable="chat",
+                name="chat",
+                condition=IfCondition(chat_enabled),
+            ),
+
+            # Metteur en scène intérieur (boucle de réflexion, étude dadou_robot_ros
+            # docs/etude-niveaux-reflexion.md) : lancé UNIQUEMENT si
+            # reflection_enabled:=true. Ne commande jamais le corps. Défauts
+            # (destination, modèles) : vision_config.config, comme pour chat.
+            Node(
+                package="vision",
+                executable="reflection",
+                name="reflection",
+                condition=IfCondition(reflection_enabled),
+            ),
+        ]),
     ])

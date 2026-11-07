@@ -51,7 +51,7 @@ dadou_vision_ros/
 ```
 
 Supprimé à la refonte : MQTT (essais), torch/whisper/blinka/pysftp (jamais utilisés),
-tests lumières/neopixel (copiés du robot), `conf/ros2_dependencies/` dupliqué (le vrai
+tests lumières/neopixel (copiés du robot), dossier de packages ROS dupliqué (le vrai
 `robot_interfaces` arrive par le rsync ansible comme sur les autres machines ; copie
 unique dans `packages/robot_interfaces` du mono-dépôt depuis le lot L1a, avec
 `packages/theatre_contrats` — contrat commun, topics `vision/person*` et `vision/status`

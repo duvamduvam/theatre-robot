@@ -47,7 +47,7 @@ TASK_MAX_S = 180.0
 # _abandon_goto) : la tâche attend l'issue du SIEN, rien à faire.
 SUPERSEDED_REASON = "goto_suivant"
 
-# Abandons par une borne de manœuvre (robot_rehearsal/goto.py) qui POURSUIVENT
+# Abandons par une borne de manœuvre (didier_rehearsal/goto.py) qui POURSUIVENT
 # la tâche : Didier dit où il en est et tente la suite — avec la raison en
 # clair pour le LLM (textes gravés dans les tests). Liste FERMÉE (défaut sûr).
 CONTINUE_REASONS = {

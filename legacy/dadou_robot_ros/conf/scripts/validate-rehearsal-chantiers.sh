@@ -21,21 +21,37 @@
 #                       scenario_end présent
 source /opt/ros/${ROS_DISTRO}/setup.sh
 source /home/ros2_ws/install/setup.bash
+# Namespace du robot (lot L1b) : les nœuds vivent sous /<ROBOT_NAME>/ (défaut
+# /didier/). Un nom RELATIF tapé dans la CLI se résout à la RACINE, pas dans ce
+# namespace : chaque topic est donc préfixé par $NS, placé JUSTE APRÈS le verbe
+# (`ros2 topic pub $NS/x …`, options après) — forme gravée par
+# robot/tests/unit/test_namespace_contract.py.
+NS="/${ROBOT_NAME:-didier}"
 JDIR=/home/ros2_ws/log/rehearsal
-ROUTE_YAML=/home/ros2_ws/src/robot_rehearsal/config/chantiers.yaml
-SCEN_YAML=/home/ros2_ws/src/robot_rehearsal/config/scenarios/chantiers.yaml
+ROUTE_YAML=/home/ros2_ws/src/didier_rehearsal/config/chantiers.yaml
+SCEN_YAML=/home/ros2_ws/src/didier_rehearsal/config/scenarios/chantiers.yaml
 CAP=/tmp/vr3-capture; mkdir -p $CAP
-num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo --once "$1" --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
+# TYPE EXPLICITE sur chaque `ros2 topic echo` (06/11) : sans lui, le CLI interroge
+# d'abord le graphe (daemon) pour deviner le type ; s'il ne voit pas encore l'éditeur il
+# sort aussitôt (« does not appear to be published yet ») et la capture reste VIDE —
+# 3 KO sur 4 le 06/11 venaient de là. Avec le type, il s'abonne tout de suite et reçoit
+# dès que DDS a apparié (mesuré : premier message en 0,8 s).
+# num <topic préfixé $NS/…> <champ> [type, défaut Odometry]
+num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo $1 ${3:-nav_msgs/msg/Odometry} --once --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
 # SALVE de 5 s (10 envois à 2 Hz) et pas `-1` : sur le PC de dev, un CLI ros2
 # fraîchement lancé met 2 à 4 s à être découvert (erreurs multicast
 # IP_ADD_MEMBERSHIP, ~50 conteneurs) — un message unique, et même une salve
 # de 1 s, partent dans le vide (vécu le 14/10 : `route on` et `start` perdus,
 # Didier immobile 4 min). Toutes les commandes envoyées ici sont idempotentes
 # (on/off/restart/vitesse/start) : les doublons ne font que des warnings.
-P() { timeout 20 ros2 topic pub -t 10 -r 2 "$1" robot_interfaces/msg/StringTime "{msg: \"$2\"}" >/dev/null 2>&1; }
+# P <topic RELATIF au robot (route, route_speed, rehearsal/cmd)> <msg> : préfixé ici.
+P() { timeout 20 ros2 topic pub $NS/$1 robot_interfaces/msg/StringTime "{msg: \"$2\"}" -t 10 -r 2 >/dev/null 2>&1; }
+# --qos-reliability reliable OBLIGATOIRE avec transient_local : un lecteur best-effort (défaut
+# du CLI quand le type est donné) ne reçoit PAS l'historique latché — mesuré le 06/11 (vide
+# sans, « on » avec ; rclpy reliable : 2,6 s).
 # Route en BOUCLE FERMÉE : on renvoie `on`/`off` jusqu'à ce que l'état latché
 # route_state le confirme (même logique que la relance du régisseur après kill).
-ROUTE() { for i in 1 2; do P route "$1"; st=$(timeout 6 ros2 topic echo --once route_state --field msg --qos-durability transient_local 2>/dev/null | head -1); [ "$st" = "$1" ] && return 0; done; echo "  ⚠️ route_state ≠ $1 après 2 salves (dernier : ${st:-aucun})"; return 1; }
+ROUTE() { for i in 1 2; do P route "$1"; st=$(timeout 6 ros2 topic echo $NS/route_state robot_interfaces/msg/StringTime --once --field msg --qos-durability transient_local --qos-reliability reliable 2>/dev/null | head -1); [ "$st" = "$1" ] && return 0; done; echo "  ⚠️ route_state ≠ $1 après 2 salves (dernier : ${st:-aucun})"; return 1; }
 ok=0; ko=0
 verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  ❌ $2"; ko=$((ko+1)); fi; }
 J() { ls -t $JDIR/*_chantiers.jsonl 2>/dev/null | head -1; }
@@ -55,9 +71,9 @@ jpid=$(basename "$(J)" 2>/dev/null | cut -d_ -f3)
 [ -n "$jpid" ] && kill -0 "$jpid" 2>/dev/null || { echo "PRÉCONDITION : aucun régisseur vivant avec le scénario chantiers (rehearsal.launch.py route:=chantiers scenario:=chantiers ?)"; exit 2; }
 
 # Captures des topics que chat_node consommera : fichiers relus à la fin.
-timeout 1000 ros2 topic echo chat_instruction --field msg > $CAP/instruction.txt 2>/dev/null &
-timeout 1000 ros2 topic echo rehearsal/chat_fault --field msg > $CAP/chat_fault.txt 2>/dev/null &
-timeout 1000 ros2 topic echo route_speed --field msg > $CAP/route_speed.txt 2>/dev/null &
+timeout 1000 ros2 topic echo $NS/chat_instruction robot_interfaces/msg/StringTime --field msg > $CAP/instruction.txt 2>/dev/null &
+timeout 1000 ros2 topic echo $NS/rehearsal/chat_fault robot_interfaces/msg/StringTime --field msg > $CAP/chat_fault.txt 2>/dev/null &
+timeout 1000 ros2 topic echo $NS/route_speed robot_interfaces/msg/StringTime --field msg > $CAP/route_speed.txt 2>/dev/null &
 sleep 2
 
 echo "=== T1 départ + start $(date +%T) ==="
@@ -69,13 +85,13 @@ timeout 10 gz service -s /world/stage/set_pose --reqtype gz.msgs.Pose --reptype 
 sleep 2; P route_speed 1.0; P rehearsal/cmd start; T0=$(date +%s); ROUTE on; sleep 3
 # Verdict PAR L'EFFET (Didier avance), pas par l'état : sur le PC de dev, la
 # découverte DDS du CLI ros2 est capricieuse (erreurs multicast
-# IP_ADD_MEMBERSHIP, ~50 conteneurs) — `ros2 topic echo route_state` peut ne
+# IP_ADD_MEMBERSHIP, ~50 conteneurs) — `ros2 topic echo $NS/route_state` peut ne
 # rien voir alors que les nodes, eux, se parlent (vécu le 14/10).
 # Seuil BAS (0,3 m) : le premier POI (les Nefs, rayon 4 m à 2 m du tracé) est
 # franchi à ~0,5 m du départ et, s'il est tiré, sa lubie ARRÊTE Didier là
 # (vécu au run 5 du 14/10 : x = 0,69 m, verdict faux avec un seuil à 1 m).
 # T2 vérifie ensuite l'arrêt et la reprise ; ici on ne juge que « il est parti ».
-sleep 6; x1=$(num /ground_truth/odom pose.pose.position.x); echo "  x après 9 s : $x1"
+sleep 6; x1=$(num $NS/ground_truth/odom pose.pose.position.x); echo "  x après 9 s : $x1"
 verdict "$(python3 -c "print(1 if '$x1'!='NaN' and float('$x1') > 0.3 else 0)")" "route on : Didier est parti (x > 0,3 m après 9 s)"
 verdict "$(has scenario_start && echo 1 || echo 0)" "journal : scenario_start"
 # Les lubies tirées (celles qui sont DANS la timeline), dans l'ordre du YAML.
@@ -106,13 +122,13 @@ echo "=== T2 première lubie : arrêt, fermeture au fader, consigne posée puis 
 first=$(echo $drawn | cut -d' ' -f1)
 for i in $(seq 1 400); do hasid fault_start $first && break; sleep 1; done
 verdict "$(hasid fault_start $first && echo 1 || echo 0)" "fault_start de la première lubie tirée ($first)"
-sleep 2.5; c0=$(num cmd_vel_follow linear.x); echo "  cmd_vel_follow pendant la lubie : $c0"
+sleep 2.5; c0=$(num $NS/cmd_vel_follow linear.x geometry_msgs/msg/Twist); echo "  cmd_vel_follow pendant la lubie : $c0"
 verdict "$(python3 -c "print(1 if '$c0'!='NaN' and abs(float('$c0'))<1e-6 else 0)")" "lubie : Didier s'arrête (route_speed 0 -> consigne nulle)"
 # La fermeture « télécommande » : David BOUGE le fader (revue du 14/10 : une
 # valeur externe qui diffère de > 0,05 de celle d'avant la lubie la termine
 # tout de suite — ici 1.0 -> 0.6 ; renvoyer 1.0 ne fermerait rien).
 P route_speed 0.6
-sleep 2.5; c1=$(num cmd_vel_follow linear.x); echo "  cmd_vel_follow après le fader : $c1"
+sleep 2.5; c1=$(num $NS/cmd_vel_follow linear.x geometry_msgs/msg/Twist); echo "  cmd_vel_follow après le fader : $c1"
 verdict "$(python3 -c "print(1 if '$c1'!='NaN' and abs(float('$c1'))>1e-3 else 0)")" "fermeture au fader : Didier repart avant la fin de la lubie"
 for i in $(seq 1 20); do hasid fault_stop $first && break; sleep 1; done
 verdict "$(hasid fault_stop $first && echo 1 || echo 0)" "fault_stop de la première lubie"
@@ -139,11 +155,11 @@ while [ $(( $(date +%s) - T0 )) -lt 880 ]; do
     sleep 8; P route on; relance=1   # respawn 5 s, puis David relance
     echo "  reboot_sans_reprise vu -> « route on » renvoyé (David relance) $(date +%T)"
   fi
-  xi=$(timeout 2 ros2 topic echo --once /ground_truth/odom --field pose.pose.position.x 2>/dev/null | grep -E -m1 '^-?[0-9]')
+  xi=$(timeout 2 ros2 topic echo $NS/ground_truth/odom nav_msgs/msg/Odometry --once --field pose.pose.position.x 2>/dev/null | grep -E -m1 '^-?[0-9]')
   python3 -c "import sys; sys.exit(0 if float('${xi:-nan}') >= float('$XEND') - 3.0 else 1)" 2>/dev/null && break
   sleep 1
 done
-x=$(num /ground_truth/odom pose.pose.position.x); echo "  x final : $x ($(( $(date +%s) - T0 )) s) ; relance jouée : $relance"
+x=$(num $NS/ground_truth/odom pose.pose.position.x); echo "  x final : $x ($(( $(date +%s) - T0 )) s) ; relance jouée : $relance"
 verdict "$(python3 -c "print(1 if '$x'!='NaN' and float('$x') >= float('$XEND') - 3.0 else 0)")" "arrivée au pied de la Titan grise (x ≥ dernier waypoint − 3 m = $XEND − 3)"
 order=$(python3 - "$(J)" "$ROUTE_YAML" <<'EOF'
 import json, sys, yaml

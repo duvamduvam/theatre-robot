@@ -27,7 +27,7 @@ def _odom(noeud, x, y, t=None):
     if t is not None:
         noeud.horloge.t = t
     pose = types.SimpleNamespace(position=types.SimpleNamespace(x=x, y=y, z=0.0))
-    _qos, callback = noeud.abonnements["/ground_truth/odom"]
+    _qos, callback = noeud.abonnements["ground_truth/odom"]
     callback(types.SimpleNamespace(pose=types.SimpleNamespace(pose=pose)))
 
 

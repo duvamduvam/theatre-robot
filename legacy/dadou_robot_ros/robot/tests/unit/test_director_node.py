@@ -1,4 +1,4 @@
-"""Node `director` (robot_rehearsal.director_node) avec rclpy SIMULÉ — même
+"""Node `director` (didier_rehearsal.director_node) avec rclpy SIMULÉ — même
 procédé que le pont web (test_web_protocol.py, fixture `pont`) : rclpy et
 robot_interfaces remplacés par des modules factices dans sys.modules ; tout le
 reste est RÉEL (yaml, robot.diagnostic.journal, scenario, director, route,
@@ -137,10 +137,10 @@ def regisseur(monkeypatch):
     }
     for nom, module in faux.items():
         monkeypatch.setitem(sys.modules, nom, module)
-    monkeypatch.delitem(sys.modules, "robot_rehearsal.director_node", raising=False)
-    module = importlib.import_module("robot_rehearsal.director_node")
+    monkeypatch.delitem(sys.modules, "didier_rehearsal.director_node", raising=False)
+    module = importlib.import_module("didier_rehearsal.director_node")
     yield module
-    sys.modules.pop("robot_rehearsal.director_node", None)
+    sys.modules.pop("didier_rehearsal.director_node", None)
 
 
 def _creer(regisseur, monkeypatch, tmp_path, faults, *, duration_s=300, **params):

@@ -1,4 +1,4 @@
-"""Scénario de pannes (robot_rehearsal.scenario) — validation à refus explicite,
+"""Scénario de pannes (didier_rehearsal.scenario) — validation à refus explicite,
 expansion déterministe par graine. Valeurs gravées : random.Random(42)
 .uniform(0, 90) = 57.548 puis .uniform(0, 100) = 2.501 ; Random(7).uniform(0, 90)
 = 29.145 (calculées UNE fois hors de la fonction testée, le 2026-10-08).
@@ -15,7 +15,7 @@ refusée pour un chat hors phantom, « p = 1 consomme un tirage » gravé —
 mutations listées dans le rapport du lot."""
 import pytest
 
-from robot_rehearsal.scenario import ScenarioError, load_scenario
+from didier_rehearsal.scenario import ScenarioError, load_scenario
 
 BASE = {"name": "demo", "seed": 42, "duration_s": 100.0}
 

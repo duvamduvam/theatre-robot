@@ -35,4 +35,7 @@ source /home/ros2_ws/install/setup.bash
 
 # Exécution du nœud principal
 echo "[🚀] Lancement du nœud controller_node..."
-ros2 run controller controller_node
+# Namespace du robot piloté (lot L1b) : la télécommande publie ses topics
+# RELATIFS sous /<ROBOT_NAME>/ (défaut /didier/), comme les nœuds du robot —
+# même variable des deux côtés (docker-compose), sinon le robot n'entend rien.
+ros2 run controller controller_node --ros-args -r __ns:=/${ROBOT_NAME:-didier}

@@ -8,8 +8,8 @@ journalisée avec son `pourquoi`. Spec :
 trouve dans `legacy/dadou_robot_ros/docs/etude-autonomie-improvisation.md` §4.1-4.2.
 
 **SIM-ONLY** : `jeu_node` refuse de démarrer hors `ROS_DOMAIN_ID=43`. Il utilise
-le garde-fou `check_domain` de `robot_rehearsal`, importé tel quel ; son message
-d'erreur dit donc « robot_rehearsal refuse de démarrer », ce qui est connu. Le
+le garde-fou `check_domain` de `didier_rehearsal`, importé tel quel ; son message
+d'erreur dit donc « didier_rehearsal refuse de démarrer », ce qui est connu. Le
 refus a lieu **avant** `rclpy.init`. **Aucun Twist** : les roues ne bougent que
 par des demandes au régisseur (`jeu/chat_move`), qui les arbitre, puis par
 `route_driver`.
@@ -27,7 +27,7 @@ par des demandes au régisseur (`jeu/chat_move`), qui les arbitre, puis par
 | entrées | | `vision/person_box`, `rehearsal/poi_event`, `rehearsal/chat_move` (la bouche), `chat_transcript` (rôle `david` = parole entendue), `chat_situation`, `mission_state`, `route_state`, `route_state_cause`, `route_goto_result`, `animation_state`, `rehearsal/objects` (avec `x`, `y` depuis A1), `/ground_truth/odom` |
 
 Les noms `jeu/*` sont définis dans `theatre_contrats.topics`. Ceux du régisseur
-viennent de `robot_rehearsal.contracts`, qui est importé et non recopié.
+viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
 
 ## Ce qui décide (dans l'ordre de l'arbre)
 
@@ -98,12 +98,16 @@ règle au journal »), et **gravés** dans `test/test_reglages.py`.
 ## Lancer (conteneur sim)
 
 ```bash
-ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
+ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
 ```
 
 Ce launch démarre **lui-même** `jeu_node` (respawn), sous la même condition que
 le remap de la bouche. Il ne faut jamais le lancer à part : un remap sans relais
 perdrait le `stop` de la bouche.
+
+Namespace (lot L1b) : `jeu_node` vit sous `/<ROBOT_NAME>/` (défaut `/didier/`),
+posé par le launch — ses topics sont `/didier/jeu/intention`, `/didier/jeu/console`…
+À la CLI, toujours préfixer (`ros2 topic echo /didier/jeu/journal`).
 
 Le journal est écrit dans `/home/ros2_ws/log/jeu/<horodatage>_<pid>_jeu.jsonl`.
 Vérification rejouable : `validate-jeu-a1.sh` (voir `legacy/dadou_robot_ros/docs/operations.md`).

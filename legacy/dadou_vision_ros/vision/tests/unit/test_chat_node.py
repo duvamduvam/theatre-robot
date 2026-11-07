@@ -125,7 +125,7 @@ def test_decode_persona_command_ne_valide_pas():
 # vision.ai.stage (pur, importable sans rclpy) : les callbacks de chat_node
 # ne font qu'appeler ces décodeurs et transformer ValueError en warning.
 # Contrat chat_fault gravé avec les MÊMES chaînes que le régisseur
-# (robot_rehearsal, §13.4 point 3).
+# (didier_rehearsal, §13.4 point 3).
 # ---------------------------------------------------------------------------
 
 
@@ -283,10 +283,10 @@ def _publisher_topics(tree, constants):
 # l'autre côté (les renommer d'un seul côté coupe la liaison SANS erreur --
 # ROS accepte n'importe quel nom de topic, personne n'écoute plus, c'est tout) :
 #   - "chat_instruction" et "rehearsal/chat_fault" : INSTRUCTION_TOPIC et
-#     CHAT_FAULT_TOPIC dans /home/dadou/Nextcloud/dev/didier/python/dadou_robot_ros/conf/ros2_dependencies/robot_rehearsal/robot_rehearsal/contracts.py
+#     CHAT_FAULT_TOPIC dans packages/didier_rehearsal/didier_rehearsal/contracts.py (mono-dépôt)
 #     (gravés par robot/tests/unit/test_rehearsal_contract.py, régisseur) ;
 #   - "chat_text" et "chat_transcript" : le pont web du robot
-#     (robot_web/web_protocol.py : WHITELIST_TECHNIQUE et TOPICS_FLUX, gravés
+#     (didier_web/web_protocol.py : WHITELIST_TECHNIQUE et TOPICS_FLUX, gravés
 #     par robot/tests/unit/test_web_protocol.py, page « scène »).
 # On compare donc à des LITTÉRAUX écrits ici, jamais à une valeur recalculée.
 
@@ -414,7 +414,7 @@ def test_on_chat_fault_passe_le_until_ms_decode_a_set_fault():
 # ---------------------------------------------------------------------------
 # Mouvement à la voix (lot I1, 2026-10-22, dadou_robot_ros/docs/
 # etude-repetition-simulee.md §13.11). CONTRAT PARTAGÉ : "rehearsal/chat_move"
-# est aussi gravé côté robot (CHAT_MOVE_TOPIC de robot_rehearsal/contracts.py,
+# est aussi gravé côté robot (CHAT_MOVE_TOPIC de didier_rehearsal/contracts.py,
 # test_rehearsal_contract.py). Et la vision ne commande JAMAIS le mouvement
 # directement : aucun publisher route / route_speed / cmd_vel dans ce node.
 # ---------------------------------------------------------------------------
@@ -619,7 +619,7 @@ def test_on_prompt_decode_refuse_ou_range_sans_toucher_au_micro():
 
 
 # --- Tâche en cours (lot M4, 01/11, spec-aller-voir.md §9.3) : chat_node
-# lit route_goto_result (contrat robot_rehearsal/contracts.py
+# lit route_goto_result (contrat didier_rehearsal/contracts.py
 # ROUTE_GOTO_RESULT_TOPIC) SEULEMENT si le mouvement à la voix est branché.
 
 def test_topic_d_issue_de_geste_a_la_valeur_du_contrat():

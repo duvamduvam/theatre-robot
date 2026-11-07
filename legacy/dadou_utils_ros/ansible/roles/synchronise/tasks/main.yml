@@ -1,8 +1,8 @@
 
 
-#- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/robot_bringup" with "{{ ros2_ws }}/src/"
+#- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/didier_bringup" with "{{ ros2_ws }}/src/"
 #  synchronize:
-#    src: "{{ local_projects_dir }}/{{ local_project_dir }}/robot_bringup"
+#    src: "{{ local_projects_dir }}/{{ local_project_dir }}/didier_bringup"
 #    dest: "{{ ros2_ws }}/src/"
 #    recursive: yes
 #    delete: yes
@@ -33,7 +33,7 @@
       - "--exclude=venv/"
       - "--exclude=.editorconfig"
       - "--exclude=.gitignore"
-      #- "--exclude=robot_bringup/"
+      #- "--exclude=didier_bringup/"
       #- "--exclude=robot_interfaces/"
 
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
@@ -45,37 +45,58 @@
     #rsync_opts:
     #  - "--delete"
 
-# Lot L1a (2026-11-02) : vision et télécommande n'ont PLUS de conf/ros2_dependencies
-# (robot_interfaces est passé dans theatre-robot/packages/). Un rsync sur un dossier
-# source absent échoue (code 23) et bloquerait les tâches suivantes — dont la copie des
-# packages communs ci-dessous. D'où le stat côté PC et la condition.
-- name: Check whether "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/" exists on the control node
-  stat:
-    path: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/"
-  delegate_to: localhost
-  become: no
-  register: ros2_dependencies_dir
+# Nettoyage des packages RENOMMÉS (lot L1e-2) : chaque ancien nom de
+# `packages_retires` (vars/main.yml) est effacé de src/, build/ et install/ AVANT
+# la copie ci-dessous — le rsync n'efface rien et `colcon build` compilerait sinon
+# les anciens ET les nouveaux. `become` : build/ et install/ sont écrits par le
+# colcon du conteneur, donc par root. Chemin ABSOLU (ansible_env.HOME = l'utilisateur
+# de connexion, faits relevés sans become) : avec sudo, un chemin relatif dépendrait
+# du répertoire courant. La liste ne se vide jamais (un Pi resté éteint rattrape).
+- name: Remove renamed package "{{ item.0 }}" from "{{ ros2_ws }}/{{ item.1 }}/"
+  become: yes
+  file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item.1 }}/{{ item.0 }}"
+    state: absent
+  loop: "{{ packages_retires | product(['src', 'build', 'install']) | list }}"
 
-- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/" with "{{ ros2_ws }}/src/"
-  synchronize:
-    src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2_dependencies/"
-    dest: "{{ ros2_ws }}/src/"
-    recursive: yes
-    copy_links: yes
-    #rsync_opts:
-    #  - "--delete"
-  when: ros2_dependencies_dir.stat.exists
-
-# Lot L1a (2026-11-02) : les packages communs du mono-dépôt vivent dans
-# theatre-robot/packages/ (hors de l'ancien dépôt) ; ils doivent arriver dans
-# ros2_ws/src/<package> sur CHAQUE machine, car dadou_utils_ros/utils_static.py
+# Packages du mono-dépôt (theatre-robot/packages/) : lot L1a (2026-11-02) pour les
+# communs, lot L1e-1 (2026-11-06) pour les 6 packages ROS autonomes du robot qui
+# vivaient dans conf/ du robot (le dossier a disparu — plus de stat ni de rsync
+# conditionnel). Chaque machine reçoit une LISTE EXPLICITE : `packages` de l'hôte
+# (ansible/hosts), à défaut `packages_default` (vars/main.yml). Pourquoi explicite
+# et non « tout packages/ » : le `colcon build` d'un Pi compile TOUT ros2_ws/src/ ;
+# un package qui n'a rien à y faire (didier_jeu, sim-only ; didier_drive et son
+# twist_mux sur le Pi vision...) y casserait la compilation sur ses dépendances
+# manquantes, ou y tournerait pour rien. Les communs (theatre_contrats,
+# robot_interfaces) sont obligatoires partout : dadou_utils_ros/utils_static.py
 # importe theatre_contrats — sans lui, tous les nodes tombent au démarrage.
-# Copie de l'arbre entier (petit : pur Python + 4 .msg), exclusions comme ci-dessus.
-- name: Synchronize mono-repo packages "{{ packages_dir }}/" with "{{ ros2_ws }}/src/"
+# Un package absent de packages/ fait échouer le rsync (code 23) : c'est voulu,
+# test_arborescence.py le détecte avant. Ne PAS nommer `packages` une liste d'apt.
+- name: Synchronize mono-repo package "{{ item }}" with "{{ ros2_ws }}/src/{{ item }}/"
   synchronize:
-    src: "{{ packages_dir }}/"
-    dest: "{{ ros2_ws }}/src/"
+    src: "{{ packages_dir }}/{{ item }}/"
+    dest: "{{ ros2_ws }}/src/{{ item }}/"
     recursive: yes
     copy_links: yes
-    rsync_opts: "{{ ['--exclude=.git/', '--exclude=__pycache__/', '--exclude=*.egg-info/', '--exclude=README.md']
-                    + (packages_sim_only | default([]) | map('regex_replace', '^(.*)$', '--exclude=\\1/') | list) }}"
+    rsync_opts:
+      - "--exclude=.git/"
+      - "--exclude=__pycache__/"
+      - "--exclude=*.egg-info/"
+      - "--exclude=README.md"
+  loop: "{{ packages | default(packages_default) }}"
+
+# Lot L1c (2026-11-04) : le robot publie le sha déployé (topic `deploy_sha`, nœud
+# catalogue_node de didier_web ; badge « version » de la console web). Le fichier est
+# lu dans le conteneur à /home/ros2_ws/src/robot/conf/DEPLOY_SHA (conf/ est monté).
+# Le lookup `pipe` s'exécute sur le PC (le git n'existe pas sur le Pi) ; `-C` sur
+# legacy/ remonte au dépôt theatre-robot. Suffixe `-dirty` OBLIGATOIRE si l'arbre
+# de travail diffère du commit : le rsync copie l'arbre, pas le commit — un sha
+# propre mentirait. Robot seulement pour L1c (vision/télécommande : quand
+# machines/<hôte>/ existera, L1e). Côté PC, conf/DEPLOY_SHA n'existe jamais
+# (gitignoré) : la sim affiche « dev ».
+- name: Write the deployed git sha (robot only, read by catalogue_node)
+  copy:
+    content: "{{ lookup('pipe', 'git -C ' ~ local_projects_dir ~ ' rev-parse HEAD') }}{{ '-dirty' if lookup('pipe', 'git -C ' ~ local_projects_dir ~ ' status --porcelain') else '' }}\n"
+    dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/DEPLOY_SHA"
+    mode: "0644"
+  when: project_ros_dir == 'robot'

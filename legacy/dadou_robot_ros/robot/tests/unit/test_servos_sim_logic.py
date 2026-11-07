@@ -1,4 +1,4 @@
-"""Tests de la logique pure de simulation des servos (robot_sim_lib.servos_logic).
+"""Tests de la logique pure de simulation des servos (didier_sim_lib.servos_logic).
 
 Le temps ET le générateur aléatoire sont toujours injectés (jamais
 time.time()/random.* non seedé côté production) : chaque test avance une
@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-from robot_sim_lib.servos_logic import (
+from didier_sim_lib.servos_logic import (
     JOINT_LIMITS,
     NORMAL,
     RANDOM,

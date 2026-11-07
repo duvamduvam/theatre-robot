@@ -1,11 +1,11 @@
-"""Tests de la logique pure de visualisation LED en sim (robot_sim_lib.leds_logic).
+"""Tests de la logique pure de visualisation LED en sim (didier_sim_lib.leds_logic).
 
 Le temps est toujours injecté (jamais time.time()/random.* non seedé côté
 production) : chaque test pose un elapsed_ms explicite pour rester déterministe.
 """
 import pytest
 
-from robot_sim_lib.leds_logic import (
+from didier_sim_lib.leds_logic import (
     BLACK,
     LedsSimState,
     active_brick_at,

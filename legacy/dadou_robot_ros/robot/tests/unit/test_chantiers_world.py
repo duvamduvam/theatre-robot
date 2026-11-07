@@ -1,5 +1,5 @@
-"""Contrats GELÉS du monde `chantiers` (robot_sim/worlds/chantiers.sdf) et de son
-itinéraire (robot_rehearsal/config/chantiers.yaml) — lus dans les VRAIS fichiers.
+"""Contrats GELÉS du monde `chantiers` (didier_sim/worlds/chantiers.sdf) et de son
+itinéraire (didier_rehearsal/config/chantiers.yaml) — lus dans les VRAIS fichiers.
 
 POURQUOI ces tests : le monde est ~330 liens de primitives écrits à la main ou
 presque ; personne ne le relira à l'œil après chaque retouche. Ils tiennent lieu
@@ -26,11 +26,12 @@ import xml.etree.ElementTree as ET
 import pytest
 import yaml
 
-from robot_rehearsal.route import load_route
+from didier_rehearsal.route import load_route
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-SDF = ROOT / "conf" / "ros2_dependencies" / "robot_sim" / "worlds" / "chantiers.sdf"
-YAML = ROOT / "conf" / "ros2_dependencies" / "robot_rehearsal" / "config" / "chantiers.yaml"
+PACKAGES = ROOT.parents[1] / "packages"          # packages/ du mono-dépôt (L1e-1)
+SDF = PACKAGES / "didier_sim" / "worlds" / "chantiers.sdf"
+YAML = PACKAGES / "didier_rehearsal" / "config" / "chantiers.yaml"
 
 # ------------------------------------------------------------------ valeurs gravées
 

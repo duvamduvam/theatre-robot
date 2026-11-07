@@ -2,7 +2,7 @@
 """Node `jeu_node` — le sélecteur de jeu de Didier (lot A1), I/O ROS SEULEMENT.
 
 SIM-ONLY : refuse de démarrer hors ROS_DOMAIN_ID=43 (garde-fou de
-robot_rehearsal, IMPORTÉ — son message dit « robot_rehearsal refuse de
+didier_rehearsal, IMPORTÉ — son message dit « didier_rehearsal refuse de
 démarrer », c'est connu et assumé : une seule définition du garde-fou).
 Le refus a lieu AVANT rclpy.init : rien n'est jamais créé sur le domaine 42.
 
@@ -30,7 +30,7 @@ import os
 import time
 
 # Garde-fou AVANT tout import rclpy à effet : check_domain est pur.
-from robot_rehearsal.contracts import (CHAT_MOVE_TOPIC, OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
+from didier_rehearsal.contracts import (CHAT_MOVE_TOPIC, OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC,
                                        check_domain)
 from theatre_contrats import stringtime, topics

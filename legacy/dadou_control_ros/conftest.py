@@ -10,3 +10,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # tout import de la lib échoue sur l'hôte (pas de colcon build en dev).
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "packages", "theatre_contrats"))
+
+# didier_web (catalogue PUR : web_catalog.py, stdlib seule) — lot L1c : le test
+# test_buttons_vs_catalogue compare BUTTONS_LAYOUT au catalogue que le robot
+# publie, construit par la MÊME fonction depuis legacy/dadou_robot_ros/json
+# (package didier_web : packages/ du mono-dépôt depuis L1e-1).
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))), "packages", "didier_web"))

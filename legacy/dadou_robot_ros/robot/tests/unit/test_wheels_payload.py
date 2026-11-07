@@ -1,4 +1,4 @@
-"""Tests du parsing pur du payload roues (robot_drive.wheels_payload).
+"""Tests du parsing pur du payload roues (didier_drive.wheels_payload).
 
 Couvre toutes les formes acceptées par la branche WHEELS de
 robot/actions/wheels.py (voir wheels_payload.py pour la correspondance).
@@ -9,8 +9,8 @@ import pathlib
 
 from dadou_utils_ros.utils_static import ANIMATION, BACKWARD, FORWARD, LEFT, RIGHT, SPEED, STOP, \
     WHEELS
-from robot_drive import wheels_payload
-from robot_drive.wheels_payload import payload_to_pair, payload_to_speed
+from didier_drive import wheels_payload
+from didier_drive.wheels_payload import payload_to_pair, payload_to_speed
 
 
 def imported_roots(module):
@@ -109,7 +109,7 @@ def test_payload_to_speed_none_hors_reglage_vitesse():
 
 
 def test_module_reste_autonome():
-    """robot_drive doit s'importer dans le conteneur sim sans rclpy ni
+    """didier_drive doit s'importer dans le conteneur sim sans rclpy ni
     dadou_utils_ros ni robot.* : on inspecte les imports réels (AST)."""
     roots = imported_roots(wheels_payload)
     assert roots.isdisjoint(("rclpy", "dadou_utils_ros", "robot")), roots
@@ -117,9 +117,9 @@ def test_module_reste_autonome():
 
 def test_constantes_alignees_avec_utils_static():
     """Anti-dérive : les constantes du protocole sont dupliquées dans
-    robot_drive (autonomie du conteneur sim, qui n'a pas dadou_utils_ros) ;
+    didier_drive (autonomie du conteneur sim, qui n'a pas dadou_utils_ros) ;
     elles doivent rester identiques aux originales."""
     from dadou_utils_ros import utils_static
-    from robot_drive import wheels_payload
+    from didier_drive import wheels_payload
     for name in ("WHEELS", "STOP", "FORWARD", "BACKWARD", "LEFT", "RIGHT", "SPEED"):
         assert getattr(wheels_payload, name) == getattr(utils_static, name), name

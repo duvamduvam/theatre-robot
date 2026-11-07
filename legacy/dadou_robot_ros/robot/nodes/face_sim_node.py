@@ -14,7 +14,7 @@ sur x86 comme sur le Pi. En pratique il n'est lancé QUE par sim.launch.py
 jamais dans le bringup du vrai robot.
 
 PIÈGE DEUX BOUCLES D'ÉVÉNEMENTS : même architecture que
-robot_web/web_bridge_node.py (rclpy.spin dans un thread daemon, aiohttp dans
+didier_web/web_bridge_node.py (rclpy.spin dans un thread daemon, aiohttp dans
 le thread principal) -- rclpy.spin() est bloquant et ne rend jamais la main à
 une boucle asyncio, on ne les mélange donc pas dans le même thread. Les deux
 communiquent par self.last_jpeg (écrit par _on_show, thread spin ; lu par
@@ -159,7 +159,7 @@ async def index_handler(_request: web.Request) -> web.Response:
 
 async def stream_handler(request: web.Request) -> web.StreamResponse:
     """GET /stream : MJPEG (multipart/x-mixed-replace), même motif que
-    /video dans robot_web/web_bridge_node.py -- une frame à la fois, servie à
+    /video dans didier_web/web_bridge_node.py -- une frame à la fois, servie à
     STREAM_FPS, chaque client indépendant. Rien à servir tant qu'aucun
     show() n'est encore passé : ne devrait pas arriver, Face affiche sa
     séquence "default" dès la construction (show_first_frames)."""

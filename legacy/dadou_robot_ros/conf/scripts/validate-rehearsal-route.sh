@@ -13,18 +13,25 @@
 # T5 arrivée     : x >= 59 et « route : finished » (budget 240 s à 0,4 m/s)
 source /opt/ros/${ROS_DISTRO}/setup.sh
 source /home/ros2_ws/install/setup.bash
+# Namespace du robot (lot L1b) : les nœuds vivent sous /<ROBOT_NAME>/ (défaut
+# /didier/). Un nom RELATIF tapé dans la CLI se résout à la RACINE, pas dans ce
+# namespace : chaque topic est donc préfixé par $NS, placé JUSTE APRÈS le verbe
+# (`ros2 topic pub $NS/x …`, options après) — forme gravée par
+# robot/tests/unit/test_namespace_contract.py.
+NS="/${ROBOT_NAME:-didier}"
 LOG=${REHEARSAL_LOG:-/tmp/rehearsal.log}
 START=$(grep -c "" "$LOG")   # on ne lit que les lignes écrites après le début de la passe
 J() { tail -n +$((START+1)) "$LOG"; }
-# Lectures ROBUSTES : `ros2 topic echo --once` peut rendre un avertissement de
+# Lectures ROBUSTES : une lecture unique (echo … --once) peut rendre un avertissement de
 # découverte (« does not appear to be published yet ») ou rien du tout juste
 # après un (re)démarrage — on ne garde qu'un NOMBRE, avec 3 tentatives (vécu
 # le 2026-10-08 : deux faux KO pour un avertissement et une chaîne vide).
-num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo --once "$1" --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
-X() { num /ground_truth/odom pose.pose.position.x; }
-CMD() { num /cmd_vel linear.x; }
-R() { timeout 15 ros2 topic pub -1 route robot_interfaces/msg/StringTime "{msg: \"$1\"}" >/dev/null 2>&1; }
-S() { timeout 15 ros2 topic pub -1 route_speed robot_interfaces/msg/StringTime "{msg: \"$1\"}" >/dev/null 2>&1; }
+# num <topic préfixé $NS/…> <champ>
+num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo $1 --once --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
+X() { num $NS/ground_truth/odom pose.pose.position.x; }
+CMD() { num $NS/cmd_vel linear.x; }
+R() { timeout 15 ros2 topic pub $NS/route robot_interfaces/msg/StringTime "{msg: \"$1\"}" -1 >/dev/null 2>&1; }
+S() { timeout 15 ros2 topic pub $NS/route_speed robot_interfaces/msg/StringTime "{msg: \"$1\"}" -1 >/dev/null 2>&1; }
 ok=0; ko=0
 verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  ❌ $2"; ko=$((ko+1)); fi; }
 
@@ -39,7 +46,7 @@ echo "  x0=$x0 x1=$x1"
 verdict "$(python3 -c "print(1 if '$x0'!='NaN' and '$x1'!='NaN' and float('$x1')-float('$x0')>2.0 else 0)")" "x progresse de plus de 2 m en 20 s"
 
 echo "=== T3 télécommande écrase (prio 100) $(date +%T) ==="
-timeout 8 ros2 topic pub -r 10 cmd_vel_remote geometry_msgs/msg/Twist "{}" >/dev/null 2>&1 &
+timeout 8 ros2 topic pub $NS/cmd_vel_remote geometry_msgs/msg/Twist "{}" -r 10 >/dev/null 2>&1 &
 sleep 2; c=$(CMD); wait
 echo "  /cmd_vel linear.x pendant remote=0 : $c"
 verdict "$(python3 -c "print(1 if '$c'!='NaN' and abs(float('$c'))<1e-6 else 0)")" "/cmd_vel nul sous la télécommande"

@@ -98,7 +98,7 @@ def test_vocabulaire_de_deplacements_grave():
 
 
 def test_commandes_regisseur_egales_au_contrat():
-    from robot_rehearsal import contracts
+    from didier_rehearsal import contracts
     from didier_jeu.repertoire import COMMANDES_REGISSEUR
     assert set(COMMANDES_REGISSEUR) == {contracts.CHAT_MOVE_GOTO_CMD, contracts.CHAT_MOVE_TOUR_CMD,
                                         contracts.CHAT_MOVE_TURN_CMD, contracts.CHAT_MOVE_FORWARD_CMD}
@@ -107,7 +107,7 @@ def test_commandes_regisseur_egales_au_contrat():
 def test_reculer_refuse_comme_le_regisseur():
     """Le régisseur refuse un avancer négatif (FORWARD_MIN_M) : un verbe
     « reculer » ne ferait que des refus — il est refusé au chargement."""
-    from robot_rehearsal import contracts
+    from didier_rehearsal import contracts
     from didier_jeu.repertoire import RepertoireError, valider_deplacements
     assert contracts.FORWARD_MIN_M == 0.1
     with pytest.raises(RepertoireError):
