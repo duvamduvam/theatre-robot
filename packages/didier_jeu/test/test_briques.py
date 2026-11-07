@@ -112,7 +112,7 @@ def test_arbre_ordre_des_priorites_grave():
 
 # ------------------------------------------------------------------ journal
 def test_journal_pourquoi_obligatoire(tmp_path):
-    from robot.diagnostic.journal import JournalError, parse_lines
+    from didier_core.diagnostic.journal import JournalError, parse_lines
     from didier_jeu.journal import Journal
     j = Journal(tmp_path)
     ligne = j.ecrire(5, "decision", {"action": "regarder", "pourquoi": "offre:personne p1 0.70"})

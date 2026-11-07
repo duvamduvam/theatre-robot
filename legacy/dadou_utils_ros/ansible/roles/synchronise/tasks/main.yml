@@ -148,6 +148,35 @@
   loop: "{{ chemins_retires_lib }}"
   when: item in lib_embarquee.stdout_lines
 
+# Lot L1e-3c (07/11) : le cœur `robot` est devenu le package src/didier_core. Quelles entrées de
+# `chemins_retires_robot` (vars/main.yml) portent ENCORE l'ancienne forme ? Toutes : rien ne les
+# recrée plus (le rsync du projet n'a plus ni robot/, ni conf/ros2/setup.py…, et aucun package ne
+# s'appelle plus `robot`) — présente = ancienne. Lecture seule, exécutée aussi en --check, jamais
+# « changed » : un Pi déjà nettoyé ne voit aucune tâche bouger (ecart-pi.sh vert).
+- name: Detect old robot package forms still on the Pi
+  become: yes
+  shell: |
+    cd "{{ ansible_env.HOME }}/{{ ros2_ws }}" 2>/dev/null || exit 0
+    for chemin in {{ chemins_retires_robot | join(' ') }}; do
+      [ -e "$chemin" ] && echo "$chemin"
+    done
+    exit 0
+  register: robot_ancien
+  changed_when: false
+  check_mode: false
+
+# Effacement AVANT la copie des packages : sinon le colcon build suivant compilerait l'ancien
+# package `robot` (src/robot/package.xml) à côté de didier_core — deux jeux des mêmes
+# exécutables, et un install/robot périmé sur le PYTHONPATH. Même motif que les nettoyages
+# ci-dessus : `become`, chemin ABSOLU, seulement les entrées détectées.
+- name: Remove old robot package "{{ item }}"
+  become: yes
+  file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item }}"
+    state: absent
+  loop: "{{ chemins_retires_robot }}"
+  when: item in robot_ancien.stdout_lines
+
 # Déchets laissés par l'ancien rsync (vars/main.yml, `dechets_rsync`) : désormais exclus de
 # la copie, effacés ici s'ils sont encore sur le Pi.
 - name: Remove rsync leftovers (dechets_rsync) from "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
@@ -182,6 +211,10 @@
       - "--exclude=.pytest_cache/"
       - "--exclude=*.egg-info/"
       - "--exclude=README.md"
+      # Sentinelle de build du cœur (packages/didier_core/change, gitignorée, écrite par le
+      # Makefile sur le PC) : posée par la dernière tâche de ce rôle, jamais copiée — sinon
+      # le --check d'ecart-pi.sh la verrait manquer après chaque build (effacée par le script).
+      - "--exclude=/change"
   loop: "{{ packages | default(packages_default) }}"
 
 # Lot L1c (2026-11-04) : le robot publie le sha déployé (topic `deploy_sha`, nœud

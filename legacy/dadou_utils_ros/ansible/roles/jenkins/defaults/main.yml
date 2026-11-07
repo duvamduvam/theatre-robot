@@ -23,7 +23,7 @@ jenkins_pipeline_script_path: "Jenkinsfile"
 jenkins_pipeline_lightweight_checkout: true
 jenkins_pipeline_disable_concurrent_builds: true
 jenkins_pipeline_requirements_path: "requirements.txt"
-jenkins_pipeline_test_command: "pytest -q /home/ros2_ws/src/robot/robot/tests --ignore=/home/ros2_ws/src/robot/robot/tests/sandbox"
+jenkins_pipeline_test_command: "pytest -q /home/ros2_ws/src/didier_core/test/unit"
 jenkins_pipeline_junit_report_glob: ""
 jenkins_pipeline_docker_image: "dadou_robot"
 jenkins_pipeline_docker_tag_expression: "${env.BRANCH_NAME ?: 'main'}-${env.BUILD_NUMBER}"

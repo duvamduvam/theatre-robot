@@ -53,7 +53,7 @@ ODOM_TOPIC = "ground_truth/odom"
 POI_EVENT_TOPIC = "rehearsal/poi_event"
 
 # --- Plafonds ABSOLUS (m/s, rad/s) -------------------------------------------
-# IDENTIQUES à ceux du suivi de personne (robot.move.follow_control
+# IDENTIQUES à ceux du suivi de personne (didier_core.move.follow_control
 # ABS_MAX_LIN/ABS_MAX_ANG) : même créneau du mux, mêmes 50 kg. Dupliqués ici
 # parce que le package est autonome ; le test de contrat vérifie l'égalité.
 ABS_MAX_LIN = 0.5

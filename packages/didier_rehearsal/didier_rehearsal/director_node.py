@@ -20,7 +20,7 @@ sur rehearsal/cmd (autostart false par défaut), puis exécute la timeline :
                  sur-le-champ, SANS rendre de vitesse (David vient de la fixer) ;
   chat        -> panne de conversation sur rehearsal/chat_fault, « pass » à la
                  fin (sauf phantom, ponctuel : rien à lever) ;
-et JOURNALISE tout (robot.diagnostic.journal, JSONL) : la frise du débrief.
+et JOURNALISE tout (didier_core.diagnostic.journal, JSONL) : la frise du débrief.
 MOUVEMENT À LA VOIX (lot I1, étude §13.11) : les ordres de marche que
 Didier demande (rehearsal/chat_move, "go"/"stop", publiés par chat_node)
 sont décidés par director.VoiceMove et journalisés `voice_move` :
@@ -109,7 +109,7 @@ from theatre_interfaces.msg import StringTime
 # même try) : chaque except est gardé tel quel, le comportement ne bouge pas.
 from theatre_contrats import stringtime
 
-from robot.diagnostic.journal import JournalWriter, make_event
+from didier_core.diagnostic.journal import JournalWriter, make_event
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
                                        CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC,

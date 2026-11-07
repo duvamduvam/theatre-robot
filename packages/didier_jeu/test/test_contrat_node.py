@@ -51,7 +51,7 @@ def test_garde_fou_domaine_refuse_hors_43():
 
 
 def test_topic_look_egal_a_celui_de_gaze_follower():
-    src = (LEGACY / "dadou_robot_ros" / "robot" / "nodes" / "gaze_follower_node.py").read_text(encoding="utf-8")
+    src = (MONO / "packages" / "didier_core" / "didier_core" / "nodes" / "gaze_follower_node.py").read_text(encoding="utf-8")
     assert re.search(r'^LOOK_TOPIC = "look"$', src, re.M)
     assert re.search(r'^LOOK_TOPIC = "look"$', NODE.read_text(encoding="utf-8"), re.M)
 
@@ -71,10 +71,10 @@ def test_le_regisseur_ecoute_ce_que_le_selecteur_publie():
 
 
 def test_import_robot_limite_au_journal_pur():
-    """Seule dépendance vers robot.* : robot.diagnostic.journal (pur, stdlib)."""
+    """Seule dépendance vers didier_core.* : didier_core.diagnostic.journal (pur, stdlib)."""
     for nom, src in _sources().items():
-        for m in re.finditer(r"^\s*(?:from|import)\s+(robot\.[\w.]*|robot)\b", src, re.M):
-            assert m.group(1) == "robot.diagnostic.journal", (nom, m.group(0))
+        for m in re.finditer(r"^\s*(?:from|import)\s+(didier_core\.[\w.]*|didier_core|robot\.[\w.]*|robot)\b", src, re.M):
+            assert m.group(1) == "didier_core.diagnostic.journal", (nom, m.group(0))
 
 
 def test_modules_purs_sans_ros():

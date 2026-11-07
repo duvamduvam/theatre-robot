@@ -18,7 +18,7 @@ pipeline {
           env.REPO_URL = env.REPO_URL?.trim() ?: 'https://github.com/duvamduvam/dadou_robot_ros.git'
           env.REPO_BRANCH = env.REPO_BRANCH?.trim() ?: 'main'
           env.PYTHON_REQUIREMENTS = env.PYTHON_REQUIREMENTS?.trim() ?: 'requirements.txt'
-          env.TEST_COMMAND = env.TEST_COMMAND?.trim() ?: 'pytest -q /home/ros2_ws/src/robot/robot/tests --ignore=/home/ros2_ws/src/robot/robot/tests/sandbox'
+          env.TEST_COMMAND = env.TEST_COMMAND?.trim() ?: 'pytest -q /home/ros2_ws/src/didier_core/test/unit'
           env.WORKSPACE_ROOT = env.WORKSPACE_ROOT?.trim() ?: '/home/pi/jenkins-workspace'
           env.KEEP_WORKDIR = env.KEEP_WORKDIR?.trim() ?: '1'
           env.DOCKER_COMPOSE_FILE = env.DOCKER_COMPOSE_FILE?.trim() ?: 'conf/docker/jenkins/docker-compose-jenkins.yml'

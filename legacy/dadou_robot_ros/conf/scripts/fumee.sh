@@ -340,7 +340,7 @@ lancer_corps() { # lancer_corps <scénario chantiers|jeu-a1> <jeu:=true|''> : ch
   attendre_processus "lib/didier_rehearsal/director" absent 30 || true
   ros_detache 'ros2 launch didier_drive drive.launch.py use_sim_time:=true'
   ros_detache "ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=$scenario $jeu"
-  ros_detache 'ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
+  ros_detache 'ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
   attendre_processus "lib/didier_rehearsal/director" présent 60 || return 1
   attendre_processus "gaze_follower" présent 60 || return 1
   sleep 20   # les nœuds finissent de s'apparier avant que le script de vérification ne les sonde

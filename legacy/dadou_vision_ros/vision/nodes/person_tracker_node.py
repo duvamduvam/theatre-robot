@@ -246,7 +246,7 @@ class PersonTrackerNode(Node):
         chat_node._on_chat_cmd (dadou_vision_ros/vision/nodes/chat_node.py) :
         "on"/"off", JSON ou brut. PIÈGE ÉVITÉ : le décodage StringTime commun
         du dépôt frère (dadou_robot_ros/robot/nodes/payload.py::decode) n'est
-        PAS réutilisable ici — il importe robot.robot_static, un paquet ROS
+        PAS réutilisable ici — il importe didier_core.robot_static, un paquet ROS
         que vision n'a et ne doit PAS dépendre (dépôts frères indépendants).
         Ce dépôt n'a pas d'équivalent factorisé pour ses topics de commande
         (chat/persona) : on suit donc le même motif dupliqué, pas de perte

@@ -10,7 +10,7 @@ import os
 import pathlib
 from datetime import datetime
 
-from robot.diagnostic.journal import JournalError, JournalWriter, make_event
+from didier_core.diagnostic.journal import JournalError, JournalWriter, make_event
 
 SOURCE = "didier_jeu"
 

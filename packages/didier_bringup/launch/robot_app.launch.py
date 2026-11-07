@@ -8,9 +8,9 @@ from launch_ros.substitutions import FindPackageShare
 # Contrat inter-machines (noms des topics servo) : reste sur la lib partagée.
 from dadou_utils_ros.utils_static import NAME, NECK, LEFT_ARM, RIGHT_ARM, LEFT_EYE, RIGHT_EYE
 # Constantes internes au robot (numéros PWM, bornes servo) : rapatriées (cf. robot_static).
-from robot.robot_static import HEAD_PWM_NB, DEFAULT_POS, MAX_POS, LEFT_ARM_NB, \
+from didier_core.robot_static import HEAD_PWM_NB, DEFAULT_POS, MAX_POS, LEFT_ARM_NB, \
     RIGHT_ARM_NB, LEFT_EYE_NB, RIGHT_EYE_NB
-from robot.robot_config import config
+from didier_core.robot_config import config
 
 
 def generate_launch_description():
@@ -27,55 +27,55 @@ def generate_launch_description():
     #remap_number_topic = ("number", "my_number")
 
     ai_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="ai_node",
         name="ai_node"
     )
 
     animations_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="animations_node",
         name="animations_node"
     )
 
     audio_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="audio_node",
         name="audio_node"
     )
 
     face_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="face_node",
         name="face_node"
     )
 
     lights_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="lights_node",
         name="lights_node"
     )
 
     relays_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="relays_node",
         name="relays_node"
     )
 
     system_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="system_node",
         name="system_node"
     )
 
     wheels_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="wheels_node",
         name="wheels_node"
     )
 
     neck_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="servo_node",
         name="{}_node".format(NECK),
         parameters=[
@@ -87,7 +87,7 @@ def generate_launch_description():
     )
 
     left_arm_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="servo_node",
         name="{}_node".format(LEFT_ARM),
         parameters=[
@@ -99,7 +99,7 @@ def generate_launch_description():
     )
 
     right_arm_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="servo_node",
         name="{}_node".format(RIGHT_ARM),
         parameters=[
@@ -111,7 +111,7 @@ def generate_launch_description():
     )
 
     left_eye_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="servo_node",
         name="{}_node".format(LEFT_EYE),
         parameters=[
@@ -123,7 +123,7 @@ def generate_launch_description():
     )
 
     right_eye_server_node = Node(
-        package="robot",
+        package="didier_core",
         executable="servo_node",
         name="{}_node".format(RIGHT_EYE),
         parameters=[
@@ -135,7 +135,7 @@ def generate_launch_description():
     )
 
     #number_counter_node = Node(
-    #    package="robot",
+    #    package="didier_core",
     #    executable="number_counter",
     #    name="my_number_counter",
     #    remappings=[

@@ -54,7 +54,7 @@ JEU_INTENTION = 'jeu/intention'
 # (le régisseur y est remappé par rehearsal.launch.py jeu:=true).
 JEU_CHAT_MOVE = 'jeu/chat_move'
 # StringTime volatile : une ligne du journal JSONL du sélecteur par message
-# (format boîte noire, robot.diagnostic.journal), pour la page scène.
+# (format boîte noire, didier_core.diagnostic.journal), pour la page scène.
 JEU_JOURNAL = 'jeu/journal'
 
 # ---------------------------------------------------------------- catalogue + version (lot L1c)

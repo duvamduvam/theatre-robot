@@ -14,8 +14,8 @@
   <!-- Contrat commun (lot L1a, packages/theatre_contrats) : codec StringTime et noms
        de topics ; dadou_utils_ros/utils_static.py (shim) l'importe aussi. -->
   <exec_depend>theatre_contrats</exec_depend>
-  <!-- journal JSONL (robot.diagnostic.journal, module PUR du paquet robot) -->
-  <exec_depend>robot</exec_depend>
+  <!-- journal JSONL (didier_core.diagnostic.journal, module PUR du paquet didier_core, ex-robot) -->
+  <exec_depend>didier_core</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>python3-pytest</test_depend>

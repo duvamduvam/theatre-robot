@@ -73,7 +73,7 @@ _REQUIRED_RANDOM_KEYS = (RANDOM_MOVE_MIN, RANDOM_MOVE_MAX, RANDOM_TIME_MIN, RAND
 def pos99_to_radians(pos, joint_min_rad, joint_max_rad):
     """Mapping linéaire consigne servo 0-99 -> bornes du joint (radians).
     0 -> joint_min_rad, 99 -> joint_max_rad. Même formule que
-    robot.move.gaze_control.consigne_to_radians, généralisée aux bornes
+    didier_core.move.gaze_control.consigne_to_radians, généralisée aux bornes
     passées en paramètre (au lieu de +-pi/2 codé en dur) -- gaze_control reste
     la référence pour le joint `neck` en mode gaze, ce module la réutilise
     pour les 5 servos rejoués depuis les animations.

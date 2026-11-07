@@ -62,6 +62,27 @@ chemins_retires_lib:
 # seulement si elles portent encore la forme ancienne — un dossier `dadou_utils_ros` à
 # l'intérieur (détection dans le rôle synchronise). Les src/* restent effacés s'ils existent.
 
+# Lot L1e-3c (07/11) : le cœur `robot` est devenu le package src/didier_core (liste `packages`
+# de l'hôte robot). Chemins (relatifs à ros2_ws/) de l'ANCIENNE forme, que la tâche `Remove old
+# robot package` du rôle synchronise efface AVANT la copie des packages — sans ça, colcon
+# trouverait encore un package `robot` (src/robot/package.xml + setup.py, posés jadis par le
+# rsync de conf/ros2/) et installerait deux fois les mêmes exécutables (wheels_node compris).
+# Le rsync n'efface rien. Effacement CONDITIONNEL (même principe que chemins_retires_lib) : seule
+# une entrée présente est touchée — src/robot/ n'en reçoit plus aucune, build/robot et
+# install/robot n'ont plus de raison d'exister (aucun package `robot`). Les DONNÉES de src/robot/
+# (json/, medias/, conf/, db/) ne sont PAS dans la liste. Elle NE SE VIDE JAMAIS (un Pi resté
+# éteint rattrape). Gravée par test_arborescence.py.
+chemins_retires_robot:
+  - src/robot/robot
+  - src/robot/dadou_utils_ros
+  - src/robot/setup.py
+  - src/robot/package.xml
+  - src/robot/setup.cfg
+  - src/robot/resource
+  - src/robot/test
+  - build/robot
+  - install/robot
+
 # Déchets que l'ancien rsync a poussés dans ros2_ws/src/<projet>/ (relevé du 07/11) : venv de
 # test du PC (269 Mo robot, 342 Mo vision) et workspace colcon du banc x86 de la vision (50 Mo).
 # Exclus du rsync désormais (rôle synchronise) ; cette liste efface ce qui est déjà sur le Pi.

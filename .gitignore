@@ -11,3 +11,7 @@ log/
 
 # IAction (app de bureau) : dossier local de l'app, jamais versionné (même règle que l'ancien dépôt)
 .iaction/
+
+# Sentinelle de build du cœur (L1e-3c) : posée par Ansible / le Makefile, effacée par
+# launch-ros-in-docker.sh après `colcon build`. Elle était SUIVIE (robot/change) : dette soldée.
+packages/didier_core/change

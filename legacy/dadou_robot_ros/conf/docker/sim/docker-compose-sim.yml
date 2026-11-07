@@ -28,6 +28,8 @@ services:
         didier_drive: ../../../../../packages/didier_drive
         didier_web: ../../../../../packages/didier_web
         didier_rehearsal: ../../../../../packages/didier_rehearsal
+        # L1e-3c : le cœur (ex-paquet robot) est un package de packages/.
+        didier_core: ../../../../../packages/didier_core
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
@@ -37,6 +39,9 @@ services:
       # par défaut. Robot, vision et télécommande d'un même Didier DOIVENT avoir le
       # même nom (sinon ils ne s'entendent plus) ; la CLI ros2 doit préfixer.
       - ROBOT_NAME=${ROBOT_NAME:-didier}
+      # Racine des DONNÉES du cœur (json/, medias/), lue par didier_core/robot_config.py
+      # (L1e-3c) : même chemin que sur le robot, montages plus bas.
+      - DIDIER_DATA_DIR=/home/ros2_ws/src/robot/
       - HEADLESS=${HEADLESS:-false}
       # Monde Gazebo : fichier worlds/<WORLD>.sdf de didier_sim (`stage` = le
       # plateau nu historique, `rue` = la salle de répétition, étude
@@ -45,7 +50,7 @@ services:
       # `stage` dans les deux (contrat bridge LED), seul le fichier change.
       - WORLD=${WORLD:-stage}
       # animations_node (rejeu des séquences JSON, cf. commentaire des volumes
-      # "robot" plus bas) : OFF par défaut, comme gaze_follower -- un lancement
+      # "didier_core" plus bas) : OFF par défaut, comme gaze_follower -- un lancement
       # explicite (ANIMATIONS=true docker compose ... up) est requis.
       - ANIMATIONS=${ANIMATIONS:-false}
       # web_bridge_node (pont HTTP/WebSocket W0, paquet didier_web) : même
@@ -68,7 +73,7 @@ services:
       # à la main dans le conteneur. Le pont ignore de toute façon ce drapeau hors
       # du domaine 43 : la sim ne peut PAS commander le vrai Didier (domaine 42).
       - REHEARSAL=${REHEARSAL:-false}
-      # face_sim (paquet "robot", aperçu web du visage LED -- les matrices LED
+      # face_sim (paquet "didier_core", aperçu web du visage LED -- les matrices LED
       # n'ont aucun rendu dans Gazebo) : même prudence qu'ANIMATIONS/WEB, OFF
       # par défaut. http://localhost:8766 une fois lancé (FACE=true).
       - FACE=${FACE:-false}
@@ -125,15 +130,13 @@ services:
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
       - ../../../json:/home/ros2_ws/json
 
-      # --- Paquet "robot" (animations_node, param animations:=true du launch sim) ---
-      # Reproduit la structure assemblée par Ansible sur le vrai robot
-      # (setup.py/package.xml de conf/ros2/ + le module robot/ + json/, tous à
-      # plat dans le même dossier ros2_ws/src/robot/, cf.
-      # dadou_utils_ros/ansible/roles/synchronise + commentaire détaillé dans
-      # Dockerfile-sim). La lib dadou_utils_ros n'y est plus : depuis L1e-3a c'est
-      # un package de packages/ (montage plus haut, contexte nommé du build).
-      - ../../ros2:/home/ros2_ws/src/robot
-      - ../../../robot:/home/ros2_ws/src/robot/robot
+      # --- Paquet "didier_core" (animations_node, face_sim ; ex-paquet "robot") ---
+      # Depuis L1e-3c le CODE est un package de packages/, monté à plat dans src/
+      # comme les autres ; src/robot/ ne porte plus que les DONNÉES (json/, medias/),
+      # racine DIDIER_DATA_DIR ci-dessus — même disposition que sur le vrai robot
+      # (rôle Ansible synchronise). Plus de montage de conf/ros2 (setup.py/package.xml
+      # du paquet robot) en guise de src/robot/.
+      - ../../../../../packages/didier_core:/home/ros2_ws/src/didier_core
       - ../../../json:/home/ros2_ws/src/robot/json
       # medias/ : PNG bouche/yeux lus par Face.load_visuals() (config[MOUTH_VISUALS_PATH]/
       # [EYE_VISUALS_PATH] = <PROJECT_DIRECTORY>/medias/visuals/{mouth,eye}, cf.

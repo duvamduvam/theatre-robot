@@ -10,11 +10,10 @@ EXPOSE 4421
 # Prepare ROS 2 workspace layout
 RUN mkdir /home/ros2_ws
 RUN mkdir /home/ros2_ws/src
+# src/robot/ : données du cœur seulement (L1e-3c) ; le code est le package src/didier_core.
 RUN mkdir /home/ros2_ws/src/robot
-RUN mkdir /home/ros2_ws/src/robot/resource
 
 # Copy project sources and configuration
-COPY robot/ /home/ros2_ws/src/robot/robot/
 COPY conf/ /home/ros2_ws/src/robot/conf/
 COPY json/ /home/ros2_ws/src/robot/json/
 COPY medias/ /home/ros2_ws/src/robot/medias/
@@ -33,11 +32,8 @@ COPY --from=theatre_interfaces . /home/ros2_ws/src/theatre_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
 # dadou_utils_ros (L1e-3a) : lib partagée, package de packages/ (plus de symlink).
 COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
-
-COPY conf/ros2/setup.py /home/ros2_ws/src/robot/
-COPY conf/ros2/package.xml /home/ros2_ws/src/robot/
-COPY conf/ros2/setup.cfg /home/ros2_ws/src/robot/
-COPY conf/ros2/resource/ /home/ros2_ws/src/robot/resource/
+# didier_core (L1e-3c) : le cœur, ex-package robot (code + package.xml/setup.py).
+COPY --from=didier_core . /home/ros2_ws/src/didier_core
 
 # Add helper aliases/env setup for interactive shells in the container
 COPY conf/docker/docker_bashrc /tmp/docker_bashrc
@@ -59,7 +55,9 @@ RUN pip3 install --no-cache-dir --ignore-installed -r /home/ros2_ws/src/robot/co
 
 #COPY robot/test.py .
 # Launch test entry point by default (override at runtime if needed)
-ENTRYPOINT ["python3", "/home/ros2_ws/src/robot/robot/test.py"]
+# ⚠️ test.py n'existe pas dans le module (constaté au L1e-3c, 07/11) : cette image de bureau
+# ne démarre pas telle quelle — chemin seulement suivi du renommage robot -> didier_core.
+ENTRYPOINT ["python3", "/home/ros2_ws/src/didier_core/didier_core/test.py"]
 #CMD ["python3", "src/run.py"]
 
 ### ajouter

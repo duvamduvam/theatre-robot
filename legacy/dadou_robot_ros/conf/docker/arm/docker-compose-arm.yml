@@ -15,6 +15,8 @@ services:
         theatre_contrats: ../../../../theatre_contrats
         # L1e-3a : la lib partagée, package de packages/ (liste `packages_default`).
         dadou_utils_ros: ../../../../dadou_utils_ros
+        # L1e-3c : le cœur, package de packages/ (liste `packages` de l'hôte robot).
+        didier_core: ../../../../didier_core
         # L1e-1 : les 6 packages du robot, eux aussi dans ros2_ws/src/<package> (liste
         # `packages` de l'hôte robot dans ansible/hosts) — remplace l'ancienne COPY du dossier conf/ du robot.
         didier_bringup: ../../../../didier_bringup
@@ -36,6 +38,9 @@ services:
       # par défaut. Robot, vision et télécommande d'un même Didier DOIVENT avoir le
       # même nom (sinon ils ne s'entendent plus) ; la CLI ros2 doit préfixer.
       - ROBOT_NAME=${ROBOT_NAME:-didier}
+      # Racine des DONNÉES du cœur (json/, medias/, db/, conf/), lue par robot_config.py
+      # (L1e-3c) : le code est dans src/didier_core, les données restent sous src/robot/.
+      - DIDIER_DATA_DIR=/home/ros2_ws/src/robot/
     #ports:
     #  - "80:80"
     #  - "8000-9000:8000-9000"
@@ -44,7 +49,6 @@ services:
     volumes:
       #- /tmp/.X11-unix:/tmp/.X11-unix
       - ../../../conf:/home/ros2_ws/src/robot/conf
-      - ../../../robot:/home/ros2_ws/src/robot/robot
       - ../../../json:/home/ros2_ws/src/robot/json
       - ../../../medias:/home/ros2_ws/src/robot/medias
       - ../../../../didier_bringup:/home/ros2_ws/src/didier_bringup
@@ -55,6 +59,9 @@ services:
       # dadou_utils_ros (L1e-3a) : package à plat dans src/ comme les autres (plus de
       # copie dans src/robot/, le symlink a disparu).
       - ../../../../dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
+      # didier_core (L1e-3c) : le cœur (ex-package robot), à plat dans src/ ; sa sentinelle de
+      # build est src/didier_core/change (launch-ros-in-docker.sh).
+      - ../../../../didier_core:/home/ros2_ws/src/didier_core
       # Chaîne cmd_vel (bridge/mux/deadman) — rsyncée sur le Pi par la tâche
       # ansible (liste `packages` de l'hôte robot -> src/), comme didier_bringup/theatre_interfaces.
       - ../../../../didier_drive:/home/ros2_ws/src/didier_drive
@@ -65,8 +72,6 @@ services:
       - ../../../../../build:/home/ros2_ws/build
       - ../../../../../install:/home/ros2_ws/install
       - ../../../../../log:/home/ros2_ws/log
-      - ../../../conf/ros2/setup.py:/home/ros2_ws/src/robot/setup.py
-      - ../../../conf/ros2/package.xml:/home/ros2_ws/src/robot/package.xml
       - /dev:/dev
       - /dev/snd:/dev/snd
     #  - /dev/null:/folder/fileToBeExcluded

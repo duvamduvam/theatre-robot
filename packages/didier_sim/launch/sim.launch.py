@@ -7,13 +7,13 @@ robot_description, robot_state_publisher et le bridge ros_gz.
     ros2 launch didier_sim sim.launch.py headless:=true
     ros2 launch didier_sim sim.launch.py world:=rue   # monde "rue" (étude répétition simulée)
 
-    # Rejeu des séquences JSON (animations_node, package "robot" -- OFF par
+    # Rejeu des séquences JSON (animations_node, package "didier_core" -- OFF par
     # défaut, comme gaze_follower : lancement explicite requis) :
     ros2 launch didier_sim sim.launch.py animations:=true
     # puis, dans un autre terminal (même domaine ROS que la sim, 43) :
     #   ros2 topic pub -1 /didier/animation theatre_interfaces/msg/StringTime '{msg: "\\"parle\\""}'
 
-    # Aperçu web du visage LED (face_sim, package "robot" -- les matrices LED
+    # Aperçu web du visage LED (face_sim, package "didier_core" -- les matrices LED
     # n'ont aucun rendu dans Gazebo) -- OFF par défaut, même prudence :
     ros2 launch didier_sim sim.launch.py face:=true
     # puis http://localhost:8766 (face_port pour changer le port).
@@ -96,7 +96,7 @@ def generate_launch_description():
         DeclareLaunchArgument("headless", default_value="false",
                               description="true = serveur gz seul, sans GUI"),
         DeclareLaunchArgument("animations", default_value="false",
-                              description="true = lance animations_node (paquet robot, rejeu des"
+                              description="true = lance animations_node (paquet didier_core, rejeu des"
                                            " séquences JSON) -- OFF par défaut, même prudence que"
                                            " gaze_follower : activation explicite requise"),
         DeclareLaunchArgument("web", default_value="false",
@@ -120,7 +120,7 @@ def generate_launch_description():
                                            " false. NE LANCE PAS la route ni le régisseur (à la main)."
                                            " Sans effet sans web:=true."),
         DeclareLaunchArgument("face", default_value="false",
-                              description="true = lance face_sim (paquet robot, aperçu web du visage"
+                              description="true = lance face_sim (paquet didier_core, aperçu web du visage"
                                            " LED -- les matrices LED n'ont aucun rendu dans Gazebo)."
                                            " OFF par défaut, même prudence que animations/web :"
                                            " activation explicite requise."),
@@ -193,7 +193,7 @@ def generate_launch_description():
                 output="screen",
             ),
 
-            # Rejeu des séquences JSON (paquet "robot", le VRAI code du robot --
+            # Rejeu des séquences JSON (paquet "didier_core", le VRAI code du robot --
             # PAS un paquet didier_sim, cf. Dockerfile-sim/docker-compose-sim.yml
             # pour comment il est construit dans le conteneur sim). OFF par défaut
             # (animations:=false) : même prudence que gaze_follower, activation
@@ -204,21 +204,21 @@ def generate_launch_description():
             # aucun effet ici ; on ne le passe donc pas, contrairement aux autres
             # nodes de ce fichier).
             Node(
-                package="robot",
+                package="didier_core",
                 executable="animations_node",
                 output="screen",
                 condition=IfCondition(animations),
             ),
 
-            # Aperçu web du visage LED (paquet "robot", le VRAI code du visage --
-            # robot.actions.face.Face + ImageMapping, réutilisés tels quels sur un
+            # Aperçu web du visage LED (paquet "didier_core", le VRAI code du visage --
+            # didier_core.actions.face.Face + ImageMapping, réutilisés tels quels sur un
             # strip factice, cf. robot/nodes/face_sim_node.py). Aucune libs
             # matérielle requise (contrairement à animations_node dont le rejeu
             # des séquences peut piloter des actions qui, elles, en dépendraient
             # si jamais activées) -- mais OFF par défaut quand même (face:=false),
             # même prudence que animations/web : lancement explicite requis.
             Node(
-                package="robot",
+                package="didier_core",
                 executable="face_sim",
                 output="screen",
                 parameters=[{"face_port": face_port}],
