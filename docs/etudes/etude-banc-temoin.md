@@ -190,6 +190,10 @@ il ne coûte que du temps d'atelier.
 
 ## 7. Si l'inventaire trouve des Pi en stock
 
+> **07/11, soir** : David a retrouvé **5 Pi 4**, et pense avoir **3 Pi 3**. Rien n'est encore relevé
+> (mémoire, démarrage). Le banc aura donc un Pi 4 à lui, et le mini-robot aussi le jour du lidar.
+> La récupération du bootloader des deux Pi 4 morts n'est plus urgente.
+
 **Ce qui change.**
 
 - **Le banc devient permanent.** Il ne rend plus de Pi au remontage du robot. Le risque n° 1 du
