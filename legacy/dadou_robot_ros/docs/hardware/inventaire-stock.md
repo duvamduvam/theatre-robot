@@ -608,6 +608,7 @@ Donc, pour la prochaine passe :
 | Pi 4 Model B Rev 1.2 | 4 Go | `100000000a547d0e` | **Sain** le 07/11 : démarre sur la SD du robot, `throttled=0x0` | MAC Ethernet `dc:a6:32:65:57:eb` ; DHCP en .49. 3ᵉ des Pi retrouvés |
 | Pi 4 Model B Rev 1.4 | 4 Go | `10000000da66fc96` | **Sain, mais FENTE SD CASSÉE** (07/11) : démarre sur USB (SD du robot dans un lecteur USB, port USB-A), `throttled=0x0` | MAC Ethernet `e4:5f:01:71:5e:52` ; DHCP en .53. 4ᵉ des Pi retrouvés. Toujours démarrer sur clé, SSD ou lecteur USB ; bon candidat pour le banc témoin (support USB permanent) |
 | Pi 4 Model B Rev 1.5 | 4 Go | `10000000bec1ed98` | **Sain** le 07/11 : démarre sur la SD du robot, `throttled=0x0` | MAC Ethernet `d8:3a:dd:6d:da:73` ; DHCP en .131. 5ᵉ et dernier des Pi 4 retrouvés |
+| **Pi 5 Model B Rev 1.0** (vision) | 8 Go | `feb761db62578811` | **Sain** le 07/11 : `throttled=0x0`, sur sa propre SD | MAC Ethernet `2c:cf:67:6f:51:e0` ; hôte `vision`, en .151 |
 **Bilan du relevé du 2026-11-07** : les **5 Pi 4 retrouvés** sont relevés ci-dessus, tous de
 4 Go, tous **sains** (aucune alerte d'alimentation), tous démarrés sur la SD du robot. Leurs numéros
 de série diffèrent de ceux du 04/11 : ce sont bien **5 cartes de plus**, et les deux Pi morts restent
