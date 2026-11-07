@@ -235,6 +235,9 @@ l'inventaire :
 
 ## 8. Câblage du banc (B0) — relevé dans le code du robot le 07/11
 
+**Schéma imprimable (A4 paysage, noir pur)** : [`banc-temoin-cablage.svg`](banc-temoin-cablage.svg),
+régénéré par `atelier/outils/schema_banc_temoin.py` (une valeur qui change se corrige là).
+
 **Règle n° 1, tirée de l'incident du 04/11 (deux Pi abîmés par la nappe)** : le Pi est alimenté
 **uniquement par son propre chargeur USB-C**. **Aucun fil** entre les broches 5 V du Pi (2 et 4) et
 l'alimentation du banc. Seule la **masse** est commune, par un seul fil.

@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210" font-family="DejaVu Sans, sans-serif">
+<rect width="297" height="210" fill="white"/>
+<text x="148.5" y="10" font-size="4.2" text-anchor="middle" font-weight="bold">Banc témoin B0 — câblage (relevé dans le code du robot, 07/11/2026)</text>
+<text x="148.5" y="15.5" font-size="2.6" text-anchor="middle">Aucun moteur, aucun driver moteur. Même câblage logique que Didier : PCA9685 0x40, PCF8574 0x21, LED sur GPIO 18.</text>
+<rect x="8" y="24" width="62" height="122" fill="none" stroke="black" stroke-width="0.6"/>
+<text x="39.0" y="29" font-size="3.4" text-anchor="middle" font-weight="bold">Raspberry Pi 4</text>
+<text x="39.0" y="33" font-size="2.6" text-anchor="middle">da66fc96 · démarre sur USB</text>
+<text x="68.5" y="41" font-size="2.6" text-anchor="end">broche 1 · 3,3 V</text>
+<text x="68.5" y="51" font-size="2.6" text-anchor="end">broche 3 · SDA</text>
+<text x="68.5" y="61" font-size="2.6" text-anchor="end">broche 5 · SCL</text>
+<text x="68.5" y="73" font-size="2.6" text-anchor="end">broche 6 · masse</text>
+<text x="68.5" y="89" font-size="2.6" text-anchor="end">broche 12 · GPIO 18</text>
+<text x="68.5" y="113" font-size="2.6" text-anchor="end">broche 32 · GPIO 12</text>
+<text x="68.5" y="125" font-size="2.6" text-anchor="end">broche 36 · GPIO 16</text>
+<text x="68.5" y="137" font-size="2.6" text-anchor="end">broche 38 · GPIO 20</text>
+<text x="12" y="100" font-size="2.6" text-anchor="start" font-weight="bold">broches 2 et 4 (5 V) :</text>
+<text x="12" y="104" font-size="2.6" text-anchor="start" font-weight="bold">NE RIEN BRANCHER</text>
+<rect x="8" y="152" width="62" height="16" fill="none" stroke="black" stroke-width="0.6"/>
+<text x="39.0" y="157" font-size="3.4" text-anchor="middle" font-weight="bold">Chargeur USB-C du Pi</text>
+<text x="39.0" y="161" font-size="2.6" text-anchor="middle">SEULE alimentation du Pi</text>
+<polyline points="39,152 39,146" fill="none" stroke="black" stroke-width="0.6"/>
+<polyline points="70,40 100,40" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="100" cy="40" r="0.9" fill="black"/>
+<polyline points="100,38 100,98" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="100,38 130,38" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="100" cy="38" r="0.9" fill="black"/>
+<polyline points="100,98 130,98" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="100" cy="98" r="0.9" fill="black"/>
+<polyline points="70,50 106,50" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="106" cy="50" r="0.9" fill="black"/>
+<polyline points="106,46 106,106" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="106,46 130,46" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="106" cy="46" r="0.9" fill="black"/>
+<polyline points="106,106 130,106" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="106" cy="106" r="0.9" fill="black"/>
+<polyline points="70,60 112,60" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="112" cy="60" r="0.9" fill="black"/>
+<polyline points="112,54 112,114" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="112,54 130,54" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="112" cy="54" r="0.9" fill="black"/>
+<polyline points="112,114 130,114" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="112" cy="114" r="0.9" fill="black"/>
+<text x="100" y="30" font-size="2.6" text-anchor="middle">3,3 V</text>
+<text x="106.5" y="34" font-size="2.6" text-anchor="middle">SDA</text>
+<text x="113" y="30" font-size="2.6" text-anchor="middle">SCL</text>
+<polyline points="70,72 80,72" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="80,72 80,75" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="77.6,75.0 82.4,75.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="78.4,75.9 81.6,75.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="79.2,76.8 80.8,76.8" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="74" y="83" font-size="2.6" text-anchor="start">masse commune</text>
+<rect x="130" y="24" width="72" height="62" fill="none" stroke="black" stroke-width="0.6"/>
+<text x="166.0" y="29" font-size="3.4" text-anchor="middle" font-weight="bold">PCA9685</text>
+<text x="166.0" y="33" font-size="2.6" text-anchor="middle">0x40 · servos ET roues</text>
+<text x="131.5" y="39" font-size="2.6" text-anchor="start">VCC</text>
+<text x="131.5" y="47" font-size="2.6" text-anchor="start">SDA</text>
+<text x="131.5" y="55" font-size="2.6" text-anchor="start">SCL</text>
+<text x="131.5" y="63" font-size="2.6" text-anchor="start">GND</text>
+<polyline points="130,62 124,62" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="124,62 124,65" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="121.6,65.0 126.4,65.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="122.4,65.9 125.6,65.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="123.2,66.8 124.8,66.8" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="200.5" y="33" font-size="2.6" text-anchor="end">V+ (bornier)</text>
+<polyline points="202,32 208,32" fill="none" stroke="black" stroke-width="0.4"/>
+<polygon points="208,30 223.25,30 225.25,32 223.25,34 208,34" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="215.625" y="33" font-size="2.6" text-anchor="middle" font-weight="bold">5V BANC</text>
+<text x="200.5" y="45" font-size="2.6" text-anchor="end">ch 0 · sens G</text>
+<text x="200.5" y="52" font-size="2.6" text-anchor="end">ch 1 · PWM G</text>
+<text x="200.5" y="59" font-size="2.6" text-anchor="end">ch 2 · PWM D</text>
+<text x="200.5" y="66" font-size="2.6" text-anchor="end">ch 3 · sens D</text>
+<polyline points="202,44 208.0,44" fill="none" stroke="black" stroke-width="0.4"/>
+<rect x="208.0" y="42.7" width="8" height="2.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="216.0,44 222,44" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="212.0" y="41.8" font-size="2.6" text-anchor="middle">330 Ω</text>
+<polygon points="222,42.4 222,45.6 225,44" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="225,42.4 225,45.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="225,44 229,44" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="202,51 208.0,51" fill="none" stroke="black" stroke-width="0.4"/>
+<rect x="208.0" y="49.7" width="8" height="2.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="216.0,51 222,51" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="212.0" y="48.8" font-size="2.6" text-anchor="middle">330 Ω</text>
+<polygon points="222,49.4 222,52.6 225,51" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="225,49.4 225,52.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="225,51 229,51" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="202,58 208.0,58" fill="none" stroke="black" stroke-width="0.4"/>
+<rect x="208.0" y="56.7" width="8" height="2.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="216.0,58 222,58" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="212.0" y="55.8" font-size="2.6" text-anchor="middle">330 Ω</text>
+<polygon points="222,56.4 222,59.6 225,58" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="225,56.4 225,59.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="225,58 229,58" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="202,65 208.0,65" fill="none" stroke="black" stroke-width="0.4"/>
+<rect x="208.0" y="63.7" width="8" height="2.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="216.0,65 222,65" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="212.0" y="62.8" font-size="2.6" text-anchor="middle">330 Ω</text>
+<polygon points="222,63.4 222,66.6 225,65" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="225,63.4 225,66.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="225,65 229,65" fill="none" stroke="black" stroke-width="0.4"/>
+<circle cx="229" cy="51" r="0.9" fill="black"/>
+<polyline points="229,44 229,68" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="229,68 229,71" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="226.6,71.0 231.4,71.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="227.4,71.9 230.6,71.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="228.2,72.8 229.8,72.8" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="233" y="48" font-size="2.6" text-anchor="start">4 LED témoins</text>
+<text x="233" y="52" font-size="2.6" text-anchor="start">(facultatif)</text>
+<text x="233" y="58" font-size="2.6" text-anchor="start" font-weight="bold">JAMAIS de driver</text>
+<text x="233" y="62" font-size="2.6" text-anchor="start" font-weight="bold">moteur sur 0 à 3</text>
+<text x="200.5" y="79" font-size="2.6" text-anchor="end">ch 4 · cou</text>
+<polyline points="202,78 212,78" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="213" y="79" font-size="2.6" text-anchor="start">servo facultatif (emprunté à la tête), alimenté par V+</text>
+<rect x="130" y="90" width="72" height="38" fill="none" stroke="black" stroke-width="0.6"/>
+<text x="166.0" y="95" font-size="3.4" text-anchor="middle" font-weight="bold">PCF8574</text>
+<text x="166.0" y="99" font-size="2.6" text-anchor="middle">0x21 · relais</text>
+<text x="131.5" y="99" font-size="2.6" text-anchor="start">VCC</text>
+<text x="131.5" y="107" font-size="2.6" text-anchor="start">SDA</text>
+<text x="131.5" y="115" font-size="2.6" text-anchor="start">SCL</text>
+<text x="131.5" y="123" font-size="2.6" text-anchor="start">GND</text>
+<polyline points="130,122 124,122" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="124,122 124,125" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="121.6,125.0 126.4,125.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="122.4,125.9 125.6,125.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="123.2,126.8 124.8,126.8" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="200" y="108" font-size="2.6" text-anchor="end">cavaliers : A0 = 1,</text>
+<text x="200" y="112" font-size="2.6" text-anchor="end">A1 = 0, A2 = 0</text>
+<text x="200" y="120" font-size="2.6" text-anchor="end" font-weight="bold">vérifier : 8574, pas 8575</text>
+<rect x="130" y="138" width="72" height="56" fill="none" stroke="black" stroke-width="0.6"/>
+<text x="166.0" y="143" font-size="3.4" text-anchor="middle" font-weight="bold">74AHCT125</text>
+<text x="166.0" y="147" font-size="2.6" text-anchor="middle">DIP-14 · 3,3 V → 5 V</text>
+<text x="131.5" y="151" font-size="2.6" text-anchor="start">2 · 1A</text>
+<text x="131.5" y="159" font-size="2.6" text-anchor="start">1 · 1OE</text>
+<text x="131.5" y="167" font-size="2.6" text-anchor="start">7 · GND</text>
+<text x="131.5" y="175" font-size="2.6" text-anchor="start">5, 9, 12 · entrées libres</text>
+<polyline points="70,88 96,88 96,150 130,150" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="100" y="148.5" font-size="2.6" text-anchor="start">données LED</text>
+<polyline points="130,158 120,158" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="130,166 120,166" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="130,174 120,174" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="120,158 120,176" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="120,176 120,179" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="117.6,179.0 122.4,179.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="118.4,179.9 121.6,179.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="119.2,180.8 120.8,180.8" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="200.5" y="151" font-size="2.6" text-anchor="end">14 · VCC</text>
+<text x="200.5" y="161" font-size="2.6" text-anchor="end">4, 10, 13 · OE libres</text>
+<text x="200.5" y="177" font-size="2.6" text-anchor="end">3 · 1Y</text>
+<polyline points="202,150 208,150" fill="none" stroke="black" stroke-width="0.4"/>
+<polygon points="208,148 223.25,148 225.25,150 223.25,152 208,152" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="215.625" y="151" font-size="2.6" text-anchor="middle" font-weight="bold">5V BANC</text>
+<polyline points="202,160 208,160" fill="none" stroke="black" stroke-width="0.4"/>
+<polygon points="208,158 223.25,158 225.25,160 223.25,162 208,162" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="215.625" y="161" font-size="2.6" text-anchor="middle" font-weight="bold">5V BANC</text>
+<text x="166" y="188" font-size="2.6" text-anchor="middle">+ 100 nF entre les broches 14 et 7</text>
+<rect x="240" y="140" width="50" height="46" fill="none" stroke="black" stroke-width="0.6"/>
+<text x="265.0" y="145" font-size="3.4" text-anchor="middle" font-weight="bold">Matrice</text>
+<text x="265.0" y="149" font-size="2.6" text-anchor="middle">WS2812B 8×8</text>
+<polyline points="202,176 217.0,176" fill="none" stroke="black" stroke-width="0.4"/>
+<rect x="217.0" y="174.7" width="8" height="2.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="225.0,176 240,176" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="221.0" y="173.8" font-size="2.6" text-anchor="middle">330 Ω</text>
+<text x="241.5" y="177" font-size="2.6" text-anchor="start">DIN</text>
+<text x="241.5" y="157" font-size="2.6" text-anchor="start">5 V</text>
+<text x="288.5" y="169" font-size="2.6" text-anchor="end">GND</text>
+<polygon points="222.75,156 224.75,154 240.0,154 240.0,158 224.75,158" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="232.375" y="157" font-size="2.6" text-anchor="middle" font-weight="bold">5V BANC</text>
+<polyline points="290,168 293,168" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="293,168 293,171" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="290.6,171.0 295.4,171.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="291.4,171.9 294.6,171.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="292.2,172.8 293.8,172.8" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="265" y="182" font-size="2.6" text-anchor="middle">+ 470 à 1 000 µF</text>
+<text x="265" y="185.5" font-size="2.6" text-anchor="middle">entre 5 V et GND</text>
+<rect x="240" y="90" width="50" height="40" fill="none" stroke="black" stroke-width="0.6"/>
+<text x="265.0" y="95" font-size="3.4" text-anchor="middle" font-weight="bold">DIANQI D-30A</text>
+<text x="265.0" y="99" font-size="2.6" text-anchor="middle">alimentation du banc</text>
+<text x="241.5" y="105" font-size="2.6" text-anchor="start">+5 V</text>
+<text x="241.5" y="113" font-size="2.6" text-anchor="start">GND</text>
+<text x="241.5" y="121" font-size="2.6" text-anchor="start">+12 V</text>
+<polygon points="222.75,104 224.75,102 240.0,102 240.0,106 224.75,106" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="232.375" y="105" font-size="2.6" text-anchor="middle" font-weight="bold">5V BANC</text>
+<polyline points="240,112 232,112" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="232,112 232,115" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="229.6,115.0 234.4,115.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="230.4,115.9 233.6,115.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="231.2,116.8 232.8,116.8" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="238" y="123" font-size="2.6" text-anchor="end" font-weight="bold">isolé</text>
+<text x="265" y="127" font-size="2.6" text-anchor="middle">luminosité LED bridée</text>
+<polyline points="70,124 73,124" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="77,124 80,124" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="73,122.2 77,122.2" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="75,122.2 75,120.5" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="80,124 84,124" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="84,124 84,127" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="81.6,127.0 86.4,127.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="82.4,127.9 85.6,127.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="83.2,128.8 84.8,128.8" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="70,136 73,136" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="77,136 80,136" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="73,134.2 77,134.2" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="75,134.2 75,132.5" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="80,136 84,136" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="84,136 84,139" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="81.6,139.0 86.4,139.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="82.4,139.9 85.6,139.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="83.2,140.8 84.8,140.8" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="72" y="120" font-size="2.6" text-anchor="start">arrêt</text>
+<text x="72" y="132" font-size="2.6" text-anchor="start">réarm.</text>
+<polyline points="70,112 71.0,112" fill="none" stroke="black" stroke-width="0.4"/>
+<rect x="71.0" y="110.7" width="8" height="2.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="79.0,112 80,112" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="75.0" y="109.8" font-size="2.6" text-anchor="middle">330 Ω</text>
+<polygon points="80,110.4 80,113.6 83,112" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="83,110.4 83,113.6" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="83,112 86,112" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="86,112 86,115" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="83.6,115.0 88.4,115.0" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="84.4,115.9 87.6,115.9" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="85.2,116.8 86.8,116.8" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="84.5" y="109.5" font-size="2.6" text-anchor="start">état</text>
+<rect x="8" y="173" width="110" height="30" fill="none" stroke="black" stroke-width="1"/>
+<text x="12" y="179" font-size="3.0" text-anchor="start" font-weight="bold">RÈGLE N° 1 (incident de la nappe du 04/11)</text>
+<text x="12" y="185" font-size="2.6" text-anchor="start">Le Pi n'est alimenté QUE par son chargeur USB-C.</text>
+<text x="12" y="189.5" font-size="2.6" text-anchor="start">Aucun fil entre les broches 5 V du Pi et le banc.</text>
+<text x="12" y="194" font-size="2.6" text-anchor="start">Seule la masse est commune, par un seul fil (broche 6).</text>
+<text x="12" y="198.5" font-size="2.6" text-anchor="start">GPIO 20 : appui court = réarmement, long = éteint le Pi du banc.</text>
+<text x="214" y="197" font-size="2.6" text-anchor="start">Légende : même étiquette = même fil ;</text>
+<polygon points="214,200 229.25,200 231.25,202 229.25,204 214,204" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="221.625" y="203" font-size="2.6" text-anchor="middle" font-weight="bold">5V BANC</text>
+<text x="232" y="203" font-size="2.6" text-anchor="start">= +5 V de la DIANQI ;</text>
+<polyline points="268,199.5 268,202.5" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="265.6,202.5 270.4,202.5" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="266.4,203.4 269.6,203.4" fill="none" stroke="black" stroke-width="0.4"/>
+<polyline points="267.2,204.3 268.8,204.3" fill="none" stroke="black" stroke-width="0.4"/>
+<text x="272" y="203" font-size="2.6" text-anchor="start">= masse commune</text>
+</svg>
