@@ -444,6 +444,95 @@ si la porte n'est pas franchie) :
    `robot_description` seulement — les usages paramètre/topic du point 3 (les lister dans
    le rapport).
 
+##### L1e-3 — conception détaillée (07/11, Fable) : le cœur, la vision, les interfaces et la lib deviennent de vrais packages
+
+**Faits relevés le 07/11** :
+- `robot` (cœur) n'a pas la forme ament : code dans `legacy/dadou_robot_ros/robot/` (nodes,
+  actions, visual, sequences, move, diagnostic, db, `robot_config.py`, `robot_static.py`,
+  **112 fichiers de tests** dans `robot/tests/`), `setup.py`/`package.xml`/`setup.cfg`/
+  `resource/` dans `conf/ros2/`, montés par Docker sous `/home/ros2_ws/src/robot/` avec
+  `json/` (72 fichiers), `medias/` (389), `db/`, `conf/`. `find_packages()` y trouve `robot`
+  ET `dadou_utils_ros` (lien symbolique `legacy/dadou_robot_ros/dadou_utils_ros → ../dadou_utils_ros`,
+  copié par rsync `copy_links`). `vision` et `controller` sont bâtis pareil (3 symlinks).
+- `robot_config.py` : `PROJECT_DIRECTORY = /home/ros2_ws/src/robot/` (données `json/`,
+  `medias/`, `db/`, `conf/` dessous) ; sur l'hôte, repli = le parent du dossier du package.
+  Déplacer le code sans toucher ça casserait les tests hôte (le parent deviendrait
+  `packages/didier_core/`).
+- `dadou_utils_ros` = 40 fichiers Python (sous-paquets `com`, `lcd`, `utils`, `audios`,
+  `files`, `fonts`…) + `ansible/` + `jenkins/` + `conf/` + 4 tests. 120 fichiers l'importent.
+  Elle disparaît à L5 (59 % morte) : jusque-là elle garde son nom.
+- `robot_interfaces` : 72 fichiers hors .md + 13 scripts/docs qui tapent `robot_interfaces/msg/StringTime` en CLI.
+- La sentinelle de build `robot/change` est un fichier SUIVI (dette), lue par
+  `launch-ros-in-docker.sh` à `/home/ros2_ws/src/robot/robot/change`.
+
+**Décisions (ne pas rouvrir)** :
+1. **Quatre sous-étapes, une porte chacune, dans cet ordre** : 3a lib, 3b interfaces, 3c cœur,
+   3d vision. Jamais deux renommages dans le même commit.
+2. **Les DONNÉES ne bougent pas en L1e-3** : `json/`, `medias/`, `db/`, `conf/` restent dans
+   `legacy/dadou_robot_ros/` (idem `medias/`, `models/`, `mediamtx/` de la vision) et aux mêmes
+   chemins conteneur (`/home/ros2_ws/src/robot/…`, `/home/ros2_ws/src/vision/…`). Leur
+   déménagement vers `data/` est L1e-4 (avec `machines/`). Seul le CODE bouge.
+3. **Racine des données = variable d'environnement** : `DIDIER_DATA_DIR` (défaut
+   `/home/ros2_ws/src/robot/`) lue par `robot_config.py` à la place du repli « parent du
+   package » ; `DIDIER_VISION_DATA_DIR` (défaut `/home/ros2_ws/src/vision/`) pour
+   `vision_config`. Les compose la posent explicitement ; les `conftest.py` hôte la posent vers
+   `legacy/dadou_robot_ros/` (chemin calculé depuis le dépôt). C'est le SEUL changement de
+   logique du lot, testé (valeur gravée).
+4. **3a — `packages/dadou_utils_ros`** (ament_python, nom INCHANGÉ) : `package.xml`, `setup.py`
+   (`packages=find_packages(include=['dadou_utils_ros', 'dadou_utils_ros.*'])`), `resource/`,
+   le code dans `packages/dadou_utils_ros/dadou_utils_ros/` (git mv des .py et sous-paquets),
+   ses 4 tests dans `test/`. **Ne déménagent PAS** : `ansible/` (→ `deploy/` en L1e-4),
+   `jenkins/`, `conf/`, `docs/`, `scripts/` (restent dans `legacy/dadou_utils_ros/`). Les 3
+   symlinks sont supprimés ; `find_packages` des 3 setup.py n'incluent plus que leur propre
+   module ; `dadou_utils_ros` entre dans `packages_default` (toutes les machines) ; compose/
+   Dockerfiles montent/copient `packages/dadou_utils_ros` (motif L1a) ; `conftest.py` des 3
+   dépôts ajoutent `packages/dadou_utils_ros` au `sys.path`. Porte : 5 suites pytest + lib ;
+   sim : namespace 5/5, catalogue 4/4, `parle` joué.
+5. **3b — `robot_interfaces` → `theatre_interfaces`** (CMake) : dossier, `package.xml`,
+   `CMakeLists.txt` (`project(theatre_interfaces)`), tous les `from robot_interfaces.msg`
+   (robot, vision, télécommande, didier_jeu, didier_web, didier_drive, didier_rehearsal, contrats),
+   les `robot_interfaces/msg/StringTime` des scripts `validate-*.sh`, `pub.sh`,
+   `collect-incident.sh`, `calibre-distance.sh`, `capture_seance.py`, les compose (montage,
+   contextes), Ansible (`packages_default`, `packages_retires` += `robot_interfaces`), doc
+   vivante + CLAUDE.md (listés au rapport). Noms de MESSAGES inchangés (`StringTime`,
+   `LedState`, `HardwareStatus`, `TurtleTuple`). Porte : pytest ; sim rebuild : namespace,
+   catalogue, **A1 14/14** (son pilote rclpy importe le type), `parle`. Opus (wheels_bridge
+   importe StringTime).
+6. **3c — `robot` → `packages/didier_core`** : forme ament vraie (`package.xml`, `setup.py`,
+   `setup.cfg`, `resource/didier_core`, module `didier_core/` = git mv de `legacy/dadou_robot_ros/robot/`
+   SANS `tests/` ni `change`, tests → `packages/didier_core/test/` avec `pytest.ini` et
+   `conftest.py`), entry points inchangés en NOM (`wheels_node = didier_core.nodes.wheels_node:main`…),
+   `from robot.` → `from didier_core.` partout (68 fichiers + tests), `package="robot"` des
+   launch → `didier_core`, `ros2 run robot …` des scripts/docs → `ros2 run didier_core …`.
+   Sentinelle : `packages/didier_core/change` (GITIGNORÉE — fin de la dette du fichier suivi),
+   lue à `/home/ros2_ws/src/didier_core/change` par `launch-ros-in-docker.sh`, écrite par le
+   Makefile. Compose ARM/x86/sim : montage `packages/didier_core → /home/ros2_ws/src/didier_core`,
+   plus de montage de `setup.py`/`package.xml` ni de `robot/robot` ; `json/medias/conf/db`
+   restent montés sous `/home/ros2_ws/src/robot/`. Ansible : `packages` de l'hôte robot +=
+   `didier_core`, `dadou_utils_ros` ; nouvelle liste gravée `chemins_retires_robot` (sous
+   `src/robot/` : `robot/`, `dadou_utils_ros/`, `setup.py`, `package.xml`, `setup.cfg`,
+   `resource/`, `test/` ; plus `build/robot`, `install/robot`) nettoyée AVANT la copie — sans
+   ça colcon trouverait encore un package `robot` via l'ancien `package.xml`. Porte : pytest
+   (1558+ depuis `packages/didier_core`), télécommande, contrats, jeu ; sim rebuild :
+   namespace 5/5, catalogue 4/4, **V-R3 21/21**, **A1 14/14**, `parle` ; `git grep -w robot`
+   comme NOM DE PACKAGE = 0 (le mot `robot` seul est partout ailleurs : le test gravé vise
+   `package="robot"`, `ros2 run robot`, `src/robot/robot`, `from robot.`). **Opus** (déplace
+   wheels_node, twist_deadman n'est pas là mais le launch de prod si).
+7. **3d — `vision` → `packages/didier_vision`** : même recette que 3c (module `didier_vision`,
+   tests → `test/`, `DIDIER_VISION_DATA_DIR`, `chemins_retires_vision`, `packages` de l'hôte
+   vision += `didier_vision`), `launch_cmd` de `hosts`. Porte : pytest vision 991 ; banc x86
+   vision (`legacy/dadou_vision_ros/conf/docker/x86`) construit et `vision_status` visible
+   sous `/didier/` dans la sim (domaine 43). Sonnet.
+8. **Télécommande (`controller`)** : reste dans `legacy/dadou_control_ros/` (L4 la réécrit) mais
+   suit 3a et 3b (symlink supprimé, imports `theatre_interfaces`). Ses tests restent verts.
+9. **Interdits** : modifier la logique d'un nœud (hors décision 3) ; toucher
+   `twist_mux.yaml` ; renommer un topic/nœud/exécutable ; déplacer des données ; `git push` ;
+   ssh ; exécuter Ansible (seulement `--syntax-check`).
+10. **Doc vivante** : README racine (table de migration), `packages/README.md`, README-contrat
+    de chaque package créé (rôle, données attendues, variables d'env), `operations.md`
+    (commandes de test : `cd packages/didier_core && <venv legacy> -m pytest`),
+    `architecture.md`, tableau de bord. CLAUDE.md : listés au rapport, appliqués par Fable.
+
 ## 3. Ordre, délégation, gates
 
 | Sous-lot | Qui | Gate avant le suivant |
