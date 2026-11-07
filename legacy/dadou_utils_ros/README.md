@@ -1,5 +1,13 @@
 # Dadou Shared Utilities
 
+> **La lib Python a déménagé (lot L1e-3a, 07/11)** : le code (`utils_static.py`, `misc.py`,
+> `com/`, `lcd/`, `utils/`…) et ses tests sont maintenant le package ROS
+> [`packages/dadou_utils_ros`](../../packages/dadou_utils_ros/README.md) du mono-dépôt.
+> Ce dossier ne garde que l'outillage : `ansible/`, `jenkins/`, `conf/`, `docs/`, `scripts/`,
+> `makefile/`. Les chemins `utils_static.py`, `tests/`, etc. cités plus bas sont à lire sous
+> `packages/dadou_utils_ros/dadou_utils_ros/` et `packages/dadou_utils_ros/test/`.
+> `.github/workflows/tests.yml` (CI de l'ancien dépôt autonome) est périmé : la CI mono-dépôt vient avec L2.
+
 Common Python utilities, assets, and deployment tooling used by both the controller (`dadou_control_ros`) and the robot runtime (`dadou_robot_ros`).
 
 ## Documentation

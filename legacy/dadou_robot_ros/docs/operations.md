@@ -54,7 +54,7 @@
   passer l'IP ; clé `~/.ssh/keys/didier`). Le sha écrit dans `conf/DEPLOY_SHA` est celui du
   worktree, suffixé `-dirty` si l'arbre diffère du commit.
 - ⚠️ **Droits sur un Pi réinstallé** : Docker crée en ROOT les dossiers de montage absents au
-  premier `compose up` (`json/`, `medias/`, `robot/`, `dadou_utils_ros/`) ; le rsync suivant,
+  premier `compose up` (`json/`, `medias/`, `robot/`) ; le rsync suivant,
   en `pi`, échoue en code 23 (« Permission denied »). Remède avant tout déploiement :
   `sudo chown -R pi:pi ~/ros2_ws/src` (le conteneur tourne en root, il lit tout).
   À ajouter au playbook d'installation (pas fait).
@@ -80,6 +80,24 @@
   Construire ensuite sur le Pi : `~/scripts/compose-up-pi.sh build` (environ 35 min), puis
   `sudo` pour créer `robot/change` (fichier root) si la compilation doit être relancée.
 - Avant de remettre le Pi sur le robot : fiches servos débranchées, moteurs de roues coupés.
+
+## Tests hôte de la lib partagée `dadou_utils_ros` (lot L1e-3a, 07/11)
+
+La lib est un package de `packages/` (plus de symlink dans les dépôts legacy) ; ses tests
+et son `conftest.py` sont dans `packages/dadou_utils_ros/test/`. Depuis la racine du
+mono-dépôt, avec le venv du robot :
+
+```bash
+cd packages/dadou_utils_ros && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=
+```
+
+Les `conftest.py` des 3 dépôts legacy et de `packages/didier_jeu` y ajoutent
+`packages/dadou_utils_ros` au `sys.path` : pour vérifier que c'est bien CETTE copie qui est
+importée, `python -c 'import conftest, dadou_utils_ros; print(dadou_utils_ros.__file__)'`
+depuis chaque dépôt doit afficher `packages/dadou_utils_ros/dadou_utils_ros/__init__.py`.
+Au déploiement, Ansible efface les anciennes copies `src/{robot,vision,controller}/dadou_utils_ros`
+(liste gravée `chemins_retires_lib`) ; si un Pi garde un `build/` ou `install/` d'avant, un
+`colcon build` complet les reconstruit.
 
 ## Calibration & verification tooling
 - **Face LED patterns** (expressions, publish on `face`): `"calib"` (digits
