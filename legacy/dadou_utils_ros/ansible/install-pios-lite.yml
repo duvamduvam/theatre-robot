@@ -18,8 +18,10 @@
             - "{{ ros2_ws }}/src/{{ project_ros_dir }}"
             - "{{ project_ros_dir }}/log"
             - "scripts"
+      # Sans `become` (lot « Ansible nickel », 07/11) : un rsync en sudo posait tout src/ en
+      # root, et le déploiement suivant (en pi) échouait en code 23. Les tâches du rôle qui
+      # ont besoin de root portent leur propre `become`.
       - role: synchronise
-        become: yes
       - role: linux-package
         vars:
           package_file: "packages.txt"
@@ -45,3 +47,5 @@
       - role: start-scripts
       - role: activate-i2c
       - role: services
+# Réinstallation complète = ce playbook PUIS deploy-pios.yml (système de l'hôte, secrets,
+# recréation et contrôle du conteneur) — voir operations.md « Déployer / réinstaller un Pi ».

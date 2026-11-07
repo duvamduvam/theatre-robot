@@ -1,0 +1,11 @@
+---
+# Système d'un hôte hors code ROS (lot « Ansible nickel », 07/11). Listes PAR HÔTE dans
+# `hosts` ; vides par défaut : un hôte qui ne déclare rien ne reçoit rien.
+# Paquets apt dont l'hôte a besoin (installés, jamais mis à jour ici : la mise à jour de
+# l'OS est un geste à part, cf. docs/ansible-ecarts.md « grosse mise à jour »).
+paquets_hote: []
+# Unités systemd versionnées (chemin de la source sur le PC) : copiées dans
+# /etc/systemd/system/<nom>, activées et démarrées.
+unites_systemd: []
+# Fichiers de /etc versionnés : liste de {source, dest}, propriétaire root, mode 0644.
+fichiers_etc: []

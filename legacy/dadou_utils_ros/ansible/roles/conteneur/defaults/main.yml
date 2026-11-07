@@ -1,0 +1,11 @@
+---
+# Conteneur du projet (lot « Ansible nickel », 07/11). Noms du parc : dadou-<projet>-container
+# et conf/docker/arm/docker-compose-arm.yml du projet déployé.
+conteneur_nom: "dadou-{{ project_name }}-container"
+conteneur_compose: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/docker/arm/docker-compose-arm.yml"
+# Nœuds qui doivent apparaître (liste PAR HÔTE dans `hosts`) ; vide = pas d'attente.
+noeuds_attendus: []
+# Attente de la fin du colcon build + démarrage des nœuds : 90 × 10 s = 15 min, de quoi couvrir
+# un build complet sur Pi 4 (workspace vierge).
+conteneur_essais: 90
+conteneur_delai: 10

@@ -1,6 +1,9 @@
 # Depuis le lot L0 (2026-11-02) les déploiements partent du mono-dépôt theatre-robot, dossier legacy/
 # (les anciens dépôts frères sont archivés). Changera de nouveau quand machines/<hôte>/ existera.
-local_projects_dir: "/home/dadou/Nextcloud/dev/didier/python/theatre-robot/legacy"
+# Lot « Ansible nickel » (07/11) : chemins DÉDUITS du playbook (legacy/dadou_utils_ros/ansible/)
+# au lieu d'un chemin absolu vers le checkout principal — un worktree déploie SON arbre sans
+# `-e local_projects_dir=… -e packages_dir=…` (surchargeables quand même par -e).
+local_projects_dir: "{{ playbook_dir | dirname | dirname }}"
 # Packages du mono-dépôt (rôle synchronise) : rsync vers ros2_ws/src/<package> de la
 # machine. Liste PAR MACHINE : variable `packages` de l'hôte dans `hosts`, à défaut
 # `packages_default` ci-dessous = les COMMUNS (lot L1a + dadou_utils_ros au lot L1e-3a),
@@ -9,7 +12,7 @@ local_projects_dir: "/home/dadou/Nextcloud/dev/didier/python/theatre-robot/legac
 # elle n'arrive plus par le symlink des 3 dépôts, supprimé en L1e-3a).
 # Il n'y a plus de liste « sim-only à exclure » : un package sim-only (didier_jeu) n'est
 # simplement dans la liste d'aucun hôte. Voir le commentaire du rôle pour le pourquoi.
-packages_dir: "/home/dadou/Nextcloud/dev/didier/python/theatre-robot/packages"
+packages_dir: "{{ playbook_dir | dirname | dirname | dirname }}/packages"
 packages_default:
   - theatre_contrats
   - theatre_interfaces
@@ -54,6 +57,20 @@ chemins_retires_lib:
   - install/vision
   - build/controller
   - install/controller
+# Lot « Ansible nickel » (07/11) : les entrées build/* et install/* ci-dessus ne sont plus
+# effacées à CHAQUE passage (ce qui imposait la sentinelle et un rebuild complet) mais
+# seulement si elles portent encore la forme ancienne — un dossier `dadou_utils_ros` à
+# l'intérieur (détection dans le rôle synchronise). Les src/* restent effacés s'ils existent.
+
+# Déchets que l'ancien rsync a poussés dans ros2_ws/src/<projet>/ (relevé du 07/11) : venv de
+# test du PC (269 Mo robot, 342 Mo vision) et workspace colcon du banc x86 de la vision (50 Mo).
+# Exclus du rsync désormais (rôle synchronise) ; cette liste efface ce qui est déjà sur le Pi.
+# Comme les listes ci-dessus, elle ne se vide jamais (state=absent est sans effet si rien).
+dechets_rsync:
+  - .venv
+  - conf/docker/x86/workspace
+# Secrets (rôle secrets) : sur le PC seulement, hors dépôt et hors Nextcloud (chmod 600).
+secrets_dir: "{{ lookup('env','HOME') }}/.config/didier"
 #controller_project_dir: "dadou_controller_ros"
 #utils_project_dir: "dadou_utils_ros_ros"
 #deploy_dir: "robot_base"

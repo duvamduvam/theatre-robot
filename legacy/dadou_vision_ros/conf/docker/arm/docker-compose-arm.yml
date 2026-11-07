@@ -55,7 +55,8 @@ services:
       - /dev/snd:/dev/snd
       # Alias ALSA casque_mic/mixette (vision_config.py chat_mic_device/
       # chat_out_device) : définis dans /etc/asound.conf de L'HÔTE (Pi 5),
-      # PAS dans le dépôt (dépend du câblage USB physique de la machine,
-      # jamais commité) — montage read-only, jamais écrit depuis le conteneur.
+      # versionné depuis le 07/11 dans conf/rpi/asound.conf et posé par Ansible
+      # (rôle config-hote ; alias par NOM de carte, indépendants de l'ordre USB)
+      # — montage read-only, jamais écrit depuis le conteneur.
       - /etc/asound.conf:/etc/asound.conf:ro
     privileged: true

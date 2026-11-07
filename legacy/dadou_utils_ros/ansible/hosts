@@ -1,10 +1,54 @@
+# Lot « Ansible nickel » (07/11) : les deux Pi de Didier se déploient avec UNE commande, sans
+# `-e ansible_user=… --private-key …` (geste manuel du 07/11). Utilisateur et clé au niveau du
+# groupe parent `didier_pi` ; IP par défaut sur chaque hôte (mDNS cassé côté PC), surchargeable
+# par `-e ansible_host=…` (les extra-vars l'emportent sur l'inventaire).
+didier_pi:
+  children:
+    robot:
+    vision:
+  vars:
+    ansible_user: pi
+    ansible_ssh_private_key_file: "{{ lookup('env','HOME') }}/.ssh/keys/didier"
+
 robot:
   hosts:
     r:
+        # Pi 4 de rechange (série 10000000bec1ed98), sur le switch depuis le 07/11.
+        ansible_host: 192.168.1.131
         local_project_dir: dadou_robot_ros
         project_ros_dir: robot
         project_name: robot
         launch_cmd: ros2 launch didier_bringup robot_app.launch.py
+        # Sentinelle de build (rôle synchronise) : le nom est celui que lit
+        # conf/scripts/launch-ros-in-docker.sh du projet — chemin relatif à ros2_ws/.
+        sentinelle_build: src/robot/robot/change
+        # Système (rôle config-hote) : alias mDNS didier.local (perdu à la réinstallation
+        # du 04/11, source versionnée dans le dépôt du robot).
+        paquets_hote:
+            - avahi-utils
+        unites_systemd:
+            - "{{ local_projects_dir }}/dadou_robot_ros/conf/systemd/avahi-alias-didier.service"
+        # Contrôle de fin de déploiement (rôle conteneur) : les 16 nœuds du robot seul
+        # (vision_status vient du Pi vision, il n'est pas exigé ici). Un nœud renommé ou
+        # ajouté au launch = cette liste à suivre (relays_node et wheels_node tournent même
+        # sans carte I²C : hors robot ils restent présents).
+        noeuds_attendus:
+            - /didier/animations_node
+            - /didier/audio_node
+            - /didier/catalogue_node
+            - /didier/left_arm_node
+            - /didier/left_eye_node
+            - /didier/lights_node
+            - /didier/neck_node
+            - /didier/relays_node
+            - /didier/right_arm_node
+            - /didier/right_eye_node
+            - /didier/system_node
+            - /didier/twist_deadman
+            - /didier/twist_mux
+            - /didier/web_bridge_node
+            - /didier/wheels_bridge
+            - /didier/wheels_node
         # Packages poussés dans ros2_ws/src/ (rôle synchronise) : les 3 communs (dont la lib
         # dadou_utils_ros, package à part depuis L1e-3a : plus de symlink dans le dépôt) + les
         # 6 packages ROS autonomes (le tri « sim-only hors du Pi » viendra avec machines/<hôte>/, L1e-4). La liste
@@ -70,6 +114,28 @@ vision:
         # Heartbeat V0 (didier_bringup était un copier-coller du groupe robot,
         # ce package n'existe pas côté vision). Deviendra un launch file en V1.
         launch_cmd: ros2 run vision vision_status --ros-args -r __ns:=/didier
+        ansible_host: 192.168.1.151
+        # Majuscules : c'est le nom que lit conf/scripts/launch-ros-in-docker.sh de la vision.
+        sentinelle_build: src/vision/vision/CHANGE
+        # Alias ALSA par NOM de carte (mixette, casque_mic, webcam_mic), bind-monté en
+        # lecture seule dans le conteneur (docker-compose-arm.yml de la vision).
+        fichiers_etc:
+            - source: "{{ local_projects_dir }}/dadou_vision_ros/conf/rpi/asound.conf"
+              dest: /etc/asound.conf
+        # Secrets (rôle secrets) : poussés depuis ~/.config/didier/ du PC, jamais du dépôt.
+        # `modele` = la liste des clés attendues ; toute clé non commentée du modèle doit
+        # exister dans la source, sinon échec (noms de clés seulement dans le message).
+        secrets_hote:
+            - source: vision-conf-secret
+              dest: ros2_ws/src/vision/conf/secret
+              modele: "{{ local_projects_dir }}/dadou_vision_ros/conf/secret.example"
+            # Boucle d'atelier ~/didier_proto (hors Ansible, à trier avec David) : son
+            # secret est quand même restauré, sans lui l'outil est mort.
+            - source: didier_proto-secret
+              dest: didier_proto/secret
+        # person_tracker n'est pas exigé : sans webcam (Pi hors robot) il s'arrête.
+        noeuds_attendus:
+            - /didier/vision_status
 
 robot-test:
   hosts:

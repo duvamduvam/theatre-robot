@@ -1,9 +1,13 @@
 
+# Le nom du projet est injecté DANS le bloc (lot « Ansible nickel », 07/11). Avant : le bloc
+# était posé avec `PROJECT=` vide, puis une tâche lineinfile le réécrivait en `PROJECT=robot`
+# — le passage suivant voyait un bloc différent du gabarit, le reposait, et la ligne était
+# réécrite : deux tâches « changed » à chaque déploiement, sans fin.
 - name: Add global bash project
   ansible.builtin.blockinfile:
     path: "{{ ansible_env.HOME }}/.bashrc"
     block: |
-      {{ lookup('file', set_bashrc_global_template) }}
+      {{ lookup('file', set_bashrc_global_template) | regex_replace('(?m)^PROJECT=.*$', 'PROJECT=' ~ project_name) if set_bashrc_update_project_name | bool else lookup('file', set_bashrc_global_template) }}
     marker: "{{ set_bashrc_global_marker }}"
     create: yes
 
@@ -15,16 +19,12 @@
     marker: "{{ set_bashrc_project_marker }}"
     create: yes
 
-- name: Update project name in bashrc
-  ansible.builtin.lineinfile:
-    path: "{{ ansible_env.HOME }}/.bashrc"
-    regexp: '^PROJECT='
-    line: "PROJECT={{ project_name }}"
-  when: set_bashrc_update_project_name | bool
-
+# Sans effet sur les sessions (le `source` se fait dans un shell jetable) : gardé pour les
+# playbooks qui l'activent, mais jamais compté comme un changement.
 - name: source .bashrc
   ansible.builtin.shell: |
     source ~/.bashrc
   args:
     executable: /bin/bash
+  changed_when: false
   when: set_bashrc_source_bashrc | bool

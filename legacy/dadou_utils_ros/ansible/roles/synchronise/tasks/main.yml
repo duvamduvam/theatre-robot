@@ -1,4 +1,26 @@
 
+# Lot « Ansible nickel » (07/11) : le squelette du workspace est créé ici, en utilisateur de
+# connexion, AVANT tout rsync. Pourquoi : rsync ne crée que le dernier niveau de sa
+# destination (un ~/ros2_ws effacé faisait échouer la copie), et un dossier absent au premier
+# `compose up` est créé par Docker EN ROOT (build/, install/, log/ montés).
+- name: Ensure the colcon workspace skeleton exists
+  file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item }}"
+    state: directory
+  loop: [src, build, install, log]
+
+# Docker crée aussi en root les points de montage absents sous src/ (json/, medias/,
+# robot/…) : le rsync suivant, en utilisateur de connexion, échouait en code 23 (geste
+# manuel `sudo chown -R pi:pi ~/ros2_ws/src` du 07/11). Le conteneur tourne en root : il
+# lit tout, rendre src/ à l'utilisateur (fait `ansible_user_id`) ne lui retire rien.
+- name: Give "{{ ros2_ws }}/src" back to the connection user before rsync
+  become: yes
+  file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src"
+    state: directory
+    recurse: yes
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
 
 #- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/didier_bringup" with "{{ ros2_ws }}/src/"
 #  synchronize:
@@ -16,6 +38,12 @@
 #    delete: yes
 #    copy_links: yes
 
+# Exclusions ajoutées au lot « Ansible nickel » (07/11) : `.venv/` (venv de test du PC, des
+# centaines de Mo partis sur les Pi), `.pytest_cache/`, le workspace du banc x86 de la vision
+# (`conf/docker/x86/workspace/`), et `conf/secret` — les secrets sont posés par le rôle
+# `secrets` depuis le PC (hors dépôt) : le rsync ne doit JAMAIS en écraser un, même si un
+# conf/secret traînait dans l'arbre du PC. Pas de --delete : rien de ce que le Pi porte
+# n'est effacé par le rsync.
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}"
   synchronize:
     src: "{{ local_projects_dir }}/{{ local_project_dir }}/"
@@ -31,6 +59,15 @@
       - "--exclude=.idea/"
       - "--exclude=__pycache__/"
       - "--exclude=venv/"
+      - "--exclude=.venv/"
+      - "--exclude=.pytest_cache/"
+      - "--exclude=/conf/docker/x86/workspace/"
+      - "--exclude=/conf/secret"
+      # Sentinelles de build COMMITÉES depuis L0 (robot/change, vision/change) : la copier
+      # recréait la sentinelle du robot à chaque passage (rsync « changed » sans fin) ; elle
+      # est désormais posée par la dernière tâche de ce rôle.
+      - "--exclude=/*/change"
+      - "--exclude=/*/CHANGE"
       - "--exclude=.editorconfig"
       - "--exclude=.gitignore"
       #- "--exclude=didier_bringup/"
@@ -59,17 +96,52 @@
     state: absent
   loop: "{{ packages_retires | product(['src', 'build', 'install']) | list }}"
 
+# Lot « Ansible nickel » (07/11) : quelles entrées de `chemins_retires_lib` sont ENCORE sous
+# leur forme ancienne ? src/* : présentes = anciennes (la lib n'y vit plus). build/<projet> et
+# install/<projet> : anciennes seulement si elles contiennent un dossier `dadou_utils_ros`
+# (la copie embarquée d'avant L1e-3a). Avant ce lot, build/ et install/ de robot et vision
+# étaient effacés à CHAQUE déploiement : rebuild complet obligatoire, et sans sentinelle la
+# vision mourait (`Package 'vision' not found`, vécu le 07/11). Lecture seule : exécutée
+# aussi en --check, jamais « changed ».
+- name: Detect old embedded dadou_utils_ros forms still on the Pi
+  become: yes
+  shell: |
+    cd "{{ ansible_env.HOME }}/{{ ros2_ws }}" 2>/dev/null || exit 0
+    for chemin in {{ chemins_retires_lib | join(' ') }}; do
+      case "$chemin" in
+        src/*) [ -e "$chemin" ] && echo "$chemin" ;;
+        *) [ -d "$chemin" ] && find "$chemin" -name dadou_utils_ros -print -quit | grep -q . \
+             && echo "$chemin" ;;
+      esac
+    done
+    exit 0
+  register: lib_embarquee
+  changed_when: false
+  check_mode: false
+
 # Lot L1e-3a (07/11) : la lib dadou_utils_ros est devenue le package src/dadou_utils_ros
 # (packages_default) ; ses copies embarquées d'avant (src/<projet>/dadou_utils_ros, issues du
 # lien symbolique suivi par le rsync `copy_links` ci-dessus) sont effacées AVANT la copie des
 # packages. Même motif que packages_retires : `become` (build/install du conteneur sont à
-# root), chemin ABSOLU, liste gravée qui ne se vide jamais (vars/main.yml).
+# root), chemin ABSOLU, liste gravée qui ne se vide jamais (vars/main.yml). Depuis le lot
+# « Ansible nickel » : seulement les entrées détectées sous leur forme ancienne (tâche
+# précédente) — un build/install sain n'est plus jamais effacé.
 - name: Remove embedded dadou_utils_ros "{{ item }}"
   become: yes
   file:
     path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item }}"
     state: absent
   loop: "{{ chemins_retires_lib }}"
+  when: item in lib_embarquee.stdout_lines
+
+# Déchets laissés par l'ancien rsync (vars/main.yml, `dechets_rsync`) : désormais exclus de
+# la copie, effacés ici s'ils sont encore sur le Pi.
+- name: Remove rsync leftovers (dechets_rsync) from "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
+  become: yes
+  file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/{{ item }}"
+    state: absent
+  loop: "{{ dechets_rsync }}"
 
 # Packages du mono-dépôt (theatre-robot/packages/) : lot L1a (2026-11-02) pour les
 # communs, lot L1e-1 (2026-11-06) pour les 6 packages ROS autonomes du robot qui
@@ -93,6 +165,7 @@
     rsync_opts:
       - "--exclude=.git/"
       - "--exclude=__pycache__/"
+      - "--exclude=.pytest_cache/"
       - "--exclude=*.egg-info/"
       - "--exclude=README.md"
   loop: "{{ packages | default(packages_default) }}"
@@ -112,3 +185,20 @@
     dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/DEPLOY_SHA"
     mode: "0644"
   when: project_ros_dir == 'robot'
+
+# Sentinelle de build, posée à CHAQUE synchronisation (lot « Ansible nickel », 07/11 ; geste
+# manuel `touch` jusque-là) : le launch-ros-in-docker.sh du projet lance `colcon build` au
+# démarrage du conteneur si elle existe, puis l'efface. Toujours la poser = le code rsyncé est
+# toujours celui qui tourne (le build est incrémental, build/ et install/ ne sont plus effacés).
+# Nom par hôte (`sentinelle_build` dans hosts) : robot/change, vision/CHANGE — gardés tels que
+# les lisent les scripts, puisque plus personne ne les tape à la main. Pas en --check (elle
+# n'existe que le temps d'un démarrage : la détection d'écart la verrait toujours manquer).
+- name: Set the colcon build sentinel "{{ sentinelle_build | default('') }}"
+  file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ sentinelle_build }}"
+    state: touch
+    access_time: preserve
+    modification_time: preserve
+  when:
+    - sentinelle_build is defined
+    - not ansible_check_mode

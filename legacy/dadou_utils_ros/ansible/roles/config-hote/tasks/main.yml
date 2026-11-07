@@ -1,0 +1,61 @@
+
+# Rôle config-hote (lot « Ansible nickel », 07/11) : tout ce qu'un Pi portait hors Ansible et
+# qu'une réinstallation perdait (relevé du 07/11 dans docs/ansible-ecarts.md) — l'alias mDNS
+# didier.local du robot, les alias ALSA de la vision. Appelé par deploy-pios.yml : chaque
+# déploiement le remet d'aplomb, et la détection d'écart (`--check`) voit toute dérive.
+
+- name: Install host packages
+  become: yes
+  ansible.builtin.apt:
+    name: "{{ paquets_hote }}"
+    state: present
+    update_cache: yes
+    cache_valid_time: 86400
+  when: paquets_hote | length > 0
+
+- name: Copy versioned systemd units
+  become: yes
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item | basename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ unites_systemd }}"
+  register: unites_copiees
+
+- name: Reload systemd after a unit change
+  become: yes
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  when: unites_copiees.changed
+
+# Une unité modifiée est REDÉMARRÉE (sinon l'ancienne version tourne jusqu'au prochain
+# boot) ; une unité inchangée est seulement maintenue active.
+- name: Enable and start versioned systemd units
+  become: yes
+  ansible.builtin.systemd:
+    name: "{{ item.item | basename }}"
+    enabled: yes
+    state: "{{ 'restarted' if item.changed else 'started' }}"
+  loop: "{{ unites_copiees.results }}"
+  loop_control:
+    label: "{{ item.item | basename }}"
+  # En --check, une unité qui SERAIT copiée n'existe pas encore sur le Pi : systemd échouerait.
+  # L'écart est déjà signalé par la copie.
+  when: not (ansible_check_mode and item.changed)
+
+# /etc/asound.conf de la vision est bind-monté (ro) dans le conteneur : un bind-mount de
+# fichier suit l'INODE, et `copy` écrit-puis-renomme. Sans conséquence ici : le rôle
+# `conteneur` recrée le conteneur en fin de déploiement, qui remonte le nouveau fichier.
+- name: Copy versioned /etc files
+  become: yes
+  ansible.builtin.copy:
+    src: "{{ item.source }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ fichiers_etc }}"
+  loop_control:
+    label: "{{ item.dest }}"

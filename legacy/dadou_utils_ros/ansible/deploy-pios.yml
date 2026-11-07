@@ -1,4 +1,8 @@
 ---
+# Déploiement d'un Pi en UNE commande, sans geste avant ni après (lot « Ansible nickel », 07/11) :
+#   cd legacy/dadou_utils_ros/ansible && ansible-playbook -i hosts deploy-pios.yml -e target_group=vision
+# L'arbre déployé est celui du checkout qui contient ce playbook (vars/main.yml). Détection
+# d'écart : ecart-pi.sh <groupe> (rejoue ce playbook en --check --diff + inventaire du Pi).
 - name: deploy {{ target_group | default('robot') }}
   hosts: "{{ target_group | default('robot') }}"
 #  become: yes
@@ -7,4 +11,18 @@
   - vars/main.yml
 
   roles:
+    # Système : paquets, unités systemd, /etc (alias mDNS, ALSA).
+    - role: config-hote
+    # Liste noire ALSA + ~/.asoundrc (gabarit commun, déjà posé par install-pios-lite).
+    - role: usb-audio
+    # Blocs .bashrc (rejoués ici pour que la détection d'écart les voie ; le `source` est inutile).
+    - role: set-bashrc
+      vars:
+        set_bashrc_project_file: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/rpi/project_bash"
+        set_bashrc_source_bashrc: false
+    # Code : chown, nettoyages, rsync, sha, sentinelle de build.
     - role: synchronise
+    # Clés d'API depuis ~/.config/didier/ du PC (après le rsync, qui ne les touche jamais).
+    - role: secrets
+    # Recréation du conteneur, attente du build, contrôle (échec = playbook rouge).
+    - role: conteneur

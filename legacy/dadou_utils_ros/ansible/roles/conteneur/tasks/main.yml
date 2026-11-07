@@ -1,0 +1,54 @@
+
+# Rôle conteneur (lot « Ansible nickel », 07/11) : fin de déploiement sans geste manuel.
+# Avant : `docker restart` à la main, qui ne relit PAS le compose (nouveaux montages ignorés,
+# vécu au L1a et au 3b), puis vérification à l'œil. Ici : recréation, attente du colcon build
+# (déclenché par la sentinelle du rôle synchronise), contrôle minimal qui fait ÉCHOUER le
+# playbook. Rien de tout ça en --check : la détection d'écart ne redémarre jamais un Pi.
+
+# `up -d --force-recreate` : relit le compose (volumes, environnement) et redémarre même si
+# rien n'a changé dans le compose — c'est le redémarrage qui fait compiler la sentinelle.
+# L'image locale est réutilisée (pas de pull : celle du Hub est périmée, docs/ansible-ecarts.md).
+- name: Recreate the project container
+  become: yes
+  ansible.builtin.command:
+    cmd: docker compose -f "{{ conteneur_compose }}" up -d --force-recreate
+  when: not ansible_check_mode
+
+# Les nœuds n'apparaissent qu'après le colcon build du script d'entrée : les voir = build fini
+# ET lancement réussi. `failed_when: false` pour que la tâche suivante dise CE qui manque.
+- name: Wait for colcon build and ROS nodes ({{ noeuds_attendus | length }} expected)
+  become: yes
+  ansible.builtin.shell: >-
+    docker exec {{ conteneur_nom }} bash -c
+    'source /opt/ros/$ROS_DISTRO/setup.bash && ros2 node list --no-daemon --spin-time 3'
+  register: noeuds_vus
+  until: noeuds_attendus | difference(noeuds_vus.stdout_lines | default([])) | length == 0
+  retries: "{{ conteneur_essais }}"
+  delay: "{{ conteneur_delai }}"
+  changed_when: false
+  failed_when: false
+  when:
+    - not ansible_check_mode
+    - noeuds_attendus | length > 0
+
+- name: Fail if expected ROS nodes are missing
+  ansible.builtin.fail:
+    msg: >-
+      Nœuds absents après {{ conteneur_essais * conteneur_delai }} s :
+      {{ noeuds_attendus | difference(noeuds_vus.stdout_lines | default([])) | join(', ') }}.
+      Voir `sudo docker logs {{ conteneur_nom }}` sur {{ inventory_hostname }}.
+  when:
+    - not ansible_check_mode
+    - noeuds_attendus | length > 0
+    - noeuds_attendus | difference(noeuds_vus.stdout_lines | default([])) | length > 0
+
+# Contrôle d'état APRÈS l'attente : un conteneur qui boucle (restart: unless-stopped du robot)
+# peut être « running » à l'instant t avec un compteur de redémarrages qui grimpe.
+- name: Read container state and restart count
+  become: yes
+  ansible.builtin.command:
+    cmd: docker inspect -f '{% raw %}{{.State.Status}} {{.RestartCount}}{% endraw %}' {{ conteneur_nom }}
+  register: etat_conteneur
+  changed_when: false
+  failed_when: etat_conteneur.rc != 0 or etat_conteneur.stdout != 'running 0'
+  when: not ansible_check_mode
