@@ -73,6 +73,20 @@
   hors namespace, `/didier/vision/status` publié par le Pi 5 et vu du Pi 4. `relays_node`
   sans PCF8574 et `person_tracker` sans webcam : attendus hors robot.
 
+## Déploiement de main (L1e-1/2/3a) sur les deux Pi hors robot — 2026-11-07
+
+Pi 4 robot de rechange (4 Go Rev 1.5, série 10000000bec1ed98, carte SD du robot) en 192.168.1.131
+**sur le switch** (sur la box il n'était même pas vu en ARP), Pi 5 vision en .151. Aucun
+périphérique I²C : aucun actionneur. Séquence : `chown -R pi:pi ~/ros2_ws/src` sur les deux,
+`ansible-playbook deploy-pios.yml -e target_group=… -e ansible_host=…`, puis `docker compose up -d`
+(recréation, pas restart). Résultat : nettoyage `packages_retires` et `chemins_retires_lib` effectif
+(6 anciens `robot_*` et la lib embarquée effacés de src/build/install), 13 packages compilés côté
+robot et 4 côté vision, `restarts=0` ; 16 nœuds sous `/didier/`, seuls `/rosout` et
+`/parameter_events` hors namespace ; mux : remote 100, anim 10, verrou e_stop 255 ; `deploy_sha` =
+`de0ca88…-dirty` (la sentinelle vision posée pendant le rsync, le suffixe dit vrai) ; catalogue 6
+familles ; lib importée depuis `install/dadou_utils_ros` sur les deux Pi. Images ARM : ce sont
+celles du 04/11, le code est monté ; aucune reconstruction n'a été nécessaire.
+
 ## Réinstallation d'un Pi vierge (vécu le 2026-11-04)
 - `ansible-playbook -i hosts install-pios-lite.yml -e target_group=robot` depuis
   `dadou_utils_ros/ansible`, puis retirer l'ancienne empreinte SSH de `robot.local`.
