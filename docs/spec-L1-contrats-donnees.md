@@ -544,14 +544,18 @@ conteneurs) — vécu le 06/11 : V-R3 de 21/21 à 18/21 sans régression du code
    sous minuterie systemd utilisateur sur le PC de David. Aucun agent : la fumée mesure et
    compare à des valeurs gravées, elle ne juge pas. Un agent n'intervient qu'à la demande,
    pour lire une nuit rouge.
-2. **Déclenchement** (corrigé le 07/11 : David éteint son PC la nuit) : PAS de cron nocturne
-   aveugle. Minuterie systemd utilisateur avec `Persistent=true` (le tir manqué est rattrapé au
-   prochain démarrage du PC) **à condition** que `main` ait un commit depuis la dernière fumée
-   verte (sha gravé dans la dernière page) — sinon rien ; plus une passe forcée par semaine
-   (dérive de l'environnement). Et la règle humaine : **à chaque fusion dans `main`, l'agent
-   AVERTIT David qu'une fumée est due** (« lance `fumee.sh` quand le PC sera libre 45 min »),
-   David la lance à un moment calme (repas, sortie) ou la laisse à la minuterie. Les épreuves
-   longues exigent une machine calme (RTF ≥ 0,8) : la page le dit si ce n'était pas le cas.
+2. **Déclenchement — OPPORTUNISTE, jamais une plage à réserver** (David : « je n'arrive jamais
+   à garder une plage vide ») : une fumée est DUE dès qu'un commit entre dans `main` après la
+   dernière fumée verte (sha gravé dans la dernière page), ou après 7 jours sans fumée (dérive
+   de l'environnement). Tant qu'elle est due et que le PC est allumé, une minuterie systemd
+   utilisateur réessaie toutes les 30 min : chaque essai mesure la charge (load average) et le
+   facteur temps réel 20 s ; si charge trop haute ou RTF < 0,8, il ne lance RIEN et note
+   « reporté » ; sinon il déroule. Un PC en usage normal (chats, navigation) suffit — mesuré :
+   RTF 0,86 pendant le travail courant ; 0,49 avec deux agents + reconstruction d'image.
+   Variante **« fumée et dodo »** : `fumee.sh --et-dodo` enchaîne la fumée puis `systemctl
+   poweroff` — à lancer en allant se coucher, le PC s'éteint seul ≈ 45 min après, la page
+   attend au matin. Règle humaine : l'agent AVERTIT David après chaque fusion qu'une fumée est
+   due, et le prévient si 2 jours passent sans créneau trouvé.
 3. **Contenu, dans l'ordre, arrêt au premier rouge bloquant** : reconstruction de l'image si
    un Dockerfile a changé (3-5 min) → sim headless + colcon (1 min) → sonde RTF 20 s (rouge
    si < 0,8 : le reste n'est pas fiable) → `validate-namespace.sh`, `validate-catalogue.sh`,
@@ -568,6 +572,16 @@ conteneurs) — vécu le 06/11 : V-R3 de 21/21 à 18/21 sans régression du code
 6. **Taille** : 1 à 2 passes Sonnet (tout existe, il s'agit d'enchaîner) ; porte = une nuit
    verte complète lue le matin, et une nuit rouge provoquée (ex. RTF forcé) correctement
    signalée.
+
+##### Outils de qualité retenus pour la CI (décidé le 07/11, à porter par le lot L2)
+
+Pas de SonarQube ni de Jenkins (serveurs à maintenir, décidés sortants en L5). Dans le premier
+palier de CI (GitHub Actions, tests unitaires, gratuit sur dépôt public) : **ruff** (lint +
+format), **pytest-cov** (voir ce qu'aucun test ne traverse, pas un pourcentage à atteindre),
+**mypy sur le code de NOUVELLE GÉNÉRATION seulement** — dès maintenant dans la cible : `packages/
+theatre_contrats`, `packages/didier_jeu`, et tout package neuf (gabarit L3 avec annotations dès
+la naissance) ; legacy exclu jusqu'à réécriture —, **ansible-lint**, **hadolint** ; **vulture**
+ponctuellement (liste du code mort pour L5) ; **pip-audit** mensuel.
 
 ## 3. Ordre, délégation, gates
 
