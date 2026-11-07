@@ -80,7 +80,7 @@ FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires
 # Simulation (GUI ; HEADLESS=true pour serveur seul ; ANIMATIONS=true = animations_node en sim) :
 cd conf/docker/sim && ANIMATIONS=true docker compose -f docker-compose-sim.yml up -d
 # Jouer une animation en sim (bras/yeux/cou via servos_sim_node — validé 2026-07-11) :
-docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub --once /didier/animation robot_interfaces/msg/StringTime "{msg: \"\\\"parle\\\"\", time: 45000, anim: false}"'
+docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub --once /didier/animation theatre_interfaces/msg/StringTime "{msg: \"\\\"parle\\\"\", time: 45000, anim: false}"'
 # Arrêt d'animation : msg: "false" (booléen JSON — PAS "stop", qui serait cherché comme nom de séquence).
 # Chaîne roues dans la sim :
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
