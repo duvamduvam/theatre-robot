@@ -380,6 +380,8 @@ la boucle du coup-de-poing et la bobine du relais 40 A ; **seule la SD-150B-12 d
 acheter**, puisque l'ampli seul fait décrocher la SD-50B-12. Repli : un convertisseur 24 V régulé pour les ASME, ou les garder en 12 V
    sur un convertisseur dédié aux actionneurs (option B).
 
+**Essai au banc du 08/11 (David) : un ASME-MR tourne en 24 V**, commandé en PPM par un RP2040 (GP0 vers « S », masses reliées, fil rouge en l'air, 50 Hz, 1300 à 1700 µs, script `DEVICE_WORKSPACE/test-servo-asme/code.py` du PC). Mouvement correct et plus dynamique qu'en 12 V. Constat non expliqué : la carte contrôleur s'éteint au bout de quelques secondes alors qu'elle reste alimentée, sans gêner le servo. Les trois molettes de la carte du servo ne commandent pas la position : ce sont des réglages, plage et vitesse d'après la notice ASME-02, la troisième non identifiée.
+
 Au recâblage, **le fil rouge du connecteur 3 points des ASME reste non raccordé** : c'est une
 sortie 5 V (incident du 03/11).
 
