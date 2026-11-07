@@ -39,5 +39,10 @@ ou une relecture adverse avant le terrain = Fable.
   Depuis L1e-3a (07/11) : la lib `dadou_utils_ros` est un package de `packages/` (dans
   `packages_default` ET la liste de l'hôte robot) ; `chemins_retires_lib` efface sur les Pi les
   anciennes copies embarquées (src/, build/, install/ de robot, vision, controller).
+- Déployer un Pi (depuis le 07/11, « Ansible nickel ») : `cd legacy/dadou_utils_ros/ansible &&
+  ansible-playbook -i hosts deploy-pios.yml -e target_group=robot|vision` — UNE commande, aucun
+  geste avant/après (utilisateur, clé, IP dans `hosts`), puis `./ecart-pi.sh <groupe>` (vert = 0).
+  Secrets : `~/.config/didier/` du PC, posés par le rôle `secrets` — jamais dans le dépôt ni un log.
+  Écarts et reste à faire : `docs/ansible-ecarts.md`.
 - Skill `/diag` : `.claude/skills/diag` (copié de l'ancien dépôt ; ses chemins visent encore
   `docs/incidents/` de legacy — à déplacer avec la doc).
