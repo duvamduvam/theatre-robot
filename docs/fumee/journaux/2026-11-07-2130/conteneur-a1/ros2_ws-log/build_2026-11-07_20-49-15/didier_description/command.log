@@ -1,6 +1,0 @@
-Invoking command in '/home/ros2_ws/build/didier_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/ros2_ws/src/didier_description -DCMAKE_INSTALL_PREFIX=/home/ros2_ws/install/didier_description
-Invoked command in '/home/ros2_ws/build/didier_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/ros2_ws/src/didier_description -DCMAKE_INSTALL_PREFIX=/home/ros2_ws/install/didier_description
-Invoking command in '/home/ros2_ws/build/didier_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/ros2_ws/build/didier_description -- -j32 -l32
-Invoked command in '/home/ros2_ws/build/didier_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/ros2_ws/build/didier_description -- -j32 -l32
-Invoking command in '/home/ros2_ws/build/didier_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/ros2_ws/build/didier_description
-Invoked command in '/home/ros2_ws/build/didier_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/ros2_ws/build/didier_description

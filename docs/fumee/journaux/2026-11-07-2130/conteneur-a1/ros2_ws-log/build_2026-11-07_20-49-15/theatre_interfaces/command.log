@@ -1,6 +1,0 @@
-Invoking command in '/home/ros2_ws/build/theatre_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/ros2_ws/src/theatre_interfaces -DCMAKE_INSTALL_PREFIX=/home/ros2_ws/install/theatre_interfaces
-Invoked command in '/home/ros2_ws/build/theatre_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/ros2_ws/src/theatre_interfaces -DCMAKE_INSTALL_PREFIX=/home/ros2_ws/install/theatre_interfaces
-Invoking command in '/home/ros2_ws/build/theatre_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/ros2_ws/build/theatre_interfaces -- -j32 -l32
-Invoked command in '/home/ros2_ws/build/theatre_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/ros2_ws/build/theatre_interfaces -- -j32 -l32
-Invoking command in '/home/ros2_ws/build/theatre_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/ros2_ws/build/theatre_interfaces
-Invoked command in '/home/ros2_ws/build/theatre_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/ros2_ws/build/theatre_interfaces
