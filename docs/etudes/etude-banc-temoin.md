@@ -25,7 +25,9 @@ qualité, `hardware/overview.md` (chaîne roues).
   un Pico ou un ESP32, ce serait un troisième logiciel à maintenir, qui ne teste rien de
   `theatre-robot`. Et il ne montre rien de ce qui fait Didier (visage, voix, regard).
 - **« Une carte avec quelques composants I²C » : non plus, pas sous cette forme.** Un composant
-  qu'aucun code de Didier n'utilise (horloge DS3231, IMU BNO055, expandeur PCF8574) ne teste rien.
+  qu'aucun code de Didier n'utilise (horloge DS3231, IMU BNO055) ne teste rien. *Correction du
+  07/11 : le PCF8574 est bien utilisé — il commande les relais en 0x21 (`robot/actions/relays.py`) ;
+  il va donc sur le banc (§8).*
 - **Ce qui vaut le coup : un banc témoin**, c'est-à-dire les vrais pilotes de Didier sur un vrai Pi,
   **sans aucun moteur branché**, avec un témoin qui MESURE ce qui sort. Il sert aux deux usages
   demandés : démonstration (le visage s'anime, la voix sort) et vérification automatique sur
@@ -128,7 +130,7 @@ usage au sol. Il le prépare : on arrive au robot avec une chaîne déjà prouv�
 | DIANQI D-30A | 5 V pour le Pi et la matrice | stock, neuve |
 | Plaque à bandes + Dupont | montage | stock |
 
-**Exclus volontairement** : DS3231, BNO055, PCF8574, OLED, ultrasons. Aucun code de Didier ne s'en
+**Exclus volontairement** : DS3231, BNO055, OLED, ultrasons (le PCF8574 des relais est inclus, §8). Aucun code de Didier ne s'en
 sert, donc ils ne testeraient rien. On les ajoutera le jour où un package les utilisera, avec le
 test qui va avec.
 
@@ -228,3 +230,58 @@ l'inventaire :
 3. S'il démarre : `cat /proc/device-tree/model`, `free -h`, `cat /proc/cpuinfo | grep Serial`.
 4. Pour un Pi destiné au banc : un test des GPIO avant tout usage. Un Pi aux GPIO douteuses donne
    de faux rouges.
+
+---
+
+## 8. Câblage du banc (B0) — relevé dans le code du robot le 07/11
+
+**Règle n° 1, tirée de l'incident du 04/11 (deux Pi abîmés par la nappe)** : le Pi est alimenté
+**uniquement par son propre chargeur USB-C**. **Aucun fil** entre les broches 5 V du Pi (2 et 4) et
+l'alimentation du banc. Seule la **masse** est commune, par un seul fil.
+
+**Valeurs du robot** (`legacy/dadou_robot_ros/robot/robot_config.py`, `actions/wheels.py`,
+`actions/relays.py`, `dadou_utils_ros/utils/status.py`) :
+
+| Organe | Où dans le robot |
+|---|---|
+| PCA9685 (servos ET roues) | I²C bus 1, adresse **0x40** (défaut) |
+| Roues | PCA9685 canaux **1** (PWM gauche), **2** (PWM droite), **0** (sens gauche), **3** (sens droite) |
+| Servos | cou **4**, bras gauche **5**, œil gauche **7**, œil droit **8**, bras droit **15** |
+| Relais | PCF8574 en **0x21**, broches 0 à 3 (sortie voix, effet, klaxon, alim HF) |
+| LED (corps + visage) | GPIO **18**, 1 000 LED, visage = LED 513 à 673, luminosité 0,05 |
+| Boutons | GPIO **16** (arrêt), GPIO **20** (réarmement / extinction), entrée avec pull-up : bouton vers la masse |
+| LED d'état | GPIO **12** |
+
+**Connexions** :
+
+| De | Vers | Remarque |
+|---|---|---|
+| Pi broche 1 (3,3 V) | PCA9685 VCC, PCF8574 VCC | logique en 3,3 V : pas de convertisseur sur l'I²C |
+| Pi broche 3 (SDA) | PCA9685 SDA, PCF8574 SDA | |
+| Pi broche 5 (SCL) | PCA9685 SCL, PCF8574 SCL | |
+| Pi broche 6 (GND) | masse commune du banc | **le seul** lien d'alimentation avec le Pi |
+| Pi broche 12 (GPIO 18) | 74AHCT125 broche 2 (1A) | |
+| 74AHCT125 broche 3 (1Y) | résistance 330 Ω, puis DIN de la matrice | |
+| 74AHCT125 broche 1 (1OE) et 7 | masse | sortie 1 toujours active |
+| 74AHCT125 broche 14 | 5 V du banc | + condensateur 100 nF entre 14 et 7 |
+| 74AHCT125 broches 5, 9, 12 | masse | entrées inutilisées |
+| 74AHCT125 broches 4, 10, 13 | 5 V du banc | sorties inutilisées désactivées |
+| DIANQI 5 V | PCA9685 V+ (bornier), matrice 5 V, 74AHCT125 | jamais vers le Pi |
+| DIANQI GND | masse commune | |
+| Matrice 5 V / GND | condensateur 470 à 1 000 µF en parallèle | kit BOJACK |
+| PCF8574 A0 = 1, A1 = 0, A2 = 0 | cavaliers d'adresse | donne 0x21 ; vérifier que la puce est bien une 8574 (la 8575 est une autre bête) |
+| Pi broche 36 (GPIO 16) | bouton poussoir vers la masse | arrêt |
+| Pi broche 38 (GPIO 20) | bouton poussoir vers la masse | réarmement ; appui long = extinction du Pi du banc |
+| Pi broche 32 (GPIO 12) | LED + 330 Ω vers la masse | LED d'état |
+| PCA9685 canaux 0 à 3 | **rien**, ou 4 LED témoins + 330 Ω vers la masse | jamais de driver moteur ; les LED montrent le deadman à l'œil |
+| PCA9685 canal 4 | un servo (facultatif) | emprunté à la tête ; alimenté par V+ |
+| DIANQI 12 V | isolé | inutilisé |
+
+**À savoir avant B1** :
+- la configuration du robot écrit 1 000 LED et place le visage aux LED 513-673 : sur une matrice de
+  64, sans réglage propre au banc, on voit les 64 premières LED du **corps**, pas le visage
+  (suffisant pour « ça s'allume », pas pour la séquence visage) ;
+- **constat** : `servo` (ServoKit, 50 Hz par défaut) et `wheels` (60 Hz) ouvrent le **même** PCA9685
+  en 0x40 ; la fréquence est celle du dernier nœud démarré. Le banc le rendra visible (registre
+  PRE_SCALE). À examiner, pas un défaut avéré ;
+- le kit de condensateurs céramiques commandé le 05/10 fournit le 100 nF, s'il est arrivé.
