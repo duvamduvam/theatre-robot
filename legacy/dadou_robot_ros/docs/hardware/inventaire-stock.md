@@ -614,4 +614,9 @@ de série diffèrent de ceux du 04/11 : ce sont bien **5 cartes de plus**, et le
 à part. Une seule réserve : le `da66fc96` a la **fente SD cassée** et ne démarre que sur USB. Chaque
 carte porte une étiquette (modèle, mémoire, fin du numéro de série, état). Outils :
 `atelier/outils/releve_pi.sh` et `atelier/outils/etiqueteuse_p15.py`.
-**Reste à relever : les 3 Pi 3** déclarés « de mémoire » par David.
+**Les 3 Pi 3** déclarés « de mémoire » par David ne sont **pas relevés, faute d'usage** : six Pi 4
+sains couvrent le robot, le banc témoin et le futur mini-robot (décision du 07/11).
+**Proposé le 07/11 : remplacer le Pi 2 Go du robot par le `bec1ed98`** (4 Go, même révision 1.5).
+Raison principale : le 2 Go a fumé sur la nappe le 04/11 et **ses GPIO n'ont jamais été testées**,
+alors que servos, visage et roues passent par elles. Le `da66fc96` (fente SD cassée) va plutôt
+au banc témoin.
