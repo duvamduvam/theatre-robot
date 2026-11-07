@@ -133,6 +133,9 @@ vision:
             # secret est quand même restauré, sans lui l'outil est mort.
             - source: didier_proto-secret
               dest: didier_proto/secret
+        # Monté par le compose (../../../medias) mais absent du dépôt de la vision.
+        dossiers_montes:
+            - medias
         # person_tracker n'est pas exigé : sans webcam (Pi hors robot) il s'arrête.
         noeuds_attendus:
             - /didier/vision_status

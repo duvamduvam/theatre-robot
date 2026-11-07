@@ -9,3 +9,6 @@ noeuds_attendus: []
 # un build complet sur Pi 4 (workspace vierge).
 conteneur_essais: 90
 conteneur_delai: 10
+# Points de montage du compose qui n'existent pas dans le dépôt (relatifs à src/<projet>/),
+# créés en utilisateur de connexion avant le `up` (liste par hôte dans `hosts`).
+dossiers_montes: []

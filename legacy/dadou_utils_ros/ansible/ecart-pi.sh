@@ -20,6 +20,9 @@
 # Sortie lisible, détail de (a) dans /tmp/ecart-<groupe>-check.log. Ne lance aucune sim,
 # ne touche ni au PC ni au domaine ROS.
 set -u
+# Tri et comparaison (sort/comm) dans le même ordre, indépendant de la langue du PC ; UTF-8
+# obligatoire : ansible refuse de démarrer sous une locale non UTF-8 (LC_ALL=C).
+export LC_ALL=C.UTF-8
 cd "$(dirname "$(readlink -f "$0")")" || exit 2
 
 GROUPE=${1:-}

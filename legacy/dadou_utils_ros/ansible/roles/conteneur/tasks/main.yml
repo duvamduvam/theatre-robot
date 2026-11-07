@@ -5,6 +5,15 @@
 # (déclenché par la sentinelle du rôle synchronise), contrôle minimal qui fait ÉCHOUER le
 # playbook. Rien de tout ça en --check : la détection d'écart ne redémarre jamais un Pi.
 
+# Points de montage du compose ABSENTS du dépôt (vision : medias/) : Docker les créerait en
+# root au `up`, et le chown du déploiement suivant les verrait comme un écart (vu au
+# redéploiement à blanc du 07/11). Créés ici, en utilisateur de connexion. Liste par hôte.
+- name: Create compose mount points missing from the repository
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/{{ item }}"
+    state: directory
+  loop: "{{ dossiers_montes }}"
+
 # `up -d --force-recreate` : relit le compose (volumes, environnement) et redémarre même si
 # rien n'a changé dans le compose — c'est le redémarrage qui fait compiler la sentinelle.
 # L'image locale est réutilisée (pas de pull : celle du Hub est périmée, docs/ansible-ecarts.md).
