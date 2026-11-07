@@ -25,8 +25,8 @@ Objectif long terme : robot autonome qui suit l'acteur, parle, simule des émoti
 
 FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires) :
 - **Simulation Gazebo Harmonic** : `conf/docker/sim/` (conteneur dédié x86),
-  packages `robot_description` (URDF xacro + plugins gz) et `robot_sim` (monde, bridge, launch).
-- **Chaîne cmd_vel** (`packages/robot_drive` (racine du mono-dépôt ; L1e-1 du 06/11 : `conf/ros2_dependencies/` n'existe plus, les 6 packages ament vivent dans `packages/`, la liste poussée vers chaque Pi = variable `packages` de l'hôte dans `ansible/hosts`), package AUTONOME — aucun import
+  packages `didier_description` (URDF xacro + plugins gz) et `didier_sim` (monde, bridge, launch).
+- **Chaîne cmd_vel** (`packages/didier_drive` (racine du mono-dépôt ; L1e-1/L1e-2 du 06/11 : les 6 packages sont renommés `didier_*` : `conf/ros2_dependencies/` n'existe plus, les 6 packages ament vivent dans `packages/`, la liste poussée vers chaque Pi = variable `packages` de l'hôte dans `ansible/hosts`), package AUTONOME — aucun import
   dadou_utils_ros ni robot.*) : `wheels_bridge` (StringTime→Twist ; le fil ne porte que la
   VALEUR de la clé wheels) → `twist_mux` (remote 100 > anim 10, verrou `e_stop` latché,
   `use_stamped: false` obligatoire en Jazzy) → `twist_deadman` (zéros à 20 Hz si silence
@@ -83,9 +83,11 @@ cd conf/docker/sim && ANIMATIONS=true docker compose -f docker-compose-sim.yml u
 docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub --once /didier/animation robot_interfaces/msg/StringTime "{msg: \"\\\"parle\\\"\", time: 45000, anim: false}"'
 # Arrêt d'animation : msg: "false" (booléen JSON — PAS "stop", qui serait cherché comme nom de séquence).
 # Chaîne roues dans la sim :
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
 # Conduite clavier (publie /didier/cmd_vel_remote via remap, prioritaire) :
 docker exec -it dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r __ns:=/didier -r cmd_vel:=cmd_vel_remote'
+# Régisseur de répétition (SIM-ONLY ; sim lancée avec WORLD=chantiers REHEARSAL=true WEB=true ANIMATIONS=true FACE=true) :
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers'
 # Suivi de personne en sim (chaîne roues requise ; toggle topic `follow` on/off, OFF par défaut) :
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot person_follower --ros-args -r __ns:=/didier'
 # Perception scriptée pour le tester (personne à droite, loin, sûre) :
