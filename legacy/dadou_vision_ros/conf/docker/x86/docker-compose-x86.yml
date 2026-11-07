@@ -18,9 +18,8 @@
 #   ./build-x86.sh                                        # 1re fois (long)
 #   CHAT=true docker compose -f docker-compose-x86.yml up -d
 #
-# Pas de section build: ici — le build passe par ./build-x86.sh (le symlink
-# dadou_utils_ros du checkout PC casse un build compose direct : « too many
-# links », voir le script).
+# Pas de section build: ici — le build passe par ./build-x86.sh (contextes
+# nommés des packages de packages/ passés en --build-context, voir le script).
 services:
   dadou-vision-x86:
     container_name: dadou-vision-x86-container
@@ -91,10 +90,6 @@ services:
       # rebuild ; conf/ apporte aussi conf/secret, jamais dans l'image).
       - ../../../conf:/home/ros2_ws/src/vision/conf
       - ../../../vision:/home/ros2_ws/src/vision/vision
-      # Symlink racine → ../dadou_utils_ros : docker résout la cible, OK en
-      # volume (c'est COPY dans un build qui ne le supporte pas, cf. le
-      # commentaire équivalent dans docker-compose-sim.yml côté robot).
-      - ../../../dadou_utils_ros:/home/ros2_ws/src/vision/dadou_utils_ros
       - ../../../conf/ros2/setup.py:/home/ros2_ws/src/vision/setup.py
       - ../../../conf/ros2/package.xml:/home/ros2_ws/src/vision/package.xml
       - ../../../conf/ros2/launch:/home/ros2_ws/src/vision/launch
@@ -112,6 +107,9 @@ services:
       # nodes tombent à l'import.
       - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      # dadou_utils_ros (L1e-3a) : lib partagée, package de packages/. ⚠️ workspace/
+      # persistant : `touch vision/CHANGE` pour que colcon construise le nouveau package.
+      - ../../../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       # Workspace colcon LOCAL au banc (pas le workspace partagé du Pi — sur
       # le PC les chemins ../../../../../ du compose ARM ne mènent nulle
       # part). Dossier gitignoré, jetable ; le premier démarrage build tout

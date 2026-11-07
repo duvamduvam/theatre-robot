@@ -1,10 +1,9 @@
 import os
 import sys
 
-# La racine du dépôt donne accès au package vision/ et, via le symlink
-# dadou_utils_ros -> ../dadou_utils_ros, à la lib partagée du parc (pas
-# utilisée par les tests unit/ actuels, mais gardée pour parité avec les
-# autres dépôts dadou_*_ros au cas où V1/V2 en aient besoin).
+# La racine du dépôt donne accès au package vision/ ; la lib partagée du parc
+# (pas utilisée par les tests unit/ actuels, mais gardée pour parité avec les
+# autres dépôts) vient de packages/dadou_utils_ros (voir plus bas).
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 
@@ -13,3 +12,8 @@ sys.path.insert(0, ROOT)
 # tout import de la lib échoue sur l'hôte (pas de colcon build en dev).
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "packages", "theatre_contrats"))
+
+# dadou_utils_ros (lib partagée, packages/ du mono-dépôt depuis L1e-3a : plus de
+# symlink dans le dépôt) : son dossier porte le module du même nom.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))), "packages", "dadou_utils_ros"))

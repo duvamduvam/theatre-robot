@@ -13,6 +13,8 @@ services:
       additional_contexts:
         robot_interfaces: ../../../../robot_interfaces
         theatre_contrats: ../../../../theatre_contrats
+        # L1e-3a : la lib partagée, package de packages/ (liste `packages_default`).
+        dadou_utils_ros: ../../../../dadou_utils_ros
         # L1e-1 : les 6 packages du robot, eux aussi dans ros2_ws/src/<package> (liste
         # `packages` de l'hôte robot dans ansible/hosts) — remplace l'ancienne COPY du dossier conf/ du robot.
         didier_bringup: ../../../../didier_bringup
@@ -43,7 +45,6 @@ services:
       #- /tmp/.X11-unix:/tmp/.X11-unix
       - ../../../conf:/home/ros2_ws/src/robot/conf
       - ../../../robot:/home/ros2_ws/src/robot/robot
-      - ../../../dadou_utils_ros:/home/ros2_ws/src/robot/dadou_utils_ros
       - ../../../json:/home/ros2_ws/src/robot/json
       - ../../../medias:/home/ros2_ws/src/robot/medias
       - ../../../../didier_bringup:/home/ros2_ws/src/didier_bringup
@@ -51,6 +52,9 @@ services:
       # theatre_contrats (lot L1a) : importé par dadou_utils_ros/utils_static.py
       # — sans lui, TOUS les nodes tombent à l'import, wheels_node compris.
       - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      # dadou_utils_ros (L1e-3a) : package à plat dans src/ comme les autres (plus de
+      # copie dans src/robot/, le symlink a disparu).
+      - ../../../../dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       # Chaîne cmd_vel (bridge/mux/deadman) — rsyncée sur le Pi par la tâche
       # ansible (liste `packages` de l'hôte robot -> src/), comme didier_bringup/robot_interfaces.
       - ../../../../didier_drive:/home/ros2_ws/src/didier_drive

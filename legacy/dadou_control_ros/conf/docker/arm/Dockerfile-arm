@@ -25,11 +25,9 @@ COPY conf/ros2/resource/controller /home/ros2_ws/src/controller/resource
 # mono-dépôt (lot L1a), contextes NOMMÉS fournis par le compose.
 COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
-COPY dadou_utils_ros.tar.gz /home/ros2_ws/src/controller/
-
-# Extraire l'archive et la supprimer
-RUN tar -xzhf /home/ros2_ws/src/controller/dadou_utils_ros.tar.gz -C /home/ros2_ws/src/controller/ && \
-    rm /home/ros2_ws/src/controller/dadou_utils_ros.tar.gz
+# dadou_utils_ros (L1e-3a) : lib partagée, package de packages/ (plus d'archive
+# tar ni de symlink dans le dépôt).
+COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
 
 # Mettre à jour les paquets et installer les dépendances.
 # sed tronque les commentaires (pleine ligne ET en fin de ligne : packages.txt

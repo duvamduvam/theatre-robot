@@ -11,6 +11,7 @@ services:
       additional_contexts:
         robot_interfaces: ../../../../robot_interfaces
         theatre_contrats: ../../../../theatre_contrats
+        dadou_utils_ros: ../../../../dadou_utils_ros
     # Supervision par le démon Docker (même assainissement que le robot,
     # 2026-07-11) : le service systemd n'est qu'un interrupteur up -d / stop.
     restart: unless-stopped
@@ -45,7 +46,6 @@ services:
       - /home/pi/.Xauthority:/root/.Xauthority
       - ../../../conf:/home/ros2_ws/src/controller/conf
       - ../../../controller:/home/ros2_ws/src/controller/controller
-      - ../../../dadou_utils_ros:/home/ros2_ws/src/controller/dadou_utils_ros
       - ../../../json:/home/ros2_ws/src/controller/json
       - ../../../medias:/home/ros2_ws/src/controller/medias
       # robot_interfaces et theatre_contrats (lot L1a) : packages/ du mono-dépôt,
@@ -53,6 +53,9 @@ services:
       # que robot/vision) — ⚠️ à faire AVANT de déployer ce lot.
       - ../../../../robot_interfaces:/home/ros2_ws/src/robot_interfaces
       - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      # dadou_utils_ros (L1e-3a) : lib partagée, package à plat dans src/ (Ansible, liste
+      # `packages_default`).
+      - ../../../../dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       #- ../../../../didier_bringup:/home/ros2_ws/src/didier_bringup
       - ../../../../../log:/home/ros2_ws/log
       - ../../../../../build:/home/ros2_ws/build

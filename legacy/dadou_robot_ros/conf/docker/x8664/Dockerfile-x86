@@ -19,9 +19,6 @@ COPY conf/ /home/ros2_ws/src/robot/conf/
 COPY json/ /home/ros2_ws/src/robot/json/
 COPY medias/ /home/ros2_ws/src/robot/medias/
 
-# Unpack shared utilities bundle
-COPY dadou_utils_ros/ /home/ros2_ws/src/robot/dadou_utils_ros/
-
 # Bring ROS 2 interfaces and package metadata
 # Les 6 packages ROS autonomes (L1e-1 : ils vivaient dans conf/ du robot, maintenant packages/
 # du mono-dépôt) : contextes nommés du compose.
@@ -34,6 +31,8 @@ COPY --from=didier_web . /home/ros2_ws/src/didier_web
 # Packages communs du mono-dépôt (lot L1a) : contextes nommés du compose.
 COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
+# dadou_utils_ros (L1e-3a) : lib partagée, package de packages/ (plus de symlink).
+COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
 
 COPY conf/ros2/setup.py /home/ros2_ws/src/robot/
 COPY conf/ros2/package.xml /home/ros2_ws/src/robot/

@@ -41,6 +41,8 @@ COPY --from=didier_sim . /home/ros2_ws/src/didier_sim
 # contextes nommés fournis par docker-compose-sim.yml (additional_contexts).
 COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
+# dadou_utils_ros (L1e-3a) : lib partagée, package de packages/ (ex-symlink du dépôt).
+COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
 # didier_jeu (lot A1, SIM-ONLY) : sélecteur de jeu, packages/ du mono-dépôt.
 COPY --from=didier_jeu . /home/ros2_ws/src/didier_jeu
 COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
@@ -59,9 +61,9 @@ COPY json/ /home/ros2_ws/json/
 # LED via les topics StringTime déjà consommés par servos_sim_node/leds_sim_node.
 # Reproduit EXACTEMENT la mécanique de déploiement Ansible sur le vrai robot
 # (dadou_utils_ros/ansible/roles/synchronise) : le paquet ROS ament_python
-# "robot" (setup.py) est la RACINE du repo synchronisée dans ros2_ws/src/robot/,
-# où cohabitent le module Python robot/ ET le module dadou_utils_ros/ (tous deux
-# ont un __init__.py -> setup.py les trouve avec find_packages()). Investigation
+# "robot" (setup.py) est la RACINE du repo synchronisée dans ros2_ws/src/robot/
+# (module Python robot/ ; la lib dadou_utils_ros est un package à part depuis
+# L1e-3a). Investigation
 # menée avant d'écrire ces lignes (cf. CLAUDE.md/commit) : la chaîne d'imports
 # RÉELLEMENT parcourue par animations_node (robot_config, RobotJsonManager,
 # AnimationManager, abstract_json_actions, animation, random_animation_start,
@@ -84,20 +86,10 @@ COPY json/ /home/ros2_ws/json/
 # Face.load_visuals() échoue au démarrage avec un log actionnable (voir
 # face_sim_node.py) plutôt qu'un plantage silencieux.
 #
-# dadou_utils_ros/ n'est PAS copié ici (contrairement à robot/) : à la racine
-# du repo c'est un SYMLINK vers ../dadou_utils_ros (dépôt frère), qui sort du
-# contexte de build (context: ../../.. dans docker-compose-sim.yml = racine du
-# repo). BuildKit ne le suit pas (testé : `COPY dadou_utils_ros/ ...` échoue
-# avec "too many links" -- le sender de contexte n'inclut pas le contenu hors
-# contexte, contrairement à `copy_links: yes` côté Ansible qui, lui, déréférence
-# vraiment le symlink). Sur le builder Jenkins (conf/docker/arm/Dockerfile-arm,
-# même COPY), ça fonctionne car dadou_utils_ros y est un checkout git réel,
-# pas un symlink (cf. Jenkinsfile : clone séparé à ce chemin exact). En sim,
-# le contenu arrive UNIQUEMENT via le volume docker-compose (qui pointe le
-# vrai chemin hôte, en contournant le symlink) -- voir docker-compose-sim.yml.
-# Conséquence assumée : l'image seule (sans compose) n'a pas dadou_utils_ros ;
-# le workflow de ce projet ne lance de toute façon jamais l'image en `docker
-# run` nu (toujours `docker compose ... up`, cf. CLAUDE.md).
+# dadou_utils_ros n'est plus dans ce dépôt (L1e-3a) : c'est un package de
+# packages/ du mono-dépôt, fourni par le contexte nommé du compose (COPY --from
+# plus haut) et construit par colcon comme les autres. Plus de symlink, donc
+# plus de contournement par volume.
 COPY robot/ /home/ros2_ws/src/robot/robot/
 COPY conf/ros2/setup.py conf/ros2/package.xml conf/ros2/setup.cfg /home/ros2_ws/src/robot/
 COPY conf/ros2/resource/ /home/ros2_ws/src/robot/resource/
