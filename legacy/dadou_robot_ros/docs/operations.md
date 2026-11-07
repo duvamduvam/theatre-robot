@@ -117,7 +117,7 @@
   2. Lancer la chaîne roues À LA MAIN dans le conteneur (elle n'est PAS démarrée
      par le launch sim, par prudence — pas de mouvement automatique) :
      `docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
-     && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive
+     && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive
      drive.launch.py use_sim_time:=true'`. Le pad/la manette bougent alors Didier
      dans Gazebo (la télécommande physique, prio 100, garderait la main).
 - ⚠️ **SIM-ONLY** : rien de ce chemin ne s'active sur le vrai robot. Le passage
@@ -158,7 +158,7 @@ ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -
 - Suivi de personne et gaze, à lancer À LA MAIN dans le conteneur (prudence
   habituelle : pas de mouvement automatique) :
 ```bash
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot person_follower --ros-args -r __ns:=/didier'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
 ```
@@ -243,8 +243,8 @@ Tout sur le domaine **43**.
 **1. Le corps + la régie** (`conf/docker/sim/`, HEADLESS recommandé) :
 ```bash
 WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
 ```
 - `REHEARSAL=true` : la page scène obtient les boutons route / vitesse /
@@ -358,8 +358,8 @@ sélecteur). Tout se passe sur le domaine **43** ; `jeu_node` refuse de démarre
 ```bash
 cd conf/docker/sim
 WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d --build
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot gaze_follower --ros-args -r __ns:=/didier'
 ```
 - Le launch `jeu:=true` démarre **lui-même** le sélecteur (`jeu_node`, respawn).
@@ -401,15 +401,15 @@ il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
 
 ## Salle de répétition simulée — Didier chemine seul dans la rue (lot R1, 2026-10-07)
 
-Monde `rue` + package SIM-ONLY `robot_rehearsal` (étude
+Monde `rue` + package SIM-ONLY `didier_rehearsal` (étude
 [`etude-repetition-simulee.md`](etude-repetition-simulee.md) §12). Mode d'emploi
-complet et règles de séance : `packages/robot_rehearsal/README.md` (racine du mono-dépôt).
+complet et règles de séance : `packages/didier_rehearsal/README.md` (racine du mono-dépôt).
 
 ```bash
 cd conf/docker/sim && WORLD=rue HEADLESS=true ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
 # chaîne roues puis cheminement (OFF au démarrage), même prudence que follow/gaze :
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py'
 # partir / s'arrêter / reprendre au début : topic `route` = "on" | "off" | "restart" ; vitesse 0..1 : topic `route_speed`
 docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route robot_interfaces/msg/StringTime "{msg: \"on\"}"'
 # vérification rejouable V-R1 (départ, POI, télécommande qui écrase, zéro franc, arrivée) :
@@ -459,8 +459,14 @@ Déploiement (fait le 2026-07-11 — pont web actif sur le robot) :
    changement de `packages-docker.txt`/`requirements.txt` demandera le même
    (`docker compose ... build` sur le Pi).
 2. Déploiement habituel : Ansible depuis `../dadou_utils_ros` (rsync du
-   checkout — `robot_web` part avec la liste `packages` de l'hôte, `ansible/hosts`, depuis L1e-1), sentinelle
+   checkout — `didier_web` part avec la liste `packages` de l'hôte, `ansible/hosts`, depuis L1e-1), sentinelle
    `robot/change` pour déclencher le colcon build au redémarrage.
+   **Premier déploiement après L1e-2 (renommage `robot_*` → `didier_*`, 07/11)** : le rôle
+   `synchronise` efface d'abord des Pi les anciens `src/`, `build/`, `install/` `robot_*`
+   (liste `packages_retires`, vars/main.yml — sinon `colcon build` compile anciens ET nouveaux) ;
+   la sentinelle est obligatoire, le conteneur (`launch-ros-in-docker.sh`) lance `ros2 launch didier_bringup
+   robot_app.launch.py`. Jamais exécuté sur un Pi à ce jour (seul `--syntax-check` l'a vu) ;
+   sur le robot, verrou inchangé : protocole caméra d'abord (L1b).
 3. **Supervision (assainie le 2026-07-11)** : le conteneur est relancé par le
    **démon Docker** (`restart: unless-stopped` dans le compose — crashs et
    boot couverts, vérifié par crash-test `docker kill`) ; `robot.service`

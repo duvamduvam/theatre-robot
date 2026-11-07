@@ -1,4 +1,4 @@
-# robot_web
+# didier_web
 
 Package ROS 2 du robot Didier, autonome (aucun import `robot.*` ni `dadou_utils_ros`) :
 

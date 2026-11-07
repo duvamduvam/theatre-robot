@@ -42,7 +42,7 @@ au défaut).
 | Profil | 2 caractères | 4 caractères | Usage |
 |---|---|---|---|
 | `default` | `neck` 0..1 | `wheels` `{left, right}` −100..100 | historique, **octet pour octet** |
-| `repetition` | `route_speed` 0..1 | `route_speed` (fader 1) + `neck` (fader 2) | salle de répétition simulée (`ROS_DOMAIN_ID=43`) : vitesse du cheminement de Didier (package `robot_rehearsal` du dépôt robot). Ne publie jamais vers les roues. |
+| `repetition` | `route_speed` 0..1 | `route_speed` (fader 1) + `neck` (fader 2) | salle de répétition simulée (`ROS_DOMAIN_ID=43`) : vitesse du cheminement de Didier (package `didier_rehearsal` du dépôt robot). Ne publie jamais vers les roues. |
 
 `route_speed` est dans `PUBLISHER_LIST` (sinon `publish()` l'ignorerait en
 silence). Sur le vrai robot, personne n'écoute ce topic : il y est inoffensif.

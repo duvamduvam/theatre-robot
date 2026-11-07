@@ -1,8 +1,8 @@
-# robot_rehearsal — salle de répétition simulée (SIM-ONLY)
+# didier_rehearsal — salle de répétition simulée (SIM-ONLY)
 
 Package **autonome** (aucun import `robot.*` ni `dadou_utils_ros`) qui n'existe
 que dans le conteneur de simulation. Il n'est **jamais** lancé par
-`robot_bringup` : un test (`robot/tests/unit/test_rehearsal_contract.py`)
+`didier_bringup` : un test (`robot/tests/unit/test_rehearsal_contract.py`)
 refuse toute référence à ce package dans le code embarqué.
 
 Étude : [`docs/etude-repetition-simulee.md`](../../../docs/etude-repetition-simulee.md)
@@ -12,9 +12,9 @@ refuse toute référence à ce package dans le code embarqué.
 
 | Fichier | Rôle |
 |---|---|
-| `robot_rehearsal/contracts.py` | topics, plafonds durs (= ceux du suivi), hystérésis POI |
-| `robot_rehearsal/route.py` | logique PURE : validation d'itinéraire, suiveur de waypoints, veilleur de POI |
-| `robot_rehearsal/route_driver_node.py` | node fin : `/odom` → Twist sur `cmd_vel_follow` (mux prio 20), événements `rehearsal/poi_event` |
+| `didier_rehearsal/contracts.py` | topics, plafonds durs (= ceux du suivi), hystérésis POI |
+| `didier_rehearsal/route.py` | logique PURE : validation d'itinéraire, suiveur de waypoints, veilleur de POI |
+| `didier_rehearsal/route_driver_node.py` | node fin : `/odom` → Twist sur `cmd_vel_follow` (mux prio 20), événements `rehearsal/poi_event` |
 | `config/rue.yaml` | le trajet vers le Hangar à Bananes + les points d'intérêt |
 | `launch/rehearsal.launch.py` | lance `route_driver`, OFF par défaut |
 
@@ -22,12 +22,12 @@ refuse toute référence à ce package dans le code embarqué.
 
 | Fichier | Rôle |
 |---|---|
-| `robot_rehearsal/scenario.py` | logique PURE : validation d'un scénario YAML (refus explicite), expansion des `t: random` avec la graine → timeline déterministe |
-| `robot_rehearsal/director.py` | ordonnanceur PUR : start/stop/skip/end, exclusion par cible, re-bornage des durées, abort |
-| `robot_rehearsal/fault_relay.py` | relais PUR : pass / drop / delay / freeze / zero, échéance, **chien de garde** (sans battement du régisseur > 1 s → passant) |
-| `robot_rehearsal/process_faults.py` | pause (SIGSTOP/SIGCONT) et kill (SIGTERM) de la **liste blanche** (`contracts.PAUSABLE/KILLABLE`) — jamais la chaîne de sécurité |
-| `robot_rehearsal/director_node.py` | node fin : exécute la timeline, bat à 5 Hz, journalise (JSONL, `robot.diagnostic.journal`) dans `/home/ros2_ws/log/rehearsal/` |
-| `robot_rehearsal/fault_relay_node.py` | node fin générique : un point de relais de `contracts.RELAYS` |
+| `didier_rehearsal/scenario.py` | logique PURE : validation d'un scénario YAML (refus explicite), expansion des `t: random` avec la graine → timeline déterministe |
+| `didier_rehearsal/director.py` | ordonnanceur PUR : start/stop/skip/end, exclusion par cible, re-bornage des durées, abort |
+| `didier_rehearsal/fault_relay.py` | relais PUR : pass / drop / delay / freeze / zero, échéance, **chien de garde** (sans battement du régisseur > 1 s → passant) |
+| `didier_rehearsal/process_faults.py` | pause (SIGSTOP/SIGCONT) et kill (SIGTERM) de la **liste blanche** (`contracts.PAUSABLE/KILLABLE`) — jamais la chaîne de sécurité |
+| `didier_rehearsal/director_node.py` | node fin : exécute la timeline, bat à 5 Hz, journalise (JSONL, `robot.diagnostic.journal`) dans `/home/ros2_ws/log/rehearsal/` |
+| `didier_rehearsal/fault_relay_node.py` | node fin générique : un point de relais de `contracts.RELAYS` |
 | `config/scenarios/demo.yaml` | chaque type de panne une fois, instants fixes — le scénario de V-R2 |
 
 Types de pannes : `relay` (sur `cmd_vel_follow` : freeze = continue sur sa
@@ -72,13 +72,13 @@ David au débrief, lue par personne en machine). ⚠️ Positions **provisoires*
 lubie `t: poi` par POI (`p: 0.4`, la Titan grise toujours).
 
 ```bash
-ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers
+ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers
 ```
 
 ## Lot A1 — le sélecteur de jeu décide (02/11)
 
 ```bash
-ros2 launch robot_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
+ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
 ```
 
 `jeu:=true` remappe le régisseur sur **`jeu/chat_move`** (publié par le sélecteur
@@ -144,7 +144,7 @@ s'il l'a dépassé), pivote face à lui, s'arrête. SIM-ONLY (vérité terrain).
   batterie), une lubie active est fermée (`closed_by: "voix"`).
 - **Ordre** : `route_goto` (`{"name","x","y","standoff"}` ou `"cancel"`).
   `route_driver` reste la SEULE sortie Twist (`cmd_vel_follow`, prio 20) :
-  il suspend le suivi et joue `robot_rehearsal/goto.py` (ALIGN -> DRIVE ->
+  il suspend le suivi et joue `didier_rehearsal/goto.py` (ALIGN -> DRIVE ->
   FACE -> ARRIVED, pivots ≤ 0,6 rad/s, v ≤ fader × la croisière du suivi
   (0,4 m/s), abandon à 60 s, à 1,5 × la distance initiale ou au CALAGE
   (consigne > 0,1 m/s sans 5 cm de déplacement en 2 s), zéro si odométrie
@@ -204,7 +204,7 @@ laborieux »). Même canal que M1/M2.
 - **Géométrie** : `config/chantiers_tours.yaml`, GÉNÉRÉ — ne pas éditer.
   Regénérer après toute retouche du monde ou de l'itinéraire (le test
   `test_tours.py` rougit sinon) :
-  `python3 tools/compute_tours.py ../robot_sim/worlds/chantiers.sdf config/chantiers.yaml > config/chantiers_tours.yaml`.
+  `python3 tools/compute_tours.py ../didier_sim/worlds/chantiers.sdf config/chantiers.yaml > config/chantiers_tours.yaml`.
   Centre = milieu des collisions de l'objet (pas l'ancre du POI), rayon = rayon
   objet + 1 m arrondi au 0,1 supérieur (1,5 à 6 m) ; pas de tour si un autre
   objet frôle l'anneau — bordure de quai et façades comprises (seul le sol
@@ -250,8 +250,8 @@ Tests : `test_goto_tour.py`, `test_tours.py`, `test_director_tour.py`,
 # 1. la sim avec la rue (HEADLESS=true recommandé) :
 WORLD=rue ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
 # 2. la chaîne roues, puis la route :
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch robot_rehearsal rehearsal.launch.py'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py'
 # 3. partir :
 docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route robot_interfaces/msg/StringTime "{msg: \"on\"}"'
 ```
