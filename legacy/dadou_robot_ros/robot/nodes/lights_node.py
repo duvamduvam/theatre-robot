@@ -9,7 +9,7 @@ from std_msgs.msg import String
 from adafruit_led_animation.helper import PixelSubset
 from rclpy.node import Node
 import time
-from robot_interfaces.msg._string_time import StringTime
+from theatre_interfaces.msg._string_time import StringTime
 
 
 from dadou_utils_ros.misc import Misc

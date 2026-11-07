@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bridge entre le topic roues legacy (robot_interfaces/StringTime) et cmd_vel.
+"""Bridge entre le topic roues legacy (theatre_interfaces/StringTime) et cmd_vel.
 
 S'abonne au même topic que robot/nodes/wheels_node.py (constante WHEELS), pour
 que la télécommande / les séquences JSON existantes puissent aussi piloter la
@@ -17,7 +17,7 @@ from rclpy.node import Node
 
 from didier_drive.diff_drive import DiffDrive
 from didier_drive.wheels_payload import WHEELS, payload_to_pair, payload_to_speed
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 
 CMD_VEL_ANIM_TOPIC = "cmd_vel_anim"
 CMD_VEL_REMOTE_TOPIC = "cmd_vel_remote"

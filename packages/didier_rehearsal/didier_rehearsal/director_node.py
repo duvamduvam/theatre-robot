@@ -103,7 +103,7 @@ import yaml
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 # Codec StringTime commun (lot L1a). `loads` là où le node a SON propre
 # traitement de l'échec (strip du brut, warning + return, KeyError dans le
 # même try) : chaque except est gardé tel quel, le comportement ne bouge pas.

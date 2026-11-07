@@ -52,8 +52,9 @@ dadou_vision_ros/
 
 Supprimé à la refonte : MQTT (essais), torch/whisper/blinka/pysftp (jamais utilisés),
 tests lumières/neopixel (copiés du robot), dossier de packages ROS dupliqué (le vrai
-`robot_interfaces` arrive par le rsync ansible comme sur les autres machines ; copie
-unique dans `packages/robot_interfaces` du mono-dépôt depuis le lot L1a, avec
+package de messages arrive par le rsync ansible comme sur les autres machines ; copie
+unique dans `packages/theatre_interfaces` du mono-dépôt depuis le lot L1a — nommé
+`robot_interfaces` jusqu'au lot L1e-3b —, avec
 `packages/theatre_contrats` — contrat commun, topics `vision/person*` et `vision/status`
 RELATIFS, codec StringTime — que le shim `dadou_utils_ros/utils_static.py` importe),
 `robot` symlink (dépendance à retirer du code), venv commité sur disque.
@@ -64,17 +65,17 @@ RELATIFS, codec StringTime — que le shim `dadou_utils_ros/utils_static.py` imp
 |---|---|---|---|
 | `/vision/person` | `geometry_msgs/msg/PointStamped` | vision → robot | x = azimut normalisé [-1..1] (0 = face caméra), y = élévation, z = confiance [0..1]. 10-15 Hz. Silence = personne perdue (le consommateur gère son timeout, comme cmd_vel). |
 | `/vision/person_box` | `geometry_msgs/msg/PointStamped` | vision → robot | Ajouté pour le suivi AUX ROUES (`person_follower`). x = azimut (identique à `/vision/person`), **y = HAUTEUR de la silhouette [0..1]** (et non l'élévation : c'est le proxy de distance monoculaire), z = confiance. ⚠️ Deux topics dont le `y` ne veut PAS dire la même chose — ne pas les confondre. |
-| `designate` | `robot_interfaces/StringTime` | télécommande → vision | **« C'est moi »** (2026-09-14). `"on"` verrouille le suivi sur la personne la plus **CENTRÉE** de l'image, `"off"` relâche. Sans ça, `TargetPicker` choisit sur `score × aire`, donc sur la PROXIMITÉ — en rue, le robot fixe le spectateur du premier rang au lieu de l'acteur. Commande (VOLATILE), pas un état latché. Étude : `dadou_robot_ros/docs/etude-identification-acteur.md`. |
-| `camera_enable` / `camera_state` | `robot_interfaces/StringTime` | page web → vision / vision → page web | **Coupe-webcam** (vie privée de l'acteur, arrêter que Didier s'adresse à lui). Commande `"on"`/`"off"` (JSON, true/false, 1/0 tolérés ; valeur inconnue = warning, rien ne change). `"off"` LIBÈRE `/dev/video0` (LED éteinte) et coupe `/vision/person`, `/vision/person_box` et `camera/image_raw/compressed` ; `"on"` rouvre au tick suivant (réessai si échec). `camera_state` = état EFFECTIF, **latché** (TRANSIENT_LOCAL, depth 1), défaut `"on"`. Décision pure : `vision/tracking/camera_switch.py`. |
-| `camera_source` / `camera_source_state` / `camera_sources` | `robot_interfaces/StringTime` | page web → vision / vision → page web | **Source d'images à chaud** (répétition simulée). Commande `"webcam"` (défaut) ou `"gazebo"` (brut ou JSON ; inconnu = warning ; `"gazebo"` sans `sim_camera_topic` = refus, rien ne change). `"gazebo"` LIBÈRE la webcam et s'abonne à `sim_camera_topic` (sensor_msgs/Image `rgb8` seulement, converti à la main — pas de cv_bridge — BEST_EFFORT depth 1) ; la dernière frame est consommée par le même tick (détection, `/vision/person*`, flux compressé), une frame n'est jamais retraitée. `camera_enable` `"off"` coupe quelle que soit la source. `camera_source_state` = source EFFECTIVE, **latché**. `camera_sources` = JSON des sources disponibles (`["webcam"]` ou `["webcam","gazebo"]`), **latché**, publié une fois. Paramètre `sim_camera_topic` (défaut vide = Gazebo indisponible) : renseigné par le SEUL compose x86 (`VISION_SIM_CAMERA_TOPIC`, défaut `camera/image_raw`), jamais sur le Pi. `reflection_node` n'affirme « la caméra filme le partenaire » que si la source est `webcam`. Logique pure : `vision/tracking/camera_source.py`. |
-| `/face`, `/audio` | `robot_interfaces/StringTime` | vision → robot | V2 : émotions et parole via les topics EXISTANTS du robot (lights_node/audio_node) — zéro modif côté robot. |
-| `animation_state` | `robot_interfaces/StringTime` (latché) | robot → vision | Arbitrage amont (étude 2026-07-12 côté robot, dadou_robot_ros/docs/etude-arbitrage-actionneurs.md) : chat_node s'y abonne et retient face/animation tant qu'une séquence de spectacle a la main ; son stop d'animation devient CIBLÉ (n'arrête que "parle", jamais une séquence en cours), cf. vision/ai/arbitration.py. |
+| `designate` | `theatre_interfaces/StringTime` | télécommande → vision | **« C'est moi »** (2026-09-14). `"on"` verrouille le suivi sur la personne la plus **CENTRÉE** de l'image, `"off"` relâche. Sans ça, `TargetPicker` choisit sur `score × aire`, donc sur la PROXIMITÉ — en rue, le robot fixe le spectateur du premier rang au lieu de l'acteur. Commande (VOLATILE), pas un état latché. Étude : `dadou_robot_ros/docs/etude-identification-acteur.md`. |
+| `camera_enable` / `camera_state` | `theatre_interfaces/StringTime` | page web → vision / vision → page web | **Coupe-webcam** (vie privée de l'acteur, arrêter que Didier s'adresse à lui). Commande `"on"`/`"off"` (JSON, true/false, 1/0 tolérés ; valeur inconnue = warning, rien ne change). `"off"` LIBÈRE `/dev/video0` (LED éteinte) et coupe `/vision/person`, `/vision/person_box` et `camera/image_raw/compressed` ; `"on"` rouvre au tick suivant (réessai si échec). `camera_state` = état EFFECTIF, **latché** (TRANSIENT_LOCAL, depth 1), défaut `"on"`. Décision pure : `vision/tracking/camera_switch.py`. |
+| `camera_source` / `camera_source_state` / `camera_sources` | `theatre_interfaces/StringTime` | page web → vision / vision → page web | **Source d'images à chaud** (répétition simulée). Commande `"webcam"` (défaut) ou `"gazebo"` (brut ou JSON ; inconnu = warning ; `"gazebo"` sans `sim_camera_topic` = refus, rien ne change). `"gazebo"` LIBÈRE la webcam et s'abonne à `sim_camera_topic` (sensor_msgs/Image `rgb8` seulement, converti à la main — pas de cv_bridge — BEST_EFFORT depth 1) ; la dernière frame est consommée par le même tick (détection, `/vision/person*`, flux compressé), une frame n'est jamais retraitée. `camera_enable` `"off"` coupe quelle que soit la source. `camera_source_state` = source EFFECTIVE, **latché**. `camera_sources` = JSON des sources disponibles (`["webcam"]` ou `["webcam","gazebo"]`), **latché**, publié une fois. Paramètre `sim_camera_topic` (défaut vide = Gazebo indisponible) : renseigné par le SEUL compose x86 (`VISION_SIM_CAMERA_TOPIC`, défaut `camera/image_raw`), jamais sur le Pi. `reflection_node` n'affirme « la caméra filme le partenaire » que si la source est `webcam`. Logique pure : `vision/tracking/camera_source.py`. |
+| `/face`, `/audio` | `theatre_interfaces/StringTime` | vision → robot | V2 : émotions et parole via les topics EXISTANTS du robot (lights_node/audio_node) — zéro modif côté robot. |
+| `animation_state` | `theatre_interfaces/StringTime` (latché) | robot → vision | Arbitrage amont (étude 2026-07-12 côté robot, dadou_robot_ros/docs/etude-arbitrage-actionneurs.md) : chat_node s'y abonne et retient face/animation tant qu'une séquence de spectacle a la main ; son stop d'animation devient CIBLÉ (n'arrête que "parle", jamais une séquence en cours), cf. vision/ai/arbitration.py. |
 
 ### Topics de régie du chat (14/10)
 
 Lot R3 « Chantiers » (spec fermée : `../dadou_robot_ros/docs/etude-repetition-simulee.md`
 §13.4 point 3 et §13.6). Logique pure dans `vision/ai/stage.py` (testée sans ROS),
-câblage dans `chat_node`. Tous en `robot_interfaces/StringTime` :
+câblage dans `chat_node`. Tous en `theatre_interfaces/StringTime` :
 
 | Topic | Sens | Contrat |
 |---|---|---|
@@ -103,7 +104,7 @@ s'attendent JAMAIS : la parole (`chat_node`, Haiku 5.5 réflexion coupée) et la
 réflexion (`reflection_node`, Haiku 5.5 effort medium ; Sonnet 5.5 sur demande).
 Contrat partagé : `vision/ai/reflection_contract.py`. Un seul interrupteur :
 `CHAT_REFLEXION` (chat_node le lit ; `launch-ros-in-docker.sh` en déduit
-`reflection_enabled`). Tous en `robot_interfaces/StringTime` :
+`reflection_enabled`). Tous en `theatre_interfaces/StringTime` :
 
 | Topic | Sens | Contrat |
 |---|---|---|
@@ -156,7 +157,7 @@ Choix prudent du lot : `look` n'est publié QU'avec le mouvement à la voix (ban
 sim) — à élargir au vrai robot plus tard, sur décision.
 
 Test à la main (domaine 43) :
-`ros2 topic pub --once chat_text robot_interfaces/msg/StringTime "{msg: 'bonjour Didier'}"`.
+`ros2 topic pub --once chat_text theatre_interfaces/msg/StringTime "{msg: 'bonjour Didier'}"`.
 
 Côté **robot** (chantier séparé, dadou_robot_ros) : un node `gaze_follower`
 /vision/person → `/neck/position` (**suivre du regard d'abord** — théâtral, sans

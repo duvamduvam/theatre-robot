@@ -1,5 +1,5 @@
 """Node `route_driver` (didier_rehearsal.route_driver_node) avec rclpy SIMULÉ —
-même procédé que test_director_node.py : rclpy, robot_interfaces,
+même procédé que test_director_node.py : rclpy, theatre_interfaces,
 geometry_msgs et nav_msgs remplacés par des modules factices ; tout le reste
 est RÉEL (yaml, route, contracts).
 
@@ -87,8 +87,8 @@ def pilote(monkeypatch, tmp_path):
         "rclpy.node": _module("rclpy.node", Node=_NodeFactice),
         "rclpy.qos": _module("rclpy.qos", QoSProfile=_QoS,
                              DurabilityPolicy=types.SimpleNamespace(TRANSIENT_LOCAL="TRANSIENT_LOCAL")),
-        "robot_interfaces": _module("robot_interfaces"),
-        "robot_interfaces.msg": _module("robot_interfaces.msg", StringTime=_StringTime),
+        "theatre_interfaces": _module("theatre_interfaces"),
+        "theatre_interfaces.msg": _module("theatre_interfaces.msg", StringTime=_StringTime),
         "geometry_msgs": _module("geometry_msgs"),
         "geometry_msgs.msg": _module("geometry_msgs.msg", Twist=object, Vector3=object),
         "nav_msgs": _module("nav_msgs"),

@@ -53,7 +53,7 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 from theatre_contrats import stringtime
 
 from didier_rehearsal.contracts import (CMD_VEL_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,

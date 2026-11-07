@@ -18,7 +18,7 @@
   <!-- leds_sim_node : visualisation LED par matériaux émissifs gz (MaterialColor). -->
   <exec_depend>rclpy</exec_depend>
   <exec_depend>ros_gz_interfaces</exec_depend>
-  <exec_depend>robot_interfaces</exec_depend>
+  <exec_depend>theatre_interfaces</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

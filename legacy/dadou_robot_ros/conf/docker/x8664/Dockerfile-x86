@@ -29,7 +29,7 @@ COPY --from=didier_rehearsal . /home/ros2_ws/src/didier_rehearsal
 COPY --from=didier_sim . /home/ros2_ws/src/didier_sim
 COPY --from=didier_web . /home/ros2_ws/src/didier_web
 # Packages communs du mono-dépôt (lot L1a) : contextes nommés du compose.
-COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces
+COPY --from=theatre_interfaces . /home/ros2_ws/src/theatre_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
 # dadou_utils_ros (L1e-3a) : lib partagée, package de packages/ (plus de symlink).
 COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros

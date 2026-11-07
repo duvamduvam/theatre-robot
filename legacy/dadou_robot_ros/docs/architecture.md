@@ -16,10 +16,10 @@ physical subsystems.
 
 | Package | Role | Depends on |
 |---|---|---|
-| `robot_interfaces` | messages (`StringTime`, …) — **moved to `packages/robot_interfaces` of the theatre-robot mono-repo (lot L1a, 2026-11-02), single copy for robot/vision/remote** | nothing — the shared contract |
+| `theatre_interfaces` | messages (`StringTime`, …) — **`packages/theatre_interfaces` of the theatre-robot mono-repo: single copy for robot/vision/remote since lot L1a (2026-11-02), renamed from `robot_interfaces` in lot L1e-3b (2026-11-07), message names unchanged** | nothing — the shared contract |
 | `theatre_contrats` | **`packages/theatre_contrats` (lot L1a)**: topic names (relative), payload keys, organ names, the StringTime codec, QoS profiles — pure Python | nothing (stdlib) |
-| `didier_drive` | cmd_vel chain (bridge, twist_mux config, deadman, kinematics) | `robot_interfaces` only |
-| `didier_sim` | Gazebo Harmonic simulation (servos + LED logic re-implemented) | `robot_interfaces` only |
+| `didier_drive` | cmd_vel chain (bridge, twist_mux config, deadman, kinematics) | `theatre_interfaces` only |
+| `didier_sim` | Gazebo Harmonic simulation (servos + LED logic re-implemented) | `theatre_interfaces` only |
 | `didier_description` | URDF (xacro) | — |
 | `didier_bringup` | launch of the real app | `robot.*` + utils (the one assumed exception) |
 

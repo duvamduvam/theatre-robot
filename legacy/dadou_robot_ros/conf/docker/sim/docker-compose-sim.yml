@@ -16,7 +16,7 @@ services:
       # NOMMÉS — `COPY --from=<nom>` dans le Dockerfile. Chemins relatifs à ce
       # fichier : ../../../../../ = racine du mono-dépôt.
       additional_contexts:
-        robot_interfaces: ../../../../../packages/robot_interfaces
+        theatre_interfaces: ../../../../../packages/theatre_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
         # L1e-3a : la lib partagée n'est plus un dépôt frère mais un package de packages/.
         dadou_utils_ros: ../../../../../packages/dadou_utils_ros
@@ -90,10 +90,10 @@ services:
       # Sources montées par-dessus la copie de l'image : itération sans rebuild.
       - ../../../../../packages/didier_description:/home/ros2_ws/src/didier_description
       - ../../../../../packages/didier_sim:/home/ros2_ws/src/didier_sim
-      # Packages communs du mono-dépôt (lot L1a) : robot_interfaces (copie
+      # Packages communs du mono-dépôt (lot L1a) : theatre_interfaces (copie
       # UNIQUE) et theatre_contrats (contrat, importé
       # par dadou_utils_ros/utils_static.py — sans lui, tout node tombe à l'import).
-      - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # dadou_utils_ros (L1e-3a) : lib partagée, package à plat dans src/ (colcon la
       # construit ; plus de montage dans src/robot/).

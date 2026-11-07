@@ -97,7 +97,7 @@ from geometry_msgs.msg import PointStamped, Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 
 SORTIE, DUREE, NS = sys.argv[1], float(sys.argv[2]), sys.argv[3]
 LATCHE = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)

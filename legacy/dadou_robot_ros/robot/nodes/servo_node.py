@@ -5,7 +5,7 @@ import logging.config
 import rclpy
 from rclpy.node import Node
 from robot.nodes.payload import decode
-from robot_interfaces.msg._string_time import StringTime
+from theatre_interfaces.msg._string_time import StringTime
 
 from dadou_utils_ros.logging_conf import LoggingConf
 from robot.robot_static import HEAD_PWM_NB, DEFAULT_POS, I2C_ENABLED, PWM_CHANNELS_ENABLED, \

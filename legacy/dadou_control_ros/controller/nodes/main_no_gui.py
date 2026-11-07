@@ -4,7 +4,7 @@ import logging.config
 
 import rclpy
 from rclpy.node import Node
-from robot_interfaces.msg._string_time import StringTime
+from theatre_interfaces.msg._string_time import StringTime
 import tkinter as tk
 
 from controller.control_config import config, PUBLISHER_LIST

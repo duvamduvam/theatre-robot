@@ -231,12 +231,12 @@ def test_chaque_script_cli_definit_ns_et_prefixe_ses_topics():
 
 def test_regex_cli_attrape_les_formes_fautives():
     """La regex gravée elle-même : elle DOIT rougir sur les formes d'avant L1b."""
-    for faute in ['ros2 topic pub -1 route robot_interfaces/msg/StringTime',
+    for faute in ['ros2 topic pub -1 route theatre_interfaces/msg/StringTime',
                   'ros2 topic echo --once "$1" --field x',
                   'ros2 topic echo route_state --once',
                   'ros2 topic hz cmd_vel']:
         assert CLI_NON_PREFIXEE.search(faute), faute
-    for juste in ['ros2 topic pub $NS/route robot_interfaces/msg/StringTime "{}" -1',
+    for juste in ['ros2 topic pub $NS/route theatre_interfaces/msg/StringTime "{}" -1',
                   'ros2 topic echo $NS/ground_truth/odom --once', 'ros2 topic hz $NS/cmd_vel']:
         assert not CLI_NON_PREFIXEE.search(juste), juste
 

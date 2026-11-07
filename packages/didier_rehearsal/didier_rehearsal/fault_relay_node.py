@@ -14,7 +14,7 @@ import time
 import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 from theatre_contrats import stringtime
 
 from didier_rehearsal.contracts import HEARTBEAT_TOPIC, RELAYS, RELAY_CMD_TOPIC, check_domain

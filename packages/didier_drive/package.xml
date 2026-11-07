@@ -9,7 +9,7 @@
 
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
-  <depend>robot_interfaces</depend>
+  <depend>theatre_interfaces</depend>
 
   <exec_depend>twist_mux</exec_depend>
   <!-- drive.launch.py lit config/twist_mux.yaml lui-même (lot L1b, namespace). -->

@@ -9,7 +9,7 @@
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
-  <depend>robot_interfaces</depend>
+  <depend>theatre_interfaces</depend>
   <!-- Contrat commun (lot L1a, packages/theatre_contrats) : codec StringTime et noms
        de topics ; dadou_utils_ros/utils_static.py (shim) l'importe aussi. -->
   <exec_depend>theatre_contrats</exec_depend>

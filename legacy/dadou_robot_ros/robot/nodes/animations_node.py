@@ -16,7 +16,7 @@ from robot.nodes.payload import decode
 from robot.robot_config import config
 from robot.robot_static import TICK_PERIOD_S
 from robot.sequences.animation_manager import AnimationManager
-from robot_interfaces.msg._string_time import StringTime
+from theatre_interfaces.msg._string_time import StringTime
 
 
 PUBLISHER_LIST = [AUDIO, FACE, ROBOT_LIGHTS, RELAY, NECK, LEFT_EYE, RIGHT_EYE, LEFT_ARM, RIGHT_ARM, WHEELS]

@@ -4,8 +4,8 @@
     ros2 launch didier_rehearsal rehearsal.launch.py speed:=0.3 scenario:=demo seed:=42
     ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers   # lot R3
     ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true   # lot A1
-    # partir :      ros2 topic pub -1 /didier/route robot_interfaces/msg/StringTime '{msg: "on"}'
-    # régisseur :   ros2 topic pub -1 /didier/rehearsal/cmd robot_interfaces/msg/StringTime '{msg: "start"}'   (stop | abort)
+    # partir :      ros2 topic pub -1 /didier/route theatre_interfaces/msg/StringTime '{msg: "on"}'
+    # régisseur :   ros2 topic pub -1 /didier/rehearsal/cmd theatre_interfaces/msg/StringTime '{msg: "start"}'   (stop | abort)
     # (lot L1b : les nœuds sont sous /<ROBOT_NAME>/, défaut /didier/ — la CLI doit préfixer)
 
 Topologie : route_driver publie `cmd_vel_follow_raw` (remap) -> fault_relay

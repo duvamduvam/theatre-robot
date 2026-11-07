@@ -20,7 +20,7 @@ import pathlib
 import rclpy
 from rclpy.node import Node
 
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 from theatre_contrats import qos, stringtime, topics
 from didier_web.web_catalog import build_catalog, next_publication, read_deploy_sha
 

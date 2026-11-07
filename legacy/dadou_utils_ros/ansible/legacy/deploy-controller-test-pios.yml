@@ -27,4 +27,4 @@
         #- "--exclude=.gitignore"
 
         #- "--exclude=didier_bringup/"
-        #- "--exclude=robot_interfaces/"
+        #- "--exclude=theatre_interfaces/"

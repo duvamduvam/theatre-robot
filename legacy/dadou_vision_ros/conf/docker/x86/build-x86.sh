@@ -22,7 +22,7 @@ tar -ch \
     --exclude=./conf/docker/x86/workspace \
     --exclude='__pycache__' \
     . | docker build -t dadouuu/dadou-vision-x86:latest \
-        --build-context robot_interfaces="$PACKAGES/robot_interfaces" \
+        --build-context theatre_interfaces="$PACKAGES/theatre_interfaces" \
         --build-context theatre_contrats="$PACKAGES/theatre_contrats" \
         --build-context dadou_utils_ros="$PACKAGES/dadou_utils_ros" \
         -f conf/docker/arm/Dockerfile-arm -

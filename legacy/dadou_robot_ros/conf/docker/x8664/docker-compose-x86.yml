@@ -9,7 +9,7 @@ services:
       dockerfile: conf/docker/x8664/Dockerfile-x86
       # Packages communs du mono-dépôt (lot L1a) : ../../../../../ = racine theatre-robot.
       additional_contexts:
-        robot_interfaces: ../../../../../packages/robot_interfaces
+        theatre_interfaces: ../../../../../packages/theatre_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
         # L1e-3a : la lib partagée, package de packages/.
         dadou_utils_ros: ../../../../../packages/dadou_utils_ros
@@ -38,7 +38,7 @@ services:
       - ../../../json:/home/ros2_ws/src/robot/json
       - ../../../medias:/home/ros2_ws/src/robot/medias
       - ../../../../../packages/didier_bringup:/home/ros2_ws/src/didier_bringup
-      - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       - ../../../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       - ../../../conf/ros2/setup.py:/home/ros2_ws/src/robot/setup.py

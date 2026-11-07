@@ -99,13 +99,13 @@ services:
       # (ChatStartupError « voix Piper introuvable » — piège documenté dans
       # Dockerfile-arm). L'image se suffit.
       #
-      # robot_interfaces (StringTime) et theatre_contrats (contrat, importé par
+      # theatre_interfaces (StringTime) et theatre_contrats (contrat, importé par
       # le shim dadou_utils_ros/utils_static.py) : packages/ du mono-dépôt
       # (lot L1a, ../../../../../ = racine theatre-robot), même niveau src/ que
       # sur le parc. ⚠️ workspace/ persistant : après ce lot, `touch
       # vision/CHANGE` pour que colcon construise theatre_contrats, sinon les
       # nodes tombent à l'import.
-      - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # dadou_utils_ros (L1e-3a) : lib partagée, package de packages/. ⚠️ workspace/
       # persistant : `touch vision/CHANGE` pour que colcon construise le nouveau package.

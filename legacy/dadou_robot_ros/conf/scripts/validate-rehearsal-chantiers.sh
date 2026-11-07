@@ -45,13 +45,13 @@ num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo $1 ${3:-nav_msgs/msg/Od
 # Didier immobile 4 min). Toutes les commandes envoyées ici sont idempotentes
 # (on/off/restart/vitesse/start) : les doublons ne font que des warnings.
 # P <topic RELATIF au robot (route, route_speed, rehearsal/cmd)> <msg> : préfixé ici.
-P() { timeout 20 ros2 topic pub $NS/$1 robot_interfaces/msg/StringTime "{msg: \"$2\"}" -t 10 -r 2 >/dev/null 2>&1; }
+P() { timeout 20 ros2 topic pub $NS/$1 theatre_interfaces/msg/StringTime "{msg: \"$2\"}" -t 10 -r 2 >/dev/null 2>&1; }
 # --qos-reliability reliable OBLIGATOIRE avec transient_local : un lecteur best-effort (défaut
 # du CLI quand le type est donné) ne reçoit PAS l'historique latché — mesuré le 06/11 (vide
 # sans, « on » avec ; rclpy reliable : 2,6 s).
 # Route en BOUCLE FERMÉE : on renvoie `on`/`off` jusqu'à ce que l'état latché
 # route_state le confirme (même logique que la relance du régisseur après kill).
-ROUTE() { for i in 1 2; do P route "$1"; st=$(timeout 6 ros2 topic echo $NS/route_state robot_interfaces/msg/StringTime --once --field msg --qos-durability transient_local --qos-reliability reliable 2>/dev/null | head -1); [ "$st" = "$1" ] && return 0; done; echo "  ⚠️ route_state ≠ $1 après 2 salves (dernier : ${st:-aucun})"; return 1; }
+ROUTE() { for i in 1 2; do P route "$1"; st=$(timeout 6 ros2 topic echo $NS/route_state theatre_interfaces/msg/StringTime --once --field msg --qos-durability transient_local --qos-reliability reliable 2>/dev/null | head -1); [ "$st" = "$1" ] && return 0; done; echo "  ⚠️ route_state ≠ $1 après 2 salves (dernier : ${st:-aucun})"; return 1; }
 ok=0; ko=0
 verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  ❌ $2"; ko=$((ko+1)); fi; }
 J() { ls -t $JDIR/*_chantiers.jsonl 2>/dev/null | head -1; }
@@ -71,9 +71,9 @@ jpid=$(basename "$(J)" 2>/dev/null | cut -d_ -f3)
 [ -n "$jpid" ] && kill -0 "$jpid" 2>/dev/null || { echo "PRÉCONDITION : aucun régisseur vivant avec le scénario chantiers (rehearsal.launch.py route:=chantiers scenario:=chantiers ?)"; exit 2; }
 
 # Captures des topics que chat_node consommera : fichiers relus à la fin.
-timeout 1000 ros2 topic echo $NS/chat_instruction robot_interfaces/msg/StringTime --field msg > $CAP/instruction.txt 2>/dev/null &
-timeout 1000 ros2 topic echo $NS/rehearsal/chat_fault robot_interfaces/msg/StringTime --field msg > $CAP/chat_fault.txt 2>/dev/null &
-timeout 1000 ros2 topic echo $NS/route_speed robot_interfaces/msg/StringTime --field msg > $CAP/route_speed.txt 2>/dev/null &
+timeout 1000 ros2 topic echo $NS/chat_instruction theatre_interfaces/msg/StringTime --field msg > $CAP/instruction.txt 2>/dev/null &
+timeout 1000 ros2 topic echo $NS/rehearsal/chat_fault theatre_interfaces/msg/StringTime --field msg > $CAP/chat_fault.txt 2>/dev/null &
+timeout 1000 ros2 topic echo $NS/route_speed theatre_interfaces/msg/StringTime --field msg > $CAP/route_speed.txt 2>/dev/null &
 sleep 2
 
 echo "=== T1 départ + start $(date +%T) ==="

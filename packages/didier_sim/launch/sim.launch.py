@@ -11,7 +11,7 @@ robot_description, robot_state_publisher et le bridge ros_gz.
     # défaut, comme gaze_follower : lancement explicite requis) :
     ros2 launch didier_sim sim.launch.py animations:=true
     # puis, dans un autre terminal (même domaine ROS que la sim, 43) :
-    #   ros2 topic pub -1 /didier/animation robot_interfaces/msg/StringTime '{msg: "\\"parle\\""}'
+    #   ros2 topic pub -1 /didier/animation theatre_interfaces/msg/StringTime '{msg: "\\"parle\\""}'
 
     # Aperçu web du visage LED (face_sim, package "robot" -- les matrices LED
     # n'ont aucun rendu dans Gazebo) -- OFF par défaut, même prudence :

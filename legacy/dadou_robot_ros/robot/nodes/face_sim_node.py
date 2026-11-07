@@ -33,7 +33,7 @@ import rclpy
 from aiohttp import web
 from PIL import Image as PILImage
 from rclpy.node import Node
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 
 from dadou_utils_ros.logging_conf import LoggingConf
 from dadou_utils_ros.utils_static import DURATION, FACE, LOGGING_FILE_NAME

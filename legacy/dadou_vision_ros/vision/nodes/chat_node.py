@@ -144,7 +144,7 @@ from aiohttp import web
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 from theatre_contrats import stringtime
 
 from dadou_utils_ros.utils_static import ANIMATION, ANIMATION_STATE, FACE

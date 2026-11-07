@@ -1,6 +1,6 @@
 """Node `director` (didier_rehearsal.director_node) avec rclpy SIMULÉ — même
 procédé que le pont web (test_web_protocol.py, fixture `pont`) : rclpy et
-robot_interfaces remplacés par des modules factices dans sys.modules ; tout le
+theatre_interfaces remplacés par des modules factices dans sys.modules ; tout le
 reste est RÉEL (yaml, robot.diagnostic.journal, scenario, director, route,
 process_faults). Aucun skip : le node n'importe rien d'autre.
 
@@ -32,7 +32,7 @@ LUBIE_PARAMS = {"poi": "banc", "text": None, "stop": True, "restore": 1.0}
 BATTERIE = {"id": "batterie", "type": "speed", "value": 0.4, "t": 200, "duration_s": 10}
 
 
-# --- rclpy & robot_interfaces factices ----------------------------------------------
+# --- rclpy & theatre_interfaces factices ----------------------------------------------
 
 class _Publieur:
     def __init__(self):
@@ -122,15 +122,15 @@ def _module(nom, **attributs):
 
 @pytest.fixture
 def regisseur(monkeypatch):
-    """Le module director_node importé avec rclpy & robot_interfaces simulés ;
+    """Le module director_node importé avec rclpy & theatre_interfaces simulés ;
     retiré de sys.modules à la fin pour ne rien laisser derrière."""
     faux = {
         "rclpy": _module("rclpy"),
         "rclpy.node": _module("rclpy.node", Node=_NodeFactice),
         "rclpy.qos": _module("rclpy.qos", QoSProfile=_QoS,
                              DurabilityPolicy=types.SimpleNamespace(TRANSIENT_LOCAL="TRANSIENT_LOCAL")),
-        "robot_interfaces": _module("robot_interfaces"),
-        "robot_interfaces.msg": _module("robot_interfaces.msg", StringTime=_StringTime),
+        "theatre_interfaces": _module("theatre_interfaces"),
+        "theatre_interfaces.msg": _module("theatre_interfaces.msg", StringTime=_StringTime),
         # Lot M1 « aller voir » : le régisseur lit la pose (borne de distance).
         "nav_msgs": _module("nav_msgs"),
         "nav_msgs.msg": _module("nav_msgs.msg", Odometry=object),

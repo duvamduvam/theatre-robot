@@ -50,7 +50,7 @@ from geometry_msgs.msg import PointStamped
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy
 from std_msgs.msg import Float64
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 from theatre_contrats import stringtime, topics
 
 from robot.move.gaze_control import GazeControl, LookGovernor, consigne_to_radians, look_course_deg, parse_look

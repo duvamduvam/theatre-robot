@@ -2,7 +2,7 @@
 
 ## Message contract: `StringTime` + JSON payload
 
-Almost every application topic uses `robot_interfaces/msg/StringTime`:
+Almost every application topic uses `theatre_interfaces/msg/StringTime`:
 
 ```
 string msg    # JSON-ENCODED payload (see below)

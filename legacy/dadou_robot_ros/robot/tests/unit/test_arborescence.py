@@ -1,6 +1,7 @@
 """Arborescence du mono-dépôt : les 6 packages ROS autonomes du robot ont déménagé de
 legacy/dadou_robot_ros/conf/ros2_dependencies/ vers packages/ (lot L1e-1, 06/11),
-puis ont été renommés robot_* -> didier_* (lot L1e-2, 07/11). Ce test grave le
+puis ont été renommés robot_* -> didier_* (lot L1e-2, 07/11) ; les messages
+robot_interfaces sont devenus theatre_interfaces (lot L1e-3b, 07/11). Ce test grave le
 résultat, la liste que le rôle Ansible `synchronise` pousse sur le Pi robot, et la
 liste des anciens noms qu'il efface des Pi (packages_retires).
 
@@ -30,14 +31,18 @@ ANCIENS_NOMS = ["robot_bringup", "robot_description", "robot_drive",
 # Parmi les six, ceux en ament_python (marqueur resource/<nom> obligatoire) ; les
 # trois autres sont ament_cmake (pas de marqueur).
 SIX_AMENT_PYTHON = ["didier_drive", "didier_rehearsal", "didier_web"]
-COMMUNS = ["theatre_contrats", "robot_interfaces", "dadou_utils_ros"]
+# L1e-3b : ancien nom des messages, ajouté à `packages_retires` (même nettoyage des Pi que
+# les six de L1e-2). Écrit en dur, comme ANCIENS_NOMS.
+ANCIEN_NOM_INTERFACES = "robot_interfaces"
+COMMUNS = ["theatre_contrats", "theatre_interfaces", "dadou_utils_ros"]
 # Liste GRAVÉE de l'hôte robot : exactement ce que le Pi reçoit depuis avant L1e-1,
 # sous les noms de L1e-2 (aucun changement de comportement ; le tri « sim-only hors
 # du Pi » est L1e-4). didier_jeu (sim-only) n'y figure PAS, et ne doit jamais y
-# figurer sans décision. dadou_utils_ros (lib partagée) y est depuis L1e-3a.
+# figurer sans décision. dadou_utils_ros (lib partagée) y est depuis L1e-3a ;
+# theatre_interfaces y remplace robot_interfaces depuis L1e-3b.
 HOTE_ROBOT_GRAVE = ["dadou_utils_ros", "didier_bringup", "didier_description", "didier_drive",
-                    "didier_rehearsal", "didier_sim", "didier_web", "robot_interfaces",
-                    "theatre_contrats"]
+                    "didier_rehearsal", "didier_sim", "didier_web", "theatre_contrats",
+                    "theatre_interfaces"]
 # L1e-3a : chemins (sous ros2_ws/) des copies embarquées de la lib, effacés des Pi par la
 # liste `chemins_retires_lib`. Écrits en dur, comme ANCIENS_NOMS.
 CHEMINS_RETIRES_LIB = ["src/robot/dadou_utils_ros", "src/vision/dadou_utils_ros",
@@ -120,9 +125,10 @@ def test_aucun_ancien_nom_ne_subsiste_dans_packages():
         assert not (PACKAGES / ancien).exists(), ancien
 
 
-def test_packages_retires_est_la_liste_gravee_des_six_anciens_noms():
+def test_packages_retires_est_la_liste_gravee_des_sept_anciens_noms():
     retires = yaml.safe_load(VARS.read_text(encoding="utf-8"))["packages_retires"]
-    assert sorted(retires) == ANCIENS_NOMS
+    assert sorted(retires) == ["robot_bringup", "robot_description", "robot_drive",
+                               "robot_interfaces", "robot_rehearsal", "robot_sim", "robot_web"]
     assert len(retires) == len(set(retires)), "doublon dans packages_retires"
 
 
@@ -193,3 +199,40 @@ def test_la_tache_de_nettoyage_de_la_lib_precede_la_copie_des_packages():
     t = taches[nettoyage]
     assert t["file"]["state"] == "absent" and t.get("become") is True
     assert t["file"]["path"].startswith("{{ ansible_env.HOME }}/{{ ros2_ws }}/")
+
+
+# --- L1e-3b : robot_interfaces -> theatre_interfaces ------------------------------
+
+def test_les_interfaces_sont_un_package_cmake_dont_le_nom_est_celui_du_dossier():
+    xml = PACKAGES / "theatre_interfaces" / "package.xml"
+    assert xml.is_file()
+    assert _nom_declare(xml) == "theatre_interfaces"
+    assert _build_type(xml) == "ament_cmake"
+    cmake = (PACKAGES / "theatre_interfaces" / "CMakeLists.txt").read_text(encoding="utf-8")
+    assert "project(theatre_interfaces)" in cmake
+    # Noms de MESSAGES inchangés : StringTime reste généré (le type de tous les topics).
+    assert '"msg/StringTime.msg"' in cmake
+
+
+def test_l_ancien_dossier_des_interfaces_n_existe_plus():
+    assert not (PACKAGES / ANCIEN_NOM_INTERFACES).exists()
+
+
+def test_plus_aucun_fichier_de_code_ni_de_conf_ne_cite_l_ancien_nom():
+    """Imports, `<depend>`, compose, Dockerfiles, scripts CLI : un oubli ne se voit qu'au
+    `colcon build` (dépendance introuvable) ou au démarrage d'un nœud (ImportError).
+    Seule exception : la liste `packages_retires` d'Ansible, qui DOIT le citer."""
+    suffixes = {".py", ".sh", ".yml", ".yaml", ".xml", ".txt", ".cfg", ".launch"}
+    exclus = {".venv", "venv", ".git", "build", "install", "log", "__pycache__", "node_modules"}
+    fautes = []
+    for p in MONO.rglob("*"):
+        if exclus & set(p.relative_to(MONO).parts) or not p.is_file():
+            continue
+        if p.suffix not in suffixes and not p.name.startswith("Dockerfile") \
+                and p.name not in ("hosts", "Makefile") and p.parent.name != "scripts":
+            continue
+        if p in (VARS, pathlib.Path(__file__).resolve()):
+            continue
+        if ANCIEN_NOM_INTERFACES in p.read_text(encoding="utf-8", errors="ignore"):
+            fautes.append(str(p.relative_to(MONO)))
+    assert fautes == [], fautes

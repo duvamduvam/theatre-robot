@@ -3,10 +3,10 @@
 ## ROS 2 Topics (Published)
 | Topic | Message Type | Origin | Description |
 |-------|--------------|--------|-------------|
-| `/controller/audio` | `robot_interfaces/msg/StringTime` | `controller/nodes/audio_node.py` | Requests audio playback on the robot side. |
-| `/controller/lights` | `robot_interfaces/msg/StringTime` | `controller/nodes/relays_node.py` | Commands light sequences / relays. |
-| `/controller/wheels` | `robot_interfaces/msg/StringTime` | `controller/nodes/wheels_node.py` | Movement commands for the wheeled base. |
-| `/controller/system` | `robot_interfaces/msg/StringTime` | `controller/nodes/system_node.py` | Misc system-level commands. |
+| `/controller/audio` | `theatre_interfaces/msg/StringTime` | `controller/nodes/audio_node.py` | Requests audio playback on the robot side. |
+| `/controller/lights` | `theatre_interfaces/msg/StringTime` | `controller/nodes/relays_node.py` | Commands light sequences / relays. |
+| `/controller/wheels` | `theatre_interfaces/msg/StringTime` | `controller/nodes/wheels_node.py` | Movement commands for the wheeled base. |
+| `/controller/system` | `theatre_interfaces/msg/StringTime` | `controller/nodes/system_node.py` | Misc system-level commands. |
 
 > The precise list of topics may evolve. Keep this table aligned with the node implementations and the subscriber list in `dadou_robot_ros`.
 

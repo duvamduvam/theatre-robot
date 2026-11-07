@@ -113,6 +113,20 @@ Au déploiement, Ansible efface les anciennes copies `src/{robot,vision,controll
 (liste gravée `chemins_retires_lib`) ; si un Pi garde un `build/` ou `install/` d'avant, un
 `colcon build` complet les reconstruit.
 
+## Messages ROS : `theatre_interfaces` (lot L1e-3b, 07/11)
+
+Le package des messages s'appelle `theatre_interfaces` (ex `robot_interfaces`, renommé en
+L1e-3b ; `StringTime` et les autres noms de messages sont inchangés). En CLI :
+`ros2 topic pub --once /didier/face theatre_interfaces/msg/StringTime "{msg: '\"calib\"'}"`.
+Au déploiement, Ansible efface `src/`, `build/` et `install/robot_interfaces` des Pi
+(`packages_retires`) avant de pousser `src/theatre_interfaces` ; les compose ARM montent
+un nouveau dossier : **recréer** le conteneur (`docker compose up -d`, pas `restart`) avec la
+sentinelle de build posée, sinon `theatre_interfaces` est absent du conteneur et les nœuds
+tombent à l'import (même piège que `theatre_contrats` au 04/11 ; pas encore vécu ici).
+Tests hôte : les modules ROS sont factices (`sys.modules["theatre_interfaces.msg"]`), rien
+à installer ; le garde-fou `test_arborescence.py` rougit si un fichier de code ou de conf
+cite encore l'ancien nom.
+
 ## Calibration & verification tooling
 - **Face LED patterns** (expressions, publish on `face`): `"calib"` (digits
   123 + E + eye F — fine orientation), `"calib-couleurs"` (one colour per
@@ -120,7 +134,7 @@ Au déploiement, Ansible efface les anciennes copies `src/{robot,vision,controll
   offset breaks a ring, no left/right interpretation needed). The wiring is
   locked by `test_image_mapping.py`; re-run the patterns after ANY change on
   the face path. Publish example:
-  `ros2 topic pub --once /didier/face robot_interfaces/msg/StringTime "{msg: '\"calib\"', time: 0, anim: false}"`
+  `ros2 topic pub --once /didier/face theatre_interfaces/msg/StringTime "{msg: '\"calib\"', time: 0, anim: false}"`
 - **Brightness** (non-persistent, default 0.05):
   `{msg: '{"brightness": 0.15}'}` on `robot_lights` — 0.15 is comfortable to
   read patterns, LED patterns are unreadable on webcams (fixed-focus + PWM
@@ -443,7 +457,7 @@ cd conf/docker/sim && WORLD=rue HEADLESS=true ANIMATIONS=true FACE=true WEB=true
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py'
 # partir / s'arrêter / reprendre au début : topic `route` = "on" | "off" | "restart" ; vitesse 0..1 : topic `route_speed`
-docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route robot_interfaces/msg/StringTime "{msg: \"on\"}"'
+docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route theatre_interfaces/msg/StringTime "{msg: \"on\"}"'
 # vérification rejouable V-R1 (départ, POI, télécommande qui écrase, zéro franc, arrivée) :
 docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-route.sh
 ```

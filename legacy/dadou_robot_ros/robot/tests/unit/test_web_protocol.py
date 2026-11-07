@@ -994,8 +994,8 @@ def pont(monkeypatch):
         "sensor_msgs": _module("sensor_msgs"),
         "sensor_msgs.msg": _module("sensor_msgs.msg", CompressedImage=type("CompressedImage", (), {}),
                                    Image=type("Image", (), {})),
-        "robot_interfaces": _module("robot_interfaces"),
-        "robot_interfaces.msg": _module("robot_interfaces.msg", StringTime=_StringTimeFactice),
+        "theatre_interfaces": _module("theatre_interfaces"),
+        "theatre_interfaces.msg": _module("theatre_interfaces.msg", StringTime=_StringTimeFactice),
     }
     for nom, module in faux.items():
         monkeypatch.setitem(sys.modules, nom, module)

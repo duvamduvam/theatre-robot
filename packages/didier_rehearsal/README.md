@@ -253,7 +253,7 @@ WORLD=rue ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-si
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py'
 # 3. partir :
-docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route robot_interfaces/msg/StringTime "{msg: \"on\"}"'
+docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route theatre_interfaces/msg/StringTime "{msg: \"on\"}"'
 ```
 
 **Vérification d'intégration V-R1** (rejouable, dans le conteneur, chaîne roues + rehearsal lancés, route OFF) :

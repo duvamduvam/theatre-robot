@@ -24,7 +24,7 @@ JDIR=/home/ros2_ws/log/rehearsal
 # num <topic préfixé $NS/…> <champ>
 num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo $1 --once --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
 # P <topic RELATIF au robot (route, rehearsal/cmd…)> <msg> : préfixé ici.
-P() { timeout 15 ros2 topic pub $NS/$1 robot_interfaces/msg/StringTime "{msg: \"$2\"}" -1 >/dev/null 2>&1; }
+P() { timeout 15 ros2 topic pub $NS/$1 theatre_interfaces/msg/StringTime "{msg: \"$2\"}" -1 >/dev/null 2>&1; }
 ok=0; ko=0
 # PRÉCONDITIONS (vérifiées avant de dérouler : un processus absent donnerait un
 # fault_error légitime du régisseur, mais ce serait le banc qui est faux, pas

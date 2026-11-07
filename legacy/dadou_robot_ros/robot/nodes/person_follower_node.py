@@ -29,7 +29,7 @@ import time
 import rclpy
 from geometry_msgs.msg import PointStamped, Twist
 from rclpy.node import Node
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 from theatre_contrats import stringtime, topics
 
 from robot.move.follow_control import FollowConfig, FollowControl

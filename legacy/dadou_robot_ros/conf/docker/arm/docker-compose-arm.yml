@@ -7,11 +7,11 @@ services:
       dockerfile: conf/docker/arm/Dockerfile-arm
       # Packages COMMUNS du mono-dépôt (lot L1a) en contextes NOMMÉS. Chemins
       # de l'arborescence DÉPLOYÉE sur le Pi (ros2_ws/src/<package>, même
-      # convention que le volume robot_interfaces ci-dessous) — ⚠️ Ansible
-      # doit y synchroniser packages/robot_interfaces et packages/theatre_contrats
+      # convention que le volume theatre_interfaces ci-dessous) — ⚠️ Ansible
+      # doit y synchroniser packages/theatre_interfaces et packages/theatre_contrats
       # AVANT tout déploiement de ce lot (verrou noté au tableau de bord).
       additional_contexts:
-        robot_interfaces: ../../../../robot_interfaces
+        theatre_interfaces: ../../../../theatre_interfaces
         theatre_contrats: ../../../../theatre_contrats
         # L1e-3a : la lib partagée, package de packages/ (liste `packages_default`).
         dadou_utils_ros: ../../../../dadou_utils_ros
@@ -48,7 +48,7 @@ services:
       - ../../../json:/home/ros2_ws/src/robot/json
       - ../../../medias:/home/ros2_ws/src/robot/medias
       - ../../../../didier_bringup:/home/ros2_ws/src/didier_bringup
-      - ../../../../robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../../../theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       # theatre_contrats (lot L1a) : importé par dadou_utils_ros/utils_static.py
       # — sans lui, TOUS les nodes tombent à l'import, wheels_node compris.
       - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
@@ -56,7 +56,7 @@ services:
       # copie dans src/robot/, le symlink a disparu).
       - ../../../../dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       # Chaîne cmd_vel (bridge/mux/deadman) — rsyncée sur le Pi par la tâche
-      # ansible (liste `packages` de l'hôte robot -> src/), comme didier_bringup/robot_interfaces.
+      # ansible (liste `packages` de l'hôte robot -> src/), comme didier_bringup/theatre_interfaces.
       - ../../../../didier_drive:/home/ros2_ws/src/didier_drive
       # Pont web (console navigateur, contenus/supervision — drive_enabled
       # reste false sur le robot, cf. robot_app.launch.py). Même mécanique de

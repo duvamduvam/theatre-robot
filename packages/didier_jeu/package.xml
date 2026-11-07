@@ -10,7 +10,7 @@
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
-  <depend>robot_interfaces</depend>
+  <depend>theatre_interfaces</depend>
   <exec_depend>ament_index_python</exec_depend>
   <!-- Contrat commun : topics jeu/*, codec StringTime, QoS latché. -->
   <exec_depend>theatre_contrats</exec_depend>

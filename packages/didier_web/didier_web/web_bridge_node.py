@@ -55,7 +55,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage, Image
 
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 # Codec StringTime commun (lot L1a) : `loads` et non decode_or_raw — le pont
 # n'attrape que TypeError/JSONDecodeError (pas tout ValueError) et sa
 # sémantique générique est gardée à l'identique.

@@ -12,7 +12,7 @@ robot:
         # packages_default (vars/main.yml).
         packages:
             - theatre_contrats
-            - robot_interfaces
+            - theatre_interfaces
             - dadou_utils_ros
             - didier_bringup
             - didier_description

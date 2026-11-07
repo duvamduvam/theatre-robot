@@ -13,11 +13,11 @@
        (contrat ARCHITECTURE.md), cf. vision/nodes/person_tracker_node.py. -->
   <depend>geometry_msgs</depend>
   <!-- Conversation temps réel V2 : chat_node publie sur les topics FACE/
-       ANIMATION existants du robot via robot_interfaces/StringTime (zéro
+       ANIMATION existants du robot via theatre_interfaces/StringTime (zéro
        nouveau topic, cf. ARCHITECTURE.md) — même dépendance que côté
-       dadou_robot_ros ; robot_interfaces arrive par rsync ansible en src/,
+       dadou_robot_ros ; theatre_interfaces arrive par rsync ansible en src/,
        cf. docker-compose-arm.yml. -->
-  <depend>robot_interfaces</depend>
+  <depend>theatre_interfaces</depend>
   <!-- Contrat commun (lot L1a, packages/theatre_contrats) : codec StringTime et noms
        de topics ; dadou_utils_ros/utils_static.py (shim) l'importe aussi. -->
   <exec_depend>theatre_contrats</exec_depend>

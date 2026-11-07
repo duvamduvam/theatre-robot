@@ -30,8 +30,8 @@ J() { tail -n +$((START+1)) "$LOG"; }
 num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo $1 --once --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
 X() { num $NS/ground_truth/odom pose.pose.position.x; }
 CMD() { num $NS/cmd_vel linear.x; }
-R() { timeout 15 ros2 topic pub $NS/route robot_interfaces/msg/StringTime "{msg: \"$1\"}" -1 >/dev/null 2>&1; }
-S() { timeout 15 ros2 topic pub $NS/route_speed robot_interfaces/msg/StringTime "{msg: \"$1\"}" -1 >/dev/null 2>&1; }
+R() { timeout 15 ros2 topic pub $NS/route theatre_interfaces/msg/StringTime "{msg: \"$1\"}" -1 >/dev/null 2>&1; }
+S() { timeout 15 ros2 topic pub $NS/route_speed theatre_interfaces/msg/StringTime "{msg: \"$1\"}" -1 >/dev/null 2>&1; }
 ok=0; ko=0
 verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  ❌ $2"; ko=$((ko+1)); fi; }
 

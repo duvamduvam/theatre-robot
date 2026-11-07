@@ -70,7 +70,7 @@ def main(args=None):
     from geometry_msgs.msg import PointStamped
     from nav_msgs.msg import Odometry
     from rclpy.node import Node
-    from robot_interfaces.msg import StringTime
+    from theatre_interfaces.msg import StringTime
     from theatre_contrats import qos
 
     class JeuNode(Node):

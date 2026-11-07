@@ -11,7 +11,7 @@ from dadou_utils_ros.logging_conf import LoggingConf
 from dadou_utils_ros.utils_static import LOGGING_FILE_NAME, DURATION, ANIMATION
 from robot.robot_static import TICK_PERIOD_S
 from robot.nodes.payload import decode
-from robot_interfaces.msg._string_time import StringTime
+from theatre_interfaces.msg._string_time import StringTime
 
 class SubscriberNode(Node):
     def __init__(self, config, action_type, topic_name, action):

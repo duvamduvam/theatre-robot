@@ -1,4 +1,4 @@
-"""LE codec des StringTime du parc Didier (robot_interfaces/msg/StringTime :
+"""LE codec des StringTime du parc Didier (theatre_interfaces/msg/StringTime :
 msg = payload JSON en chaîne, time = durée en ms, anim = vient d'une séquence).
 
 Le payload est du JSON ENCODÉ EN CHAÎNE : un nom d'expression se publie AVEC
@@ -63,7 +63,7 @@ def encode(value, time_ms=0, anim=False, msg_type=None):
     """Champs d'un StringTime : msg = json.dumps(valeur NUE) — "joie" -> '"joie"',
     False -> 'false', jamais de ré-emballage {topic: valeur} sur le fil.
     Sans msg_type : dict {msg, time, anim} (tests, outils sans ROS) ; avec
-    msg_type (robot_interfaces.msg.StringTime) : le message construit."""
+    msg_type (theatre_interfaces.msg.StringTime) : le message construit."""
     fields = {"msg": json.dumps(value), "time": int(time_ms), "anim": bool(anim)}
     if msg_type is None:
         return fields

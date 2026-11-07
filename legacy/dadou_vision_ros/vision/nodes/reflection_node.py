@@ -33,7 +33,7 @@ from geometry_msgs.msg import PointStamped
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
-from robot_interfaces.msg import StringTime
+from theatre_interfaces.msg import StringTime
 from theatre_contrats import topics
 from sensor_msgs.msg import CompressedImage
 

@@ -22,7 +22,7 @@ NS="/${ROBOT_NAME:-didier}"
 
 # $1 = valeur JSON sur le fil (chaînes AVEC guillemets JSON : '"forward"'),
 # $2 = nombre de publications à 10 Hz, $3 = anim (défaut false)
-W() { ros2 topic pub $NS/wheels robot_interfaces/msg/StringTime "{msg: '$1', time: 0, anim: ${3:-false}}" -r 10 -t $2 >/dev/null 2>&1; }
+W() { ros2 topic pub $NS/wheels theatre_interfaces/msg/StringTime "{msg: '$1', time: 0, anim: ${3:-false}}" -r 10 -t $2 >/dev/null 2>&1; }
 
 echo "=== T1 bouton forward (3 s) $(date +%T.%3N) ==="
 W '"forward"' 30

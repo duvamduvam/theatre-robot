@@ -11,7 +11,7 @@ services:
       dockerfile: conf/docker/x86/Dockerfile-x86
       # Packages communs du mono-dépôt (lot L1a) : ../../../../../ = racine theatre-robot.
       additional_contexts:
-        robot_interfaces: ../../../../../packages/robot_interfaces
+        theatre_interfaces: ../../../../../packages/theatre_interfaces
         theatre_contrats: ../../../../../packages/theatre_contrats
         dadou_utils_ros: ../../../../../packages/dadou_utils_ros
       args:
@@ -47,10 +47,10 @@ services:
       - ../../../controller:/home/ros2_ws/src/controller/controller
       - ../../../json:/home/ros2_ws/src/controller/json
       - ../../../medias:/home/ros2_ws/src/controller/medias
-      # robot_interfaces (copie UNIQUE) et theatre_contrats (contrat, importé par
+      # theatre_interfaces (copie UNIQUE) et theatre_contrats (contrat, importé par
       # le shim dadou_utils_ros/utils_static.py) : packages/ du mono-dépôt
       # (lot L1a, ../../../../../ = racine theatre-robot).
-      - ../../../../../packages/robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # dadou_utils_ros (L1e-3a) : lib partagée, package de packages/.
       - ../../../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros

@@ -38,7 +38,7 @@ from didier_sim_lib.servos_logic import (  # noqa: E402
 
 import rclpy  # noqa: E402
 from rclpy.node import Node  # noqa: E402
-from robot_interfaces.msg import StringTime  # noqa: E402
+from theatre_interfaces.msg import StringTime  # noqa: E402
 from std_msgs.msg import Float64  # noqa: E402
 
 # Noms de topic StringTime == dadou_utils_ros.utils_static.{NECK,LEFT_ARM,

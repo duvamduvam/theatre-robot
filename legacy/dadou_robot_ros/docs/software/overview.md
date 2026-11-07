@@ -55,7 +55,7 @@
 - ROS 2 **Jazzy** (containerised; the app also runs against Gazebo Harmonic in
   simulation — see `conf/docker/sim/`).
 - `dadou_utils_ros`: logging, `TimeUtils`, file utils, deployment (Ansible).
-- `robot_interfaces` message package (`StringTime`).
+- `theatre_interfaces` message package (`StringTime`; `robot_interfaces` until lot L1e-3b).
 
 ## Logging
 - Shared logging factory; application log at `/home/ros2_ws/log/robot.log`

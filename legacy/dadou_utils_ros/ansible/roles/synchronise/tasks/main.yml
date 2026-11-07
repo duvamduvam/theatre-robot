@@ -10,7 +10,7 @@
 
 #- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}//robot_interface" with "{{ ros2_ws }}/src/"
 #  synchronize:
-#    src: "{{ local_projects_dir }}/{{ local_project_dir }}/robot_interfaces"
+#    src: "{{ local_projects_dir }}/{{ local_project_dir }}/theatre_interfaces"
 #    dest: "{{ ros2_ws }}/src/"
 #    recursive: yes
 #    delete: yes
@@ -34,7 +34,7 @@
       - "--exclude=.editorconfig"
       - "--exclude=.gitignore"
       #- "--exclude=didier_bringup/"
-      #- "--exclude=robot_interfaces/"
+      #- "--exclude=theatre_interfaces/"
 
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
   synchronize:
@@ -80,7 +80,7 @@
 # un package qui n'a rien à y faire (didier_jeu, sim-only ; didier_drive et son
 # twist_mux sur le Pi vision...) y casserait la compilation sur ses dépendances
 # manquantes, ou y tournerait pour rien. Les communs (theatre_contrats,
-# robot_interfaces) sont obligatoires partout : dadou_utils_ros/utils_static.py
+# theatre_interfaces) sont obligatoires partout : dadou_utils_ros/utils_static.py
 # importe theatre_contrats — sans lui, tous les nodes tombent au démarrage.
 # Un package absent de packages/ fait échouer le rsync (code 23) : c'est voulu,
 # test_arborescence.py le détecte avant. Ne PAS nommer `packages` une liste d'apt.

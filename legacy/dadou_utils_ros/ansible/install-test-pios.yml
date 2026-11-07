@@ -59,7 +59,7 @@
         #- "--exclude=.editorconfig"
         #- "--exclude=.gitignore"
         #- "--exclude=didier_bringup/"
-        #- "--exclude=robot_interfaces/"
+        #- "--exclude=theatre_interfaces/"
 
   - name: Load mail notification password
     when: test_mail_notify_password_file | default('') | length > 0

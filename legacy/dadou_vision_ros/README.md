@@ -29,14 +29,14 @@ d'atelier du 2026-07-13 à valider avec David) : `bougon` (défaut, config
 pour la répétition simulée : chaque panne est « une fonctionnalité ») — socle commun (robot assumé, complice
 des enfants, esquives par opinions absurdes) + variante du jour. Changement
 à chaud (nouvelle session de conversation) :
-`ros2 topic pub --once /didier/persona robot_interfaces/msg/StringTime "{msg: 'naif'}"`
+`ros2 topic pub --once /didier/persona theatre_interfaces/msg/StringTime "{msg: 'naif'}"`
 — ou les boutons « Personnalité » de la console web côté robot.
 
 ## Topics de régie du chat (14/10)
 
 Lot R3 « Chantiers » (spec fermée : `../dadou_robot_ros/docs/etude-repetition-simulee.md`
 §13.4 point 3 et §13.6). Logique pure dans `vision/ai/stage.py` (testée sans ROS),
-câblage dans `chat_node`. Tous en `robot_interfaces/StringTime` :
+câblage dans `chat_node`. Tous en `theatre_interfaces/StringTime` :
 
 | Topic | Sens | Contrat |
 |---|---|---|
@@ -46,4 +46,4 @@ câblage dans `chat_node`. Tous en `robot_interfaces/StringTime` :
 | `chat_transcript` | pub | Flux (QoS volatile, depth 10) : JSON `{"role": "david"\|"didier", "text", "t_ms"}` (`t_ms` = epoch ms). `david` = ce que Didier a compris (après garble), `didier` = chaque phrase. Jamais les consignes ni les pannes. |
 
 Test à la main (domaine 43) :
-`ros2 topic pub --once /didier/chat_text robot_interfaces/msg/StringTime "{msg: 'bonjour Didier'}"`.
+`ros2 topic pub --once /didier/chat_text theatre_interfaces/msg/StringTime "{msg: 'bonjour Didier'}"`.

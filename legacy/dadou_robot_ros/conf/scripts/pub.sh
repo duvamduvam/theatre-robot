@@ -8,4 +8,4 @@ source /home/ros2_ws/install/setup.bash
 # (`ros2 topic pub $NS/x …`, options après) — forme gravée par
 # robot/tests/unit/test_namespace_contract.py.
 NS="/${ROBOT_NAME:-didier}"
-ros2 topic pub $NS/$1 robot_interfaces/msg/StringTime "{msg: '$2', time: ${3:-0}, anim: ${4:-false}}" --once
+ros2 topic pub $NS/$1 theatre_interfaces/msg/StringTime "{msg: '$2', time: ${3:-0}, anim: ${4:-false}}" --once

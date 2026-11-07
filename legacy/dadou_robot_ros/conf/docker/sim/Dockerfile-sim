@@ -37,9 +37,9 @@ WORKDIR /home/ros2_ws
 # (additional_contexts) — ils ont déménagé de conf/ du robot vers packages/, noms inchangés.
 COPY --from=didier_description . /home/ros2_ws/src/didier_description
 COPY --from=didier_sim . /home/ros2_ws/src/didier_sim
-# robot_interfaces et theatre_contrats : packages/ du mono-dépôt (lot L1a),
+# theatre_interfaces et theatre_contrats : packages/ du mono-dépôt (lot L1a),
 # contextes nommés fournis par docker-compose-sim.yml (additional_contexts).
-COPY --from=robot_interfaces . /home/ros2_ws/src/robot_interfaces
+COPY --from=theatre_interfaces . /home/ros2_ws/src/theatre_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
 # dadou_utils_ros (L1e-3a) : lib partagée, package de packages/ (ex-symlink du dépôt).
 COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros

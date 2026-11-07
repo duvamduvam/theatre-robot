@@ -7,7 +7,7 @@ QUOI : vision/nodes/chat_node.py importe rclpy en tête de module (comme tous
        (traduction RosMessage -> kwargs StringTime, construction des défauts
        de paramètres ROS depuis la config) ont donc été extraits dans
        vision/nodes/_chat_wiring.py, un module PUR (aucun rclpy ni
-       robot_interfaces) — ce fichier de test n'importe QUE lui (et les
+       theatre_interfaces) — ce fichier de test n'importe QUE lui (et les
        décodeurs des topics de régie de vision.ai.stage, pur aussi), jamais
        vision.nodes.chat_node.
 """

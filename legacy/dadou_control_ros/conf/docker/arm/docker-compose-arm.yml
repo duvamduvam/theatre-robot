@@ -9,7 +9,7 @@ services:
       # Packages communs du mono-dépôt (lot L1a) en contextes NOMMÉS, chemins
       # de l'arborescence déployée sur le Pi (ros2_ws/src/<package>).
       additional_contexts:
-        robot_interfaces: ../../../../robot_interfaces
+        theatre_interfaces: ../../../../theatre_interfaces
         theatre_contrats: ../../../../theatre_contrats
         dadou_utils_ros: ../../../../dadou_utils_ros
     # Supervision par le démon Docker (même assainissement que le robot,
@@ -48,10 +48,10 @@ services:
       - ../../../controller:/home/ros2_ws/src/controller/controller
       - ../../../json:/home/ros2_ws/src/controller/json
       - ../../../medias:/home/ros2_ws/src/controller/medias
-      # robot_interfaces et theatre_contrats (lot L1a) : packages/ du mono-dépôt,
+      # theatre_interfaces et theatre_contrats (lot L1a) : packages/ du mono-dépôt,
       # synchronisés par Ansible au niveau ros2_ws/src/ du Pi (même convention
       # que robot/vision) — ⚠️ à faire AVANT de déployer ce lot.
-      - ../../../../robot_interfaces:/home/ros2_ws/src/robot_interfaces
+      - ../../../../theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../../../theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # dadou_utils_ros (L1e-3a) : lib partagée, package à plat dans src/ (Ansible, liste
       # `packages_default`).

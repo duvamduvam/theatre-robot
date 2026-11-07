@@ -46,7 +46,7 @@ from didier_sim_lib.leds_logic import (  # noqa: E402
 
 import rclpy  # noqa: E402
 from rclpy.node import Node  # noqa: E402
-from robot_interfaces.msg import StringTime  # noqa: E402
+from theatre_interfaces.msg import StringTime  # noqa: E402
 from ros_gz_interfaces.msg import Entity, MaterialColor  # noqa: E402
 
 # Noms des visuals dans la scène gz (cf. dadou_robot_gz.urdf.xacro : joints fixes

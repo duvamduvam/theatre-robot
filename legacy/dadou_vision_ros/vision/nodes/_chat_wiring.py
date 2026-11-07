@@ -1,5 +1,5 @@
 """Helpers PURS de câblage pour vision/nodes/chat_node.py — AUCUN import
-rclpy ni robot_interfaces ici.
+rclpy ni theatre_interfaces ici.
 
 QUOI : chat_node.py importe rclpy en tête de module (comme tous les nodes du
        repo, cf. vision/nodes/person_tracker_node.py) — son import échoue
@@ -29,7 +29,7 @@ from vision.vision_config import config
 
 def ros_message_to_string_time_kwargs(message: RosMessage) -> Dict[str, Any]:
     """Traduit un RosMessage (topic/payload/durée, cf. vision.ai.performance)
-    en kwargs prêts pour `robot_interfaces.msg.StringTime(**kwargs)`.
+    en kwargs prêts pour `theatre_interfaces.msg.StringTime(**kwargs)`.
 
     anim=False FIXE (jamais autre chose ici) : côté robot, ce champ marque
     qu'un message provient d'une SÉQUENCE d'animation rejouée par
