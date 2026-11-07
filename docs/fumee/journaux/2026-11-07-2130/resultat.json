@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "id": "2026-11-07-2130",
+  "notes": [],
+  "sha": "f1f746d",
+  "sha_complet": "f1f746da1eb0f8498bbef395f188e9c6dfb6e87b",
+  "sale": false,
+  "branche": "main",
+  "mode": "si-due",
+  "raison": "due : aucune fumée verte connue",
+  "debut": "2026-11-07T21:30:47+01:00",
+  "fin": "2026-11-07T22:05:32+01:00",
+  "duree_s": 2085,
+  "rtf": 0.987,
+  "rtf_min": 0.8,
+  "charge_1min": 2.24,
+  "nb_coeurs": 32,
+  "essai": false,
+  "image_reconstruite": true,
+  "epreuves": [
+    {
+      "id": "image",
+      "statut": "vert",
+      "detail": "reconstruite : aucune fumée verte de référence",
+      "duree_s": 3,
+      "journal": "image.log"
+    },
+    {
+      "id": "demarrage",
+      "statut": "vert",
+      "detail": "conteneur dadou-sim-container, domaine 43, monde chantiers, headless",
+      "duree_s": 28,
+      "journal": "demarrage.log"
+    },
+    {
+      "id": "rtf",
+      "statut": "vert",
+      "obtenu": "0.987",
+      "detail": "seuil 0.8",
+      "duree_s": 21,
+      "journal": "rtf.log"
+    },
+    {
+      "id": "namespace",
+      "ok": 5,
+      "attendu": 5,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 43,
+      "journal": "namespace.log"
+    },
+    {
+      "id": "catalogue",
+      "ok": 4,
+      "attendu": 4,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 26,
+      "journal": "catalogue.log"
+    },
+    {
+      "id": "parle",
+      "ok": 3,
+      "attendu": 3,
+      "ko": 0,
+      "statut": "vert",
+      "detail": "ETATS=[\"\", \"parle\", \"\"]",
+      "duree_s": 4,
+      "journal": "parle.log"
+    },
+    {
+      "id": "chantiers",
+      "ok": 21,
+      "attendu": 21,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 932,
+      "journal": "chantiers.log"
+    },
+    {
+      "id": "a1",
+      "ok": 14,
+      "attendu": 14,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 910,
+      "journal": "a1.log"
+    }
+  ],
+  "verdict": "vert",
+  "bloquant": null,
+  "page": "2026-11-07.html"
+}

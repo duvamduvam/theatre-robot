@@ -1,0 +1,178 @@
+ Image dadouuu/dadou-sim-x86:latest Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.63kB done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile-sim
+#2 transferring dockerfile: 6.70kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/ros:jazzy-ros-base
+#3 ...
+
+#4 [context didier_jeu] load .dockerignore
+#4 transferring didier_jeu: 2B done
+#4 DONE 0.1s
+
+#5 [context didier_rehearsal] load .dockerignore
+#5 transferring didier_rehearsal: 2B done
+#5 DONE 0.1s
+
+#6 [context didier_description] load .dockerignore
+#6 transferring didier_description: 2B done
+#6 DONE 0.1s
+
+#7 [context didier_drive] load .dockerignore
+#7 transferring didier_drive: 2B done
+#7 DONE 0.1s
+
+#8 [context theatre_interfaces] load .dockerignore
+#8 transferring theatre_interfaces: 2B done
+#8 DONE 0.1s
+
+#9 [context dadou_utils_ros] load .dockerignore
+#9 transferring dadou_utils_ros: 2B done
+#9 DONE 0.1s
+
+#10 [context theatre_contrats] load .dockerignore
+#10 transferring theatre_contrats: 2B done
+#10 DONE 0.1s
+
+#11 [context didier_web] load .dockerignore
+#11 transferring didier_web: 2B done
+#11 DONE 0.1s
+
+#12 [context didier_sim] load .dockerignore
+#12 transferring didier_sim: 2B done
+#12 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/ros:jazzy-ros-base
+#3 DONE 0.5s
+
+#13 [internal] load .dockerignore
+#13 transferring context: 2B done
+#13 DONE 0.0s
+
+#14 [stage-0  1/21] FROM docker.io/library/ros:jazzy-ros-base@sha256:8eed0a4669bbf43ee331878a4c39bd8ebddea8e3312a58b4fae8edb14526b617
+#14 DONE 0.0s
+
+#15 [context theatre_interfaces] load from client
+#15 transferring theatre_interfaces: 5.08kB done
+#15 DONE 0.1s
+
+#16 [context didier_web] load from client
+#16 transferring didier_web: 225.14kB done
+#16 DONE 0.1s
+
+#17 [context didier_description] load from client
+#17 transferring didier_description: 41.29kB done
+#17 DONE 0.2s
+
+#18 [context didier_drive] load from client
+#18 transferring didier_drive: 33.78kB done
+#18 DONE 0.1s
+
+#19 [context didier_jeu] load from client
+#19 transferring didier_jeu: 611.28kB 0.0s done
+#19 DONE 0.1s
+
+#20 [context didier_rehearsal] load from client
+#20 transferring didier_rehearsal: 540.18kB 0.0s done
+#20 DONE 0.1s
+
+#21 [context didier_sim] load from client
+#21 transferring didier_sim: 245.68kB done
+#21 DONE 0.1s
+
+#22 [context theatre_contrats] load from client
+#22 transferring theatre_contrats: 109.31kB 0.0s done
+#22 DONE 0.1s
+
+#23 [internal] load build context
+#23 transferring context: 3.71MB 0.1s done
+#23 DONE 0.2s
+
+#24 [context dadou_utils_ros] load from client
+#24 transferring dadou_utils_ros: 19.75MB 0.1s done
+#24 DONE 0.2s
+
+#25 [stage-0 11/21] COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
+#25 CACHED
+
+#26 [stage-0 12/21] COPY --from=didier_web . /home/ros2_ws/src/didier_web
+#26 CACHED
+
+#27 [stage-0  3/21] RUN mkdir -p /home/ros2_ws/src
+#27 CACHED
+
+#28 [stage-0  5/21] COPY --from=didier_description . /home/ros2_ws/src/didier_description
+#28 CACHED
+
+#29 [stage-0  9/21] COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
+#29 CACHED
+
+#30 [stage-0 13/21] COPY --from=didier_rehearsal . /home/ros2_ws/src/didier_rehearsal
+#30 CACHED
+
+#31 [stage-0  8/21] COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
+#31 CACHED
+
+#32 [stage-0  4/21] WORKDIR /home/ros2_ws
+#32 CACHED
+
+#33 [stage-0 14/21] COPY conf/scripts/launch-sim-in-docker.sh /home/ros2_ws/
+#33 CACHED
+
+#34 [stage-0  6/21] COPY --from=didier_sim . /home/ros2_ws/src/didier_sim
+#34 CACHED
+
+#35 [stage-0  7/21] COPY --from=theatre_interfaces . /home/ros2_ws/src/theatre_interfaces
+#35 CACHED
+
+#36 [stage-0 10/21] COPY --from=didier_jeu . /home/ros2_ws/src/didier_jeu
+#36 CACHED
+
+#37 [stage-0  2/21] RUN apt-get update && apt-get install -y     ros-jazzy-ros-gz     ros-jazzy-xacro     ros-jazzy-robot-state-publisher     ros-jazzy-joint-state-publisher-gui     ros-jazzy-rviz2     ros-jazzy-teleop-twist-keyboard     ros-jazzy-twist-mux     python3-pip     python3-aiohttp     python3-pil     python3-imageio     ros-jazzy-py-trees     && rm -rf /var/lib/apt/lists/*
+#37 CACHED
+
+#38 [stage-0 15/21] COPY json/ /home/ros2_ws/json/
+#38 CACHED
+
+#39 [stage-0 16/21] COPY robot/ /home/ros2_ws/src/robot/robot/
+#39 DONE 0.1s
+
+#40 [stage-0 17/21] COPY conf/ros2/setup.py conf/ros2/package.xml conf/ros2/setup.cfg /home/ros2_ws/src/robot/
+#40 DONE 0.1s
+
+#41 [stage-0 18/21] COPY conf/ros2/resource/ /home/ros2_ws/src/robot/resource/
+#41 DONE 0.1s
+
+#42 [stage-0 19/21] COPY json/ /home/ros2_ws/src/robot/json/
+#42 DONE 0.1s
+
+#43 [stage-0 20/21] RUN mkdir -p /home/ros2_ws/log
+#43 DONE 0.2s
+
+#44 [stage-0 21/21] RUN pip3 install --no-cache-dir --break-system-packages filetype colorlog psutil
+#44 0.848 Collecting filetype
+#44 0.930   Downloading filetype-1.2.0-py2.py3-none-any.whl.metadata (6.5 kB)
+#44 1.000 Collecting colorlog
+#44 1.013   Downloading colorlog-6.12.0-py3-none-any.whl.metadata (11 kB)
+#44 1.018 Requirement already satisfied: psutil in /usr/lib/python3/dist-packages (5.9.8)
+#44 1.038 Downloading filetype-1.2.0-py2.py3-none-any.whl (19 kB)
+#44 1.052 Downloading colorlog-6.12.0-py3-none-any.whl (12 kB)
+#44 1.389 Installing collected packages: filetype, colorlog
+#44 1.433 Successfully installed colorlog-6.12.0 filetype-1.2.0
+#44 1.433 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#44 DONE 1.5s
+
+#45 exporting to image
+#45 exporting layers
+#45 exporting layers 0.2s done
+#45 writing image sha256:dc7094e997d25e47d2cc7c3ad0003af8e362ebfa3739228361987a7704de599b done
+#45 naming to docker.io/dadouuu/dadou-sim-x86:latest 0.0s done
+#45 DONE 0.3s
+
+#46 resolving provenance for metadata file
+#46 DONE 0.0s
+ Image dadouuu/dadou-sim-x86:latest Built 
