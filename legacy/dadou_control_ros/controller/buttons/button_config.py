@@ -84,8 +84,11 @@ PLAYLIST_CONFIG = [config[PLAYLIST_LIST], ["pub1", "VIDE", "VIDE"]]
 
 base = {
     IHL: {NAME: "vo off", CMD: {RELAY: "off"}},
-    IML: {NAME: "ca va", CMD: {AUDIO: 'ca-va'}},
-    IBL: {NAME: "sympa toi", CMD: {ANIMATION: 'crazy'}},
+    # IML et IBL VIDES depuis le 07/11 (décision de David) : « ca va » visait un audio
+    # absent de audios.json (bouton muet) et « sympa toi » une séquence « crazy » qui
+    # n'existe pas. Le test boutons ↔ catalogue (L1c) les avait attrapés. Touches libres.
+    IML: 0,
+    IBL: 0,
     MHL: {NAME: "wh right", CMD: {WHEELS: RIGHT}},
     MML: {NAME: "wh left", CMD: {WHEELS: LEFT}},
     MBL: {NAME: "ro vo", CMD: {RELAY: "pitched_voice", ANIMATION: "speak"}},
@@ -93,8 +96,9 @@ base = {
     AML: {NAME: "wh back", CMD: {WHEELS: BACKWARD}},
     ABL: {NAME: "klaxon", CMD: {RELAY: "klaxon"}},
     OHL: {NAME: "bug", CMD: {ANIMATION: {TYPE: "bug"}}},
-    OML: {NAME: "bug1", CMD: {ANIMATION: "bug1",
-        DURATION: 5000, AUDIO: "street/promotion-vie-eternelle.mp3"}},
+    # 07/11 (décision de David) : plus d'audio sur ce bouton — le fichier
+    # street/promotion-vie-eternelle.mp3 existe mais n'est pas au catalogue (audios.json).
+    OML: {NAME: "bug1", CMD: {ANIMATION: "bug1", DURATION: 5000}},
     OBL: {NAME: STOP, CMD: {ANIMATION: STOP}},
 
     # « C'est moi » (2026-09-14). IHR portait le libellé MORT "Inclino" avec une
