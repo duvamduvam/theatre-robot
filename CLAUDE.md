@@ -16,18 +16,11 @@ Ce fichier-ci grossira à mesure que `legacy/` se vide ; il ne doit jamais dupli
   (encore dans `legacy/dadou_robot_ros/docs/` pendant L0).
 - Dépôt public : aucun secret, jamais (les secrets vivent hors git, voir l'étude architecture).
 
-## Choix du modèle : le signaler en une ligne, sans bloquer
+## Choix du modèle
 
-Fable coûte environ 3 fois plus par appel qu'Opus (mesuré le 07/11). Au début d'une demande, et
-dès qu'une question imprévue surgit en cours de route, le modèle dit en UNE ligne s'il n'est pas
-le bon, puis continue si David ne réagit pas.
-- **Opus signale « Fable serait plus adapté »** quand : il faut trancher entre plusieurs options
-  aux conséquences durables (étude, architecture, arbitrage matériel) ; écrire une spec que
-  d'autres exécuteront ; concevoir un protocole ou de la sécurité (roues, arrêt d'urgence, carte
-  Sécurité) ; deux hypothèses de diagnostic ont échoué ; relecture adverse avant le terrain.
-- **Fable signale « Opus suffit »** quand la spec est fermée, ou pour l'atelier, l'inventaire,
-  la doc, un déploiement, l'orchestration d'un lot déjà tranché.
-- Sous Opus, jamais Sonnet/Haiku pour ce qui touche roues, arrêt d'urgence ou carte Sécurité.
+Règle générale dans le CLAUDE.md global (signal en une ligne Opus ↔ Fable). Ici, en plus :
+roues, arrêt d'urgence et carte Sécurité = Opus minimum, jamais Sonnet/Haiku ; leur conception
+ou une relecture adverse avant le terrain = Fable.
 
 ## Comment travailler ici (depuis le 02/11)
 
