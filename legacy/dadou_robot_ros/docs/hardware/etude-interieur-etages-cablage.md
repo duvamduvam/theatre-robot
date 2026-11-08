@@ -467,6 +467,16 @@ joues `support-sd50b5` existent, à décliner pour la SD-150.
 
 ## 7. Les mesures qui ferment l'étude
 
+> **État au 08/11 soir** (détail au §7 bis) — ✅ M1, M2, M3, M9 ; ✅ M11 sans objet (SD-150 dans la
+> caisse) ; 🟡 M4 (ouverture 318 lue, épaisseur du faisceau à la charnière manque), M5 (étages 320
+> et 430 depuis le haut du cadre, torse 550, caisse 150 ; contenu de la zone 430 → 550 à relire sur
+> les photos), M7 (gauche, point de vue à confirmer), M12 (pack 280 × 100 × ~75 ; par où il sort
+> manque), M13 (BLX4 en 12 V ; relais 40 A et jack VoiceTone manquent) ; ❌ M10 (courses du
+> tambour et des bras, passages à l'épaule) ; M6 et M8 se calculent sur le modèle des cartes et
+> l'implantation, pas sur le robot ; M14 après le gabarit carton. **Hors liste, découverts le
+> 08/11** : dimensions du VoiceTone (il monte à l'étage audio), accès à la caisse (par où on
+> l'ouvre), emplacements du lidar, du coup-de-poing et des commandes de façade (D13).
+
 Liste fermée. Les cinq premières décident de la forme des plaques ; sans elles, rien ne se
 dessine. Prendre chaque cote **en haut et en bas** du niveau : un torse en sapin n'est pas
 d'équerre.
