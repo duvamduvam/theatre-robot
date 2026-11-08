@@ -103,8 +103,11 @@ tension sans ouvrir a du sens). Reste à décider : la liste exacte des interrup
 - *Remonter au logiciel* (journal, page scène, alerte) : le BMS mesure déjà courant, tension
   par cellule, état de charge en Ah et températures. **Branche A0 de l'étude odométrie
   (§6 ter), zéro matériel : lire le BMS en Bluetooth depuis le Pi 4**, essai de dix minutes
-  avec l'appli du BMS posée à la place du Pi. Si la radio ne passe pas depuis la caisse :
-  branche A, par fil, via la carte Odométrie. Pas de shunt ni d'INA226 sur le 24 V pour ça :
+  avec l'appli du BMS posée à la place du Pi. ⚠️ David (08/11) : le seul Bluetooth constaté
+  ne marche que chargeur branché — c'est celui du Victron, déjà écarté. **Le BMS est collé au
+  pack, référence et ports jamais lus** : David le décolle pour le photographier (mesure M13).
+  Selon ce qu'on y lit : port BT ou dongle → A0 ; port UART/RS485 → branche A par fil via la
+  carte Odométrie ; rien → lecture de tension seule (J32) et SOC estimé, ou changer de BMS. Pas de shunt ni d'INA226 sur le 24 V pour ça :
   mesurer 40 A proprement demande un shunt externe dimensionné, et le BMS le fait déjà.
 
 ⚠️ **Le retour arrière ne sera plus un simple rebranchement.** Le plan de vérification disait
