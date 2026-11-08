@@ -90,7 +90,12 @@ Deux règles non négociables :
 
 Coût : zéro pour tout sauf le général (sectionneur 40 A DC à acheter, prix non lu) ; place :
 une rangée d'interrupteurs étiquetés en façade du coffre, à prévoir dans l'implantation.
-**À décider par David** : lesquels on pose, et où ils sont accessibles (porte ouverte suffit ?).
+**Décidé par David le 08/11 : tout accès technique se fait porte ouverte, jamais de
+l'extérieur** — interrupteurs d'isolement, fusibles, points de mesure, ports, molettes. Seules
+exceptions, les commandes critiques, qui restent en façade et utilisables porte fermée :
+le **coup-de-poing**, le **bouton d'armement**, l'**interrupteur général** et la **prise de
+charge** (le voltmètre, s'il est en hublot, est un confort, pas une exception). Reste à
+décider : la liste exacte des interrupteurs posés, parmi ceux du tableau.
 
 ⚠️ **Le retour arrière ne sera plus un simple rebranchement.** Le plan de vérification disait
 de garder l'ancienne carte montée : ce n'est plus possible si tout le câblage change. On garde
