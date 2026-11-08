@@ -19,9 +19,16 @@ dette du playbook, pas une note de doc.
 ## État au 07/11 au soir — lot « Ansible nickel » FAIT (branche `l1e-3`)
 
 Mode d'emploi : `legacy/dadou_robot_ros/docs/operations.md` §« Déployer / réinstaller un Pi ».
-En bref, depuis `legacy/dadou_utils_ros/ansible/` :
+En bref, depuis `deploy/` à la racine du dépôt (ex `legacy/dadou_utils_ros/ansible/`, déménagé
+au lot L1e-4a du 08/11) :
 `ansible-playbook -i hosts deploy-pios.yml -e target_group=robot|vision` (rien avant, rien
 après), puis `./ecart-pi.sh robot|vision` (vert = code 0).
+
+L1e-4a a aussi fait le ménage décidé par l'étude (§5.8) : rôles orphelins (`activate-spi`,
+`download-install-docker-from-url`, `root_ssh`, `ros_dependencies`, `waveshare-screen`),
+Jenkins/Sonar (rôles, `group_vars/jenkins_server`, variables, `legacy/dadou_utils_ros/jenkins/`),
+playbooks de CI et de test, groupe `integration` de `hosts`, anciens playbooks de `legacy/`.
+Rien ne change sur les Pi : mêmes chemins, mêmes `attendu/*.txt`.
 
 | Plan | État |
 |---|---|

@@ -2,12 +2,13 @@
 
 ## Déployer / réinstaller un Pi (lot « Ansible nickel », 07/11)
 
-Tout part de `legacy/dadou_utils_ros/ansible/` du checkout à déployer (main ou un worktree :
+Tout part de `deploy/` du checkout à déployer (ex `legacy/dadou_utils_ros/ansible/` jusqu'au
+lot L1e-4a du 08/11 ; main ou un worktree :
 les chemins sont déduits du playbook, le sha publié est celui de CE checkout). Rien à faire
 avant ni après : pas de `chown`, pas de sentinelle, pas de `docker restart`.
 
 ```bash
-cd legacy/dadou_utils_ros/ansible
+cd deploy
 ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
 ./ecart-pi.sh vision                                                 # vert = code 0
 ```

@@ -1,0 +1,8 @@
+---
+# Liste apt lue dans conf/<package_file> du projet de l'hôte : `package_file` est OBLIGATOIRE
+# (install-pios-lite : packages.txt, install-pios-full : packages-rpi.txt). Lot L1e-4a (08/11) :
+# l'ancien repli sur jenkins/jenkins-package.txt (liste du serveur Jenkins) est retiré avec
+# Jenkins ; un playbook sans `package_file` échoue désormais sur la variable indéfinie.
+linux_package_file: "{{ local_projects_dir ~ '/' ~ local_project_dir ~ '/conf/' ~ package_file }}"
+linux_package_state: latest
+linux_package_upgrade: dist

@@ -1,5 +1,0 @@
-- name: Activate raspberry spi
-  become: yes
-  command:
-    cmd: raspi-config nonint do_spi 0
-  check_mode: no

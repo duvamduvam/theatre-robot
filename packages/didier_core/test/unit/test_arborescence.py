@@ -19,8 +19,10 @@ ROBOT = pathlib.Path(__file__).resolve().parents[4] / "legacy" / "dadou_robot_ro
 LEGACY = ROBOT.parent
 MONO = LEGACY.parent
 PACKAGES = MONO / "packages"
-HOSTS = LEGACY / "dadou_utils_ros" / "ansible" / "hosts"
-VARS = LEGACY / "dadou_utils_ros" / "ansible" / "vars" / "main.yml"
+# L1e-4a (08/11) : Ansible a quitté legacy/dadou_utils_ros/ansible/ pour deploy/ à la racine.
+DEPLOY = MONO / "deploy"
+HOSTS = DEPLOY / "hosts"
+VARS = DEPLOY / "vars" / "main.yml"
 
 SIX_DEMENAGES = ["didier_bringup", "didier_description", "didier_drive",
                  "didier_rehearsal", "didier_sim", "didier_web"]
@@ -137,7 +139,7 @@ def test_packages_retires_est_la_liste_gravee_des_sept_anciens_noms():
 def test_la_tache_de_nettoyage_precede_la_copie_des_packages():
     """Le nettoyage doit passer AVANT le rsync (sinon colcon compile anciens et
     nouveaux au build qui suit) et couvrir src/, build/ et install/."""
-    taches = yaml.safe_load((LEGACY / "dadou_utils_ros" / "ansible" / "roles" / "synchronise"
+    taches = yaml.safe_load((DEPLOY / "roles" / "synchronise"
                              / "tasks" / "main.yml").read_text(encoding="utf-8"))
     noms = [t.get("name", "") for t in taches]
     nettoyage = next(i for i, t in enumerate(taches) if "packages_retires" in str(t.get("loop", "")))
@@ -192,7 +194,7 @@ def test_chemins_retires_lib_est_la_liste_gravee_des_trois_copies_embarquees():
 
 
 def test_la_tache_de_nettoyage_de_la_lib_precede_la_copie_des_packages():
-    taches = yaml.safe_load((LEGACY / "dadou_utils_ros" / "ansible" / "roles" / "synchronise"
+    taches = yaml.safe_load((DEPLOY / "roles" / "synchronise"
                              / "tasks" / "main.yml").read_text(encoding="utf-8"))
     noms = [t.get("name", "") for t in taches]
     nettoyage = next(i for i, t in enumerate(taches) if "chemins_retires_lib" in str(t.get("loop", "")))
@@ -267,7 +269,7 @@ EXECUTABLES_CORE = {
     "system_node": "didier_core.nodes.system_node:main",
     "wheels_node": "didier_core.nodes.wheels_node:main",
 }
-SYNCHRONISE = LEGACY / "dadou_utils_ros" / "ansible" / "roles" / "synchronise" / "tasks" / "main.yml"
+SYNCHRONISE = DEPLOY / "roles" / "synchronise" / "tasks" / "main.yml"
 COMPOSES = [ROBOT / "conf" / "docker" / d / f for d, f in
             (("arm", "docker-compose-arm.yml"), ("sim", "docker-compose-sim.yml"),
              ("x8664", "docker-compose-x86.yml"))]
@@ -534,3 +536,69 @@ def test_le_nettoyage_couvre_aussi_la_vision():
     taches = yaml.safe_load(SYNCHRONISE.read_text(encoding="utf-8"))
     assert any("chemins_retires_vision" in str(t.get("loop", "")) for t in taches)
     assert any("chemins_retires_vision" in str(t.get("shell", "")) for t in taches)
+
+
+# --- L1e-4a : Ansible -> deploy/ à la racine, épuré -----------------------------------------
+
+# Écrits en dur (un test qui recalcule l'attendu ne teste rien). Rôles GARDÉS : tout ce qui restait
+# après le ménage décidé par l'étude (§5.8) — y compris des rôles que plus aucun playbook courant
+# n'appelle (nginx, ros_humble_*…), que la spec n'a pas listés : leur sort se tranche ailleurs.
+ROLES_GARDES = [
+    "activate-i2c", "blinka", "colcon_build", "command_root", "config-hote", "conteneur",
+    "desktop_lunch", "dir_struct", "docker-arm64", "docker-compose", "docker-install",
+    "docker-prune", "download-install-deb-from-url", "info", "linux-package", "logging", "nginx",
+    "python", "ros_humble_base", "ros_humble_desktop", "screen-config", "secrets", "services",
+    "set-bashrc", "start-scripts", "synchronise", "usb-audio",
+]
+ROLES_SUPPRIMES = ["activate-spi", "download-install-docker-from-url", "root_ssh",
+                   "ros_dependencies", "waveshare-screen", "set-vim", "jenkins", "sonar"]
+PLAYBOOKS_GARDES = ["deploy-pios.yml", "install-pios-lite.yml", "install-pios-full.yml",
+                    "install-controller-ubuntu.yml"]
+PLAYBOOKS_SUPPRIMES = ["install-ci.yml", "install-ci-github-actions.yml", "configure-local-ci.yml",
+                       "install-test-pios.yml", "deploy-test-pios.yml"]
+
+
+def test_ansible_vit_dans_deploy_et_plus_dans_legacy():
+    assert (DEPLOY / "deploy-pios.yml").is_file()
+    for f in ("hosts", "ecart-pi.sh", "vars/main.yml", "attendu/robot.txt", "attendu/vision.txt"):
+        assert (DEPLOY / f).is_file(), f
+    # Nextcloud ressuscite parfois un dossier après `git mv` : même vide, il ne doit pas revenir.
+    assert not (LEGACY / "dadou_utils_ros" / "ansible").exists()
+    assert not (LEGACY / "dadou_utils_ros" / "jenkins").exists()
+    assert not (DEPLOY / "legacy").exists()
+    assert not (DEPLOY / "group_vars" / "jenkins_server").exists()
+
+
+def test_les_roles_de_deploy_sont_exactement_la_liste_gravee():
+    presents = sorted(p.name for p in (DEPLOY / "roles").iterdir() if p.is_dir())
+    assert presents == sorted(ROLES_GARDES)
+    for role in ROLES_SUPPRIMES:
+        assert not (DEPLOY / "roles" / role).exists(), role
+
+
+def test_les_playbooks_ci_et_test_sont_supprimes():
+    for pb in PLAYBOOKS_GARDES:
+        assert (DEPLOY / pb).is_file(), pb
+    for pb in PLAYBOOKS_SUPPRIMES:
+        assert not (DEPLOY / pb).exists(), pb
+
+
+def test_tout_role_appele_par_les_deux_playbooks_courants_existe():
+    for pb in ("deploy-pios.yml", "install-pios-lite.yml"):
+        roles = [r["role"] for r in yaml.safe_load((DEPLOY / pb).read_text(encoding="utf-8"))[0]["roles"]]
+        assert roles, pb
+        for role in roles:
+            assert (DEPLOY / "roles" / role / "tasks" / "main.yml").is_file(), (pb, role)
+
+
+def test_les_chemins_du_depot_se_deduisent_de_deploy_en_un_seul_dirname():
+    variables = yaml.safe_load(VARS.read_text(encoding="utf-8"))
+    assert variables["local_projects_dir"] == "{{ playbook_dir | dirname }}/legacy"
+    assert variables["packages_dir"] == "{{ playbook_dir | dirname }}/packages"
+    # Ce que ces deux gabarits donnent depuis deploy/ doit exister.
+    assert (DEPLOY.parent / "legacy" / "dadou_robot_ros").is_dir()
+    assert (DEPLOY.parent / "packages" / "didier_core").is_dir()
+
+
+def test_le_groupe_integration_a_quitte_l_inventaire():
+    assert "integration" not in _hosts()

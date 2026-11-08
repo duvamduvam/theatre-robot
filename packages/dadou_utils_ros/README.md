@@ -8,8 +8,8 @@ d'ici là elle garde son nom et reste stable — ne pas y ajouter de code neuf, 
 
 Package ament_python depuis le lot L1e-3a (07/11) : avant, c'était le dépôt `dadou_utils_ros`
 entier, embarqué dans chaque projet par un lien symbolique (`legacy/<dépôt>/dadou_utils_ros`).
-Ces liens sont supprimés ; `ansible/`, `jenkins/`, `conf/`, `docs/`, `scripts/` sont restés dans
-`legacy/dadou_utils_ros/` (ils iront dans `deploy/` au lot L1e-4).
+Ces liens sont supprimés ; `conf/`, `docs/`, `scripts/` sont restés dans `legacy/dadou_utils_ros/`
+(ménage L1e-4e) ; `ansible/` est devenu `deploy/` et `jenkins/` a été supprimé au lot L1e-4a (08/11).
 
 ## Contrat
 
