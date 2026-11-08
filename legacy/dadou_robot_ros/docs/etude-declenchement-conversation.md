@@ -224,7 +224,10 @@ Tout est au périmètre du chantier, mais séquencé :
 
 ### 5.2 Déclenchement (la FSM)
 
-- **Caméra en mouvement — décision « regard roulant, micro à l'arrêt »** :
+- ⚠️ **RE-TRANCHÉ le 08/11** : « micro à l'arrêt » est abandonné — Didier écoute en marche,
+  pour tout le monde (`etude-interaction-en-mouvement.md` §2 bis ; préalable robot : mesurer le
+  bruit des moteurs dans le micro). La porte ENGAGED garde son rôle : à qui il répond.
+- **Caméra en mouvement — décision « regard roulant, micro à l'arrêt »** (révisée, ci-dessus) :
   en roulant, seuls les états généreux vivent (PRESENT/INTERESTED → gaze,
   expressions ; un faux positif ne coûte rien). Le passage en ENGAGED
   (micro armé) **exige le robot à l'arrêt** — l'état de mouvement se lit sur
@@ -701,6 +704,10 @@ chantier 0 sera passé au réel ; ça touchera le dépôt robot, pas celui-ci.
 
 ### 10.10 Révision du 08/11 — le micro se ferme sur le SON, pas sur le GESTE
 
+> **08/11, plus tard dans la soirée : ce § redevient À FAIRE** — David : « la même règle pour
+> tout le monde », Didier écoute en marche aussi pour les passants, qui n'ont pas de bouton
+> (`etude-interaction-en-mouvement.md` §2 bis). Le paragraphe ci-dessous date du début de soirée.
+>
 > **DÉCISION DU 08/11 (David) — ce § est EN VEILLE, gardé pour les PASSANTS.**
 > Quand c'est David qui parle, pas besoin de deviner : au casque le micro est le sien,
 > et sur le robot il appuiera sur un bouton « c'est moi ». Le gate (C3/C4) existe pour un
