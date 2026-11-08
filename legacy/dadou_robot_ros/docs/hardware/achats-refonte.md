@@ -27,6 +27,7 @@ relecture a déjà changé des empreintes une fois (isolateur I²C, 05/11).
 | Pièce | Qté | État | Prix lu |
 |---|---|---|---|
 | Porte-fusibles 5×20 de panneau, rouge, lot de 5 (article 1005007910707716) | 4 lots (16 + 4 de rechange) | **retenu par David le 07/11, pas payé** | 2,45 € le lot (capture du 07/11, promo jusqu'au 18/11, 13 lots dispo) |
+| Kit de fusibles 5×20 **rapides**, 150 pièces, 15 valeurs de 0,1 à 30 A dont 2, 3, 5, 8, 10 et 15 A, 10 de chaque (proposé par David le 08/11) | 1 | couvre tous les calibres des deux boîtes, rechange comprise ; la boîte du stock est mélangée et illisible. ⚠️ Tous rapides : en entrée des Mean Well (P10-P13), le courant d'appel n'est pas publié pour les versions 24 V ; si un fusible saute à la mise sous tension, passer ces 4 voies en temporisé « T » | 5,79 € (capture du 08/11, promo jusqu'au 18/11) |
 | Fusibles à lame 25 A (SmartDrive ×2, ampli ×1) + rechange | 6 | à acheter, aucun en stock | non lu |
 | Porte-fusibles à lame **en ligne** pour les deux SmartDrive (l'ampli a déjà le sien, sur la porte) | 2 | à acheter | non lu |
 | Coup-de-poing **NF à accrochage, 2 contacts (1 NO + 1 NF), boîtier en saillie** (type LA38-11ZS / XB2-BS542 ; paroi bois 18 mm) + bouton d'armement | 1 + 1 | spec fermée le 30/08, jamais acheté | non lu |
@@ -79,7 +80,7 @@ Commandé le 05/10, à pointer à réception : TVS P6KE15A, PTC RXEF050, kit MLC
 
 ## 4. Vérifications d'atelier qui changent la liste (V3)
 
-1. **Calibres des fusibles verre 5×20** du stock : il en faut 2, 3, 5, 10 et 15 A. ⚠️ Le cahier
+1. **Calibres des fusibles verre 5×20** du stock : boîte mélangée (vidéo du 08/11), remplacée par le kit de la commande 1. Il en faut 2, 3, 5, 10 et 15 A. ⚠️ Le cahier
    prévoit **7,5 A pour les ASME : rare en 5×20** (valeurs courantes 5 / 6,3 / 8 / 10 A) →
    passer les trois lignes P07-P09 à **8 A**. Avis : passer P17/P18 (12 V contrôle) de 15 à
    **10 A**, la SD-50B-12 ne sort que 4,2 A et le porte-fusible retenu tient 10 A.
