@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "id": "2026-11-08-0230",
+  "notes": [],
+  "sha": "95335fe",
+  "sha_complet": "95335fe88c011daa0c4ce5b2a80a7fe5ad8548a4",
+  "sale": false,
+  "branche": "main",
+  "mode": "si-due",
+  "raison": "due : 12 commit(s) dans main depuis la dernière fumée verte (9175320)",
+  "debut": "2026-11-08T02:30:47+01:00",
+  "fin": "2026-11-08T02:32:35+01:00",
+  "duree_s": 108,
+  "rtf": 0.977,
+  "rtf_min": 0.8,
+  "charge_1min": 2.06,
+  "nb_coeurs": 32,
+  "essai": false,
+  "image_reconstruite": false,
+  "epreuves": [
+    {
+      "id": "image",
+      "statut": "vert",
+      "detail": "inchangée depuis la dernière fumée verte (9175320), non reconstruite",
+      "duree_s": 0
+    },
+    {
+      "id": "demarrage",
+      "statut": "vert",
+      "detail": "conteneur dadou-sim-container, domaine 43, monde chantiers, headless",
+      "duree_s": 28,
+      "journal": "demarrage.log"
+    },
+    {
+      "id": "rtf",
+      "statut": "vert",
+      "obtenu": "0.977",
+      "detail": "seuil 0.8",
+      "duree_s": 21,
+      "journal": "rtf.log"
+    },
+    {
+      "id": "namespace",
+      "ok": 5,
+      "attendu": 5,
+      "ko": 0,
+      "statut": "rouge",
+      "detail": "compteur conforme mais code de retour 255",
+      "duree_s": 50,
+      "journal": "namespace.log"
+    }
+  ],
+  "verdict": "rouge",
+  "bloquant": "namespace",
+  "page": "2026-11-08-2.html"
+}
