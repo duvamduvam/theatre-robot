@@ -36,14 +36,14 @@ ou une relecture adverse avant le terrain = Fable.
   (08/11 ; données sous `legacy/dadou_vision_ros/`, `DIDIER_VISION_DATA_DIR` ; tests : `cd
   packages/didier_vision && ../../legacy/dadou_vision_ros/.venv/bin/python -m pytest -q -o addopts=`).
   Télécommande : encore sous `legacy/`.
-- Déploiement Ansible : `legacy/dadou_utils_ros/ansible` (il rsync depuis `legacy/`).
+- Déploiement Ansible : `deploy/` depuis L1e-4a (08/11) ; il rsync `packages/` et, jusqu'à 4b/4c, `legacy/`.
   Depuis L1e-1 (06/11) : les packages ROS viennent de `packages/`, copiés par LISTE EXPLICITE
-  par machine (`packages:` de l'hôte dans `ansible/hosts`, défaut `packages_default`) — un
+  par machine (`packages:` de l'hôte dans `deploy/hosts`, défaut `packages_default`) — un
   package absent de la liste n'arrive jamais sur le Pi.
   Depuis L1e-3a (07/11) : la lib `dadou_utils_ros` est un package de `packages/` (dans
   `packages_default` ET la liste de l'hôte robot) ; `chemins_retires_lib` efface sur les Pi les
   anciennes copies embarquées (src/, build/, install/ de robot, vision, controller).
-- Déployer un Pi (depuis le 07/11, « Ansible nickel ») : `cd legacy/dadou_utils_ros/ansible &&
+- Déployer un Pi (depuis le 07/11, « Ansible nickel ») : `cd deploy &&
   ansible-playbook -i hosts deploy-pios.yml -e target_group=robot|vision` — UNE commande, aucun
   geste avant/après (utilisateur, clé, IP dans `hosts`), puis `./ecart-pi.sh <groupe>` (vert = 0).
   Secrets : `~/.config/didier/` du PC, posés par le rôle `secrets` — jamais dans le dépôt ni un log.
