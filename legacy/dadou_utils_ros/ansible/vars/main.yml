@@ -95,6 +95,22 @@ chemins_retires_robot:
   - src/robot/conf/ros2/resource
   - src/robot/conf/ros2/test
   - src/robot/conf/ros2_dependencies
+# Lot L1e-3d (08/11) : la vision est devenue le package src/didier_vision. Ancienne forme sur le
+# Pi : le package `vision` à la racine de src/vision/ (module, descripteurs, launch et tests
+# copiés à plat depuis conf/ros2/) et ses build/install. Les DONNÉES (conf, medias, mediamtx,
+# db, tools) restent. Effacement conditionnel, avant la copie (même tâche que le cœur).
+chemins_retires_vision:
+  - src/vision/vision
+  - src/vision/setup.py
+  - src/vision/package.xml
+  - src/vision/setup.cfg
+  - src/vision/resource
+  - src/vision/launch
+  - src/vision/conftest.py
+  - src/vision/pytest.ini
+  - src/vision/conf/ros2
+  - build/vision
+  - install/vision
 
 # Déchets que l'ancien rsync a poussés dans ros2_ws/src/<projet>/ (relevé du 07/11) : venv de
 # test du PC (269 Mo robot, 342 Mo vision) et workspace colcon du banc x86 de la vision (50 Mo).

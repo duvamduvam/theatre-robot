@@ -78,6 +78,8 @@
       #- "--exclude=theatre_interfaces/"
 
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
+  # La vision n'a plus de conf/ros2/ depuis L1e-3d (sa forme ament est dans packages/didier_vision).
+  when: (local_projects_dir ~ '/' ~ local_project_dir ~ '/conf/ros2') is directory
   synchronize:
     src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/"
     dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
@@ -157,7 +159,7 @@
   become: yes
   shell: |
     cd "{{ ansible_env.HOME }}/{{ ros2_ws }}" 2>/dev/null || exit 0
-    for chemin in {{ chemins_retires_robot | join(' ') }}; do
+    for chemin in {{ (chemins_retires_robot + chemins_retires_vision) | join(' ') }}; do
       [ -e "$chemin" ] && echo "$chemin"
     done
     exit 0
@@ -174,7 +176,8 @@
   file:
     path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item }}"
     state: absent
-  loop: "{{ chemins_retires_robot }}"
+  # L1e-3d : même tâche pour la vision (chemins distincts, absents de l'autre hôte).
+  loop: "{{ chemins_retires_robot + chemins_retires_vision }}"
   when: item in robot_ancien.stdout_lines
 
 # Déchets laissés par l'ancien rsync (vars/main.yml, `dechets_rsync`) : désormais exclus de

@@ -409,11 +409,6 @@ EXECUTABLES_VISION = {
     "chat": "didier_vision.nodes.chat_node:main",
     "reflection": "didier_vision.nodes.reflection_node:main",
 }
-# Moitié « Ansible » du lot 3d (hosts, chemins_retires_vision, rsync de conf/ros2/) : réservée
-# (zone Déploiement, feu vert de David attendu). strict=True : dès que l'hôte vision est migré,
-# ces tests PASSENT et pytest échoue sur l'XPASS -> retirer le marqueur, c'est la porte.
-ANSIBLE_3D_EN_ATTENTE = pytest.mark.xfail(
-    strict=True, reason="moitié Ansible de L1e-3d en attente du feu vert de David")
 
 
 def test_la_vision_est_un_package_ament_python_dont_le_nom_est_celui_du_dossier():
@@ -508,9 +503,34 @@ def test_plus_aucun_fichier_de_code_ni_de_conf_ne_cite_le_package_vision():
     assert fautes == [], fautes
 
 
-@ANSIBLE_3D_EN_ATTENTE
 def test_l_hote_vision_pousse_son_package_et_lit_sa_sentinelle_renommee():
     vision = _hosts()["vision"]["hosts"]["ai"]
     assert "didier_vision" in vision["packages"]
     assert vision["sentinelle_build"] == "src/didier_vision/change"
     assert vision["launch_cmd"] == "ros2 run didier_vision vision_status --ros-args -r __ns:=/didier"
+
+
+# Ancienne forme de la vision sur le Pi (L1e-3d, 08/11), écrite en dur comme CHEMINS_RETIRES_ROBOT.
+CHEMINS_RETIRES_VISION = [
+    "src/vision/vision", "src/vision/setup.py", "src/vision/package.xml", "src/vision/setup.cfg",
+    "src/vision/resource", "src/vision/launch", "src/vision/conftest.py", "src/vision/pytest.ini",
+    "src/vision/conf/ros2", "build/vision", "install/vision",
+]
+
+
+def test_chemins_retires_vision_est_la_liste_gravee_et_epargne_les_donnees():
+    retires = yaml.safe_load(VARS.read_text(encoding="utf-8"))["chemins_retires_vision"]
+    assert sorted(retires) == sorted(CHEMINS_RETIRES_VISION)
+    assert len(retires) == len(set(retires))
+    for donnee in ("src/vision", "src/vision/conf", "src/vision/medias", "src/vision/mediamtx",
+                   "src/vision/db", "src/vision/tools", "src/vision/conf/secret"):
+        assert donnee not in retires, donnee
+    # Idempotence : rien de la liste ne doit exister dans l'arbre rsyncé (sinon recopié à chaque passage).
+    for rel in (p[len("src/vision/"):] for p in retires if p.startswith("src/vision/")):
+        assert not (VISION / rel).exists(), rel
+
+
+def test_le_nettoyage_couvre_aussi_la_vision():
+    taches = yaml.safe_load(SYNCHRONISE.read_text(encoding="utf-8"))
+    assert any("chemins_retires_vision" in str(t.get("loop", "")) for t in taches)
+    assert any("chemins_retires_vision" in str(t.get("shell", "")) for t in taches)

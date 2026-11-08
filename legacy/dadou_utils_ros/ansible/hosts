@@ -116,10 +116,16 @@ vision:
         project_name: vision
         # Heartbeat V0 (didier_bringup était un copier-coller du groupe robot,
         # ce package n'existe pas côté vision). Deviendra un launch file en V1.
-        launch_cmd: ros2 run vision vision_status --ros-args -r __ns:=/didier
+        launch_cmd: ros2 run didier_vision vision_status --ros-args -r __ns:=/didier
+        # L1e-3d (08/11) : la vision est le package packages/didier_vision ; les 3 communs + lui.
+        packages:
+            - theatre_contrats
+            - theatre_interfaces
+            - dadou_utils_ros
+            - didier_vision
         ansible_host: 192.168.1.151
-        # Majuscules : c'est le nom que lit conf/scripts/launch-ros-in-docker.sh de la vision.
-        sentinelle_build: src/vision/vision/CHANGE
+        # Sentinelle dans le package (gitignorée), lue par conf/scripts/launch-ros-in-docker.sh.
+        sentinelle_build: src/didier_vision/change
         # Alias ALSA par NOM de carte (mixette, casque_mic, webcam_mic), bind-monté en
         # lecture seule dans le conteneur (docker-compose-arm.yml de la vision).
         fichiers_etc:
