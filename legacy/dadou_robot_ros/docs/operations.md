@@ -567,6 +567,14 @@ reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.
 regard puis `validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh`
 (A1). ≈ 40 min.
 
+**Cœurs réservés (08/11)** : pendant la fumée, la sim est seule sur les CPU **8-15** (4 cœurs
+rapides) ; tes processus et tes autres conteneurs sont poussés sur les 28 autres fils, puis tout
+est rendu à la fin (`conf/scripts/coeurs_reserves.py`, sans sudo : `sched_setaffinity` sur tes
+processus, `docker update --cpuset-cpus` sur les conteneurs). Mesuré sous un pic artificiel sur
+les 32 fils : RTF 0,76 sim libre, 0,987 sim sur cœurs réservés. `FUMEE_COEURS=` (vide) la
+désactive. Fumée tuée sans ménage : `python3 conf/scripts/coeurs_reserves.py liberer` rend tout.
+Limite : les processus root hors conteneur ne sont pas déplacés.
+
 **Trois façons de la lancer**
 - `fumee.sh --si-due` : appelé toutes les 30 min par la minuterie (voir plus bas). Ne fait RIEN
   si rien n'est dû ; dû = un commit est entré dans `main` après le sha gravé dans la dernière

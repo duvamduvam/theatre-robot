@@ -48,6 +48,8 @@
 #   FUMEE_ETAT         journal + verrou (défaut ~/.local/state/didier-fumee)
 #   FUMEE_DRY_POWEROFF 1 = --et-dodo n'éteint pas, il l'affiche
 #   FUMEE_DODO_DELAI   secondes entre la fin et le poweroff (défaut 20)
+#   FUMEE_COEURS       CPU RÉSERVÉS à la sim pendant la fumée (défaut 8-15 = 4 cœurs rapides
+#                      du PC de David) ; vide = pas de réservation. Voir coeurs_reserves.py.
 # Codes de sortie : 0 vert ou reporté ou pas due ; 1 fumée ROUGE ; 2 refus/précondition.
 set -euo pipefail
 
@@ -73,6 +75,11 @@ CONTENEUR=dadou-sim-container
 IMAGE=dadouuu/dadou-sim-x86:latest
 CHEMIN_DOCKER_SIM="legacy/dadou_robot_ros/conf/docker/sim"   # relatif au dépôt (git diff)
 NB_COEURS="$(nproc)"
+# Cœurs réservés (08/11) : sous un pic de charge le RTF tombait à 0,76 ; sim seule sur 4 cœurs
+# rapides réservés = 0,987 (mesuré). Pendant la fumée SEULEMENT : tout est rendu à la fin.
+COEURS="${FUMEE_COEURS-8-15}"
+COEURS_PY="$ICI/coeurs_reserves.py"
+MAINTIEN_PID=""
 CHARGE="$(cut -d' ' -f1 /proc/loadavg)"
 CHARGE_MAX="${FUMEE_CHARGE_MAX:-$(awk -v n="$NB_COEURS" 'BEGIN { printf "%.1f", n * 0.5 }')}"
 
@@ -285,6 +292,29 @@ arreter_sim() {
   SIM_A_NOUS=0
 }
 
+epingler_sim() { # la sim sur les cœurs réservés, et le reste du PC poussé ailleurs (une fois)
+  [ -n "$COEURS" ] || return 0
+  docker update --cpuset-cpus "$COEURS" "$CONTENEUR" >/dev/null 2>&1 \
+    || { NOTES+=("cœurs réservés : épinglage de la sim sur $COEURS refusé par docker"); return 0; }
+  [ -z "$MAINTIEN_PID" ] || return 0
+  # Reliquat d'une fumée tuée (état encore présent) : on rend d'abord, on réserve ensuite.
+  python3 "$COEURS_PY" liberer --etat "$ETAT/coeurs.json" >/dev/null 2>&1 || true
+  dit "$(python3 "$COEURS_PY" reserver --coeurs "$COEURS" --etat "$ETAT/coeurs.json" --sim "$CONTENEUR" 2>&1 || true)"
+  # Les processus lancés PENDANT la fumée (un nouvel onglet, un build) héritent de leur parent,
+  # déjà poussé ; ceux qui naîtraient ailleurs sont rattrapés par cette passe toutes les 15 s.
+  ( while sleep 15; do
+      python3 "$COEURS_PY" maintenir --coeurs "$COEURS" --etat "$ETAT/coeurs.json" --sim "$CONTENEUR" >/dev/null 2>&1 || true
+    done ) &
+  MAINTIEN_PID=$!
+}
+
+liberer_coeurs() { # idempotent : rend affinités et cpusets d'origine (aussi sous trap EXIT)
+  [ -n "$MAINTIEN_PID" ] && kill "$MAINTIEN_PID" 2>/dev/null
+  MAINTIEN_PID=""
+  [ -f "$ETAT/coeurs.json" ] || return 0
+  dit "$(python3 "$COEURS_PY" liberer --etat "$ETAT/coeurs.json" 2>&1 || true)"
+}
+
 demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis attend colcon + bridge
   dit "démarrage de la sim (headless, domaine 43, colcon ≈ 1 min)"
   # SIM_A_NOUS avant le `up` : même un échec en cours de route laisse un conteneur À NOUS,
@@ -294,6 +324,7 @@ demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis a
   (cd "$DOCKER_DIR" && env ROS_DOMAIN_ID=43 ROBOT_NAME=didier HEADLESS=true WORLD=chantiers \
       REHEARSAL=true FACE=true WEB=true ANIMATIONS=true WEB_DRIVE=false \
       docker compose -f docker-compose-sim.yml up -d) >>"$TMP/demarrage.log" 2>&1 || return 1
+  epingler_sim
   local domaine; domaine="$(docker exec "$CONTENEUR" printenv ROS_DOMAIN_ID 2>/dev/null || echo ?)"
   if [ "$domaine" != 43 ]; then echo "ROS_DOMAIN_ID=$domaine dans le conteneur : REFUS (43 exigé)" >>"$TMP/demarrage.log"; return 1; fi
   # Prêt = colcon fini sans échec ET le bridge gz lancé (dernier maillon de sim.launch.py).
@@ -561,7 +592,7 @@ terminer() {
       --meta "mode=$MODE" --meta "raison=$RAISON" --meta "debut=$DEBUT_ISO" --meta "fin=$(date -Iseconds)" \
       --meta "duree_s=$((SECONDS - DEBUT_S))" --meta "rtf=${RTF}" --meta "rtf_min=$RTF_MIN" \
       --meta "charge_1min=$CHARGE" --meta "nb_coeurs=$NB_COEURS" --meta "essai=$ESSAI" \
-      --meta "image_reconstruite=$IMAGE_RECONSTRUITE" "${args[@]}")"
+      --meta "image_reconstruite=$IMAGE_RECONSTRUITE" --meta "coeurs_reserves=${COEURS:-aucun}" "${args[@]}")"
     VERDICT="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["verdict"])' "$JDIR/resultat.json")"
     dit "fumée $VERDICT — page $SORTIE/$PAGE"
     journal "fin fumée $ID : $VERDICT, page $PAGE, RTF ${RTF:-n/a}, $((SECONDS - DEBUT_S)) s"
@@ -571,6 +602,7 @@ terminer() {
     [ "$VERDICT" = vert ] && rc=0 || rc=1
   fi
   arreter_sim   # idempotent ; couvre le cas « reporté » après démarrage de la sim (RTF trop bas)
+  liberer_coeurs
   # Reporté : pas de page, donc pas de dossier de journaux résiduel dans le dépôt.
   [ "$ENGAGEE" = 1 ] || [ -z "$JDIR" ] || rm -rf "$JDIR"
   [ "$ENGAGEE" = 1 ] || rmdir "$SORTIE/journaux" "$SORTIE" 2>/dev/null
