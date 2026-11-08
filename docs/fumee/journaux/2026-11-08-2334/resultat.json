@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "id": "2026-11-08-2334",
+  "notes": [],
+  "sha": "40568bf",
+  "sha_complet": "40568bf64a490ceb2573812c065cd670b554df54",
+  "sale": false,
+  "branche": "main",
+  "mode": "si-due",
+  "raison": "due : 14 commit(s) dans main depuis la dernière fumée verte (a4071fa)",
+  "debut": "2026-11-08T23:34:48+01:00",
+  "fin": "2026-11-08T23:53:26+01:00",
+  "duree_s": 1118,
+  "rtf": 0.991,
+  "rtf_min": 0.8,
+  "charge_1min": 4.12,
+  "nb_coeurs": 32,
+  "essai": false,
+  "image_reconstruite": false,
+  "coeurs_reserves": "8-15",
+  "epreuves": [
+    {
+      "id": "image",
+      "statut": "vert",
+      "detail": "inchangée depuis la dernière fumée verte (a4071fa), non reconstruite",
+      "duree_s": 0
+    },
+    {
+      "id": "demarrage",
+      "statut": "vert",
+      "detail": "conteneur dadou-sim-container, domaine 43, monde chantiers, headless",
+      "duree_s": 24,
+      "journal": "demarrage.log"
+    },
+    {
+      "id": "rtf",
+      "statut": "vert",
+      "obtenu": "0.991",
+      "detail": "seuil 0.8",
+      "duree_s": 24,
+      "journal": "rtf.log"
+    },
+    {
+      "id": "namespace",
+      "ok": 5,
+      "attendu": 5,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 43,
+      "journal": "namespace.log"
+    },
+    {
+      "id": "catalogue",
+      "ok": 4,
+      "attendu": 4,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 26,
+      "journal": "catalogue.log"
+    },
+    {
+      "id": "parle",
+      "ok": 3,
+      "attendu": 3,
+      "ko": 0,
+      "statut": "vert",
+      "detail": "ETATS=[\"\", \"parle\", \"\"]",
+      "duree_s": 7,
+      "journal": "parle.log"
+    },
+    {
+      "id": "chantiers",
+      "ok": 21,
+      "attendu": 21,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 929,
+      "journal": "chantiers.log"
+    },
+    {
+      "id": "a1",
+      "statut": "rouge",
+      "detail": "la sim relancée n'a pas démarré (voir demarrage.log)",
+      "duree_s": 12,
+      "journal": "demarrage.log"
+    }
+  ],
+  "verdict": "rouge",
+  "bloquant": "a1",
+  "page": "2026-11-08-14.html"
+}
