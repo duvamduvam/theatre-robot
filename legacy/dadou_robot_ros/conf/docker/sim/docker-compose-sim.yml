@@ -92,6 +92,11 @@ services:
       - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
       # Accès GPU pour le rendu de la GUI Gazebo (Intel/AMD).
       - /dev/dri:/dev/dri
+      # Traces (08/11) : robot.log, journaux jeu/ et rehearsal/, tickets/ de la page scène.
+      # Avant ce montage ils mouraient avec le conteneur (chaque `compose up` qui le
+      # recrée). Même forme que le banc vision (./workspace/log), gitignoré (log/), lu par
+      # conf/scripts/ramasser_traces.py. Le colcon de la sim y écrit aussi ses build_*.
+      - ./workspace/log:/home/ros2_ws/log
       # Sources montées par-dessus la copie de l'image : itération sans rebuild.
       - ../../../../../packages/didier_description:/home/ros2_ws/src/didier_description
       - ../../../../../packages/didier_sim:/home/ros2_ws/src/didier_sim

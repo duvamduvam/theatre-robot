@@ -1288,3 +1288,86 @@ def test_pont_de_bout_en_bout_repetition_desactivee_refuse_route(pont, monkeypat
 
     asyncio.run(scenario())
     assert "route" not in noeud.publishers
+
+
+# --- Tickets « Noter un problème » (08/11) ------------------------------------------
+# Valeurs GRAVÉES : la borne de taille, le nom de fichier, le contenu, l'anti-rafale.
+
+from didier_web import tickets as tk  # noqa: E402  (bloc ajouté en fin de fichier)
+
+
+def test_ticket_parse_texte_nettoye_et_borne():
+    assert parse_client_message('{"type":"ticket","texte":"  le micro coupe  "}') == {
+        "type": "ticket", "texte": "le micro coupe"}
+    # Hors whitelist et sans topic : valable quelle que soit la whitelist du node.
+    assert parse_client_message('{"type":"ticket","texte":"x"}', frozenset())["texte"] == "x"
+    assert web_protocol.TICKET_TEXTE_MAX == 2000
+    parse_client_message(json.dumps({"type": "ticket", "texte": "a" * 2000}))
+
+
+@pytest.mark.parametrize("brut", [
+    '{"type":"ticket"}', '{"type":"ticket","texte":""}', '{"type":"ticket","texte":"   "}',
+    '{"type":"ticket","texte":42}', json.dumps({"type": "ticket", "texte": "a" * 2001}),
+])
+def test_ticket_parse_refuse(brut):
+    with pytest.raises(ProtocolError):
+        parse_client_message(brut)
+
+
+def test_ticket_nom_de_fichier_trie_par_heure():
+    assert tk.nom_fichier("2026-11-08T16:50:03.123+00:00", 7) == "20261108-165003-007.json"
+    assert tk.nom_fichier("2026-11-08T16:50:03.123+00:00", 1007) == "20261108-165003-007.json"
+
+
+def test_ticket_contenu():
+    assert tk.construire_ticket("ça coince", "T", 43, "SIMULATION", {"route_state": 1}) == {
+        "origine": "page", "t_wall": "T", "domain_id": 43, "mode": "SIMULATION",
+        "texte": "ça coince", "topics": {"route_state": 1}}
+
+
+def test_ticket_pare_rafale():
+    pare = tk.PareRafale()
+    assert tk.INTERVALLE_MIN_S == 2.0
+    assert [pare.admettre(t) for t in (10.0, 11.9, 12.0, 12.5, 14.1)] == [
+        True, False, True, False, True]
+    assert pare.compteur == 3
+
+
+class _WsFactice:
+    closed = False
+
+    def __init__(self):
+        self.envoyes = []
+
+    async def send_json(self, payload):
+        self.envoyes.append(payload)
+
+
+@pytest.mark.parametrize("domaine", ["43", "42"])
+def test_pont_ticket_ecrit_un_fichier_sans_la_main(pont, monkeypatch, tmp_path, domaine):
+    """Un client en LECTURE SEULE note un ticket : un fichier JSON lisible, sans les
+    topics masqués, et un ack — sur la sim comme sur le vrai robot."""
+    noeud = _creer_noeud(pont, monkeypatch, domaine=domaine, tickets_dir=str(tmp_path))
+    noeud.last_topics = {"route_state": {"msg": "on", "at_s": 0.0},
+                         "chat_instruction": {"msg": "LUBIE SECRÈTE", "at_s": 0.0}}
+    ws = _WsFactice()
+    asyncio.run(pont.handle_client_message(
+        noeud, {"clients": {}}, "c1", ws, '{"type":"ticket","texte":"Didier sourd"}'))
+    assert ws.envoyes == [{"type": "ack", "topic": "ticket"}]
+    fichiers = list(tmp_path.glob("*.json"))
+    assert len(fichiers) == 1 and not list(tmp_path.glob("*.tmp"))
+    ticket = json.loads(fichiers[0].read_text(encoding="utf-8"))
+    assert ticket["texte"] == "Didier sourd" and ticket["origine"] == "page"
+    assert ticket["domain_id"] == int(domaine)
+    assert set(ticket["topics"]) == {"route_state"}
+    # Rafale : le 2e ticket immédiat est refusé, pas perdu en silence.
+    asyncio.run(pont.handle_client_message(
+        noeud, {"clients": {}}, "c1", ws, '{"type":"ticket","texte":"bis"}'))
+    assert ws.envoyes[-1]["type"] == "err" and len(list(tmp_path.glob("*.json"))) == 1
+
+
+def test_scene_a_le_formulaire_ticket_hors_garde_d_ecriture():
+    html, js = _lire("scene.html"), _lire("scene.js")
+    assert 'id="form-ticket"' in html and 'maxlength="2000"' in html
+    bloc = js[js.index('$("form-ticket")'):js.index("liaison.surReponse")]
+    assert 'type: "ticket"' in bloc and "isWriter" not in bloc

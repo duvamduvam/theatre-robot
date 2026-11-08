@@ -412,6 +412,11 @@ page scène, persona **mauvaisefoi**.
   `CHAT_VAD_FACTOR=6` (le souffle du micro BT fluctue, à 1,3 la fin de phrase
   n'est jamais détectée). `CHAT_PARTENAIRE=David` : Didier sait qu'il parle à
   David, pas à un passant.
+  **08/11** : atténuation passée à **×0,075** (la voix dépassait encore le seuil
+  « sono » du gate) et `CHAT_MICRO_CONFIANCE=true` (défaut du compose x86) : au
+  casque c'est David qui parle, le gate « source audio vivante » n'est pas construit —
+  sinon chaque geste muet du sélecteur de jeu fermait le micro (1 phrase sur 10).
+  Ligne attendue au démarrage : « micro de confiance : gate … désactivé ».
 - ⚠️ Tant que l'image vision n'est pas rebâtie avec `av>=14,<15`, chaque
   `compose up` qui RECRÉE le conteneur remet PyAV 19 (whisper casse, STT
   vide) : `docker exec dadou-vision-x86-container pip install
@@ -460,6 +465,12 @@ n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
   relance pas non plus (politique du régisseur : jamais contre une route OFF).
   Une lubie se ferme en **bougeant** le fader/slider (une valeur identique ne
   ferme rien), ou en attendant (60 s).
+
+**Ticket « Noter un problème » (08/11)** : champ du bandeau de la page scène, utilisable sans
+la main. Le pont écrit un JSON dans `log/tickets/` (texte, heure, topics visibles — jamais
+les topics masqués). En sim, `log/` est monté sur le PC : `conf/docker/sim/workspace/log/`
+(gitignoré), il survit aux recréations du conteneur. Le ramasseur qui les range avec les
+journaux reste à faire (`docs/seances/2026-11-08-a1-casque.md` #11).
 
 **4. Après** : le journal JSONL de la séance est dans
 `/home/ros2_ws/log/rehearsal/` du conteneur sim (ce qui a été tiré, quand) ;

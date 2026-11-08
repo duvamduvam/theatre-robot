@@ -43,6 +43,7 @@ const liaison = {
   surMode: null,      // (mode) : le badge de mode vient d'être mis à jour
   surEtat: null,      // (msg) : message serveur "state" (toutes les 2 s)
   surFeed: null,      // (msg) : message serveur "feed" (un événement, à chaque message)
+  surReponse: null,   // (msg) : message serveur "ack" ou "err" (après le flash commun)
 };
 
 // --- État global du client --------------------------------------------------
@@ -180,10 +181,12 @@ function traiterMessageServeur(msg) {
       // vert = la commande est vraiment partie sur le topic ROS.
       flash(state.attenteAck[msg.topic] || $("badge-ecriture"), true);
       delete state.attenteAck[msg.topic];
+      liaison.surReponse?.(msg);
       break;
     case "err":
       logErreur(msg.reason);
       flash(state.dernierBouton || $("badge-ecriture"), false);
+      liaison.surReponse?.(msg);
       break;
     case "state":
       $("badge-connexion").title = msg.clients + " client(s) connecté(s), écriture "

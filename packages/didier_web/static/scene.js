@@ -377,6 +377,33 @@ $("scene-consigne-lever").addEventListener("click", () => {
   $("scene-consigne").value = "";
 });
 
+// --- Ticket « Noter un problème » (08/11) ------------------------------------------
+// Hors whitelist et SANS la main : pas de garde isWriter ici, volontairement. Le champ
+// n'est vidé qu'à l'ack (fichier réellement écrit) : sur un err, le texte reste pour
+// réessayer au lieu d'être perdu.
+let ticketEnAttente = false;
+$("form-ticket").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const texte = $("ticket-texte").value.trim();
+  if (texte === "") {
+    return;
+  }
+  const bouton = event.currentTarget.querySelector("button");
+  state.attenteAck.ticket = bouton;
+  state.dernierBouton = bouton;
+  ticketEnAttente = true;
+  envoyer({ type: "ticket", texte: texte });
+});
+
+liaison.surReponse = function viderTicketSiAcquitte(msg) {
+  if (ticketEnAttente && msg.type === "ack" && msg.topic === "ticket") {
+    $("ticket-texte").value = "";
+    ticketEnAttente = false;
+  } else if (ticketEnAttente && msg.type === "err") {
+    ticketEnAttente = false;
+  }
+};
+
 // --- Vitesse de la route (SIM-ONLY, visible si hello.rehearsal) ---------------------
 
 function vitesseChoisie() {

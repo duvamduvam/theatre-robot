@@ -252,6 +252,25 @@ def drive_to_twist(x: float, z: float, max_linear: float, max_angular: float) ->
     return (lin, ang)
 
 
+# Ticket (08/11) : « Noter un problème » depuis la page scène. PAS un topic ROS
+# (rien n'est publié, le pont écrit un fichier) : canal séparé, hors whitelist,
+# accepté même en lecture seule -- noter une panne n'actionne rien, et c'est
+# justement quand on n'a pas la main qu'on veut pouvoir dire « ça ne marche pas ».
+# Borne de taille : un ticket est une phrase de David, pas un dépôt de fichiers.
+TICKET_TEXTE_MAX = 2000
+
+
+def _parse_ticket(msg: dict) -> dict:
+    texte = msg.get("texte")
+    if not isinstance(texte, str) or not texte.strip():
+        raise ProtocolError("ticket.texte doit être un texte non vide")
+    texte = texte.strip()
+    if len(texte) > TICKET_TEXTE_MAX:
+        raise ProtocolError("ticket.texte trop long ({} > {} caractères)".format(
+            len(texte), TICKET_TEXTE_MAX))
+    return {"type": "ticket", "texte": texte}
+
+
 # Dispatch par type : chaque entrée valide/normalise son propre message
 # (dict -> dict), les types sans champ additionnel se contentent de le
 # renvoyer tel quel ("cmd" est traité à part, cf. parse_client_message).
@@ -264,6 +283,7 @@ _PARSERS = {
     "drive": _parse_drive,
     "take_control": lambda msg: {"type": "take_control"},
     "stop_all": lambda msg: {"type": "stop_all"},
+    "ticket": _parse_ticket,
 }
 
 

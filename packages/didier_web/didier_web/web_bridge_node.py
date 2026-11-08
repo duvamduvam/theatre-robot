@@ -45,6 +45,7 @@ import pathlib
 import threading
 import time
 import uuid
+from datetime import datetime, timezone
 
 import rclpy
 from aiohttp import web, WSMsgType
@@ -65,9 +66,10 @@ from didier_web.web_protocol import (
     DRIVE_TIMEOUT_S, TOPICS_FLUX, TOPICS_LECTURE, WRITE_TIMEOUT_S, DriveFlow,
     ProtocolError, SessionManager, build_ack, build_err, build_feed,
     build_hb_ack, build_hello, build_state, drive_to_twist,
-    effective_whitelist, parse_client_message, rehearsal_allowed,
-    snapshot_visible, stop_all_commands,
+    effective_whitelist, mode_from_domain_id, parse_client_message,
+    rehearsal_allowed, snapshot_visible, stop_all_commands,
 )
+from didier_web.tickets import PareRafale, construire_ticket, nom_fichier
 
 STATE_PERIOD_S = 2.0  # cadence de diffusion du message "state" à tous les clients
 NODES_REFRESH_PERIOD_S = 5.0  # get_node_names_and_namespaces() : évite de le refaire à 2 Hz
@@ -134,9 +136,15 @@ class WebBridgeNode(Node):
         # rehearsal/cmd) de la page « scène ». FALSE par défaut ; même true, ignoré
         # hors domaine 43 (cf. plus bas) -- le vrai robot n'a jamais ces topics.
         self.declare_parameter("rehearsal_enabled", False)
+        # Tickets « Noter un problème » (08/11) : un fichier JSON par ticket, dans le
+        # dossier de log du conteneur — monté sur le PC en sim, ramassé par
+        # conf/scripts/ramasser_traces.py (voir didier_web/tickets.py).
+        self.declare_parameter("tickets_dir", "/home/ros2_ws/log/tickets")
 
         self.web_port = self.get_parameter("web_port").value
         self.json_dir = self.get_parameter("json_dir").value
+        self.tickets_dir = pathlib.Path(str(self.get_parameter("tickets_dir").value))
+        self.pare_rafale_tickets = PareRafale()
         token = self.get_parameter("token").value or None
         self.drive_enabled = bool(self.get_parameter("drive_enabled").value)
         self.max_linear = float(self.get_parameter("max_linear").value)
@@ -393,6 +401,20 @@ class WebBridgeNode(Node):
             for topic, info in snapshot_visible(items).items()
         }
 
+    def ecrire_ticket(self, texte: str) -> pathlib.Path:
+        """Écrit le ticket et rend son chemin. Écriture atomique (fichier .tmp puis
+        rename) : le ramasseur, qui passe toutes les 15 min, ne lit jamais un ticket
+        à moitié écrit."""
+        t_wall = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+        ticket = construire_ticket(texte, t_wall, self.domain_id,
+                                   mode_from_domain_id(self.domain_id), self.snapshot_topics())
+        self.tickets_dir.mkdir(parents=True, exist_ok=True)
+        chemin = self.tickets_dir / nom_fichier(t_wall, self.pare_rafale_tickets.compteur)
+        provisoire = chemin.with_suffix(".tmp")
+        provisoire.write_text(json.dumps(ticket, ensure_ascii=False, indent=2), encoding="utf-8")
+        provisoire.replace(chemin)
+        return chemin
+
     def refresh_node_names(self) -> None:
         self.node_names_cache = sorted(
             name for name, _namespace in self.get_node_names_and_namespaces())
@@ -572,6 +594,23 @@ async def _handle_drive(node, app, client_id, ws, msg):
     node.on_drive_received(msg["x"], msg["z"], time.monotonic())
 
 
+async def _handle_ticket(node, app, client_id, ws, msg):
+    """Ticket de la page scène. Accepté SANS la main (lecture seule comprise) : il
+    n'actionne rien. Refus d'une rafale et échec d'écriture répondent un err (le
+    bouton flashe rouge) : un ticket perdu en silence serait pire que pas de bouton."""
+    if not node.pare_rafale_tickets.admettre(time.monotonic()):
+        await _send_json_safe(ws, build_err("ticket refusé : un autre vient d'être noté"))
+        return
+    try:
+        chemin = node.ecrire_ticket(msg["texte"])
+    except OSError as e:
+        node.get_logger().error("ticket NON écrit id={} : {}".format(client_id, e))
+        await _send_json_safe(ws, build_err("ticket non écrit : {}".format(e)))
+        return
+    node.get_logger().info("ticket noté id={} : {}".format(client_id, chemin))
+    await _send_json_safe(ws, build_ack("ticket"))
+
+
 # Dispatch par type : chaque handler applique et répond son propre message.
 # Table plutôt qu'une cascade if/elif -- garde handle_client_message sous le
 # seuil de complexité et isole chaque règle (motif de web_protocol._PARSERS).
@@ -582,6 +621,7 @@ _HANDLERS = {
     "stop_all": _handle_stop_all,
     "cmd": _handle_cmd,
     "drive": _handle_drive,
+    "ticket": _handle_ticket,
 }
 
 

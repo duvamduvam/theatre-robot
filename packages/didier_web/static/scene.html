@@ -44,6 +44,15 @@
       <input id="token-input" type="password" placeholder="token" autocomplete="off">
       <button id="btn-token" type="button">Connexion</button>
     </span>
+    <!-- « Noter un problème » (08/11) : TOUJOURS visible et utilisable SANS la main
+         (un ticket n'actionne rien). Message WS {type:"ticket"} : le pont écrit un
+         fichier, le ramasseur du PC le range dans traces/tickets/ avec les journaux
+         de l'instant. Flash vert = fichier écrit. -->
+    <form id="form-ticket" class="scene-saisie scene-ticket">
+      <input id="ticket-texte" type="text" maxlength="2000" autocomplete="off"
+             placeholder="Noter un problème…" aria-label="Décrire un problème pour plus tard">
+      <button type="submit">Ticket</button>
+    </form>
   </header>
 
   <!-- Barre de contrôle. Les boutons .bouton-catalogue (data-topic/data-value)

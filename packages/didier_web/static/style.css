@@ -687,6 +687,10 @@ footer {
   min-width: 0;
 }
 
+/* Ticket dans le bandeau (08/11) : poussé à droite, largeur bornée pour ne pas
+   écraser les badges de mode/connexion. */
+.scene-ticket { margin-left: auto; width: min(26rem, 40vw); }
+
 /* --- Oreille de Didier (page scène, 31/10) ------------------------------- */
 .scene-oreille { margin: 0 0 0.6em; font-size: 0.85em; }
 .scene-oreille summary { cursor: pointer; font-weight: bold; }
