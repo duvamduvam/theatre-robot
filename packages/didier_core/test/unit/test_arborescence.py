@@ -316,26 +316,30 @@ def test_chemins_retires_robot_est_la_liste_gravee_de_l_ancienne_forme():
         assert donnee not in retires, donnee
 
 
+def _source_robot(rel):
+    """Fichier du PC que les copies de l'hôte robot (L1e-4b) poseraient en src/robot/<rel> —
+    None si aucune copie n'y écrit : data/{json,medias,db}/ → src/robot/{json,medias,db}/,
+    legacy/dadou_robot_ros/conf/ → src/robot/conf/, rien d'autre (plus de copie « projet »)."""
+    tete = rel.split("/")[0]
+    if tete in ("json", "medias", "db"):
+        return MONO / "data" / rel
+    if tete == "conf":
+        return ROBOT / rel
+    return None
+
+
 def test_aucun_chemin_retire_du_coeur_n_existe_dans_l_arbre_rsynce():
-    """Idempotence : le rsync du projet copie legacy/dadou_robot_ros/ vers src/robot/ et
-    conf/ros2/ à plat dans src/robot/. Une entrée encore présente dans l'arbre reviendrait à
-    chaque passage — effacée puis recopiée, « changed » sans fin (ecart-pi.sh rouge) et, pour
-    un descripteur, un package fantôme compilé par colcon."""
-    retires = yaml.safe_load(VARS.read_text(encoding="utf-8"))["chemins_retires_robot"]
+    """Idempotence : une entrée de la liste encore présente dans ce que les copies du robot
+    poussent reviendrait à chaque passage — effacée puis recopiée, « changed » sans fin
+    (ecart-pi.sh rouge) et, pour un descripteur, un package fantôme compilé par colcon. Depuis
+    L1e-4b, l'hôte robot ne reçoit plus que data/{json,medias,db} et conf/ (voir _source_robot)."""
+    variables = yaml.safe_load(VARS.read_text(encoding="utf-8"))
+    retires = variables["chemins_retires_robot"] + variables["chemins_retires_legacy_robot"]
     sources = [p[len("src/robot/"):] for p in retires if p.startswith("src/robot/")]
     assert sources, "aucune entrée src/robot/ : le test ne vérifierait rien"
-    # Exclusions de la copie à plat de conf/ros2/ (points de montage vides créés en root par un
-    # Docker du PC, non suivis) : lues dans le rôle, pas recopiées ici.
-    taches = yaml.safe_load(SYNCHRONISE.read_text(encoding="utf-8"))
-    a_plat = next(t for t in taches if str(t.get("name", "")).startswith("Synchronize directory")
-                  and t["synchronize"]["src"].endswith("/conf/ros2/"))
-    exclus = {o[len("--exclude=/"):].strip("/") for o in a_plat["synchronize"]["rsync_opts"]
-              if o.startswith("--exclude=/")}
-    assert "robot" in exclus, exclus
     for rel in sources:
-        assert not (ROBOT / rel).exists(), rel
-        if rel.split("/")[0] not in exclus:
-            assert not (ROBOT / "conf" / "ros2" / rel).exists(), f"conf/ros2/{rel} (copié à plat)"
+        source = _source_robot(rel)
+        assert source is None or not source.exists(), rel
 
 
 def test_le_nettoyage_du_coeur_est_conditionnel_et_precede_la_copie_des_packages():
@@ -595,10 +599,173 @@ def test_les_chemins_du_depot_se_deduisent_de_deploy_en_un_seul_dirname():
     variables = yaml.safe_load(VARS.read_text(encoding="utf-8"))
     assert variables["local_projects_dir"] == "{{ playbook_dir | dirname }}/legacy"
     assert variables["packages_dir"] == "{{ playbook_dir | dirname }}/packages"
-    # Ce que ces deux gabarits donnent depuis deploy/ doit exister.
+    # L1e-4b : la racine elle-même (git status du sha déployé).
+    assert variables["depot_dir"] == "{{ playbook_dir | dirname }}"
+    # Ce que ces gabarits donnent depuis deploy/ doit exister.
     assert (DEPLOY.parent / "legacy" / "dadou_robot_ros").is_dir()
+    assert (DEPLOY.parent / ".git").exists()
     assert (DEPLOY.parent / "packages" / "didier_core").is_dir()
 
 
 def test_le_groupe_integration_a_quitte_l_inventaire():
     assert "integration" not in _hosts()
+
+
+# --- L1e-4b : données du robot -> data/ à la racine ------------------------------------------
+
+DONNEES = MONO / "data"
+# Écrits en dur. Déchets de l'ancienne copie « projet » relevés sur le Pi robot le 08/11.
+CHEMINS_RETIRES_LEGACY_ROBOT = [
+    "src/robot/.claude", "src/robot/.github", "src/robot/.pytest_cache", "src/robot/.vscode",
+    "src/robot/CLAUDE.md", "src/robot/README.md", "src/robot/ci", "src/robot/ci_test",
+    "src/robot/conftest.py", "src/robot/dadou_robot_ros.code-workspace", "src/robot/docs",
+    "src/robot/essais", "src/robot/firmware", "src/robot/launch.txt", "src/robot/pytest.ini",
+    "src/robot/requirements-test.txt", "src/robot/requirements.txt", "src/robot/todo.txt",
+]
+# Chemins (relatifs à la racine du dépôt) qui décident du suffixe -dirty du sha déployé.
+CHEMINS_DEPLOYES = ["packages", "data", "legacy/dadou_robot_ros/conf", "legacy/dadou_vision_ros",
+                    "deploy"]
+COMPOSES_PC = [ROBOT / "conf/docker/sim/docker-compose-sim.yml",
+               ROBOT / "conf/docker/x8664/docker-compose-x86.yml"]
+COMPOSE_ARM = ROBOT / "conf/docker/arm/docker-compose-arm.yml"
+
+
+def _service(compose):
+    return next(iter(yaml.safe_load(compose.read_text(encoding="utf-8"))["services"].values()))
+
+
+def _taches():
+    return yaml.safe_load(SYNCHRONISE.read_text(encoding="utf-8"))
+
+
+def test_les_donnees_sont_dans_data_et_ont_quitte_legacy():
+    for nom in ("json", "medias", "db"):
+        assert (DONNEES / nom).is_dir(), nom
+        # Nextcloud ressuscite parfois un dossier après `git mv` : même vide, il ne revient pas.
+        assert not (ROBOT / nom).exists(), nom
+    assert (DONNEES / "json" / "sequences").is_dir()
+    assert (DONNEES / "medias" / "visuals" / "mouth").is_dir()
+    assert (DONNEES / "db" / "sequences.db").is_file()
+
+
+def test_les_compose_du_pc_montent_et_copient_depuis_data():
+    for compose in COMPOSES_PC:
+        service = _service(compose)
+        assert service["build"]["additional_contexts"]["data"] == "../../../../../data", compose.name
+        sources = {v.split(":")[1]: v.split(":")[0] for v in service["volumes"]}
+        assert sources["/home/ros2_ws/src/robot/json"] == "../../../../../data/json", compose.name
+        assert sources["/home/ros2_ws/src/robot/medias"] == "../../../../../data/medias", compose.name
+        assert (compose.parent / "../../../../../data/json").resolve() == DONNEES / "json"
+    # La sim monte AUSSI json/ pour leds_sim_node.
+    assert "../../../../../data/json:/home/ros2_ws/json" in _service(COMPOSES_PC[0])["volumes"]
+
+
+def test_le_compose_arm_garde_la_disposition_du_pi():
+    """Le compose ARM tourne SUR LE PI (src/robot/conf/docker/arm/) : les données y sont dans
+    src/robot/ (chemin Pi inchangé, décision L1e-4), soit ../../.. — pas data/."""
+    service = _service(COMPOSE_ARM)
+    assert service["build"]["additional_contexts"]["data"] == "../../.."
+    assert "../../../json:/home/ros2_ws/src/robot/json" in service["volumes"]
+    assert "../../../medias:/home/ros2_ws/src/robot/medias" in service["volumes"]
+
+
+def test_les_dockerfiles_copient_les_donnees_depuis_le_contexte_data():
+    for nom in ("arm/Dockerfile-arm", "x8664/Dockerfile-x86", "sim/Dockerfile-sim"):
+        lignes = (ROBOT / "conf" / "docker" / nom).read_text(encoding="utf-8").splitlines()
+        copies = [l for l in lignes if l.startswith("COPY ")]
+        assert not [l for l in copies if l.split()[1] in ("json/", "medias/", "db/")], nom
+        assert "COPY --from=data json/ /home/ros2_ws/src/robot/json/" in copies, nom
+    for nom in ("arm/Dockerfile-arm", "x8664/Dockerfile-x86"):
+        texte = (ROBOT / "conf" / "docker" / nom).read_text(encoding="utf-8")
+        assert "COPY --from=data medias/ /home/ros2_ws/src/robot/medias/\n" in texte, nom
+
+
+def test_seul_l_hote_robot_porte_donnees_dir():
+    hotes = {h: v for g in _hosts().values() for h, v in (g.get("hosts") or {}).items()}
+    porteurs = sorted(h for h, v in hotes.items() if v and "donnees_dir" in v)
+    assert porteurs == ["r"]
+    assert hotes["r"]["donnees_dir"] == "{{ playbook_dir | dirname }}/data"
+
+
+def test_l_hote_robot_ne_recoit_plus_la_copie_projet():
+    taches = _taches()
+    projet = next(t for t in taches if str(t.get("name", "")).startswith("Synchronize directory")
+                  and t["synchronize"]["src"] == "{{ local_projects_dir }}/{{ local_project_dir }}/")
+    assert projet["when"] == "donnees_dir is not defined"
+    a_plat = next(t for t in taches if str(t.get("synchronize", {}).get("src", "")).endswith("/conf/ros2/"))
+    assert "donnees_dir is not defined" in a_plat["when"]
+
+
+def test_l_hote_robot_recoit_data_et_conf_par_deux_copies_explicites():
+    taches = _taches()
+    donnees = next(t for t in taches if str(t.get("name", "")).startswith("Synchronize robot data"))
+    assert donnees["when"] == "donnees_dir is defined"
+    assert donnees["loop"] == ["json", "medias", "db"]
+    assert donnees["synchronize"]["src"] == "{{ donnees_dir }}/{{ item }}/"
+    assert donnees["synchronize"]["dest"] == "{{ ros2_ws }}/src/{{ project_ros_dir }}/{{ item }}/"
+    conf = next(t for t in taches if str(t.get("name", "")).startswith("Synchronize robot conf"))
+    assert conf["when"] == "donnees_dir is defined"
+    assert conf["synchronize"]["src"] == "{{ local_projects_dir }}/{{ local_project_dir }}/conf/"
+    assert conf["synchronize"]["dest"] == "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/"
+    # Jamais un secret ni un workspace de banc par le rsync.
+    for exclu in ("--exclude=/secret", "--exclude=/docker/sim/workspace/",
+                  "--exclude=/docker/x86/workspace/", "--exclude=.venv/"):
+        assert exclu in conf["synchronize"]["rsync_opts"], exclu
+    copie = next(i for i, t in enumerate(taches) if str(t.get("name", "")).startswith("Synchronize mono-repo package"))
+    assert taches.index(donnees) < copie and taches.index(conf) < copie
+
+
+def test_chemins_retires_legacy_robot_est_la_liste_gravee_et_epargne_les_donnees():
+    variables = yaml.safe_load(VARS.read_text(encoding="utf-8"))
+    retires = variables["chemins_retires_legacy_robot"]
+    assert sorted(retires) == sorted(CHEMINS_RETIRES_LEGACY_ROBOT)
+    assert len(retires) == len(set(retires))
+    for donnee in ("src/robot", "src/robot/json", "src/robot/medias", "src/robot/db", "src/robot/conf"):
+        assert donnee not in retires, donnee
+    assert not [p for p in retires if not p.startswith("src/robot/") or p.count("/") != 2], retires
+    # Détection et effacement conditionnels : même tâche que l'ancienne forme du cœur.
+    taches = _taches()
+    assert any("chemins_retires_legacy_robot" in str(t.get("shell", "")) for t in taches)
+    assert any("chemins_retires_legacy_robot" in str(t.get("loop", "")) for t in taches)
+    assert "conf/docker/sim/workspace" in variables["dechets_rsync"]
+
+
+def test_le_sha_deploye_ne_depend_que_des_chemins_deployes():
+    variables = yaml.safe_load(VARS.read_text(encoding="utf-8"))
+    assert variables["chemins_deployes"] == CHEMINS_DEPLOYES
+    for chemin in CHEMINS_DEPLOYES:
+        assert (MONO / chemin).is_dir(), chemin
+    sha = next(t for t in _taches() if str(t.get("name", "")).startswith("Write the deployed git sha"))
+    contenu = sha["copy"]["content"]
+    assert ("lookup('pipe', 'git -C ' ~ depot_dir ~ ' status --porcelain -- ' ~ "
+            "(chemins_deployes | join(' ')))") in contenu
+    assert "rev-parse HEAD" in contenu and "local_projects_dir" not in contenu
+
+
+def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
+    """Comportement de la commande du rôle (git status --porcelain -- <chemins_deployes>) sur un
+    dépôt jetable : un fichier non suivi sous docs/ (fumée en cours) n'y apparaît pas ; une
+    modification d'un chemin déployé, si (vécu le 08/11 : sha faussement -dirty)."""
+    import subprocess
+
+    def git(*args):
+        return subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True,
+                              text=True, env={"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+                                              "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+                                              "HOME": str(tmp_path), "PATH": "/usr/bin:/bin"}).stdout
+
+    chemins = yaml.safe_load(VARS.read_text(encoding="utf-8"))["chemins_deployes"]
+    git("init", "-q")
+    for rel in [*chemins, "docs"]:
+        (tmp_path / rel).mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel / "suivi.txt").write_text("x\n")
+    git("add", ".")
+    git("commit", "-q", "-m", "init")
+    (tmp_path / "docs" / "fumee" / "journaux" / "2026-11-08-1923").mkdir(parents=True)
+    (tmp_path / "docs" / "fumee" / "journaux" / "2026-11-08-1923" / "resultat.json").write_text("{}")
+    (tmp_path / "docs" / "suivi.txt").write_text("modifié\n")
+    assert git("status", "--porcelain", "--", *chemins) == ""
+    for rel in chemins:
+        (tmp_path / rel / "suivi.txt").write_text("modifié\n")
+        assert git("status", "--porcelain", "--", *chemins) != "", rel
+        git("checkout", "-q", "--", rel)

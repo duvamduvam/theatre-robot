@@ -18,6 +18,10 @@ robot:
         local_project_dir: dadou_robot_ros
         project_ros_dir: robot
         project_name: robot
+        # L1e-4b (08/11) : données du robot = data/ du dépôt, copiées dans src/robot/{json,medias,db}
+        # (chemin Pi inchangé). Sa présence REMPLACE, pour cet hôte, la copie du projet entier
+        # (rôle synchronise) : seuls data/{json,medias,db} et legacy/dadou_robot_ros/conf/ partent.
+        donnees_dir: "{{ playbook_dir | dirname }}/data"
         launch_cmd: ros2 launch didier_bringup robot_app.launch.py
         # Sentinelle de build (rôle synchronise) : le nom est celui que lit
         # conf/scripts/launch-ros-in-docker.sh du projet — chemin relatif à ros2_ws/.

@@ -18,10 +18,10 @@ from didier_sim_lib.servos_logic import (
     pos99_to_radians,
 )
 
-# legacy/dadou_robot_ros (données du robot) ; le test vit dans packages/didier_core/test/unit (L1e-3c).
-REPO_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))))), "legacy", "dadou_robot_ros")
-PARLE_JSON = os.path.join(REPO_ROOT, "json", "sequences", "didier", "parle.json")
+# data/ du mono-dépôt (données du robot, L1e-4b) ; le test vit dans packages/didier_core/test/unit.
+DATA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))))), "data")
+PARLE_JSON = os.path.join(DATA_ROOT, "json", "sequences", "didier", "parle.json")
 
 
 def load_left_arm_keyframe():

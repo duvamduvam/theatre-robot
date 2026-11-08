@@ -130,8 +130,8 @@ config[SRC_DIRECTORY] = config[BASE_PATH] + "src/"
 
 # Racine des DONNÉES (json/, medias/, db/, conf/) — lot L1e-3c, décision 3 de la spec L1 :
 # le code est devenu le package didier_core (packages/ du mono-dépôt), les données sont
-# restées dans legacy/dadou_robot_ros/ (montées sous /home/ros2_ws/src/robot/ dans les
-# conteneurs). L'ancien repli « parent du dossier du package » (sous pytest) pointerait
+# dans data/ du mono-dépôt depuis L1e-4b (conf/ dans legacy/dadou_robot_ros/), copiées ou
+# montées sous /home/ros2_ws/src/robot/ sur le Pi et dans les conteneurs. L'ancien repli « parent du dossier du package » (sous pytest) pointerait
 # désormais packages/didier_core/ : la racine vient donc de DIDIER_DATA_DIR, posée par les
 # compose et par le conftest.py des tests hôte. Défaut = le chemin conteneur historique.
 # Barre finale garantie : tout le reste du fichier concatène des sous-dossiers.

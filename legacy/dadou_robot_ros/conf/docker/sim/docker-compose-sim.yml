@@ -30,6 +30,8 @@ services:
         didier_rehearsal: ../../../../../packages/didier_rehearsal
         # L1e-3c : le cœur (ex-paquet robot) est un package de packages/.
         didier_core: ../../../../../packages/didier_core
+        # L1e-4b : les données du robot (json/, medias/, db/) vivent dans data/ du mono-dépôt.
+        data: ../../../../../data
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
@@ -133,7 +135,7 @@ services:
       - ../../scripts/validate-catalogue.sh:/home/ros2_ws/validate-catalogue.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
-      - ../../../json:/home/ros2_ws/json
+      - ../../../../../data/json:/home/ros2_ws/json
 
       # --- Paquet "didier_core" (animations_node, face_sim ; ex-paquet "robot") ---
       # Depuis L1e-3c le CODE est un package de packages/, monté à plat dans src/
@@ -142,10 +144,10 @@ services:
       # (rôle Ansible synchronise). Plus de montage de conf/ros2 (setup.py/package.xml
       # du paquet robot) en guise de src/robot/.
       - ../../../../../packages/didier_core:/home/ros2_ws/src/didier_core
-      - ../../../json:/home/ros2_ws/src/robot/json
+      - ../../../../../data/json:/home/ros2_ws/src/robot/json
       # medias/ : PNG bouche/yeux lus par Face.load_visuals() (config[MOUTH_VISUALS_PATH]/
       # [EYE_VISUALS_PATH] = <PROJECT_DIRECTORY>/medias/visuals/{mouth,eye}, cf.
       # robot_config.py) -- requis par face_sim (param face:=true) : sans ce
       # volume, Face.load_visuals() lève FileNotFoundError au démarrage du node
       # (voir le log actionnable dans face_sim_node.py).
-      - ../../../medias:/home/ros2_ws/src/robot/medias
+      - ../../../../../data/medias:/home/ros2_ws/src/robot/medias

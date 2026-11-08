@@ -25,6 +25,11 @@ services:
         didier_rehearsal: ../../../../didier_rehearsal
         didier_sim: ../../../../didier_sim
         didier_web: ../../../../didier_web
+        # L1e-4b : données du robot (Dockerfile-arm : COPY --from=data). Dans le dépôt elles
+        # vivent dans data/ ; sur le Pi, Ansible les copie dans src/robot/{json,medias,db}
+        # (chemin Pi INCHANGÉ), c'est-à-dire ../../.. d'ici — les montages json/ et medias/
+        # ci-dessous restent donc ../../../json et ../../../medias (disposition du Pi).
+        data: ../../..
     # Supervision par le DÉMON Docker (assainissement 2026-07-11) : relance
     # sur crash et au boot, sauf arrêt volontaire (docker stop / systemctl
     # stop robot). robot.service n'est plus qu'un interrupteur up -d / stop —

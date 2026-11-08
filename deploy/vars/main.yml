@@ -6,6 +6,20 @@
 # deploy/ à la racine du dépôt (ex legacy/dadou_utils_ros/ansible/) : un seul `dirname` mène
 # à la racine, au lieu de deux (legacy/) et trois (packages/).
 local_projects_dir: "{{ playbook_dir | dirname }}/legacy"
+# Racine du dépôt (L1e-4b) : le `git status` du sha déployé (rôle synchronise) s'y exécute, pour
+# que les chemins de `chemins_deployes` ci-dessous soient relatifs à la racine.
+depot_dir: "{{ playbook_dir | dirname }}"
+# Chemins du dépôt (relatifs à sa racine) qui partent sur un Pi : SEULS eux décident du suffixe
+# `-dirty` du sha publié par le robot (L1e-4b, 08/11). Avant : `git status` de TOUT le dépôt — une
+# fumée en cours, qui écrit docs/fumee/journaux/ (non suivi), rendait le sha faussement « -dirty »
+# et ecart-pi.sh rouge (vécu le 08/11 au soir). docs/ ne part sur aucun Pi. Gravée par
+# test_arborescence.py ; un dossier nouvellement déployé (machines/ en L1e-4c) s'ajoute ici.
+chemins_deployes:
+  - packages
+  - data
+  - legacy/dadou_robot_ros/conf
+  - legacy/dadou_vision_ros
+  - deploy
 # Packages du mono-dépôt (rôle synchronise) : rsync vers ros2_ws/src/<package> de la
 # machine. Liste PAR MACHINE : variable `packages` de l'hôte dans `hosts`, à défaut
 # `packages_default` ci-dessous = les COMMUNS (lot L1a + dadou_utils_ros au lot L1e-3a),
@@ -97,6 +111,33 @@ chemins_retires_robot:
   - src/robot/conf/ros2/resource
   - src/robot/conf/ros2/test
   - src/robot/conf/ros2_dependencies
+# Lot L1e-4b (08/11) : l'hôte robot ne reçoit plus le projet legacy/dadou_robot_ros/ ENTIER mais
+# deux copies explicites (data/{json,medias,db} et conf/, rôle synchronise). Tout le reste, poussé
+# par l'ancienne copie « projet » (docs 139 Mo, essais, firmware, CLAUDE.md, réglages d'éditeur…)
+# ou par l'ancienne copie à plat de conf/ros2/ (launch.txt, puis conftest.py et pytest.ini d'avant
+# L0), est un DÉCHET sur le Pi : relevé sur le robot le 08/11, effacé s'il est présent (même tâche
+# conditionnelle que chemins_retires_robot). JAMAIS json/, medias/, db/ ni conf/ (gravé par
+# test_arborescence.py). Rien ne les recrée plus ; la liste ne se vide jamais (un Pi resté éteint
+# rattrape).
+chemins_retires_legacy_robot:
+  - src/robot/.claude
+  - src/robot/.github
+  - src/robot/.pytest_cache
+  - src/robot/.vscode
+  - src/robot/CLAUDE.md
+  - src/robot/README.md
+  - src/robot/ci
+  - src/robot/ci_test
+  - src/robot/conftest.py
+  - src/robot/dadou_robot_ros.code-workspace
+  - src/robot/docs
+  - src/robot/essais
+  - src/robot/firmware
+  - src/robot/launch.txt
+  - src/robot/pytest.ini
+  - src/robot/requirements-test.txt
+  - src/robot/requirements.txt
+  - src/robot/todo.txt
 # Lot L1e-3d (08/11) : la vision est devenue le package src/didier_vision. Ancienne forme sur le
 # Pi : le package `vision` à la racine de src/vision/ (module, descripteurs, launch et tests
 # copiés à plat depuis conf/ros2/) et ses build/install. Les DONNÉES (conf, medias, mediamtx,
@@ -121,6 +162,9 @@ chemins_retires_vision:
 dechets_rsync:
   - .venv
   - conf/docker/x86/workspace
+  # Même déchet côté sim (workspace colcon de la fumée, 8 Mo trouvés sur le robot le 08/11) :
+  # exclu de la copie depuis 965aaf4, effacé ici (L1e-4b).
+  - conf/docker/sim/workspace
 # Secrets (rôle secrets) : sur le PC seulement, hors dépôt et hors Nextcloud (chmod 600).
 secrets_dir: "{{ lookup('env','HOME') }}/.config/didier"
 #controller_project_dir: "dadou_controller_ros"

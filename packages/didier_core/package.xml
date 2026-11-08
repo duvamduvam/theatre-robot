@@ -3,7 +3,7 @@
 <package format="3">
   <name>didier_core</name>
   <version>0.1.0</version>
-  <description>Cœur embarqué du robot de théâtre Didier (servos, roues, LEDs, audio, animations). Ex-package robot (lot L1e-3c) ; ses données (json/, medias/, db/, conf/) restent hors du package, racine DIDIER_DATA_DIR.</description>
+  <description>Cœur embarqué du robot de théâtre Didier (servos, roues, LEDs, audio, animations). Ex-package robot (lot L1e-3c) ; ses données (json/, medias/, db/ : data/ du mono-dépôt ; conf/) restent hors du package, racine DIDIER_DATA_DIR.</description>
   <maintainer email="achats@duvam.net">dadou</maintainer>
   <license>MIT</license>
 

@@ -31,7 +31,8 @@ Related repositories:
 ## Quick start (tests, no hardware needed)
 ```bash
 # theatre-robot mono-repo: the code is the package packages/didier_core (lot L1e-3c,
-# 2026-11-07); this folder keeps its data (json/, medias/, db/, conf/) and the test venv.
+# 2026-11-07), its data (json/, medias/, db/) is data/ at the repo root (lot L1e-4b,
+# 2026-11-08); this folder keeps conf/ and the test venv.
 cd legacy/dadou_robot_ros
 python3 -m venv .venv
 .venv/bin/pip install -r requirements-test.txt

@@ -6,7 +6,7 @@ un audio, un relais, une expression ou une lumière INEXISTANTS ne joue rien,
 sans erreur (publish() n'a aucun retour). Ce test le rend rouge.
 
 Le catalogue est construit ICI par la même fonction que le nœud du robot, sur
-legacy/dadou_robot_ros/json (chemin calculé depuis ce fichier) : même code que
+data/json du mono-dépôt (L1e-4b, chemin calculé depuis ce fichier) : même code que
 la prod, pas une reproduction. Les valeurs attendues sont lues dans le catalogue,
 jamais recopiées.
 
@@ -21,7 +21,7 @@ from dadou_utils_ros.utils_static import ANIMATION, AUDIO, FACE, RELAY, ROBOT_LI
 from controller.buttons.button_config import BUTTONS_LAYOUT
 from didier_web.web_catalog import build_catalog
 
-JSON_DIR = pathlib.Path(__file__).resolve().parents[4] / "dadou_robot_ros" / "json"
+JSON_DIR = pathlib.Path(__file__).resolve().parents[5] / "data" / "json"
 CATALOGUE = build_catalog(JSON_DIR)
 
 # clé de commande -> famille du catalogue où la valeur doit se trouver.

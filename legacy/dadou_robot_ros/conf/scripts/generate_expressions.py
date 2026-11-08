@@ -24,10 +24,13 @@ import random
 
 from PIL import Image
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MOUTH_DIR = os.path.join(REPO, "medias", "visuals", "mouth")
-EYE_DIR = os.path.join(REPO, "medias", "visuals", "eye")
-EXPR_JSON = os.path.join(REPO, "json", "expressions.json")
+# Données du robot : data/ à la racine du mono-dépôt depuis L1e-4b (ce script est dans
+# legacy/dadou_robot_ros/conf/scripts/, cinq niveaux sous la racine).
+DONNEES = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))))), "data")
+MOUTH_DIR = os.path.join(DONNEES, "medias", "visuals", "mouth")
+EYE_DIR = os.path.join(DONNEES, "medias", "visuals", "eye")
+EXPR_JSON = os.path.join(DONNEES, "json", "expressions.json")
 
 MW, MH = 24, 16   # bouche
 EW, EH = 8, 8     # œil

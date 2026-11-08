@@ -38,13 +38,15 @@ Hors du package, dans le dossier désigné par **`DIDIER_DATA_DIR`** (lu par `ro
 | `db/` | bases audio/séquences | `db/*.py` |
 | `conf/` | `logging/`, `DEPLOY_SHA` (posé par Ansible) | journalisation, catalogue |
 
-Ces données vivent dans `legacy/dadou_robot_ros/` jusqu'au lot L1e-4 (→ `data/`).
+`json/`, `medias/` et `db/` vivent dans [`data/`](../../data/README.md) depuis L1e-4b (08/11) ;
+`conf/` reste dans `legacy/dadou_robot_ros/` jusqu'à L1e-4c. Sur le Pi et dans les conteneurs, tout
+est sous `/home/ros2_ws/src/robot/` (inchangé).
 
 ## Variables d'environnement
 
 | Variable | Défaut | Qui la pose |
 |---|---|---|
-| `DIDIER_DATA_DIR` | `/home/ros2_ws/src/robot/` (barre finale ajoutée si absente ; vide = défaut) | les compose ARM/x86/sim (valeur = le défaut) ; `test/conftest.py` → `legacy/dadou_robot_ros/` |
+| `DIDIER_DATA_DIR` | `/home/ros2_ws/src/robot/` (barre finale ajoutée si absente ; vide = défaut) | les compose ARM/x86/sim (valeur = le défaut) ; `test/conftest.py` → `data/` |
 | `ROBOT_NAME` | `didier` | les compose (namespace des nœuds, lot L1b) |
 
 ## Où il entre

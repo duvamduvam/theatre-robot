@@ -55,8 +55,9 @@ COPY conf/scripts/launch-sim-in-docker.sh /home/ros2_ws/
 # json/ : robot_lights.json, lights_base.json, colors.json lus par leds_sim_node
 # (mêmes fichiers que le vrai robot, cf. didier_core/robot_config.py) pour que la visu
 # LED en sim résolve les mêmes séquences/couleurs. Monté aussi en volume par le
-# compose (itération sans rebuild), comme les packages de packages/.
-COPY json/ /home/ros2_ws/json/
+# compose (itération sans rebuild), comme les packages de packages/. Depuis L1e-4b les
+# données sont dans data/ du mono-dépôt, hors du contexte principal : contexte nommé `data`.
+COPY --from=data json/ /home/ros2_ws/json/
 
 # --- Paquet "didier_core" (animations_node, param animations:=true du launch sim) ---
 # Rejoue les séquences JSON (json/sequences/**) dans la sim : servos + faces +
@@ -86,7 +87,7 @@ COPY json/ /home/ros2_ws/json/
 # JSON_DIRECTORY résolu par robot_config.py = <DIDIER_DATA_DIR>/json/ avec
 # DIDIER_DATA_DIR="/home/ros2_ws/src/robot/" (chemin DIFFÉRENT de la copie json/
 # ci-dessus, dédiée à leds_sim_node) : les séquences vivent sous json/sequences/.
-COPY json/ /home/ros2_ws/src/robot/json/
+COPY --from=data json/ /home/ros2_ws/src/robot/json/
 # log/ : logging_conf.py écrit un TimedRotatingFileHandler sur ce chemin exact
 # (robot_config.LOGGING_FILE_NAME) -- le dossier doit exister avant le premier
 # `logging.config.dictConfig(...)` (fait dans AnimationsNode.__init__), sinon
