@@ -1,0 +1,13 @@
+=== namespace attendu : /didier/ (ROBOT_NAME=didier) 09:36:05 ===
+  lancé : drive (pid 1190, journal /tmp/validate-namespace-drive.log)
+  lancé : rehearsal (pid 1192, journal /tmp/validate-namespace-rehearsal.log)
+  déjà présent : web
+  79 topics, 15 nœuds vus
+  ✅ sentinelles présentes sous /didier/ (topics + nœuds)
+  ✅ tout topic sous /didier/ sauf {/clock /tf /tf_static /rosout /parameter_events}
+  ✅ tout nœud sous /didier/
+  /didier/twist_mux : locks.e_stop.priority=255, topics.remote.priority=100
+  ✅ twist_mux a chargé twist_mux.yaml sous namespace (e_stop 255, remote 100)
+  /didier/ground_truth/odom : 1 publisher(s) ; /didier/neck/position : 1 abonné(s)
+  ✅ bridge gz namespacé (vérité terrain publiée, cou écouté)
+=== validate-namespace (/didier) : 5 OK, 0 KO 09:36:37 ===
