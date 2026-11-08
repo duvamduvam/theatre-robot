@@ -210,7 +210,7 @@ Confiance : **H** = référence lue ou forme sans ambiguïté · **M** = famille
 | Diodes de redressement (autres bandes) | — ; une 2ᵉ bande n'est lisible qu'en « `007` » — **ne PAS compléter en 1N4007** | DO-41 axial, sur bande | ~50-100 | t0014, `v2:t0309` | M |
 | Diodes signal/Zener (verre, bagues) | — | DO-35 axial, sur bande | ~30-50 | t0014 | M |
 | Transistors, sur bande | `BC547B` (**suffixe lu**, 2 images) | TO-92 | ~10-50 | c0032, c0033 | H |
-| Fusibles verre, triés par taille | — (**calibres non lus**) | cartouche 5×20 **et** 6×30 | **~150-250** | c0639, c0640 | H |
+| Fusibles verre, **MÉLANGÉS** (vidéo du 08/11 : 5×20 et 6×30 dans les mêmes compartiments, une cartouche noire, notice de la boîte perdue) | — (**calibres non lus** : gravures de côté et floues sur la vidéo ; seuls « 250 V » et des logos CE sont lisibles) | cartouche 5×20 **et** 6×30 | **~150-250** | c0639, c0640, vidéo 08/11 | H |
 | Transistors en vrac, **lot hétérogène** | — | TO-92 | ~50-80 | t0014 | M |
 | Transistors / régulateurs CMS | — | SOT-23, qq SOT-89 | ~30-40 | t0014 | B |
 | Circuits intégrés CMS large corps | — | SOIC/SOP ~300 mil | 2-3 | t0014 | B |
