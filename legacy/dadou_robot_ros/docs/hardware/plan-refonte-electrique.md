@@ -69,6 +69,19 @@ Les étapes 4 et 5 peuvent avancer en parallèle une fois 3 fini.
 > sortie, droit ou coudé, hauteur libre au-dessus (étages coulissants), accès au tournevis une fois
 > la carte en place. Même règle pour l'empreinte des porte-fusibles BLX-A.
 >
+> **Points de mesure à prévoir dans les nouvelles cartes (David, 08/11).** `protocole-oscillo.md` §3 définit
+> TP0 à TP8, mais pour le robot actuel, en dérivant des fils. **Aucun schéma de carte n'a de point de
+> test** (0 `TestPoint` dans les 8 projets KiCad au 08/11). À ajouter pendant la session de corrections,
+> pour mesurer sans rien débrancher : picots ou une barrette « MESURE » avec GND sur Puissance
+> (5 V, 12 V, 24 V_IN), sur Moteurs (GND du PCA9685, signal d'un servo) et sur Audio (sortie, masse
+> audio) ; dans les boîtes de distribution, un accès aux rails et à l'étoile. TP0 reste le « - »
+> batterie, câblé une fois pour toutes.
+>
+> **Écran aluminium entre étages : option, pas prévue d'office (08/11).** Il ne bloque que le couplage
+> électrique, pas le 50 Hz magnétique ni le bruit conduit par les masses ; mal relié, il fait une boucle.
+> Ajouté seulement si les mesures à l'oscilloscope après recâblage le justifient : une seule feuille,
+> un seul fil vers l'étoile, face isolée côté cartes, aucun contact avec entretoises et vis.
+>
 > **Achats, analyse complète du 08/11** : [`achats-refonte.md`](achats-refonte.md) — trois
 > commandes (AliExpress maintenant, distributeur UE après corrections et mesures, JLCPCB), ce
 > que le stock couvre, les vérifications d'atelier qui font tomber des lignes.
