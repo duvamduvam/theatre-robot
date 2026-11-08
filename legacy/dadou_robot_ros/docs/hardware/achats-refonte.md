@@ -32,7 +32,8 @@ relecture a déjà changé des empreintes une fois (isolateur I²C, 05/11).
 | Fusibles 5×20 **temporisés T10A**, céramique, lot de 10 : AliExpress 1005007520792851 (ATOPELEC), variante 10A, retenu par David le 08/11 | 1 lot | entrée SD-150B-12, même raison | 1,43 € le lot (capture du 08/11) |
 | Fusibles à lame 25 A (SmartDrive ×2, ampli ×1) + rechange | 6 | à acheter, aucun en stock | non lu |
 | Porte-fusibles à lame **en ligne** pour les deux SmartDrive (l'ampli a déjà le sien, sur la porte) : AliExpress 1005006286934036, « Waterproof Auto Fuse Holder », 32 V, variantes **Medium 1 Pair** (taille standard ATO, à confirmer à réception : lame de 19 mm), **25 ampères**, **12 AWG** ; retenu le 08/11 | 1 paire | variantes vérifiées sur la capture : Medium 1 Pair, 25 A, 12 AWG, max. 20 par acheteur | 6,39 € la paire (capture du 08/11) |
-| Coup-de-poing **NF à accrochage, 2 contacts (1 NO + 1 NF), boîtier en saillie** (type LA38-11ZS / XB2-BS542 ; paroi bois 18 mm) + bouton d'armement | 1 + 1 | spec fermée le 30/08, jamais acheté | non lu |
+| ~~Coup-de-poing~~ **EN STOCK** (vidéo de David du 08/11) : boîtier jaune en saillie « EMERGENCY STOP », champignon rouge à flèches de rotation, blocs Techpushbutton **ZB2-BE102C (1-2, NF)** et **ZB2-BE101C (3-4, NO)**, Ith 10 A, AC15 240 V 3 A. Conforme à la spec du 30/08, accrochage à confirmer à la main (reste enfoncé, se libère en tournant). Calibre donné en alternatif seulement : il commande la bobine du relais et `ESTOP_SENSE`, il ne coupe jamais les 40 A | 0 | — | — |
+| Bouton d'armement, poussoir momentané | 1 | à acheter | non lu |
 | Cosses à œillet **jaunes** (4-6 mm²) M5 et M6 : les 5 fils de 6 mm² et les 5 de 4 mm² du cahier | ~20 | à acheter : le stock n'a que du rouge (0,5-1,5) et du bleu (1,5-2,5) | non lu |
 
 Hors UE : 3,60 € de droits par catégorie, donc grouper en une fois.

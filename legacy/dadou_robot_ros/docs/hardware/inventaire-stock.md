@@ -353,6 +353,7 @@ Confiance : **H** = référence lue ou forme sans ambiguïté · **M** = famille
 | Interrupteurs à bascule (rockers) panneau | — (**calibre non lu**) | encastrable, cosses faston | ~25-35 | c0423 | H |
 | Bloc marche/arrêt de machine, touches `I` vert / `O` rouge | — (`CE` seul lisible) | encastrable panneau | ~5-10 | c0161, c0171 | H |
 | Coupe-circuit / sectionneur à poignée rouge, bornes à goujon | `BLAN…` (marque tronquée) | panneau, goujons laiton | 1-2 | c0163, c0165 | M |
+| **Coup-de-poing d'arrêt d'urgence en boîtier** — *vidéo du 2026-11-08* | boîtier jaune « EMERGENCY STOP », blocs Techpushbutton `ZB2-BE102C` (1-2 NF) + `ZB2-BE101C` (3-4 NO), Ith 10 A, AC15 240 V 3 A | boîtier en saillie, champignon à déverrouillage par rotation (à confirmer) | 1 | vidéo 08/11 | H |
 | Boutons-poussoirs tactiles | étiquette `INTER À P… OFF-(ON) 12VDC`, `5 mm`, `0.05A` | 4 broches, 6×6 et 12×12 | ~40-60 | t0017, t0506 | H |
 | Micro-interrupteurs à glissière | — | traversant, SPDT + multipos. | **100+** | t0173 | H |
 | Interrupteurs DIP | — | traversant, 4 à 8 positions | ~10-20 | t0124 | H |
