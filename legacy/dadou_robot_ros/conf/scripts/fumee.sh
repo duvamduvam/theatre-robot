@@ -176,6 +176,20 @@ fi
 # --- Un conteneur sim déjà là est celui de quelqu'un : jamais touché --------------
 if [ -n "$(docker ps -a --filter "name=^${CONTENEUR}\$" --format '{{.Names}}')" ]; then
   ETAT_C="$(docker inspect -f '{{.State.Status}}' "$CONTENEUR" 2>/dev/null || echo inconnu)"
+  # Un conteneur ARRÊTÉ (exited/dead/created) ne fait tourner la sim de personne : c'est un reste
+  # (vécu le 08/11 : PC éteint au bouton à 02:32 pendant une fumée → conteneur exited, et la
+  # minuterie a reporté toute la matinée). On le retire (docker rm SANS -f : refuse s'il tourne)
+  # et on continue. Seul un conteneur vivant (running/paused/restarting) reste intouchable.
+  case "$ETAT_C" in
+    exited|dead|created)
+      if docker rm "$CONTENEUR" >/dev/null 2>&1; then
+        journal "reste retiré : conteneur $CONTENEUR arrêté ($ETAT_C)"
+        ETAT_C=retire
+      fi ;;
+  esac
+fi
+if [ "${ETAT_C:-}" != retire ] && [ -n "$(docker ps -a --filter "name=^${CONTENEUR}\$" --format '{{.Names}}')" ]; then
+  ETAT_C="$(docker inspect -f '{{.State.Status}}' "$CONTENEUR" 2>/dev/null || echo inconnu)"
   if [ "$MODE" = si-due ]; then reporter "conteneur $CONTENEUR déjà présent ($ETAT_C), pas touché"; fi
   journal "refus : conteneur $CONTENEUR déjà présent ($ETAT_C)"
   dit "REFUS : le conteneur $CONTENEUR existe déjà ($ETAT_C). C'est une sim à toi : arrête-la toi-même (docker rm -f $CONTENEUR) puis relance. Je ne la touche pas."
