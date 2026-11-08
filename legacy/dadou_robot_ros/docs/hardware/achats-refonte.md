@@ -38,6 +38,22 @@ relecture a déjà changé des empreintes une fois (isolateur I²C, 05/11).
 
 Hors UE : 3,60 € de droits par catégorie, donc grouper en une fois.
 
+#### Panier AliExpress du 08/11 — prêt, **NON PAYÉ** (connexion bloquée : code par mail jamais reçu)
+
+Relevé sur la capture du panier de David, 5 articles, promo jusqu'au 18/11 à 23 h 59. Plusieurs
+articles sont marqués « Presque épuisé » : si un lien ne donne plus la variante, revenir ici.
+
+| Article | Variante à choisir | Qté | Prix |
+|---|---|---|---|
+| Porte-fusibles 5×20 de panneau — https://fr.aliexpress.com/item/1005007910707716.html | noir, 5X20MM | 4 lots de 5 | 1,94 € le lot |
+| Kit de 150 fusibles 5×20 rapides, 15 valeurs 0,1-30 A (vendeur Shop1100353140) | — | 1 | 5,79 € |
+| Fusibles céramique temporisés — https://fr.aliexpress.com/item/1005007520792851.html | 5A | 1 lot de 10 | 1,43 € |
+| Fusibles céramique temporisés — même annonce | 10A | 1 lot de 10 | 1,43 € |
+| Porte-fusibles à lame en ligne étanches — https://fr.aliexpress.com/item/1005006286934036.html | Medium 1 Pair, 25 ampères, 12 AWG | 1 paire | 6,39 € |
+| **Sous-total 22,80 €, livraison 2,62 € (fusibles T, vendeur international), total estimé 25,42 €** | | | |
+
+Pas encore dans le panier : cosses à œillet jaunes 4-6 mm² (M5 et M6), lames ATO 25 A de rechange.
+
 ### Commande 2 — un seul distributeur UE, après V1 et V2 (cartes, modules, alimentation, câble)
 
 | Pièce | Qté | Pourquoi / piège | Prix lu |
