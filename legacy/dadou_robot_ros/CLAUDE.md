@@ -44,7 +44,7 @@ FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires
 ## État du 2026-07-11 — visage calibré, architecture assainie, temps réel
 
 - **Câblage LED du visage ÉTABLI physiquement** (mires lues par l'humain — la webcam ne
-  résout pas les motifs) et GRAVÉ dans `robot/visual/image_mapping.py` +
+  résout pas les motifs) et GRAVÉ dans `packages/didier_core/didier_core/visual/image_mapping.py` +
   `test_image_mapping.py` : bouche en serpentin entrant en bas-droite, rangée basse et
   yeux montés tête-bêche, œil droit 384-447 / gauche 448-511 (contigu, sans trous).
   Ne JAMAIS « corriger » ces tests sans repasser les mires (`calib`, `calib-couleurs`,
@@ -53,8 +53,8 @@ FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires
   JSON invalide = refus loggué, plus de perte silencieuse), classe `Track` unique pour
   les pistes de keyframes (fix au passage : les frames du visage étaient décalées d'un
   cran), contrat `Action` (ABC), contrats de données testés (chaque visuel/audio/brique
-  référencé doit exister). **601 tests** (`.venv/bin/pytest`, chiffre relevé le
-  2026-09-14 ; il en disait 443, figés au 11/07), CI verte.
+  référencé doit exister). **1619 tests** (depuis `packages/didier_core`, relevé le
+  2026-11-08), CI verte.
 - **Temps réel fait** : tick global 20 Hz (`TICK_PERIOD_S`, chaîne roues non touchée),
   servos en rampe linéaire (`RAMP_SPEED=160`, à caler sur scène) + anti-spam I2C +
   deadman façon roues + fix `random_duration` (le réel suit enfin la sim).
@@ -71,7 +71,7 @@ FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires
 ## Commandes
 
 ```bash
-.venv/bin/pytest -q                 # tests unitaires (host, sans ROS ni matériel)
+(cd ../../packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=)  # tests du cœur (host, sans ROS ni matériel)
 conf/scripts/fumee.sh               # fumée : rejoue toute la sim sur main (minuterie systemd, docs/operations.md § Fumée automatique)
 
 # ⚠️ Namespace (L1b) : la CLI ne suit PAS le namespace des nœuds — un nom relatif tapé
@@ -90,7 +90,7 @@ docker exec -it dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.s
 # Régisseur de répétition (SIM-ONLY ; sim lancée avec WORLD=chantiers REHEARSAL=true WEB=true ANIMATIONS=true FACE=true) :
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers'
 # Suivi de personne en sim (chaîne roues requise ; toggle topic `follow` on/off, OFF par défaut) :
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run robot person_follower --ros-args -r __ns:=/didier'
+docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core person_follower --ros-args -r __ns:=/didier'
 # Perception scriptée pour le tester (personne à droite, loin, sûre) :
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && ros2 topic pub -r 16 /didier/vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.5, y: 0.2, z: 0.9}}"'
 
@@ -103,7 +103,7 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
 
 # Déploiement robot : Ansible dans ../dadou_utils_ros (rsync du checkout local, PAS de git sur le Pi).
 # ssh alias `r` = pi@robot. Logs applicatifs : /home/ros2_ws/log/robot.log DANS le conteneur (pas stdout docker).
-# Sentinelle de build : créer le fichier robot/change déclenche colcon build au (re)démarrage.
+# Sentinelle de build : créer packages/didier_core/change (gitignoré ; sur le Pi : posée par Ansible) déclenche colcon build au (re)démarrage.
 ```
 
 ## État et priorités
