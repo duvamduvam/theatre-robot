@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "id": "2026-11-08-2100",
+  "notes": [],
+  "sha": "a4071fa",
+  "sha_complet": "a4071fac47761324c66752d8fe30d43d11b489aa",
+  "sale": false,
+  "branche": "main",
+  "mode": "si-due",
+  "raison": "due : 2 commit(s) dans main depuis la dernière fumée verte (4fbb8eb)",
+  "debut": "2026-11-08T21:00:00+01:00",
+  "fin": "2026-11-08T21:34:43+01:00",
+  "duree_s": 2083,
+  "rtf": 0.992,
+  "rtf_min": 0.8,
+  "charge_1min": 3.75,
+  "nb_coeurs": 32,
+  "essai": false,
+  "image_reconstruite": false,
+  "coeurs_reserves": "8-15",
+  "epreuves": [
+    {
+      "id": "image",
+      "statut": "vert",
+      "detail": "inchangée depuis la dernière fumée verte (4fbb8eb), non reconstruite",
+      "duree_s": 0
+    },
+    {
+      "id": "demarrage",
+      "statut": "vert",
+      "detail": "conteneur dadou-sim-container, domaine 43, monde chantiers, headless",
+      "duree_s": 28,
+      "journal": "demarrage.log"
+    },
+    {
+      "id": "rtf",
+      "statut": "vert",
+      "obtenu": "0.992",
+      "detail": "seuil 0.8",
+      "duree_s": 22,
+      "journal": "rtf.log"
+    },
+    {
+      "id": "namespace",
+      "ok": 5,
+      "attendu": 5,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 41,
+      "journal": "namespace.log"
+    },
+    {
+      "id": "catalogue",
+      "ok": 4,
+      "attendu": 4,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 27,
+      "journal": "catalogue.log"
+    },
+    {
+      "id": "parle",
+      "ok": 3,
+      "attendu": 3,
+      "ko": 0,
+      "statut": "vert",
+      "detail": "ETATS=[\"\", \"parle\", \"\"]",
+      "duree_s": 5,
+      "journal": "parle.log"
+    },
+    {
+      "id": "chantiers",
+      "ok": 21,
+      "attendu": 21,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 931,
+      "journal": "chantiers.log"
+    },
+    {
+      "id": "a1",
+      "ok": 14,
+      "attendu": 14,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 911,
+      "journal": "a1.log"
+    }
+  ],
+  "verdict": "vert",
+  "bloquant": null,
+  "page": "2026-11-08-12.html"
+}
