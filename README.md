@@ -21,7 +21,7 @@ lumières, gants) — décidé le 2026-11-01 (`legacy/dadou_robot_ros/docs/etude
 | Lot | Statut |
 |---|---|
 | L0 sauvegardes + squelette | **FAIT le 02/11** : 6 dépôts sauvegardés et poussés, secrets purgés, squelette posé et **validé sur pièce par David**, 4 historiques importés (1 628 commits), **V-R3 rejoué depuis `legacy/` : 21 OK / 0 KO**, tests du cœur verts, Ansible pointe sur `legacy/` |
-| L1 contrats + données | **en cours** — FAITS, fusionnés et déployés hors robot (07/11) : L1a contrats, L1b namespace `/didier/`, L1c catalogue + sha publiés, L1e-1/2 packages `didier_*` dans `packages/`, L1e-3a lib `dadou_utils_ros`, L1e-3b messages `theatre_interfaces`. ⛔ Protocole caméra dû avant tout usage au sol. Reste : 3c cœur `didier_core`, 3d `didier_vision`, L1e-4 `machines/` + `data/`, L1d édition via le robot. Détail : [tableau de bord](legacy/dadou_robot_ros/docs/chantiers.md), [spec L1](docs/spec-L1-contrats-donnees.md) |
+| L1 contrats + données | **en cours** — FAITS, fusionnés et déployés hors robot (07/11) : L1a contrats, L1b namespace `/didier/`, L1c catalogue + sha publiés, L1e-1/2 packages `didier_*` dans `packages/`, L1e-3a lib `dadou_utils_ros`, L1e-3b messages `theatre_interfaces` ; L1e-3c cœur `didier_core` fait et déployé hors robot le 08/11 (branche `l1e-3`, à fusionner). ⛔ Protocole caméra dû avant tout usage au sol. Reste : 3d `didier_vision`, L1e-4 `machines/` + `data/`, L1d édition via le robot. Détail : [tableau de bord](legacy/dadou_robot_ros/docs/chantiers.md), [spec L1](docs/spec-L1-contrats-donnees.md) |
 | L2 sim multi-conteneurs | à venir |
 | L3 gabarit + sono | à venir |
 | L4 télécommande neuve | à venir |

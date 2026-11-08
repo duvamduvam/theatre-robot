@@ -36,7 +36,7 @@ import random
 # Clés JSON des payloads servo -- MÊMES valeurs que dadou_utils_ros.utils_static
 # (MODE, RANDOM, RANDOM_MOVE_MIN, ...), dupliquées ici en toutes lettres pour ne
 # PAS importer dadou_utils_ros : didier_sim reste un paquet AUTONOME (même règle
-# que didier_drive et leds_sim_node -- aucun import robot.*/dadou_utils_ros).
+# que didier_drive et leds_sim_node -- aucun import didier_core.*/dadou_utils_ros).
 MODE = "mode"
 RANDOM = "random"
 NORMAL = "normal"
