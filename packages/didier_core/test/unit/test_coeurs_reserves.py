@@ -92,13 +92,39 @@ def test_reserver_puis_liberer_un_vrai_processus(tmp_path):
         # Une 2e passe ne réécrit pas l'origine avec l'affinité déjà réduite.
         assert cr.deplacer(reserves, etat, "sim", pids=[jetable.pid], avec_conteneurs=False) == (0, 0)
         assert cr.lire_liste(json.loads(etat.read_text())["processus"][str(jetable.pid)]["cpus"]) == avant
-        assert cr.liberer(etat) == (1, 0)
+        assert cr.liberer(etat, pids=[jetable.pid]) == (1, 0)
         assert os.sched_getaffinity(jetable.pid) == avant
         assert not etat.exists()
     finally:
         jetable.kill()
         # Garde-fou : le processus de test lui-même n'a jamais bougé.
         assert os.sched_getaffinity(0) == moi_avant
+
+
+def test_est_heritier_valeurs_gravees():
+    reserves = set(range(8, 16))
+    assert cr.est_heritier(set(range(0, 8)) | set(range(16, 32)), reserves, TOUS) is True
+    assert cr.est_heritier(TOUS, reserves, TOUS) is False            # jamais réduit
+    assert cr.est_heritier({20, 21}, reserves, TOUS) is False        # épinglé par quelqu'un d'autre
+    assert cr.est_heritier(set(range(0, 8)) | set(range(16, 32)), set(), TOUS) is False
+
+
+@pytest.mark.skipif(len(os.sched_getaffinity(0)) < 4, reason="il faut au moins 4 CPU")
+def test_liberer_elargit_un_processus_ne_pendant_la_reservation(tmp_path):
+    """Né PENDANT la réservation (affinité héritée, absent de l'état) : rendu à tous les CPU."""
+    tous = set(range(os.cpu_count()))
+    if os.sched_getaffinity(0) != tous:
+        pytest.skip("le processus de test doit voir tous les CPU")
+    reserves = {1, 2}
+    etat = tmp_path / "coeurs.json"
+    etat.write_text(json.dumps({"reserves": "1-2", "processus": {}, "conteneurs": {}}))
+    jetable = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    try:
+        os.sched_setaffinity(jetable.pid, tous - reserves)   # ce qu'il aurait hérité
+        assert cr.liberer(etat, pids=[jetable.pid]) == (1, 0)
+        assert os.sched_getaffinity(jetable.pid) == tous
+    finally:
+        jetable.kill()
 
 
 def test_liberer_sans_etat_ne_fait_rien(tmp_path):

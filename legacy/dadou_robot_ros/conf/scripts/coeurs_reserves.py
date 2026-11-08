@@ -165,12 +165,22 @@ def deplacer(reserves: set[int], fichier: Path, sim: str, pids=None,
     return n_proc, n_cont
 
 
-def liberer(fichier: Path) -> tuple[int, int]:
-    """Rend chaque affinité et chaque cpuset d'origine, puis efface l'état."""
+def est_heritier(actuels: set[int], reserves: set[int], tous: set[int]) -> bool:
+    """Un processus NÉ pendant la réservation hérite de l'affinité réduite de son parent : il
+    n'est pas dans l'état (personne ne l'a déplacé) mais porte exactement « tous moins les
+    réservés ». Vu le 08/11 : 15 processus restés privés de cœurs après la fumée."""
+    return bool(reserves) and actuels == tous - reserves
+
+
+def liberer(fichier: Path, pids=None) -> tuple[int, int]:
+    """Rend chaque affinité et chaque cpuset d'origine, élargit les héritiers (cf. est_heritier),
+    puis efface l'état. `pids` : borne pour les tests (cf. deplacer)."""
     if not fichier.exists():
         return 0, 0
     etat = _lire_etat(fichier)
-    tous = ecrire_liste(range(os.cpu_count() or 1))
+    tous_cpus = set(range(os.cpu_count() or 1))
+    tous = ecrire_liste(tous_cpus)
+    reserves = lire_liste(etat.get("reserves", ""))
     n_proc = n_cont = 0
     for cle, origine in etat.get("processus", {}).items():
         pid = int(cle)
@@ -181,6 +191,16 @@ def liberer(fichier: Path) -> tuple[int, int]:
             n_proc += 1
         except OSError:
             pass
+    connus = set(etat.get("processus", {}))
+    for pid in (_mes_processus() if pids is None else pids):
+        if str(pid) in connus:
+            continue
+        try:
+            if est_heritier(os.sched_getaffinity(pid), reserves, tous_cpus):
+                os.sched_setaffinity(pid, tous_cpus)
+                n_proc += 1
+        except OSError:
+            continue
     for nom, cpuset in etat.get("conteneurs", {}).items():
         # cpuset d'origine vide = « pas de contrainte » : Docker n'accepte pas "" en update,
         # on rend donc tous les CPU, ce qui revient au même.
