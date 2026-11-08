@@ -58,6 +58,25 @@ compilait. Corrigé dans le rôle `conteneur` : l'identifiant de l'image du buil
 `~/ros2_ws/.image-du-build` ; image différente → `build/` et `install/` vidés avant la
 recréation (colcon complet au démarrage). Idempotent : même image = rien.
 
+**L1e-4b (08/11) : le robot ne reçoit plus le projet entier.** Les données du robot sont dans
+`data/` à la racine ; l'hôte robot (variable `donnees_dir` de `hosts`) reçoit deux copies
+explicites — `data/{json,medias,db}` → `src/robot/{json,medias,db}` et
+`legacy/dadou_robot_ros/conf/` → `src/robot/conf/` — au lieu de la copie « projet » (qui poussait
+aussi docs 139 Mo, essais, firmware, `CLAUDE.md`, réglages d'éditeur…) et de la copie à plat de
+`conf/ros2/` (`launch.txt`). Ces déchets ont été effacés du Pi au premier déploiement (liste
+conditionnelle `chemins_retires_legacy_robot`, 18 entrées) avec le workspace colcon de la fumée
+(`conf/docker/sim/workspace`, 8 Mo, ajouté à `dechets_rsync`) : `src/robot/` = `conf db json
+medias`, rien d'autre. Chemins Pi et conteneur inchangés. La vision garde sa copie « projet »
+(L1e-4c). Sha publié : `-dirty` ne regarde plus que `chemins_deployes` (`packages data
+legacy/dadou_robot_ros/conf legacy/dadou_vision_ros deploy`) — une fumée en cours (journaux non
+suivis sous `docs/fumee/`) le rendait faussement sale. Image ARM du robot reconstruite sur le Pi
+(contexte nommé `data`), redéployée (build/ et install/ vidés par le rôle `conteneur`, colcon
+complet), poussée sur le Hub (`e1420fc9…`). Porte : RECAP `failed=0` ×2, conteneurs `running`
+restarts=0, catalogue 6 familles, sha `5895e24` sans `-dirty`, `ecart-pi.sh` vert ×2 sans
+regraver `attendu/`. Piège vu : une connexion multiplexée d'Ansible (`~/.ansible/cp/`) restée
+pendue a figé un `ecart-pi.sh` 10 min sur la première tâche `become` ; tuer le mux et relancer
+suffit.
+
 **Voix de Didier (trouvé le 07/11 au soir)** : `medias/voices/didier.onnx` n'existait que sur la
 vision, déposée à la main ; `medias/` est bind-monté et MASQUE la voix que le Dockerfile met dans
 l'image ; la preuve à blanc (effacement de `~/ros2_ws`) l'a donc perdue sans qu'aucune épreuve le

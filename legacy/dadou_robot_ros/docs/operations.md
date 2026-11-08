@@ -60,7 +60,10 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
 - **Badge version** dans le bandeau de la console et de la page scène : `dev` en
   sim, sinon les 7 premiers caractères du sha. **`-dirty`** (badge orange) = l'arbre
   rsyncé n'était PAS un commit propre : le sha seul mentirait, il faut lire le
-  `git status` du PC au moment du déploiement pour savoir ce qui tourne.
+  `git status` du PC au moment du déploiement pour savoir ce qui tourne. Depuis L1e-4b
+  (08/11), seuls les chemins DÉPLOYÉS comptent (`chemins_deployes` de `deploy/vars/main.yml` :
+  `packages data legacy/dadou_robot_ros/conf legacy/dadou_vision_ros deploy`) — les journaux
+  non suivis d'une fumée en cours (`docs/fumee/journaux/`) ne salissent plus le sha.
   Pas de badge = le robot n'a rien publié (nœud absent, ancien déploiement).
 - Tâche Ansible (rôle `synchronise`, robot seulement) : écrit `conf/DEPLOY_SHA` au rsync,
   jamais exécutée à ce jour (04/11) — le premier déploiement robot doit afficher son sha.
@@ -207,9 +210,10 @@ cd packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pyte
 ```
 
 (il n'y a plus de tests ni de `conftest.py` à la racine de `legacy/dadou_robot_ros/`). Les
-DONNÉES (`json/`, `medias/`, `db/`, `conf/`) restent dans `legacy/dadou_robot_ros/`, montées
-sous `/home/ros2_ws/src/robot/` ; `robot_config.py` en lit la racine dans `DIDIER_DATA_DIR`
-(posée par les compose, et par le `conftest.py` vers `legacy/dadou_robot_ros/`). En CLI :
+DONNÉES `json/`, `medias/`, `db/` sont dans `data/` à la racine du mono-dépôt depuis L1e-4b
+(08/11, voir « Données du robot » ci-dessous), `conf/` reste dans `legacy/dadou_robot_ros/` ;
+tout est sous `/home/ros2_ws/src/robot/` sur le Pi et dans les conteneurs ; `robot_config.py` en
+lit la racine dans `DIDIER_DATA_DIR` (posée par les compose, et par le `conftest.py` vers `data/`). En CLI :
 `ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier`. Sentinelle de build :
 `src/didier_core/change` (sur le PC `packages/didier_core/change`, gitignorée ; `make build` de
 `conf/Makefile` la pose). Au déploiement, Ansible efface l'ancienne forme (`src/robot/robot`,
@@ -218,6 +222,25 @@ liste gravée `chemins_retires_robot`, seulement si présente) AVANT de pousser 
 ⚠️ L'image ARM COPIE le code : après ce lot, la reconstruire sur le Pi
 (`sudo docker compose -f docker-compose-arm.yml build`) puis la pousser sur le Hub. Contrôle
 dans le conteneur : `ls /home/ros2_ws/src /home/ros2_ws/install` ne montre plus aucun `robot`.
+
+## Données du robot : `data/` (lot L1e-4b, 08/11)
+
+`data/{json,medias,db}` à la racine du mono-dépôt (ex-`legacy/dadou_robot_ros/{json,medias,db}`,
+déplacés tels quels ; voir `data/README.md`). **Rien ne change sur le Pi ni dans les conteneurs** :
+`~/ros2_ws/src/robot/{json,medias,db,conf}`, `DIDIER_DATA_DIR=/home/ros2_ws/src/robot/`.
+
+- **Ansible** (rôle `synchronise`) : l'hôte robot (variable `donnees_dir` dans `deploy/hosts`)
+  ne reçoit plus le projet `legacy/dadou_robot_ros/` entier, mais deux copies explicites :
+  `data/{json,medias,db}` → `src/robot/{json,medias,db}` et `legacy/dadou_robot_ros/conf/` →
+  `src/robot/conf/` (jusqu'à L1e-4c). Les anciens déchets (docs 139 Mo, essais, firmware,
+  `CLAUDE.md`, réglages d'éditeur, `launch.txt`…) sont effacés du Pi s'ils y sont encore (liste
+  `chemins_retires_legacy_robot`). La vision garde sa copie « projet » (L1e-4c).
+- **Compose et images** : sim et banc x86 montent `../../../../../data/{json,medias}` et copient
+  par un contexte nommé `data` (`COPY --from=data json/ …`). Le compose ARM tourne SUR LE PI :
+  `data: ../../..` (= `src/robot/`, où Ansible a posé les données), montages `../../../json`
+  inchangés. ⚠️ Après ce lot, l'image ARM du robot a été reconstruite sur le Pi puis poussée.
+- **Tests hôte** : `DIDIER_DATA_DIR` → `data/` (conftest du cœur) ; jeu et télécommande lisent
+  `data/json`. Éditer une séquence pour la sim = éditer `data/json/sequences/…` (monté).
 
 ## Calibration & verification tooling
 - **Face LED patterns** (expressions, publish on `face`): `"calib"` (digits
