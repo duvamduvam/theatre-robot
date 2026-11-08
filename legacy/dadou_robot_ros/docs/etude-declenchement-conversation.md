@@ -699,6 +699,75 @@ d'exploitation (« ne pas activer la parole IA pendant que le HF est vivant »)
 et une ligne de boîte noire pour le télédiagnostic. À instruire quand le
 chantier 0 sera passé au réel ; ça touchera le dépôt robot, pas celui-ci.
 
+### 10.10 Révision du 08/11 — le micro se ferme sur le SON, pas sur le GESTE
+
+> **DÉCISION DU 08/11 (David) — ce § est EN VEILLE, gardé pour les PASSANTS.**
+> Quand c'est David qui parle, pas besoin de deviner : au casque le micro est le sien,
+> et sur le robot il appuiera sur un bouton « c'est moi ». Le gate (C3/C4) existe pour un
+> micro **dans le châssis qui est l'enceinte**, pas pour ça. **Fait le jour même** :
+> `CHAT_MICRO_CONFIANCE=true` (banc, domaine 43 seulement) → gate non construit
+> (`_chat_wiring.construire_gate`, clause `gate=None` du §10.5), comportement historique.
+> Sur le robot : le bouton de la télécommande rendra ce « micro de confiance » dynamique
+> (chantier télécommande RP2040). Le reste de ce § — publier si une séquence a du son —
+> redevient utile le jour où Didier écoute des **passants** par le micro du châssis
+> pendant qu'il bouge : à ressortir alors, tel quel.
+
+**Le problème (séance A1, 08/11).** David est compris 1 fois sur 10. Le micro marche ;
+c'est la tête qui le ferme à chaque geste de Didier. Le robot n'annonce que le *nom* de la
+séquence en cours, jamais si elle a du son → la tête ferme le micro pour toutes. Le
+sélecteur de jeu joue un geste toutes les 3-10 s, presque tous muets (15 des 18 séquences
+`eternel-show`) : le micro est fermé la plupart du temps et la phrase en cours est jetée.
+Seconde cause, réglée le jour même sur le banc : voix du casque trop forte, prise pour la
+sono (`asound-pc.conf` ×0,15 → ×0,075, plus aucun blocage « niveau »).
+
+**La règle (David, 08/11) : il écoute dès qu'il ne parle pas.** Micro ouvert sauf si un
+son sort de Didier : sa voix (déjà fait), **ou une piste audio de séquence** (le geste
+muet ne compte plus), ou une source vivante au micro (déjà fait).
+
+**La solution.** Le robot publie un second état, `animation_audio_state` : le nom de la
+séquence **si elle a une piste audio**, sinon `""`. La tête ne ferme le micro que là-dessus.
+Même forme que `animation_state` (latché, `time` = temps restant → péremption deadman).
+Pourquoi un topic de plus et pas un `animation_state` enrichi : trois lecteurs (gaze, chat,
+jeu) attendent une chaîne et traiteraient autre chose comme « repos » — aveugles aux
+séquences pendant le déploiement, qui se fait Pi par Pi. Le champ `StringTime.anim` est
+déjà pris (« vient d'une animation », deadman roues).
+
+**Ce que ça ne rend jamais pire.** Tête mise à jour avant le robot : topic jamais reçu →
+elle n'en tient pas compte → elle écoute (le canal acoustique couvre). Robot avant la
+tête : un topic que personne ne lit. Aucun ordre ne rend Didier sourd.
+
+**À trancher**
+
+| # | Question | Proposition | Si on choisit l'autre voie |
+|---|---|---|---|
+| 1 | Garder une fermeture pendant une séquence **à son** ? | **Oui** (C4 sur le son) | Supprimer C4 : une piste discrète (sous 2800 RMS) serait transcrite et Didier se répondrait ; une piste jouée pendant la calibration de la VAD fausserait son seuil pour toute la session |
+| 2 | Granularité : la **séquence** ou le **clip** ? | **Séquence** (10 s de séquence avec 2 s de son = 10 s fermées) | Le clip : `audio_node` publierait « clip en cours » ; plus juste, lot séparé, à instruire si la gêne se mesure |
+| 3 | Tour spontané pendant un geste muet ? | **Autorisé** (sa voix part, le visage reste au geste — déjà le cas quand David lui parle pendant une séquence) | L'interdire : garder l'interdit sur « toute séquence », au prix de tours spontanés rares dès que le sélecteur bouge |
+
+**Spec d'implémentation** (fermée si les 3 propositions tiennent ; Opus ; relecture adverse
+du câblage tête avant déploiement — le piège du 30/08, `None` lu comme actif, revient vite
+par copier-coller).
+- Contrat : `theatre_contrats.topics.ANIMATION_AUDIO_STATE = 'animation_audio_state'` ;
+  `docs/interfaces.md` ligne sous `animation_state`.
+- Robot (`didier_core`) : `AnimationManager.audio_state_name()` (`""` sans séquence ou sans
+  piste, sinon le nom) ; `animations_node._publish_state` publie les deux, mêmes transitions,
+  même QoS.
+- Tête (`didier_vision/chat_node`) : second abonnement, second couple état/échéance tenu par
+  `_on_animation_audio_state` qui réutilise `parse_animation_state` + `state_expiry` ;
+  `_show_audio_active()` lit ce couple (formule `show_audio_live` inchangée : `None`, `""`,
+  `"parle"` exclus) ; `allow_message` continue de lire `animation_state` (le visage ne change
+  pas de règle).
+- Tests gravés : `audio_state_name` sur les vrais JSON (`aurore` → `"aurore"`, `little-neck`
+  → `""`, repos → `""`) ; constante de topic ; câblage tête : `animation_state="little-neck"`
+  seul → micro ouvert, `animation_audio_state="aurore"` → fermé, 5,1 s après → ouvert, `face`
+  retenu pendant `little-neck`. Mutation : rebrancher `_show_audio_active` sur
+  `animation_state` doit faire rougir ; retirer l'exclusion de `None` aussi.
+- Fumée : l'épreuve `parle` relève aussi `animation_audio_state` (« parle » a une piste),
+  compteur gravé mis à jour. Sim : séance A1 10 min, `cause=spectacle` seulement pendant les
+  séquences à son.
+- Docs du lot : ce §, `interfaces.md`, `chantiers.md`, renvoi dans
+  `etude-arbitrage-actionneurs.md`. Déployer les 2 Pi, `ecart-pi.sh` vert.
+
 ## Sources
 
 - Hall, *The Hidden Dimension* (1966) ; Walters et al. 2005 (validation HRI).

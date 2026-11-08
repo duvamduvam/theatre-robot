@@ -159,12 +159,12 @@ from didier_vision.ai.stt import FallbackStt, FasterWhisperStt, OpenRouterStt
 from didier_vision.ai.thinking_show import ThinkingShow
 from didier_vision.ai.tts_piper import PiperTts
 from didier_vision.audio.beeps import build_thinking_beeps
-from didier_vision.audio.live_audio_gate import LiveAudioGate, LiveAudioGateConfig
+from didier_vision.audio.live_audio_gate import LiveAudioGateConfig
 from didier_vision.audio.mic import MicCapture
 from didier_vision.audio.playback import AudioPlayer
 from didier_vision.audio.vad import EnergyVad
-from didier_vision.nodes._chat_wiring import (decode_persona_command, default_chat_parameters,
-                                       ros_message_to_string_time_kwargs)
+from didier_vision.nodes._chat_wiring import (construire_gate, decode_persona_command,
+                                       default_chat_parameters, ros_message_to_string_time_kwargs)
 from didier_vision.vision_config import chat_env_overrides, config, get_secret
 
 # Durée d'une trame micro (ms) : DOIT être identique côté MicCapture (qui
@@ -700,7 +700,16 @@ class ChatNode(Node):
             # EFFECTIFS depuis CET objet réellement construit, jamais depuis
             # une constante recopiée (cf. spec du lot diag_port, 2026-09-13).
             gate_config = config["chat_live_audio_gate"]
-            gate = LiveAudioGate(gate_config)
+            # None si micro de confiance (CHAT_MICRO_CONFIANCE, domaine 43) : le gate
+            # fermait le micro à chaque geste muet du sélecteur (08/11). La décision
+            # vit dans _chat_wiring (pure, testée) ; show_audio_active reste branché
+            # plus bas : il retient aussi la PAROLE spontanée pendant une séquence à
+            # son, ce qui n'a rien à voir avec l'écoute.
+            gate = construire_gate(config["chat_mic_trusted"], gate_config)
+            if gate is None:
+                self.get_logger().info(
+                    "micro de confiance : gate « source audio vivante » désactivé "
+                    "(la personne au micro est le partenaire)")
         except Exception as exc:  # noqa: BLE001 - log explicite avant de propager
             self.get_logger().error(f"Échec d'initialisation micro/VAD : {exc}")
             raise ChatStartupError("échec init micro/VAD") from exc

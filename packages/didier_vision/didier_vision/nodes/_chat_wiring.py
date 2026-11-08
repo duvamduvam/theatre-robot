@@ -24,6 +24,7 @@ import json
 from typing import Any, Dict
 
 from didier_vision.ai.performance import RosMessage
+from didier_vision.audio.live_audio_gate import LiveAudioGate, LiveAudioGateConfig
 from didier_vision.vision_config import config
 
 
@@ -84,3 +85,16 @@ def decode_persona_command(raw) -> str:
     except (ValueError, TypeError):
         value = raw
     return str(value).strip().lower()
+
+
+def construire_gate(micro_de_confiance: bool, gate_config: LiveAudioGateConfig):
+    """Le gate « source audio vivante » du tour de parole, ou None.
+
+    None quand le micro est DE CONFIANCE (vision_config.TRUSTED_MIC_ENV : casque
+    de David au banc, demain son bouton) : c'est la clause gate=None de
+    ConversationEngine (§10.5 de l'étude), comportement historique à l'octet
+    près — rien ne ferme le micro entre deux répliques de Didier. Sinon le
+    gate du robot, dont la config reste lue par le diagnostic (seuils effectifs)."""
+    if micro_de_confiance:
+        return None
+    return LiveAudioGate(gate_config)

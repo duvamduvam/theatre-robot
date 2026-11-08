@@ -643,3 +643,28 @@ def test_tache_et_abonnement_conditionnes_au_mouvement():
 def test_chat_off_ferme_la_tache():
     source = ast.unparse(_chat_node_method(_chat_node_tree(), "_on_chat_cmd"))
     assert "self._move_task.close('chat OFF')" in source
+
+
+# ---------------------------------------------------------------------------
+# construire_gate (micro de confiance, 08/11)
+# ---------------------------------------------------------------------------
+
+def test_construire_gate_micro_de_confiance_rend_none():
+    from didier_vision.audio.live_audio_gate import LiveAudioGate, LiveAudioGateConfig
+    from didier_vision.nodes._chat_wiring import construire_gate
+    assert construire_gate(True, LiveAudioGateConfig()) is None
+    gate = construire_gate(False, LiveAudioGateConfig())
+    assert isinstance(gate, LiveAudioGate)
+    # Le gate du robot bloque bien une trame de spectacle : c'est lui, pas un leurre.
+    assert gate.feed(0.0, 0.0, show_audio=True) is True
+
+
+def test_chat_node_construit_son_gate_par_construire_gate():
+    """Le node ne doit plus instancier LiveAudioGate lui-même : la décision
+    micro de confiance → None vit dans _chat_wiring (testée ci-dessus)."""
+    tree = _chat_node_tree()
+    appels = [n.func.id for n in ast.walk(tree)
+              if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
+    assert "construire_gate" in appels and "LiveAudioGate" not in appels
+    source = Path(__file__).resolve().parents[2] / "didier_vision" / "nodes" / "chat_node.py"
+    assert 'config["chat_mic_trusted"]' in source.read_text(encoding="utf-8")

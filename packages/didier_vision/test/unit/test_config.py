@@ -276,3 +276,37 @@ def test_llm_model_inconnu_refuse():
     import pytest
     with pytest.raises(ValueError):
         vision_config.llm_model_from_env({"CHAT_LLM_MODEL": "openai/gpt-5"})
+
+
+# --- Micro de confiance (CHAT_MICRO_CONFIANCE, 08/11) ---------------------------------
+# La personne au micro est David (casque du banc, demain le bouton) : le gate
+# « source audio vivante » n'a plus d'objet. Valeurs gravées, même tolérance que
+# CHAT_MOUVEMENT, même garde-fou de domaine (jamais sur le Pi par une variable oubliée).
+
+@pytest.mark.parametrize("env", [{}, {"CHAT_MICRO_CONFIANCE": ""}, {"CHAT_MICRO_CONFIANCE": "off"},
+                                 {"CHAT_MICRO_CONFIANCE": "0"}])
+def test_micro_de_confiance_absent_ou_coupe_garde_le_gate(env):
+    assert vision_config.trusted_mic_from_env(env) is False
+
+
+@pytest.mark.parametrize("raw", ["1", "true", " ON ", "Oui"])
+def test_micro_de_confiance_actif(raw):
+    assert vision_config.trusted_mic_from_env({"CHAT_MICRO_CONFIANCE": raw}) is True
+
+
+def test_micro_de_confiance_valeur_inconnue_refusee():
+    with pytest.raises(ValueError, match="CHAT_MICRO_CONFIANCE"):
+        vision_config.trusted_mic_from_env({"CHAT_MICRO_CONFIANCE": "peut-être"})
+
+
+def test_micro_de_confiance_reserve_au_domaine_43():
+    overrides, warnings = vision_config.chat_env_overrides(
+        {"CHAT_MICRO_CONFIANCE": "true", "ROS_DOMAIN_ID": "43"})
+    assert overrides["chat_mic_trusted"] is True and warnings == []
+    overrides, warnings = vision_config.chat_env_overrides(
+        {"CHAT_MICRO_CONFIANCE": "true", "ROS_DOMAIN_ID": "42"})
+    assert overrides["chat_mic_trusted"] is False
+    assert len(warnings) == 1 and "CHAT_MICRO_CONFIANCE IGNORÉ" in warnings[0]
+    # Défaut du robot, sans variable : gate conservé.
+    assert vision_config.config["chat_mic_trusted"] is False
+    assert vision_config.chat_env_overrides({})[0]["chat_mic_trusted"] is False

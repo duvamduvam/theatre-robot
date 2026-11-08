@@ -185,6 +185,29 @@ def reflection_enabled_from_env(environ=os.environ):
     raise ValueError(f"{REFLECTION_ENV}={raw!r} : attendu {'/'.join(_MOVE_TRUE + _MOVE_FALSE)}")
 
 
+# Micro de CONFIANCE (08/11) : la personne au micro est David, par construction
+# — casque Bluetooth du banc (le micro est sur sa bouche, pas dans le châssis
+# qui fait sono), demain le bouton « c'est moi » de la télécommande. Le gate
+# « source audio vivante » (C3/C4, live_audio_gate) n'a alors AUCUN objet : il
+# existe pour un micro qui réentend Didier et la sono, et il fermait le micro
+# à chaque geste muet du sélecteur de jeu (séance du 08/11 : 1 phrase sur 10
+# comprise). Posée = gate non construit (clause gate=None de l'engine, §10.5
+# de l'étude). Jamais sur le Pi aujourd'hui : réservée au domaine 43 comme
+# CHAT_MOUVEMENT, jusqu'au bouton (qui la rendra dynamique, pas une variable).
+TRUSTED_MIC_ENV = "CHAT_MICRO_CONFIANCE"
+
+
+def trusted_mic_from_env(environ=os.environ):
+    """True ssi CHAT_MICRO_CONFIANCE vaut 1/true/on/oui ; False si absente/vide
+    ou 0/false/off/non ; ValueError sinon (même tolérance que CHAT_MOUVEMENT)."""
+    raw = environ.get(TRUSTED_MIC_ENV, "").strip().lower()
+    if raw == "" or raw in _MOVE_FALSE:
+        return False
+    if raw in _MOVE_TRUE:
+        return True
+    raise ValueError(f"{TRUSTED_MIC_ENV}={raw!r} : attendu {'/'.join(_MOVE_TRUE + _MOVE_FALSE)}")
+
+
 def camera_is_partner_from_env(environ, partner):
     """True ssi la personne vue par la caméra EST le partenaire de jeu :
     ROS_DOMAIN_ID == MOVE_DOMAIN_ID (simulation) ET un partenaire défini.
@@ -230,6 +253,15 @@ def chat_env_overrides(environ=os.environ):
             f"réservé au domaine {MOVE_DOMAIN_ID} (simulation) — mouvement=False")
         move = False
     overrides["chat_move_enabled"] = move
+    # Micro de confiance : même garde-fou de domaine que le mouvement — une
+    # variable oubliée sur le Pi rouvrirait la boucle sono → micro du châssis.
+    trusted = trusted_mic_from_env(environ)
+    if trusted and domain != MOVE_DOMAIN_ID:
+        warnings.append(
+            f"{TRUSTED_MIC_ENV} IGNORÉ : ROS_DOMAIN_ID={domain!r}, le micro de confiance est "
+            f"réservé au domaine {MOVE_DOMAIN_ID} (banc au casque) — gate conservé")
+        trusted = False
+    overrides["chat_mic_trusted"] = trusted
     return overrides, warnings
 
 
@@ -428,6 +460,8 @@ config = {
     # "chat_vad" ci-dessus, un objet complet pour rester source unique de
     # vérité si la dataclass gagne un champ.
     "chat_live_audio_gate": LiveAudioGateConfig(),
+    # Micro de confiance (cf. TRUSTED_MIC_ENV) : False = gate construit, le défaut du robot.
+    "chat_mic_trusted": False,
 
     # Personnalité de Didier au démarrage (didier_vision/ai/personas.py, lot D3 —
     # atelier du 2026-07-13) : « bougon » = la plus proche du registre

@@ -54,6 +54,12 @@ services:
       # passant à découvrir. Jamais posé sur le Pi (en rue, Didier ne sait pas
       # qui parle). Vide = aucun partenaire.
       - CHAT_PARTENAIRE=${CHAT_PARTENAIRE:-David}
+      # Micro de CONFIANCE (08/11, cf. vision_config.trusted_mic_from_env) : au casque,
+      # la personne au micro est David par construction — le gate « source audio
+      # vivante » (fait pour le micro du châssis qui réentend la sono) fermait le
+      # micro à chaque geste muet du sélecteur de jeu (1 phrase sur 10 comprise).
+      # Domaine 43 seulement ; sur le robot, ce sera le bouton « c'est moi ».
+      - CHAT_MICRO_CONFIANCE=${CHAT_MICRO_CONFIANCE:-true}
       # Modèle whisper du BANC (cf. vision_config.whisper_model_from_env) :
       # « small » — « base » confondait chien/chat (séance du 22/10) ; ~1,2 s
       # de STT pour 6 s de parole sur ce PC. Le Pi reste en « base ».
@@ -92,6 +98,12 @@ services:
       # Mêmes montages de sources que docker-compose-arm.yml (itération sans
       # rebuild ; conf/ apporte aussi conf/secret, jamais dans l'image).
       - ../../../conf:/home/ros2_ws/src/vision/conf
+      # Secret du banc (08/11) : depuis « Ansible nickel » (07/11) les clés vivent HORS dépôt
+      # dans ~/.config/didier/ (source unique, la même que le rôle secrets pose sur le Pi) ;
+      # conf/secret n'existe plus dans le checkout → sans ce montage chat_node meurt au
+      # démarrage (« Secret manquant ») et Didier est muet en sim. Lecture seule, par-dessus
+      # le montage de conf/ ci-dessus.
+      - ${HOME}/.config/didier/vision-conf-secret:/home/ros2_ws/src/vision/conf/secret:ro
       # didier_vision (L1e-3d) : le code (module, package.xml, setup.py, launch/) est un
       # package de packages/, à plat dans src/ comme sur le parc.
       - ../../../../../packages/didier_vision:/home/ros2_ws/src/didier_vision
