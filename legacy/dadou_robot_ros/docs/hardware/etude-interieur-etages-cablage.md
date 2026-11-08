@@ -386,7 +386,7 @@ le ronflement avant/après (étape 8 du plan), et le bruit des moteurs, jamais m
 | Ouverture de la porte | **318 mm** (M4) | la plaque de 311,8 passe avec ~3 mm par côté : **aucun faisceau ni rail ne doit empiéter sur l'ouverture** côté charnière ; à vérifier au gabarit carton |
 | Coffre | **550 mm** (M9, relevé tel quel) | égal à la hauteur du torse : à préciser si le coffre désigne tout le volume ou seulement le dessous de l'étage 1 (320 mm) |
 | Dessus de l'étage 2 | photos existantes | `docs/pictures/robot-2026-11-05/`, à relire pour la tablette et le passage du cou |
-| Pack batterie | **280 mm × 100 mm de profondeur** (M12) | hauteur et sortie du pack non relevées |
+| Pack batterie | **280 mm × 100 mm de profondeur ; hauteur ≈ hauteur d'une 18650 + 1 cm, soit ≈ 75 mm** (M12, estimation de David) | cellules debout (65 mm) : l'empreinte loge ~15 × 5 cellules, compatible avec un 7S10P (70 cellules) — à confirmer en comptant. Prévoir 85 mm de hauteur libre pour le tiroir. Sortie du pack non relevée |
 | Récepteur BLX4 | **alimenté par le convertisseur 12 V** (M13) | 12 V, départ J8 de la carte Audio (cahier P32) |
 | Moteurs de roues | **250 W chacun** (David : choisis pour limiter la vitesse) | ≈ 10,4 A nominal par moteur sous 24 V, ≈ 21 A pour les deux ; usage courant du pack ≈ 31 A, pire cumul ≈ 51 A. Le fusible général de 40 A (temporisé) et 25 A par SmartDrive restent cohérents ; la mesure roues hors sol reste à faire pour les pointes de démarrage et le blocage |
 
