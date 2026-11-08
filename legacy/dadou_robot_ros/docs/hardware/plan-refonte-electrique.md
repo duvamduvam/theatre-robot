@@ -34,6 +34,63 @@ Ce que la refonte règle, tout ensemble :
    sans gabarit essayé en place.
 5. **Chemin roues** : règles de `CLAUDE.md` inchangées. Toute la chaîne repasse le protocole
    caméra, roues hors sol, avant le sol.
+6. **Maintenable par une seule personne pressée (David, 08/11).** David est seul sur
+   l'électronique, avec peu de temps : chaque geste courant doit se faire **sans rien
+   démonter ni débrancher**. C'est un critère de conception, pas un confort : l'implantation
+   (étape 2) et chaque carte (étape 4) sont vérifiées contre la liste du §2 bis avant d'être
+   figées. Ce qu'on ne peut pas faire sans démonter se fera rarement, donc mal.
+
+## 2 bis. Contrôle de maintenabilité — les gestes qui doivent se faire sans démonter
+
+À dérouler sur le plan d'implantation, puis sur chaque carte avant la commande. Un geste qui
+échoue = une modification du plan, pas une consigne « faire attention ».
+
+| Geste | Ce que ça impose | État au 08/11 |
+|---|---|---|
+| Changer un fusible qui a sauté | tous les fusibles en façade (boîtes de distribution) ou sur le bord accessible d'une carte ; **une boîte de fusibles de rechange dans le robot** ; calibres gravés ou étiquetés à côté de chaque porte-fusible | boîtes : oui ; cartes : BLX-A à placer en bord accessible ; rechange : à prévoir |
+| Mesurer un rail ou une masse à l'oscilloscope | points de mesure sur les cartes et dans les boîtes (encadré ci-dessus), TP0 câblé à demeure | à ajouter aux cartes |
+| Isoler un domaine pour chercher une panne | **interrupteurs d'isolement** par domaine, sur le + après son fusible (§2 ter) | à décider |
+| Débrancher une carte entière | un seul tronc par carte, fiches débrochables (2EDG 5,08), nappes à détrompeur ; pas de fil soudé sur une carte | déjà la règle des cartes 100 × 100 |
+| Sortir une carte ou un étage | étages coulissants par la porte ; vis accessibles de face ; rien de vissé sous un autre élément | étude intérieur, à vérifier au gabarit |
+| Changer un Pi, sa SD, le flasher | SD et ports USB vers la porte ; nappe GPIO détrompée ; alimentation du Pi par connecteur, pas soudée | support Pi à traîneaux (étude) : vérifier l'orientation des ports |
+| Brancher le réseau ou l'USB d'atelier | RJ45 du routeur et un port USB de chaque Pi atteignables porte ouverte | routeur : support à refaire (relevé) |
+| Régler les molettes (ASME, VoiceTone) et lire le voltmètre | molettes face à la porte ; voltmètre visible porte fermée ou dans un hublot | VoiceTone : support sur un pan (étude) |
+| Changer un servo ou un ruban LED | connecteur côté carte ET côté tête : jamais une épissure au milieu du faisceau | fiches servo tenues par barrette imprimée (étude) |
+| Charger, mettre sous tension, arrêter d'urgence, réarmer | prise de charge en panneau, interrupteur général, coup-de-poing et bouton d'armement en façade | prise de charge : décidée ; coup-de-poing : en stock ; armement : bloc marche/arrêt du stock |
+| Retrouver un fil | étiquette Marklife à chaque bout, repère du cahier, couleur par tension | règle du cahier |
+
+Compléments de méthode, pour la même raison :
+- **une seule référence par type de pièce** (fusibles, fiches, visserie) : un seul sachet de rechange ;
+- **tout ce qui se règle se photographie avant** (molettes, cavaliers) et la photo va dans `docs/hardware/photos/` ;
+- **pas de pièce unique sans rechange en stock** pour ce qui peut lâcher en spectacle : fusibles, porte-fusibles, un PCA9685, un Pi.
+
+## 2 ter. Interrupteurs d'isolement par domaine (proposé le 08/11, à décider)
+
+Idée de David : des interrupteurs placés pour **isoler une partie** sans rien débrancher, pour
+chercher une panne ou travailler sur un domaine robot allumé. Le stock en a : 2 sectionneurs
+à bouton rouge `YH02-A` (16 A AC), 3-4 bascules `ON-OFF-ON 15 A 250 VAC`, 25-35 rockers de
+calibre non lu, 1-2 coupe-circuits à poignée. Proposition, chaque interrupteur **sur le + de
+son domaine, après son fusible** :
+
+| Interrupteur | Coupe | Sert à | Calibre à tenir (continu) |
+|---|---|---|---|
+| Général | 24 V permanent, après le fusible général | tout éteindre sans débrancher le pack | ≥ 40 A : les bascules AC ne conviennent pas, **sectionneur dédié** à choisir |
+| Moteurs | la bobine du relais 40 A, en série avec le coup-de-poing | couper roues + bras sans toucher au reste | quelques dizaines de mA : n'importe quel rocker |
+| Audio | entrée de la SD-150B-12 | faire taire l'audio ou le sortir du jeu pour une mesure de bruit | 10 A (7,5 A d'entrée) : bascule 15 A du stock, DC à dérater |
+| Vision | entrée de la SD-50B-5 n° 1 | redémarrer le Pi 5 seul | 5 A : bascule ou rocker |
+| Contrôle | entrée de la SD-50B-5 n° 2 | redémarrer le Pi 4 seul | 5 A : idem |
+| Servos 12 V | entrée de la SD-50B-12 | yeux et boucle d'arrêt — ⚠️ coupe aussi la bobine du relais : équivaut à un arrêt | 5 A |
+
+Deux règles non négociables :
+1. **Aucun interrupteur ne doit pouvoir contourner la chaîne d'arrêt.** Couper « Moteurs »
+   ou « Servos 12 V » arrête ; aucun interrupteur ne *réarme* ni ne shunte le coup-de-poing.
+2. **Les calibres des interrupteurs sont donnés en alternatif.** En continu, l'arc ne s'éteint
+   pas tout seul : un « 15 A 250 VAC » tient en gros 5 à 8 A sous 24-28 V DC, à lire sur sa
+   fiche s'il y en a une. Pas de bascule AC sur le 24 V des moteurs ni sur le général.
+
+Coût : zéro pour tout sauf le général (sectionneur 40 A DC à acheter, prix non lu) ; place :
+une rangée d'interrupteurs étiquetés en façade du coffre, à prévoir dans l'implantation.
+**À décider par David** : lesquels on pose, et où ils sont accessibles (porte ouverte suffit ?).
 
 ⚠️ **Le retour arrière ne sera plus un simple rebranchement.** Le plan de vérification disait
 de garder l'ancienne carte montée : ce n'est plus possible si tout le câblage change. On garde
