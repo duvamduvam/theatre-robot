@@ -374,6 +374,28 @@ le ronflement avant/après (étape 8 du plan), et le bruit des moteurs, jamais m
 
 ---
 
+## 7 bis. Mesures relevées par David le 08/11
+
+| Mesure | Valeur | Conséquence |
+|---|---|---|
+| Épaisseur du bois | **18 mm** | — |
+| Largeur d'un pan | **145 mm à l'extérieur, 130 à l'intérieur** | 145 − 2 × 18 × tan 22,5° = 130,1 : **octogone régulier**, angles de 135° entre pans, coupes à 22,5° (M2 résolu par le calcul) |
+| Hauteur du torse | **550 mm** | — |
+| Étages | **étage 1 à 320 mm, étage 2 à 430 mm** | 110 mm entre les deux ; 120 mm au-dessus de l'étage 2 jusqu'à 550 ; 320 mm sous l'étage 1. Référence supposée : le bas du torse, **à confirmer** |
+| Charnière de la porte | **côté gauche** | M7 ; vue supposée de face, à confirmer vue de l'intérieur |
+
+Géométrie calculée (intérieur, bois à bois) : **313,8 mm entre pans latéraux**, 339,7 mm entre
+coins, pans diagonaux arrière de 91,9 mm de profondeur, pans latéraux utiles de 130 mm.
+**Plaque d'étage : 311,8 × 218,9 mm** (modèle `plans/elec/etages`, au lieu de 212 × 167).
+
+Deux points ouverts que ces chiffres font apparaître :
+1. **M1 : sur quoi s'appuie l'étage actuel ?** L'étage imprimé fait 212 de large pour 314 entre
+   pans : soit il est porté par des montants intérieurs (qui réduisent la largeur utile), soit
+   il ne remplit pas la section. À regarder avant de dessiner la plaque au maximum.
+2. **CNC : 312 × 219 ne rentre pas dans la CNC d'eMode (300 × 180).** Il faut une CNC d'au moins
+   ~330 × 240 avec le bridage, ou couper la plaque en deux (joint sous une carte), ou le laser
+   d'eMode (726 × 432). À trancher selon la machine que David utilisera.
+
 ## 7. Les mesures qui ferment l'étude
 
 Liste fermée. Les cinq premières décident de la forme des plaques ; sans elles, rien ne se
