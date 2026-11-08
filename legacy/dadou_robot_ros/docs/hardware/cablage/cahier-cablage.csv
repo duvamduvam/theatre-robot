@@ -1,5 +1,5 @@
 repere;de;a;famille;tension;section_mm2;fusible_A;connecteur;chemin;longueur_cm;couleur;statut;note
-P01;Pack + (sortie BMS);Fusible général;puissance;24V;6;40;cosse œillet M6;caisse basse;;rouge;a_cabler;calibre du fusible général à fixer sur le courant mesuré des 2 roues (jamais mesuré) ; lame MIDI ou verre 6×32 selon support
+P01;Pack + (sortie BMS);Fusible général;puissance;24V;6;40;cosse œillet M6;caisse basse;;rouge;a_cabler;calibre du fusible général : moteurs 250 W (≈ 10,4 A chacun, David 08/11), 40 A temporisé cohérent, pointes à mesurer ; lame MIDI ou verre 6×32 selon support
 P02;Fusible général;Barre 24 V permanente;puissance;24V;6;40;cosse œillet;caisse basse;;rouge;a_cabler;la barre permanente alimente ce qui doit survivre à l'arrêt d'urgence
 P03;Barre 24 V permanente;Relais 40 A (contact);puissance;24V;6;40;cosse œillet;caisse basse;;rouge;a_cabler;relais au plus près du pack (relevé §5.2)
 P04;Relais 40 A (contact);Barre 24 V moteurs;puissance;24V_MOT;6;40;cosse œillet;caisse basse;;orange;a_cabler;tout ce qui est en aval est coupé par le coup-de-poing et le chien de garde
@@ -30,7 +30,7 @@ P28;SD-150B-12 OUT;Ampli Focal Impulse 4.320 (+12 V / REM);puissance;12V_AUDIO;4
 P29;SD-150B-12 OUT;Carte Audio J1 12V-IN;puissance;12V_AUDIO;0.75;2;2EDG 5,08 2 pôles (J1);coffre → étage milieu (côté charnière);;violet;a_cabler;F1 T2A sur carte ; courant du klaxon inconnu
 P30;SD-150B-12 OUT;TC Helicon VoiceTone C1 (alim 12 V);puissance;12V_AUDIO;0.75;2;jack DC du VoiceTone (Ø à lire);coffre → étage milieu;;violet;a_cabler;audio-relays/DESIGN.md : alim hors carte → départ fusiblé au bloc 12 V audio ; polarité du jack à lire
 P31;Carte Audio J7 KLAXON-12V;Klaxon;puissance;12V_AUDIO;1.5;10;2EDG 5,08 2 pôles (J7);étage milieu → klaxon;;violet;a_cabler;relais K3 10 A ; courant du klaxon à mesurer
-P32;Carte Audio J8 HF-12V;Récepteur Shure BLX4;puissance;12V_AUDIO;0.75;2;2EDG 5,08 2 pôles (J8) → alim du BLX4;étage milieu;;violet;a_cabler;tension d'alimentation du BLX4 à lire sur son bloc (12-15 V ?) : non écrit
+P32;Carte Audio J8 HF-12V;Récepteur Shure BLX4;puissance;12V_AUDIO;0.75;2;2EDG 5,08 2 pôles (J8) → alim du BLX4;étage milieu;;violet;a_cabler;BLX4 alimenté en 12 V (David, 08/11)
 P33;Carte Sécurité J43 RELAIS-PUISSANCE;Bobine du relais 40 A;logique;12V;0.75;3;2EDG 5,08 2 pôles (J43);colonne logique → caisse basse;;jaune;a_cabler;paire torsadée, toute la hauteur ; débranchement = protocole caméra ; courant bobine à mesurer
 P34;Carte Sécurité J42 COUP-DE-POING;Bouton coup-de-poing (NF);logique;12V;0.75;3;2EDG 5,08 2 pôles (J42);colonne logique → emplacement du bouton (à trouver);;jaune;a_cabler;boucle 12 V électromécanique ; emplacement accessible encore à choisir (relevé §4.7)
 P35;Carte Sécurité J41 ARM-DEPORTE;Bouton d'armement déporté;logique;3.3V;0.5;;2EDG 5,08 2 pôles (J41);colonne logique → emplacement du bouton;;blanc;a_cabler;
