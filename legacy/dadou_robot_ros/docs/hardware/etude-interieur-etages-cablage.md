@@ -417,8 +417,15 @@ Idée de David : garder les 4 convertisseurs dans la caisse, mais **posés sur l
 (debout sur leur côté long) au lieu d'à plat. Chiffres : pack 28 000 mm² + convertisseurs sur
 la tranche 28 076 mm² = **35 % du fond** (au lieu de 60 % à plat) ; reste 104 000 mm² pour les
 2 SmartDrive, le relais, le fusible général, les barres et les câbles. Hauteurs : SD-50 97 mm,
-SD-150 110 mm, dans les 150 mm de la caisse : **rien à remonter**, sauf si les SmartDrive avec
-leur câblage dépassent (leurs cotes ne sont pas relevées).
+SD-150 110 mm, dans les 150 mm de la caisse : **rien à remonter.**
+
+**SmartDrive40 (Cytron MDS40B)**, cotes lues chez un revendeur le 08/11 (evelta.com, page
+produit) : carte **105 × 106 × 38 mm**, **125 × 107 × 47 mm avec sa platine** ; 10-45 V, 40 A
+continu, 80 A en pointe. Les deux avec platine : 26 750 mm². **Pack + convertisseurs sur la
+tranche + 2 SmartDrive = 82 826 mm², soit 52 % du fond** ; il reste ~77 000 mm² pour le relais,
+le fusible général, les barres et les câbles. Hauteur 47 mm + borniers et câbles : très loin
+des 150 mm. **Tout tient dans la caisse, sans rien remonter.** À vérifier sur le robot : que
+le modèle monté est bien le MDS40B (la sérigraphie lue au relevé dit « SmartDrive 4.0 / DS40B »).
 
 Conditions pour que ça reste propre :
 - **SD-150B-12 dans le coin opposé aux SmartDrive**, sorties audio vers la colonne : c'est un
