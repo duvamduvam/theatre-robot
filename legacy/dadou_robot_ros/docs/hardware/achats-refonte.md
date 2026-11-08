@@ -54,6 +54,8 @@ articles sont marqués « Presque épuisé » : si un lien ne donne plus la vari
 
 Pas encore dans le panier : lames ATO 25 A de rechange (optionnel). Cosses : en stock (photo du 08/11).
 
+Ajouts du 08/11 dans le même panier : porte-fusible général et quelques fusibles (pris par David, calibre définitif après mesure du courant des roues), RPLIDAR C1 (1005006190309082, 66,39 €), et **un lot de porte-fusibles BLX-A pour CI** (annonce « [30-10PCS] BLX-A », 2,12 €, 250 vendus). ⚠️ La carte Puissance est dessinée pour des **clips Keystone 3512, entraxe 23 mm** (8 empreintes `Fuseholder_Clip-5x20mm_Keystone_3512_Inline_P23`) : le BLX-A n'y tombe pas. Décision à prendre pendant la session de corrections : mesurer l'entraxe des BLX-A reçus et changer l'empreinte si les 8 tiennent sur la carte, sinon acheter 16 clips. ⚠️ Retirer du panier le SD-150B-12 AliExpress (57,39 €) : retenu chez alimentatorishop.
+
 ### Commande 2 — un seul distributeur UE, après V1 et V2 (cartes, modules, alimentation, câble)
 
 | Pièce | Qté | Pourquoi / piège | Prix lu |
