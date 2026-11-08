@@ -411,7 +411,28 @@ Deux points ouverts que ces chiffres font apparaître :
    compte, c'est la vitesse de broche et l'avance réglées ensemble, avec plusieurs passes peu
    profondes. Faire un essai sur une chute avant la vraie plaque.
 
-### Convertisseurs : monter dans le bas du torse (✅ VALIDÉ par David le 08/11)
+### Convertisseurs : TOUT RESTE DANS LA CAISSE, convertisseurs debout sur la tranche (David, 08/11 — remplace la proposition ci-dessous)
+
+Idée de David : garder les 4 convertisseurs dans la caisse, mais **posés sur la tranche**
+(debout sur leur côté long) au lieu d'à plat. Chiffres : pack 28 000 mm² + convertisseurs sur
+la tranche 28 076 mm² = **35 % du fond** (au lieu de 60 % à plat) ; reste 104 000 mm² pour les
+2 SmartDrive, le relais, le fusible général, les barres et les câbles. Hauteurs : SD-50 97 mm,
+SD-150 110 mm, dans les 150 mm de la caisse : **rien à remonter**, sauf si les SmartDrive avec
+leur câblage dépassent (leurs cotes ne sont pas relevées).
+
+Conditions pour que ça reste propre :
+- **SD-150B-12 dans le coin opposé aux SmartDrive**, sorties audio vers la colonne : c'est un
+  convertisseur isolé, mais ses fils de sortie ne doivent pas longer les fils moteurs ;
+- **ventilation de la caisse** : convertisseurs et drivers chauffent dans une tôle fermée,
+  quelques ouïes basses et hautes, et ne pas les coller entre eux (convection des SD) ;
+- **4 sorties montent vers la boîte de distribution** (12 V, 12 V audio, 5 V × 2) au lieu d'un
+  seul 24 V : à prévoir dans la colonne puissance, gainées par tension ;
+- les convertisseurs se changent rarement : un accès par la caisse suffit, les fusibles et
+  les LED restent dans la boîte, porte ouverte (règle 6).
+
+L'octaveur monte toujours à l'étage audio.
+
+### (Proposition précédente, remplacée) Convertisseurs dans le bas du torse
 
 **Proposition : les 4 convertisseurs quittent la caisse et montent dans la zone basse du torse
 (0 → 320 mm), debout sur les pans, à côté de la boîte de distribution.** La caisse garde ce qui
