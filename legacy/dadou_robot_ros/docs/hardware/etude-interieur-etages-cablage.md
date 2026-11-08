@@ -411,7 +411,7 @@ Deux points ouverts que ces chiffres font apparaître :
    compte, c'est la vitesse de broche et l'avance réglées ensemble, avec plusieurs passes peu
    profondes. Faire un essai sur une chute avant la vraie plaque.
 
-### Convertisseurs : monter dans le bas du torse (avis du 08/11, à décider par David)
+### Convertisseurs : monter dans le bas du torse (✅ VALIDÉ par David le 08/11)
 
 **Proposition : les 4 convertisseurs quittent la caisse et montent dans la zone basse du torse
 (0 → 320 mm), debout sur les pans, à côté de la boîte de distribution.** La caisse garde ce qui
@@ -425,6 +425,13 @@ porte du gros courant : pack, fusible général, relais 40 A, barre 24 V moteurs
 | Bruit audio | la SD-150B-12 s'éloigne des drivers PWM et des moteurs (le ronflement est le problème n° 1 de la parole) |
 | Ça tient | pan intérieur 130 mm : SD-50 (97 de large) et SD-150 (110) debout ; hauteur 159 et 199 mm dans 320 |
 | Maintenance | fusibles, LED et convertisseurs au même endroit, porte ouverte (règle 6) |
+
+**L'octaveur suit (David, 08/11).** Le TC Helicon VoiceTone C1, sanglé aujourd'hui au fond du
+bas du torse, libère la zone des convertisseurs et monte à **l'étage milieu, avec l'audio**
+(carte Audio, récepteur HF) — c'était déjà la proposition du §3.3. Il y gagne : signal audio
+court entre carte Audio, octaveur et ampli, loin des convertisseurs et des moteurs ; molettes
+**face à la porte**, réglables porte ouverte (règle 6). À relever : ses dimensions, la position
+de ses jacks et de son alimentation, et la hauteur molettes comprises (l'étage offre 110 mm).
 
 Coût : un seul câble 24 V permanent monte de la caisse vers le torse (6 mm², déjà au cahier
 comme « alimentation du bloc »), au lieu de quatre sorties de convertisseurs. Supports : les
