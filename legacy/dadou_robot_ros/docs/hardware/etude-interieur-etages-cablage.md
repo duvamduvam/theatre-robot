@@ -386,6 +386,7 @@ le ronflement avant/après (étape 8 du plan), et le bruit des moteurs, jamais m
 | Ouverture de la porte | **318 mm** (M4) | la plaque de 311,8 passe avec ~3 mm par côté : **aucun faisceau ni rail ne doit empiéter sur l'ouverture** côté charnière ; à vérifier au gabarit carton |
 | Coffre | **550 mm = tout le volume du torse en bois** (David, 08/11) | trois zones au-dessus du cadre métallique : **0 → 320 mm** sous l'étage 1, **320 → 430 mm** entre étages (110 mm, cartes et modules), **430 → 550 mm** au-dessus de l'étage 2 (120 mm). ⚠️ **Corrigé par David le 08/11 : les convertisseurs sont DANS LE CADRE MÉTALLIQUE**, avec le pack et les SmartDrive, pas dans le torse. Conséquences : la SD-150B-12 (199 × 110 × 50) et la boîte de distribution du coffre doivent tenir dans le cadre (cotes intérieures du cadre **non relevées**). **Bas du torse (zone 0 → 320) : le départ des alimentations** (David, 08/11) — c'est là que va la boîte de distribution du coffre (`plans/elec/bornier-distribution`), à la place du bornier gris, alimentée par les convertisseurs du cadre juste dessous : trajets courts, fusibles et LED de contrôle à hauteur de main porte ouverte |
 | Dessus de l'étage 2 | photos existantes | `docs/pictures/robot-2026-11-05/`, à relire pour la tablette et le passage du cou |
+| Caisse basse (cadre métallique) | **400 × 400 mm, 150 mm de haut** (David, 08/11) | les 4 convertisseurs y prennent aujourd'hui **la place des drivers moteur** (David). À plat, pack + 4 convertisseurs couvrent déjà 60 % du fond, avant SmartDrive, relais, fusible général et câbles |
 | Pack batterie | **280 mm × 100 mm de profondeur ; hauteur ≈ hauteur d'une 18650 + 1 cm, soit ≈ 75 mm** (M12, estimation de David) | cellules debout (65 mm) : l'empreinte loge ~15 × 5 cellules, compatible avec un 7S10P (70 cellules) — à confirmer en comptant. Prévoir 85 mm de hauteur libre pour le tiroir. Sortie du pack non relevée |
 | Récepteur BLX4 | **alimenté par le convertisseur 12 V** (M13) | 12 V, départ J8 de la carte Audio (cahier P32) |
 | Moteurs de roues | **250 W chacun** (David : choisis pour limiter la vitesse) | ≈ 10,4 A nominal par moteur sous 24 V, ≈ 21 A pour les deux ; usage courant du pack ≈ 31 A, pire cumul ≈ 51 A. Le fusible général de 40 A (temporisé) et 25 A par SmartDrive restent cohérents ; la mesure roues hors sol reste à faire pour les pointes de démarrage et le blocage |
@@ -409,6 +410,25 @@ Deux points ouverts que ces chiffres font apparaître :
    mieux** : une avance trop faible fait frotter la fraise, le PMMA chauffe et fond. Ce qui
    compte, c'est la vitesse de broche et l'avance réglées ensemble, avec plusieurs passes peu
    profondes. Faire un essai sur une chute avant la vraie plaque.
+
+### Convertisseurs : monter dans le bas du torse (avis du 08/11, à décider par David)
+
+**Proposition : les 4 convertisseurs quittent la caisse et montent dans la zone basse du torse
+(0 → 320 mm), debout sur les pans, à côté de la boîte de distribution.** La caisse garde ce qui
+porte du gros courant : pack, fusible général, relais 40 A, barre 24 V moteurs, 2 SmartDrive.
+
+| Pourquoi | Détail |
+|---|---|
+| Place | la caisse fait 160 000 mm² ; pack + 4 convertisseurs à plat en prennent 96 000. Les drivers retrouvent leur place |
+| Courants forts courts | moteurs → SmartDrive → pack restent dans la caisse : 25 A sur quelques dizaines de cm |
+| Distribution directe | les sorties 12 V et 5 V des convertisseurs entrent dans la boîte de distribution juste à côté |
+| Bruit audio | la SD-150B-12 s'éloigne des drivers PWM et des moteurs (le ronflement est le problème n° 1 de la parole) |
+| Ça tient | pan intérieur 130 mm : SD-50 (97 de large) et SD-150 (110) debout ; hauteur 159 et 199 mm dans 320 |
+| Maintenance | fusibles, LED et convertisseurs au même endroit, porte ouverte (règle 6) |
+
+Coût : un seul câble 24 V permanent monte de la caisse vers le torse (6 mm², déjà au cahier
+comme « alimentation du bloc »), au lieu de quatre sorties de convertisseurs. Supports : les
+joues `support-sd50b5` existent, à décliner pour la SD-150.
 
 ## 7. Les mesures qui ferment l'étude
 
