@@ -93,9 +93,19 @@ une rangée d'interrupteurs étiquetés en façade du coffre, à prévoir dans l
 **Décidé par David le 08/11 : tout accès technique se fait porte ouverte, jamais de
 l'extérieur** — interrupteurs d'isolement, fusibles, points de mesure, ports, molettes. Seules
 exceptions, les commandes critiques, qui restent en façade et utilisables porte fermée :
-le **coup-de-poing**, le **bouton d'armement**, l'**interrupteur général** et la **prise de
-charge** (le voltmètre, s'il est en hublot, est un confort, pas une exception). Reste à
-décider : la liste exacte des interrupteurs posés, parmi ceux du tableau.
+le **coup-de-poing**, le **bouton d'armement**, l'**interrupteur général**, la **prise de
+charge** et le **voltmètre** (ajouté par David le 08/11 : pendant une intervention, lire la
+tension sans ouvrir a du sens). Reste à décider : la liste exacte des interrupteurs posés.
+
+**Suivre la consommation (David, 08/11) : deux besoins, deux moyens.**
+- *Lire d'un coup d'œil* : le mini-voltmètre en façade, sur J32 de la carte Puissance. Il ne
+  donne qu'une tension, pas un courant ni un état de charge.
+- *Remonter au logiciel* (journal, page scène, alerte) : le BMS mesure déjà courant, tension
+  par cellule, état de charge en Ah et températures. **Branche A0 de l'étude odométrie
+  (§6 ter), zéro matériel : lire le BMS en Bluetooth depuis le Pi 4**, essai de dix minutes
+  avec l'appli du BMS posée à la place du Pi. Si la radio ne passe pas depuis la caisse :
+  branche A, par fil, via la carte Odométrie. Pas de shunt ni d'INA226 sur le 24 V pour ça :
+  mesurer 40 A proprement demande un shunt externe dimensionné, et le BMS le fait déjà.
 
 ⚠️ **Le retour arrière ne sera plus un simple rebranchement.** Le plan de vérification disait
 de garder l'ancienne carte montée : ce n'est plus possible si tout le câblage change. On garde
