@@ -66,6 +66,9 @@
       - "--exclude=.venv/"
       - "--exclude=.pytest_cache/"
       - "--exclude=/conf/docker/x86/workspace/"
+      # Même déchet côté sim (workspace colcon de la fumée, gitignoré) : vu rouge le 08/11 pendant
+      # une fumée. Disparaît avec la copie « projet » en L1e-4b.
+      - "--exclude=/conf/docker/sim/workspace/"
       - "--exclude=/conf/secret"
       # Sentinelles de build COMMITÉES depuis L0 (robot/change, vision/change) : la copier
       # recréait la sentinelle du robot à chaque passage (rsync « changed » sans fin) ; elle
