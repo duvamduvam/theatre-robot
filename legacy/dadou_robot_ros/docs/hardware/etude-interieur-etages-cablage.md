@@ -392,9 +392,10 @@ Deux points ouverts que ces chiffres font apparaître :
 1. **M1 : sur quoi s'appuie l'étage actuel ?** L'étage imprimé fait 212 de large pour 314 entre
    pans : soit il est porté par des montants intérieurs (qui réduisent la largeur utile), soit
    il ne remplit pas la section. À regarder avant de dessiner la plaque au maximum.
-2. **CNC : 312 × 219 ne rentre pas dans la CNC d'eMode (300 × 180).** Il faut une CNC d'au moins
-   ~330 × 240 avec le bridage, ou couper la plaque en deux (joint sous une carte), ou le laser
-   d'eMode (726 × 432). À trancher selon la machine que David utilisera.
+2. ~~CNC trop petite~~ **Réglé le 08/11 : CNC du frère de David, 1500 × 1500 mm.** Toutes les
+   plaques d'une pièce, et les 4 niveaux tiennent sur une seule plaque de PMMA (chute minimale).
+   À demander au frère : diamètre de fraise disponible (fixe `R_COIN` intérieur, ≥ 3 mm prévu),
+   format accepté (DXF ou SVG), et s'il a déjà fraisé du PMMA coulé (vitesse, refroidissement).
 
 ## 7. Les mesures qui ferment l'étude
 
