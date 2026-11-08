@@ -20,6 +20,54 @@ Pièces jointes :
 
 ---
 
+## 0 bis. Cadre de l'étude complète — semaine du 10/11 (David, 08/11)
+
+**Commande de David.** « Ça doit être super clean, c'est un peu ma carte de visite. Pro et
+design. » L'intérieur de Didier se montre : à un technicien de salle, à un partenaire, en
+photo. L'étude complète livre donc **des visuels de toute l'organisation interne**, pas
+seulement des cotes. Trois exigences nouvelles s'ajoutent au cadre du §1, sans en retirer :
+
+1. **Propre à montrer.** Aucun fil en l'air, aucune surlongueur lovée, aucune épissure :
+   goulottes ou peignes imprimés dans les deux colonnes, faisceaux gainés, une couleur par
+   tension (§5.3), étiquette Marklife à chaque bout, visserie et entretoises d'une seule
+   famille, cartes alignées sur une même trame. Ce qui n'est pas beau est suspect : un
+   faisceau désordonné cache toujours un fil qu'on ne sait plus suivre.
+2. **Maintenable seul, sans démonter** (règle 6 du plan, grille §2 bis) : l'implantation est
+   déroulée contre la grille avant d'être figée. Accès technique porte ouverte seulement ;
+   en façade : coup-de-poing, armement, général, prise de charge, voltmètre.
+3. **LED de contrôle en couleur**, lisibles porte ouverte, pour voir d'un coup d'œil ce qui
+   est alimenté : **une LED par rail sur les boîtes de distribution**, dans la couleur du
+   code des fils (rouge 24 V permanent, orange 24 V moteurs, jaune 12 V, violet 12 V audio,
+   bleu 5 V contrôle et 5 V vision), chacune derrière son fusible — une LED éteinte = fusible
+   sauté ou domaine isolé. Plus deux LED d'état sur la carte Sécurité : **chaîne d'arrêt armée**
+   (vert) / **arrêt** (rouge), et **vie du Pi 4** (clignotant). Sur 24 V, résistance série
+   calculée pour 2 mA (≈ 12 kΩ, 0,06 W) ; LED 3 mm en façade des boîtes, perçage prévu dans le
+   modèle `plans/elec/bornier-distribution`. Rien de plus : une rangée de LED qui clignotent
+   sans raison n'est plus un tableau de bord.
+
+**Étages : PMMA coulé 5 mm fraisé à la CNC** (David, 08/11 — change l'avis D2 du §4.3, qui
+préférait le laser). Conséquences : rayons intérieurs ≥ rayon de fraise (3 mm, à mettre en
+paramètre du modèle), contour et trous en une passe, plaque bridée sur martyr ; **la CNC
+d'eMode fait 300 × 180 mm, une plaque de 212 × 167 y entre de justesse** — à confirmer avec
+la machine réelle avant de dessiner la plaque au maximum des pans. PMMA coulé obligatoire
+(l'extrudé fond et colle à la fraise).
+
+**Livrables de l'étude complète**, tous dans ce dossier et `plans/elec/` :
+
+| Livrable | Forme | Outil |
+|---|---|---|
+| Vue éclatée du torse : 4 niveaux + porte, chaque élément à sa place | rendu 3D | OpenSCAD, modèle `etages/etage.scad` étendu en « montage complet » avec fantômes de tous les éléments du §2 |
+| Une vue de dessus par niveau, cotée, avec chemins de câbles et colonnes | PNG + DXF | idem, projection par niveau |
+| Façade et porte ouverte : ce qu'on voit, ce qu'on touche (interrupteurs, LED, fusibles, ports) | dessin 2D | SVG généré, comme `cablage/bornier-distribution.svg` |
+| Schéma de câblage par niveau, dérivé du cahier (repères, couleurs, sections) | SVG | `cablage/schema_*.py` existants, étendus |
+| Grille de maintenabilité remplie, geste par geste | tableau | plan §2 bis |
+| Par carte : bord de sortie de chaque connecteur, droit ou coudé, hauteur libre | tableau | entrée de la session de corrections PCB |
+| Fichiers de découpe des étages | DXF | `etage.scad`, après mesures et gabarit carton |
+
+**Préalable non négociable : les mesures M1-M13 du §7.** Sans elles, les visuels seraient
+des hypothèses dessinées proprement, ce qui est pire qu'un croquis. La séance commence par
+le robot, pas par l'écran. Une feuille de mesures imprimable est à produire en premier.
+
 ## 0. En bref
 
 1. **Cadre fixé par David le 06/11** (§1) : toute la hauteur du torse est reprise, de la
@@ -379,7 +427,7 @@ SmartDrive, tiroir du pack, support du VoiceTone, boîtes de distribution (dessi
 
 | # | Décision | État |
 |---|---|---|
-| D2 | Matière et découpe | **Avis : PMMA coulé 5 mm, laser eMode, plaque d'essai d'abord ; polycarbonate fraisé en repli** (§4.3) |
+| D2 | Matière et découpe | **DÉCIDÉ par David le 08/11 : PMMA coulé 5 mm fraisé à la CNC** (§0 bis). Rayons intérieurs ≥ 3 mm, plaque d'essai d'abord ; laser en repli si la CNC ne prend pas la plaque |
 | D3 | Deux cartes dans la largeur de l'étage milieu | **au gabarit carton** après M1 ; repli si ça ne tient pas : carte Moteurs sur un pan, debout, à côté de la pile |
 | D5 | Échange des broches 7 et 8 de la nappe | après M8 ; à faire si > 25 cm |
 | D6 | Point de masse en étoile | **proposé §6**, relecture indépendante avant câblage |
