@@ -62,6 +62,13 @@ Les étapes 4 et 5 peuvent avancer en parallèle une fois 3 fini.
 > (`cablage/`, 74 fils, contrôle section/fusible), masse en étoile (D6 proposée), modèle OpenSCAD
 > des plaques (`plans/elec/etages`), 14 mesures qui ferment l'étude (§7). D2 avis : PMMA 5 mm laser.
 >
+> ⚠️ **Ordre imposé (David, 08/11) : finir l'étude de réorganisation du corps AVANT les corrections
+> des cartes.** L'implantation fixe où arrive chaque faisceau, donc **sur quel bord de chaque carte
+> doivent sortir les connecteurs, et s'ils sont droits ou coudés** (embases 2EDG 5,08, nappes IDC,
+> borniers). Corriger les PCB avant, c'est risquer de les reprendre. À trancher par carte : bord de
+> sortie, droit ou coudé, hauteur libre au-dessus (étages coulissants), accès au tournevis une fois
+> la carte en place. Même règle pour l'empreinte des porte-fusibles BLX-A.
+>
 > **Achats, analyse complète du 08/11** : [`achats-refonte.md`](achats-refonte.md) — trois
 > commandes (AliExpress maintenant, distributeur UE après corrections et mesures, JLCPCB), ce
 > que le stock couvre, les vérifications d'atelier qui font tomber des lignes.

@@ -38,7 +38,7 @@ relecture a déjà changé des empreintes une fois (isolateur I²C, 05/11).
 
 Hors UE : 3,60 € de droits par catégorie, donc grouper en une fois.
 
-#### Panier AliExpress du 08/11 — prêt, **NON PAYÉ** (connexion bloquée : code par mail jamais reçu)
+#### Panier AliExpress du 08/11 — ✅ **COMMANDÉ le 08/11** (David), avec le SD-150B-12 chez alimentatorishop.com
 
 Relevé sur la capture du panier de David, 5 articles, promo jusqu'au 18/11 à 23 h 59. Plusieurs
 articles sont marqués « Presque épuisé » : si un lien ne donne plus la variante, revenir ici.
@@ -54,7 +54,7 @@ articles sont marqués « Presque épuisé » : si un lien ne donne plus la vari
 
 Pas encore dans le panier : lames ATO 25 A de rechange (optionnel). Cosses : en stock (photo du 08/11).
 
-Ajouts du 08/11 dans le même panier : porte-fusible général et quelques fusibles (pris par David, calibre définitif après mesure du courant des roues), RPLIDAR C1 (1005006190309082, 66,39 €), et **un lot de porte-fusibles BLX-A pour CI** (annonce « [30-10PCS] BLX-A », 2,12 €, 250 vendus). ⚠️ La carte Puissance est dessinée pour des **clips Keystone 3512, entraxe 23 mm** (8 empreintes `Fuseholder_Clip-5x20mm_Keystone_3512_Inline_P23`) : le BLX-A n'y tombe pas. Décision à prendre pendant la session de corrections : mesurer l'entraxe des BLX-A reçus et changer l'empreinte si les 8 tiennent sur la carte, sinon acheter 16 clips. ⚠️ Retirer du panier le SD-150B-12 AliExpress (57,39 €) : retenu chez alimentatorishop.
+Ajouts du 08/11 dans le même panier : porte-fusible général et quelques fusibles (pris par David, calibre définitif après mesure du courant des roues), RPLIDAR C1 (1005006190309082, 66,39 €), et **un lot de porte-fusibles BLX-A pour CI** (annonce « [30-10PCS] BLX-A », 2,12 €, 250 vendus). ⚠️ La carte Puissance est dessinée pour des **clips Keystone 3512, entraxe 23 mm** (8 empreintes `Fuseholder_Clip-5x20mm_Keystone_3512_Inline_P23`) : le BLX-A n'y tombe pas. Décision à prendre pendant la session de corrections : mesurer l'entraxe des BLX-A reçus et changer l'empreinte si les 8 tiennent sur la carte, sinon acheter 16 clips. SD-150B-12 commandé chez alimentatorishop.com, pas sur AliExpress.
 
 ### Commande 2 — un seul distributeur UE, après V1 et V2 (cartes, modules, alimentation, câble)
 
