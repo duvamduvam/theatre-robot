@@ -62,6 +62,10 @@ Les étapes 4 et 5 peuvent avancer en parallèle une fois 3 fini.
 > (`cablage/`, 74 fils, contrôle section/fusible), masse en étoile (D6 proposée), modèle OpenSCAD
 > des plaques (`plans/elec/etages`), 14 mesures qui ferment l'étude (§7). D2 avis : PMMA 5 mm laser.
 >
+> **Achats, analyse complète du 08/11** : [`achats-refonte.md`](achats-refonte.md) — trois
+> commandes (AliExpress maintenant, distributeur UE après corrections et mesures, JLCPCB), ce
+> que le stock couvre, les vérifications d'atelier qui font tomber des lignes.
+>
 > **Étape 1 commencée le 05/11** : relevé à l'image dans
 > [`releve-2026-11-05.md`](releve-2026-11-05.md) (état de chaque niveau, conformité de la doc,
 > proposition d'implantation). **Les cotes et l'étiquetage des fils restent à faire** : liste
