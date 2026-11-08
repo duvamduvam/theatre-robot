@@ -118,15 +118,20 @@ def _ecrire_etat(fichier: Path, etat: dict) -> None:
     provisoire.replace(fichier)
 
 
-def deplacer(reserves: set[int], fichier: Path, sim: str) -> tuple[int, int]:
+def deplacer(reserves: set[int], fichier: Path, sim: str, pids=None,
+             avec_conteneurs: bool = True) -> tuple[int, int]:
     """Une passe : pousse hors des réservés ce qui n'y a pas encore été poussé. Idempotent —
-    `reserver` et `maintenir` sont la même passe. L'origine est notée AVANT le déplacement."""
+    `reserver` et `maintenir` sont la même passe. L'origine est notée AVANT le déplacement.
+
+    `pids` / `avec_conteneurs` : bornes pour les TESTS (un processus jetable, aucun
+    conteneur). Leçon du 08/11 : un test qui laissait la valeur par défaut a déplacé toute la
+    session de David, et une mutation (libération neutralisée) ne l'a jamais rendue."""
     tous = set(range(os.cpu_count() or 1))
     etat = _lire_etat(fichier)
     etat["reserves"] = ecrire_liste(reserves)
     n_proc = n_cont = 0
     moi = os.getpid()
-    for pid in _mes_processus():
+    for pid in (_mes_processus() if pids is None else pids):
         if pid == moi:
             continue
         try:
@@ -145,7 +150,7 @@ def deplacer(reserves: set[int], fichier: Path, sim: str) -> tuple[int, int]:
             n_proc += 1
         except OSError:
             pass  # processus fini entre-temps, ou d'un autre uid (setuid) : on passe
-    for ident, nom in _conteneurs(sauf=sim):
+    for ident, nom in (_conteneurs(sauf=sim) if avec_conteneurs else ()):
         actuel = _cpuset_conteneur(ident)
         cible = hors_reserve(lire_liste(actuel), reserves, tous)
         if cible == (lire_liste(actuel) or tous):

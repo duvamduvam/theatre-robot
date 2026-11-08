@@ -72,29 +72,33 @@ def faux_docker(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(len(os.sched_getaffinity(0)) < 4, reason="il faut au moins 4 CPU")
-def test_reserver_puis_liberer_un_vrai_processus(tmp_path, faux_docker):
+def test_reserver_puis_liberer_un_vrai_processus(tmp_path):
+    """Sur UN processus jetable seulement (pids=[...], aucun conteneur) : jamais la session de
+    l'utilisateur — le 08/11, la version « tous mes processus » de ce test, mutée, a laissé
+    toute la session de David privée de 2 CPU."""
     cpus = sorted(os.sched_getaffinity(0))
     reserves = {cpus[1], cpus[2]}
     etat = tmp_path / "coeurs.json"
+    moi_avant = os.sched_getaffinity(0)
     jetable = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
     try:
         avant = os.sched_getaffinity(jetable.pid)
-        assert cr.main(["reserver", "--coeurs", cr.ecrire_liste(reserves), "--etat", str(etat)]) == 0
+        assert cr.deplacer(reserves, etat, "sim", pids=[jetable.pid], avec_conteneurs=False) == (1, 0)
         pendant = os.sched_getaffinity(jetable.pid)
         assert pendant.isdisjoint(reserves) and pendant == avant - reserves
-        # L'origine est notée, telle qu'elle était.
-        note = json.loads(etat.read_text())["processus"][str(jetable.pid)]
-        assert cr.lire_liste(note["cpus"]) == avant
-        # Une 2e passe (maintenir) ne réécrit pas l'origine avec l'affinité déjà réduite.
-        assert cr.main(["maintenir", "--coeurs", cr.ecrire_liste(reserves), "--etat", str(etat)]) == 0
+        note = json.loads(etat.read_text())["processus"]
+        assert list(note) == [str(jetable.pid)]           # lui, et personne d'autre
+        assert cr.lire_liste(note[str(jetable.pid)]["cpus"]) == avant
+        # Une 2e passe ne réécrit pas l'origine avec l'affinité déjà réduite.
+        assert cr.deplacer(reserves, etat, "sim", pids=[jetable.pid], avec_conteneurs=False) == (0, 0)
         assert cr.lire_liste(json.loads(etat.read_text())["processus"][str(jetable.pid)]["cpus"]) == avant
-        assert cr.main(["liberer", "--etat", str(etat)]) == 0
+        assert cr.liberer(etat) == (1, 0)
         assert os.sched_getaffinity(jetable.pid) == avant
         assert not etat.exists()
     finally:
         jetable.kill()
-    # Faux docker : seulement des lectures (ps), jamais un update.
-    assert "update" not in faux_docker.read_text()
+        # Garde-fou : le processus de test lui-même n'a jamais bougé.
+        assert os.sched_getaffinity(0) == moi_avant
 
 
 def test_liberer_sans_etat_ne_fait_rien(tmp_path):
