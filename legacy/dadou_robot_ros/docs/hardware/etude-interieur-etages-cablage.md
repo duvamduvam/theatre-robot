@@ -381,7 +381,7 @@ le ronflement avant/après (étape 8 du plan), et le bruit des moteurs, jamais m
 | Épaisseur du bois | **18 mm** | — |
 | Largeur d'un pan | **145 mm à l'extérieur, 130 à l'intérieur** | 145 − 2 × 18 × tan 22,5° = 130,1 : **octogone régulier**, angles de 135° entre pans, coupes à 22,5° (M2 résolu par le calcul) |
 | Hauteur du torse | **550 mm** | — |
-| Étages | **étage 1 à 320 mm, étage 2 à 430 mm** | 110 mm entre les deux ; 120 mm au-dessus de l'étage 2 jusqu'à 550 ; 320 mm sous l'étage 1. Référence supposée : le bas du torse, **à confirmer** |
+| Étages | **étage 1 à 320 mm, étage 2 à 430 mm, mesurés depuis le haut du cadre métallique** (David, 08/11) | 110 mm entre les deux étages ; l'origine est le haut du cadre en métal, pas le bas du torse |
 | Charnière de la porte | **côté gauche** | M7 ; vue supposée de face, à confirmer vue de l'intérieur |
 
 Géométrie calculée (intérieur, bois à bois) : **313,8 mm entre pans latéraux**, 339,7 mm entre
@@ -389,13 +389,20 @@ coins, pans diagonaux arrière de 91,9 mm de profondeur, pans latéraux utiles d
 **Plaque d'étage : 311,8 × 218,9 mm** (modèle `plans/elec/etages`, au lieu de 212 × 167).
 
 Deux points ouverts que ces chiffres font apparaître :
-1. **M1 : sur quoi s'appuie l'étage actuel ?** L'étage imprimé fait 212 de large pour 314 entre
-   pans : soit il est porté par des montants intérieurs (qui réduisent la largeur utile), soit
-   il ne remplit pas la section. À regarder avant de dessiner la plaque au maximum.
+1. ~~M1~~ **Réglé le 08/11 : l'étage actuel repose sur des supports imprimés en 3D**, d'où ses
+   212 mm. Ils disparaissent avec la refonte : la nouvelle plaque va bois à bois, portée par
+   les rails vissés sur les pans latéraux. La largeur utile est bien 313,8 mm.
 2. ~~CNC trop petite~~ **Réglé le 08/11 : CNC du frère de David, 1500 × 1500 mm.** Toutes les
    plaques d'une pièce, et les 4 niveaux tiennent sur une seule plaque de PMMA (chute minimale).
-   À demander au frère : diamètre de fraise disponible (fixe `R_COIN` intérieur, ≥ 3 mm prévu),
-   format accepté (DXF ou SVG), et s'il a déjà fraisé du PMMA coulé (vitesse, refroidissement).
+   **La machine se pilote avec CNCjs, qui envoie du G-code** : le modèle sort du DXF, il faut
+   donc une étape de FAO (DXF → G-code, avec la fraise, les passes, les attaches et l'origine)
+   faite par le frère de David, ou générée par nous une fois connus le contrôleur (GRBL ?),
+   la fraise et l'origine machine. PMMA coulé jamais testé sur cette machine : si besoin,
+   David achète une **fraise 1 dent (« O-flute ») spéciale acrylique** ; rayon des coins
+   intérieurs ≥ rayon de cette fraise (paramètre `R_COIN`). ⚠️ **Lentement ne veut pas dire
+   mieux** : une avance trop faible fait frotter la fraise, le PMMA chauffe et fond. Ce qui
+   compte, c'est la vitesse de broche et l'avance réglées ensemble, avec plusieurs passes peu
+   profondes. Faire un essai sur une chute avant la vraie plaque.
 
 ## 7. Les mesures qui ferment l'étude
 
