@@ -44,6 +44,13 @@ secret) puis effacés du Pi ; lignes `?` et secret `didier_proto` retirés. Parl
 simulation avec retour visuel = le **banc PC** (operations.md § « Banc PC »), sur le PC : il
 n'utilisait aucun de ces outils.
 
+**Image changée = build/ périmé (trouvé le 08/11, L1e-3d)** : `build/` et `install/` sont des
+dossiers de l'HÔTE ; après reconstruction de l'image de la vision (libfastcdr plus récente), le
+cache CMake de `build/theatre_interfaces` visait l'ancienne bibliothèque et plus rien ne
+compilait. Corrigé dans le rôle `conteneur` : l'identifiant de l'image du build est noté dans
+`~/ros2_ws/.image-du-build` ; image différente → `build/` et `install/` vidés avant la
+recréation (colcon complet au démarrage). Idempotent : même image = rien.
+
 **Voix de Didier (trouvé le 07/11 au soir)** : `medias/voices/didier.onnx` n'existait que sur la
 vision, déposée à la main ; `medias/` est bind-monté et MASQUE la voix que le Dockerfile met dans
 l'image ; la preuve à blanc (effacement de `~/ros2_ws`) l'a donc perdue sans qu'aucune épreuve le

@@ -14,6 +14,52 @@
     state: directory
   loop: "{{ dossiers_montes }}"
 
+# Image changée → build/ et install/ de l'hôte sont PÉRIMÉS (vécu le 08/11 au L1e-3d : nouvelle
+# image de la vision = libfastcdr plus récente ; le cache CMake de build/theatre_interfaces, sur
+# l'hôte, visait l'ancienne bibliothèque → « No rule to make target libfastcdr.so.2.2.7 », plus
+# rien ne compilait). L'identifiant de l'image avec laquelle build/ a été produit est noté dans
+# ~/ros2_ws/.image-du-build ; s'il diffère de l'image du compose, build/ et install/ sont vidés
+# (le workspace vide déclenche un colcon build complet au démarrage, sentinelle ou non).
+- name: Read the image id the compose will run
+  become: yes
+  ansible.builtin.shell: >-
+    docker image inspect -f '{% raw %}{{.Id}}{% endraw %}'
+    "$(docker compose -f "{{ conteneur_compose }}" config --images | head -1)"
+  register: image_courante
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Read the image id the current build was made with
+  ansible.builtin.slurp:
+    src: "{{ ansible_env.HOME }}/{{ ros2_ws }}/.image-du-build"
+  register: image_du_build
+  failed_when: false
+  check_mode: false
+
+- name: Clear build/ and install/ built with another image
+  become: yes
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item }}"
+    state: absent
+  loop: [build, install]
+  when:
+    - image_courante.rc == 0
+    - (image_du_build.content | default('') | b64decode | trim) != image_courante.stdout
+
+- name: Recreate empty build/ and install/ mount points as the login user
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item }}"
+    state: directory
+  loop: [build, install]
+
+- name: Record the image id of this build
+  ansible.builtin.copy:
+    content: "{{ image_courante.stdout }}\n"
+    dest: "{{ ansible_env.HOME }}/{{ ros2_ws }}/.image-du-build"
+    mode: "0644"
+  when: image_courante.rc == 0
+
 # `up -d --force-recreate` : relit le compose (volumes, environnement) et redémarre même si
 # rien n'a changé dans le compose — c'est le redémarrage qui fait compiler la sentinelle.
 # L'image locale est réutilisée (pas de pull : celle du Hub est périmée, docs/ansible-ecarts.md).
