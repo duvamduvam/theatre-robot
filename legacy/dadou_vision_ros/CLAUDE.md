@@ -42,7 +42,7 @@ Cerveau perceptif du robot de théâtre Didier, sur Pi 5 « vision » (alias ssh
   z=confiance ; silence = personne perdue). Le topic historique `/vision/person`
   reste GELÉ (gaze_follower). Consommé par person_follower (dadou_robot_ros).
   ⚠️ PAS ENCORE DÉPLOYÉ sur le Pi vision (éteint au moment du déploiement) :
-  scp target_picker.py + person_tracker_node.py + test + sentinelle CHANGE.
+  scp target_picker.py + person_tracker_node.py + test + sentinelle `packages/didier_vision/change` (gitignorée, posée par Ansible sur le Pi).
 - **Retour vidéo console de régie (2026-07-11, validé réel)** : person_tracker
   republie ses trames en JPEG (`camera/image_raw/compressed`, ~5 i/s, qualité 70,
   paramètre `video_fps`, 0 = off) — seule source d'images possible, la webcam lui
@@ -77,7 +77,7 @@ Cerveau perceptif du robot de théâtre Didier, sur Pi 5 « vision » (alias ssh
   contente plus d'écraser `face`/`animation` au moindre bruit — rattrapage
   `idle()` après un tour abandonné (le visage ne reste plus coincé sur
   "reflechit"), et abonnement au topic latché `animation_state` (publié par
-  animations_node côté robot) via `vision.ai.arbitration` : les messages
+  animations_node côté robot) via `didier_vision.ai.arbitration` : les messages
   face/animation du chat sont RETENUS tant qu'une séquence de spectacle a la
   main, et son stop d'animation devient CIBLÉ (n'arrête que "parle", plus
   d'arrêt global qui écraserait une séquence en cours).
