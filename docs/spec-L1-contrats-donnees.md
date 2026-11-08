@@ -533,6 +533,108 @@ si la porte n'est pas franchie) :
     (commandes de test : `cd packages/didier_core && <venv legacy> -m pytest`),
     `architecture.md`, tableau de bord. CLAUDE.md : listés au rapport, appliqués par Fable.
 
+#### L1e-4 — conception détaillée (08/11, Fable) : le dépôt prend sa forme cible, les Pi ne bougent pas
+
+**État au 08/11** : L1e-3 terminé — tout le CODE est dans `packages/`. Restent sous `legacy/` :
+les données du robot (`json/` 72 fichiers, `medias/` 112 Mo, `db/` 3 SQLite — tous suivis),
+la conf machine du robot (`conf/` : docker arm/sim/x86, scripts, rpi, systemd, logging, listes de
+paquets), celle de la vision (`conf/`, `mediamtx/`), Ansible (`legacy/dadou_utils_ros/ansible`),
+et la doc. Les dossiers cibles `data/`, `deploy/`, `machines/`, `docker/` n'ont qu'un README.
+
+**La décision qui simplifie tout : seul le DÉPÔT change ; les chemins sur les Pi et dans les
+conteneurs restent IDENTIQUES** (`~/ros2_ws/src/robot/{json,medias,db,conf}`,
+`~/ros2_ws/src/vision/{conf,medias,db}`, `DIDIER_DATA_DIR`/`DIDIER_VISION_DATA_DIR` inchangées,
+`deploy_sha_file` du launch inchangé, voix et secret aux mêmes places). Pourquoi : chaque
+consommateur de chemin (launch, config, Ansible `secrets`/`telechargements_hote`, scripts
+d'épreuve) reste intouché ; le risque se réduit aux SOURCES des rsync et des montages. Renommer les
+chemins Pi/conteneur est le travail de L2 (un conteneur par machine, nouvelles images) — pas avant.
+
+**Décisions (ne pas rouvrir)** :
+1. **Quatre sous-étapes, une porte chacune, fusionnées une à une** : 4a `deploy/`, 4b `data/`,
+   4c `machines/`, 4e ménage. **Pas de 4d `docker/`** : un Dockerfile de base commun ARM/x86 est
+   une nouvelle conception (robot et vision n'ont pas les mêmes dépendances), c'est L2 ;
+   `docker/` garde son README qui le dit.
+2. **Le déploiement hors robot sur les Pi FAIT PARTIE de chaque sous-étape** (consigne du 07/11 ;
+   lève l'ambiguïté qui a arrêté l'implémenteur de 3d) : Ansible exécuté sur `192.168.1.131` et
+   `.151` (aucun actionneur), `ecart-pi.sh` vert sur les deux à la fin. Toujours interdit : un
+   robot aux roues câblées avant le protocole caméra.
+3. **4a — `deploy/`** : `git mv legacy/dadou_utils_ros/ansible deploy` (playbooks, `hosts`, `vars/`,
+   `roles/`, `templates/`, `attendu/`, `ecart-pi.sh`). `vars/main.yml` : `local_projects_dir` =
+   `{{ playbook_dir | dirname }}/legacy`, `packages_dir` = `{{ playbook_dir | dirname }}/packages`
+   (aujourd'hui trois `dirname`). **Ménage décidé par l'étude (§5.8), fait ici** : suppression des
+   rôles orphelins `activate-spi`, `download-install-docker-from-url`, `root_ssh`,
+   `ros_dependencies`, `waveshare-screen` (et `set-vim` s'il existe), de `jenkins`, `sonar`,
+   `install-ci*.yml`, `configure-local-ci.yml`, `install-test-pios.yml`, `deploy-test-pios.yml`, du
+   groupe `integration` de `hosts`, et de `deploy/legacy/` ; `legacy/dadou_utils_ros/jenkins/`
+   part avec. Le reste de `legacy/dadou_utils_ros/` (`conf/`, `docs/`, `scripts/`) attend 4e.
+   Porte : `--syntax-check` ; `test_arborescence.py` (chemins gravés `deploy/…`) ; déploiement des
+   2 Pi depuis `deploy/`, `ecart-pi.sh` vert ×2 ; CLAUDE.md racine (chemin) listé au rapport.
+4. **4b — `data/`** : `git mv` de `legacy/dadou_robot_ros/{json,medias,db}` vers
+   `data/{json,medias,db}` — le contenu du robot est UNE famille (les JSON référencent les
+   médias ; le catalogue les publie ensemble), on ne la coupe pas. **Aucun code ne change.**
+   Compose sim/x86/arm : montages `…/data/json:/home/ros2_ws/src/robot/json` (idem medias, db).
+   Dockerfile ARM/x86 du robot : `COPY` depuis `data/` (contexte nommé `data`, motif des
+   packages) — reconstruction de l'image robot à la fin. Ansible : la synchro « projet » de
+   `legacy/dadou_robot_ros/` vers `src/robot/` est REMPLACÉE par deux copies explicites :
+   `data/{json,medias,db}` → `src/robot/` (hôte robot seul, variable `donnees_dir`) et
+   `legacy/dadou_robot_ros/conf/` → `src/robot/conf/` (jusqu'à 4c) ; plus rien d'autre de
+   `legacy/` ne part sur le Pi (docs, essais, firmware, .venv : déchets). `conftest`/tests hôte
+   qui posent `DIDIER_DATA_DIR` vers `legacy/dadou_robot_ros/` : la racine de données hôte
+   devient `<dépôt>/data/` — et c'est le seul endroit où `json/`, `medias/`, `db/` doivent être
+   des enfants directs de la racine, comme sur le Pi (`src/robot/`). La vision n'a pas de
+   `data/` : rien de suivi hors `mediamtx/` (conf → 4c) ; sa voix et son `db/` restent des
+   fichiers d'exécution posés par Ansible. Porte : pytest 6 suites ; `test_arborescence`
+   (`data/` présent, `legacy/dadou_robot_ros/{json,medias,db}` absents, aucune synchro « projet »
+   dans le rôle) ; **fumée complète verte sur la branche** (namespace 5/5, catalogue 4/4, `parle`,
+   V-R3 21/21, A1 14/14) ; déploiement robot (image reconstruite, catalogue 6 familles, sha
+   publié), vision inchangée, `ecart-pi.sh` vert ×2.
+5. **4c — `machines/`** : `machines/robot/` ← `legacy/dadou_robot_ros/conf/` SAUF ce qui est sim
+   (`docker/sim`, `docker/x8664`, `scripts/{launch-sim-in-docker.sh,validate-*.sh,fumee.sh,
+   fumee_page.py,pub.sh}`, `systemd/didier-fumee.*`, `systemd/installer-fumee.sh`) qui va dans
+   **`machines/sim/`** (le banc x86 du robot dans `machines/sim/banc-robot/`, celui de la vision
+   `legacy/dadou_vision_ros/conf/docker/x86` dans `machines/sim/banc-vision/` — L2 les fondra en
+   un compose). `machines/vision/` ← `legacy/dadou_vision_ros/{conf,mediamtx}` ;
+   `legacy/dadou_vision_ros/tools/` → `packages/didier_vision/tools/` (il importe le package ;
+   non installé). **Variables par machine** : `deploy/hosts` ne garde que l'inventaire
+   (groupes, IP, utilisateur, clé, et `machine: robot|vision|…`) ; tout ce qui décrit le
+   CONTENU d'une machine (`packages`, `sentinelle_build`, `launch_cmd`, `noeuds_attendus`,
+   `dossiers_montes`, `secrets_hote`, `telechargements_hote`, `fichiers_etc`, `unites_systemd`,
+   `paquets_hote`, `project_ros_dir`, `project_name`) vit dans **`machines/<machine>/machine.yml`**,
+   chargé par `include_vars` au début de `deploy-pios.yml` et `install-pios-lite.yml`. Ansible
+   copie `machines/<machine>/` → `src/<project_ros_dir>/conf/` (chemin Pi stable, voir plus
+   haut). Chemins qui changent dans les fichiers déplacés : montages relatifs des compose
+   (`../../packages/…`, `../../data/…`), contextes des Dockerfiles, `DOCKER_DIR`/
+   `CHEMIN_DOCKER_SIM` de `fumee.sh`, `installer-fumee.sh` (ExecStart), `ecart-pi.sh`,
+   `docs/ansible-ecarts.md`. **À la fusion** : relancer `machines/sim/installer-fumee.sh` depuis
+   main (l'unité pointe sur l'ancien chemin) et vérifier `systemctl --user list-timers`.
+   Porte : pytest ; `test_arborescence` (plus de `conf/` sous `legacy/dadou_robot_ros`, plus de
+   `conf/`/`mediamtx/` sous `legacy/dadou_vision_ros`, `machine.yml` par hôte, `hosts` sans
+   variable de contenu) ; `--syntax-check` ×2 ; **fumée verte lancée par `machines/sim/fumee.sh`**
+   ; images ARM robot ET vision reconstruites, déployées, poussées sur le Hub ; `ecart-pi.sh`
+   vert ×2 ; première fumée AUTOMATIQUE verte après fusion = la porte finale.
+6. **4e — ménage de L1e (peut glisser en L5 si le temps manque, mais se fait en une passe)** :
+   `legacy/dadou_robot_ros/docs/` → `docs/` (le tableau de bord devient `docs/chantiers.md`,
+   comme le CLAUDE.md l'annonce), avec réécriture des liens et un test qui échoue sur tout lien
+   Markdown mort du dépôt ; `legacy/dadou_robot_ros/{essais,firmware}` → `atelier/{essais,firmware}`
+   ; `legacy/dadou_robot_ros/ci/` et `legacy/dadou_utils_ros/{conf,docs,scripts,jenkins}` →
+   supprimés (rien ne les lit : vérifier par `git grep` avant) ; venvs : un `.venv` à la racine
+   (cœur, contrats, jeu, lib, télécommande) et `packages/didier_vision/.venv` (dépendances
+   propres), `requirements-test.txt` à la racine ; `legacy/dadou_robot_ros/` et
+   `legacy/dadou_vision_ros/` ne contiennent plus que leur README (bandeau « archive ») — ou
+   disparaissent si rien ne les référence. `legacy/dadou_control_ros/` reste (L4). Porte :
+   pytest 6 suites depuis les nouveaux venvs, lien mort = 0, fumée verte.
+7. **Interdits (toutes sous-étapes)** : modifier la logique d'un nœud ; renommer un topic, un
+   nœud, un exécutable, un chemin Pi ou conteneur ; toucher `twist_mux.yaml` ; `git push` ;
+   `systemctl poweroff/reboot/suspend`, `fumee.sh --et-dodo` ; domaine 42.
+8. **Qui** : 4a, 4b, 4c = implémenteur **Opus** (Ansible et déploiement : l'implémenteur Sonnet de
+   3d s'est arrêté devant ; 4c touche la sim et les images) ; 4e = Sonnet (mécanique, liens).
+   Orchestration Opus, une sous-étape par session, fusion après chaque porte, les Pi branchés.
+   Estimation : 4a ≈ 1 h, 4b ≈ 1 h 30, 4c ≈ 3 h (deux images ARM), 4e ≈ 1 h 30.
+9. **Doc vivante** à chaque sous-étape : README racine (carte des dossiers : ce qui est VRAI
+   maintenant, ligne L1 courte), `packages/README.md`, README de `data/`, `deploy/`,
+   `machines/` (rôle, convention `machine.yml`), `operations.md`, `ansible-ecarts.md`, tableau de
+   bord ; CLAUDE.md listés au rapport, appliqués par l'orchestrateur.
+
 ##### Lot F — fumée nocturne (décidé le 07/11, à faire APRÈS 3b, AVANT 3c)
 
 **Pourquoi** : chaque lot paie aujourd'hui ses propres épreuves (≈ 1 h d'agent) ; et
