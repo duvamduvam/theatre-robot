@@ -26,11 +26,11 @@ import re
 import statistics
 import time
 
-from vision.ai import llm_stream, personas
-from vision.ai.conversation import LOOK_WORDS, TURN_WORDS, _gesture_number
-from vision.ai.emotion_parser import extract_emotion_json
-from vision.ai.llm_stream import StreamingBrain
-from vision.nodes.chat_node import LLM_API_KEY_NAME
+from didier_vision.ai import llm_stream, personas
+from didier_vision.ai.conversation import LOOK_WORDS, TURN_WORDS, _gesture_number
+from didier_vision.ai.emotion_parser import extract_emotion_json
+from didier_vision.ai.llm_stream import StreamingBrain
+from didier_vision.nodes.chat_node import LLM_API_KEY_NAME
 
 BASE_URL = "https://openrouter.ai/api/v1"
 MAX_TOKENS = 600  # large : on mesure aussi qui déborde, pas qui est coupé

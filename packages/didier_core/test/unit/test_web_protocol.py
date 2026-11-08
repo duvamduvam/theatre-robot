@@ -82,7 +82,7 @@ def test_whitelist_est_l_union_spectacle_technique():
     # "chat" (2026-07-12) : toggle on/off de la parole IA (chat_node, Pi
     # vision) -- topic de commande comme "gaze", pas un actionneur.
     # "persona" (2026-07-13, lot D3) : sélection de la personnalité de Didier
-    # (payload = nom de variante, cf. vision.ai.personas) -- même nature que
+    # (payload = nom de variante, cf. didier_vision.ai.personas) -- même nature que
     # "chat", une commande de configuration, pas un actionneur.
     # "chat_text" / "chat_instruction" (2026-10-14, page « scène ») : la régie
     # souffle un texte « entendu » ou pose une consigne de jeu -- conversation,

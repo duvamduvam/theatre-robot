@@ -40,7 +40,7 @@ BLOC_MICRO = "pcm.casque_mic_bt"
 BLOC_SORTIE = "pcm.mixette"
 
 
-# ─── logique PURE (testée : vision/tests/unit/test_audio_banc.py) ────────────
+# ─── logique PURE (testée : test/unit/test_audio_banc.py) ────────────
 
 def lire_devices(conf_text: str) -> dict:
     """-> {"micro": nom, "sortie": nom} lus dans les blocs du contrat."""

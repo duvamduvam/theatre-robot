@@ -24,6 +24,7 @@ physical subsystems.
 | `didier_drive` | cmd_vel chain (bridge, twist_mux config, deadman, kinematics) | `theatre_interfaces` only |
 | `didier_sim` | Gazebo Harmonic simulation (servos + LED logic re-implemented) | `theatre_interfaces` only |
 | `didier_description` | URDF (xacro) | — |
+| `didier_vision` | perception/speech brain of the vision Pi — **`packages/didier_vision` since L1e-3d (2026-11-08)**, ex-package `vision` (`vision.*` → `didier_vision.*`, executables unchanged); DATA stays in `legacy/dadou_vision_ros/`, root read from `DIDIER_VISION_DATA_DIR` | `theatre_interfaces`, `theatre_contrats`, `dadou_utils_ros` (nothing from `didier_core`) |
 | `didier_bringup` | launch of the real app | `didier_core.*` + utils (the one assumed exception) |
 
 `didier_drive` and `didier_sim` import **nothing** from the application: the

@@ -3,7 +3,7 @@
 Le robot suit une personne EN SE DÉPLAÇANT : rotation pour la garder au centre
 de l'image, avance pour maintenir la distance (la HAUTEUR de silhouette dans
 l'image sert de proxy de distance — caméra monoculaire, cf. dadou_vision_ros
-vision/tracking/target_picker.py, topic /vision/person_box).
+didier_vision/tracking/target_picker.py, topic /vision/person_box).
 
 SÉCURITÉ (cf. CLAUDE.md — ce module commande les 50 kg du robot) :
  - Sortie UNIQUE : un couple (lin, ang) destiné à cmd_vel_follow, entrée du

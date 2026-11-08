@@ -27,7 +27,7 @@
 liaison.suivreCible = false;
 
 // Personnalités proposées : liste GRAVÉE ici, pas lue du catalogue. Les personas
-// vivent côté Pi vision (vision.ai.personas) que le pont web ne connaît pas ; en
+// vivent côté Pi vision (didier_vision.ai.personas) que le pont web ne connaît pas ; en
 // ajouter une = l'ajouter là-bas ET ici (persona inconnue du node = ignorée).
 const PERSONAS = [
   ["bougon", "Bougon"],

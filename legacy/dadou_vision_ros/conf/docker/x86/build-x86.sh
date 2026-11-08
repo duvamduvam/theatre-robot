@@ -25,4 +25,5 @@ tar -ch \
         --build-context theatre_interfaces="$PACKAGES/theatre_interfaces" \
         --build-context theatre_contrats="$PACKAGES/theatre_contrats" \
         --build-context dadou_utils_ros="$PACKAGES/dadou_utils_ros" \
+        --build-context didier_vision="$PACKAGES/didier_vision" \
         -f conf/docker/arm/Dockerfile-arm -

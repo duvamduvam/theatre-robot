@@ -5,7 +5,7 @@ import platform
 
 from dadou_utils_ros.logging_conf import LoggingConf
 from dadou_utils_ros.utils_static import RPI_TYPE, LOGGING_TEST_FILE_NAME
-from vision.vision_config import config
+from didier_vision.vision_config import config
 
 
 class TestSetup:

@@ -30,6 +30,9 @@ services:
       # par défaut. Robot, vision et télécommande d'un même Didier DOIVENT avoir le
       # même nom (sinon ils ne s'entendent plus) ; la CLI ros2 doit préfixer.
       - ROBOT_NAME=${ROBOT_NAME:-didier}
+      # Racine des DONNÉES (conf/, medias/, db/ ; lot L1e-3d) lue par vision_config.py : le
+      # code est le package src/didier_vision, les données restent sous src/vision/.
+      - DIDIER_VISION_DATA_DIR=/home/ros2_ws/src/vision/
       # chat_node (micro → whisper → OpenRouter → piper) : OFF par défaut,
       # même prudence que sur le Pi (micro physique + budget LLM payant).
       # Activation explicite : CHAT=true docker compose ... up.
@@ -89,10 +92,9 @@ services:
       # Mêmes montages de sources que docker-compose-arm.yml (itération sans
       # rebuild ; conf/ apporte aussi conf/secret, jamais dans l'image).
       - ../../../conf:/home/ros2_ws/src/vision/conf
-      - ../../../vision:/home/ros2_ws/src/vision/vision
-      - ../../../conf/ros2/setup.py:/home/ros2_ws/src/vision/setup.py
-      - ../../../conf/ros2/package.xml:/home/ros2_ws/src/vision/package.xml
-      - ../../../conf/ros2/launch:/home/ros2_ws/src/vision/launch
+      # didier_vision (L1e-3d) : le code (module, package.xml, setup.py, launch/) est un
+      # package de packages/, à plat dans src/ comme sur le parc.
+      - ../../../../../packages/didier_vision:/home/ros2_ws/src/didier_vision
       # ⚠️ medias/ N'EST PAS monté, contrairement au compose ARM : sur le PC,
       # medias/voices/ n'existe pas dans le checkout et le bind-mount
       # MASQUERAIT la voix Piper téléchargée dans l'image au build
@@ -103,12 +105,12 @@ services:
       # le shim dadou_utils_ros/utils_static.py) : packages/ du mono-dépôt
       # (lot L1a, ../../../../../ = racine theatre-robot), même niveau src/ que
       # sur le parc. ⚠️ workspace/ persistant : après ce lot, `touch
-      # vision/CHANGE` pour que colcon construise theatre_contrats, sinon les
+      # packages/didier_vision/change` pour que colcon construise theatre_contrats, sinon les
       # nodes tombent à l'import.
       - ../../../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # dadou_utils_ros (L1e-3a) : lib partagée, package de packages/. ⚠️ workspace/
-      # persistant : `touch vision/CHANGE` pour que colcon construise le nouveau package.
+      # persistant : `touch packages/didier_vision/change` pour que colcon construise le nouveau package.
       - ../../../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       # Workspace colcon LOCAL au banc (pas le workspace partagé du Pi — sur
       # le PC les chemins ../../../../../ du compose ARM ne mènent nulle

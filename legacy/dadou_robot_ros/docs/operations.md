@@ -181,6 +181,21 @@ Tests hôte : les modules ROS sont factices (`sys.modules["theatre_interfaces.ms
 à installer ; le garde-fou `test_arborescence.py` rougit si un fichier de code ou de conf
 cite encore l'ancien nom.
 
+## La vision `didier_vision` (lot L1e-3d, 08/11)
+
+L'ex-package `vision` est `packages/didier_vision/` (code `didier_vision/`, tests `test/`,
+launch `launch/vision.launch.py`) ; exécutables, nœuds et topics inchangés. Les données
+(`conf/`, `medias/`, `db/`, `models/`, `mediamtx/`) restent dans `legacy/dadou_vision_ros/`
+(`DIDIER_VISION_DATA_DIR`). Il exige SON venv (le venv robot n'a pas `sqlobject`) :
+
+```bash
+cd packages/didier_vision && ../../legacy/dadou_vision_ros/.venv/bin/python -m pytest -q -o addopts=
+```
+
+Banc x86 : `legacy/dadou_vision_ros/conf/docker/x86/build-x86.sh` (contexte nommé
+`didier_vision`), puis vider `workspace/{build,install,log}` (l'ancien `install/vision`
+n'a plus de raison d'exister) et poser `touch packages/didier_vision/change`.
+
 ## Le cœur `didier_core` (lot L1e-3c, 07/11)
 
 L'ex-package `robot` est `packages/didier_core/` (code `didier_core/`, tests `test/`) ;
@@ -316,9 +331,12 @@ CHAT=true docker compose -f docker-compose-x86.yml up -d
   space (persistant, c'est le workspace monté ; à REFAIRE si un colcon build
   les efface — symptôme : chat meurt sur « Secret LLM manquant ») :
   `docker exec dadou-vision-x86-container bash -c 'sp=/home/ros2_ws/install/vision/lib/python3.12/site-packages; ln -sfn /home/ros2_ws/src/vision/conf $sp/conf; ln -sfn /home/ros2_ws/src/vision/medias $sp/medias'`
+  **Obsolète depuis L1e-3d (08/11)** : `vision_config` lit la racine des données dans
+  `DIDIER_VISION_DATA_DIR` (posée par le compose), plus de calcul depuis l'emplacement du
+  package — ces symlinks ne servent plus à rien (l'install-space est `install/didier_vision`).
 - ⚠️ **Le code qui tourne est celui de `workspace/install`, pas des sources
   montées** (ament_python COPIE les sources au build) : après tout changement
-  de `vision/`, poser la sentinelle `touch dadou_vision_ros/vision/CHANGE` puis
+  de `packages/didier_vision/`, poser la sentinelle `touch packages/didier_vision/change` puis
   redémarrer le conteneur (vécu le 14/10 : chat_node tournait avec le code du
   13/09 malgré les sources à jour). Et **après un rebuild d'IMAGE**
   (`build-x86.sh`), vider `workspace/{build,install,log}` avant de relancer :

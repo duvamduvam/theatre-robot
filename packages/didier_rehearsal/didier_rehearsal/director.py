@@ -696,7 +696,7 @@ def objects_payload(pois) -> str:
     prompt. x, y (m, repère du monde = ANCRE du POI, pas le centre de l'objet)
     ajoutés au lot A1 (02/11) pour que le sélecteur de jeu oriente le regard
     vers l'objet d'une lubie (SIM-ONLY) : champs ADDITIFS, chat_node ne lit
-    que name/desc (vision/ai/stage.decode_objects_payload) et les ignore."""
+    que name/desc (didier_vision/ai/stage.decode_objects_payload) et les ignore."""
     return json.dumps([{"name": p.name, "desc": p.shown_desc, "x": p.x, "y": p.y} for p in pois])
 
 

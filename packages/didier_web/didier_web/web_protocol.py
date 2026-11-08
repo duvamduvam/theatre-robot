@@ -30,7 +30,7 @@ WHITELIST_SPECTACLE = {"animation", "face", "audio", "robot_lights"}
 # par chat_node sur le Pi vision (même contrat StringTime "on"/"off" que
 # "gaze"). Ce n'est PAS un topic d'actionneur : aucun risque roues/e_stop.
 # "persona" (2026-07-13, lot D3) : sélection de la personnalité de Didier
-# (payload = nom de variante "bougon"/"naif"/"vantard", cf. vision.ai.personas
+# (payload = nom de variante "bougon"/"naif"/"vantard", cf. didier_vision.ai.personas
 # côté Pi vision) — même nature que "chat" : une commande de configuration du
 # chat_node, pas un actionneur.
 # "chat_text" / "chat_instruction" (2026-10-14, page « scène ») : la régie

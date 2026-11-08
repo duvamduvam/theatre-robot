@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>didier_vision</name>
+  <version>0.0.1</version>
+  <description>Cerveau perceptif de Didier (Pi 5) : publie des perceptions caméra en topics ROS standard, ne commande jamais les moteurs (sécurité mouvement dans dadou_robot_ros).</description>
+  <maintainer email="achats@duvam.net">dadou</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <!-- Suivi de personne V1 : /vision/person publie des geometry_msgs/PointStamped
+       (contrat ARCHITECTURE.md), cf. didier_vision/nodes/person_tracker_node.py. -->
+  <depend>geometry_msgs</depend>
+  <!-- Conversation temps réel V2 : chat_node publie sur les topics FACE/
+       ANIMATION existants du robot via theatre_interfaces/StringTime (zéro
+       nouveau topic, cf. ARCHITECTURE.md) — même dépendance que côté
+       dadou_robot_ros ; theatre_interfaces arrive par rsync ansible en src/,
+       cf. docker-compose-arm.yml. -->
+  <depend>theatre_interfaces</depend>
+  <!-- Contrat commun (lot L1a, packages/theatre_contrats) : codec StringTime et noms
+       de topics ; dadou_utils_ros/utils_static.py (shim) l'importe aussi. -->
+  <exec_depend>theatre_contrats</exec_depend>
+  <!-- Lib partagée (L1e-3a : package de packages/, plus un symlink du dépôt). -->
+  <exec_depend>dadou_utils_ros</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

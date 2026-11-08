@@ -4,14 +4,14 @@
 source /opt/ros/${ROS_DISTRO}/setup.sh
 cd /home/ros2_ws/
 
-# Sentinelle dans un dossier bind-monté (vision/CHANGE) : sa présence déclenche
+# Sentinelle dans un dossier bind-monté (didier_vision/change) : sa présence déclenche
 # un colcon build, puis elle est supprimée. Recréez-la après une modif de code
 # pour forcer un rebuild (cf. leçon du parc, dadou_robot_ros).
 # Build aussi si install/ n'existe pas encore : premier démarrage d'un
 # workspace vierge (cas du banc PC x86, dont le workspace colcon est un
 # dossier local jetable — cf. conf/docker/x86/docker-compose-x86.yml). Sur le
 # Pi ce cas ne se présente qu'à la première installation : même besoin.
-CHANGE_FILE=/home/ros2_ws/src/vision/vision/CHANGE
+CHANGE_FILE=/home/ros2_ws/src/didier_vision/change
 if [ -f "$CHANGE_FILE" ] || [ ! -f /home/ros2_ws/install/setup.bash ]; then
     echo "CHANGE file or empty workspace. Running colcon build..."
     colcon build
@@ -23,8 +23,8 @@ fi
 source /home/ros2_ws/install/setup.bash
 
 # V1 : launch file unique (heartbeat vision_status + suivi de personne
-# person_tracker), cf. conf/ros2/launch/vision.launch.py — remplace le
-# `ros2 run vision vision_status` de V0 (single node). Un seul launch,
+# person_tracker), cf. packages/didier_vision/launch/vision.launch.py — remplace le
+# `ros2 run didier_vision vision_status` de V0 (single node). Un seul launch,
 # supervision propre de l'arrêt des deux nodes (SIGINT).
 # CHAT (env du compose, défaut false) → chat_enabled : le node de
 # conversation ne démarre que sur activation explicite (micro physique +
@@ -47,4 +47,4 @@ SIM_CAMERA_ARG=()
 if [ -n "$(echo "${VISION_SIM_CAMERA_TOPIC:-}" | xargs)" ]; then
     SIM_CAMERA_ARG=("sim_camera_topic:=$(echo "${VISION_SIM_CAMERA_TOPIC}" | xargs)")
 fi
-ros2 launch vision vision.launch.py chat_enabled:=${CHAT:-false} reflection_enabled:=${REFLECTION_ENABLED} "${SIM_CAMERA_ARG[@]}"
+ros2 launch didier_vision vision.launch.py chat_enabled:=${CHAT:-false} reflection_enabled:=${REFLECTION_ENABLED} "${SIM_CAMERA_ARG[@]}"

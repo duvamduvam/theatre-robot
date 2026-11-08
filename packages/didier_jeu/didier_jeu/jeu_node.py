@@ -44,7 +44,7 @@ from didier_jeu.selecteur import Selecteur
 # « regarder » (lot M2) : littéral gravé avec gaze_follower_node.LOOK_TOPIC
 # (test_contrat_node.py le relit dans le vrai fichier).
 LOOK_TOPIC = "look"
-# Boucle de réflexion (dépôt vision, vision/ai/reflection_contract.py) :
+# Boucle de réflexion (dépôt vision, didier_vision/ai/reflection_contract.py) :
 # SITUATION_TOPIC / MISSION_STATE_TOPIC, littéraux gravés en test.
 SITUATION_TOPIC = "chat_situation"
 MISSION_STATE_TOPIC = "mission_state"

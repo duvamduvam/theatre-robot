@@ -4,9 +4,9 @@
 # Outils pip dans le conteneur
 python3-pip
 
-# Audio : lecture TTS (vision/ai/tts.py, PyAudio) + diagnostic ALSA
+# Audio : lecture TTS (didier_vision/ai/tts.py, PyAudio) + diagnostic ALSA
 # (aplay/arecord). V2 (chat_node) : arecord/aplay ne sont PLUS juste du
-# diagnostic — vision/audio/mic.py et vision/audio/playback.py les lancent
+# diagnostic — didier_vision/audio/mic.py et didier_vision/audio/playback.py les lancent
 # en subprocess pour de vrai (capture micro + lecture TTS/bips), cf.
 # docker-compose-arm.yml (montage /etc/asound.conf + /dev/snd).
 alsa-utils

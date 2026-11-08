@@ -145,7 +145,7 @@ def attaques(x: np.ndarray, sr: int, n: int) -> list[int]:
 def c_robot_historique(x, sr):
     # LE code de prod (chemin OpenAI historique), pas une imitation : mêmes
     # paramètres que vision/ai/tts.py (sample_rate=24000 passé en dur là-bas).
-    from vision.audio.effects import apply_robotic_effect
+    from didier_vision.audio.effects import apply_robotic_effect
     i16 = (np.clip(x, -1, 1) * 32767).astype(np.int16).tobytes()
     y = apply_robotic_effect(i16, depth=0.7, rate_hz=35, sample_rate=24000)
     return np.frombuffer(y, dtype=np.int16).astype(np.float64) / 32768

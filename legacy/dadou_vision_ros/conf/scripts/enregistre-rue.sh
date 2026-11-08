@@ -5,8 +5,8 @@
 # enregistrements en conditions rue, rejoués ensuite dans le VAD de prod).
 #
 # QUOI : capture le micro EXACTEMENT au format du pipeline chat (16 kHz mono
-#        16 bits, cf. vision.nodes.chat_node.MIC_SAMPLE_RATE) -- ces wav sont
-#        ensuite rejoués TELS QUELS par `python -m vision.audio.vad_replay`,
+#        16 bits, cf. didier_vision.nodes.chat_node.MIC_SAMPLE_RATE) -- ces wav sont
+#        ensuite rejoués TELS QUELS par `python -m didier_vision.audio.vad_replay`,
 #        qui REFUSE tout resampling (règle du projet : mesurer le MÊME code
 #        que la prod, pas une approximation) -- un mauvais format ici rendrait
 #        toute la campagne inexploitable.

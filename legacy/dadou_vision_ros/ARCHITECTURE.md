@@ -32,9 +32,9 @@ dadou_vision_ros/
 │   ├── docker/arm/                  # FROM ros:jazzy-ros-base — calqué sur le robot,
 │   │                                #  AVEC les leçons: sed s/#.*// packages, PAS de pip
 │   │                                #  upgrade, PIP_BREAK_SYSTEM_PACKAGES=1, entrypoint
-│   │                                #  sentinelle vision/CHANGE
-│   └── ros2/                        # package ament "vision" (PAS "robot") : setup.py propre
-├── vision/
+│   │                                #  sentinelle didier_vision/change
+│   └── ros2/                        # (vide depuis L1e-3d : le package ament est packages/didier_vision)
+├── (code : packages/didier_vision/didier_vision/ depuis L1e-3d ; ex vision/)
 │   ├── nodes/                       # fins : I/O ROS seulement, zéro logique
 │   │   ├── person_tracker_node.py   # V1 — caméra → /vision/person
 │   │   └── chat_node.py             # V2 — micro → GPT → TTS + topics face/audio
@@ -46,7 +46,7 @@ dadou_vision_ros/
 │   │   ├── tts.py                   #   TTS OpenAI streaming + effet robot (gardé tel quel)
 │   │   └── stt.py                   #   à retrancher : faster-whisper local vs API (bench V2)
 │   ├── db/chat_db.py                # gardé (SQLite conversations)
-│   └── tests/unit/                  # purs, lancés par la CI
+│   └── (tests : packages/didier_vision/test/unit/, purs, lancés par la CI)
 └── json/, medias/                   # épurés (les configs lumières copiées du robot : supprimées)
 ```
 

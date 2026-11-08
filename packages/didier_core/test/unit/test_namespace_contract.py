@@ -58,12 +58,12 @@ def _launch_files():
 def test_les_sept_launch_sont_inventories():
     noms = sorted(str(p.relative_to(MONO)) for p in _launch_files())
     assert noms == [
-        "legacy/dadou_vision_ros/conf/ros2/launch/vision.launch.py",
         "packages/didier_bringup/launch/robot_app.launch.py",
         "packages/didier_description/launch/display.launch.py",
         "packages/didier_drive/launch/drive.launch.py",
         "packages/didier_rehearsal/launch/rehearsal.launch.py",
         "packages/didier_sim/launch/sim.launch.py",
+        "packages/didier_vision/launch/vision.launch.py",
         "packages/didier_web/launch/web.launch.py",
     ]
 
@@ -158,8 +158,9 @@ def test_bridge_noms_ros_relatifs_sauf_clock_et_tf():
 # --- (c) aucun nom absolu dans le code ----------------------------------------
 
 def _code_des_noeuds():
-    # Le cœur (ex-ROBOT / "robot") est dans DEPS depuis L1e-3c : packages/didier_core/didier_core.
-    zones = [VISION / "vision", CONTROL / "controller",
+    # Le cœur (L1e-3c) et la vision (L1e-3d) sont dans DEPS : packages/didier_core/didier_core,
+    # packages/didier_vision/didier_vision.
+    zones = [CONTROL / "controller",
              LEGACY / "dadou_utils_ros", DEPS]
     fichiers = []
     for z in zones:

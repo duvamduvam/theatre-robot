@@ -395,3 +395,122 @@ def test_plus_aucun_fichier_de_code_ni_de_conf_ne_cite_le_package_robot():
         if motif.search(p.read_text(encoding="utf-8", errors="ignore")):
             fautes.append(str(p.relative_to(MONO)))
     assert fautes == [], fautes
+
+
+# --- L1e-3d : la vision -> packages/didier_vision ----------------------------------------
+
+import pytest  # noqa: E402  (bloc ajouté par lot : garde chaque lot lisible d'un tenant)
+
+VISION = LEGACY / "dadou_vision_ros"
+VISION_PKG = PACKAGES / "didier_vision"
+EXECUTABLES_VISION = {
+    "vision_status": "didier_vision.nodes.vision_status_node:main",
+    "person_tracker": "didier_vision.nodes.person_tracker_node:main",
+    "chat": "didier_vision.nodes.chat_node:main",
+    "reflection": "didier_vision.nodes.reflection_node:main",
+}
+# Moitié « Ansible » du lot 3d (hosts, chemins_retires_vision, rsync de conf/ros2/) : réservée
+# (zone Déploiement, feu vert de David attendu). strict=True : dès que l'hôte vision est migré,
+# ces tests PASSENT et pytest échoue sur l'XPASS -> retirer le marqueur, c'est la porte.
+ANSIBLE_3D_EN_ATTENTE = pytest.mark.xfail(
+    strict=True, reason="moitié Ansible de L1e-3d en attente du feu vert de David")
+
+
+def test_la_vision_est_un_package_ament_python_dont_le_nom_est_celui_du_dossier():
+    assert _nom_declare(VISION_PKG / "package.xml") == "didier_vision"
+    assert _build_type(VISION_PKG / "package.xml") == "ament_python"
+    assert (VISION_PKG / "didier_vision" / "__init__.py").is_file()
+    assert (VISION_PKG / "didier_vision" / "nodes" / "chat_node.py").is_file()
+    assert (VISION_PKG / "test" / "conftest.py").is_file() and (VISION_PKG / "pytest.ini").is_file()
+    assert (VISION_PKG / "launch" / "vision.launch.py").is_file()
+    assert (VISION_PKG / "resource" / "didier_vision").is_file()
+    # Les tests ne sont PAS dans le module (ils seraient installés sur le Pi) ; la sentinelle
+    # de build est gitignorée et ne vit jamais dans le module.
+    assert not (VISION_PKG / "didier_vision" / "tests").exists()
+    assert not (VISION_PKG / "didier_vision" / "change").exists()
+
+
+def test_l_ancien_module_vision_et_sa_forme_ament_ont_quitte_legacy():
+    assert not (VISION / "vision").exists()
+    for nom in ("setup.py", "package.xml", "setup.cfg", "resource", "launch"):
+        assert not (VISION / "conf" / "ros2" / nom).exists(), nom
+    for nom in ("conftest.py", "pytest.ini"):
+        assert not (VISION / nom).exists(), nom
+
+
+def test_les_executables_de_la_vision_gardent_leur_nom():
+    import re
+    setup = (VISION_PKG / "setup.py").read_text(encoding="utf-8")
+    actifs = dict(re.findall(r"^\s*'(\w+) = ([\w.:]+)'", setup, re.M))
+    assert actifs == EXECUTABLES_VISION
+    assert "package_name = 'didier_vision'" in setup
+    assert "(os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py'))" in setup
+    cfg = (VISION_PKG / "setup.cfg").read_text(encoding="utf-8")
+    assert "$base/lib/didier_vision" in cfg and "lib/vision" not in cfg
+
+
+def test_le_launch_de_la_vision_cible_le_package_renomme():
+    launch = (VISION_PKG / "launch" / "vision.launch.py").read_text(encoding="utf-8")
+    assert launch.count('package="didier_vision"') == 4
+    assert 'package="vision"' not in launch
+
+
+def test_la_sentinelle_de_la_vision_est_dans_le_package_et_gitignoree():
+    script = (VISION / "conf" / "scripts" / "launch-ros-in-docker.sh").read_text(encoding="utf-8")
+    assert "CHANGE_FILE=/home/ros2_ws/src/didier_vision/change\n" in script
+    assert "ros2 launch didier_vision vision.launch.py" in script
+    ignores = (MONO / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "packages/didier_vision/change" in ignores
+
+
+def test_les_compose_de_la_vision_montent_le_package_a_plat_et_posent_la_racine_des_donnees():
+    for nom, build in (("arm", True), ("x86", False)):
+        compose = VISION / "conf" / "docker" / nom / f"docker-compose-{nom}.yml"
+        service = next(iter(yaml.safe_load(compose.read_text(encoding="utf-8"))["services"].values()))
+        volumes = service["volumes"]
+        code = [v for v in volumes if v.endswith(":/home/ros2_ws/src/didier_vision")]
+        assert len(code) == 1 and code[0].split(":")[0].endswith("/didier_vision"), (nom, code)
+        # Plus de montage du module, de setup.py, de package.xml ni de launch sous src/vision/ ;
+        # conf/ et medias/ (ARM) restent montés : ce sont les données.
+        assert not [v for v in volumes if "/src/vision/vision" in v or "/src/vision/setup.py" in v
+                    or "/src/vision/package.xml" in v or "/src/vision/launch" in v], nom
+        assert "DIDIER_VISION_DATA_DIR=/home/ros2_ws/src/vision/" in service["environment"], nom
+        if build:
+            assert service["build"]["additional_contexts"]["didier_vision"].endswith("/didier_vision")
+    dockerfile = (VISION / "conf" / "docker" / "arm" / "Dockerfile-arm").read_text(encoding="utf-8")
+    assert "COPY --from=didier_vision . /home/ros2_ws/src/didier_vision\n" in dockerfile
+    actives = [ligne for ligne in dockerfile.splitlines() if not ligne.lstrip().startswith("#")]
+    assert not [ligne for ligne in actives if ligne.startswith("COPY vision/") or "conf/ros2" in ligne]
+    build_x86 = (VISION / "conf" / "docker" / "x86" / "build-x86.sh").read_text(encoding="utf-8")
+    assert '--build-context didier_vision="$PACKAGES/didier_vision"' in build_x86
+
+
+def test_plus_aucun_fichier_de_code_ni_de_conf_ne_cite_le_package_vision():
+    """`package="vision"`, `ros2 run|launch vision`, `src/vision/vision`, `from vision.`,
+    `import vision` : un oubli ne se voit qu'au lancement ou à l'import d'un nœud. `hosts` et
+    `vars/main.yml` (moitié Ansible, test suivant) sont traités à part."""
+    import re
+    motif = re.compile(r'package=["\']vision["\']|ros2 (?:run|launch) vision\b|src/vision/vision\b'
+                       r'|^\s*from vision[. ]|^\s*import vision\b', re.M)
+    suffixes = {".py", ".sh", ".yml", ".yaml", ".xml", ".txt", ".cfg", ".launch", ".ini"}
+    exclus = {".venv", "venv", ".git", "build", "install", "log", "__pycache__", "node_modules"}
+    fautes = []
+    for p in MONO.rglob("*"):
+        if exclus & set(p.relative_to(MONO).parts) or not p.is_file():
+            continue
+        if p.suffix not in suffixes and not p.name.startswith("Dockerfile") \
+                and p.name not in ("Makefile", "Jenkinsfile") and p.parent.name != "scripts":
+            continue
+        if p in (HOSTS, VARS, pathlib.Path(__file__).resolve()):
+            continue
+        if motif.search(p.read_text(encoding="utf-8", errors="ignore")):
+            fautes.append(str(p.relative_to(MONO)))
+    assert fautes == [], fautes
+
+
+@ANSIBLE_3D_EN_ATTENTE
+def test_l_hote_vision_pousse_son_package_et_lit_sa_sentinelle_renommee():
+    vision = _hosts()["vision"]["hosts"]["ai"]
+    assert "didier_vision" in vision["packages"]
+    assert vision["sentinelle_build"] == "src/didier_vision/change"
+    assert vision["launch_cmd"] == "ros2 run didier_vision vision_status --ros-args -r __ns:=/didier"
