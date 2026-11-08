@@ -332,6 +332,8 @@ Confiance : **H** = référence lue ou forme sans ambiguïté · **M** = famille
 | Bobines de fil de câblage, 8 couleurs | `Haerkn` + `XDH Tech, Lyon` (**section non lue**) | bobines à flasques | 8 | c0551, c0554 | H |
 | Cosses préisolées rouges (0,5-1,5 mm²) | — | faston / fourche / œillet | 100+ | t0370 | H |
 | Cosses préisolées bleues (1,5-2,5 mm²) | — | œillet / faston | 100+ | t0370 | H |
+| **Cosses à œillet préisolées JAUNES (4-6 mm²)** — *photo du 2026-11-08* | — (diamètre du trou non lu : M5 ou M6 à vérifier) | œillet | ~10-15 | photo 08/11 | H |
+| **Cosses tubulaires cuivre étamé nues, série SC** — *photo du 2026-11-08* | marquages lus : `SC16-6`, `SC10-6` ; un 3ᵉ compartiment `…6-8` ou `…6-6` partiellement lu (SC6 probable, à confirmer) ; gros modèles en haut non lus | section-trou en mm² et mm | ~30-40, 5 compartiments | photo 08/11 | H (présence) / M (tailles) |
 | **Coffret d'embouts de câblage isolés** | `1800PCS VE TERMINALS` — `E0508` 0,5 mm² ×500, `E7508` 0,75 mm² ×400 | ferrules fût 8 mm | 1800 | t0642 | H |
 | Manchons thermosoudables (solder seal) | — | codés couleur 0,5 à 6 mm² | 200-300 | t0518 | H |
 | Gaine thermorétractable noire, tronçons | — | plusieurs Ø | 100+ | t0518 | H |
