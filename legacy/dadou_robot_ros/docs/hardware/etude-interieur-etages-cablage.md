@@ -389,6 +389,8 @@ le ronflement avant/après (étape 8 du plan), et le bruit des moteurs, jamais m
 | Caisse basse (cadre métallique) | **400 × 400 mm, 150 mm de haut** (David, 08/11) | les 4 convertisseurs y prennent aujourd'hui **la place des drivers moteur** (David). À plat, pack + 4 convertisseurs couvrent déjà 60 % du fond, avant SmartDrive, relais, fusible général et câbles |
 | Pack batterie | **280 mm × 100 mm de profondeur ; hauteur ≈ hauteur d'une 18650 + 1 cm, soit ≈ 75 mm** (M12, estimation de David) | cellules debout (65 mm) : l'empreinte loge ~15 × 5 cellules, compatible avec un 7S10P (70 cellules) — à confirmer en comptant. Prévoir 85 mm de hauteur libre pour le tiroir. Sortie du pack non relevée |
 | Récepteur BLX4 | **alimenté par le convertisseur 12 V** (M13) | 12 V, départ J8 de la carte Audio (cahier P32) |
+| VoiceTone C1 (octaveur) | **140 × 90 × 60 mm, 420 g, alimentation 12 V** — trois sources revendeurs concordantes (recherche du 08/11), page fabricant non lue | à l'étage audio (110 mm de haut) : couché, molettes face à la porte, ou debout sur un pan (140 de haut, ça passe) |
+| Routeur Teltonika RUT955 | **109 × 50 × 103 mm (L × H × P), 295 g**, alimentation 9-30 V DC par prise 4 points, boîtier alu, rail DIN ou fixation à plat — fiche RUT955 v1.1 lue le 08/11. ⚠️ Une ancienne révision mesure 80 × 106 × 46 mm : vérifier laquelle est montée | dans le bas du torse avec le départ des alimentations ; **antennes** : 2 LTE, 2 Wi-Fi, 1 GPS en SMA — à sortir ou à placer près d'une paroi bois, jamais dans la caisse en tôle |
 | Moteurs de roues | **250 W chacun** (David : choisis pour limiter la vitesse) | ≈ 10,4 A nominal par moteur sous 24 V, ≈ 21 A pour les deux ; usage courant du pack ≈ 31 A, pire cumul ≈ 51 A. Le fusible général de 40 A (temporisé) et 25 A par SmartDrive restent cohérents ; la mesure roues hors sol reste à faire pour les pointes de démarrage et le blocage |
 
 Géométrie calculée (intérieur, bois à bois) : **313,8 mm entre pans latéraux**, 339,7 mm entre
@@ -474,7 +476,7 @@ joues `support-sd50b5` existent, à décliner pour la SD-150.
 > manque), M13 (BLX4 en 12 V ; relais 40 A et jack VoiceTone manquent) ; ❌ M10 (courses du
 > tambour et des bras, passages à l'épaule) ; M6 et M8 se calculent sur le modèle des cartes et
 > l'implantation, pas sur le robot ; M14 après le gabarit carton. **Hors liste, découverts le
-> 08/11** : dimensions du VoiceTone (il monte à l'étage audio), accès à la caisse (par où on
+> 08/11** : ~~dimensions du VoiceTone~~ (trouvées en ligne), révision du routeur et place de ses antennes, accès à la caisse (par où on
 > l'ouvre), emplacements du lidar, du coup-de-poing et des commandes de façade (D13).
 
 Liste fermée. Les cinq premières décident de la forme des plaques ; sans elles, rien ne se
