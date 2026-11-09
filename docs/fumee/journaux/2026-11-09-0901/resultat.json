@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "id": "2026-11-09-0901",
+  "notes": [
+    "aucune autorité X de session trouvée : Gazebo risque de ne pas démarrer (session graphique fermée ?)"
+  ],
+  "sha": "3ecf7bf",
+  "sha_complet": "3ecf7bf1fc36fc27e4a301c776fefcde76c1d094",
+  "sale": false,
+  "branche": "main",
+  "mode": "si-due",
+  "raison": "due : 14 commit(s) dans main depuis la dernière fumée verte (a4071fa)",
+  "debut": "2026-11-09T09:01:04+01:00",
+  "fin": "2026-11-09T09:02:01+01:00",
+  "duree_s": 57,
+  "rtf": null,
+  "rtf_min": 0.8,
+  "charge_1min": 0.16,
+  "nb_coeurs": 32,
+  "essai": false,
+  "image_reconstruite": false,
+  "coeurs_reserves": "8-15",
+  "epreuves": [
+    {
+      "id": "image",
+      "statut": "vert",
+      "detail": "inchangée depuis la dernière fumée verte (a4071fa), non reconstruite",
+      "duree_s": 0
+    },
+    {
+      "id": "demarrage",
+      "statut": "rouge",
+      "detail": "la sim n'a pas démarré proprement (colcon, conteneur ou bridge)",
+      "duree_s": 25,
+      "journal": "demarrage.log"
+    }
+  ],
+  "verdict": "rouge",
+  "bloquant": "demarrage",
+  "page": "2026-11-09.html"
+}

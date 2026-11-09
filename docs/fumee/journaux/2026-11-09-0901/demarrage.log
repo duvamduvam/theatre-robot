@@ -1,0 +1,10 @@
+ Container dadou-sim-container Creating 
+ Container dadou-sim-container Created 
+ Container dadou-sim-container Starting 
+ Container dadou-sim-container Started 
+Gazebo (gz sim) est mort au démarrage — extrait du journal du conteneur :
+[gazebo-1] [1;31m[Err] [Ogre2RenderEngine.cc:1304] [0m[1;31m Unable to create the rendering window: [0m[1;31mOGRE EXCEPTION(3:RenderingAPIException): OpenGL 3.3 is not supported. Please update your graphics card drivers. in GL3PlusRenderSystem::initialiseContext at ./.obj-x86_64-linux-gnu/gz_og
+[gazebo-1] [1;31m[Err] [Ogre2RenderEngine.cc:1312] [0m[1;31mUnable to create the rendering window after [[0m[1;31m11[0m[1;31m] attempts.[0m[1;31m[0m
+[gazebo-1] Segmentation fault (Address not mapped to object [0x220])
+[gazebo-1] Segmentation fault (core dumped)
+[ERROR] [gazebo-1]: process has died [pid 824, exit code 139, cmd 'ruby /opt/ros/jazzy/opt/gz_tools_vendor/bin/gz sim /home/ros2_ws/install/didier_sim/share/didier_sim/worlds/chantiers.sdf -r -s --force-version 8'].
