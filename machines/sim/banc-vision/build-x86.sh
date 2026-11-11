@@ -11,6 +11,10 @@
 # reconstruit la disposition du Pi (src/vision/conf/ = machines/vision/) en renommant
 # vision/ en conf/ (--transform). Ce banc vit dans machines/sim/banc-vision/.
 #
+# Le Dockerfile-arm fait aussi `COPY medias/` (sur le Pi, medias/ est un dossier d'exécution posé
+# par Ansible, absent du dépôt) : le tar reçoit un medias/ VIDE, sinon le build échoue sur le PC
+# (dette signalée par L1e-4c, soldée en L1e-4e). Les médias réels sont montés par le compose.
+#
 # SÉCURITÉ (dépôt et registre publics) : Dockerfile-arm.dockerignore (lu par BuildKit)
 # exclut conf/secret, mais conf/secret est EN PLUS exclu du tar — ceinture et
 # bretelles, la clé ne doit jamais approcher une image.
@@ -19,13 +23,16 @@ cd "$(dirname "$0")/../.."   # machines/ du mono-dépôt
 # Packages COMMUNS du mono-dépôt theatre-robot (lot L1a) : hors du contexte
 # streamé, passés en contextes NOMMÉS (COPY --from=... dans Dockerfile-arm).
 PACKAGES="$(cd ../packages && pwd)"
+VIDE="$(mktemp -d)"
+trap 'rm -rf "$VIDE"' EXIT
+mkdir "$VIDE/medias"
 
 tar -ch \
     --exclude-vcs \
     --exclude=./vision/secret \
     --exclude='__pycache__' \
     --transform='s,^\./vision,./conf,' \
-    ./vision | docker build -t dadouuu/dadou-vision-x86:latest \
+    ./vision -C "$VIDE" ./medias | docker build -t dadouuu/dadou-vision-x86:latest \
         --build-context theatre_interfaces="$PACKAGES/theatre_interfaces" \
         --build-context theatre_contrats="$PACKAGES/theatre_contrats" \
         --build-context dadou_utils_ros="$PACKAGES/dadou_utils_ros" \
