@@ -1439,29 +1439,52 @@
 <rect x="195.36" y="85.21" width="18.75" height="32.46" fill="none" stroke="black" stroke-width="1.0"/>
 <rect x="195.36" y="85.21" width="5.03" height="32.46" fill="url(#hachure)" stroke="black" stroke-width="0.6"/>
 <rect x="209.08" y="85.21" width="5.03" height="32.46" fill="url(#hachure)" stroke="black" stroke-width="0.6"/>
-<line x1="88.15" y1="46.57" x2="88.15" y2="60.29" stroke="black" stroke-width="0.9" stroke-linecap="round"/>
-<line x1="37.86" y1="42.00" x2="37.86" y2="60.29" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="275.60" y1="32.86" x2="275.60" y2="42.00" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="275.60" y1="51.15" x2="275.60" y2="60.29" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="261.89" y1="42.00" x2="261.89" y2="51.15" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="220.74" y1="60.29" x2="220.74" y2="69.43" stroke="black" stroke-width="0.9" stroke-linecap="round"/>
-<line x1="211.59" y1="55.72" x2="211.59" y2="74.01" stroke="black" stroke-width="0.45" stroke-linecap="round"/>
-<line x1="207.02" y1="51.15" x2="207.02" y2="78.58" stroke="black" stroke-width="0.45" stroke-linecap="round"/>
-<line x1="234.45" y1="42.00" x2="234.45" y2="83.15" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="152.16" y1="83.15" x2="152.16" y2="87.72" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="179.59" y1="87.72" x2="179.59" y2="106.01" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="175.02" y1="106.01" x2="175.02" y2="115.15" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="170.45" y1="115.15" x2="170.45" y2="128.87" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="193.31" y1="101.44" x2="193.31" y2="119.73" stroke="black" stroke-width="0.9" stroke-linecap="round"/>
-<line x1="220.74" y1="87.72" x2="220.74" y2="92.29" stroke="black" stroke-width="0.9" stroke-linecap="round"/>
-<line x1="225.31" y1="92.29" x2="225.31" y2="106.01" stroke="black" stroke-width="0.9" stroke-linecap="round"/>
-<line x1="229.88" y1="106.01" x2="229.88" y2="119.73" stroke="black" stroke-width="0.9" stroke-linecap="round"/>
-<line x1="234.45" y1="96.87" x2="234.45" y2="110.58" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="239.03" y1="110.58" x2="239.03" y2="128.87" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
-<line x1="161.30" y1="60.29" x2="161.30" y2="119.73" stroke="black" stroke-width="0.9" stroke-linecap="round"/>
-<line x1="42.43" y1="78.58" x2="42.43" y2="119.73" stroke="black" stroke-width="0.45" stroke-linecap="round"/>
-<line x1="74.43" y1="83.15" x2="74.43" y2="119.73" stroke="black" stroke-width="0.45" stroke-linecap="round"/>
-<line x1="65.29" y1="110.58" x2="65.29" y2="128.87" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="88.15" y1="46.57" x2="88.15" y2="60.29" stroke="black" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="88.15" y1="46.57" x2="88.15" y2="60.29" stroke="#d40000" stroke-width="0.90" stroke-linecap="round"/>
+<line x1="37.86" y1="42.00" x2="37.86" y2="60.29" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="37.86" y1="42.00" x2="37.86" y2="60.29" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="275.60" y1="32.86" x2="275.60" y2="42.00" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="275.60" y1="32.86" x2="275.60" y2="42.00" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="275.60" y1="51.15" x2="275.60" y2="60.29" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="275.60" y1="51.15" x2="275.60" y2="60.29" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="261.89" y1="42.00" x2="261.89" y2="51.15" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="261.89" y1="42.00" x2="261.89" y2="51.15" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="220.74" y1="60.29" x2="220.74" y2="69.43" stroke="black" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="220.74" y1="60.29" x2="220.74" y2="69.43" stroke="#d40000" stroke-width="0.90" stroke-linecap="round"/>
+<line x1="211.59" y1="55.72" x2="211.59" y2="74.01" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="211.59" y1="55.72" x2="211.59" y2="74.01" stroke="#0057e7" stroke-width="0.60" stroke-linecap="round"/>
+<line x1="207.02" y1="51.15" x2="207.02" y2="78.58" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="207.02" y1="51.15" x2="207.02" y2="78.58" stroke="#ffcc00" stroke-width="0.60" stroke-linecap="round"/>
+<line x1="234.45" y1="42.00" x2="234.45" y2="83.15" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="234.45" y1="42.00" x2="234.45" y2="83.15" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="152.16" y1="83.15" x2="152.16" y2="87.72" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="152.16" y1="83.15" x2="152.16" y2="87.72" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="179.59" y1="87.72" x2="179.59" y2="106.01" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="179.59" y1="87.72" x2="179.59" y2="106.01" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="175.02" y1="106.01" x2="175.02" y2="115.15" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="175.02" y1="106.01" x2="175.02" y2="115.15" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="170.45" y1="115.15" x2="170.45" y2="128.87" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="170.45" y1="115.15" x2="170.45" y2="128.87" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="193.31" y1="101.44" x2="193.31" y2="119.73" stroke="black" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="193.31" y1="101.44" x2="193.31" y2="119.73" stroke="#d40000" stroke-width="0.90" stroke-linecap="round"/>
+<line x1="220.74" y1="87.72" x2="220.74" y2="92.29" stroke="black" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="220.74" y1="87.72" x2="220.74" y2="92.29" stroke="#d40000" stroke-width="0.90" stroke-linecap="round"/>
+<line x1="225.31" y1="92.29" x2="225.31" y2="106.01" stroke="black" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="225.31" y1="92.29" x2="225.31" y2="106.01" stroke="#d40000" stroke-width="0.90" stroke-linecap="round"/>
+<line x1="229.88" y1="106.01" x2="229.88" y2="119.73" stroke="black" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="229.88" y1="106.01" x2="229.88" y2="119.73" stroke="#d40000" stroke-width="0.90" stroke-linecap="round"/>
+<line x1="234.45" y1="96.87" x2="234.45" y2="110.58" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="234.45" y1="96.87" x2="234.45" y2="110.58" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="239.03" y1="110.58" x2="239.03" y2="128.87" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="239.03" y1="110.58" x2="239.03" y2="128.87" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="161.30" y1="60.29" x2="161.30" y2="119.73" stroke="black" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="161.30" y1="60.29" x2="161.30" y2="119.73" stroke="#d40000" stroke-width="0.90" stroke-linecap="round"/>
+<line x1="42.43" y1="78.58" x2="42.43" y2="119.73" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="42.43" y1="78.58" x2="42.43" y2="119.73" stroke="#008a00" stroke-width="0.60" stroke-linecap="round"/>
+<line x1="74.43" y1="83.15" x2="74.43" y2="119.73" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="74.43" y1="83.15" x2="74.43" y2="119.73" stroke="#008a00" stroke-width="0.60" stroke-linecap="round"/>
+<line x1="65.29" y1="110.58" x2="65.29" y2="128.87" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="65.29" y1="110.58" x2="65.29" y2="128.87" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
 <line x1="216.17" y1="46.57" x2="216.17" y2="60.29" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
 <rect x="214.77" y="50.18" width="2.8" height="6.5" fill="white" stroke="black" stroke-width="0.4"/>
 <circle cx="216.17" cy="46.57" r="1.1" fill="black"/>
@@ -1714,13 +1737,22 @@
 <text x="170.45" y="103.71" font-size="2.6" text-anchor="end">PCA 0x41 (servos) et PCF8574 (relais) :</text>
 <text x="170.45" y="108.28" font-size="2.6" text-anchor="end">hors plaque, en chaîne sur J7</text>
 <text x="14.00" y="146.00" font-size="3.0" text-anchor="start" font-weight="bold">Légende :</text>
-<line x1="14" y1="150" x2="24" y2="150" stroke="black" stroke-width="0.9"/>
-<text x="26.00" y="151.00" font-size="2.6" text-anchor="start">5 V : rouge</text>
-<line x1="54" y1="150" x2="64" y2="150" stroke="black" stroke-width="0.6" stroke-dasharray="1.6,0.9"/>
-<text x="66.00" y="151.00" font-size="2.6" text-anchor="start">masse : noir</text>
-<line x1="94" y1="150" x2="104" y2="150" stroke="black" stroke-width="0.45"/>
-<text x="106.00" y="151.00" font-size="2.6" text-anchor="start">SDA bleu · SCL jaune · boutons (GPIO16/20) vert</text>
-<text x="134.00" y="146.00" font-size="2.6" text-anchor="start">✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)</text>
+<line x1="14.00" y1="150.00" x2="23.00" y2="150.00" stroke="black" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="14.00" y1="150.00" x2="23.00" y2="150.00" stroke="#d40000" stroke-width="0.90" stroke-linecap="round"/>
+<text x="25.00" y="151.00" font-size="2.6" text-anchor="start">5 V rouge</text>
+<line x1="48.00" y1="150.00" x2="57.00" y2="150.00" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="48.00" y1="150.00" x2="57.00" y2="150.00" stroke="#000000" stroke-width="0.60" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<text x="59.00" y="151.00" font-size="2.6" text-anchor="start">masse noir</text>
+<line x1="82.00" y1="150.00" x2="91.00" y2="150.00" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="82.00" y1="150.00" x2="91.00" y2="150.00" stroke="#0057e7" stroke-width="0.60" stroke-linecap="round"/>
+<text x="93.00" y="151.00" font-size="2.6" text-anchor="start">SDA bleu</text>
+<line x1="116.00" y1="150.00" x2="125.00" y2="150.00" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="116.00" y1="150.00" x2="125.00" y2="150.00" stroke="#ffcc00" stroke-width="0.60" stroke-linecap="round"/>
+<text x="127.00" y="151.00" font-size="2.6" text-anchor="start">SCL jaune</text>
+<line x1="150.00" y1="150.00" x2="159.00" y2="150.00" stroke="black" stroke-width="1.30" stroke-linecap="round"/>
+<line x1="150.00" y1="150.00" x2="159.00" y2="150.00" stroke="#008a00" stroke-width="0.60" stroke-linecap="round"/>
+<text x="161.00" y="151.00" font-size="2.6" text-anchor="start">boutons vert</text>
+<text x="189.00" y="151.00" font-size="2.6" text-anchor="start">✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)</text>
 <text x="14.00" y="157.00" font-size="2.6" text-anchor="start" font-weight="bold">RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en JST (Dupont femelle côté Pi), aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.</text>
 <text x="14.00" y="173.00" font-size="2.6" text-anchor="start" font-weight="bold">À SOUDER — hachuré = barrette FEMELLE : ISO1540 2 × 1×4, PCA9685 ROUES 1×6, support tulipe DIP-14 (U1).  Cadre épais = barrette MÂLE : J4 1×7, JP1 1×2 (+ cavalier).</text>
 <text x="14.00" y="178.50" font-size="2.6" text-anchor="start" font-weight="bold">Cadre fin = embase JST-XH : J1a, J1b, J7 (4 pts) ; J3, J5, J6 (3 pts).  J2 = bornier à vis 2 pts au pas de 5,08.</text>

@@ -31,9 +31,21 @@ def texte(x: float, y: float, s: str, taille: float = TEXTE, ancre: str = "start
     elements.append(f'<text x="{x}" y="{y}" font-size="{taille}" text-anchor="{ancre}"{poids}>{s}</text>')
 
 
-def ligne(*points: tuple[float, float], epaisseur: float = TRAIT, tirets: bool = False) -> None:
+# Couleurs des fils, les mêmes que les straps de la plaque (implantation_banc_temoin_bandes.py) ;
+# 3,3 V du Pi en violet (couleur restée libre). Liseré noir : lisible imprimé en noir seul.
+TEINTE = {"5V": "#d40000", "SDA": "#0057e7", "SCL": "#ffcc00", "BOUTON": "#008a00", "3V3": "#7a2fbf"}
+
+
+def ligne(*points: tuple[float, float], epaisseur: float = TRAIT, tirets: bool = False,
+          net: str = "") -> None:
     pts = " ".join(f"{x},{y}" for x, y in points)
     style = ' stroke-dasharray="1.5,1"' if tirets else ""
+    if net in TEINTE:
+        elements.append(f'<polyline points="{pts}" fill="none" stroke="black" '
+                        f'stroke-width="{epaisseur + 0.9}"/>')
+        elements.append(f'<polyline points="{pts}" fill="none" stroke="{TEINTE[net]}" '
+                        f'stroke-width="{epaisseur + 0.3}"{style}/>')
+        return
     elements.append(f'<polyline points="{pts}" fill="none" stroke="black" stroke-width="{epaisseur}"{style}/>')
 
 
@@ -130,7 +142,7 @@ ligne((39, 152), (39, 146), epaisseur=TRAIT_BOITE)
 boite(80, 32, 24, 52, "ISO1540", "3,3 V │ 5 V")
 iso = {"3V3": 46, "SDA": 54, "SCL": 62, "GND": 72}
 for net, nom1, nom2 in (("3V3", "VCC1", "VCC2"), ("SDA", "SDA1", "SDA2"), ("SCL", "SCL1", "SCL2")):
-    ligne((PI_D, pi[net]), (80, iso[net]))
+    ligne((PI_D, pi[net]), (80, iso[net]), net=net)
     broche(80, iso[net], nom1, "gauche")
     broche(104, iso[net], nom2, "droite")
 broche(80, iso["GND"], "GND1", "gauche")
@@ -144,13 +156,13 @@ pca = {"5V": 38, "SDA": 46, "SCL": 54, "GND": 62}
 j7 = {"5V": 98, "SDA": 106, "SCL": 114, "GND": 122}
 for net, y_iso in (("5V", iso["3V3"]), ("SDA", iso["SDA"]), ("SCL", iso["SCL"])):
     x = COL[net]
-    ligne((104, y_iso), (x, y_iso))
-    point(x, y_iso)
-    ligne((x, min(pca[net], y_iso)), (x, j7[net]))
+    ligne((104, y_iso), (x, y_iso), net=net)
+    ligne((x, min(pca[net], y_iso)), (x, j7[net]), net=net)
     for y in (pca[net], j7[net]):
-        ligne((x, y), (130, y))
+        ligne((x, y), (130, y), net=net)
+    for y in (y_iso, pca[net], j7[net]):
         point(x, y)
-ligne((COL["5V"], 38), (COL["5V"], 29))
+ligne((COL["5V"], 38), (COL["5V"], 29), net="5V")
 etiquette(COL["5V"], 27, "5V BANC", vers_droite=False)
 
 # Masse du Pi : le seul lien avec les alimentations du banc (comme sur le robot)
@@ -270,7 +282,7 @@ masse(232, 131)
 for nom, cle in (("arrêt", "G16"), ("réarm. / appui long = extinction", "G20")):
     y = pi[cle]
     bouton(PI_D, y)
-    ligne((PI_D + 10, y), (84, y))
+    ligne((PI_D + 10, y), (84, y), net="BOUTON")
     masse(84, y)
 texte(72, pi["G16"] - 4, "SW1 arrêt", PETIT)
 texte(72, pi["G20"] - 4, "SW2 réarm.", PETIT)
@@ -293,6 +305,11 @@ texte(12, 194, "Masse commune à tout ; 5 V, 12 V et servos séparés.", PETIT)
 texte(12, 198.5, "Cartes I²C en 5 V derrière l'ISO1540, comme le robot.", PETIT)
 
 texte(214, 197, "Légende : même étiquette = même fil ;", PETIT)
+for i, (net, nom) in enumerate((("5V", "5 V rouge"), ("SDA", "SDA bleu"), ("SCL", "SCL jaune"),
+                                ("BOUTON", "boutons vert"), ("3V3", "3,3 V violet"))):
+    x = 130 + i * 31
+    ligne((x, 206.5), (x + 6, 206.5), net=net)
+    texte(x + 7.5, 207.5, nom, PETIT)
 etiquette(214, 202, "5V BANC")
 texte(232, 203, "= +5 V DIANQI ;", PETIT)
 masse(262, 199.5)

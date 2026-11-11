@@ -313,6 +313,24 @@ def contour(c1: float, r1: float, c2: float, r2: float, titre: str = "", sous: s
 
 
 STYLE = {"5V": (0.9, ""), "GND": (0.6, "1.6,0.9")}
+# Teinte à l'écran de chaque couleur de fil. Le trait garde un liseré noir et ses tirets :
+# imprimé sur la thermique (noir seul), le plan reste lisible, le jaune compris.
+TEINTE = {"rouge": "#d40000", "noir": "#000000", "bleu": "#0057e7", "jaune": "#ffcc00",
+          "vert": "#008a00", "violet": "#7a2fbf", "blanc": "#ffffff"}
+
+
+def trait_couleur(x1: float, y1: float, x2: float, y2: float, net: str) -> None:
+    """Trait à la couleur du fil du réseau, sur un liseré noir (visible même jaune ou blanc)."""
+    ep, tirets = STYLE.get(net, (0.6, ""))
+    el.append(f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" stroke="black" '
+              f'stroke-width="{ep + 0.7:.2f}" stroke-linecap="round"/>')
+    d = f' stroke-dasharray="{tirets}"' if tirets else ""
+    el.append(f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" '
+              f'stroke="{TEINTE[COULEURS[net]]}" stroke-width="{ep:.2f}" stroke-linecap="round"{d}/>')
+
+
+def strap_dessin(a: Trou, b: Trou, net: str) -> None:
+    trait_couleur(*P(*a), *P(*b), net)
 
 
 def dessiner() -> str:
@@ -369,8 +387,7 @@ def dessiner() -> str:
 
     # ---- straps
     for net, a, b in STRAPS:
-        ep, t = STYLE.get(net, (0.45, ""))
-        ligne(a, b, ep, t)
+        strap_dessin(a, b, net)
 
     # ---- dipôles
     for repere, valeur, a, b, sorte in DIPOLES:
@@ -451,14 +468,12 @@ def dessiner() -> str:
     # ---- légende
     lx, ly = 14, 150
     texte(lx, ly - 4, "Légende :", TEXTE, gras=True)
-    for i, (net, nom) in enumerate((("5V", "5 V : rouge"), ("GND", "masse : noir"),
-                                    ("SIG", "SDA bleu · SCL jaune · boutons (GPIO16/20) vert"))):
-        x = lx + i * 40
-        ep, t = STYLE.get(net, (0.45, ""))
-        d = f' stroke-dasharray="{t}"' if t else ""
-        el.append(f'<line x1="{x}" y1="{ly}" x2="{x + 10}" y2="{ly}" stroke="black" stroke-width="{ep}"{d}/>')
-        texte(x + 12, ly + 1, nom, PETIT)
-    texte(lx + 120, ly - 4, "✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)", PETIT)
+    for i, (net, nom) in enumerate((("5V", "5 V rouge"), ("GND", "masse noir"), ("SDA", "SDA bleu"),
+                                    ("SCL", "SCL jaune"), ("GPIO16", "boutons vert"))):
+        x = lx + i * 34
+        trait_couleur(x, ly, x + 9, ly, net)
+        texte(x + 11, ly + 1, nom, PETIT)
+    texte(lx + 175, ly + 1, "✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)", PETIT)
     texte(lx, ly + 7, "RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en JST (Dupont femelle côté Pi), "
           "aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.",
           PETIT, gras=True)
