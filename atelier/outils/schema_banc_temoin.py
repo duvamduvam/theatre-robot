@@ -97,9 +97,9 @@ def broche(x: float, y: float, nom: str, cote: str) -> None:
 
 
 # --- Titre --------------------------------------------------------------------------------
-texte(148.5, 10, "Banc témoin B0 — câblage (relevé dans le code du robot, 07/11/2026)", 4.2, "middle", True)
-texte(148.5, 15.5, "Aucun moteur, aucun driver moteur. Même câblage logique que Didier : PCA9685 0x40, "
-      "PCF8574 0x21 derrière un ISO1540, LED sur GPIO 18.", PETIT, "middle")
+texte(148.5, 10, "Banc témoin — câblage (code du robot relevé le 07/11, plaque à bandes du 11/11)", 4.2, "middle", True)
+texte(148.5, 15.5, "Même câblage logique que Didier : PCA9685 0x40 derrière un ISO1540, LED sur GPIO 18. "
+      "Roues en l'air par un MDD10A (étage B3). Jx = connecteur de la plaque.", PETIT, "middle")
 
 # --- Raspberry Pi 4 (da66fc96, démarre sur USB) -------------------------------------------
 boite(8, 24, 62, 122, "Raspberry Pi 4", "da66fc96 · démarre sur USB")
@@ -117,14 +117,16 @@ broche(PI_D, pi["G16"], "broche 36 · GPIO 16", "droite")
 broche(PI_D, pi["G20"], "broche 38 · GPIO 20", "droite")
 texte(12, 100, "broches 2 et 4 (5 V) :", PETIT, gras=True)
 texte(12, 104, "NE RIEN BRANCHER", PETIT, gras=True)
+texte(72, 68.5, "J1a (JST 4)", PETIT, gras=True)
+texte(72, 88, "J1b (JST 4)", PETIT, gras=True)
 
 # Alimentation propre du Pi
-boite(8, 152, 62, 16, "Chargeur USB-C du Pi", "SEULE alimentation du Pi")
+boite(8, 152, 62, 16, "Chargeur USB-C du Pi", "source 1 · SEULE alimentation du Pi")
 ligne((39, 152), (39, 146), epaisseur=TRAIT_BOITE)
 
 # --- Isolateur ISO1540, comme sur la carte Sécurité du robot ------------------------------
-# Côté 1 = Pi (3,3 V), côté 2 = cartes (5 V). Sur le robot les deux masses sont communes : il
-# sépare et adapte le bus (3,3 V → 5 V), ce n'est pas une barrière galvanique.
+# Côté 1 = Pi (3,3 V), côté 2 = cartes (5 V). Les deux masses sont communes : il sépare et
+# adapte le bus (3,3 V → 5 V), ce n'est pas une barrière galvanique.
 boite(80, 32, 24, 52, "ISO1540", "3,3 V │ 5 V")
 iso = {"3V3": 46, "SDA": 54, "SCL": 62, "GND": 72}
 for net, nom1, nom2 in (("3V3", "VCC1", "VCC2"), ("SDA", "SDA1", "SDA2"), ("SCL", "SCL1", "SCL2")):
@@ -139,63 +141,87 @@ masse(107, 82)
 # --- Bus 5 V derrière l'isolateur : colonnes verticales -----------------------------------
 COL = {"5V": 110, "SDA": 115, "SCL": 120}
 pca = {"5V": 38, "SDA": 46, "SCL": 54, "GND": 62}
-pcf = {"5V": 98, "SDA": 106, "SCL": 114, "GND": 122}
+j7 = {"5V": 98, "SDA": 106, "SCL": 114, "GND": 122}
 for net, y_iso in (("5V", iso["3V3"]), ("SDA", iso["SDA"]), ("SCL", iso["SCL"])):
     x = COL[net]
     ligne((104, y_iso), (x, y_iso))
     point(x, y_iso)
-    ligne((x, min(pca[net], y_iso)), (x, pcf[net]))
-    for y in (pca[net], pcf[net]):
+    ligne((x, min(pca[net], y_iso)), (x, j7[net]))
+    for y in (pca[net], j7[net]):
         ligne((x, y), (130, y))
         point(x, y)
 ligne((COL["5V"], 38), (COL["5V"], 29))
 etiquette(COL["5V"], 27, "5V BANC", vers_droite=False)
 
-# Masse du Pi : le seul lien avec l'alimentation du banc (comme sur le robot)
+# Masse du Pi : le seul lien avec les alimentations du banc (comme sur le robot)
 ligne((PI_D, pi["GND"]), (80, iso["GND"]))
 ligne((76, pi["GND"]), (76, pi["GND"] + 4))
 masse(76, pi["GND"] + 4)
 
-# --- PCA9685 ------------------------------------------------------------------------------
-boite(130, 24, 72, 62, "PCA9685", "0x40 · servos ET roues")
+# --- PCA9685 0x40 ROUES (sur la plaque) ---------------------------------------------------
+boite(130, 24, 72, 62, "PCA9685 0x40", "roues ch 0-3 · servos ch 4+ (code actuel)")
 for net, nom in (("5V", "VCC"), ("SDA", "SDA"), ("SCL", "SCL"), ("GND", "GND")):
     broche(130, pca[net], nom, "gauche")
 ligne((130, pca["GND"]), (125, pca["GND"]))
 masse(125, pca["GND"])
-broche(202, 32, "V+ (bornier)", "droite")
-ligne((202, 32), (208, 32))
-etiquette(208, 32, "5V BANC")
-broche(202, 44, "ch 0 · sens G", "droite")
-broche(202, 51, "ch 1 · PWM G", "droite")
-broche(202, 58, "ch 2 · PWM D", "droite")
-broche(202, 65, "ch 3 · sens D", "droite")
-for y in (44, 51, 58, 65):
-    resistance(202, 222, y, "330 Ω")
-    # LED témoin : triangle + barre, cathode vers la masse
+# OE : R10 vers le 5 V (PWM coupés par défaut), JP1 vers la masse (posé = roues actives)
+broche(202, 33, "OE", "droite")
+ligne((202, 33), (208, 33))
+point(208, 33)
+resistance(208, 226, 33, "R10 10 kΩ")
+etiquette(226, 33, "5V BANC")
+ligne((208, 33), (208, 35))
+elements.append('<circle cx="208" cy="35.8" r="0.7" fill="none" stroke="black" stroke-width="0.3"/>')
+elements.append('<circle cx="208" cy="38.2" r="0.7" fill="none" stroke="black" stroke-width="0.3"/>')
+ligne((208, 39), (208, 39.5))
+masse(208, 39.5)
+texte(205, 39, "JP1 posé = roues actives", PETIT, "end")
+CH = (48, 54, 60, 66)
+for y, nom in zip(CH, ("ch 0 · sens G", "ch 1 · PWM G", "ch 2 · PWM D", "ch 3 · sens D")):
+    broche(202, y, nom, "droite")
+    resistance(202, 222, y, "")
     elements.append(f'<polygon points="222,{y - 1.6} 222,{y + 1.6} 225,{y}" fill="none" stroke="black" '
                     f'stroke-width="{TRAIT}"/>')
     ligne((225, y - 1.6), (225, y + 1.6))
     ligne((225, y), (229, y))
-point(229, 51)
-ligne((229, 44), (229, 68))
+ligne((229, 48), (229, 68))
 masse(229, 68)
-texte(233, 48, "4 LED témoins", PETIT)
-texte(233, 52, "(facultatif)", PETIT)
-texte(233, 58, "JAMAIS de driver", PETIT, gras=True)
-texte(233, 62, "moteur sur 0 à 3", PETIT, gras=True)
-broche(202, 78, "ch 4 · cou", "droite")
-ligne((202, 78), (212, 78))
-texte(213, 79, "servo facultatif (emprunté à la tête), alimenté par V+", PETIT)
+texte(200, 71.5, "témoins : J4 + 4 × 330 Ω + LED", PETIT, "end")
+broche(202, 76, "ch 4 · servo", "droite")
+broche(202, 82, "V+ (bornier)", "droite")
+ligne((202, 82), (206, 82))
+etiquette(206, 82, "5V SERVOS")
 
-# --- PCF8574 ------------------------------------------------------------------------------
-boite(130, 90, 72, 38, "PCF8574", "0x21 · relais")
-for net, nom in (("5V", "VCC"), ("SDA", "SDA"), ("SCL", "SCL"), ("GND", "GND")):
-    broche(130, pcf[net], nom, "gauche")
-ligne((130, pcf["GND"]), (125, pcf["GND"]))
-masse(125, pcf["GND"])
-texte(200, 108, "cavaliers : A0 = 1,", PETIT, "end")
-texte(200, 112, "A1 = 0, A2 = 0", PETIT, "end")
-texte(200, 120, "vérifier : 8574, pas 8575", PETIT, "end", gras=True)
+# --- MDD10A et moteurs (étage B3, hors plaque) ---------------------------------------------
+boite(246, 24, 46, 48, "MDD10A", "Cytron · hors plaque")
+for y, s_ in ((36, "DIR1 ← ch 0 (J5)"), (40.5, "PWM1 ← ch 1 (J5)"), (45, "PWM2 ← ch 2 (J6)"),
+              (49.5, "DIR2 ← ch 3 (J6)"), (54, "GND ← J5 / J6"), (59, "M1 → N20 gauche"), (63.5, "M2 → N20 droite")):
+    texte(248, y, s_, PETIT)
+texte(248, 68.5, "VIN ← 12V MOT", PETIT, gras=True)
+
+# --- Alimentation des moteurs : chargeur 12 V (source 3) ------------------------------------
+boite(240, 76, 52, 13, "Chargeur 12 V (jack)", "source 3 · ≥ 2 A · polarité vérifiée")
+texte(242, 92, "+12 V → 1N5819 →", PETIT)
+etiquette(270, 91, "12V MOT")
+texte(242, 97, "12V MOT → LM2596 réglé à 5 V →", PETIT)
+etiquette(242, 101.5, "5V SERVOS")
+texte(242, 106.5, "(régler à vide, au multimètre)", PETIT)
+
+# --- Modules déportés sur J7 (hors plaque, sur le socle) ------------------------------------
+elements.append('<rect x="130" y="90" width="72" height="38" fill="none" stroke="black" '
+                'stroke-width="0.6" stroke-dasharray="2.5,1.2"/>')
+texte(166, 95, "Sur J7 (JST 4, hors plaque)", TEXTE + 0.4, "middle", gras=True)
+for net, nom in (("5V", "5 V"), ("SDA", "SDA"), ("SCL", "SCL"), ("GND", "GND")):
+    broche(130, j7[net], nom, "gauche")
+ligne((130, j7["GND"]), (125, j7["GND"]))
+masse(125, j7["GND"])
+texte(150, 101.5, "→ PCF8574 0x21 (relais)", PETIT, gras=True)
+texte(150, 105.5, "   cavaliers A0 = 1, A1 = A2 = 0", PETIT)
+texte(150, 110.5, "→ PCA9685 0x41 (servos)", PETIT, gras=True)
+texte(150, 114.5, "   V+ ←", PETIT)
+etiquette(162, 114, "5V SERVOS")
+texte(150, 120, "chaînés par leurs barrettes", PETIT)
+texte(150, 124, "traversantes", PETIT)
 
 # --- 74AHCT125 ----------------------------------------------------------------------------
 boite(130, 138, 72, 56, "74AHCT125", "DIP-14 · 3,3 V → 5 V")
@@ -218,30 +244,27 @@ ligne((202, y_14), (208, y_14))
 etiquette(208, y_14, "5V BANC")
 ligne((202, y_oe2), (208, y_oe2))
 etiquette(208, y_oe2, "5V BANC")
-texte(166, 188, "+ 100 nF entre les broches 14 et 7", PETIT, "middle")
+texte(166, 188, "+ C1 100 nF entre les broches 14 et 7", PETIT, "middle")
 
 # --- Matrice WS2812B ----------------------------------------------------------------------
-boite(240, 140, 50, 46, "Matrice", "WS2812B 8×8")
-resistance(202, 240, y_1y, "330 Ω")
+boite(240, 140, 50, 46, "Matrice", "WS2812B 8×8 · J3 (JST 3)")
+resistance(202, 240, y_1y, "R2 330 Ω")
 broche(240, y_1y, "DIN", "gauche")
 broche(240, 156, "5 V", "gauche")
 broche(290, 168, "GND", "droite")
 etiquette(240, 156, "5V BANC", vers_droite=False)
 ligne((290, 168), (293, 168))
 masse(293, 168)
-texte(265, 182, "+ 470 à 1 000 µF", PETIT, "middle")
-texte(265, 185.5, "entre 5 V et GND", PETIT, "middle")
+texte(265, 180, "courant par J2, pas les bandes", PETIT, "middle")
+texte(265, 184, "C2 1 000 µF entre 5 V et GND", PETIT, "middle")
 
-# --- Alimentation du banc DIANQI ------------------------------------------------------------
-boite(240, 90, 50, 40, "DIANQI D-30A", "alimentation du banc")
-broche(240, 104, "+5 V", "gauche")
-broche(240, 112, "GND", "gauche")
-broche(240, 120, "+12 V", "gauche")
-etiquette(240, 104, "5V BANC", vers_droite=False)
-ligne((240, 112), (232, 112))
-masse(232, 112)
-texte(238, 123, "isolé", PETIT, "end", gras=True)
-texte(265, 127, "luminosité LED bridée", PETIT, "middle")
+# --- Alimentation logique : DIANQI 5 V (source 2) -------------------------------------------
+boite(240, 112, 50, 24, "DIANQI 5 V 4 A", "source 2 · bornier J2")
+broche(240, 124, "+5 V", "gauche")
+broche(240, 131, "GND", "gauche")
+etiquette(240, 124, "5V BANC", vers_droite=False)
+ligne((240, 131), (232, 131))
+masse(232, 131)
 
 # --- Boutons et LED d'état ----------------------------------------------------------------
 for nom, cle in (("arrêt", "G16"), ("réarm. / appui long = extinction", "G20")):
@@ -249,16 +272,16 @@ for nom, cle in (("arrêt", "G16"), ("réarm. / appui long = extinction", "G20")
     bouton(PI_D, y)
     ligne((PI_D + 10, y), (84, y))
     masse(84, y)
-texte(72, pi["G16"] - 4, "arrêt", PETIT)
-texte(72, pi["G20"] - 4, "réarm.", PETIT)
+texte(72, pi["G16"] - 4, "SW1 arrêt", PETIT)
+texte(72, pi["G20"] - 4, "SW2 réarm.", PETIT)
 y = pi["G12"]
-resistance(PI_D, 80, y, "330 Ω")
+resistance(PI_D, 80, y, "R3 330")
 elements.append(f'<polygon points="80,{y - 1.6} 80,{y + 1.6} 83,{y}" fill="none" stroke="black" '
                 f'stroke-width="{TRAIT}"/>')
 ligne((83, y - 1.6), (83, y + 1.6))
 ligne((83, y), (86, y))
 masse(86, y)
-texte(84.5, y - 2.5, "état", PETIT)
+texte(84.5, y - 2.5, "D5 état", PETIT)
 
 # --- Avertissement et légende -------------------------------------------------------------
 elements.append(f'<rect x="8" y="173" width="110" height="30" fill="none" stroke="black" '
@@ -266,14 +289,14 @@ elements.append(f'<rect x="8" y="173" width="110" height="30" fill="none" stroke
 texte(12, 179, "RÈGLE N° 1 (incident de la nappe du 04/11)", TEXTE, gras=True)
 texte(12, 185, "Le Pi n'est alimenté QUE par son chargeur USB-C.", PETIT)
 texte(12, 189.5, "Aucun fil entre les broches 5 V du Pi et le banc.", PETIT)
-texte(12, 194, "Seule la masse est commune, par un seul fil (broche 6).", PETIT)
+texte(12, 194, "Masse commune à tout ; 5 V, 12 V et servos séparés.", PETIT)
 texte(12, 198.5, "Cartes I²C en 5 V derrière l'ISO1540, comme le robot.", PETIT)
 
 texte(214, 197, "Légende : même étiquette = même fil ;", PETIT)
 etiquette(214, 202, "5V BANC")
-texte(232, 203, "= +5 V de la DIANQI ;", PETIT)
-masse(268, 199.5)
-texte(272, 203, "= masse commune", PETIT)
+texte(232, 203, "= +5 V DIANQI ;", PETIT)
+masse(262, 199.5)
+texte(266, 203, "= masse commune", PETIT)
 
 svg = (
     '<?xml version="1.0" encoding="UTF-8"?>\n'
