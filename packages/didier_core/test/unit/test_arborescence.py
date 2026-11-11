@@ -580,12 +580,13 @@ def test_le_nettoyage_couvre_aussi_la_vision():
 ROLES_GARDES = [
     "activate-i2c", "blinka", "colcon_build", "command_root", "config-hote", "conteneur",
     "desktop_lunch", "dir_struct", "docker-arm64", "docker-compose", "docker-install",
-    "docker-prune", "download-install-deb-from-url", "info", "linux-package", "logging", "nginx",
+    "docker-prune", "download-install-deb-from-url", "info", "linux-package", "logging",
     "python", "ros_humble_base", "ros_humble_desktop", "screen-config", "secrets", "services",
     "set-bashrc", "start-scripts", "synchronise", "usb-audio",
 ]
 ROLES_SUPPRIMES = ["activate-spi", "download-install-docker-from-url", "root_ssh",
-                   "ros_dependencies", "waveshare-screen", "set-vim", "jenkins", "sonar"]
+                   "ros_dependencies", "waveshare-screen", "set-vim", "jenkins", "sonar",
+                   "nginx"]   # nginx : aucun playbook ne l'appelle (git grep, L1e-4e)
 PLAYBOOKS_GARDES = ["deploy-pios.yml", "install-pios-lite.yml", "install-pios-full.yml",
                     "install-controller-ubuntu.yml"]
 PLAYBOOKS_SUPPRIMES = ["install-ci.yml", "install-ci-github-actions.yml", "configure-local-ci.yml",
@@ -967,3 +968,41 @@ def test_la_sim_garde_gz_ip_et_la_fumee_pointe_le_banc():
                    "validate-rehearsal-chantiers.sh", "validate-jeu-a1.sh"):
         montage = next(v for v in volumes if v.startswith(f"../{script}:"))
         assert (MACHINES / "sim" / "banc-robot" / montage.split(":")[0]).resolve() == MACHINES / "sim" / script
+
+
+# --- L1e-4e (11/11) : le ménage de L1e. Chemins gravés en dur, pas dérivés. -------------------------
+
+def test_la_doc_est_a_la_racine_et_a_quitte_legacy():
+    docs = MONO / "docs"
+    for f in ("chantiers.md", "operations.md", "architecture.md", "interfaces.md", "README.md",
+              "etude-architecture-globale.md", "incidents/README.md", "software/overview.md",
+              "hardware/overview.md", "etudes/etude-standards-robotique.md"):
+        assert (docs / f).is_file(), f
+    assert not (ROBOT / "docs").exists()
+    # Le CLAUDE.md du robot (règles de sécurité roues) reste la référence tant que le CLAUDE.md
+    # racine y renvoie.
+    assert (ROBOT / "CLAUDE.md").is_file()
+
+
+def test_essais_et_firmwares_sont_dans_atelier():
+    atelier = MONO / "atelier"
+    for f in ("essais/voix/bench.py", "firmware/pico_odometry/odom_protocol.py",
+              "firmware/remote_usb/remote_protocol.py", "outils/releve_pi.sh"):
+        assert (atelier / f).is_file(), f
+    assert not (ROBOT / "essais").exists() and not (ROBOT / "firmware").exists()
+
+
+def test_l_outillage_mort_de_legacy_est_supprime():
+    utils = LEGACY / "dadou_utils_ros"
+    for ancien in (ROBOT / "ci", ROBOT / "ci_test", utils / "conf", utils / "docs", utils / "scripts",
+                   utils / "jenkins", ROBOT / "requirements.txt", VISION / "requirements.txt",
+                   ROBOT / "requirements-test.txt", VISION / "requirements-test.txt"):
+        assert not ancien.exists(), ancien
+
+
+def test_les_requirements_de_test_sont_a_la_racine_et_dans_la_vision():
+    racine = (MONO / "requirements-test.txt").read_text(encoding="utf-8").splitlines()
+    actifs = [ligne for ligne in racine if ligne and not ligne.startswith("#")]
+    assert actifs == ["pytest", "filetype", "colorlog", "psutil", "xacro", "imageio", "py_trees==2.6.0"]
+    vision = (PACKAGES / "didier_vision" / "requirements-test.txt").read_text(encoding="utf-8").splitlines()
+    assert [ligne for ligne in vision if ligne and not ligne.startswith("#")] == ["pytest", "sqlobject", "numpy<2"]

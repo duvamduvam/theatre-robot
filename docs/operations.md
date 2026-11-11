@@ -163,7 +163,7 @@ et son `conftest.py` sont dans `packages/dadou_utils_ros/test/`. Depuis la racin
 mono-dépôt, avec le venv du robot :
 
 ```bash
-cd packages/dadou_utils_ros && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=
+cd packages/dadou_utils_ros && ../../.venv/bin/python -m pytest -q -o addopts=
 ```
 
 Les `conftest.py` des dépôts legacy (vision, télécommande), de `packages/didier_core/test/` (le
@@ -198,7 +198,7 @@ L1e-4c (copiée dans `src/vision/conf/` du Pi) ; `DIDIER_VISION_DATA_DIR` des te
 toujours `legacy/dadou_vision_ros/` (`db/`, `medias/` d'exécution, non suivis). Il exige SON venv (le venv robot n'a pas `sqlobject`) :
 
 ```bash
-cd packages/didier_vision && ../../legacy/dadou_vision_ros/.venv/bin/python -m pytest -q -o addopts=
+cd packages/didier_vision && .venv/bin/python -m pytest -q -o addopts=
 ```
 
 Banc x86 : `machines/sim/banc-vision/build-x86.sh` (contexte nommé
@@ -211,7 +211,7 @@ L'ex-package `robot` est `packages/didier_core/` (code `didier_core/`, tests `te
 exécutables, nœuds et topics inchangés. Tests hôte, depuis la racine du mono-dépôt :
 
 ```bash
-cd packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=
+cd packages/didier_core && ../../.venv/bin/python -m pytest -q -o addopts=
 ```
 
 (il n'y a plus de tests ni de `conftest.py` à la racine de `legacy/dadou_robot_ros/`). Les
@@ -249,20 +249,47 @@ déplacés tels quels ; voir `data/README.md`). **Rien ne change sur le Pi ni da
 - **Tests hôte** : `DIDIER_DATA_DIR` → `data/` (conftest du cœur) ; jeu et télécommande lisent
   `data/json`. Éditer une séquence pour la sim = éditer `data/json/sequences/…` (monté).
 
+## Venvs et commandes de test (lot L1e-4e, 11/11)
+
+Deux venvs gitignorés, à créer une fois (`uv`, Python 3.12) :
+
+```bash
+uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements-test.txt
+uv venv --python 3.12 packages/didier_vision/.venv && \
+  uv pip install --python packages/didier_vision/.venv/bin/python -r packages/didier_vision/requirements-test.txt
+```
+
+Les six suites (depuis la racine du dépôt ; `-o addopts=` neutralise le `-q` des `pytest.ini`) :
+
+```bash
+R=$PWD
+(cd packages/didier_core       && $R/.venv/bin/python -m pytest -q -o addopts=)   # cœur + arborescence + liens Markdown
+(cd packages/dadou_utils_ros   && $R/.venv/bin/python -m pytest -q -o addopts=)
+(cd packages/didier_jeu        && $R/.venv/bin/python -m pytest -q -o addopts=)
+(cd packages/theatre_contrats  && $R/.venv/bin/python -m pytest -q -o addopts=)
+(cd legacy/dadou_control_ros   && $R/.venv/bin/python -m pytest -q -o addopts=)   # télécommande (→ L4)
+(cd packages/didier_vision     && $R/packages/didier_vision/.venv/bin/python -m pytest -q -o addopts=)
+```
+
+La vision a son venv à part (`sqlobject`, `numpy<2`). Ses tests posent `DIDIER_VISION_DATA_DIR`
+sur un dossier temporaire jetable (la vision n'a aucune donnée suivie). Le test
+`test_liens_markdown.py` échoue sur tout lien Markdown relatif mort du dépôt : après avoir déplacé
+une page, corriger les liens, pas le test.
+
 ## CI à la racine — les tests unitaires à chaque poussée (11/11)
 
 `.github/workflows/tests.yml` (racine du mono-dépôt) rejoue sur GitHub, à chaque poussée et
 chaque demande de fusion, six suites « hôte » : `didier_core`, `dadou_utils_ros`,
 `didier_jeu`, `theatre_contrats`, `didier_vision`, et la télécommande de
-`legacy/dadou_control_ros`. Ubuntu 24.04, Python 3.12, aucun ROS (modules factices), la
-commande de cette page : `python -m pytest -q -o addopts=` depuis le dossier de la suite.
+`legacy/dadou_control_ros`. Ubuntu 24.04, Python 3.12, aucun ROS (modules factices), `requirements-test.txt` de la racine
+(la vision : celui de son package), la commande de la section précédente : `python -m pytest -q -o addopts=` depuis le dossier de la suite.
 Pas de build colcon ni de sim : la fumée nocturne s'en charge.
 
 - Voir le résultat : `gh run list --workflow tests --limit 5`, puis `gh run view <id> --log-failed`.
 - Ajouter une suite : une entrée dans `matrix.include` (dossier + fichier d'exigences).
 - Rejouer comme la CI, hors de l'arbre de travail : `git archive HEAD | tar -x -C /tmp/x`,
   un venv neuf, `pip install -r <exigences>`. ⚠️ Dans une telle copie,
-  `test_arborescence.py` rougit sur l'absence de `.git` : attendu, GitHub en a un.
+  `test_arborescence.py` et `test_liens_markdown.py` rougissent sur l'absence de `.git` : attendu, GitHub en a un.
 - Les anciens `legacy/*/.github/workflows/tests.yml` sont supprimés : GitHub ne lit que la
   racine, ils ne tournaient plus depuis le lot L0 (02/11).
 

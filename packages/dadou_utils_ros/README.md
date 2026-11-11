@@ -34,5 +34,5 @@ Ces liens sont supprimés ; `conf/`, `docs/`, `scripts/` sont restés dans `lega
 ## Tester
 
 ```bash
-cd packages/dadou_utils_ros && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=
+cd packages/dadou_utils_ros && ../../.venv/bin/python -m pytest -q -o addopts=
 ```

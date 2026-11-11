@@ -184,7 +184,7 @@ def test_liste_des_chemins_testes_gravee():
     # L1e-4c : les anciennes conf/ de legacy ne sont plus des chemins testés.
     ("legacy/dadou_robot_ros/conf/scripts/fumee.sh", 0), ("legacy/dadou_vision_ros/conf/v.yaml", 0),
     # la doc, même dans legacy/, ne déclenche rien (vécu le 08/11 : 14 commits d'étude du torse)
-    ("docs/etude-torse.md", 0), ("legacy/dadou_robot_ros/docs/chantiers.md", 0), ("README.md", 0),
+    ("docs/etude-torse.md", 0), ("docs/chantiers.md", 0), ("README.md", 0),
     ("CLAUDE.md", 0), ("legacy/dadou_vision_ros/README.md", 0), ("docs/fumee/index.html", 0),
     ("packagesX/faux.py", 0),
 ])

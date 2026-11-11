@@ -1,7 +1,7 @@
 # Firmware Pico — odométrie des roues
 
 Compte les 4 capteurs inductifs (2 par roue, en quadrature) et rapporte au Pi
-par une trame texte à 50 Hz. Étude complète : [`../../docs/etude-odometrie.md`](../../docs/etude-odometrie.md).
+par une trame texte à 50 Hz. Étude complète : [`../../docs/etude-odometrie.md`](../../../docs/etude-odometrie.md).
 
 > ⚠️ **Le Pico ne commande RIEN.** Il lit, il compte, il rapporte. Il n'est pas
 > sur le chemin de commande des roues. Si ce lien meurt, on perd l'odométrie —

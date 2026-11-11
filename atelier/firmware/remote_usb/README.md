@@ -4,7 +4,7 @@ Boîtier filaire à base de **Seeed XIAO RP2040** : un joystick analogique, un
 poussoir d'homme-mort sous l'index, 4 boutons de menu et un écran OLED. Il émet
 l'état des axes et des boutons vers l'hôte à 50 Hz, et affiche les lignes de
 menu que l'hôte lui envoie. Étude complète :
-[`../../docs/etude-telecommande-usb.md`](../../docs/etude-telecommande-usb.md).
+[`../../docs/etude-telecommande-usb.md`](../../../docs/etude-telecommande-usb.md).
 
 > ⚠️ **La conduite est LOCALE et ne passe jamais par le menu ni par l'hôte**
 > (étude §4.7). Lecture des axes, homme-mort, émission 50 Hz : tout se fait

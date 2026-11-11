@@ -1,8 +1,9 @@
 # theatre-robot — mono-dépôt du système Didier (CLAUDE.md unique)
 
-Lot L0 en cours (2026-11-02) : les anciens dépôts vivent dans `legacy/`, **tels quels**, avec
-leurs propres `CLAUDE.md` qui restent la référence pour travailler dans leur code :
-`legacy/dadou_robot_ros/CLAUDE.md` (règles de sécurité roues, commandes sim, priorités).
+Depuis L1e-4e (11/11), `legacy/` ne garde que des README d'archive et deux `CLAUDE.md` qui
+restent la référence : `legacy/dadou_robot_ros/CLAUDE.md` (règles de sécurité roues, commandes
+sim, priorités) et `legacy/dadou_vision_ros/CLAUDE.md` ; la télécommande vit encore entière dans
+`legacy/dadou_control_ros/` (lot L4).
 Ce fichier-ci grossira à mesure que `legacy/` se vide ; il ne doit jamais dupliquer ce que
 `README.md` (la carte) et `docs/` disent.
 
@@ -12,8 +13,7 @@ Ce fichier-ci grossira à mesure que `legacy/` se vide ; il ne doit jamais dupli
 - Toute proposition de déplacement dit ce qu'elle SUPPRIME ; la sim doit marcher en fin de lot.
 - Noms de packages : `didier_*` / `<appareil>_*` / `theatre_*` ; noms de topics **relatifs**
   (namespace par robot), jamais absolus.
-- Documentation dans le même lot que le code ; état des chantiers dans `docs/chantiers.md`
-  (encore dans `legacy/dadou_robot_ros/docs/` pendant L0).
+- Documentation dans le même lot que le code ; état des chantiers dans `docs/chantiers.md`.
 - Dépôt public : aucun secret, jamais (les secrets vivent hors git, voir l'étude architecture).
 - Mission salariée : ni employeur, ni client, ni poste ou réseau de travail dans ce dépôt (règle du CLAUDE.md global, section « Confidentialité de la mission salariée »).
 - Jamais d'extinction du poste depuis un agent : ni `fumee.sh --et-dodo`, ni `systemctl
@@ -30,14 +30,17 @@ ou une relecture adverse avant le terrain = Fable.
 
 - Ouvrir **ce dossier** (`theatre-robot/`) dans IAction / Claude Code — plus jamais les anciens
   `dadou_*_ros`, qui sont des archives (bandeau en tête de leur README).
-- Le cœur du robot est `packages/didier_core` depuis L1e-3c (08/11) ; données, conf, sim et
-  venv restent sous `legacy/dadou_robot_ros/` (`DIDIER_DATA_DIR`). Tests du cœur :
-  `cd packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=` ;
+- Le cœur du robot est `packages/didier_core` depuis L1e-3c (08/11) ; données dans `data/` (`DIDIER_DATA_DIR`),
+  conf des machines dans `machines/`. Venvs (L1e-4e) : `.venv` à la racine (cœur, contrats, jeu,
+  lib, télécommande) et `packages/didier_vision/.venv`. Tests du cœur :
+  `cd packages/didier_core && ../../.venv/bin/python -m pytest -q -o addopts=` (les six suites :
+  `docs/operations.md`, CI `.github/workflows/tests.yml`) ;
   sim : `machines/sim/banc-robot` (depuis L1e-4c, 11/11). Vision = `packages/didier_vision` depuis L1e-3d
-  (08/11 ; données sous `legacy/dadou_vision_ros/`, `DIDIER_VISION_DATA_DIR` ; tests : `cd
-  packages/didier_vision && ../../legacy/dadou_vision_ros/.venv/bin/python -m pytest -q -o addopts=`).
+  (08/11 ; `DIDIER_VISION_DATA_DIR` ; tests : `cd packages/didier_vision &&
+  .venv/bin/python -m pytest -q -o addopts=`).
   Télécommande : encore sous `legacy/`.
-- Déploiement Ansible : `deploy/` depuis L1e-4a (08/11) ; il rsync `packages/` et, jusqu'à 4b/4c, `legacy/`.
+- Déploiement Ansible : `deploy/` depuis L1e-4a (08/11) ; il rsync `packages/`, `data/` (robot) et
+  `machines/<machine>/` ; de `legacy/` seulement les projets pas encore déménagés (télécommande, gants).
   Depuis L1e-1 (06/11) : les packages ROS viennent de `packages/`, copiés par LISTE EXPLICITE
   par machine (`packages:` dans `machines/<machine>/machine.yml` depuis L1e-4c — `deploy/hosts` = inventaire + `machine:` seulement ; défaut `packages_default`) — un
   package absent de la liste n'arrive jamais sur le Pi.
@@ -49,5 +52,4 @@ ou une relecture adverse avant le terrain = Fable.
   geste avant/après (utilisateur, clé, IP dans `hosts`), puis `./ecart-pi.sh <groupe>` (vert = 0).
   Secrets : `~/.config/didier/` du PC, posés par le rôle `secrets` — jamais dans le dépôt ni un log.
   Écarts et reste à faire : `docs/ansible-ecarts.md`.
-- Skill `/diag` : `.claude/skills/diag` (copié de l'ancien dépôt ; ses chemins visent encore
-  `docs/incidents/` de legacy — à déplacer avec la doc).
+- Skill `/diag` : `.claude/skills/diag` (incidents dans `docs/incidents/`).

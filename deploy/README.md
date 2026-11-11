@@ -21,6 +21,6 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=robot   # ou vision
 | `ecart-pi.sh`, `attendu/` | détection d'écart Pi ↔ dépôt (voir `docs/ansible-ecarts.md`) |
 
 Secrets : `~/.config/didier/` du PC, posés par le rôle `secrets` — jamais dans le dépôt ni un log.
-Mode d'emploi détaillé : `legacy/dadou_robot_ros/docs/operations.md` § « Déployer / réinstaller un Pi ».
+Mode d'emploi détaillé : `docs/operations.md` § « Déployer / réinstaller un Pi ».
 Ménage de L1e-4a (étude §5.8) : rôles orphelins, Jenkins/Sonar, playbooks de CI et de test,
 groupe `integration`, anciens playbooks de `legacy/` — supprimés.

@@ -2,6 +2,7 @@
 #
 # Pourquoi ce fichier : depuis le lot L0 (02/11) les workflows des anciens dépôts vivaient
 # sous legacy/*/.github/, où GitHub ne les lit pas — plus aucun test ne tournait à la poussée.
+# (L1e-4e, 11/11 : requirements-test.txt à la racine = le .venv racine ; la vision a le sien.)
 # Celui-ci rejoue, à chaque poussée, les suites unitaires « hôte » (aucun ROS à installer :
 # les modules ROS sont factices dans les tests), avec les commandes de docs/operations.
 #
@@ -22,22 +23,22 @@ jobs:
         include:
           - suite: didier_core
             dir: packages/didier_core
-            requirements: legacy/dadou_robot_ros/requirements-test.txt
+            requirements: requirements-test.txt
           - suite: dadou_utils_ros
             dir: packages/dadou_utils_ros
-            requirements: legacy/dadou_robot_ros/requirements-test.txt
+            requirements: requirements-test.txt
           - suite: didier_jeu
             dir: packages/didier_jeu
-            requirements: legacy/dadou_robot_ros/requirements-test.txt
+            requirements: requirements-test.txt
           - suite: theatre_contrats
             dir: packages/theatre_contrats
-            requirements: legacy/dadou_robot_ros/requirements-test.txt
+            requirements: requirements-test.txt
           - suite: didier_vision
             dir: packages/didier_vision
-            requirements: legacy/dadou_vision_ros/requirements-test.txt
+            requirements: packages/didier_vision/requirements-test.txt
           - suite: telecommande (legacy)
             dir: legacy/dadou_control_ros
-            requirements: legacy/dadou_control_ros/requirements-test.txt
+            requirements: requirements-test.txt
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

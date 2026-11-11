@@ -42,7 +42,7 @@ Les topics existants ne sont pas réécrits. Origine : `docs/etudes/etude-standa
 
 ```bash
 # depuis la racine du mono-dépôt (n'importe quel python avec pytest) :
-legacy/dadou_robot_ros/.venv/bin/python -m pytest packages/theatre_contrats/test -q
+.venv/bin/python -m pytest packages/theatre_contrats/test -q
 # recompter qui importe quoi (AST, imports multi-lignes compris — un grep se trompe) :
 python3 packages/theatre_contrats/tools/inventaire.py
 ```

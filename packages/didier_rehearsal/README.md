@@ -5,7 +5,7 @@ que dans le conteneur de simulation. Il n'est **jamais** lancé par
 `didier_bringup` : un test (`robot/tests/unit/test_rehearsal_contract.py`)
 refuse toute référence à ce package dans le code embarqué.
 
-Étude : [`docs/etude-repetition-simulee.md`](../../../docs/etude-repetition-simulee.md)
+Étude : [`docs/etude-repetition-simulee.md`](../../docs/etude-repetition-simulee.md)
 (§11 architecture et tests, §12 variante retenue).
 
 ## Lot R1 — Didier chemine seul

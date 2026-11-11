@@ -18,7 +18,7 @@ dette du playbook, pas une note de doc.
 
 ## État au 07/11 au soir — lot « Ansible nickel » FAIT (branche `l1e-3`)
 
-Mode d'emploi : `legacy/dadou_robot_ros/docs/operations.md` §« Déployer / réinstaller un Pi ».
+Mode d'emploi : `docs/operations.md` §« Déployer / réinstaller un Pi ».
 En bref, depuis `deploy/` à la racine du dépôt (ex `legacy/dadou_utils_ros/ansible/`, déménagé
 au lot L1e-4a du 08/11) :
 `ansible-playbook -i hosts deploy-pios.yml -e target_group=robot|vision` (rien avant, rien

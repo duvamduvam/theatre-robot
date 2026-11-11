@@ -1,5 +1,9 @@
 # legacy/
 
-Les quatre anciens dépôts, importés par `git subtree add` le 2026-11-02 (historiques conservés), côte à côte pour que leurs liens relatifs (`../dadou_utils_ros`) continuent de fonctionner. **Ne pas y faire d'architecture** : on y corrige, on en sort des morceaux vers les dossiers cibles, lot après lot.
+Les quatre anciens dépôts, importés par `git subtree add` le 2026-11-02 (historiques conservés). **Ne pas y faire d'architecture** : on en sort des morceaux vers les dossiers cibles, lot après lot.
 
-**Les déploiements Ansible rsyncent d'ici** depuis le 02/11 (`deploy/vars/main.yml : local_projects_dir`, à la racine du dépôt depuis le lot L1e-4a du 08/11). Les anciens dossiers `~/Nextcloud/dev/didier/python/dadou_*_ros` ne servent plus qu'à l'archive.
+État au lot L1e-4e (2026-11-11) :
+- `dadou_robot_ros/`, `dadou_vision_ros/`, `dadou_utils_ros/` : **archives** — leur code, données, conf, doc et outillage ont rejoint `packages/`, `data/`, `machines/`, `docs/`, `atelier/`, `deploy/`. Il n'y reste que des bandeaux (README), les `CLAUDE.md` de sécurité/vision et `ARCHITECTURE.md` de la vision.
+- `dadou_control_ros/` : la télécommande, seule à vivre encore ici (réécrite au lot L4). Ansible la copie depuis `legacy/` (`local_projects_dir` de `deploy/vars/main.yml`).
+
+Les anciens dossiers `~/Nextcloud/dev/didier/python/dadou_*_ros` ne servent plus qu'à l'archive.

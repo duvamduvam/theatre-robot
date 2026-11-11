@@ -1,7 +1,7 @@
 """Racine des données de la vision = DIDIER_VISION_DATA_DIR (lot L1e-3d, décision 3 de la spec L1).
 
-Le code a déménagé dans packages/didier_vision ; conf/, db/, medias/, models/, mediamtx/ sont
-restés dans legacy/dadou_vision_ros/ (conteneur : /home/ros2_ws/src/vision/). vision_config
+Le code a déménagé dans packages/didier_vision ; la vision n'a aucune donnée suivie (conf/ et
+mediamtx/ sont dans machines/vision/, le reste est posé par Ansible ; conteneur : /home/ros2_ws/src/vision/). vision_config
 lit la racine dans DIDIER_VISION_DATA_DIR, défaut = le chemin conteneur. Valeurs GRAVÉES ici :
 un test qui recalculerait l'attendu avec vision_config ne testerait rien.
 
@@ -52,9 +52,11 @@ def test_la_variable_remplace_la_racine_et_la_barre_finale_est_ajoutee():
     assert _chemins("/srv/didier/vision/")[0] == "/srv/didier/vision/"
 
 
-def test_sous_pytest_le_conftest_pointe_les_donnees_de_legacy():
+def test_sous_pytest_le_conftest_pointe_un_dossier_temporaire_hors_depot():
+    # L1e-4e : plus de racine de données dans le dépôt (la config crée db/ à l'import).
     from didier_vision import vision_config
-    assert vision_config.DATA_DIR == str(LEGACY_VISION) + "/"
+    assert os.path.basename(vision_config.DATA_DIR.rstrip("/")).startswith("didier-vision-donnees-")
+    assert str(LEGACY_VISION) not in vision_config.DATA_DIR
     # L1e-4c (11/11) : conf/ a quitté la racine de données de l'hôte pour machines/vision/ (copiée
     # en src/vision/conf/ sur le Pi : le chemin conteneur, lui, ne change pas).
     assert not (LEGACY_VISION / "conf").exists()

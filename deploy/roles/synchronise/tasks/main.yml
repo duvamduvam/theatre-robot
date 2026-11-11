@@ -277,6 +277,9 @@
       # remède que la copie du projet plus haut).
       - "--omit-dir-times"
       - "--exclude=.git/"
+      # Venvs du PC (L1e-4e : packages/didier_vision/.venv) : jamais vers un Pi.
+      - "--exclude=.venv/"
+      - "--exclude=venv/"
       - "--exclude=__pycache__/"
       - "--exclude=.pytest_cache/"
       - "--exclude=*.egg-info/"

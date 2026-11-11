@@ -65,8 +65,8 @@ valeurs gravées par `test/unit/test_didier_vision_data_dir.py`).
 
 ## Tester
 
-Le venv robot n'a pas `sqlobject` : la vision a SON venv (`legacy/dadou_vision_ros/.venv`).
+Le venv robot n'a pas `sqlobject` : la vision a SON venv (`packages/didier_vision/.venv`, `requirements-test.txt` à côté).
 
 ```bash
-cd packages/didier_vision && ../../legacy/dadou_vision_ros/.venv/bin/python -m pytest -q -o addopts=
+cd packages/didier_vision && .venv/bin/python -m pytest -q -o addopts=
 ```

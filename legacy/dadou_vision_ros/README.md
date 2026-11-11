@@ -1,3 +1,11 @@
+# dadou_vision_ros (archive)
+
+> **Dossier d'archive, lot L1e-4e (2026-11-11).** Le code est le package
+> [`packages/didier_vision`](../../packages/didier_vision/README.md), la conf est dans
+> [`machines/vision/`](../../machines/vision/README.md). Restent ici `CLAUDE.md` et `ARCHITECTURE.md`
+> (références de la vision, à fondre dans `packages/didier_vision/` — L5). Les chemins `conf/…` et
+> `vision.…` cités plus bas sont ceux de l'ancien dépôt.
+
 Dadou Vision
 
 ## Outillage D0 conversation
