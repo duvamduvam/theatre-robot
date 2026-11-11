@@ -12,7 +12,7 @@ entre bouches et yeux : les basenames doivent être uniques (d'où le préfixe o
 Déterministe (seed fixe) : relancer le script régénère exactement les mêmes
 frames de glitch — indispensable pour comparer avant/après en revue.
 
-Usage : python3 conf/scripts/generate_expressions.py   (depuis la racine du repo)
+Usage : python3 machines/robot/scripts/generate_expressions.py   (depuis la racine du dépôt)
 Écrit dans medias/visuals/{mouth,eye}/ et fusionne les nouvelles expressions
 dans json/expressions.json (n'écrase jamais une entrée existante).
 """
@@ -25,9 +25,9 @@ import random
 from PIL import Image
 
 # Données du robot : data/ à la racine du mono-dépôt depuis L1e-4b (ce script est dans
-# legacy/dadou_robot_ros/conf/scripts/, cinq niveaux sous la racine).
+# machines/robot/scripts/ depuis L1e-4c, quatre niveaux sous la racine).
 DONNEES = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))))), "data")
+    os.path.abspath(__file__))))), "data")
 MOUTH_DIR = os.path.join(DONNEES, "medias", "visuals", "mouth")
 EYE_DIR = os.path.join(DONNEES, "medias", "visuals", "eye")
 EXPR_JSON = os.path.join(DONNEES, "json", "expressions.json")

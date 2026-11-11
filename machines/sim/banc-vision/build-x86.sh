@@ -7,21 +7,25 @@
 # en contextes NOMMÉS. Depuis L1e-3a la lib dadou_utils_ros en fait partie
 # (plus de symlink dans le dépôt vision).
 #
-# SÉCURITÉ (dépôt et registre publics) : le .dockerignore racine s'applique
-# aussi à un contexte streamé, mais conf/secret est EN PLUS exclu du tar —
-# ceinture et bretelles, la clé ne doit jamais approcher une image.
+# L1e-4c (11/11) : la conf de la vision est machines/vision/ du mono-dépôt ; le tar
+# reconstruit la disposition du Pi (src/vision/conf/ = machines/vision/) en renommant
+# vision/ en conf/ (--transform). Ce banc vit dans machines/sim/banc-vision/.
+#
+# SÉCURITÉ (dépôt et registre publics) : Dockerfile-arm.dockerignore (lu par BuildKit)
+# exclut conf/secret, mais conf/secret est EN PLUS exclu du tar — ceinture et
+# bretelles, la clé ne doit jamais approcher une image.
 set -euo pipefail
-cd "$(dirname "$0")/../../.."   # racine du dépôt vision = racine du contexte
+cd "$(dirname "$0")/../.."   # machines/ du mono-dépôt
 # Packages COMMUNS du mono-dépôt theatre-robot (lot L1a) : hors du contexte
 # streamé, passés en contextes NOMMÉS (COPY --from=... dans Dockerfile-arm).
-PACKAGES="$(cd ../../packages && pwd)"
+PACKAGES="$(cd ../packages && pwd)"
 
 tar -ch \
     --exclude-vcs \
-    --exclude=./conf/secret \
-    --exclude=./conf/docker/x86/workspace \
+    --exclude=./vision/secret \
     --exclude='__pycache__' \
-    . | docker build -t dadouuu/dadou-vision-x86:latest \
+    --transform='s,^\./vision,./conf,' \
+    ./vision | docker build -t dadouuu/dadou-vision-x86:latest \
         --build-context theatre_interfaces="$PACKAGES/theatre_interfaces" \
         --build-context theatre_contrats="$PACKAGES/theatre_contrats" \
         --build-context dadou_utils_ros="$PACKAGES/dadou_utils_ros" \

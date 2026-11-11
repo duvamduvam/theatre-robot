@@ -50,7 +50,8 @@ COPY --from=didier_web . /home/ros2_ws/src/didier_web
 COPY --from=didier_rehearsal . /home/ros2_ws/src/didier_rehearsal
 # didier_core (L1e-3c) : le cœur, ex-paquet robot (animations_node, face_sim, gaze_follower…).
 COPY --from=didier_core . /home/ros2_ws/src/didier_core
-COPY conf/scripts/launch-sim-in-docker.sh /home/ros2_ws/
+# L1e-4c : contexte principal = machines/sim/ (docker-compose-sim.yml), où vit le script.
+COPY launch-sim-in-docker.sh /home/ros2_ws/
 
 # json/ : robot_lights.json, lights_base.json, colors.json lus par leds_sim_node
 # (mêmes fichiers que le vrai robot, cf. didier_core/robot_config.py) pour que la visu
@@ -98,7 +99,7 @@ RUN mkdir -p /home/ros2_ws/log
 # chaîne d'imports d'animations_node (cf. investigation ci-dessus) -- pas tout
 # requirements.txt (adafruit-*, PyAudio... inutiles ici et lourds à builder).
 # --break-system-packages : Ubuntu Noble (Jazzy) refuse pip hors venv sans ce
-# flag (même contournement que conf/docker/arm/Dockerfile-arm).
+# flag (même contournement que machines/robot/docker/arm/Dockerfile-arm).
 RUN pip3 install --no-cache-dir --break-system-packages filetype colorlog psutil
 
 ENTRYPOINT ["/bin/bash", "-c", "/home/ros2_ws/launch-sim-in-docker.sh"]

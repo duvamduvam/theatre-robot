@@ -6,11 +6,12 @@ from pathlib import Path
 from didier_vision.ai.hearing import asound_targets, describe_chain, encode_chain, encode_hearing
 from didier_vision.ai.stt import FallbackStt
 
-ROOT = Path(__file__).resolve().parents[4] / "legacy" / "dadou_vision_ros"
+# L1e-4c (11/11) : le banc PC de la vision est machines/sim/banc-vision/.
+BANC = Path(__file__).resolve().parents[4] / "machines" / "sim" / "banc-vision"
 
 
 def test_asound_targets_vrai_fichier_banc():
-    t = asound_targets((ROOT / "conf/docker/x86/asound-pc.conf").read_text(encoding="utf-8"))
+    t = asound_targets((BANC / "asound-pc.conf").read_text(encoding="utf-8"))
     assert t["micro"] and t["sortie"] and t["gain"] is not None
 
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Réglage SON + MICRO du banc PC (salle de répétition) — à lancer sur l'HÔTE.
 
-    python3 conf/docker/x86/audio_banc.py                # état : qui est branché à quoi
-    python3 conf/docker/x86/audio_banc.py choisir M50    # casque BT par nom (ou MAC)
-    python3 conf/docker/x86/audio_banc.py choisir defaut # suivre les réglages son d'Ubuntu
-    python3 conf/docker/x86/audio_banc.py choisir M50 --gain 0.3 --sans-redemarrer
+    python3 machines/sim/banc-vision/audio_banc.py                # état : qui est branché à quoi
+    python3 machines/sim/banc-vision/audio_banc.py choisir M50    # casque BT par nom (ou MAC)
+    python3 machines/sim/banc-vision/audio_banc.py choisir defaut # suivre les réglages son d'Ubuntu
+    python3 machines/sim/banc-vision/audio_banc.py choisir M50 --gain 0.3 --sans-redemarrer
 
 POURQUOI : la tête de Didier (chat_node, conteneur dadou-vision-x86) lit son micro
 et parle par deux alias ALSA, `casque_mic` et `mixette`, définis dans
@@ -159,7 +159,7 @@ def etat() -> int:
         etiquette = "réglages Ubuntu" if val == defaut else ("PRÉSENT" if present else "ABSENT — Didier est sourd/muet de ce côté")
         print(f"  {cle:<7} {val}   [{etiquette}]")
     if not ok:
-        print("\n→ connecte le casque puis : python3 conf/docker/x86/audio_banc.py choisir <nom>")
+        print("\n→ connecte le casque puis : python3 machines/sim/banc-vision/audio_banc.py choisir <nom>")
     return 0 if ok else 1
 
 

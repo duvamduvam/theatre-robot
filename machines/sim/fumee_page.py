@@ -55,16 +55,16 @@ RAPPEL_JOURS = 2       # décision 2 : due depuis plus de 2 jours = on prévient
 # (étude du torse) ont lancé des sims de 35 min pour rien. docs/ n'y est pas (pas plus que
 # docs/fumee, nos propres pages). Les trois dossiers de données de legacy/dadou_robot_ros
 # restent listés tant qu'ils existent sur main (un chemin absent ne fait simplement rien).
+# L1e-4c (11/11) : les conf/ du robot et de la vision sont dans machines/ (déjà listé) ; leurs
+# anciens chemins legacy ne déclenchent plus rien.
 CHEMINS_TESTES = (
     "packages/",
     "data/",
     "deploy/",
     "machines/",
-    "legacy/dadou_robot_ros/conf/",
     "legacy/dadou_robot_ros/json/",
     "legacy/dadou_robot_ros/medias/",
     "legacy/dadou_robot_ros/db/",
-    "legacy/dadou_vision_ros/conf/",
 )
 # Après un rouge sur un « sha de code » (dernier commit touchant un chemin testé) : UNE
 # relance de confirmation, puis plus rien sur ce même code (le 08/11 un rouge a été rejoué
@@ -339,7 +339,7 @@ image sim reconstruite : {image}</p>
 <p>Copiés hors du conteneur AVANT son arrêt : <a href="journaux/{id}/">dossier {id}</a>
  · <a href="journaux/{id}/resultat.json">resultat.json</a> (la vérité, cette page n'en est que le rendu).</p>
 
-<footer>Généré par <code>conf/scripts/fumee.sh</code> (lot F, zéro token) · <a href="index.html">toutes les fumées</a></footer>""".format(
+<footer>Généré par <code>machines/sim/fumee.sh</code> (lot F, zéro token) · <a href="index.html">toutes les fumées</a></footer>""".format(
         debut=_e(_debut_lisible(res)), sha=_e(res.get("sha")), branche=_e(res.get("branche")),
         sale=" — <strong>arbre modifié au départ</strong>" if res.get("sale") else "",
         duree=_e(_duree(res.get("duree_s"))), mode=_e(res.get("mode")), raison=_e(res.get("raison")),

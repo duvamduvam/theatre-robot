@@ -13,8 +13,9 @@ StreamingBrain, JSON lu par emotion_parser.extract_emotion_json, nombres par
 conversation._gesture_number. Seul l'historique ChatDB est remplacé par une
 liste en mémoire (ne pas polluer db/chat.db de la répétition).
 
-Usage (dans le conteneur vision, workspace sourcé) :
-    python3 tools/banc_bouche.py --objects /tmp/banc_objects.json --runs 2 \
+Usage (dans le conteneur vision, workspace sourcé ; depuis L1e-4c l'outil vit dans le
+package, non installé : /home/ros2_ws/src/didier_vision/tools/) :
+    cd /home/ros2_ws/src/didier_vision && python3 tools/banc_bouche.py --objects /tmp/banc_objects.json --runs 2 \
         --out /tmp/banc_bouche.json [--models a,b,c]
 Coût : ~14 scénarios × runs × modèles appels courts (quelques centimes).
 """

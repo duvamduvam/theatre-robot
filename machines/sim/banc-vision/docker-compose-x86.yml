@@ -1,6 +1,6 @@
 # Banc PC « Didier à l'arrêt » (2026-09-13) : perception + parole RÉELLES sur
 # le PC de dev (webcam USB + carte son), corps SIMULÉ dans Gazebo
-# (dadou_robot_ros/conf/docker/sim). Créé pendant l'immobilisation du robot
+# (machines/sim/banc-robot, ex dadou_robot_ros/conf/docker/sim). Créé pendant l'immobilisation du robot
 # (Pi 4 fumé le 12/09, convertisseurs 24V→5V en commande) pour continuer à
 # travailler la conversation et le suivi de personne sans matériel.
 #
@@ -97,7 +97,8 @@ services:
     volumes:
       # Mêmes montages de sources que docker-compose-arm.yml (itération sans
       # rebuild ; conf/ apporte aussi conf/secret, jamais dans l'image).
-      - ../../../conf:/home/ros2_ws/src/vision/conf
+      # L1e-4c (11/11) : la conf de la machine vision est machines/vision/ (ex conf/ de la vision).
+      - ../../vision:/home/ros2_ws/src/vision/conf
       # Secret du banc (08/11) : depuis « Ansible nickel » (07/11) les clés vivent HORS dépôt
       # dans ~/.config/didier/ (source unique, la même que le rôle secrets pose sur le Pi) ;
       # conf/secret n'existe plus dans le checkout → sans ce montage chat_node meurt au
@@ -106,7 +107,7 @@ services:
       - ${HOME}/.config/didier/vision-conf-secret:/home/ros2_ws/src/vision/conf/secret:ro
       # didier_vision (L1e-3d) : le code (module, package.xml, setup.py, launch/) est un
       # package de packages/, à plat dans src/ comme sur le parc.
-      - ../../../../../packages/didier_vision:/home/ros2_ws/src/didier_vision
+      - ../../../packages/didier_vision:/home/ros2_ws/src/didier_vision
       # ⚠️ medias/ N'EST PAS monté, contrairement au compose ARM : sur le PC,
       # medias/voices/ n'existe pas dans le checkout et le bind-mount
       # MASQUERAIT la voix Piper téléchargée dans l'image au build
@@ -115,15 +116,15 @@ services:
       #
       # theatre_interfaces (StringTime) et theatre_contrats (contrat, importé par
       # le shim dadou_utils_ros/utils_static.py) : packages/ du mono-dépôt
-      # (lot L1a, ../../../../../ = racine theatre-robot), même niveau src/ que
+      # (lot L1a, ../../../ = racine theatre-robot), même niveau src/ que
       # sur le parc. ⚠️ workspace/ persistant : après ce lot, `touch
       # packages/didier_vision/change` pour que colcon construise theatre_contrats, sinon les
       # nodes tombent à l'import.
-      - ../../../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
-      - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      - ../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
+      - ../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # dadou_utils_ros (L1e-3a) : lib partagée, package de packages/. ⚠️ workspace/
       # persistant : `touch packages/didier_vision/change` pour que colcon construise le nouveau package.
-      - ../../../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
+      - ../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       # Workspace colcon LOCAL au banc (pas le workspace partagé du Pi — sur
       # le PC les chemins ../../../../../ du compose ARM ne mènent nulle
       # part). Dossier gitignoré, jetable ; le premier démarrage build tout

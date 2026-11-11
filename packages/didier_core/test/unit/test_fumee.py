@@ -17,8 +17,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-ROBOT = pathlib.Path(__file__).resolve().parents[4] / "legacy" / "dadou_robot_ros"
-SCRIPTS = ROBOT / "conf" / "scripts"
+# L1e-4c (11/11) : la fumée et les scripts de la sim vivent dans machines/sim/ du mono-dépôt.
+SCRIPTS = pathlib.Path(__file__).resolve().parents[4] / "machines" / "sim"
 FUMEE_SH = SCRIPTS / "fumee.sh"
 FUMEE_PY = SCRIPTS / "fumee_page.py"
 
@@ -170,18 +170,19 @@ def test_sha_absent_du_depot_donne_none(depot):
 # --- Règle du 10/11 : chemins TESTÉS seulement, et un rouge n'est rejoué qu'une fois ------
 
 def test_liste_des_chemins_testes_gravee():
+    # L1e-4c : les conf/ legacy du robot et de la vision sont devenues machines/ (déjà listé).
     assert fp.CHEMINS_TESTES == (
-        "packages/", "data/", "deploy/", "machines/", "legacy/dadou_robot_ros/conf/",
-        "legacy/dadou_robot_ros/json/", "legacy/dadou_robot_ros/medias/", "legacy/dadou_robot_ros/db/",
-        "legacy/dadou_vision_ros/conf/")
+        "packages/", "data/", "deploy/", "machines/",
+        "legacy/dadou_robot_ros/json/", "legacy/dadou_robot_ros/medias/", "legacy/dadou_robot_ros/db/")
     assert fp.ROUGES_MAX_PAR_CODE == 2
 
 
 @pytest.mark.parametrize("chemin,compte", [
     ("packages/didier_jeu/x.py", 1), ("data/x.json", 1), ("deploy/hosts", 1), ("machines/robot.yml", 1),
-    ("legacy/dadou_robot_ros/conf/scripts/fumee.sh", 1), ("legacy/dadou_robot_ros/json/a.json", 1),
+    ("machines/sim/fumee.sh", 1), ("machines/vision/v.yaml", 1), ("legacy/dadou_robot_ros/json/a.json", 1),
     ("legacy/dadou_robot_ros/medias/a.png", 1), ("legacy/dadou_robot_ros/db/a.db", 1),
-    ("legacy/dadou_vision_ros/conf/v.yaml", 1),
+    # L1e-4c : les anciennes conf/ de legacy ne sont plus des chemins testés.
+    ("legacy/dadou_robot_ros/conf/scripts/fumee.sh", 0), ("legacy/dadou_vision_ros/conf/v.yaml", 0),
     # la doc, même dans legacy/, ne déclenche rien (vécu le 08/11 : 14 commits d'étude du torse)
     ("docs/etude-torse.md", 0), ("legacy/dadou_robot_ros/docs/chantiers.md", 0), ("README.md", 0),
     ("CLAUDE.md", 0), ("legacy/dadou_vision_ros/README.md", 0), ("docs/fumee/index.html", 0),

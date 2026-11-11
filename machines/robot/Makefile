@@ -3,9 +3,9 @@ include /home/dadou/Nextcloud/dev/didier/python/dadou_utils_ros/ansible/template
 # Build test orchestrators for desktop robot stack.
 
 # Sentinelle du cœur (L1e-3c) : packages/didier_core/change du mono-dépôt (gitignorée), chemin
-# déduit de CE Makefile (conf/ -> legacy/dadou_robot_ros -> legacy -> racine) — PROJECT_DIR du
+# déduit de CE Makefile (machines/robot/ -> machines -> racine, L1e-4c) — PROJECT_DIR du
 # gabarit inclus vise encore l'ancien dépôt dadou_robot_ros, archivé.
-SENTINELLE_CORE := $(abspath $(dir $(firstword $(MAKEFILE_LIST)))../../../packages/didier_core/change)
+SENTINELLE_CORE := $(abspath $(dir $(firstword $(MAKEFILE_LIST)))../../packages/didier_core/change)
 
 # Run stack without rebuilding image (expects tarball up-to-date).
 run:

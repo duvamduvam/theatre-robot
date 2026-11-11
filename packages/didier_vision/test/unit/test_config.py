@@ -14,7 +14,10 @@ import pytest
 
 from didier_vision import vision_config
 
-SECRET_EXAMPLE = os.path.join(vision_config.DATA_DIR, "conf", "secret.example")
+# L1e-4c (11/11) : conf/ de la vision = machines/vision/ du dépôt (src/vision/conf/ sur le Pi et
+# dans le conteneur) ; elle n'est plus sous la racine de données de l'hôte — comme pour le cœur
+# depuis L1e-4b, les tests hôte lisent le modèle à sa place dans le dépôt.
+SECRET_EXAMPLE = str(Path(__file__).resolve().parents[4] / "machines" / "vision" / "secret.example")
 
 
 def test_load_secrets_missing_file_raises_clear_error(tmp_path):

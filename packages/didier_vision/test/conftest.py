@@ -1,9 +1,10 @@
 """Tests hôte de didier_vision (sans ROS ni colcon build) — lot L1e-3d.
 
 Le package s'importe depuis les sources : sa racine (packages/didier_vision) porte le module
-didier_vision/ ET ce dossier test/. Les données (conf/, db/, medias/, models/, mediamtx/) sont
-restées dans legacy/dadou_vision_ros/ : DIDIER_VISION_DATA_DIR y pointe AVANT tout import de
-vision_config (décision 3 de la spec L1).
+didier_vision/ ET ce dossier test/. Les données d'exécution (db/, medias/) restent sous
+legacy/dadou_vision_ros/ (non suivies) : DIDIER_VISION_DATA_DIR y pointe AVANT tout import de
+vision_config (décision 3 de la spec L1). Depuis L1e-4c, conf/ et mediamtx/ sont dans
+machines/vision/ (src/vision/conf/ sur le Pi) : les tests hôte ne lisent pas <racine>/conf/.
 Lancer : cd packages/didier_vision && <venv vision> -m pytest -q
 """
 import os

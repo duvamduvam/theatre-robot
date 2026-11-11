@@ -1,14 +1,15 @@
-"""Outil de réglage son/micro du banc PC (conf/docker/x86/audio_banc.py) —
+"""Outil de réglage son/micro du banc PC (machines/sim/banc-vision/audio_banc.py) —
 logique PURE, valeurs gravées. Lit le VRAI asound-pc.conf pour le contrat."""
 import importlib.util
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[4] / "legacy" / "dadou_vision_ros"
-_spec = importlib.util.spec_from_file_location("audio_banc", ROOT / "conf/docker/x86/audio_banc.py")
+# L1e-4c (11/11) : le banc PC de la vision est machines/sim/banc-vision/.
+BANC = Path(__file__).resolve().parents[4] / "machines" / "sim" / "banc-vision"
+_spec = importlib.util.spec_from_file_location("audio_banc", BANC / "audio_banc.py")
 ab = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(ab)
-CONF = (ROOT / "conf/docker/x86/asound-pc.conf").read_text(encoding="utf-8")
+CONF = (BANC / "asound-pc.conf").read_text(encoding="utf-8")
 
 
 def test_le_vrai_fichier_respecte_le_contrat():

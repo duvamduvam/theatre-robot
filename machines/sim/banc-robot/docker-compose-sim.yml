@@ -9,29 +9,31 @@ services:
     container_name: dadou-sim-container
     image: dadouuu/dadou-sim-x86:latest
     build:
-      context: ../../..
-      dockerfile: conf/docker/sim/Dockerfile-sim
+      # L1e-4c (11/11) : ce banc vit dans machines/sim/banc-robot/. Contexte principal =
+      # machines/sim/ (le Dockerfile n'y prend que launch-sim-in-docker.sh ; BuildKit ne
+      # transfère que les fichiers copiés).
+      context: ..
+      dockerfile: banc-robot/Dockerfile-sim
       # Packages COMMUNS du mono-dépôt theatre-robot (lot L1a) : hors du
-      # contexte principal (racine de dadou_robot_ros), passés en contextes
-      # NOMMÉS — `COPY --from=<nom>` dans le Dockerfile. Chemins relatifs à ce
-      # fichier : ../../../../../ = racine du mono-dépôt.
+      # contexte principal, passés en contextes NOMMÉS — `COPY --from=<nom>` dans
+      # le Dockerfile. Chemins relatifs à ce fichier : ../../../ = racine du mono-dépôt.
       additional_contexts:
-        theatre_interfaces: ../../../../../packages/theatre_interfaces
-        theatre_contrats: ../../../../../packages/theatre_contrats
+        theatre_interfaces: ../../../packages/theatre_interfaces
+        theatre_contrats: ../../../packages/theatre_contrats
         # L1e-3a : la lib partagée n'est plus un dépôt frère mais un package de packages/.
-        dadou_utils_ros: ../../../../../packages/dadou_utils_ros
-        didier_jeu: ../../../../../packages/didier_jeu
+        dadou_utils_ros: ../../../packages/dadou_utils_ros
+        didier_jeu: ../../../packages/didier_jeu
         # L1e-1 : les packages ROS autonomes du robot ont déménagé de
         # conf/ du robot vers packages/ (même motif, noms inchangés).
-        didier_description: ../../../../../packages/didier_description
-        didier_sim: ../../../../../packages/didier_sim
-        didier_drive: ../../../../../packages/didier_drive
-        didier_web: ../../../../../packages/didier_web
-        didier_rehearsal: ../../../../../packages/didier_rehearsal
+        didier_description: ../../../packages/didier_description
+        didier_sim: ../../../packages/didier_sim
+        didier_drive: ../../../packages/didier_drive
+        didier_web: ../../../packages/didier_web
+        didier_rehearsal: ../../../packages/didier_rehearsal
         # L1e-3c : le cœur (ex-paquet robot) est un package de packages/.
-        didier_core: ../../../../../packages/didier_core
+        didier_core: ../../../packages/didier_core
         # L1e-4b : les données du robot (json/, medias/, db/) vivent dans data/ du mono-dépôt.
-        data: ../../../../../data
+        data: ../../../data
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
@@ -105,45 +107,45 @@ services:
       # Traces (08/11) : robot.log, journaux jeu/ et rehearsal/, tickets/ de la page scène.
       # Avant ce montage ils mouraient avec le conteneur (chaque `compose up` qui le
       # recrée). Même forme que le banc vision (./workspace/log), gitignoré (log/), lu par
-      # conf/scripts/ramasser_traces.py. Le colcon de la sim y écrit aussi ses build_*.
+      # ramasser_traces.py. Le colcon de la sim y écrit aussi ses build_*.
       - ./workspace/log:/home/ros2_ws/log
       # Sources montées par-dessus la copie de l'image : itération sans rebuild.
-      - ../../../../../packages/didier_description:/home/ros2_ws/src/didier_description
-      - ../../../../../packages/didier_sim:/home/ros2_ws/src/didier_sim
+      - ../../../packages/didier_description:/home/ros2_ws/src/didier_description
+      - ../../../packages/didier_sim:/home/ros2_ws/src/didier_sim
       # Packages communs du mono-dépôt (lot L1a) : theatre_interfaces (copie
       # UNIQUE) et theatre_contrats (contrat, importé
       # par dadou_utils_ros/utils_static.py — sans lui, tout node tombe à l'import).
-      - ../../../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
-      - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      - ../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
+      - ../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       # dadou_utils_ros (L1e-3a) : lib partagée, package à plat dans src/ (colcon la
       # construit ; plus de montage dans src/robot/).
-      - ../../../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
+      - ../../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
       # didier_jeu (lot A1, SIM-ONLY : refus hors domaine 43) : sélecteur de
       # jeu, lancé À LA MAIN (ros2 run didier_jeu jeu_node), cf. son README.
-      - ../../../../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
-      - ../../../../../packages/didier_drive:/home/ros2_ws/src/didier_drive
-      - ../../../../../packages/didier_web:/home/ros2_ws/src/didier_web
+      - ../../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
+      - ../../../packages/didier_drive:/home/ros2_ws/src/didier_drive
+      - ../../../packages/didier_web:/home/ros2_ws/src/didier_web
       # didier_rehearsal : salle de répétition (SIM-ONLY, jamais dans le
       # bringup du robot) — cheminement de Didier dans la rue, lancé À LA
       # MAIN (rehearsal.launch.py), cf. son README.
-      - ../../../../../packages/didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
-      - ../../scripts/launch-sim-in-docker.sh:/home/ros2_ws/launch-sim-in-docker.sh
+      - ../../../packages/didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
+      - ../launch-sim-in-docker.sh:/home/ros2_ws/launch-sim-in-docker.sh
       # V-R1 : protocole de vérification du cheminement (didier_rehearsal/README.md).
-      - ../../scripts/validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro
-      - ../../scripts/validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
+      - ../validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro
+      - ../validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
       # V-R3 : séance « chantiers » (monde chantiers, 20 bugs + 30 lubies), étude §13.8.
-      - ../../scripts/validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
+      - ../validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
       # A1 : porte de sortie du sélecteur de jeu (T1-T7, spec A1 §6), 15 min.
-      - ../../scripts/validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
+      - ../validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
       # L1b : preuve du namespace par robot (tout sous /<ROBOT_NAME>/ sauf les
       # 5 exceptions globales gravées), rejouable avec ROBOT_NAME=didier2 puis didier.
-      - ../../scripts/validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro
+      - ../validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro
       # L1c : preuve que le robot publie catalogue + deploy_sha et que le catalogue
       # suit json/ (dépose puis supprime une séquence temporaire, nettoyée en sortant).
-      - ../../scripts/validate-catalogue.sh:/home/ros2_ws/validate-catalogue.sh:ro
+      - ../validate-catalogue.sh:/home/ros2_ws/validate-catalogue.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
-      - ../../../../../data/json:/home/ros2_ws/json
+      - ../../../data/json:/home/ros2_ws/json
 
       # --- Paquet "didier_core" (animations_node, face_sim ; ex-paquet "robot") ---
       # Depuis L1e-3c le CODE est un package de packages/, monté à plat dans src/
@@ -151,11 +153,11 @@ services:
       # racine DIDIER_DATA_DIR ci-dessus — même disposition que sur le vrai robot
       # (rôle Ansible synchronise). Plus de montage de conf/ros2 (setup.py/package.xml
       # du paquet robot) en guise de src/robot/.
-      - ../../../../../packages/didier_core:/home/ros2_ws/src/didier_core
-      - ../../../../../data/json:/home/ros2_ws/src/robot/json
+      - ../../../packages/didier_core:/home/ros2_ws/src/didier_core
+      - ../../../data/json:/home/ros2_ws/src/robot/json
       # medias/ : PNG bouche/yeux lus par Face.load_visuals() (config[MOUTH_VISUALS_PATH]/
       # [EYE_VISUALS_PATH] = <PROJECT_DIRECTORY>/medias/visuals/{mouth,eye}, cf.
       # robot_config.py) -- requis par face_sim (param face:=true) : sans ce
       # volume, Face.load_visuals() lève FileNotFoundError au démarrage du node
       # (voir le log actionnable dans face_sim_node.py).
-      - ../../../../../data/medias:/home/ros2_ws/src/robot/medias
+      - ../../../data/medias:/home/ros2_ws/src/robot/medias

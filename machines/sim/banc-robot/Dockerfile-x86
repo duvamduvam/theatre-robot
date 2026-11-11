@@ -14,9 +14,9 @@ RUN mkdir /home/ros2_ws/src
 RUN mkdir /home/ros2_ws/src/robot
 
 # Copy project sources and configuration
-COPY conf/ /home/ros2_ws/src/robot/conf/
-# Données du robot (L1e-4b) : data/ du mono-dépôt, contexte nommé `data` du compose ;
-# conf/ reste dans le contexte principal (legacy/dadou_robot_ros/, jusqu'à L1e-4c).
+# conf/ de la machine robot (L1e-4c : machines/robot/), contexte nommé `conf` du compose.
+COPY --from=conf . /home/ros2_ws/src/robot/conf/
+# Données du robot (L1e-4b) : data/ du mono-dépôt, contexte nommé `data` du compose.
 COPY --from=data json/ /home/ros2_ws/src/robot/json/
 COPY --from=data medias/ /home/ros2_ws/src/robot/medias/
 
@@ -38,7 +38,7 @@ COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
 COPY --from=didier_core . /home/ros2_ws/src/didier_core
 
 # Add helper aliases/env setup for interactive shells in the container
-COPY conf/docker/docker_bashrc /tmp/docker_bashrc
+COPY --from=conf docker/docker_bashrc /tmp/docker_bashrc
 RUN cat /tmp/docker_bashrc >> /root/.bashrc && rm /tmp/docker_bashrc
 
 # System dependencies needed by the robot stack

@@ -16,15 +16,15 @@
 #                       Essai à blanc : FUMEE_DRY_POWEROFF=1 remplace le poweroff par un echo.
 #
 # Une fumée est DUE si un commit touchant un chemin TESTÉ (liste gravée CHEMINS_TESTES en
-# tête de fumee_page.py : packages/, data/, deploy/, machines/, conf/ et données du robot,
-# conf/ de la vision — la doc n'en est pas) est entré dans main après le sha de la dernière
+# tête de fumee_page.py : packages/, data/, deploy/, machines/ — la doc n'en est pas) est
+# entré dans main après le sha de la dernière
 # page VERTE, OU si 7 jours se sont écoulés sans fumée verte. Après un ROUGE sur un « sha de
 # code » (dernier commit touchant un chemin testé) : UNE relance de confirmation, puis plus
 # rien sur ce code tant qu'aucun commit de code n'arrive (« bloquée » ; le rappel > 2 jours
 # reste). La décision lit les resultat.json (fumee_page.py), jamais le HTML.
 #
 # Ordre (décision 3), arrêt au PREMIER rouge bloquant (les suivantes : « non lancée ») :
-#   image (reconstruite seulement si conf/docker/sim a changé depuis la dernière verte)
+#   image (reconstruite seulement si machines/sim/banc-robot a changé depuis la dernière verte)
 #   -> sim headless + colcon -> sonde RTF 20 s (rouge si < 0,8 : le reste n'est pas fiable)
 #   -> validate-namespace -> validate-catalogue -> animation parle
 #   -> chaîne roues + régisseur + regard, validate-rehearsal-chantiers (V-R3)
@@ -74,10 +74,11 @@ SORTIE="${FUMEE_SORTIE:-$SORTIE_DEFAUT}"
 RTF_MIN="${FUMEE_RTF_MIN:-$RTF_MIN_DEFAUT}"
 ETAT="${FUMEE_ETAT:-$HOME/.local/state/didier-fumee}"
 JOURNAL="$ETAT/journal.log"
-DOCKER_DIR="$DEPOT/legacy/dadou_robot_ros/conf/docker/sim"
+# L1e-4c (11/11) : le banc de la sim vit dans machines/sim/banc-robot/ (ex conf/docker/sim du robot).
+DOCKER_DIR="$DEPOT/machines/sim/banc-robot"
 CONTENEUR=dadou-sim-container
 IMAGE=dadouuu/dadou-sim-x86:latest
-CHEMIN_DOCKER_SIM="legacy/dadou_robot_ros/conf/docker/sim"   # relatif au dépôt (git diff)
+CHEMIN_DOCKER_SIM="machines/sim/banc-robot"   # relatif au dépôt (git diff)
 NB_COEURS="$(nproc)"
 # Cœurs réservés (08/11) : sous un pic de charge le RTF tombait à 0,76 ; sim seule sur 4 cœurs
 # rapides réservés = 0,987 (mesuré). Pendant la fumée SEULEMENT : tout est rendu à la fin.

@@ -9,7 +9,8 @@
 set -euo pipefail
 
 ICI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FUMEE_SH="$(cd "$ICI/../scripts" && pwd)/fumee.sh"
+# L1e-4c (11/11) : fumee.sh et ce script vivent côte à côte dans machines/sim/.
+FUMEE_SH="$ICI/fumee.sh"
 DEST="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
 if [ "${1:-}" = "--desinstaller" ]; then

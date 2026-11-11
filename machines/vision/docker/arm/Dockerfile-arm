@@ -12,8 +12,9 @@ RUN mkdir /home/ros2_ws/src/vision
 
 WORKDIR /home/ros2_ws/
 
-# conf/secret est exclu par le .dockerignore RACINE du dépôt (= racine du
-# contexte de build) : jamais de secret dans l'image (registre public).
+# conf/secret est exclu par Dockerfile-arm.dockerignore (à côté de ce fichier,
+# lu par BuildKit ; L1e-4c, ex .dockerignore racine) : jamais de secret dans
+# l'image (registre public).
 COPY conf/ /home/ros2_ws/src/vision/conf/
 COPY medias/ /home/ros2_ws/src/vision/medias/
 
