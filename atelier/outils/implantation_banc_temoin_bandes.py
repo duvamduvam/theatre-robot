@@ -121,6 +121,17 @@ strap("GND", (58, 1), (58, 3))
 strap("GND", (59, 3), (59, 5))
 strap("GND", (58, 5), (58, 7))
 
+# ------------------------------------------------------------------- J7 : extension du bus I²C 5 V
+# Même rôle et même ordre que J11 de la carte Moteurs (5 V · SDA · SCL · GND) : un module de plus
+# sur le bus côté modules sans dessouder. JST 4 points, bandes 9-12 (côté droit).
+for i, net in enumerate(["5V", "SDA", "SCL", "GND"]):
+    broche(61, 9 + i, net, f"J7.{i + 1}")
+couper(13, 8, 9, 10, 11)  # ces bandes ne vont pas jusqu'à la zone de gauche
+strap("5V", (41, 7), (41, 9))
+strap("SDA", (39, 6), (39, 10))
+strap("SCL", (38, 5), (38, 11))
+strap("GND", (36, 12), (36, 14))
+
 # ------------------------------------------------------------------- PCA9685 0x41 SERVOS (rangées 14-19)
 for i, nom in enumerate(PCA_BROCHES):
     net = {"OE": "GND", "VCC": "5V", "V+": "V+_SERVOS"}.get(nom, nom)
@@ -389,7 +400,7 @@ def dessiner() -> str:
         texte_trou(0, 21 + i, nom, dx=-2.2, ancre="end")
     texte_trou(0, 19.6, "J1b Pi", dx=-2.2, ancre="end", gras=True)
     # embases JST-XH (contour du boîtier, côté verrou à droite)
-    for c, r0, n in ((0, 4, 4), (0, 21, 4), (62, 36, 3), (47, 0, 3), (47, 4, 3)):
+    for c, r0, n in ((0, 4, 4), (0, 21, 4), (62, 36, 3), (47, 0, 3), (47, 4, 3), (61, 9, 4)):
         x1, y1 = P(c - 0.45, r0 - 0.6)
         x2, y2 = P(c + 0.45, r0 + n - 0.4)
         el.append(f'<rect x="{x1:.2f}" y="{y1:.2f}" width="{x2 - x1:.2f}" height="{y2 - y1:.2f}" '
@@ -405,6 +416,9 @@ def dessiner() -> str:
     texte_trou(44, 7.4, "J4", ancre="middle", gras=True)
     texte_trou(47, 1, "J5", dx=3.0, gras=True)
     texte_trou(47, 5, "J6", dx=3.0, gras=True)
+    texte_trou(61, 8.0, "J7 I²C 5 V", ancre="end", dx=1.2, gras=True)
+    for i, nom in enumerate(["5V", "SDA", "SCL", "GND"]):
+        texte_trou(61, 9 + i, nom, dx=-1.9, ancre="end")
     texte_trou(3.5, 11.2, "SW1", ancre="middle", gras=True)
     texte_trou(9.5, 14.9, "SW2", ancre="middle", gras=True)
     for c, r in ((2, 12), (8, 14)):  # contour des boutons 6×6
