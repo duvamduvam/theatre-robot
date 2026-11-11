@@ -326,7 +326,7 @@ fait tourner la chaîne réelle ; chaque ajout doit prolonger cette chaîne, pas
 |---|---|---|---|
 | Relecture des registres (B1) | le logiciel a écrit la bonne consigne | — | B1 |
 | Pico témoin (B2) | le signal électrique sort vraiment | — | B2 |
-| **Roues en l'air** | la chaîne complète jusqu'au moteur : sens de chaque roue, arrêt du deadman, coupure par OE (JP1) | un driver **de même commande que le SmartDrive40 de Didier (PWM + sens)** ; le MDDS30 de rechange est de la même marque mais son mode PWM + sens est **à vérifier dans sa notice** ; un L298N serait une autre chaîne, donc un faux témoin | B3 |
+| **Roues en l'air** | la chaîne complète jusqu'au moteur : sens de chaque roue, arrêt du deadman, coupure par OE (JP1) | **un petit driver** (décision de David le 11/11 : pas de gros driver pour des moteurs TT), **commandé en PWM + sens** comme le SmartDrive40, pour que le code des roues soit celui de Didier (PWM sur les canaux 1-2, sens sur 0-3). Un driver à deux entrées IN1/IN2 (type DRV8833, MX1508) exigerait un autre code : faux témoin, sauf petit inverseur pour fabriquer IN2 depuis le sens. **Moteurs sur une alimentation séparée** (une 2ᵉ DIANQI), pas sur le 5 V de la logique | B3 |
 | Un ou deux servos sur 0x41 | la séquence fait bouger quelque chose de réel | servos à emprunter (aucun en stock) ; un servo de loisir ne remplace pas un ASME du bras, il teste la commande, pas la mécanique | B3 |
 | **Caméra** | le résultat physique : la LED s'allume, le servo bouge, la roue tourne | **oui/non sur une zone fixe, exposition manuelle, éclairage maîtrisé** — leçons du 10/07 (l'auto-exposition trompe) et du visage (la caméra ne sait pas lire un motif) ; jamais une mesure fine | B4 |
 | **Bras simples** (levier imprimé au bout de chaque servo) | la caméra voit bouger le bras : chaîne servo vérifiée de bout en bout, comme les roues | bras **imprimés**, pas une copie de la mécanique de Didier ; servos de loisir sur 0x41 : ils testent la commande, pas le comportement des ASME 12 V du vrai robot (et si un ASME vient sur le banc : son fil rouge est une SORTIE 5 V, ne jamais le relier au 5 V, incident du 03/11) | B3 |
@@ -346,6 +346,4 @@ ce qui rend le test « ça bouge / ça ne bouge pas » fiable.
 
 **Le gain réel des roues en l'air** : répéter sur la table le protocole caméra des roues (sens par
 roue, deadman, e_stop, OE) avant de le faire sur Didier, sans aucun danger. Le socle n'est pas le
-mini-robot roulant reporté au lidar (§3) : il ne roule jamais. Les moteurs TT du stock acceptent 3 à
-6 V, alors que le MDDS30 démarre à 7 V : l'alimentation des moteurs est à concevoir à ce
-moment-là, pas avant.
+mini-robot roulant reporté au lidar (§3) : il ne roule jamais. 
