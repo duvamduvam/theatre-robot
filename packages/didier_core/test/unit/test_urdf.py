@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 import pytest
 import xacro
 
-# legacy/dadou_robot_ros (données du robot) ; le test vit dans packages/didier_core/test/unit (L1e-3c).
+# legacy/dadou_robot_ros (ancien dépôt du robot) ; le test vit dans packages/didier_core/test/unit (L1e-3c).
 REPO_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))), "legacy", "dadou_robot_ros")
 # packages/ du mono-dépôt (L1e-1) : didier_description y a déménagé de conf/ du robot.

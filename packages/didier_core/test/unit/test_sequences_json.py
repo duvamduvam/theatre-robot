@@ -14,10 +14,10 @@ import os
 
 import pytest
 
-# legacy/dadou_robot_ros (données du robot) ; le test vit dans packages/didier_core/test/unit (L1e-3c).
-REPO_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))))), "legacy", "dadou_robot_ros")
-SEQUENCES_DIR = os.path.join(REPO_ROOT, "json", "sequences")
+# data/ du mono-dépôt (données du robot, L1e-4b) ; le test vit dans packages/didier_core/test/unit.
+DATA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))))), "data")
+SEQUENCES_DIR = os.path.join(DATA_ROOT, "json", "sequences")
 
 SERVO_TRACKS = ("neck", "left_arm", "right_arm", "left_eye", "right_eye")
 OTHER_TRACKS = ("audios", "faces", "wheels", "robot_lights")

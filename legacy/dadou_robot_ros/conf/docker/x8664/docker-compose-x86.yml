@@ -22,6 +22,8 @@ services:
         didier_rehearsal: ../../../../../packages/didier_rehearsal
         didier_sim: ../../../../../packages/didier_sim
         didier_web: ../../../../../packages/didier_web
+        # L1e-4b : les données du robot (json/, medias/, db/) vivent dans data/ du mono-dépôt.
+        data: ../../../../../data
     environment:
       # Allow RViz et al to display on host X server.
       - DISPLAY=${DISPLAY}
@@ -38,8 +40,8 @@ services:
     volumes:
       # Sync configs, assets, and give access to host X11 + logs.
       - ../../../conf:/home/ros2_ws/src/robot/conf
-      - ../../../json:/home/ros2_ws/src/robot/json
-      - ../../../medias:/home/ros2_ws/src/robot/medias
+      - ../../../../../data/json:/home/ros2_ws/src/robot/json
+      - ../../../../../data/medias:/home/ros2_ws/src/robot/medias
       - ../../../../../packages/didier_bringup:/home/ros2_ws/src/didier_bringup
       - ../../../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats

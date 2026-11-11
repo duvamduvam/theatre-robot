@@ -15,8 +15,8 @@ import yaml
 ICI = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(ICI)
 MONO = os.path.dirname(os.path.dirname(PKG))
-# Données du robot (json/sequences) : restées dans legacy/ (L1e-3c ne déplace que le code).
-LEGACY_ROBOT = os.path.join(MONO, "legacy", "dadou_robot_ros")
+# Données du robot (json/sequences) : data/ du mono-dépôt depuis L1e-4b.
+DONNEES = os.path.join(MONO, "data")
 for chemin in (PKG, os.path.join(MONO, "packages", "theatre_contrats"),
                os.path.join(MONO, "packages", "dadou_utils_ros"),
                os.path.join(MONO, "packages", "didier_core"),
@@ -26,7 +26,7 @@ for chemin in (PKG, os.path.join(MONO, "packages", "theatre_contrats"),
 
 REGLAGES_YAML = os.path.join(PKG, "config", "reglages.yaml")
 DEPLACEMENTS_YAML = os.path.join(PKG, "config", "deplacements.yaml")
-SEQUENCES = os.path.join(LEGACY_ROBOT, "json", "sequences")
+SEQUENCES = os.path.join(DONNEES, "json", "sequences")
 
 
 def donnees_reglages():

@@ -13,8 +13,11 @@ RUN mkdir /home/ros2_ws/src/robot
 WORKDIR /home/ros2_ws/
 
 COPY conf/ /home/ros2_ws/src/robot/conf/
-COPY json/ /home/ros2_ws/src/robot/json/
-COPY medias/ /home/ros2_ws/src/robot/medias/
+# Données du robot (L1e-4b) : contexte nommé `data` du compose. Sur le Pi, Ansible copie
+# data/{json,medias,db} du dépôt dans src/robot/ (chemin Pi inchangé) : `data` y est
+# donc le contexte principal lui-même — même Dockerfile que le banc x86 (data/ du PC).
+COPY --from=data json/ /home/ros2_ws/src/robot/json/
+COPY --from=data medias/ /home/ros2_ws/src/robot/medias/
 
 # Les 6 packages ROS autonomes (L1e-1 : ex-conf/ du robot) : contextes nommés
 # du compose, chemins de la disposition déployée ros2_ws/src/<package>.

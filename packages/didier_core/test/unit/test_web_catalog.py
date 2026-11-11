@@ -10,8 +10,8 @@ import pathlib
 
 from didier_web.web_catalog import build_catalog, read_deploy_sha
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[4] / "legacy" / "dadou_robot_ros"
-JSON_DIR = REPO_ROOT / "json"
+# data/ du mono-dépôt (données du robot, L1e-4b) : le json/ que le robot publie.
+JSON_DIR = pathlib.Path(__file__).resolve().parents[4] / "data" / "json"
 
 
 def test_json_dir_existe_bien_sous_le_depot():

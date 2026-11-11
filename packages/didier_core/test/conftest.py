@@ -2,8 +2,10 @@
 
 Le package s'importe depuis les sources : sa racine (packages/didier_core) porte le module
 didier_core/ ET ce dossier test/ (les tests s'importent entre eux en `test.unit.…`).
-Les données (json/, medias/, db/, conf/) sont restées dans legacy/dadou_robot_ros/ :
-DIDIER_DATA_DIR y pointe AVANT tout import de robot_config (décision 3 de la spec L1).
+Les données (json/, medias/, db/) vivent dans data/ du mono-dépôt depuis L1e-4b, enfants
+directs de la racine comme sur le Pi (src/robot/) : DIDIER_DATA_DIR y pointe AVANT tout import
+de robot_config (décision 3 de la spec L1). conf/ reste dans legacy/dadou_robot_ros/ (→ L1e-4c) :
+les tests hôte ne lisent pas <DIDIER_DATA_DIR>/conf/.
 Lancer : cd packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q
 """
 import os
@@ -14,10 +16,11 @@ PKG = os.path.dirname(ICI)                      # packages/didier_core
 PACKAGES = os.path.dirname(PKG)                 # packages/ du mono-dépôt
 MONO = os.path.dirname(PACKAGES)
 LEGACY_ROBOT = os.path.join(MONO, "legacy", "dadou_robot_ros")
+DONNEES = os.path.join(MONO, "data")
 
 # Racine des données lue par didier_core/robot_config.py (sinon : chemin conteneur).
 # setdefault : un DIDIER_DATA_DIR posé par l'appelant l'emporte (essai sur d'autres données).
-os.environ.setdefault("DIDIER_DATA_DIR", LEGACY_ROBOT + "/")
+os.environ.setdefault("DIDIER_DATA_DIR", DONNEES + "/")
 
 for chemin in (
     PKG,

@@ -21,7 +21,7 @@ import pytest
 
 from theatre_contrats import stringtime
 
-# legacy/dadou_robot_ros (données du robot) ; le test vit dans packages/didier_core/test/unit (L1e-3c).
+# legacy/dadou_robot_ros (ancien dépôt du robot) ; le test vit dans packages/didier_core/test/unit (L1e-3c).
 RACINE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))), "legacy", "dadou_robot_ros")
 # packages/ du mono-dépôt (L1e-1) ; les SITES ci-dessous le citent en chemin relatif à RACINE.

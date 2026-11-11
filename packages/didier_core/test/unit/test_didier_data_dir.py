@@ -1,8 +1,8 @@
 """Racine des données du cœur = DIDIER_DATA_DIR (lot L1e-3c, décision 3 de la spec L1).
 
-Le code a déménagé dans packages/didier_core ; json/, medias/, db/, conf/ sont restés dans
-legacy/dadou_robot_ros/ (conteneurs : /home/ros2_ws/src/robot/). robot_config.py lit la
-racine dans DIDIER_DATA_DIR, défaut = le chemin conteneur. Valeurs GRAVÉES ici : un test qui
+Le code a déménagé dans packages/didier_core ; json/, medias/, db/ vivent dans data/ du
+mono-dépôt depuis L1e-4b (conteneurs et Pi : /home/ros2_ws/src/robot/, inchangé). robot_config.py
+lit la racine dans DIDIER_DATA_DIR, défaut = le chemin conteneur. Valeurs GRAVÉES ici : un test qui
 recalculerait l'attendu avec robot_config ne testerait rien.
 
 Chaque cas importe robot_config dans un PROCESSUS NEUF : la racine est lue à l'import, et le
@@ -13,7 +13,8 @@ import pathlib
 import subprocess
 import sys
 
-LEGACY_ROBOT = pathlib.Path(__file__).resolve().parents[4] / "legacy" / "dadou_robot_ros"
+# Racine des données hôte (L1e-4b) : data/ du mono-dépôt, json/ medias/ db/ en enfants directs.
+DONNEES = pathlib.Path(__file__).resolve().parents[4] / "data"
 
 _SONDE = ("from didier_core.robot_config import config\n"
           "from dadou_utils_ros.utils_static import PROJECT_DIRECTORY, JSON_DIRECTORY, "
@@ -49,8 +50,8 @@ def test_la_variable_remplace_la_racine_et_la_barre_finale_est_ajoutee():
     assert _chemins("/srv/didier/data/")[0] == "/srv/didier/data/"
 
 
-def test_sous_pytest_le_conftest_pointe_les_donnees_de_legacy():
+def test_sous_pytest_le_conftest_pointe_les_donnees_de_data():
     from didier_core.robot_config import config
     from dadou_utils_ros.utils_static import PROJECT_DIRECTORY, JSON_DIRECTORY
-    assert config[PROJECT_DIRECTORY] == str(LEGACY_ROBOT) + "/"
+    assert config[PROJECT_DIRECTORY] == str(DONNEES) + "/"
     assert pathlib.Path(config[JSON_DIRECTORY], "sequences").is_dir()

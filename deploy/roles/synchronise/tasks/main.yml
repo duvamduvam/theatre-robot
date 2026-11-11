@@ -44,7 +44,10 @@
 # `secrets` depuis le PC (hors dépôt) : le rsync ne doit JAMAIS en écraser un, même si un
 # conf/secret traînait dans l'arbre du PC. Pas de --delete : rien de ce que le Pi porte
 # n'est effacé par le rsync.
+# Lot L1e-4b (08/11) : copie « projet » réservée aux hôtes SANS `donnees_dir` (vision,
+# télécommande) ; le robot reçoit à la place les deux copies explicites qui suivent.
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}"
+  when: donnees_dir is not defined
   synchronize:
     src: "{{ local_projects_dir }}/{{ local_project_dir }}/"
     dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
@@ -67,7 +70,8 @@
       - "--exclude=.pytest_cache/"
       - "--exclude=/conf/docker/x86/workspace/"
       # Même déchet côté sim (workspace colcon de la fumée, gitignoré) : vu rouge le 08/11 pendant
-      # une fumée. Disparaît avec la copie « projet » en L1e-4b.
+      # une fumée. Gardé pour les hôtes qui reçoivent encore la copie « projet » ; la copie conf/
+      # du robot ci-dessous porte la même exclusion.
       - "--exclude=/conf/docker/sim/workspace/"
       - "--exclude=/conf/secret"
       # Sentinelles de build COMMITÉES depuis L0 (robot/change, vision/change) : la copier
@@ -80,9 +84,55 @@
       #- "--exclude=didier_bringup/"
       #- "--exclude=theatre_interfaces/"
 
+# Lot L1e-4b (08/11) : données du robot. data/{json,medias,db} du dépôt → src/robot/{json,medias,db}
+# (chemin Pi INCHANGÉ : DIDIER_DATA_DIR, compose ARM et Dockerfile-arm les y lisent). Hôte robot
+# seul (`donnees_dir` dans hosts). Une copie PAR dossier, nommée : rien d'autre de data/ (README)
+# ne part. Pas de --delete, comme la copie « projet » qu'elles remplacent.
+- name: Synchronize robot data "{{ donnees_dir | default('') }}/{{ item }}/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/{{ item }}/"
+  when: donnees_dir is defined
+  synchronize:
+    src: "{{ donnees_dir }}/{{ item }}/"
+    dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/{{ item }}/"
+    recursive: yes
+    copy_links: yes
+    rsync_opts:
+      - "--omit-dir-times"
+      - "--exclude=.~tmp~/"
+      - "--exclude=__pycache__/"
+  loop: [json, medias, db]
+
+# Lot L1e-4b (08/11) : conf/ du robot, seule autre partie de legacy/dadou_robot_ros/ qui part sur
+# le Pi (jusqu'à L1e-4c : machines/robot/). Mêmes exclusions que la copie « projet », ancrées à
+# conf/ : workspaces colcon des bancs (déchets de la fumée), conf/secret (rôle secrets, jamais le
+# rsync), caches Python.
+- name: Synchronize robot conf "{{ local_projects_dir }}/{{ local_project_dir }}/conf/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/"
+  when: donnees_dir is defined
+  synchronize:
+    src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/"
+    dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/"
+    recursive: yes
+    copy_links: yes
+    rsync_opts:
+      - "--omit-dir-times"
+      - "--exclude=.git/"
+      - "--exclude=node_modules/"
+      - "--exclude=.~tmp~/"
+      - "--exclude=.idea/"
+      - "--exclude=__pycache__/"
+      - "--exclude=venv/"
+      - "--exclude=.venv/"
+      - "--exclude=.pytest_cache/"
+      - "--exclude=/docker/x86/workspace/"
+      - "--exclude=/docker/sim/workspace/"
+      - "--exclude=/secret"
+
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
   # La vision n'a plus de conf/ros2/ depuis L1e-3d (sa forme ament est dans packages/didier_vision).
-  when: (local_projects_dir ~ '/' ~ local_project_dir ~ '/conf/ros2') is directory
+  # L1e-4b : plus pour le robot non plus — son conf/ros2/ ne portait plus que launch.txt, que
+  # rien ne lit (déchet effacé par chemins_retires_legacy_robot) ; il arrive avec conf/.
+  when:
+    - donnees_dir is not defined
+    - (local_projects_dir ~ '/' ~ local_project_dir ~ '/conf/ros2') is directory
   synchronize:
     src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/"
     dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
@@ -162,7 +212,7 @@
   become: yes
   shell: |
     cd "{{ ansible_env.HOME }}/{{ ros2_ws }}" 2>/dev/null || exit 0
-    for chemin in {{ (chemins_retires_robot + chemins_retires_vision) | join(' ') }}; do
+    for chemin in {{ (chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot) | join(' ') }}; do
       [ -e "$chemin" ] && echo "$chemin"
     done
     exit 0
@@ -179,8 +229,9 @@
   file:
     path: "{{ ansible_env.HOME }}/{{ ros2_ws }}/{{ item }}"
     state: absent
-  # L1e-3d : même tâche pour la vision (chemins distincts, absents de l'autre hôte).
-  loop: "{{ chemins_retires_robot + chemins_retires_vision }}"
+  # L1e-3d : même tâche pour la vision (chemins distincts, absents de l'autre hôte). L1e-4b : et
+  # pour les déchets de l'ancienne copie « projet » du robot (chemins_retires_legacy_robot).
+  loop: "{{ chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot }}"
   when: item in robot_ancien.stdout_lines
 
 # Déchets laissés par l'ancien rsync (vars/main.yml, `dechets_rsync`) : désormais exclus de
@@ -231,15 +282,16 @@
 # Lot L1c (2026-11-04) : le robot publie le sha déployé (topic `deploy_sha`, nœud
 # catalogue_node de didier_web ; badge « version » de la console web). Le fichier est
 # lu dans le conteneur à /home/ros2_ws/src/robot/conf/DEPLOY_SHA (conf/ est monté).
-# Le lookup `pipe` s'exécute sur le PC (le git n'existe pas sur le Pi) ; `-C` sur
-# legacy/ remonte au dépôt theatre-robot. Suffixe `-dirty` OBLIGATOIRE si l'arbre
-# de travail diffère du commit : le rsync copie l'arbre, pas le commit — un sha
-# propre mentirait. Robot seulement pour L1c (vision/télécommande : quand
+# Le lookup `pipe` s'exécute sur le PC (le git n'existe pas sur le Pi), à la racine du dépôt
+# (`depot_dir`). Suffixe `-dirty` OBLIGATOIRE si l'arbre de travail diffère du commit : le
+# rsync copie l'arbre, pas le commit — un sha propre mentirait. Depuis L1e-4b (08/11) : seuls
+# les chemins DÉPLOYÉS comptent (`chemins_deployes`, vars/main.yml) — un fichier non suivi
+# sous docs/ (journaux d'une fumée en cours) ne part sur aucun Pi et ne salit plus le sha. Robot seulement pour L1c (vision/télécommande : quand
 # machines/<hôte>/ existera, L1e). Côté PC, conf/DEPLOY_SHA n'existe jamais
 # (gitignoré) : la sim affiche « dev ».
 - name: Write the deployed git sha (robot only, read by catalogue_node)
   copy:
-    content: "{{ lookup('pipe', 'git -C ' ~ local_projects_dir ~ ' rev-parse HEAD') }}{{ '-dirty' if lookup('pipe', 'git -C ' ~ local_projects_dir ~ ' status --porcelain') else '' }}\n"
+    content: "{{ lookup('pipe', 'git -C ' ~ depot_dir ~ ' rev-parse HEAD') }}{{ '-dirty' if lookup('pipe', 'git -C ' ~ depot_dir ~ ' status --porcelain -- ' ~ (chemins_deployes | join(' '))) else '' }}\n"
     dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/DEPLOY_SHA"
     mode: "0644"
   when: project_ros_dir == 'robot'

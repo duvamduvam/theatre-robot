@@ -30,10 +30,10 @@ sys.modules.setdefault("adafruit_servokit", _fake_adafruit_servokit)
 from dadou_utils_ros.utils_static import MODE, NECK, NORMAL, RANDOM
 from didier_core.actions.servo import Servo  # noqa: E402
 
-# legacy/dadou_robot_ros (données du robot) ; le test vit dans packages/didier_core/test/unit (L1e-3c).
-REPO_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))))), "legacy", "dadou_robot_ros")
-SPEAK_JSON = os.path.join(REPO_ROOT, "json", "sequences", "eternel-show", "speak.json")
+# data/ du mono-dépôt (données du robot, L1e-4b) ; le test vit dans packages/didier_core/test/unit.
+DATA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))))), "data")
+SPEAK_JSON = os.path.join(DATA_ROOT, "json", "sequences", "eternel-show", "speak.json")
 
 
 class FakePwmChannel:

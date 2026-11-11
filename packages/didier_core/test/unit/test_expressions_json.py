@@ -32,12 +32,12 @@ try:
 except ImportError:  # pragma: no cover - imageio est dans requirements-test
     imageio = None
 
-# legacy/dadou_robot_ros (données du robot) ; le test vit dans packages/didier_core/test/unit (L1e-3c).
-REPO_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))))), "legacy", "dadou_robot_ros")
-EXPRESSIONS_FILE = os.path.join(REPO_ROOT, "json", "expressions.json")
-MOUTH_DIR = os.path.join(REPO_ROOT, "medias", "visuals", "mouth")
-EYE_DIR = os.path.join(REPO_ROOT, "medias", "visuals", "eye")
+# data/ du mono-dépôt (données du robot, L1e-4b) ; le test vit dans packages/didier_core/test/unit.
+DATA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))))), "data")
+EXPRESSIONS_FILE = os.path.join(DATA_ROOT, "json", "expressions.json")
+MOUTH_DIR = os.path.join(DATA_ROOT, "medias", "visuals", "mouth")
+EYE_DIR = os.path.join(DATA_ROOT, "medias", "visuals", "eye")
 
 # Dimensions attendues (robot/visual/image_mapping.py : MOUTH_WIDTH/MOUTH_HEIGHT/MATRIX).
 MOUTH_SIZE = (24, 16)  # (largeur, hauteur)

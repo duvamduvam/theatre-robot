@@ -29,12 +29,12 @@ import pytest
 
 from didier_core.visual.lights_animations import LightsAnimations
 
-# legacy/dadou_robot_ros (données du robot) ; le test vit dans packages/didier_core/test/unit (L1e-3c).
-REPO_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))))), "legacy", "dadou_robot_ros")
-LIGHTS_BASE_FILE = os.path.join(REPO_ROOT, "json", "lights_base.json")
-ROBOT_LIGHTS_FILE = os.path.join(REPO_ROOT, "json", "robot_lights.json")
-COLORS_FILE = os.path.join(REPO_ROOT, "json", "colors.json")
+# data/ du mono-dépôt (données du robot, L1e-4b) ; le test vit dans packages/didier_core/test/unit.
+DATA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))))), "data")
+LIGHTS_BASE_FILE = os.path.join(DATA_ROOT, "json", "lights_base.json")
+ROBOT_LIGHTS_FILE = os.path.join(DATA_ROOT, "json", "robot_lights.json")
+COLORS_FILE = os.path.join(DATA_ROOT, "json", "colors.json")
 
 # Références mortes préexistantes, à trancher : AUCUNE connue à ce jour
 # (exploration du 2026-07-11 : toutes les briques/couleurs/méthodes existent).
