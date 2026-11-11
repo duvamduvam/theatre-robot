@@ -99,13 +99,13 @@ def broche(x: float, y: float, nom: str, cote: str) -> None:
 # --- Titre --------------------------------------------------------------------------------
 texte(148.5, 10, "Banc témoin B0 — câblage (relevé dans le code du robot, 07/11/2026)", 4.2, "middle", True)
 texte(148.5, 15.5, "Aucun moteur, aucun driver moteur. Même câblage logique que Didier : PCA9685 0x40, "
-      "PCF8574 0x21, LED sur GPIO 18.", PETIT, "middle")
+      "PCF8574 0x21 derrière un ISO1540, LED sur GPIO 18.", PETIT, "middle")
 
 # --- Raspberry Pi 4 (da66fc96, démarre sur USB) -------------------------------------------
 boite(8, 24, 62, 122, "Raspberry Pi 4", "da66fc96 · démarre sur USB")
 PI_D = 70  # bord droit
 pi = {
-    "3V3": 40, "SDA": 50, "SCL": 60, "GND": 72, "G18": 88, "G12": 112, "G16": 124, "G20": 136,
+    "3V3": 46, "SDA": 54, "SCL": 62, "GND": 72, "G18": 92, "G12": 112, "G16": 124, "G20": 136,
 }
 broche(PI_D, pi["3V3"], "broche 1 · 3,3 V", "droite")
 broche(PI_D, pi["SDA"], "broche 3 · SDA", "droite")
@@ -122,33 +122,46 @@ texte(12, 104, "NE RIEN BRANCHER", PETIT, gras=True)
 boite(8, 152, 62, 16, "Chargeur USB-C du Pi", "SEULE alimentation du Pi")
 ligne((39, 152), (39, 146), epaisseur=TRAIT_BOITE)
 
-# --- Bus I²C et 3,3 V : colonnes verticales ----------------------------------------------
-COL = {"3V3": 100, "SDA": 106, "SCL": 112}
-pca = {"3V3": 38, "SDA": 46, "SCL": 54, "GND": 62}
-pcf = {"3V3": 98, "SDA": 106, "SCL": 114, "GND": 122}
-for net in ("3V3", "SDA", "SCL"):
+# --- Isolateur ISO1540, comme sur la carte Sécurité du robot ------------------------------
+# Côté 1 = Pi (3,3 V), côté 2 = cartes (5 V). Sur le robot les deux masses sont communes : il
+# sépare et adapte le bus (3,3 V → 5 V), ce n'est pas une barrière galvanique.
+boite(80, 32, 24, 52, "ISO1540", "3,3 V │ 5 V")
+iso = {"3V3": 46, "SDA": 54, "SCL": 62, "GND": 72}
+for net, nom1, nom2 in (("3V3", "VCC1", "VCC2"), ("SDA", "SDA1", "SDA2"), ("SCL", "SCL1", "SCL2")):
+    ligne((PI_D, pi[net]), (80, iso[net]))
+    broche(80, iso[net], nom1, "gauche")
+    broche(104, iso[net], nom2, "droite")
+broche(80, iso["GND"], "GND1", "gauche")
+broche(104, 78, "GND2", "droite")
+ligne((104, 78), (107, 78), (107, 82))
+masse(107, 82)
+
+# --- Bus 5 V derrière l'isolateur : colonnes verticales -----------------------------------
+COL = {"5V": 110, "SDA": 115, "SCL": 120}
+pca = {"5V": 38, "SDA": 46, "SCL": 54, "GND": 62}
+pcf = {"5V": 98, "SDA": 106, "SCL": 114, "GND": 122}
+for net, y_iso in (("5V", iso["3V3"]), ("SDA", iso["SDA"]), ("SCL", iso["SCL"])):
     x = COL[net]
-    ligne((PI_D, pi[net]), (x, pi[net]))
-    point(x, pi[net])
-    ligne((x, min(pca[net], pi[net])), (x, pcf[net]))
+    ligne((104, y_iso), (x, y_iso))
+    point(x, y_iso)
+    ligne((x, min(pca[net], y_iso)), (x, pcf[net]))
     for y in (pca[net], pcf[net]):
         ligne((x, y), (130, y))
         point(x, y)
-texte(COL["3V3"], 30, "3,3 V", PETIT, "middle")
-texte(COL["SDA"] + 0.5, 34, "SDA", PETIT, "middle")
-texte(COL["SCL"] + 1, 30, "SCL", PETIT, "middle")
+ligne((COL["5V"], 38), (COL["5V"], 29))
+etiquette(COL["5V"], 27, "5V BANC", vers_droite=False)
 
-# Masse du Pi : le seul lien avec l'alimentation du banc
-ligne((PI_D, pi["GND"]), (80, pi["GND"]))
-masse(80, pi["GND"])
-texte(74, pi["GND"] + 11, "masse commune", PETIT)
+# Masse du Pi : le seul lien avec l'alimentation du banc (comme sur le robot)
+ligne((PI_D, pi["GND"]), (80, iso["GND"]))
+ligne((76, pi["GND"]), (76, pi["GND"] + 4))
+masse(76, pi["GND"] + 4)
 
 # --- PCA9685 ------------------------------------------------------------------------------
 boite(130, 24, 72, 62, "PCA9685", "0x40 · servos ET roues")
-for net, nom in (("3V3", "VCC"), ("SDA", "SDA"), ("SCL", "SCL"), ("GND", "GND")):
+for net, nom in (("5V", "VCC"), ("SDA", "SDA"), ("SCL", "SCL"), ("GND", "GND")):
     broche(130, pca[net], nom, "gauche")
-ligne((130, pca["GND"]), (124, pca["GND"]))
-masse(124, pca["GND"])
+ligne((130, pca["GND"]), (125, pca["GND"]))
+masse(125, pca["GND"])
 broche(202, 32, "V+ (bornier)", "droite")
 ligne((202, 32), (208, 32))
 etiquette(208, 32, "5V BANC")
@@ -176,10 +189,10 @@ texte(213, 79, "servo facultatif (emprunté à la tête), alimenté par V+", PET
 
 # --- PCF8574 ------------------------------------------------------------------------------
 boite(130, 90, 72, 38, "PCF8574", "0x21 · relais")
-for net, nom in (("3V3", "VCC"), ("SDA", "SDA"), ("SCL", "SCL"), ("GND", "GND")):
+for net, nom in (("5V", "VCC"), ("SDA", "SDA"), ("SCL", "SCL"), ("GND", "GND")):
     broche(130, pcf[net], nom, "gauche")
-ligne((130, pcf["GND"]), (124, pcf["GND"]))
-masse(124, pcf["GND"])
+ligne((130, pcf["GND"]), (125, pcf["GND"]))
+masse(125, pcf["GND"])
 texte(200, 108, "cavaliers : A0 = 1,", PETIT, "end")
 texte(200, 112, "A1 = 0, A2 = 0", PETIT, "end")
 texte(200, 120, "vérifier : 8574, pas 8575", PETIT, "end", gras=True)
@@ -254,7 +267,7 @@ texte(12, 179, "RÈGLE N° 1 (incident de la nappe du 04/11)", TEXTE, gras=True)
 texte(12, 185, "Le Pi n'est alimenté QUE par son chargeur USB-C.", PETIT)
 texte(12, 189.5, "Aucun fil entre les broches 5 V du Pi et le banc.", PETIT)
 texte(12, 194, "Seule la masse est commune, par un seul fil (broche 6).", PETIT)
-texte(12, 198.5, "GPIO 20 : appui court = réarmement, long = éteint le Pi du banc.", PETIT)
+texte(12, 198.5, "Cartes I²C en 5 V derrière l'ISO1540, comme le robot.", PETIT)
 
 texte(214, 197, "Légende : même étiquette = même fil ;", PETIT)
 etiquette(214, 202, "5V BANC")

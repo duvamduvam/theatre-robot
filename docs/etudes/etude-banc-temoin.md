@@ -259,10 +259,10 @@ l'alimentation du banc. Seule la **masse** est commune, par un seul fil.
 
 | De | Vers | Remarque |
 |---|---|---|
-| Pi broche 1 (3,3 V) | PCA9685 VCC, PCF8574 VCC | logique en 3,3 V : pas de convertisseur sur l'I²C |
-| Pi broche 3 (SDA) | PCA9685 SDA, PCF8574 SDA | |
-| Pi broche 5 (SCL) | PCA9685 SCL, PCF8574 SCL | |
-| Pi broche 6 (GND) | masse commune du banc | **le seul** lien d'alimentation avec le Pi |
+| Pi broches 1 / 3 / 5 / 6 (3,3 V, SDA, SCL, GND) | ISO1540 côté 1 (VCC1, SDA1, SCL1, GND1) | comme la carte Sécurité du robot |
+| ISO1540 côté 2 (VCC2, SDA2, SCL2, GND2) | 5 V du banc ; SDA/SCL du PCA9685 et du PCF8574 ; masse | bus I²C des cartes en **5 V**, comme sur le robot |
+| PCA9685 VCC, PCF8574 VCC | 5 V du banc | (et non plus 3,3 V du Pi) |
+| Pi broche 6 (GND) | masse commune du banc | **le seul** lien d'alimentation avec le Pi ; masses communes des deux côtés de l'ISO1540, comme sur le robot |
 | Pi broche 12 (GPIO 18) | 74AHCT125 broche 2 (1A) | |
 | 74AHCT125 broche 3 (1Y) | résistance 330 Ω, puis DIN de la matrice | |
 | 74AHCT125 broche 1 (1OE) et 7 | masse | sortie 1 toujours active |
@@ -279,6 +279,19 @@ l'alimentation du banc. Seule la **masse** est commune, par un seul fil.
 | PCA9685 canaux 0 à 3 | **rien**, ou 4 LED témoins + 330 Ω vers la masse | jamais de driver moteur ; les LED montrent le deadman à l'œil |
 | PCA9685 canal 4 | un servo (facultatif) | emprunté à la tête ; alimenté par V+ |
 | DIANQI 12 V | isolé | inutilisé |
+
+**Montage (décidé par David le 11/11)** : sur **plaque à pastilles soudée**, plus propre qu'une
+breadboard. Modules (PCA9685, PCF8574, ISO1540) sur **barrettes femelles**, 74AHCT125 sur **support
+tulipe** : tout se remplace sans dessouder. Si le Pi arrive par une nappe 40 fils, **couper ou ne
+pas câbler les broches 2 et 4** côté plaque (le connecteur les amène d'office).
+
+**Isolateur I²C : oui, un ISO1540 (décidé le 11/11).** Pas pour protéger le Pi — le banc n'a ni
+moteur ni 24 V, et sur le robot les deux côtés de l'ISO1540 partagent déjà la masse (étude
+odométrie : « ce n'est pas une barrière galvanique ») — mais parce que **le robot fait passer son
+I²C par un ISO1540, côté cartes en 5 V**. Un banc sans lui testerait un autre bus que celui du
+robot. Bonus : il valide un ISO1540 avant de souder la carte Sécurité. Prendre un exemplaire
+**neuf** (achat refonte) ; celui de l'ancienne carte du 04/11 est sur le chemin de la panne et
+ne se monte qu'après contrôle au multimètre entre VCC1 et GND1, et entre VCC2 et GND2.
 
 **À savoir avant B1** :
 - la configuration du robot écrit 1 000 LED et place le visage aux LED 513-673 : sur une matrice de
