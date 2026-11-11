@@ -15,9 +15,13 @@
 #   fumee.sh --et-dodo  fumée forcée PUIS extinction du PC (à lancer en allant se coucher).
 #                       Essai à blanc : FUMEE_DRY_POWEROFF=1 remplace le poweroff par un echo.
 #
-# Une fumée est DUE si un commit est entré dans main après le sha gravé dans la dernière
-# page VERTE (hors commits de docs/fumee/ eux-mêmes), OU si 7 jours se sont écoulés sans
-# fumée verte. La décision lit les resultat.json (fumee_page.py), jamais le HTML.
+# Une fumée est DUE si un commit touchant un chemin TESTÉ (liste gravée CHEMINS_TESTES en
+# tête de fumee_page.py : packages/, data/, deploy/, machines/, conf/ et données du robot,
+# conf/ de la vision — la doc n'en est pas) est entré dans main après le sha de la dernière
+# page VERTE, OU si 7 jours se sont écoulés sans fumée verte. Après un ROUGE sur un « sha de
+# code » (dernier commit touchant un chemin testé) : UNE relance de confirmation, puis plus
+# rien sur ce code tant qu'aucun commit de code n'arrive (« bloquée » ; le rappel > 2 jours
+# reste). La décision lit les resultat.json (fumee_page.py), jamais le HTML.
 #
 # Ordre (décision 3), arrêt au PREMIER rouge bloquant (les suivantes : « non lancée ») :
 #   image (reconstruite seulement si conf/docker/sim a changé depuis la dernière verte)
@@ -145,13 +149,20 @@ DEBUT_ISO="$(date -Iseconds)"
 DEPUIS=""; RAPPEL=non
 
 # --- Reporter : sortir proprement sans page -------------------------------------
-rappel_si_besoin() {
-  # Décision 2 : due depuis plus de 2 jours et toujours reportée -> on prévient David
+rappel_si_besoin() { # rappel_si_besoin [bloquee]
+  # Décision 2 : due depuis plus de 2 jours et toujours pas verte -> on prévient David
   # (notification + journal), au plus une fois toutes les 12 h pour ne pas harceler.
+  # Deux causes : reportée (PC occupé) ou bloquée (rouge confirmé sur ce code, règle du 10/11).
   [ "$RAPPEL" = oui ] || return 0
   local marque="$ETAT/dernier-rappel" maintenant; maintenant="$(date +%s)"
   if [ -f "$marque" ] && [ $((maintenant - $(cat "$marque"))) -lt 43200 ]; then return 0; fi
   echo "$maintenant" >"$marque"
+  if [ "${1:-}" = bloquee ]; then
+    journal "RAPPEL : une fumée est due depuis ${DEPUIS:-plus de 2 jours} et reste $RAISON"
+    command -v notify-send >/dev/null && notify-send "Didier : fumée rouge confirmée" \
+      "Plus de relance automatique sur ce code tant qu'aucun commit de code n'arrive. Voir docs/fumee/." || true
+    return 0
+  fi
   journal "RAPPEL : une fumée est due depuis ${DEPUIS:-plus de 2 jours} et reste reportée (PC trop occupé)"
   command -v notify-send >/dev/null && notify-send "Didier : fumée en retard" \
     "Due depuis plus de 2 jours, toujours reportée. Lance fumee.sh --et-dodo en allant te coucher." || true
@@ -170,7 +181,11 @@ if [ "$MODE" = si-due ]; then
   LIGNE="$(python3 "$PAGE_PY" due --sortie "$SORTIE" --depot "$DEPOT")"; RC=$?
   set -e
   case "$RC" in
-    1) exit 0 ;;   # pas due : on ne fait RIEN (30 min plus tard, même chose)
+    1) # pas due : on ne fait RIEN (30 min plus tard, même chose). Bloquée (rouge confirmé
+       # sur ce code) : rien non plus, sauf le rappel « > 2 jours » (au plus 1 fois / 12 h).
+       IFS=$'\t' read -r ETAT_DUE RAISON DEPUIS RAPPEL <<<"$LIGNE"
+       [ "$ETAT_DUE" != bloquee ] || rappel_si_besoin bloquee
+       exit 0 ;;
     0) ;;
     *) journal "ERREUR de la décision « due ? » (code $RC) : $LIGNE"; exit 2 ;;
   esac
