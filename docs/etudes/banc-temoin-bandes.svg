@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210" font-family="DejaVu Sans, sans-serif">
+<defs><pattern id="hachure" width="1.6" height="1.6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="1.6" stroke="black" stroke-width="0.35"/></pattern></defs>
 <rect width="297" height="210" fill="white"/>
 <text x="148.50" y="9.00" font-size="4.2" text-anchor="middle" font-weight="bold">Banc témoin — implantation sur plaque à bandes 60 × 140 mm (vue côté composants)</text>
 <text x="148.50" y="14.50" font-size="2.6" text-anchor="middle">Dessin agrandi ×1,8 : compter les trous (colonnes 0-54, bandes 0-24 dans la longueur). ✕ = coupure de bande (côté cuivre) ; trait plein = strap côté composants.</text>
@@ -1430,6 +1431,14 @@
 <rect x="193.31" y="82.69" width="22.86" height="37.49" fill="none" stroke="black" stroke-width="0.5"/>
 <text x="204.74" y="81.76" font-size="2.6" text-anchor="middle" font-weight="bold">U1 74AHCT125</text>
 <text x="196.28" y="88.62" font-size="2.6" text-anchor="end">1</text>
+<rect x="53.63" y="44.06" width="5.03" height="18.75" fill="url(#hachure)" stroke="black" stroke-width="1.0"/>
+<rect x="76.49" y="44.06" width="5.03" height="18.75" fill="url(#hachure)" stroke="black" stroke-width="1.0"/>
+<rect x="99.35" y="39.49" width="5.03" height="27.89" fill="url(#hachure)" stroke="black" stroke-width="1.0"/>
+<rect x="227.37" y="25.77" width="5.03" height="32.46" fill="white" stroke="black" stroke-width="1.0"/>
+<rect x="218.22" y="39.49" width="5.03" height="9.60" fill="white" stroke="black" stroke-width="1.0"/>
+<rect x="195.36" y="85.21" width="18.75" height="32.46" fill="none" stroke="black" stroke-width="1.0"/>
+<rect x="195.36" y="85.21" width="5.03" height="32.46" fill="url(#hachure)" stroke="black" stroke-width="0.6"/>
+<rect x="209.08" y="85.21" width="5.03" height="32.46" fill="url(#hachure)" stroke="black" stroke-width="0.6"/>
 <line x1="88.15" y1="46.57" x2="88.15" y2="60.29" stroke="black" stroke-width="0.9" stroke-linecap="round"/>
 <line x1="37.86" y1="42.00" x2="37.86" y2="60.29" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
 <line x1="275.60" y1="32.86" x2="275.60" y2="42.00" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
@@ -1713,6 +1722,8 @@
 <text x="106.00" y="151.00" font-size="2.6" text-anchor="start">strap signal</text>
 <text x="136.00" y="151.00" font-size="2.6" text-anchor="start">✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)</text>
 <text x="14.00" y="157.00" font-size="2.6" text-anchor="start" font-weight="bold">RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en JST (Dupont femelle côté Pi), aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.</text>
+<text x="14.00" y="173.00" font-size="2.6" text-anchor="start" font-weight="bold">À SOUDER — hachuré = barrette FEMELLE : ISO1540 2 × 1×4, PCA9685 ROUES 1×6, support tulipe DIP-14 (U1).  Cadre épais = barrette MÂLE : J4 1×7, JP1 1×2 (+ cavalier).</text>
+<text x="14.00" y="178.50" font-size="2.6" text-anchor="start" font-weight="bold">Cadre fin = embase JST-XH : J1a, J1b, J7 (4 pts) ; J3, J5, J6 (3 pts).  J2 = bornier à vis 2 pts au pas de 5,08.</text>
 <text x="14.00" y="167.50" font-size="2.6" text-anchor="start">J4 (Dupont depuis les sorties 0-3 du PCA ROUES) : ch0 · GND · ch1 · GND · ch2 · GND · ch3.  J5 (JST, MDD10A roue G) : sens ch0 · GND · PWM ch1.  J6 (JST, roue D) : PWM ch2 · GND · sens ch3.</text>
 <text x="14.00" y="162.50" font-size="2.6" text-anchor="start">Coupures côté cuivre : plaque retournée, la colonne 0 passe à DROITE. Matrice : ses fils d'alimentation vont au bornier J2, jamais par les bandes. Bouton 6×6 : vérifier au multimètre quelles pattes commutent.</text>
 </svg>

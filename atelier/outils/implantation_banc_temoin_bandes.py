@@ -184,6 +184,18 @@ dipole("D5", "LED", (6, 17), "LED_ETAT", (6, 18), "GND", "led")
 strap("GND", (7, 18), (7, 22))
 
 
+# ------------------------------------------------------------------- connecteurs à souder (mis en évidence)
+# (sorte, colonne, première bande, nombre de broches, désignation)
+CONNECTEURS = [
+    ("femelle", 5, 4, 4, "ISO1540 côté 1"),
+    ("femelle", 10, 4, 4, "ISO1540 côté 2"),
+    ("femelle", 15, 3, 6, "PCA9685 ROUES"),
+    ("male", 43, 0, 7, "J4 témoins (Dupont femelle-femelle depuis le PCA)"),
+    ("male", 41, 3, 2, "JP1 + cavalier"),
+]
+SUPPORT_DIP = (36, 39, 13, 7)  # colonnes des deux rangées, première bande, broches par rangée
+
+
 # =================================================================== vérification
 def verifier() -> list[str]:
     """Reconstruit les liaisons (bandes − coupures + straps) et les compare aux réseaux attendus."""
@@ -328,6 +340,24 @@ def dessiner() -> str:
     texte_trou(37.5, 11.5, "U1 74AHCT125", ancre="middle", gras=True)
     texte_trou(36, 13, "1", dx=-1.6, ancre="end")
 
+    # ---- barrettes à souder (sous les broches) : femelle = hachurée, mâle = cadre épais
+    for sorte, c, r0, n, _ in CONNECTEURS:
+        x1, y1 = P(c - 0.55, r0 - 0.55)
+        x2, y2 = P(c + 0.55, r0 + n - 0.45)
+        remplissage = 'url(#hachure)' if sorte == "femelle" else "white"
+        el.append(f'<rect x="{x1:.2f}" y="{y1:.2f}" width="{x2 - x1:.2f}" height="{y2 - y1:.2f}" '
+                  f'fill="{remplissage}" stroke="black" stroke-width="1.0"/>')
+    cg, cd, r0, n = SUPPORT_DIP
+    x1, y1 = P(cg - 0.55, r0 - 0.55)
+    x2, y2 = P(cd + 0.55, r0 + n - 0.45)
+    el.append(f'<rect x="{x1:.2f}" y="{y1:.2f}" width="{x2 - x1:.2f}" height="{y2 - y1:.2f}" '
+              f'fill="none" stroke="black" stroke-width="1.0"/>')
+    for c in (cg, cd):
+        xa, ya = P(c - 0.55, r0 - 0.55)
+        xb, yb = P(c + 0.55, r0 + n - 0.45)
+        el.append(f'<rect x="{xa:.2f}" y="{ya:.2f}" width="{xb - xa:.2f}" height="{yb - ya:.2f}" '
+                  f'fill="url(#hachure)" stroke="black" stroke-width="0.6"/>')
+
     # ---- straps
     for net, a, b in STRAPS:
         ep, t = STYLE.get(net, (0.45, ""))
@@ -422,6 +452,10 @@ def dessiner() -> str:
     texte(lx, ly + 7, "RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en JST (Dupont femelle côté Pi), "
           "aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.",
           PETIT, gras=True)
+    texte(lx, ly + 23, "À SOUDER — hachuré = barrette FEMELLE : ISO1540 2 × 1×4, PCA9685 ROUES 1×6, "
+          "support tulipe DIP-14 (U1).  Cadre épais = barrette MÂLE : J4 1×7, JP1 1×2 (+ cavalier).", PETIT, gras=True)
+    texte(lx, ly + 28.5, "Cadre fin = embase JST-XH : J1a, J1b, J7 (4 pts) ; J3, J5, J6 (3 pts).  "
+          "J2 = bornier à vis 2 pts au pas de 5,08.", PETIT, gras=True)
     texte(lx, ly + 17.5, "J4 (Dupont depuis les sorties 0-3 du PCA ROUES) : ch0 · GND · ch1 · GND · ch2 · GND · ch3.  "
           "J5 (JST, MDD10A roue G) : sens ch0 · GND · PWM ch1.  J6 (JST, roue D) : PWM ch2 · GND · sens ch3.", PETIT)
     texte(lx, ly + 12.5, "Coupures côté cuivre : plaque retournée, la colonne 0 passe à DROITE. "
@@ -430,7 +464,10 @@ def dessiner() -> str:
 
     return ('<?xml version="1.0" encoding="UTF-8"?>\n'
             '<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210" '
-            'font-family="DejaVu Sans, sans-serif">\n<rect width="297" height="210" fill="white"/>\n'
+            'font-family="DejaVu Sans, sans-serif">\n<defs><pattern id="hachure" width="1.6" height="1.6" '
+            'patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" '
+            'y2="1.6" stroke="black" stroke-width="0.35"/></pattern></defs>\n'
+            '<rect width="297" height="210" fill="white"/>\n'
             + "\n".join(el) + "\n</svg>\n")
 
 
