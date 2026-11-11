@@ -78,6 +78,14 @@ services:
       # par défaut. http://localhost:8766 une fois lancé (FACE=true).
       - FACE=${FACE:-false}
       - FACE_PORT=${FACE_PORT:-8766}
+      # Transport Gazebo (gz-transport) confiné au loopback (11/11, cause d'A1 7/14) :
+      # en réseau host, sans GZ_IP, la découverte gz part en multicast sur TOUTES les
+      # interfaces du PC (ponts docker, VPN wg-maison…) ; ~48 000 paquets perdus sur le
+      # port 10317 par démarrage et, 6 fois sur 10, ground_truth/odom jamais relayé vers
+      # ROS -> 2e sim de la fumée sans cmd_vel. Avec 127.0.0.1 : 0 perte, 20/20 démarrages
+      # bons (bras B et C, diag-a1). Gazebo et ses ponts vivent dans CE conteneur :
+      # le loopback suffit. Ne touche pas à DDS (ROS_DOMAIN_ID reste la barrière 42/43).
+      - GZ_IP=127.0.0.1
     network_mode: "host"
     # ipc host OBLIGATOIRE pour le banc PC (conteneur vision x86 sur la même
     # machine, 2026-09-13) : FastDDS fait la DÉCOUVERTE en UDP mais passe les

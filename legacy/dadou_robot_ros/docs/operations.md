@@ -652,6 +652,15 @@ dans `docs/fumee/` : la fumée est « due » et c'est la minuterie qui écrira l
 Tests hôte : `packages/didier_core/test/unit/test_fumee.py` (décision « due ? », pages, garde-fous du script avec
 un faux `docker`).
 
+**A1 rouge à 7/14 par intermittence (08-11/11) — cause et correctif.** La sim tourne en réseau
+`host` ; sans `GZ_IP`, la découverte gz-transport part sur toutes les interfaces du PC (ponts
+docker, VPN `wg-maison`…), perd des milliers de paquets UDP (port 10317) et, une fois sur trois à
+six, `ground_truth/odom` n'est jamais relayé vers ROS : la 2e sim de la fumée ne publie alors
+aucun `cmd_vel`. Mesures (10 démarrages par série) : sans `GZ_IP` 3/10 ratés PC calme, 6/10 PC
+chargé ; avec `GZ_IP=127.0.0.1` 0/20, puis 5 passes A1 complètes à 14/14. Correctif : `GZ_IP=127.0.0.1`
+dans `docker-compose-sim.yml` (11/11). Si `ground_truth` se tait à nouveau, regarder d'abord
+`GZ_IP` dans le conteneur. Outils et journaux du diagnostic : `~/.local/state/didier-fumee/diag-a1/` (PC).
+
 ## Salle de répétition simulée — Didier chemine seul dans la rue (lot R1, 2026-10-07)
 
 Monde `rue` + package SIM-ONLY `didier_rehearsal` (étude
