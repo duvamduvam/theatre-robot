@@ -239,6 +239,12 @@ Confiance : **H** = référence lue ou forme sans ambiguïté · **M** = famille
 |---|---|---|---|---|---|
 | **Driver double moteur brossé** | `Cytron MDDS30`, 7-35 V | carte + dissipateur | ~2 | t0600, t0649 | H |
 | Driver moteur pont en H | `L298N` | module rouge | 1-2 | t0446, t0450 | H |
+| **Drivers Cytron filmés le 2026-11-11** (vidéo `VID_20261111_171445.mp4`, références lues) | `MDD10A REV2.0` « DUAL CHANNEL 10A DC MOTOR DRIVER » — ⚠️ un condensateur rapporté par deux fils (bleu, marron) sur la carte : réparation ou modification, à comprendre avant usage | 2 voies, PWM + sens par voie | 1 | `f_0030` | H |
+| ⋯ | `MD20A` « 20A DC MOTOR DRIVER », entrée `DIR · PWM · GND`, `6-30VDC (NO POLARITY PROTECTION)` | 1 voie, PWM + sens | 1 | `f_0072` | H |
+| ⋯ | `MD13S`, entrée `DIR · PWM · NC · GND` | 1 voie, PWM + sens | 1 | `f_0037` | H |
+| ⋯ | `MD10C R3`, entrée `DIR · PWM · GND` | 1 voie, PWM + sens | 1 | `f_0083` | H |
+| ⋯ | Cytron 1 voie, entrée `PWM · DIR · GND` — **modèle non lu** | 1 voie | 1 | `f_0037` | M |
+| L298N, version noire à connecteurs JST | — | module | 1 | `f_0061` | H |
 | Driver moteur pas à pas industriel | *(non lue)* — `DC 9~42VDC`, borniers PUL/DIR/ENA | boîtier alu à ailettes | 1 | t0490 | M |
 | Drivers pas-à-pas sur cartes porteuses | *(puce non lue)* — carte `STEPPER Drivers…` | modules violets à dissipateur | ~6-10 | t0212, t0221 | M |
 | Carte de puissance Cytron (2ᵉ modèle) | `Cytron` — **modèle non lu** | carte + dissipateur | 1 | t0599 | M |
