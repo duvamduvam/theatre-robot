@@ -29,12 +29,12 @@ Chaque actionneur d'expression est un node consommateur à **souscription plate*
 (un seul topic, pas de notion de source) :
 
 - **Visage LED** : `lights_node` s'abonne à `face`
-  ([lights_node.py:57-58](../robot/nodes/lights_node.py)) et applique chaque message
+  ([lights_node.py:57-58](../packages/didier_core/didier_core/nodes/lights_node.py)) et applique chaque message
   immédiatement (`face_callback` → `Face.update`, [lights_node.py:62-68]) ; le champ
   `anim` du StringTime est **ignoré**, il n'y a **pas de deadman** sur face
-  (`FACE ∉ DEADMAN_KEYS`, [animations_node.py:30](../robot/nodes/animations_node.py)).
+  (`FACE ∉ DEADMAN_KEYS`, [animations_node.py:30](../packages/didier_core/didier_core/nodes/animations_node.py)).
 - **Servos de tête** : un `servo_node` par servo, abonné au topic homonyme
-  ([servo_node.py:42-46](../robot/nodes/servo_node.py)) ; chaque message réécrit la
+  ([servo_node.py:42-46](../packages/didier_core/didier_core/nodes/servo_node.py)) ; chaque message réécrit la
   cible de rampe (`Servo.set_target`).
 
 Les producteurs, eux, sont **mutuellement aveugles** — répartis sur deux machines,
@@ -44,10 +44,10 @@ aucun ne sait si un autre est en train de jouer :
 |---|---|---|---|---|
 | `animations_node` (pistes de séquence) | Pi robot | ✔ jusqu'à 20 Hz | ✔ jusqu'à 20 Hz | pendant toute animation (dont « parle ») |
 | `chat_node` (émotions, didascalies, thinking) | Pi vision | ✔ | — (via l'animation « parle ») | piloté par le VAD/LLM, **dès le moindre bruit** |
-| `gaze_follower_node` (suivi du regard) | Pi robot | — | ✔ ~10 Hz (cou + 2 yeux, [gaze_follower_node.py:182,189](../robot/nodes/gaze_follower_node.py)) | quand `gaze` est ON |
-| `web_bridge` (console de régie) | Pi robot | ✔ (whitelist spectacle) | ✔ (whitelist technique, [web_protocol.py:27-28](../conf/ros2_dependencies/robot_web/robot_web/web_protocol.py)) | clics opérateur |
+| `gaze_follower_node` (suivi du regard) | Pi robot | — | ✔ ~10 Hz (cou + 2 yeux, [gaze_follower_node.py:182,189](../packages/didier_core/didier_core/nodes/gaze_follower_node.py)) | quand `gaze` est ON |
+| `web_bridge` (console de régie) | Pi robot | ✔ (whitelist spectacle) | ✔ (whitelist technique, [web_protocol.py:27-28](../packages/didier_web/didier_web/web_protocol.py)) | clics opérateur |
 
-`AnimationManager.playing` ([animation_manager.py:104](../robot/sequences/animation_manager.py))
+`AnimationManager.playing` ([animation_manager.py:104](../packages/didier_core/didier_core/sequences/animation_manager.py))
 existe mais **n'est publié nulle part** : aucun producteur ne peut savoir qu'une
 animation est en cours. Il n'existe ni mux, ni priorité, ni verrou, ni état partagé
 — le seul point du robot qui a tout ça est la chaîne roues (`twist_mux` : remote 100
@@ -72,7 +72,7 @@ animation est en cours. Il n'existe ni mux, ni priorité, ni verrou, ni état pa
   au défaut.
 - **S3 — alternance à 20 Hz = clignotement.** Deux producteurs qui poussent des
   **noms différents** sur `face` : chaque message reconstruit les 3 pistes et force
-  un rendu immédiat (`show_first_frames`, [face.py:88-111](../robot/actions/face.py))
+  un rendu immédiat (`show_first_frames`, [face.py:88-111](../packages/didier_core/didier_core/actions/face.py))
   — le garde-fou « même nom → simple re-timestamp » ne protège que contre un
   producteur unique qui se répète.
 - **S4 — gaze vs animation sur les servos de tête.** Même topologie : le gaze écrit

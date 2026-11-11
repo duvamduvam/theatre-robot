@@ -1,24 +1,31 @@
 """Tests hôte de didier_vision (sans ROS ni colcon build) — lot L1e-3d.
 
 Le package s'importe depuis les sources : sa racine (packages/didier_vision) porte le module
-didier_vision/ ET ce dossier test/. Les données d'exécution (db/, medias/) restent sous
-legacy/dadou_vision_ros/ (non suivies) : DIDIER_VISION_DATA_DIR y pointe AVANT tout import de
-vision_config (décision 3 de la spec L1). Depuis L1e-4c, conf/ et mediamtx/ sont dans
-machines/vision/ (src/vision/conf/ sur le Pi) : les tests hôte ne lisent pas <racine>/conf/.
-Lancer : cd packages/didier_vision && <venv vision> -m pytest -q
+didier_vision/ ET ce dossier test/. La vision n'a aucune donnée suivie (sa db/ et sa voix sont des
+fichiers d'exécution posés par Ansible) : depuis L1e-4e (11/11) DIDIER_VISION_DATA_DIR pointe, AVANT
+tout import de vision_config (décision 3 de la spec L1), vers un dossier TEMPORAIRE jetable (la
+config y crée db/ à l'import) — plus vers legacy/dadou_vision_ros/, qui ne garde que de la doc.
+conf/ et mediamtx/ sont dans machines/vision/ (src/vision/conf/ sur le Pi) : les tests hôte ne
+lisent pas <racine>/conf/.
+Lancer : cd packages/didier_vision && .venv/bin/python -m pytest -q -o addopts=
 """
+import atexit
 import os
+import shutil
 import sys
+import tempfile
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(ICI)                      # packages/didier_vision
 PACKAGES = os.path.dirname(PKG)                 # packages/ du mono-dépôt
 MONO = os.path.dirname(PACKAGES)
-LEGACY_VISION = os.path.join(MONO, "legacy", "dadou_vision_ros")
 
 # Racine des données lue par didier_vision/vision_config.py (sinon : chemin conteneur).
 # setdefault : un DIDIER_VISION_DATA_DIR posé par l'appelant l'emporte.
-os.environ.setdefault("DIDIER_VISION_DATA_DIR", LEGACY_VISION + "/")
+if not os.environ.get("DIDIER_VISION_DATA_DIR"):
+    _donnees = tempfile.mkdtemp(prefix="didier-vision-donnees-")
+    atexit.register(shutil.rmtree, _donnees, ignore_errors=True)
+    os.environ["DIDIER_VISION_DATA_DIR"] = _donnees + "/"
 
 for chemin in (
     PKG,

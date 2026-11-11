@@ -23,7 +23,7 @@ Le payload de `msg` n'est **pas** décrit ici : c'est le contrat `theatre_contra
   `didier_drive`, `didier_web`, `didier_rehearsal`, `didier_jeu`, `didier_sim`).
 - `package.xml` : `<depend>theatre_interfaces</depend>` (`exec_depend` pour `didier_sim`).
 - CLI : `ros2 topic pub /didier/face theatre_interfaces/msg/StringTime "{msg: '\"calib\"'}"`
-  (toujours préfixer le namespace, voir `legacy/dadou_robot_ros/docs/operations.md`).
+  (toujours préfixer le namespace, voir `docs/operations.md`).
 
 ## Données, variables d'environnement
 

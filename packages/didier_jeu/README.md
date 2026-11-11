@@ -5,7 +5,7 @@ décide de ce qui est permis, et un **score** choisit l'action. Les offres, les
 pistes de personnes et les pulsions alimentent ce choix ; chaque décision est
 journalisée avec son `pourquoi`. Spec :
 `docs/spec-A1-selecteur-de-jeu.md` (décisions §8 du 02/11) ; le pourquoi se
-trouve dans `legacy/dadou_robot_ros/docs/etude-autonomie-improvisation.md` §4.1-4.2.
+trouve dans `docs/etude-autonomie-improvisation.md` §4.1-4.2.
 
 **SIM-ONLY** : `jeu_node` refuse de démarrer hors `ROS_DOMAIN_ID=43`. Il utilise
 le garde-fou `check_domain` de `didier_rehearsal`, importé tel quel ; son message
@@ -110,7 +110,7 @@ posé par le launch — ses topics sont `/didier/jeu/intention`, `/didier/jeu/co
 À la CLI, toujours préfixer (`ros2 topic echo /didier/jeu/journal`).
 
 Le journal est écrit dans `/home/ros2_ws/log/jeu/<horodatage>_<pid>_jeu.jsonl`.
-Vérification rejouable : `validate-jeu-a1.sh` (voir `legacy/dadou_robot_ros/docs/operations.md`).
+Vérification rejouable : `validate-jeu-a1.sh` (voir `docs/operations.md`).
 
 ## Tester
 

@@ -1,6 +1,6 @@
 # Atelier voix — essais sur le PC, sans le robot
 
-Bac d'essai du chantier voix ([`docs/etude-voix-didier.md`](../../docs/etude-voix-didier.md)).
+Bac d'essai du chantier voix ([`docs/etude-voix-didier.md`](../../../docs/etude-voix-didier.md)).
 Sert à traiter, **sans le Pi ni le châssis**, la moitié « qualité » du lot V0b :
 le français est-il bon, le clonage ressemble-t-il à David, et le modèle
 tient-il un énoncé de 30 s ? Ne répond PAS aux questions « ça tourne sur ARM »

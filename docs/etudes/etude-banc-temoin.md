@@ -7,7 +7,7 @@ construction ? »
 
 **Statut** : analyse, **rien d'acté**. À trancher par David.
 
-**Sources lues** : `legacy/dadou_robot_ros/docs/hardware/inventaire-stock.md` (stock d'atelier,
+**Sources lues** : `docs/hardware/inventaire-stock.md` (stock d'atelier,
 quantités = minorants, référence citée seulement si lue), `etude-architecture-globale.md` §3.1
 (nœuds et matériel) et §5.10 (CI), `docs/spec-L1-contrats-donnees.md` §Lot F (fumée) et §Outils
 qualité, `hardware/overview.md` (chaîne roues).

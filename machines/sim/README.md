@@ -14,5 +14,5 @@ ROS **43** (le vrai robot est sur 42). En L2, un compose lancera un conteneur pa
 | `fumee.sh`, `fumee_page.py`, `coeurs_reserves.py` | fumée nocturne (lot F) : rejoue tout sur main, pages `docs/fumee/` |
 | `didier-fumee.{service,timer}`, `installer-fumee.sh` | minuterie systemd utilisateur ; **relancer `installer-fumee.sh` depuis le checkout de main** après un déménagement |
 
-Mode d'emploi : `legacy/dadou_robot_ros/docs/operations.md` (sections Sim, Séance « Chantiers »,
+Mode d'emploi : `docs/operations.md` (sections Sim, Séance « Chantiers »,
 Fumée automatique).

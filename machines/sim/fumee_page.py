@@ -368,7 +368,7 @@ def rendre_index(resultats: list) -> str:
         tableau = '<p class="doux">Aucune fumée pour l\'instant.</p>'
     corps = ("<h1>Fumée nocturne — Didier</h1>\n"
              '<p class="doux">La plus récente en tête. Comment ça décide et comment lire une page : '
-             "<code>legacy/dadou_robot_ros/docs/operations.md</code>, section « Fumée automatique ».</p>\n"
+             "<code>docs/operations.md</code>, section « Fumée automatique ».</p>\n"
              + tableau + "\n")
     return _squelette("Fumée nocturne Didier — sommaire", corps)
 

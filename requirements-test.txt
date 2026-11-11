@@ -1,0 +1,12 @@
+# Dépendances des tests « hôte » du cœur, des contrats, du jeu, de la lib et de la télécommande
+# (venv racine : `uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements-test.txt`).
+# La vision a le sien : packages/didier_vision/requirements-test.txt (sqlobject, numpy<2).
+pytest
+filetype
+colorlog
+psutil
+xacro
+imageio
+# py_trees : behaviour trees du sélecteur de jeu (packages/didier_jeu, lot A1) —
+# même version que ros-jazzy-py-trees dans l image sim (2.6.0 au 02/11).
+py_trees==2.6.0
