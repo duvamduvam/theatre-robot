@@ -115,7 +115,7 @@ Vérification rejouable : `validate-jeu-a1.sh` (voir `docs/operations.md`).
 ## Tester
 
 ```bash
-legacy/dadou_robot_ros/.venv/bin/python -m pytest packages/didier_jeu/test -q
+.venv/bin/python -m pytest packages/didier_jeu/test -q
 ```
 
 Chaque règle chiffrée est testée avec une valeur écrite en dur, et accompagnée

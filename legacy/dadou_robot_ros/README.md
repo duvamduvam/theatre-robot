@@ -4,8 +4,8 @@
 > [`packages/didier_core`](../../packages/didier_core/README.md), ses données sont dans
 > [`data/`](../../data/README.md), sa conf dans [`machines/robot/`](../../machines/robot/README.md),
 > la doc dans [`docs/`](../../docs/README.md) (tableau de bord : [`docs/chantiers.md`](../../docs/chantiers.md)),
-> les essais et firmwares dans [`atelier/`](../../atelier/README.md). Tests : voir la section « Tests »
-> de [`docs/operations.md`](../../docs/operations.md).
+> les essais et firmwares dans [`atelier/`](../../atelier/README.md). Tests : voir « Venvs et commandes de test »
+> dans [`docs/operations.md`](../../docs/operations.md).
 >
 > Ne reste ici que [`CLAUDE.md`](CLAUDE.md), qui porte les **règles de sécurité roues** (référence
 > unique, citée par le `CLAUDE.md` racine), et quelques fichiers d'éditeur.

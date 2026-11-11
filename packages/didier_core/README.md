@@ -62,5 +62,5 @@ est sous `/home/ros2_ws/src/robot/` (inchangé).
 ## Tester
 
 ```bash
-cd packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=
+cd packages/didier_core && ../../.venv/bin/python -m pytest -q -o addopts=
 ```

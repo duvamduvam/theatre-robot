@@ -3,7 +3,7 @@
 Chemins : le package lui-même, theatre_contrats (contrat commun), dadou_utils_ros (lib partagée),
 packages/didier_core (didier_core.diagnostic.journal, module PUR ; ex-robot, L1e-3c) et
 didier_rehearsal (garde-fou check_domain + contrats du régisseur, purs).
-Lancer : legacy/dadou_robot_ros/.venv/bin/python -m pytest packages/didier_jeu/test -q
+Lancer : .venv/bin/python -m pytest packages/didier_jeu/test -q
 """
 import copy
 import os
