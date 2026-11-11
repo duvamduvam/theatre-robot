@@ -1,0 +1,8 @@
+=== catalogue attendu sous /didier/ 20:31:42 ===
+  catalogue : ok animations=47 audios=6 faces=37 relays=8 robot_lights=13 visuals=7
+  ✅ /didier/catalogue : 6 familles, toutes non vides
+  deploy_sha : dev
+  ✅ /didier/deploy_sha = "dev" (pas de conf/DEPLOY_SHA en sim)
+  ✅ séquence ajoutée visible dans le catalogue en <= 5 s
+  ✅ séquence supprimée disparue du catalogue en <= 5 s
+=== validate-catalogue (/didier) : 4 OK, 0 KO 20:32:07 ===

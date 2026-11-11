@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fumée Didier — 11/11/2026 à 21:30 — vert</title>
+<style>
+  :root { --fond:#fbfaf7; --texte:#1f2328; --doux:#5b636b; --trait:#e3e0d8;
+          --vert:#1a7f37; --rouge:#cf222e; --orange:#9a6700; --gris:#57606a; --lien:#0b5cad; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fond); color:var(--texte);
+         font:16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:2rem 1.25rem 4rem; }
+  header p { color:var(--doux); margin:.2rem 0; }
+  h1 { font-size:1.7rem; margin:0 0 .3rem; }
+  h2 { font-size:1.25rem; margin:2.2rem 0 .8rem; padding-bottom:.3rem; border-bottom:2px solid var(--trait); }
+  a { color:var(--lien); }
+  .bandeau { background:#fff; border:1px solid var(--trait); border-left:5px solid var(--gris);
+             border-radius:6px; padding:.8rem 1.1rem; margin:1rem 0; }
+  .bandeau.b-vert { border-left-color:var(--vert); } .bandeau.b-rouge { border-left-color:var(--rouge); }
+  .carte { background:#fff; border:1px solid var(--trait); border-radius:6px; padding:.8rem 1rem; margin:.7rem 0; }
+  .carte h3 { margin:0 0 .3rem; font-size:1rem; }
+  .meta { font-size:.85rem; color:var(--doux); margin:.2rem 0; }
+  .verdict { display:inline-block; font-size:.75rem; font-weight:600; text-transform:uppercase;
+             letter-spacing:.03em; padding:.1rem .5rem; border-radius:99px; color:#fff; margin-left:.4rem; vertical-align:middle; }
+  .vert { background:var(--vert); } .rouge { background:var(--rouge); }
+  .orange { background:var(--orange); } .non_lance { background:var(--gris); }
+  table { border-collapse:collapse; width:100%; } th, td { text-align:left; padding:.35rem .5rem; border-bottom:1px solid var(--trait); }
+  .doux { color:var(--doux); }
+  footer { margin-top:3rem; font-size:.85rem; color:var(--doux); border-top:1px solid var(--trait); padding-top:1rem; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Fumée nocturne — Didier</h1>
+  <p><strong>11/11/2026 à 21:30</strong> · sha testé <code>8041c31</code> (branche main)</p>
+  <p>Durée 34 min 41 s · mode si-due · due : 2 commit(s) de code dans main depuis la dernière fumée verte (93ea6a5)</p>
+</header>
+
+<div class="bandeau b-vert"><strong><span class="verdict vert">vert</span></strong> Toutes les épreuves sont vertes, aux valeurs gravées.</div>
+
+<p class="meta">Facteur temps réel (sonde 20 s) : <strong>0.99</strong> (seuil 0.8) ·
+charge 1 min au départ : <strong>1.61</strong> sur 32 cœurs ·
+image sim reconstruite : non</p>
+
+<h2>Épreuves</h2>
+<table>
+<tr><th>Épreuve</th><th>Résultat</th><th>Compteur</th><th>Durée</th><th>Journal</th></tr>
+<tr><td>Image sim (reconstruite seulement si un Dockerfile/compose a changé)</td><td><span class="verdict vert">vert</span></td><td></td><td>0 s</td><td></td></tr><tr><td colspan="5" class="meta">inchangée depuis la dernière fumée verte (93ea6a5), non reconstruite</td></tr>
+<tr><td>Sim headless + colcon build</td><td><span class="verdict vert">vert</span></td><td></td><td>26 s</td><td><a href="journaux/2026-11-11-2130/demarrage.log">journal</a></td></tr><tr><td colspan="5" class="meta">conteneur dadou-sim-container, domaine 43, monde chantiers, headless</td></tr>
+<tr><td>Sonde du facteur temps réel (20 s)</td><td><span class="verdict vert">vert</span></td><td>0.993</td><td>23 s</td><td><a href="journaux/2026-11-11-2130/rtf.log">journal</a></td></tr><tr><td colspan="5" class="meta">seuil 0.8</td></tr>
+<tr><td>validate-namespace.sh</td><td><span class="verdict vert">vert</span></td><td>5 / 5 OK, 0 KO</td><td>40 s</td><td><a href="journaux/2026-11-11-2130/namespace.log">journal</a></td></tr>
+<tr><td>validate-catalogue.sh</td><td><span class="verdict vert">vert</span></td><td>4 / 4 OK, 0 KO</td><td>26 s</td><td><a href="journaux/2026-11-11-2130/catalogue.log">journal</a></td></tr>
+<tr><td>Animation « parle » (animation_state &quot;&quot; → &quot;parle&quot; → &quot;&quot;)</td><td><span class="verdict vert">vert</span></td><td>3 / 3 OK, 0 KO</td><td>5 s</td><td><a href="journaux/2026-11-11-2130/parle.log">journal</a></td></tr><tr><td colspan="5" class="meta">ETATS=[&quot;&quot;, &quot;parle&quot;, &quot;&quot;]</td></tr>
+<tr><td>Chaîne roues + régisseur + regard, puis validate-rehearsal-chantiers.sh (V-R3)</td><td><span class="verdict vert">vert</span></td><td>21 / 21 OK, 0 KO</td><td>15 min 34 s</td><td><a href="journaux/2026-11-11-2130/chantiers.log">journal</a></td></tr>
+<tr><td>Sim relancée, validate-jeu-a1.sh (A1)</td><td><span class="verdict vert">vert</span></td><td>14 / 14 OK, 0 KO</td><td>15 min 10 s</td><td><a href="journaux/2026-11-11-2130/a1.log">journal</a></td></tr>
+</table>
+
+<h2>Journaux</h2>
+<p>Copiés hors du conteneur AVANT son arrêt : <a href="journaux/2026-11-11-2130/">dossier 2026-11-11-2130</a>
+ · <a href="journaux/2026-11-11-2130/resultat.json">resultat.json</a> (la vérité, cette page n'en est que le rendu).</p>
+
+<footer>Généré par <code>machines/sim/fumee.sh</code> (lot F, zéro token) · <a href="index.html">toutes les fumées</a></footer>
+</main>
+</body>
+</html>
