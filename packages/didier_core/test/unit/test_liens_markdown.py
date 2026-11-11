@@ -38,7 +38,13 @@ def liens_morts(racine, fichiers):
             if _SCHEMA.match(cible) or cible.startswith("#"):
                 continue
             cible = cible.split("#")[0].split("?")[0]
-            if cible and not (chemin.parent / cible).exists():
+            if not cible:
+                continue
+            # Une cible HORS du dépôt est morte aussi : sur le PC de David, ../../dadou_vision_ros
+            # existe (les anciens dépôts archivés à côté) et le test passait — pas sur GitHub
+            # (CI rouge du 11/11 au soir).
+            vise = (chemin.parent / cible).resolve()
+            if not vise.is_relative_to(racine.resolve()) or not vise.exists():
                 morts.append((f, cible))
     return morts
 
@@ -68,3 +74,12 @@ def test_le_depot_n_a_aucun_lien_markdown_mort():
     assert len(fichiers) > 100
     assert "docs/README.md" in fichiers and "docs/chantiers.md" in fichiers
     assert liens_morts(MONO, fichiers) == []
+
+
+def test_un_lien_qui_sort_du_depot_est_mort_meme_si_la_cible_existe(tmp_path):
+    """Gravé après la CI rouge du 11/11 : la cible existait à côté du dépôt sur le PC, pas sur GitHub."""
+    depot = tmp_path / "depot"
+    (depot / "docs").mkdir(parents=True)
+    (tmp_path / "voisin.md").write_text("x", encoding="utf-8")         # existe, mais HORS du dépôt
+    (depot / "docs" / "a.md").write_text("[v](../../voisin.md) [ok](a.md)", encoding="utf-8")
+    assert liens_morts(depot, ["docs/a.md"]) == [("docs/a.md", "../../voisin.md")]

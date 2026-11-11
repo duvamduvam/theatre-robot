@@ -13,8 +13,8 @@ Didier est destiné à la déambulation : parler à des gens dans la rue. Or le
 déclenchement actuel de la conversation est purement acoustique :
 
 - Dès que le toggle `chat` est ON, le `ConversationEngine` tourne en boucle
-  ([conversation.py](../../dadou_vision_ros/vision/ai/conversation.py)) : le
-  VAD à énergie ([vad.py](../../dadou_vision_ros/vision/audio/vad.py), seuil =
+  ([conversation.py](../packages/didier_vision/didier_vision/ai/conversation.py)) : le
+  VAD à énergie ([vad.py](../packages/didier_vision/didier_vision/audio/vad.py), seuil =
   médiane du bruit de fond × 1,3) déclenche STT → LLM → TTS sur **n'importe
   quel bruit** dépassant le seuil. Le seul garde-fou est le filtre
   « ≥ 2 caractères alphanumériques » après transcription.
@@ -32,7 +32,7 @@ gens qui passent sans intention — exactement le mode d'échec dominant mesuré
 par la littérature (§3.2).
 
 L'objectif est déjà écrit dans la vision V3 de
-[`ARCHITECTURE.md`](../../dadou_vision_ros/ARCHITECTURE.md) côté vision :
+[`ARCHITECTURE.md`](../legacy/dadou_vision_ros/ARCHITECTURE.md) côté vision :
 *« il décide seul de suivre du regard, d'interpeller quelqu'un […] Didier
 remarque quelqu'un qui entre, le suit du regard, engage la conversation »*.
 Cette étude en est la concrétisation.

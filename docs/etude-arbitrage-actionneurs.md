@@ -59,10 +59,10 @@ animation est en cours. Il n'existe ni mux, ni priorité, ni verrou, ni état pa
   détecte une fin de « parole » sur du bruit de salle → `thinking()` publie
   `face="reflechit"` **avant même le STT** — décision documentée comme volontaire,
   avec limite explicitement « à revisiter si ça se voit mal sur scène »
-  ([conversation.py:16-28](../../dadou_vision_ros/vision/ai/conversation.py)). Si le
+  ([conversation.py:16-28](../packages/didier_vision/didier_vision/ai/conversation.py)). Si le
   tour est abandonné (STT vide), **aucun rattrapage** : le visage reste coincé sur
   « reflechit ». Le helper `idle()` (retour au neutre) existe dans
-  [performance.py:128-131](../../dadou_vision_ros/vision/ai/performance.py) mais
+  [performance.py:128-131](../packages/didier_vision/didier_vision/ai/performance.py) mais
   n'est **appelé nulle part**.
 - **S2 — le chat peut tuer une animation de spectacle.** `speaking_stop()` publie
   `animation=False` ([performance.py:85-92]) → `animations_node` déclenche un **stop
