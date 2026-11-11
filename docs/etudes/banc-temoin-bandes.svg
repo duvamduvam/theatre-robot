@@ -2562,47 +2562,51 @@
 <line x1="207.78" y1="160.14" x2="207.78" y2="172.34" stroke="black" stroke-width="0.9" stroke-linecap="round"/>
 <line x1="211.85" y1="152.02" x2="211.85" y2="164.21" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
 <line x1="215.91" y1="164.21" x2="215.91" y2="180.46" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
+<line x1="37.10" y1="111.38" x2="37.10" y2="74.80" stroke="black" stroke-width="0.45" stroke-linecap="round"/>
+<line x1="41.16" y1="115.44" x2="41.16" y2="91.06" stroke="black" stroke-width="0.45" stroke-linecap="round"/>
+<line x1="45.22" y1="119.50" x2="45.22" y2="99.18" stroke="black" stroke-width="0.45" stroke-linecap="round"/>
+<line x1="37.10" y1="123.57" x2="37.10" y2="147.95" stroke="black" stroke-width="0.45" stroke-linecap="round"/>
 <line x1="81.80" y1="82.93" x2="81.80" y2="107.31" stroke="black" stroke-width="0.6" stroke-linecap="round" stroke-dasharray="1.6,0.9"/>
 <line x1="195.59" y1="42.29" x2="195.59" y2="54.48" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
 <rect x="194.19" y="45.13" width="2.8" height="6.5" fill="white" stroke="black" stroke-width="0.4"/>
 <circle cx="195.59" cy="42.29" r="1.1" fill="black"/>
 <circle cx="195.59" cy="54.48" r="1.1" fill="black"/>
-<line x1="224.04" y1="26.03" x2="240.30" y2="26.03" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
-<rect x="228.92" y="24.63" width="6.5" height="2.8" fill="white" stroke="black" stroke-width="0.4"/>
-<circle cx="224.04" cy="26.03" r="1.1" fill="black"/>
-<circle cx="240.30" cy="26.03" r="1.1" fill="black"/>
-<line x1="248.42" y1="26.03" x2="248.42" y2="30.10" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
-<polygon points="246.62,26.66 250.22,26.66 248.42,29.46" fill="white" stroke="black" stroke-width="0.4"/>
-<line x1="246.62" y1="29.46" x2="250.22" y2="29.46" stroke="black" stroke-width="0.4"/>
-<rect x="247.32" y="24.93" width="2.2" height="2.2" fill="black"/>
-<circle cx="248.42" cy="30.10" r="1.1" fill="black"/>
-<line x1="224.04" y1="34.16" x2="240.30" y2="34.16" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
-<rect x="228.92" y="32.76" width="6.5" height="2.8" fill="white" stroke="black" stroke-width="0.4"/>
-<circle cx="224.04" cy="34.16" r="1.1" fill="black"/>
-<circle cx="240.30" cy="34.16" r="1.1" fill="black"/>
-<line x1="248.42" y1="34.16" x2="248.42" y2="38.22" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
-<polygon points="246.62,34.79 250.22,34.79 248.42,37.59" fill="white" stroke="black" stroke-width="0.4"/>
-<line x1="246.62" y1="37.59" x2="250.22" y2="37.59" stroke="black" stroke-width="0.4"/>
-<rect x="247.32" y="33.06" width="2.2" height="2.2" fill="black"/>
-<circle cx="248.42" cy="38.22" r="1.1" fill="black"/>
-<line x1="224.04" y1="42.29" x2="240.30" y2="42.29" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
-<rect x="228.92" y="40.89" width="6.5" height="2.8" fill="white" stroke="black" stroke-width="0.4"/>
-<circle cx="224.04" cy="42.29" r="1.1" fill="black"/>
-<circle cx="240.30" cy="42.29" r="1.1" fill="black"/>
-<line x1="248.42" y1="42.29" x2="248.42" y2="46.35" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
-<polygon points="246.62,42.92 250.22,42.92 248.42,45.72" fill="white" stroke="black" stroke-width="0.4"/>
-<line x1="246.62" y1="45.72" x2="250.22" y2="45.72" stroke="black" stroke-width="0.4"/>
-<rect x="247.32" y="41.19" width="2.2" height="2.2" fill="black"/>
-<circle cx="248.42" cy="46.35" r="1.1" fill="black"/>
-<line x1="224.04" y1="50.42" x2="240.30" y2="50.42" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
-<rect x="228.92" y="49.02" width="6.5" height="2.8" fill="white" stroke="black" stroke-width="0.4"/>
-<circle cx="224.04" cy="50.42" r="1.1" fill="black"/>
-<circle cx="240.30" cy="50.42" r="1.1" fill="black"/>
-<line x1="248.42" y1="50.42" x2="248.42" y2="54.48" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
-<polygon points="246.62,51.05 250.22,51.05 248.42,53.85" fill="white" stroke="black" stroke-width="0.4"/>
-<line x1="246.62" y1="53.85" x2="250.22" y2="53.85" stroke="black" stroke-width="0.4"/>
-<rect x="247.32" y="49.32" width="2.2" height="2.2" fill="black"/>
-<circle cx="248.42" cy="54.48" r="1.1" fill="black"/>
+<line x1="232.17" y1="26.03" x2="248.42" y2="26.03" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
+<rect x="237.05" y="24.63" width="6.5" height="2.8" fill="white" stroke="black" stroke-width="0.4"/>
+<circle cx="232.17" cy="26.03" r="1.1" fill="black"/>
+<circle cx="248.42" cy="26.03" r="1.1" fill="black"/>
+<line x1="256.55" y1="26.03" x2="256.55" y2="30.10" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
+<polygon points="254.75,26.66 258.35,26.66 256.55,29.46" fill="white" stroke="black" stroke-width="0.4"/>
+<line x1="254.75" y1="29.46" x2="258.35" y2="29.46" stroke="black" stroke-width="0.4"/>
+<rect x="255.45" y="24.93" width="2.2" height="2.2" fill="black"/>
+<circle cx="256.55" cy="30.10" r="1.1" fill="black"/>
+<line x1="232.17" y1="34.16" x2="248.42" y2="34.16" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
+<rect x="237.05" y="32.76" width="6.5" height="2.8" fill="white" stroke="black" stroke-width="0.4"/>
+<circle cx="232.17" cy="34.16" r="1.1" fill="black"/>
+<circle cx="248.42" cy="34.16" r="1.1" fill="black"/>
+<line x1="256.55" y1="34.16" x2="256.55" y2="38.22" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
+<polygon points="254.75,34.79 258.35,34.79 256.55,37.59" fill="white" stroke="black" stroke-width="0.4"/>
+<line x1="254.75" y1="37.59" x2="258.35" y2="37.59" stroke="black" stroke-width="0.4"/>
+<rect x="255.45" y="33.06" width="2.2" height="2.2" fill="black"/>
+<circle cx="256.55" cy="38.22" r="1.1" fill="black"/>
+<line x1="232.17" y1="42.29" x2="248.42" y2="42.29" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
+<rect x="237.05" y="40.89" width="6.5" height="2.8" fill="white" stroke="black" stroke-width="0.4"/>
+<circle cx="232.17" cy="42.29" r="1.1" fill="black"/>
+<circle cx="248.42" cy="42.29" r="1.1" fill="black"/>
+<line x1="256.55" y1="42.29" x2="256.55" y2="46.35" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
+<polygon points="254.75,42.92 258.35,42.92 256.55,45.72" fill="white" stroke="black" stroke-width="0.4"/>
+<line x1="254.75" y1="45.72" x2="258.35" y2="45.72" stroke="black" stroke-width="0.4"/>
+<rect x="255.45" y="41.19" width="2.2" height="2.2" fill="black"/>
+<circle cx="256.55" cy="46.35" r="1.1" fill="black"/>
+<line x1="232.17" y1="50.42" x2="248.42" y2="50.42" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
+<rect x="237.05" y="49.02" width="6.5" height="2.8" fill="white" stroke="black" stroke-width="0.4"/>
+<circle cx="232.17" cy="50.42" r="1.1" fill="black"/>
+<circle cx="248.42" cy="50.42" r="1.1" fill="black"/>
+<line x1="256.55" y1="50.42" x2="256.55" y2="54.48" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
+<polygon points="254.75,51.05 258.35,51.05 256.55,53.85" fill="white" stroke="black" stroke-width="0.4"/>
+<line x1="254.75" y1="53.85" x2="258.35" y2="53.85" stroke="black" stroke-width="0.4"/>
+<rect x="255.45" y="49.32" width="2.2" height="2.2" fill="black"/>
+<circle cx="256.55" cy="54.48" r="1.1" fill="black"/>
 <line x1="264.68" y1="172.34" x2="264.68" y2="180.46" stroke="black" stroke-width="0.4" stroke-linecap="round"/>
 <line x1="262.68" y1="175.60" x2="266.68" y2="175.60" stroke="black" stroke-width="0.6"/>
 <line x1="262.68" y1="177.20" x2="266.68" y2="177.20" stroke="black" stroke-width="0.6"/>
@@ -2647,13 +2651,19 @@
 <circle cx="93.99" cy="58.54" r="1.1" fill="black"/>
 <circle cx="203.72" cy="38.22" r="1.1" fill="black"/>
 <rect x="202.62" y="41.19" width="2.2" height="2.2" fill="black"/>
-<circle cx="215.91" cy="26.03" r="1.1" fill="black"/>
-<circle cx="215.91" cy="30.10" r="1.1" fill="black"/>
-<circle cx="215.91" cy="34.16" r="1.1" fill="black"/>
-<circle cx="215.91" cy="38.22" r="1.1" fill="black"/>
-<circle cx="215.91" cy="42.29" r="1.1" fill="black"/>
-<circle cx="215.91" cy="46.35" r="1.1" fill="black"/>
-<circle cx="215.91" cy="50.42" r="1.1" fill="black"/>
+<circle cx="211.85" cy="26.03" r="1.1" fill="black"/>
+<circle cx="211.85" cy="30.10" r="1.1" fill="black"/>
+<circle cx="211.85" cy="34.16" r="1.1" fill="black"/>
+<circle cx="211.85" cy="38.22" r="1.1" fill="black"/>
+<circle cx="211.85" cy="42.29" r="1.1" fill="black"/>
+<circle cx="211.85" cy="46.35" r="1.1" fill="black"/>
+<circle cx="211.85" cy="50.42" r="1.1" fill="black"/>
+<rect x="222.94" y="24.93" width="2.2" height="2.2" fill="black"/>
+<circle cx="224.04" cy="30.10" r="1.1" fill="black"/>
+<circle cx="224.04" cy="34.16" r="1.1" fill="black"/>
+<rect x="222.94" y="41.19" width="2.2" height="2.2" fill="black"/>
+<circle cx="224.04" cy="46.35" r="1.1" fill="black"/>
+<circle cx="224.04" cy="50.42" r="1.1" fill="black"/>
 <rect x="92.89" y="81.83" width="2.2" height="2.2" fill="black"/>
 <circle cx="93.99" cy="86.99" r="1.1" fill="black"/>
 <circle cx="93.99" cy="91.06" r="1.1" fill="black"/>
@@ -2683,10 +2693,10 @@
 <circle cx="191.53" cy="164.21" r="1.1" fill="black"/>
 <circle cx="179.34" cy="168.27" r="1.1" fill="black"/>
 <circle cx="191.53" cy="168.27" r="1.1" fill="black"/>
-<circle cx="33.03" cy="74.80" r="1.1" fill="black"/>
-<circle cx="33.03" cy="91.06" r="1.1" fill="black"/>
-<circle cx="33.03" cy="99.18" r="1.1" fill="black"/>
-<circle cx="33.03" cy="147.95" r="1.1" fill="black"/>
+<rect x="31.93" y="110.28" width="2.2" height="2.2" fill="black"/>
+<circle cx="33.03" cy="115.44" r="1.1" fill="black"/>
+<circle cx="33.03" cy="119.50" r="1.1" fill="black"/>
+<circle cx="33.03" cy="123.57" r="1.1" fill="black"/>
 <circle cx="41.16" cy="74.80" r="1.1" fill="black"/>
 <circle cx="41.16" cy="82.93" r="1.1" fill="black"/>
 <circle cx="53.35" cy="74.80" r="1.1" fill="black"/>
@@ -2749,24 +2759,29 @@
 <line x1="206.28" y1="51.92" x2="209.28" y2="48.92" stroke="black" stroke-width="0.7"/>
 <line x1="206.28" y1="52.98" x2="209.28" y2="55.98" stroke="black" stroke-width="0.7"/>
 <line x1="206.28" y1="55.98" x2="209.28" y2="52.98" stroke="black" stroke-width="0.7"/>
-<line x1="230.67" y1="24.53" x2="233.67" y2="27.53" stroke="black" stroke-width="0.7"/>
-<line x1="230.67" y1="27.53" x2="233.67" y2="24.53" stroke="black" stroke-width="0.7"/>
-<line x1="230.67" y1="32.66" x2="233.67" y2="35.66" stroke="black" stroke-width="0.7"/>
-<line x1="230.67" y1="35.66" x2="233.67" y2="32.66" stroke="black" stroke-width="0.7"/>
-<line x1="230.67" y1="40.79" x2="233.67" y2="43.79" stroke="black" stroke-width="0.7"/>
-<line x1="230.67" y1="43.79" x2="233.67" y2="40.79" stroke="black" stroke-width="0.7"/>
-<line x1="230.67" y1="48.92" x2="233.67" y2="51.92" stroke="black" stroke-width="0.7"/>
-<line x1="230.67" y1="51.92" x2="233.67" y2="48.92" stroke="black" stroke-width="0.7"/>
+<line x1="238.80" y1="24.53" x2="241.80" y2="27.53" stroke="black" stroke-width="0.7"/>
+<line x1="238.80" y1="27.53" x2="241.80" y2="24.53" stroke="black" stroke-width="0.7"/>
+<line x1="238.80" y1="32.66" x2="241.80" y2="35.66" stroke="black" stroke-width="0.7"/>
+<line x1="238.80" y1="35.66" x2="241.80" y2="32.66" stroke="black" stroke-width="0.7"/>
+<line x1="238.80" y1="40.79" x2="241.80" y2="43.79" stroke="black" stroke-width="0.7"/>
+<line x1="238.80" y1="43.79" x2="241.80" y2="40.79" stroke="black" stroke-width="0.7"/>
+<line x1="238.80" y1="48.92" x2="241.80" y2="51.92" stroke="black" stroke-width="0.7"/>
+<line x1="238.80" y1="51.92" x2="241.80" y2="48.92" stroke="black" stroke-width="0.7"/>
 <text x="30.83" y="43.19" font-size="2.6" text-anchor="end">3,3 V (1)</text>
 <text x="30.83" y="47.25" font-size="2.6" text-anchor="end">SCL (5)</text>
 <text x="30.83" y="51.32" font-size="2.6" text-anchor="end">SDA (3)</text>
 <text x="30.83" y="55.38" font-size="2.6" text-anchor="end">GND (6)</text>
 <text x="30.83" y="37.50" font-size="2.6" text-anchor="end" font-weight="bold">J1a Pi</text>
-<text x="30.83" y="75.70" font-size="2.6" text-anchor="end">GPIO16 (36)</text>
-<text x="30.83" y="91.96" font-size="2.6" text-anchor="end">GPIO20 (38)</text>
-<text x="30.83" y="100.08" font-size="2.6" text-anchor="end">GPIO12 (32)</text>
-<text x="30.83" y="148.85" font-size="2.6" text-anchor="end">GPIO18 (12)</text>
-<text x="30.83" y="70.82" font-size="2.6" text-anchor="end" font-weight="bold">J1b Pi</text>
+<text x="30.83" y="112.28" font-size="2.6" text-anchor="end">GPIO16 (36)</text>
+<text x="30.83" y="116.34" font-size="2.6" text-anchor="end">GPIO20 (38)</text>
+<text x="30.83" y="120.40" font-size="2.6" text-anchor="end">GPIO12 (32)</text>
+<text x="30.83" y="124.47" font-size="2.6" text-anchor="end">GPIO18 (12)</text>
+<text x="30.83" y="106.59" font-size="2.6" text-anchor="end" font-weight="bold">J1b Pi</text>
+<rect x="31.20" y="39.85" width="3.66" height="17.07" fill="none" stroke="black" stroke-width="0.6"/>
+<rect x="31.20" y="108.94" width="3.66" height="17.07" fill="none" stroke="black" stroke-width="0.6"/>
+<rect x="283.17" y="169.90" width="3.66" height="13.00" fill="none" stroke="black" stroke-width="0.6"/>
+<rect x="222.21" y="23.59" width="3.66" height="13.00" fill="none" stroke="black" stroke-width="0.6"/>
+<rect x="222.21" y="39.85" width="3.66" height="13.00" fill="none" stroke="black" stroke-width="0.6"/>
 <text x="95.79" y="39.12" font-size="2.6" text-anchor="start">GND</text>
 <text x="95.79" y="83.83" font-size="2.6" text-anchor="start">GND</text>
 <text x="95.79" y="43.19" font-size="2.6" text-anchor="start">OE</text>
@@ -2786,13 +2801,9 @@
 <text x="197.59" y="49.28" font-size="2.6" text-anchor="start">R10</text>
 <text x="197.59" y="53.35" font-size="2.6" text-anchor="start">10k</text>
 <text x="201.28" y="36.69" font-size="2.6" text-anchor="end" font-weight="bold">JP1</text>
-<text x="217.51" y="31.00" font-size="2.6" text-anchor="start" font-weight="bold">J4</text>
-<text x="214.11" y="26.93" font-size="2.6" text-anchor="end">ch0</text>
-<text x="214.11" y="35.06" font-size="2.6" text-anchor="end">ch1</text>
-<text x="214.11" y="43.19" font-size="2.6" text-anchor="end">ch2</text>
-<text x="214.11" y="51.32" font-size="2.6" text-anchor="end">ch3</text>
-<text x="244.36" y="59.44" font-size="2.6" text-anchor="middle">J4 : ch0 · GND · ch1 · GND · ch2 · GND · ch3</text>
-<text x="244.36" y="63.51" font-size="2.6" text-anchor="middle">4 × 330 Ω en ligne + 4 LED (□ = anode)</text>
+<text x="211.85" y="57.01" font-size="2.6" text-anchor="middle" font-weight="bold">J4</text>
+<text x="227.04" y="31.00" font-size="2.6" text-anchor="start" font-weight="bold">J5</text>
+<text x="227.04" y="47.25" font-size="2.6" text-anchor="start" font-weight="bold">J6</text>
 <text x="47.26" y="72.45" font-size="2.6" text-anchor="middle" font-weight="bold">SW1</text>
 <text x="71.64" y="87.49" font-size="2.6" text-anchor="middle" font-weight="bold">SW2</text>
 <rect x="39.13" y="72.77" width="16.26" height="12.19" fill="none" stroke="black" stroke-width="0.5"/>
@@ -2808,14 +2819,15 @@
 <text x="287.40" y="173.24" font-size="2.6" text-anchor="start" font-weight="bold">5 V</text>
 <text x="287.40" y="177.30" font-size="2.6" text-anchor="start" font-weight="bold">DIN</text>
 <text x="287.40" y="181.36" font-size="2.6" text-anchor="start" font-weight="bold">GND</text>
-<text x="14.00" y="188.00" font-size="3.0" text-anchor="start" font-weight="bold">Légende :</text>
-<line x1="14" y1="192" x2="24" y2="192" stroke="black" stroke-width="0.9"/>
-<text x="26.00" y="193.00" font-size="2.6" text-anchor="start">strap 5 V</text>
-<line x1="54" y1="192" x2="64" y2="192" stroke="black" stroke-width="0.6" stroke-dasharray="1.6,0.9"/>
-<text x="66.00" y="193.00" font-size="2.6" text-anchor="start">strap masse</text>
-<line x1="94" y1="192" x2="104" y2="192" stroke="black" stroke-width="0.45"/>
-<text x="106.00" y="193.00" font-size="2.6" text-anchor="start">strap signal</text>
-<text x="136.00" y="193.00" font-size="2.6" text-anchor="start">✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)</text>
-<text x="14.00" y="199.00" font-size="2.6" text-anchor="start" font-weight="bold">RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en fils Dupont un par un, aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.</text>
-<text x="14.00" y="204.50" font-size="2.6" text-anchor="start">Coupures côté cuivre : plaque retournée, la colonne 0 passe à DROITE. Matrice : ses fils d'alimentation vont au bornier J2, jamais par les bandes. Bouton 6×6 : vérifier au multimètre quelles pattes commutent.</text>
+<text x="14.00" y="186.00" font-size="3.0" text-anchor="start" font-weight="bold">Légende :</text>
+<line x1="14" y1="190" x2="24" y2="190" stroke="black" stroke-width="0.9"/>
+<text x="26.00" y="191.00" font-size="2.6" text-anchor="start">strap 5 V</text>
+<line x1="54" y1="190" x2="64" y2="190" stroke="black" stroke-width="0.6" stroke-dasharray="1.6,0.9"/>
+<text x="66.00" y="191.00" font-size="2.6" text-anchor="start">strap masse</text>
+<line x1="94" y1="190" x2="104" y2="190" stroke="black" stroke-width="0.45"/>
+<text x="106.00" y="191.00" font-size="2.6" text-anchor="start">strap signal</text>
+<text x="136.00" y="191.00" font-size="2.6" text-anchor="start">✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)</text>
+<text x="14.00" y="197.00" font-size="2.6" text-anchor="start" font-weight="bold">RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en JST (Dupont femelle côté Pi), aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.</text>
+<text x="14.00" y="207.50" font-size="2.6" text-anchor="start">J4 (Dupont depuis les sorties 0-3 du PCA ROUES) : ch0 · GND · ch1 · GND · ch2 · GND · ch3.  J5 (JST, MDD10A roue G) : sens ch0 · GND · PWM ch1.  J6 (JST, roue D) : PWM ch2 · GND · sens ch3.</text>
+<text x="14.00" y="202.50" font-size="2.6" text-anchor="start">Coupures côté cuivre : plaque retournée, la colonne 0 passe à DROITE. Matrice : ses fils d'alimentation vont au bornier J2, jamais par les bandes. Bouton 6×6 : vérifier au multimètre quelles pattes commutent.</text>
 </svg>

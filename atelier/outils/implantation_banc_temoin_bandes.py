@@ -15,8 +15,11 @@ Choix d'implantation :
 - les rangées des modules sont ALIGNÉES sur les bandes : ISO1540 côté 2 → SCL rangée 5, SDA
   rangée 6, comme le support du PCA9685 ROUES (GND · OE · SCL · SDA · VCC · V+, rangées 3 à 8) :
   le bus I²C passe par le cuivre, sans strap ;
-- J1 est coupé en deux : le connecteur I²C en face de l'ISO1540, les quatre GPIO un par un plus
-  bas (fils Dupont un par un : aucune broche 5 V du Pi n'arrive sur la plaque) ;
+- liaisons hors plaque en JST-XH (détrompées, verrouillées) : J1a I²C (4 pts) en face de
+  l'ISO1540, J1b GPIO (4 pts), J3 matrice (3 pts), J5/J6 vers le MDD10A (3 pts) ; côté Pi, câble
+  JST → Dupont femelle, fil par fil : aucune broche 5 V du Pi n'arrive sur la plaque ;
+- J5/J6 sortent les canaux roues AVANT les résistances des témoins : les LED restent branchées
+  en parallèle et montrent ce que reçoit le driver ;
 - les LED témoins des roues alternent signal et masse (J4 = ch0 · GND · ch1 · GND · ch2 · GND · ch3) :
   chaque LED tient entre deux bandes voisines, sa résistance est EN LIGNE sur la bande (une coupure
   entre ses deux pattes) ;
@@ -101,12 +104,19 @@ broche(42, 4, "OE_ROUES", "JP1.1")
 couper(43, 4, 5, 6, 7)  # isole la zone des témoins du bus
 for k in range(4):
     r = 2 * k
-    broche(45, r, f"CH{k}", f"J4.ch{k}")
+    broche(44, r, f"CH{k}", f"J4.ch{k}")
     if k < 3:
-        broche(45, r + 1, "GND", f"J4.GND{k + 1}")
-    couper(49, r)  # résistance en ligne : une coupure entre ses pattes
-    dipole(f"R{4 + k}", "330 Ω", (47, r), f"CH{k}", (51, r), f"LED{k}", "resistance")
-    dipole(f"D{1 + k}", "LED", (53, r), f"LED{k}", (53, r + 1), "GND", "led")
+        broche(44, r + 1, "GND", f"J4.GND{k + 1}")
+    couper(51, r)  # résistance en ligne : une coupure entre ses pattes
+    dipole(f"R{4 + k}", "330 Ω", (49, r), f"CH{k}", (53, r), f"LED{k}", "resistance")
+    dipole(f"D{1 + k}", "LED", (55, r), f"LED{k}", (55, r + 1), "GND", "led")
+# J5/J6 : JST 3 points vers le MDD10A (étage B3), pris AVANT les résistances des témoins.
+# L'alternance signal/masse de J4 donne gratuitement « sens · GND · PWM » par roue
+# (robot_config : gauche = sens ch0 + PWM ch1, droite = PWM ch2 + sens ch3).
+for i, net in enumerate(["CH0", "GND", "CH1"]):
+    broche(47, i, net, f"J5.{i + 1}")
+for i, net in enumerate(["CH2", "GND", "CH3"]):
+    broche(47, 4 + i, net, f"J6.{i + 1}")
 strap("GND", (58, 1), (58, 3))
 strap("GND", (59, 3), (59, 5))
 strap("GND", (58, 5), (58, 7))
@@ -163,10 +173,13 @@ strap("GND", (44, 31), (44, 34))
 strap("GND", (45, 34), (45, 38))
 
 # ------------------------------------------------------------------- J1b (GPIO), boutons, LED d'état
-broche(0, 12, "GPIO16", "J1b.GPIO16")
-broche(0, 16, "GPIO20", "J1b.GPIO20")
-broche(0, 18, "GPIO12", "J1b.GPIO12")
-broche(0, 30, "GPIO18", "J1b.GPIO18")
+J1B = [("GPIO16", "GPIO16 (36)"), ("GPIO20", "GPIO20 (38)"), ("GPIO12", "GPIO12 (32)"), ("GPIO18", "GPIO18 (12)")]
+for i, (net, _) in enumerate(J1B):  # JST 4 points, rangées 21-24
+    broche(0, 21 + i, net, f"J1b.{i + 1}")
+strap("GPIO16", (1, 21), (1, 12))
+strap("GPIO20", (2, 22), (2, 16))
+strap("GPIO12", (3, 23), (3, 18))
+strap("GPIO18", (1, 24), (1, 30))
 couper(13, 12)
 # Bouton 6×6 : pattes 6,5 mm (même bande, reliées dans le bouton) × 4,5 mm (le contact)
 for repere, net, rang in (("SW1", "GPIO16", 12), ("SW2", "GPIO20", 14)):
@@ -372,9 +385,15 @@ def dessiner() -> str:
     for i, (_, nom) in enumerate(J1A):
         texte_trou(0, 4 + i, nom, dx=-2.2, ancre="end")
     texte_trou(0, 2.6, "J1a Pi", dx=-2.2, ancre="end", gras=True)
-    for r, nom in ((12, "GPIO16 (36)"), (16, "GPIO20 (38)"), (18, "GPIO12 (32)"), (30, "GPIO18 (12)")):
-        texte_trou(0, r, nom, dx=-2.2, ancre="end")
-    texte_trou(0, 10.8, "J1b Pi", dx=-2.2, ancre="end", gras=True)
+    for i, (_, nom) in enumerate(J1B):
+        texte_trou(0, 21 + i, nom, dx=-2.2, ancre="end")
+    texte_trou(0, 19.6, "J1b Pi", dx=-2.2, ancre="end", gras=True)
+    # embases JST-XH (contour du boîtier, côté verrou à droite)
+    for c, r0, n in ((0, 4, 4), (0, 21, 4), (62, 36, 3), (47, 0, 3), (47, 4, 3)):
+        x1, y1 = P(c - 0.45, r0 - 0.6)
+        x2, y2 = P(c + 0.45, r0 + n - 0.4)
+        el.append(f'<rect x="{x1:.2f}" y="{y1:.2f}" width="{x2 - x1:.2f}" height="{y2 - y1:.2f}" '
+                  f'fill="none" stroke="black" stroke-width="0.6"/>')
     for i, nom in enumerate(PCA_BROCHES):
         texte_trou(15, 3 + i, nom, dx=1.8)
         texte_trou(15, 14 + i, nom, dx=1.8)
@@ -383,11 +402,9 @@ def dessiner() -> str:
     texte_trou(40, 5.5, "R10", dx=2.0)
     texte_trou(40, 6.5, "10k", dx=2.0)
     texte_trou(41.4, 2.4, "JP1", ancre="end", gras=True)
-    texte_trou(45, 1, "J4", dx=1.6, gras=True)
-    for k in range(4):
-        texte_trou(45, 2 * k, f"ch{k}", dx=-1.8, ancre="end")
-    texte_trou(52, 8.0, "J4 : ch0 · GND · ch1 · GND · ch2 · GND · ch3", ancre="middle")
-    texte_trou(52, 9.0, "4 × 330 Ω en ligne + 4 LED (□ = anode)", ancre="middle")
+    texte_trou(44, 7.4, "J4", ancre="middle", gras=True)
+    texte_trou(47, 1, "J5", dx=3.0, gras=True)
+    texte_trou(47, 5, "J6", dx=3.0, gras=True)
     texte_trou(3.5, 11.2, "SW1", ancre="middle", gras=True)
     texte_trou(9.5, 14.9, "SW2", ancre="middle", gras=True)
     for c, r in ((2, 12), (8, 14)):  # contour des boutons 6×6
@@ -404,7 +421,7 @@ def dessiner() -> str:
         texte_trou(62, r, nom, dx=2.4, gras=True)
 
     # ---- légende
-    lx, ly = 14, 192
+    lx, ly = 14, 190
     texte(lx, ly - 4, "Légende :", TEXTE, gras=True)
     for i, (net, nom) in enumerate((("5V", "strap 5 V"), ("GND", "strap masse"), ("SIG", "strap signal"))):
         x = lx + i * 40
@@ -413,9 +430,11 @@ def dessiner() -> str:
         el.append(f'<line x1="{x}" y1="{ly}" x2="{x + 10}" y2="{ly}" stroke="black" stroke-width="{ep}"{d}/>')
         texte(x + 12, ly + 1, nom, PETIT)
     texte(lx + 122, ly + 1, "✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)", PETIT)
-    texte(lx, ly + 7, "RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en fils Dupont un par un, "
+    texte(lx, ly + 7, "RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en JST (Dupont femelle côté Pi), "
           "aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.",
           PETIT, gras=True)
+    texte(lx, ly + 17.5, "J4 (Dupont depuis les sorties 0-3 du PCA ROUES) : ch0 · GND · ch1 · GND · ch2 · GND · ch3.  "
+          "J5 (JST, MDD10A roue G) : sens ch0 · GND · PWM ch1.  J6 (JST, roue D) : PWM ch2 · GND · sens ch3.", PETIT)
     texte(lx, ly + 12.5, "Coupures côté cuivre : plaque retournée, la colonne 0 passe à DROITE. "
           "Matrice : ses fils d'alimentation vont au bornier J2, jamais par les bandes. "
           "Bouton 6×6 : vérifier au multimètre quelles pattes commutent.", PETIT)

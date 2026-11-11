@@ -310,8 +310,11 @@ Le script reconstruit les liaisons (bandes − coupures + straps) et refuse d'é
 moindre court-circuit ou réseau coupé ; contrôlé en retirant une coupure, en décalant un strap et
 en posant une coupure sur une broche : les trois sont refusés. Même circuit, trois choix propres
 aux bandes : bus I²C **sur le cuivre** (ISO1540 côté 2 et PCA9685 ROUES alignés sur les bandes 5-6),
-J1 coupé en **J1a** (I²C) et **J1b** (GPIO un par un), témoins J4 en **signal/masse alternés** avec
-résistances en ligne. La matrice tire son courant **par le bornier J2, jamais par les bandes** (une
+J1 coupé en **J1a** (I²C) et **J1b** (GPIO), témoins J4 en **signal/masse alternés** avec
+résistances en ligne. **Liaisons hors plaque en JST-XH** du stock (remarque de David) : J1a et J1b (4 pts, câble JST → Dupont
+femelle côté Pi), J3 matrice (3 pts), et **J5/J6 vers le MDD10A** (3 pts, étage B3) : « sens · GND · PWM »
+par roue, pris avant les résistances des témoins, que l'alternance de J4 donne sans strap. Le pas
+XH (2,50 mm) sur une plaque au pas de 2,54 passe sans forcer jusqu'à 4 points. La matrice tire son courant **par le bornier J2, jamais par les bandes** (une
 bande ne supporte pas les ~4 A d'une matrice 8×8 en blanc). Contours des modules indicatifs : les
 poser à blanc avant de souder.
 
