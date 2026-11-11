@@ -311,3 +311,28 @@ Pi ne peut arriver sur la plaque.
   en 0x40 ; la fréquence est celle du dernier nœud démarré. Le banc le rendra visible (registre
   PRE_SCALE). À examiner, pas un défaut avéré ;
 - le kit de condensateurs céramiques commandé le 05/10 fournit le 100 nF, s'il est arrivé.
+
+---
+
+## 9. Aller « jusqu'au bout » : caméra, roues en l'air, bras (proposé par David le 11/11, rien d'acté)
+
+**Idée de David** : une caméra qui vérifie qu'il y a du mouvement dans les LED et les servos, et un
+petit robot de table avec des roues **qui ne touchent pas le sol** et des bras comme Didier.
+
+**Avis : oui, mais par étages, et seulement ce qui ressemble à Didier.** Le banc vaut parce qu'il
+fait tourner la chaîne réelle ; chaque ajout doit prolonger cette chaîne, pas en créer une autre.
+
+| Ajout | Ce qu'il prouve de plus | Condition pour qu'il vaille | Étage |
+|---|---|---|---|
+| Relecture des registres (B1) | le logiciel a écrit la bonne consigne | — | B1 |
+| Pico témoin (B2) | le signal électrique sort vraiment | — | B2 |
+| **Roues en l'air** | la chaîne complète jusqu'au moteur : sens de chaque roue, arrêt du deadman, coupure par OE (JP1) | un driver **de même commande que le SmartDrive40 de Didier (PWM + sens)** ; le MDDS30 de rechange est de la même marque mais son mode PWM + sens est **à vérifier dans sa notice** ; un L298N serait une autre chaîne, donc un faux témoin | B3 |
+| Un ou deux servos sur 0x41 | la séquence fait bouger quelque chose de réel | servos à emprunter (aucun en stock) ; un servo de loisir ne remplace pas un ASME du bras, il teste la commande, pas la mécanique | B3 |
+| **Caméra** | le résultat physique : la LED s'allume, le servo bouge, la roue tourne | **oui/non sur une zone fixe, exposition manuelle, éclairage maîtrisé** — leçons du 10/07 (l'auto-exposition trompe) et du visage (la caméra ne sait pas lire un motif) ; jamais une mesure fine | B4 |
+| Bras mécaniques comme Didier | rien de plus pour le logiciel | à écarter : c'est de la mécanique, et le projet a déjà Didier pour ça | — |
+
+**Le gain réel des roues en l'air** : répéter sur la table le protocole caméra des roues (sens par
+roue, deadman, e_stop, OE) avant de le faire sur Didier, sans aucun danger. **Le piège** : glisser
+vers le mini-robot de démonstration, reporté au lidar (§3). Les moteurs TT du stock acceptent 3 à
+6 V, alors que le MDDS30 démarre à 7 V : l'alimentation des moteurs est à concevoir à ce
+moment-là, pas avant.
