@@ -32,13 +32,13 @@ ou une relecture adverse avant le terrain = Fable.
 - Le cœur du robot est `packages/didier_core` depuis L1e-3c (08/11) ; données, conf, sim et
   venv restent sous `legacy/dadou_robot_ros/` (`DIDIER_DATA_DIR`). Tests du cœur :
   `cd packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=` ;
-  sim : `legacy/dadou_robot_ros/conf/docker/sim`. Vision = `packages/didier_vision` depuis L1e-3d
+  sim : `machines/sim/banc-robot` (depuis L1e-4c, 11/11). Vision = `packages/didier_vision` depuis L1e-3d
   (08/11 ; données sous `legacy/dadou_vision_ros/`, `DIDIER_VISION_DATA_DIR` ; tests : `cd
   packages/didier_vision && ../../legacy/dadou_vision_ros/.venv/bin/python -m pytest -q -o addopts=`).
   Télécommande : encore sous `legacy/`.
 - Déploiement Ansible : `deploy/` depuis L1e-4a (08/11) ; il rsync `packages/` et, jusqu'à 4b/4c, `legacy/`.
   Depuis L1e-1 (06/11) : les packages ROS viennent de `packages/`, copiés par LISTE EXPLICITE
-  par machine (`packages:` de l'hôte dans `deploy/hosts`, défaut `packages_default`) — un
+  par machine (`packages:` dans `machines/<machine>/machine.yml` depuis L1e-4c — `deploy/hosts` = inventaire + `machine:` seulement ; défaut `packages_default`) — un
   package absent de la liste n'arrive jamais sur le Pi.
   Depuis L1e-3a (07/11) : la lib `dadou_utils_ros` est un package de `packages/` (dans
   `packages_default` ET la liste de l'hôte robot) ; `chemins_retires_lib` efface sur les Pi les

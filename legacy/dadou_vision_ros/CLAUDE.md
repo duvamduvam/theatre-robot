@@ -7,7 +7,7 @@ Cerveau perceptif du robot de théâtre Didier, sur Pi 5 « vision » (alias ssh
 ## Règles
 
 - **Dépôt GitHub PUBLIC** : jamais de secret dans le code, les tests, les commits.
-  Tout secret vit dans `conf/secret` (gitignoré) ; `conf/secret.example` fait foi.
+  Tout secret vit dans `~/.config/didier/vision-conf-secret` du PC, posé sur le Pi dans `src/vision/conf/secret` par Ansible ; `machines/vision/secret.example` fait foi.
 - La vision **publie des perceptions** (topics standard), ne commande JAMAIS les
   moteurs directement — la sécurité mouvement vit dans dadou_robot_ros (twist_mux,
   deadman, e-stop, validés physiquement).
@@ -30,7 +30,7 @@ Cerveau perceptif du robot de théâtre Didier, sur Pi 5 « vision » (alias ssh
 - Pièges consignés dans les commits/le code : logger rclpy ≠ logging stdlib
   (f-strings), purger build/ après changement numpy, mediapipe impose numpy<2
   + opencv-contrib (un seul opencv, libgl1 requis).
-- **Photo de contrôle par la webcam** : `conf/scripts/photo-camera.sh` (à lancer
+- **Photo de contrôle par la webcam** : `machines/vision/scripts/photo-camera.sh` (sur le Pi : `src/vision/conf/scripts/`) (à lancer
   sur le Pi ; validé 2026-07-11). La caméra étant tenue en exclusif par
   person_tracker (aucun topic image publié), le script arrête le tracker, capture
   via OpenCV (15 trames de chauffe — auto-exposition lente), puis `docker restart`
@@ -88,7 +88,7 @@ Cerveau perceptif du robot de théâtre Didier, sur Pi 5 « vision » (alias ssh
 Le MÊME code (image bâtie du Dockerfile-arm, base multi-arch) tourne sur le
 PC de dev : webcam + Scarlett réelles, corps simulé dans Gazebo
 (`ROS_DOMAIN_ID=43`). Mode d'emploi : dadou_robot_ros `docs/operations.md`
-§Banc PC. Depuis `conf/docker/x86/` :
+§Banc PC. Depuis `machines/sim/banc-vision/` :
 
 ```bash
 ./build-x86.sh                                        # 1re fois (long) — PAS compose build :

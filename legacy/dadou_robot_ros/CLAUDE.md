@@ -24,7 +24,7 @@ Objectif long terme : robot autonome qui suit l'acteur, parle, simule des émoti
 ## État Phase 2 (2026-07-04) — migration mouvement vers les standards ROS
 
 FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires) :
-- **Simulation Gazebo Harmonic** : `conf/docker/sim/` (conteneur dédié x86),
+- **Simulation Gazebo Harmonic** : `machines/sim/banc-robot/` (racine du mono-dépôt) (conteneur dédié x86),
   packages `didier_description` (URDF xacro + plugins gz) et `didier_sim` (monde, bridge, launch).
 - **Chaîne cmd_vel** (`packages/didier_drive` (racine du mono-dépôt ; L1e-1/L1e-2 du 06/11 : les 6 packages sont renommés `didier_*` : `conf/ros2_dependencies/` n'existe plus, les 6 packages ament vivent dans `packages/`, la liste poussée vers chaque Pi = variable `packages` de l'hôte dans `ansible/hosts`), package AUTONOME — aucun import
   dadou_utils_ros ni robot.*) : `wheels_bridge` (StringTime→Twist ; le fil ne porte que la
@@ -38,7 +38,7 @@ FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires
 - **BASCULE FAITE ET VALIDÉE sur le robot le 2026-07-04** : `WHEELS_CMD_VEL_ENABLED=True`
   est la config officielle. Protocole caméra 4/4 (roues hors sol) : forward 50 %,
   slider vitesse 50 %→25 %, e-stop étanche, kill de la chaîne en plein mouvement →
-  arrêt local en 440 ms. Protocole rejouable : `conf/scripts/validate-cmdvel-protocol.sh`
+  arrêt local en 440 ms. Protocole rejouable : `machines/robot/scripts/validate-cmdvel-protocol.sh`
   (à exécuter dans le conteneur robot). Rollback : drapeau à False + sentinelle + restart.
 
 ## État du 2026-07-11 — visage calibré, architecture assainie, temps réel
@@ -72,14 +72,14 @@ FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires
 
 ```bash
 (cd ../../packages/didier_core && ../../legacy/dadou_robot_ros/.venv/bin/python -m pytest -q -o addopts=)  # tests du cœur (host, sans ROS ni matériel)
-conf/scripts/fumee.sh               # fumée : rejoue toute la sim sur main (minuterie systemd, docs/operations.md § Fumée automatique)
+machines/sim/fumee.sh               # fumée : rejoue toute la sim sur main (minuterie systemd, docs/operations.md § Fumée automatique)
 
 # ⚠️ Namespace (L1b) : la CLI ne suit PAS le namespace des nœuds — un nom relatif tapé
 # dans `ros2 topic pub/echo` se résout à la RACINE. Toujours préfixer (/didier/…) et
 # lancer les `ros2 run` avec `--ros-args -r __ns:=/didier`. Sim : ROBOT_NAME=<nom> au compose.
 
 # Simulation (GUI ; HEADLESS=true pour serveur seul ; ANIMATIONS=true = animations_node en sim) :
-cd conf/docker/sim && ANIMATIONS=true docker compose -f docker-compose-sim.yml up -d
+cd machines/sim/banc-robot && ANIMATIONS=true docker compose -f docker-compose-sim.yml up -d
 # Jouer une animation en sim (bras/yeux/cou via servos_sim_node — validé 2026-07-11) :
 docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub --once /didier/animation theatre_interfaces/msg/StringTime "{msg: \"\\\"parle\\\"\", time: 45000, anim: false}"'
 # Arrêt d'animation : msg: "false" (booléen JSON — PAS "stop", qui serait cherché comme nom de séquence).
