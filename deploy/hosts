@@ -30,27 +30,11 @@ control:
     c:
         machine: telecommande
 
-disk:
-  hosts:
-    d:
-        machine: disque
-
-sceno:
-  hosts:
-    s:
-        machine: sono
-
 vision:
   hosts:
     ai:
         ansible_host: 192.168.1.151
         machine: vision
-
-# Hôte de test sans adresse : une seconde machine « robot ».
-robot-test:
-  hosts:
-    test:
-        machine: robot
 
 glove-left:
   hosts:

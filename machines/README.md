@@ -9,7 +9,6 @@ est dans `packages/`, le contenu du robot dans `data/`, Ansible dans `deploy/`.
 | `vision/` | Pi 5 de la tête (hôte `ai`) | conf complète (ex `legacy/dadou_vision_ros/{conf,mediamtx}`) |
 | `sim/` | le PC de David (bancs, pas un hôte Ansible) | `banc-robot/` (sim Gazebo + banc de bureau), `banc-vision/`, scripts de vérification, fumée et sa minuterie |
 | `telecommande/`, `gant-gauche/`, `gant-droit/` | console de pilotage, gants | `machine.yml` seul : le code et la conf sont encore dans `legacy/dadou_control_ros/` (lot L4) |
-| `sono/`, `disque/` | hôtes `s` et `d` | `machine.yml` seul, repris de l'ancien inventaire ; projets absents du dépôt |
 | `lights/` | — | vide (pas encore d'hôte) |
 
 ## La convention `machine.yml`
@@ -30,6 +29,24 @@ chargé par Ansible (`include_vars`, en tête de `deploy-pios.yml` et `install-p
 
 Une variable de contenu dans `hosts`, un hôte sans `machine:` ou une machine sans `machine.yml`
 font rougir `packages/didier_core/test/unit/test_arborescence.py`.
+
+## Ajouter une machine (ou en remettre une retirée)
+
+Le 11/11, les hôtes `d` (disque), `s` (sono) et `test` ont été retirés de `deploy/hosts`, avec
+`machines/disque/` et `machines/sono/` : leurs projets n'étaient pas dans le dépôt, le déploiement
+ne pouvait pas marcher (l'ancien contenu reste dans l'historique git, commit de retrait du 11/11).
+Pour en (re)mettre une — la sono reviendra ainsi au lot L3 :
+
+1. `machines/<machine>/machine.yml` : partir de `machines/robot/machine.yml` ou
+   `machines/vision/machine.yml` et ne garder que ce qui tourne sur l'hôte (tableau ci-dessus) ;
+   un `README.md` d'une ligne (rôle de la machine).
+2. `deploy/hosts` : un groupe, l'hôte avec `ansible_host: <IP>` et `machine: <machine>` — RIEN
+   d'autre (utilisateur et clé au niveau d'un groupe parent, comme `didier_pi`).
+3. `packages/didier_core/test/unit/test_arborescence.py` : ajouter l'hôte à `HOTES_MACHINES`.
+4. Vérifier : `ansible-playbook -i hosts deploy-pios.yml --syntax-check`, les tests, puis
+   `ansible-playbook -i hosts deploy-pios.yml -e target_group=<groupe>` et graver l'inventaire
+   attendu (`attendu/<groupe>.txt`, voir `docs/ansible-ecarts.md`) pour que `./ecart-pi.sh <groupe>`
+   ait une référence.
 
 ## Ce qui part sur un Pi
 

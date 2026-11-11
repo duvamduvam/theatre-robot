@@ -46,8 +46,8 @@
 # n'est effacé par le rsync.
 # Lot L1e-4b (08/11) : copie « projet » réservée aux hôtes SANS `donnees_dir` ; le robot reçoit à
 # la place les copies explicites qui suivent. Lot L1e-4c (11/11) : réservée aux machines dont le
-# projet vit ENCORE dans legacy/ (`local_project_dir` dans leur machine.yml : télécommande, gants,
-# sono, disque) ; robot et vision reçoivent leur conf depuis machines/<machine>/ (plus bas).
+# projet vit ENCORE dans legacy/ (`local_project_dir` dans leur machine.yml : télécommande, gants
+# — sono et disque retirés le 11/11) ; robot et vision reçoivent leur conf depuis machines/<machine>/ (plus bas).
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir | default('') }}/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}"
   when: local_project_dir is defined
   synchronize:

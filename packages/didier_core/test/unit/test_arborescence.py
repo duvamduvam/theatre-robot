@@ -823,8 +823,8 @@ SIM_A_PLAT = ["coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer"
 BANC_ROBOT = ["Dockerfile-sim", "Dockerfile-x86", "docker-compose-sim.yml", "docker-compose-x86.yml"]
 BANC_VISION = ["asound-pc.conf", "audio_banc.py", "build-x86.sh", "docker-compose-x86.yml"]
 # Hôte de l'inventaire -> machine (dossier machines/<machine>/).
-HOTES_MACHINES = {"r": "robot", "test": "robot", "ai": "vision", "c": "telecommande",
-                  "gl": "gant-gauche", "gr": "gant-droit", "s": "sono", "d": "disque"}
+HOTES_MACHINES = {"r": "robot", "ai": "vision", "c": "telecommande",
+                  "gl": "gant-gauche", "gr": "gant-droit"}
 # Variables de CONTENU (spec L1e-4, décision 5) : jamais dans hosts.
 VARIABLES_DE_CONTENU = ["packages", "sentinelle_build", "launch_cmd", "noeuds_attendus",
                         "dossiers_montes", "secrets_hote", "telechargements_hote", "fichiers_etc",

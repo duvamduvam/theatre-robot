@@ -1,8 +1,0 @@
-# Contenu de la machine « sono » (hôte `s` de deploy/hosts, ex groupe sceno) — chargé par Ansible
-# (`include_vars`, lot L1e-4c du 11/11). Convention : machines/README.md.
-# Contenu repris TEL QUEL de l'ancien deploy/hosts : le projet dadou_sceno_ros n'est PAS dans le
-# mono-dépôt (archivé sur GitHub, sono réécrite au lot L3) — ce déploiement ne marcherait pas.
-local_project_dir: dadou_sceno_ros
-conf_machine_dir: "{{ local_projects_dir }}/dadou_sceno_ros/conf"
-project_ros_dir: sceno
-project_name: sceno
