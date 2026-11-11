@@ -877,3 +877,20 @@ outdoors, in summer. Feeds lot V0b of
 - Face changes by itself → `chat_node` (vision Pi) reacts to ambient sound.
 - mDNS `.local` may fail from some terminals: use the IPs above.
 - Topic mapping reference: [`interfaces.md`](interfaces.md).
+
+## Accès à distance aux Pi : VPN WireGuard de la Freebox (11/11/2026)
+
+Serveur VPN **WireGuard** de la Freebox Pop activé (Freebox OS → Paramètres → Mode avancé →
+Serveur VPN ; port UDP 33664 ; PPTP/OpenVPN/IPsec restent désactivés). Un utilisateur par
+appareil : `david` (téléphone, IP tunnel 192.168.27.65) et `pc` (portable, 192.168.27.66).
+Validé le 11/11 depuis le téléphone en 4G (console `http://192.168.1.131:8765` affichée).
+- **Portable** : profil NetworkManager `wg-maison`, en tunnel SÉPARÉ (seuls `192.168.1.0/24` et
+  le réseau du tunnel passent par la maison ; le reste sort directement ; pas de DNS imposé),
+  **jamais allumé automatiquement** (à la maison il ferait doublon avec le réseau local).
+  Hors de chez soi : `nmcli connection up wg-maison` (ou l'icône réseau), puis ssh, Ansible et la
+  console comme à la maison ; `nmcli connection down wg-maison` en partant.
+- **Clés** : jamais dans le dépôt. Fichier d'origine du portable dans `~/.config/didier/`
+  (mode 600) ; à garder aussi dans un gestionnaire de mots de passe. Révoquer un appareil perdu =
+  supprimer son utilisateur dans Freebox OS.
+- Le VPN donne l'ACCÈS, pas l'allumage : les Pi doivent rester sous tension. Verrou inchangé :
+  aucune action à distance sur un robot aux roues câblées avant le protocole caméra.
