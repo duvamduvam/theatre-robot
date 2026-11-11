@@ -1,0 +1,188 @@
+ Image dadouuu/dadou-sim-x86:latest Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.81kB done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile-sim
+#2 transferring dockerfile: 6.36kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/ros:jazzy-ros-base
+#3 ...
+
+#4 [context didier_core] load .dockerignore
+#4 transferring didier_core: 2B done
+#4 DONE 0.1s
+
+#5 [context didier_sim] load .dockerignore
+#5 transferring didier_sim: 2B done
+#5 DONE 0.1s
+
+#6 [context didier_jeu] load .dockerignore
+#6 transferring didier_jeu: 2B done
+#6 DONE 0.1s
+
+#7 [context theatre_interfaces] load .dockerignore
+#7 transferring theatre_interfaces: 2B done
+#7 DONE 0.1s
+
+#8 [context didier_rehearsal] load .dockerignore
+#8 transferring didier_rehearsal: 2B done
+#8 DONE 0.1s
+
+#9 [context dadou_utils_ros] load .dockerignore
+#9 transferring dadou_utils_ros: 2B done
+#9 DONE 0.1s
+
+#10 [context didier_web] load .dockerignore
+#10 transferring didier_web: 2B done
+#10 DONE 0.1s
+
+#11 [context didier_drive] load .dockerignore
+#11 transferring didier_drive: 2B done
+#11 DONE 0.1s
+
+#12 [context didier_description] load .dockerignore
+#12 transferring didier_description: 2B done
+#12 DONE 0.2s
+
+#13 [context data] load .dockerignore
+#13 transferring data: 2B done
+#13 DONE 0.2s
+
+#14 [context theatre_contrats] load .dockerignore
+#14 transferring theatre_contrats: 2B done
+#14 DONE 0.2s
+
+#3 [internal] load metadata for docker.io/library/ros:jazzy-ros-base
+#3 DONE 1.4s
+
+#15 [internal] load .dockerignore
+#15 transferring context: 2B done
+#15 DONE 0.0s
+
+#16 [stage-0  1/19] FROM docker.io/library/ros:jazzy-ros-base@sha256:8eed0a4669bbf43ee331878a4c39bd8ebddea8e3312a58b4fae8edb14526b617
+#16 DONE 0.0s
+
+#17 [context didier_description] load from client
+#17 transferring didier_description: 259B done
+#17 DONE 0.1s
+
+#18 [context didier_drive] load from client
+#18 transferring didier_drive: 1.06kB done
+#18 DONE 0.1s
+
+#19 [context didier_jeu] load from client
+#19 transferring didier_jeu: 5.66kB done
+#19 DONE 0.1s
+
+#20 [context didier_web] load from client
+#20 transferring didier_web: 1.18kB done
+#20 DONE 0.1s
+
+#21 [context didier_sim] load from client
+#21 transferring didier_sim: 892B done
+#21 DONE 0.1s
+
+#22 [context didier_core] load from client
+#22 transferring didier_core: 873.46kB 0.0s done
+#22 DONE 0.1s
+
+#23 [context theatre_contrats] load from client
+#23 transferring theatre_contrats: 2.33kB done
+#23 DONE 0.1s
+
+#24 [internal] load build context
+#24 transferring context: 114B done
+#24 DONE 0.1s
+
+#25 [context data] load from client
+#25 transferring data: 237.62kB 0.0s done
+#25 DONE 0.2s
+
+#26 [context theatre_interfaces] load from client
+#26 transferring theatre_interfaces: 378B done
+#26 DONE 0.2s
+
+#27 [context dadou_utils_ros] load from client
+#27 transferring dadou_utils_ros: 4.83kB done
+#27 DONE 0.2s
+
+#28 [context didier_rehearsal] load from client
+#28 transferring didier_rehearsal: 2.29kB done
+#28 DONE 0.2s
+
+#29 [stage-0  7/19] COPY --from=theatre_interfaces . /home/ros2_ws/src/theatre_interfaces
+#29 CACHED
+
+#30 [stage-0  8/19] COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
+#30 CACHED
+
+#31 [stage-0  5/19] COPY --from=didier_description . /home/ros2_ws/src/didier_description
+#31 CACHED
+
+#32 [stage-0  6/19] COPY --from=didier_sim . /home/ros2_ws/src/didier_sim
+#32 CACHED
+
+#33 [stage-0  2/19] RUN apt-get update && apt-get install -y     ros-jazzy-ros-gz     ros-jazzy-xacro     ros-jazzy-robot-state-publisher     ros-jazzy-joint-state-publisher-gui     ros-jazzy-rviz2     ros-jazzy-teleop-twist-keyboard     ros-jazzy-twist-mux     python3-pip     python3-aiohttp     python3-pil     python3-imageio     ros-jazzy-py-trees     && rm -rf /var/lib/apt/lists/*
+#33 CACHED
+
+#34 [stage-0  3/19] RUN mkdir -p /home/ros2_ws/src
+#34 CACHED
+
+#35 [stage-0  4/19] WORKDIR /home/ros2_ws
+#35 CACHED
+
+#36 [stage-0  9/19] COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
+#36 CACHED
+
+#37 [stage-0 10/19] COPY --from=didier_jeu . /home/ros2_ws/src/didier_jeu
+#37 DONE 0.1s
+
+#38 [stage-0 11/19] COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
+#38 DONE 0.1s
+
+#39 [stage-0 12/19] COPY --from=didier_web . /home/ros2_ws/src/didier_web
+#39 DONE 0.1s
+
+#40 [stage-0 13/19] COPY --from=didier_rehearsal . /home/ros2_ws/src/didier_rehearsal
+#40 DONE 0.1s
+
+#41 [stage-0 14/19] COPY --from=didier_core . /home/ros2_ws/src/didier_core
+#41 DONE 0.1s
+
+#42 [stage-0 15/19] COPY conf/scripts/launch-sim-in-docker.sh /home/ros2_ws/
+#42 DONE 0.1s
+
+#43 [stage-0 16/19] COPY --from=data json/ /home/ros2_ws/json/
+#43 DONE 0.1s
+
+#44 [stage-0 17/19] COPY --from=data json/ /home/ros2_ws/src/robot/json/
+#44 DONE 0.1s
+
+#45 [stage-0 18/19] RUN mkdir -p /home/ros2_ws/log
+#45 DONE 0.3s
+
+#46 [stage-0 19/19] RUN pip3 install --no-cache-dir --break-system-packages filetype colorlog psutil
+#46 1.014 Collecting filetype
+#46 1.135   Downloading filetype-1.2.0-py2.py3-none-any.whl.metadata (6.5 kB)
+#46 1.211 Collecting colorlog
+#46 1.237   Downloading colorlog-6.12.0-py3-none-any.whl.metadata (11 kB)
+#46 1.243 Requirement already satisfied: psutil in /usr/lib/python3/dist-packages (5.9.8)
+#46 1.289 Downloading filetype-1.2.0-py2.py3-none-any.whl (19 kB)
+#46 1.323 Downloading colorlog-6.12.0-py3-none-any.whl (12 kB)
+#46 1.684 Installing collected packages: filetype, colorlog
+#46 1.728 Successfully installed colorlog-6.12.0 filetype-1.2.0
+#46 1.728 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#46 DONE 1.8s
+
+#47 exporting to image
+#47 exporting layers
+#47 exporting layers 0.3s done
+#47 writing image sha256:d4c7a663c7971caa93a0e65ba66902dace7fbd01885cb9272aaeb3a743b5bc2e done
+#47 naming to docker.io/dadouuu/dadou-sim-x86:latest 0.0s done
+#47 DONE 0.4s
+
+#48 resolving provenance for metadata file
+#48 DONE 0.0s
+ Image dadouuu/dadou-sim-x86:latest Built 

@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "id": "2026-11-11-1300",
+  "notes": [],
+  "sha": "52ec248",
+  "sha_complet": "52ec248c4ec959b7ea3f61ce4c133886166ad990",
+  "sale": false,
+  "branche": "main",
+  "mode": "si-due",
+  "raison": "due : 2 commit(s) de code dans main depuis la dernière fumée verte (46ecb38)",
+  "debut": "2026-11-11T13:00:35+01:00",
+  "fin": "2026-11-11T13:35:25+01:00",
+  "duree_s": 2090,
+  "rtf": 0.993,
+  "rtf_min": 0.8,
+  "charge_1min": 1.61,
+  "nb_coeurs": 32,
+  "essai": false,
+  "image_reconstruite": true,
+  "coeurs_reserves": "8-15",
+  "epreuves": [
+    {
+      "id": "image",
+      "statut": "vert",
+      "detail": "reconstruite : Dockerfile/compose sim modifié depuis 46ecb38",
+      "duree_s": 5,
+      "journal": "image.log"
+    },
+    {
+      "id": "demarrage",
+      "statut": "vert",
+      "detail": "conteneur dadou-sim-container, domaine 43, monde chantiers, headless",
+      "duree_s": 26,
+      "journal": "demarrage.log"
+    },
+    {
+      "id": "rtf",
+      "statut": "vert",
+      "obtenu": "0.993",
+      "detail": "seuil 0.8",
+      "duree_s": 22,
+      "journal": "rtf.log"
+    },
+    {
+      "id": "namespace",
+      "ok": 5,
+      "attendu": 5,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 40,
+      "journal": "namespace.log"
+    },
+    {
+      "id": "catalogue",
+      "ok": 4,
+      "attendu": 4,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 27,
+      "journal": "catalogue.log"
+    },
+    {
+      "id": "parle",
+      "ok": 3,
+      "attendu": 3,
+      "ko": 0,
+      "statut": "vert",
+      "detail": "ETATS=[\"\", \"parle\", \"\"]",
+      "duree_s": 6,
+      "journal": "parle.log"
+    },
+    {
+      "id": "chantiers",
+      "ok": 21,
+      "attendu": 21,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 934,
+      "journal": "chantiers.log"
+    },
+    {
+      "id": "a1",
+      "ok": 14,
+      "attendu": 14,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 911,
+      "journal": "a1.log"
+    }
+  ],
+  "verdict": "vert",
+  "bloquant": null,
+  "page": "2026-11-11-3.html"
+}
