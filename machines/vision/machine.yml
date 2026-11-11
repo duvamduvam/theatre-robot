@@ -1,0 +1,49 @@
+# Contenu de la machine « vision » (Pi 5 de la tête) — chargé par Ansible au début de
+# deploy-pios.yml et install-pios-lite.yml (`include_vars`, lot L1e-4c du 11/11) pour tout hôte
+# de deploy/hosts qui porte `machine: vision`. Convention : machines/README.md.
+
+# Chemins sur le Pi : ~/ros2_ws/src/vision/ — INCHANGÉS par L1e-4.
+project_ros_dir: vision
+project_name: vision
+# Conf de la machine = CE dossier (ex legacy/dadou_vision_ros/{conf,mediamtx}, sans le banc x86
+# parti dans machines/sim/banc-vision/), copiée dans src/vision/conf/ (rôle synchronise).
+conf_machine_dir: "{{ machines_dir }}/vision"
+# Heartbeat V0 (didier_bringup était un copier-coller du groupe robot,
+# ce package n'existe pas côté vision). Deviendra un launch file en V1.
+launch_cmd: ros2 run didier_vision vision_status --ros-args -r __ns:=/didier
+# L1e-3d (08/11) : la vision est le package packages/didier_vision ; les 3 communs + lui.
+packages:
+  - theatre_contrats
+  - theatre_interfaces
+  - dadou_utils_ros
+  - didier_vision
+# Sentinelle dans le package (gitignorée), lue par scripts/launch-ros-in-docker.sh.
+sentinelle_build: src/didier_vision/change
+# Alias ALSA par NOM de carte (mixette, casque_mic, webcam_mic), bind-monté en
+# lecture seule dans le conteneur (docker/arm/docker-compose-arm.yml).
+fichiers_etc:
+  - source: "{{ machines_dir }}/vision/rpi/asound.conf"
+    dest: /etc/asound.conf
+# Secrets (rôle secrets) : poussés depuis ~/.config/didier/ du PC, jamais du dépôt.
+# `modele` = la liste des clés attendues ; toute clé non commentée du modèle doit
+# exister dans la source, sinon échec (noms de clés seulement dans le message).
+secrets_hote:
+  - source: vision-conf-secret
+    dest: ros2_ws/src/vision/conf/secret
+    modele: "{{ machines_dir }}/vision/secret.example"
+# Monté par le compose (../../../medias) mais absent du dépôt.
+dossiers_montes:
+  - medias
+# Voix Piper de Didier (chat_node : vision_config « chat_piper_voice » =
+# medias/voices/didier.onnx). Sous medias/ bind-monté : la copie de l'image est masquée,
+# c'est donc CELLE-CI qui sert. Empreintes = fichiers du proto validé le 10/07.
+telechargements_hote:
+  - url: https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx
+    dest: ros2_ws/src/vision/medias/voices/didier.onnx
+    sha256: 641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99
+  - url: https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json
+    dest: ros2_ws/src/vision/medias/voices/didier.onnx.json
+    sha256: 39479916c2db192b5ac9764daddd0c744d83e023ad890c6976c0633ae4df8959
+# person_tracker n'est pas exigé : sans webcam (Pi hors robot) il s'arrête.
+noeuds_attendus:
+  - /didier/vision_status

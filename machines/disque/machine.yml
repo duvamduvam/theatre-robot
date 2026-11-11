@@ -1,0 +1,9 @@
+# Contenu de la machine « disque » (hôte `d` de deploy/hosts, groupe disk) — chargé par Ansible
+# (`include_vars`, lot L1e-4c du 11/11). Convention : machines/README.md.
+# Contenu repris TEL QUEL de l'ancien deploy/hosts : le projet dadou_hardrive_ros n'existe nulle
+# part dans le mono-dépôt. Dossier créé pour que deploy/hosts ne garde que l'inventaire ; le sort
+# de cet hôte (garder ou retirer de l'inventaire) n'est PAS tranché.
+local_project_dir: dadou_hardrive_ros
+conf_machine_dir: "{{ local_projects_dir }}/dadou_hardrive_ros/conf"
+project_ros_dir: hardrive
+project_name: hardrive

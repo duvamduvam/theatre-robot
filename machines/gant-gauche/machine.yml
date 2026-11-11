@@ -1,0 +1,17 @@
+# Contenu de la machine « gant-gauche » — chargé par Ansible (`include_vars`, lot L1e-4c du 11/11)
+# pour tout hôte de deploy/hosts qui porte `machine: gant-gauche`. Convention : machines/README.md.
+# Code encore dans legacy/dadou_control_ros/ (copie « projet » du rôle synchronise) ; contenu
+# repris TEL QUEL de l'ancien deploy/hosts (groupe glove-left).
+# Paquets apt (information seule, aucun rôle ne les lit). Renommé : `packages` est
+# désormais la liste des packages ROS du rôle synchronise — l'ancien nom aurait fait
+# rsync-er des dossiers « vim »... inexistants.
+apt_packages:
+  - vim
+  - libgirepository1.0-dev
+  - libasound2-dev
+local_project_dir: dadou_control_ros
+conf_machine_dir: "{{ local_projects_dir }}/dadou_control_ros/conf"
+local_utils_dir: dadou_utils_ros_ros
+project_ros_dir: controller
+project_name: controller
+launch_cmd: ros2 run controller controller_node --ros-args -r __ns:=/didier

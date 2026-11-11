@@ -3,12 +3,12 @@
 # et conf/docker/arm/docker-compose-arm.yml du projet déployé.
 conteneur_nom: "dadou-{{ project_name }}-container"
 conteneur_compose: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/docker/arm/docker-compose-arm.yml"
-# Nœuds qui doivent apparaître (liste PAR HÔTE dans `hosts`) ; vide = pas d'attente.
+# Nœuds qui doivent apparaître (liste PAR MACHINE, machines/<machine>/machine.yml) ; vide = pas d'attente.
 noeuds_attendus: []
 # Attente de la fin du colcon build + démarrage des nœuds : 90 × 10 s = 15 min, de quoi couvrir
 # un build complet sur Pi 4 (workspace vierge).
 conteneur_essais: 90
 conteneur_delai: 10
 # Points de montage du compose qui n'existent pas dans le dépôt (relatifs à src/<projet>/),
-# créés en utilisateur de connexion avant le `up` (liste par hôte dans `hosts`).
+# créés en utilisateur de connexion avant le `up` (liste par machine, machine.yml).
 dossiers_montes: []
