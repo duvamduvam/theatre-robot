@@ -306,7 +306,7 @@ Pi ne peut arriver sur la plaque.
 **Plaque à bandes 60 × 140 mm** (la seule du stock assez grande, 11/11 ; pas d'achat) :
 [`banc-temoin-bandes.svg`](banc-temoin-bandes.svg), générée et **vérifiée** par
 `atelier/outils/implantation_banc_temoin_bandes.py` (`--liste` : coupures, straps, composants ;
-54 trous × 23 bandes). Le script reconstruit les liaisons (bandes − coupures + straps) et refuse
+54 trous × 25 bandes ; les bandes 23-24 restent libres). Le script reconstruit les liaisons (bandes − coupures + straps) et refuse
 d'écrire le dessin au moindre court-circuit ou réseau coupé (contrôlé par trois mutations).
 Sur cette surface, **le PCA9685 0x41 (servos) et le PCF8574 (relais) quittent la plaque** : ils se
 branchent en chaîne sur **J7** (bus I²C 5 V, JST 4 pts, 5 V · SDA · SCL · GND, ordre de J11 de la
