@@ -1247,6 +1247,19 @@ coup-de-poing) ne bougent pas : la sim ne qualifie rien côté sécurité.
 
 ## Pistes en veille (pas urgentes, pas oubliées)
 
+- **CAMÉRA DE PROFONDEUR — avis du 2026-11-11, rien d'acté.** Utile pour **mesurer** la
+  distance des personnes (aujourd'hui estimée par la hauteur de boîte, fragile en occlusion
+  partielle : `etude-suivi-personne.md`), séparer les personnes en foule, et voir **marches
+  et bordures** si elle est inclinée vers le sol (le lidar 2D ne les voit pas). **Ne remplace
+  PAS le lidar** : champ ~70-90° devant, la zone d'arrêt exige 360°. Côté Pi : RealSense /
+  Orbbec envoient du brut à traiter (lourd, Pi 5 déjà chargé — charge **non mesurée** ;
+  RealSense « Docker-only » sur la nouvelle distro, veille du 11/11) → déconseillé ;
+  **OAK-D (Luxonis)** calcule profondeur ET détection sur la caméra, le Pi ne reçoit que
+  « personne à X m, Y° » → seule option qui colle (Lite : 269 $ lus le 01/11 ; sans
+  projecteur IR, faible dans le noir — à vérifier pour les salles sombres). **Déclencheur** :
+  après lidar + A1, si la distance des personnes s'avère le maillon faible ; mesurer d'abord
+  la charge CPU du Pi 5.
+
 - **TRONC ARTICULÉ (tangage + roulis ±10-15°) — étude du 2026-10-25, rien d'acté** :
   [`etude-tronc.md`](etude-tronc.md). Recommandation : cardan + **2 vérins 24 V à
   potentiomètre, autobloquants** (100 € pièce, 300 N à 40 mm/s, lus le 25/10), commandés par
