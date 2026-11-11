@@ -293,6 +293,16 @@ robot. Bonus : il valide un ISO1540 avant de souder la carte Sécurité. Prendre
 **neuf** (achat refonte) ; celui de l'ancienne carte du 04/11 est sur le chemin de la panne et
 ne se monte qu'après contrôle au multimètre entre VCC1 et GND1, et entre VCC2 et GND2.
 
+**Implantation sur plaque à pastilles 160 × 100 mm** : [`banc-temoin-implantation.svg`](banc-temoin-implantation.svg)
+(vue de dessus, trous numérotés colonnes 0-62 × rangées 0-38 ; liste des fils :
+`atelier/outils/implantation_banc_temoin.py --liste`). Elle suit la **carte Moteurs de la refonte**
+(`pcb/kicad/carrier_design.py`) plutôt que le robot actuel : **deux supports de PCA9685**, 0x40 pour
+les roues avec sa ligne **OE tirée au 5 V par R10 (10 kΩ)** et un cavalier **JP1** vers la masse
+(posé = roues actives, retiré = PWM roues coupés, le comportement de sûreté de la refonte), 0x41
+pour les servos (support vide tant que le code vise 0x40 pour tout). Le PCF8574 reste en 0x21
+(code actuel ; la refonte prévoit 0x22). J1 se câble en fils Dupont un par un : aucune broche 5 V du
+Pi ne peut arriver sur la plaque.
+
 **À savoir avant B1** :
 - la configuration du robot écrit 1 000 LED et place le visage aux LED 513-673 : sur une matrice de
   64, sans réglage propre au banc, on voit les 64 premières LED du **corps**, pas le visage
