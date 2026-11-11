@@ -472,7 +472,8 @@ def banc(tmp_path):
     notif.chmod(0o755)
     env = dict(os.environ, PATH=str(bin_) + os.pathsep + os.environ["PATH"], FUMEE_DEPOT=str(depot),
                FUMEE_ETAT=str(tmp_path / "etat"), FAUX_DOCKER_APPELS=str(tmp_path / "appels.txt"),
-               FAUX_NOTIFS=str(tmp_path / "notifs.txt"), FUMEE_DRY_POWEROFF="1")
+               FAUX_NOTIFS=str(tmp_path / "notifs.txt"), FUMEE_DRY_POWEROFF="1",
+               FUMEE_PLAGES=str(tmp_path / "aucune-plage"))   # jamais le fichier réel du PC
     (tmp_path / "appels.txt").write_text("", encoding="utf-8")
     return depot, env, tmp_path
 
@@ -505,6 +506,29 @@ def test_si_due_apres_un_commit_mais_pc_charge_reporte_sans_lancer_la_sim(banc):
     appels = (tmp / "appels.txt").read_text(encoding="utf-8")
     assert "compose" not in appels and "rm" not in appels.split()      # aucune sim lancée ni retirée
     assert not (depot / "docs" / "fumee" / "journaux" / "2026-11-07-2130" / "x").exists()
+
+
+@pytest.mark.parametrize("maintenant, reporte", [
+    ("1 08", True),    # lundi 8 h : dans la plage
+    ("5 18", True),    # vendredi 18 h : dernière heure de la plage
+    ("3 07", True),    # mercredi 7 h : l'heure AVANT la plage (la page tomberait dedans)
+    ("2 19", False),   # mardi 19 h : FIN exclue
+    ("1 06", False),   # lundi 6 h : plus d'une heure avant
+    ("6 10", False),   # samedi : hors jours
+    ("7 10", False),   # dimanche
+])
+def test_si_due_ne_demarre_pas_dans_une_plage_sans_commit(banc, maintenant, reporte):
+    depot, env, tmp = banc
+    _commit(depot, "packages/code.txt", "code 2")
+    plages = tmp / "plages"
+    plages.write_text("# commentaire ignoré\n1-5 8 19\n", encoding="utf-8")
+    p = subprocess.run([str(FUMEE_SH), "--si-due"],
+                       env=dict(env, FUMEE_PLAGES=str(plages), FUMEE_MAINTENANT=maintenant),
+                       capture_output=True, text=True, timeout=60)
+    assert ("reporté : plage sans commit" in _journal(tmp)) is reporte
+    if reporte:
+        assert p.returncode == 0
+        assert "compose" not in (tmp / "appels.txt").read_text(encoding="utf-8")   # aucune sim
 
 
 def test_rappel_apres_deux_jours_de_report_une_fois_par_demi_journee(banc):

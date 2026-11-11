@@ -226,6 +226,23 @@ if [ "$MODE" = si-due ]; then
   if awk -v c="$CHARGE" -v m="$CHARGE_MAX" 'BEGIN { exit !(c > m) }'; then
     reporter "charge trop haute ($CHARGE > $CHARGE_MAX)"
   fi
+  # Plages sans commit (11/11) : la fumée commite sa page dans main, donc elle ne démarre ni
+  # dans une plage, ni dans l'heure qui la précède (≈ 35 min de sim). Fichier LOCAL, hors dépôt
+  # (FUMEE_PLAGES, défaut ~/.config/didier/plages-sans-commit ; absent = aucune plage) ; une
+  # ligne par plage « JOURS DEBUT FIN », jours ISO (1 = lundi) en « a-b » ou « a », heures
+  # pleines, FIN exclue. FUMEE_MAINTENANT="<jour> <heure>" remplace l'horloge (tests).
+  PLAGES="${FUMEE_PLAGES:-$HOME/.config/didier/plages-sans-commit}"
+  if [ -r "$PLAGES" ]; then
+    read -r JOUR_N HEURE_N <<<"${FUMEE_MAINTENANT:-$(date '+%u %H')}"
+    if awk -v j="$JOUR_N" -v h="$((10#$HEURE_N))" '
+        !/^[[:space:]]*#/ && NF >= 3 {
+          n = split($1, r, "-"); a = r[1] + 0; b = (n > 1 ? r[2] : r[1]) + 0
+          if (j >= a && j <= b && h >= $2 - 1 && h < $3 + 0) dedans = 1
+        }
+        END { exit !dedans }' "$PLAGES"; then
+      reporter "plage sans commit ($PLAGES)"
+    fi
+  fi
 fi
 
 # =====================================================================================

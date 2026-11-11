@@ -640,7 +640,11 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
   de 30 min plus tard réessaie. Sont reportés : charge 1 min > nb de cœurs × 0,5 (seuil
   `FUMEE_CHARGE_MAX`, 16 sur ce PC de 32 cœurs ; le RTF reste le vrai juge), RTF < 0,8 après
   démarrage de la sim, **conteneur `dadou-sim-container` déjà présent** (la sim de quelqu'un :
-  jamais touchée), checkout qui n'est pas sur la branche `main`. Due depuis plus de 2 jours et
+  jamais touchée), checkout qui n'est pas sur la branche `main`, **plage sans commit** (11/11 :
+  fichier LOCAL hors dépôt `~/.config/didier/plages-sans-commit`, une ligne « JOURS DEBUT FIN »,
+  jours ISO 1 = lundi, heures pleines, FIN exclue ; la fumée ne démarre ni dedans ni dans l'heure
+  d'avant, puisqu'elle commite sa page ; fichier absent = aucune plage ; même fichier lu par une
+  garde `pre-commit`/`pre-merge-commit` locale du dépôt, non versionnée). Due depuis plus de 2 jours et
   toujours reportée → `notify-send` + ligne « RAPPEL » au journal (au plus toutes les 12 h).
 - `fumee.sh` : à la main, déroule même si pas due. Le RTF reste juge (rouge si < 0,8).
 - `fumee.sh --et-dodo` : fumée forcée **puis `systemctl poweroff`** — à lancer en allant se
