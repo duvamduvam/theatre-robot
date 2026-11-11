@@ -30,7 +30,7 @@ Brochages : mêmes sources et même réserve que la plaque à pastilles (À VÉR
 réels avant de souder). Les contours des modules sont INDICATIFS : poser les modules à blanc
 sur leurs barrettes avant de souder.
 
-Plaque : 60 × 140 mm (54 trous × 25 bandes, compté par David : 25 bandes), la seule du stock assez grande (11/11) ; le
+Plaque : 60 × 140 mm (55 trous × 25 bandes, comptés par David), la seule du stock assez grande (11/11) ; le
 PCA9685 0x41 et le PCF8574 n'y tiennent pas : ils se branchent en chaîne sur J7, hors plaque.
 
 Usage : implantation_banc_temoin_bandes.py [sortie.svg]  (défaut : docs/etudes/banc-temoin-bandes.svg)
@@ -45,8 +45,8 @@ from pathlib import Path
 
 PAS = 2.54
 ECHELLE = 1.8  # dessin agrandi : on compte les trous
-COLS, RANGS = 54, 25  # plaque à bandes 60 × 140 mm, bandes dans la longueur
-X0, Y0 = 34.0, 26.0
+COLS, RANGS = 55, 25  # plaque à bandes 60 × 140 mm, bandes dans la longueur
+X0, Y0 = 31.0, 26.0
 TEXTE, PETIT = 3.0, 2.6
 
 Trou = tuple[int, int]
@@ -298,7 +298,7 @@ def dessiner() -> str:
     # ---- titre, plaque, bandes, trous, numéros
     texte(148.5, 9, "Banc témoin — implantation sur plaque à bandes 60 × 140 mm (vue côté composants)",
           4.2, "middle", True)
-    texte(148.5, 14.5, "Dessin agrandi ×1,8 : compter les trous (colonnes 0-53, bandes 0-24 dans la longueur). "
+    texte(148.5, 14.5, "Dessin agrandi ×1,8 : compter les trous (colonnes 0-54, bandes 0-24 dans la longueur). "
           "✕ = coupure de bande (côté cuivre) ; trait plein = strap côté composants.", PETIT, "middle")
     bx1, by1 = P(-0.5, -0.5)
     bx2, by2 = P(COLS - 0.5, RANGS - 0.5)

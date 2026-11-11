@@ -306,7 +306,7 @@ Pi ne peut arriver sur la plaque.
 **Plaque à bandes 60 × 140 mm** (la seule du stock assez grande, 11/11 ; pas d'achat) :
 [`banc-temoin-bandes.svg`](banc-temoin-bandes.svg), générée et **vérifiée** par
 `atelier/outils/implantation_banc_temoin_bandes.py` (`--liste` : coupures, straps, composants ;
-54 trous × 25 bandes ; les bandes 23-24 restent libres). Le script reconstruit les liaisons (bandes − coupures + straps) et refuse
+55 trous × 25 bandes, comptés par David ; la colonne 54 et les bandes 23-24 restent libres). Le script reconstruit les liaisons (bandes − coupures + straps) et refuse
 d'écrire le dessin au moindre court-circuit ou réseau coupé (contrôlé par trois mutations).
 Sur cette surface, **le PCA9685 0x41 (servos) et le PCF8574 (relais) quittent la plaque** : ils se
 branchent en chaîne sur **J7** (bus I²C 5 V, JST 4 pts, 5 V · SDA · SCL · GND, ordre de J11 de la
@@ -317,7 +317,7 @@ par roue, pris avant les résistances des témoins), 74AHCT125, boutons, LED d'�
 J3 (matrice, JST 3 pts). La matrice tire son courant **par J2, jamais par les bandes**. Bus I²C
 sur le cuivre (ISO1540 côté 2 et PCA ROUES alignés). Pas d'extension côté Pi : un module 3,3 V se
 branche sur le Pi, et un INA226 (0x40 d'usine) n'irait jamais sur J7. Contours des modules
-indicatifs : les poser à blanc avant de souder ; compter les trous de la plaque (54 attendus).
+indicatifs : les poser à blanc avant de souder ; plaque comptée : 55 trous × 25 bandes.
 
 **À savoir avant B1** :
 - la configuration du robot écrit 1 000 LED et place le visage aux LED 513-673 : sur une matrice de
