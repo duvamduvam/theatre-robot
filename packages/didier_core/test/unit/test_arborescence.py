@@ -580,12 +580,13 @@ def test_le_nettoyage_couvre_aussi_la_vision():
 ROLES_GARDES = [
     "activate-i2c", "blinka", "colcon_build", "command_root", "config-hote", "conteneur",
     "desktop_lunch", "dir_struct", "docker-arm64", "docker-compose", "docker-install",
-    "docker-prune", "download-install-deb-from-url", "info", "linux-package", "logging", "nginx",
+    "docker-prune", "download-install-deb-from-url", "info", "linux-package", "logging",
     "python", "ros_humble_base", "ros_humble_desktop", "screen-config", "secrets", "services",
     "set-bashrc", "start-scripts", "synchronise", "usb-audio",
 ]
 ROLES_SUPPRIMES = ["activate-spi", "download-install-docker-from-url", "root_ssh",
-                   "ros_dependencies", "waveshare-screen", "set-vim", "jenkins", "sonar"]
+                   "ros_dependencies", "waveshare-screen", "set-vim", "jenkins", "sonar",
+                   "nginx"]   # nginx : aucun playbook ne l'appelle (git grep, L1e-4e)
 PLAYBOOKS_GARDES = ["deploy-pios.yml", "install-pios-lite.yml", "install-pios-full.yml",
                     "install-controller-ubuntu.yml"]
 PLAYBOOKS_SUPPRIMES = ["install-ci.yml", "install-ci-github-actions.yml", "configure-local-ci.yml",
