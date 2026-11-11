@@ -196,6 +196,12 @@ CONNECTEURS = [
 SUPPORT_DIP = (36, 39, 13, 7)  # colonnes des deux rangées, première bande, broches par rangée
 
 
+# Couleur des straps par réseau (fils de David : rouge, noir, violet, bleu, jaune, vert, blanc).
+# Convention I²C usuelle : SDA bleu, SCL jaune.
+COULEURS = {"5V": "rouge", "GND": "noir", "SDA": "bleu", "SCL": "jaune",
+            "GPIO16": "vert", "GPIO20": "vert"}  # violet et blanc : libres (GPIO12 et GPIO18 passent par les bandes)
+
+
 # =================================================================== vérification
 def verifier() -> list[str]:
     """Reconstruit les liaisons (bandes − coupures + straps) et les compare aux réseaux attendus."""
@@ -240,6 +246,9 @@ def verifier() -> list[str]:
     for t, net, rep in BROCHES:
         par_reseau[net].add(racine(t))
         par_groupe[racine(t)].add(net)
+    for net, _, _ in STRAPS:
+        if net not in COULEURS:
+            erreurs.append(f"strap {net} sans couleur attribuée")
     for net, a, b in STRAPS:  # un strap doit relier deux points de SON réseau
         par_groupe[racine(a)].add(net)
     for net, groupes in par_reseau.items():
@@ -442,13 +451,14 @@ def dessiner() -> str:
     # ---- légende
     lx, ly = 14, 150
     texte(lx, ly - 4, "Légende :", TEXTE, gras=True)
-    for i, (net, nom) in enumerate((("5V", "strap 5 V"), ("GND", "strap masse"), ("SIG", "strap signal"))):
+    for i, (net, nom) in enumerate((("5V", "5 V : rouge"), ("GND", "masse : noir"),
+                                    ("SIG", "SDA bleu · SCL jaune · boutons (GPIO16/20) vert"))):
         x = lx + i * 40
         ep, t = STYLE.get(net, (0.45, ""))
         d = f' stroke-dasharray="{t}"' if t else ""
         el.append(f'<line x1="{x}" y1="{ly}" x2="{x + 10}" y2="{ly}" stroke="black" stroke-width="{ep}"{d}/>')
         texte(x + 12, ly + 1, nom, PETIT)
-    texte(lx + 122, ly + 1, "✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)", PETIT)
+    texte(lx + 120, ly - 4, "✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)", PETIT)
     texte(lx, ly + 7, "RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en JST (Dupont femelle côté Pi), "
           "aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.",
           PETIT, gras=True)
@@ -479,9 +489,9 @@ def liste() -> str:
     for c, rangs in sorted(par_col.items()):
         lignes.append(f"- colonne {c} : bandes {', '.join(map(str, sorted(rangs)))}")
     lignes += ["", f"Total : {len(COUPURES)} coupures.", "", "## Straps (côté composants)", "",
-               "| Réseau | De (col, bande) | À (col, bande) |", "|---|---|---|"]
-    for net, a, b in STRAPS:
-        lignes.append(f"| {net} | {a[0]}, {a[1]} | {b[0]}, {b[1]} |")
+               "| Couleur | Réseau | De (col, bande) | À (col, bande) |", "|---|---|---|---|"]
+    for net, a, b in sorted(STRAPS, key=lambda s: (list(COULEURS).index(s[0]), s[1])):
+        lignes.append(f"| {COULEURS[net]} | {net} | {a[0]}, {a[1]} | {b[0]}, {b[1]} |")
     lignes += ["", "## Composants à deux pattes", "", "| Repère | Valeur | Patte 1 | Patte 2 |", "|---|---|---|---|"]
     for repere, valeur, a, b, _ in DIPOLES:
         lignes.append(f"| {repere} | {valeur} | {a[0]}, {a[1]} | {b[0]}, {b[1]} |")

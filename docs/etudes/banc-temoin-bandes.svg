@@ -1715,12 +1715,12 @@
 <text x="170.45" y="108.28" font-size="2.6" text-anchor="end">hors plaque, en chaîne sur J7</text>
 <text x="14.00" y="146.00" font-size="3.0" text-anchor="start" font-weight="bold">Légende :</text>
 <line x1="14" y1="150" x2="24" y2="150" stroke="black" stroke-width="0.9"/>
-<text x="26.00" y="151.00" font-size="2.6" text-anchor="start">strap 5 V</text>
+<text x="26.00" y="151.00" font-size="2.6" text-anchor="start">5 V : rouge</text>
 <line x1="54" y1="150" x2="64" y2="150" stroke="black" stroke-width="0.6" stroke-dasharray="1.6,0.9"/>
-<text x="66.00" y="151.00" font-size="2.6" text-anchor="start">strap masse</text>
+<text x="66.00" y="151.00" font-size="2.6" text-anchor="start">masse : noir</text>
 <line x1="94" y1="150" x2="104" y2="150" stroke="black" stroke-width="0.45"/>
-<text x="106.00" y="151.00" font-size="2.6" text-anchor="start">strap signal</text>
-<text x="136.00" y="151.00" font-size="2.6" text-anchor="start">✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)</text>
+<text x="106.00" y="151.00" font-size="2.6" text-anchor="start">SDA bleu · SCL jaune · boutons (GPIO16/20) vert</text>
+<text x="134.00" y="146.00" font-size="2.6" text-anchor="start">✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)</text>
 <text x="14.00" y="157.00" font-size="2.6" text-anchor="start" font-weight="bold">RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en JST (Dupont femelle côté Pi), aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.</text>
 <text x="14.00" y="173.00" font-size="2.6" text-anchor="start" font-weight="bold">À SOUDER — hachuré = barrette FEMELLE : ISO1540 2 × 1×4, PCA9685 ROUES 1×6, support tulipe DIP-14 (U1).  Cadre épais = barrette MÂLE : J4 1×7, JP1 1×2 (+ cavalier).</text>
 <text x="14.00" y="178.50" font-size="2.6" text-anchor="start" font-weight="bold">Cadre fin = embase JST-XH : J1a, J1b, J7 (4 pts) ; J3, J5, J6 (3 pts).  J2 = bornier à vis 2 pts au pas de 5,08.</text>
