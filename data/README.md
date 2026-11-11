@@ -17,8 +17,8 @@ jeu, télécommande : `test_buttons_vs_catalogue.py` compare ses boutons au cata
 depuis `json/`).
 
 **Où il arrive sur le Pi.** Le rôle Ansible `synchronise` copie `data/json`, `data/medias`,
-`data/db` dans `~/ros2_ws/src/robot/{json,medias,db}` (hôte robot seul, variable `donnees_dir`
-de `deploy/hosts`) — chemin Pi et conteneur **inchangés** (`/home/ros2_ws/src/robot/`,
+`data/db` dans `~/ros2_ws/src/robot/{json,medias,db}` (machine robot seule, variable `donnees_dir`
+de `machines/robot/machine.yml` depuis L1e-4c) — chemin Pi et conteneur **inchangés** (`/home/ros2_ws/src/robot/`,
 `DIDIER_DATA_DIR`) ; l'image ARM du robot les copie depuis ce même dossier (contexte nommé
 `data`). Le reste de `data/` (ce README) ne part pas.
 

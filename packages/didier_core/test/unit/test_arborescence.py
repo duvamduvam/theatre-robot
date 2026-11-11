@@ -8,7 +8,9 @@ liste des anciens noms qu'il efface des Pi (packages_retires).
 
 Pourquoi graver la liste de l'hôte robot : le `colcon build` d'un Pi compile TOUT
 ros2_ws/src/ ; un package en trop (sim-only) ou en moins (chaîne roues) se découvre
-sinon sur le robot. Les listes sont lues dans le VRAI fichier `hosts`.
+sinon sur le robot. Les listes sont lues dans les VRAIS fichiers : depuis L1e-4c (11/11), le
+contenu de chaque machine est machines/<machine>/machine.yml (deploy/hosts ne garde que
+l'inventaire et `machine:`).
 """
 import pathlib
 import xml.etree.ElementTree as ET
@@ -23,6 +25,9 @@ PACKAGES = MONO / "packages"
 DEPLOY = MONO / "deploy"
 HOSTS = DEPLOY / "hosts"
 VARS = DEPLOY / "vars" / "main.yml"
+# L1e-4c (11/11) : la conf et le contenu de chaque machine (ex conf/ des projets legacy, ex variables
+# de contenu de hosts) vivent dans machines/<machine>/.
+MACHINES = MONO / "machines"
 
 SIX_DEMENAGES = ["didier_bringup", "didier_description", "didier_drive",
                  "didier_rehearsal", "didier_sim", "didier_web"]
@@ -61,13 +66,23 @@ def _hosts():
     return yaml.safe_load(HOSTS.read_text(encoding="utf-8"))
 
 
+def _machine(nom):
+    """Contenu de la machine `nom` : machines/<nom>/machine.yml (L1e-4c)."""
+    return yaml.safe_load((MACHINES / nom / "machine.yml").read_text(encoding="utf-8"))
+
+
+def _machines():
+    """{nom: contenu} de toutes les machines qui portent un machine.yml."""
+    return {p.parent.name: yaml.safe_load(p.read_text(encoding="utf-8"))
+            for p in sorted(MACHINES.glob("*/machine.yml"))}
+
+
 def _listes_packages():
     """Toutes les listes de packages ROS déclarées : (origine, liste)."""
     trouvees = []
-    for groupe, contenu in _hosts().items():
-        for hote, variables in (contenu.get("hosts") or {}).items():
-            if variables and "packages" in variables:
-                trouvees.append((f"hosts:{groupe}/{hote}", variables["packages"]))
+    for nom, variables in _machines().items():
+        if variables and "packages" in variables:
+            trouvees.append((f"machines/{nom}/machine.yml", variables["packages"]))
     defaut = yaml.safe_load(VARS.read_text(encoding="utf-8")).get("packages_default")
     if defaut is not None:
         trouvees.append(("vars/main.yml:packages_default", defaut))
@@ -84,7 +99,7 @@ def test_les_six_packages_sont_dans_packages_avec_leur_package_xml():
 
 
 def test_l_hote_robot_pousse_exactement_les_dix_packages_graves():
-    robot = _hosts()["robot"]["hosts"]["r"]
+    robot = _machine("robot")
     assert sorted(robot["packages"]) == HOTE_ROBOT_GRAVE
     assert len(robot["packages"]) == len(set(robot["packages"])), "doublon dans la liste"
 
@@ -151,7 +166,7 @@ def test_la_tache_de_nettoyage_precede_la_copie_des_packages():
 
 
 def test_l_hote_robot_lance_le_bringup_renomme():
-    assert _hosts()["robot"]["hosts"]["r"]["launch_cmd"] == "ros2 launch didier_bringup robot_app.launch.py"
+    assert _machine("robot")["launch_cmd"] == "ros2 launch didier_bringup robot_app.launch.py"
 
 
 def test_le_marqueur_resource_de_chaque_ament_python_porte_le_nom_du_package():
@@ -270,9 +285,10 @@ EXECUTABLES_CORE = {
     "wheels_node": "didier_core.nodes.wheels_node:main",
 }
 SYNCHRONISE = DEPLOY / "roles" / "synchronise" / "tasks" / "main.yml"
-COMPOSES = [ROBOT / "conf" / "docker" / d / f for d, f in
-            (("arm", "docker-compose-arm.yml"), ("sim", "docker-compose-sim.yml"),
-             ("x8664", "docker-compose-x86.yml"))]
+# L1e-4c : compose ARM dans la conf de la machine robot, bancs x86 dans machines/sim/banc-robot/.
+COMPOSES = [MACHINES / "robot" / "docker" / "arm" / "docker-compose-arm.yml",
+            MACHINES / "sim" / "banc-robot" / "docker-compose-sim.yml",
+            MACHINES / "sim" / "banc-robot" / "docker-compose-x86.yml"]
 
 
 def test_le_coeur_est_un_package_ament_python_dont_le_nom_est_celui_du_dossier():
@@ -288,7 +304,7 @@ def test_le_coeur_est_un_package_ament_python_dont_le_nom_est_celui_du_dossier()
 def test_l_ancien_module_robot_et_sa_forme_ament_ont_quitte_legacy():
     assert not (ROBOT / "robot").exists()
     for nom in ("setup.py", "package.xml", "setup.cfg", "resource", "test"):
-        assert not (ROBOT / "conf" / "ros2" / nom).exists(), nom
+        assert not (MACHINES / "robot" / "ros2" / nom).exists(), nom   # ex conf/ros2 (L1e-4c)
 
 
 def test_les_executables_du_coeur_gardent_leur_nom():
@@ -319,12 +335,12 @@ def test_chemins_retires_robot_est_la_liste_gravee_de_l_ancienne_forme():
 def _source_robot(rel):
     """Fichier du PC que les copies de l'hôte robot (L1e-4b) poseraient en src/robot/<rel> —
     None si aucune copie n'y écrit : data/{json,medias,db}/ → src/robot/{json,medias,db}/,
-    legacy/dadou_robot_ros/conf/ → src/robot/conf/, rien d'autre (plus de copie « projet »)."""
+    machines/robot/ → src/robot/conf/ (L1e-4c), rien d'autre (plus de copie « projet »)."""
     tete = rel.split("/")[0]
     if tete in ("json", "medias", "db"):
         return MONO / "data" / rel
     if tete == "conf":
-        return ROBOT / rel
+        return MACHINES / "robot" / rel[len("conf/"):]
     return None
 
 
@@ -332,9 +348,11 @@ def test_aucun_chemin_retire_du_coeur_n_existe_dans_l_arbre_rsynce():
     """Idempotence : une entrée de la liste encore présente dans ce que les copies du robot
     poussent reviendrait à chaque passage — effacée puis recopiée, « changed » sans fin
     (ecart-pi.sh rouge) et, pour un descripteur, un package fantôme compilé par colcon. Depuis
-    L1e-4b, l'hôte robot ne reçoit plus que data/{json,medias,db} et conf/ (voir _source_robot)."""
+    L1e-4b, l'hôte robot ne reçoit plus que data/{json,medias,db} et conf/ (voir _source_robot) ;
+    L1e-4c y ajoute la partie sim de l'ancienne conf/ (chemins_retires_sim)."""
     variables = yaml.safe_load(VARS.read_text(encoding="utf-8"))
-    retires = variables["chemins_retires_robot"] + variables["chemins_retires_legacy_robot"]
+    retires = (variables["chemins_retires_robot"] + variables["chemins_retires_legacy_robot"]
+               + variables["chemins_retires_sim"])
     sources = [p[len("src/robot/"):] for p in retires if p.startswith("src/robot/")]
     assert sources, "aucune entrée src/robot/ : le test ne vérifierait rien"
     for rel in sources:
@@ -361,8 +379,8 @@ def test_le_nettoyage_du_coeur_est_conditionnel_et_precede_la_copie_des_packages
 
 
 def test_la_sentinelle_du_coeur_est_dans_le_package_et_gitignoree():
-    assert _hosts()["robot"]["hosts"]["r"]["sentinelle_build"] == "src/didier_core/change"
-    script = (ROBOT / "conf" / "scripts" / "launch-ros-in-docker.sh").read_text(encoding="utf-8")
+    assert _machine("robot")["sentinelle_build"] == "src/didier_core/change"
+    script = (MACHINES / "robot" / "scripts" / "launch-ros-in-docker.sh").read_text(encoding="utf-8")
     assert "CHANGE_FILE=/home/ros2_ws/src/didier_core/change\n" in script
     ignores = (MONO / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "packages/didier_core/change" in ignores
@@ -434,7 +452,7 @@ def test_la_vision_est_un_package_ament_python_dont_le_nom_est_celui_du_dossier(
 def test_l_ancien_module_vision_et_sa_forme_ament_ont_quitte_legacy():
     assert not (VISION / "vision").exists()
     for nom in ("setup.py", "package.xml", "setup.cfg", "resource", "launch"):
-        assert not (VISION / "conf" / "ros2" / nom).exists(), nom
+        assert not (MACHINES / "vision" / "ros2" / nom).exists(), nom   # ex conf/ros2 (L1e-4c)
     for nom in ("conftest.py", "pytest.ini"):
         assert not (VISION / nom).exists(), nom
 
@@ -457,7 +475,7 @@ def test_le_launch_de_la_vision_cible_le_package_renomme():
 
 
 def test_la_sentinelle_de_la_vision_est_dans_le_package_et_gitignoree():
-    script = (VISION / "conf" / "scripts" / "launch-ros-in-docker.sh").read_text(encoding="utf-8")
+    script = (MACHINES / "vision" / "scripts" / "launch-ros-in-docker.sh").read_text(encoding="utf-8")
     assert "CHANGE_FILE=/home/ros2_ws/src/didier_vision/change\n" in script
     assert "ros2 launch didier_vision vision.launch.py" in script
     ignores = (MONO / ".gitignore").read_text(encoding="utf-8").splitlines()
@@ -465,8 +483,10 @@ def test_la_sentinelle_de_la_vision_est_dans_le_package_et_gitignoree():
 
 
 def test_les_compose_de_la_vision_montent_le_package_a_plat_et_posent_la_racine_des_donnees():
-    for nom, build in (("arm", True), ("x86", False)):
-        compose = VISION / "conf" / "docker" / nom / f"docker-compose-{nom}.yml"
+    # L1e-4c : compose ARM dans machines/vision/, banc x86 dans machines/sim/banc-vision/.
+    for nom, build, compose in (
+            ("arm", True, MACHINES / "vision" / "docker" / "arm" / "docker-compose-arm.yml"),
+            ("x86", False, MACHINES / "sim" / "banc-vision" / "docker-compose-x86.yml")):
         service = next(iter(yaml.safe_load(compose.read_text(encoding="utf-8"))["services"].values()))
         volumes = service["volumes"]
         code = [v for v in volumes if v.endswith(":/home/ros2_ws/src/didier_vision")]
@@ -478,11 +498,11 @@ def test_les_compose_de_la_vision_montent_le_package_a_plat_et_posent_la_racine_
         assert "DIDIER_VISION_DATA_DIR=/home/ros2_ws/src/vision/" in service["environment"], nom
         if build:
             assert service["build"]["additional_contexts"]["didier_vision"].endswith("/didier_vision")
-    dockerfile = (VISION / "conf" / "docker" / "arm" / "Dockerfile-arm").read_text(encoding="utf-8")
+    dockerfile = (MACHINES / "vision" / "docker" / "arm" / "Dockerfile-arm").read_text(encoding="utf-8")
     assert "COPY --from=didier_vision . /home/ros2_ws/src/didier_vision\n" in dockerfile
     actives = [ligne for ligne in dockerfile.splitlines() if not ligne.lstrip().startswith("#")]
     assert not [ligne for ligne in actives if ligne.startswith("COPY vision/") or "conf/ros2" in ligne]
-    build_x86 = (VISION / "conf" / "docker" / "x86" / "build-x86.sh").read_text(encoding="utf-8")
+    build_x86 = (MACHINES / "sim" / "banc-vision" / "build-x86.sh").read_text(encoding="utf-8")
     assert '--build-context didier_vision="$PACKAGES/didier_vision"' in build_x86
 
 
@@ -510,7 +530,7 @@ def test_plus_aucun_fichier_de_code_ni_de_conf_ne_cite_le_package_vision():
 
 
 def test_l_hote_vision_pousse_son_package_et_lit_sa_sentinelle_renommee():
-    vision = _hosts()["vision"]["hosts"]["ai"]
+    vision = _machine("vision")
     assert "didier_vision" in vision["packages"]
     assert vision["sentinelle_build"] == "src/didier_vision/change"
     assert vision["launch_cmd"] == "ros2 run didier_vision vision_status --ros-args -r __ns:=/didier"
@@ -524,6 +544,15 @@ CHEMINS_RETIRES_VISION = [
 ]
 
 
+def _source_vision(rel):
+    """Fichier du PC que les copies de l'hôte vision poseraient en src/vision/<rel> — None si aucune
+    copie n'y écrit. Depuis L1e-4c : machines/vision/ → src/vision/conf/, rien d'autre (plus de
+    copie « projet » de legacy/dadou_vision_ros/ ; le code arrive par packages/didier_vision)."""
+    if rel.split("/")[0] == "conf":
+        return MACHINES / "vision" / rel[len("conf/"):]
+    return None
+
+
 def test_chemins_retires_vision_est_la_liste_gravee_et_epargne_les_donnees():
     retires = yaml.safe_load(VARS.read_text(encoding="utf-8"))["chemins_retires_vision"]
     assert sorted(retires) == sorted(CHEMINS_RETIRES_VISION)
@@ -533,7 +562,8 @@ def test_chemins_retires_vision_est_la_liste_gravee_et_epargne_les_donnees():
         assert donnee not in retires, donnee
     # Idempotence : rien de la liste ne doit exister dans l'arbre rsyncé (sinon recopié à chaque passage).
     for rel in (p[len("src/vision/"):] for p in retires if p.startswith("src/vision/")):
-        assert not (VISION / rel).exists(), rel
+        source = _source_vision(rel)
+        assert source is None or not source.exists(), rel
 
 
 def test_le_nettoyage_couvre_aussi_la_vision():
@@ -601,6 +631,9 @@ def test_les_chemins_du_depot_se_deduisent_de_deploy_en_un_seul_dirname():
     assert variables["packages_dir"] == "{{ playbook_dir | dirname }}/packages"
     # L1e-4b : la racine elle-même (git status du sha déployé).
     assert variables["depot_dir"] == "{{ playbook_dir | dirname }}"
+    # L1e-4c : les machines.
+    assert variables["machines_dir"] == "{{ playbook_dir | dirname }}/machines"
+    assert (DEPLOY.parent / "machines" / "robot" / "machine.yml").is_file()
     # Ce que ces gabarits donnent depuis deploy/ doit exister.
     assert (DEPLOY.parent / "legacy" / "dadou_robot_ros").is_dir()
     assert (DEPLOY.parent / ".git").exists()
@@ -623,11 +656,11 @@ CHEMINS_RETIRES_LEGACY_ROBOT = [
     "src/robot/requirements-test.txt", "src/robot/requirements.txt", "src/robot/todo.txt",
 ]
 # Chemins (relatifs à la racine du dépôt) qui décident du suffixe -dirty du sha déployé.
-CHEMINS_DEPLOYES = ["packages", "data", "legacy/dadou_robot_ros/conf", "legacy/dadou_vision_ros",
-                    "deploy"]
-COMPOSES_PC = [ROBOT / "conf/docker/sim/docker-compose-sim.yml",
-               ROBOT / "conf/docker/x8664/docker-compose-x86.yml"]
-COMPOSE_ARM = ROBOT / "conf/docker/arm/docker-compose-arm.yml"
+# L1e-4c : machines/ remplace legacy/dadou_robot_ros/conf et legacy/dadou_vision_ros.
+CHEMINS_DEPLOYES = ["packages", "data", "machines", "deploy"]
+COMPOSES_PC = [MACHINES / "sim/banc-robot/docker-compose-sim.yml",
+               MACHINES / "sim/banc-robot/docker-compose-x86.yml"]
+COMPOSE_ARM = MACHINES / "robot/docker/arm/docker-compose-arm.yml"
 
 
 def _service(compose):
@@ -651,13 +684,14 @@ def test_les_donnees_sont_dans_data_et_ont_quitte_legacy():
 def test_les_compose_du_pc_montent_et_copient_depuis_data():
     for compose in COMPOSES_PC:
         service = _service(compose)
-        assert service["build"]["additional_contexts"]["data"] == "../../../../../data", compose.name
+        # L1e-4c : les bancs sont dans machines/sim/banc-robot/, trois niveaux sous la racine.
+        assert service["build"]["additional_contexts"]["data"] == "../../../data", compose.name
         sources = {v.split(":")[1]: v.split(":")[0] for v in service["volumes"]}
-        assert sources["/home/ros2_ws/src/robot/json"] == "../../../../../data/json", compose.name
-        assert sources["/home/ros2_ws/src/robot/medias"] == "../../../../../data/medias", compose.name
-        assert (compose.parent / "../../../../../data/json").resolve() == DONNEES / "json"
+        assert sources["/home/ros2_ws/src/robot/json"] == "../../../data/json", compose.name
+        assert sources["/home/ros2_ws/src/robot/medias"] == "../../../data/medias", compose.name
+        assert (compose.parent / "../../../data/json").resolve() == DONNEES / "json"
     # La sim monte AUSSI json/ pour leds_sim_node.
-    assert "../../../../../data/json:/home/ros2_ws/json" in _service(COMPOSES_PC[0])["volumes"]
+    assert "../../../data/json:/home/ros2_ws/json" in _service(COMPOSES_PC[0])["volumes"]
 
 
 def test_le_compose_arm_garde_la_disposition_du_pi():
@@ -670,30 +704,35 @@ def test_le_compose_arm_garde_la_disposition_du_pi():
 
 
 def test_les_dockerfiles_copient_les_donnees_depuis_le_contexte_data():
-    for nom in ("arm/Dockerfile-arm", "x8664/Dockerfile-x86", "sim/Dockerfile-sim"):
-        lignes = (ROBOT / "conf" / "docker" / nom).read_text(encoding="utf-8").splitlines()
+    for nom in ("robot/docker/arm/Dockerfile-arm", "sim/banc-robot/Dockerfile-x86",
+                "sim/banc-robot/Dockerfile-sim"):
+        lignes = (MACHINES / nom).read_text(encoding="utf-8").splitlines()
         copies = [l for l in lignes if l.startswith("COPY ")]
         assert not [l for l in copies if l.split()[1] in ("json/", "medias/", "db/")], nom
         assert "COPY --from=data json/ /home/ros2_ws/src/robot/json/" in copies, nom
-    for nom in ("arm/Dockerfile-arm", "x8664/Dockerfile-x86"):
-        texte = (ROBOT / "conf" / "docker" / nom).read_text(encoding="utf-8")
+    for nom in ("robot/docker/arm/Dockerfile-arm", "sim/banc-robot/Dockerfile-x86"):
+        texte = (MACHINES / nom).read_text(encoding="utf-8")
         assert "COPY --from=data medias/ /home/ros2_ws/src/robot/medias/\n" in texte, nom
 
 
-def test_seul_l_hote_robot_porte_donnees_dir():
-    hotes = {h: v for g in _hosts().values() for h, v in (g.get("hosts") or {}).items()}
-    porteurs = sorted(h for h, v in hotes.items() if v and "donnees_dir" in v)
-    assert porteurs == ["r"]
-    assert hotes["r"]["donnees_dir"] == "{{ playbook_dir | dirname }}/data"
+def test_seule_la_machine_robot_porte_donnees_dir():
+    machines = _machines()
+    porteurs = sorted(m for m, v in machines.items() if v and "donnees_dir" in v)
+    assert porteurs == ["robot"]
+    assert machines["robot"]["donnees_dir"] == "{{ playbook_dir | dirname }}/data"
 
 
-def test_l_hote_robot_ne_recoit_plus_la_copie_projet():
+def test_robot_et_vision_ne_recoivent_plus_la_copie_projet():
+    """L1e-4c : la copie « projet » (et celle, à plat, de conf/ros2/) ne sert plus qu'aux machines
+    dont le projet vit encore dans legacy/ — celles qui déclarent `local_project_dir`."""
     taches = _taches()
     projet = next(t for t in taches if str(t.get("name", "")).startswith("Synchronize directory")
                   and t["synchronize"]["src"] == "{{ local_projects_dir }}/{{ local_project_dir }}/")
-    assert projet["when"] == "donnees_dir is not defined"
+    assert projet["when"] == "local_project_dir is defined"
     a_plat = next(t for t in taches if str(t.get("synchronize", {}).get("src", "")).endswith("/conf/ros2/"))
-    assert "donnees_dir is not defined" in a_plat["when"]
+    assert "local_project_dir is defined" in a_plat["when"]
+    for nom in ("robot", "vision"):
+        assert "local_project_dir" not in _machine(nom), nom
 
 
 def test_l_hote_robot_recoit_data_et_conf_par_deux_copies_explicites():
@@ -703,13 +742,14 @@ def test_l_hote_robot_recoit_data_et_conf_par_deux_copies_explicites():
     assert donnees["loop"] == ["json", "medias", "db"]
     assert donnees["synchronize"]["src"] == "{{ donnees_dir }}/{{ item }}/"
     assert donnees["synchronize"]["dest"] == "{{ ros2_ws }}/src/{{ project_ros_dir }}/{{ item }}/"
-    conf = next(t for t in taches if str(t.get("name", "")).startswith("Synchronize robot conf"))
-    assert conf["when"] == "donnees_dir is defined"
-    assert conf["synchronize"]["src"] == "{{ local_projects_dir }}/{{ local_project_dir }}/conf/"
+    # L1e-4c : la conf vient de machines/<machine>/ (robot ET vision), plus de legacy/.
+    conf = next(t for t in taches if str(t.get("name", "")).startswith("Synchronize machine conf"))
+    assert conf["when"] == "local_project_dir is not defined"
+    assert conf["synchronize"]["src"] == "{{ conf_machine_dir }}/"
     assert conf["synchronize"]["dest"] == "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/"
-    # Jamais un secret ni un workspace de banc par le rsync.
-    for exclu in ("--exclude=/secret", "--exclude=/docker/sim/workspace/",
-                  "--exclude=/docker/x86/workspace/", "--exclude=.venv/"):
+    # Jamais un secret par le rsync ; ni le contenu ni la doc de la machine (lus sur le PC).
+    for exclu in ("--exclude=/secret", "--exclude=.venv/", "--exclude=/machine.yml",
+                  "--exclude=/README.md"):
         assert exclu in conf["synchronize"]["rsync_opts"], exclu
     copie = next(i for i, t in enumerate(taches) if str(t.get("name", "")).startswith("Synchronize mono-repo package"))
     assert taches.index(donnees) < copie and taches.index(conf) < copie
@@ -769,3 +809,161 @@ def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
         (tmp_path / rel / "suivi.txt").write_text("modifié\n")
         assert git("status", "--porcelain", "--", *chemins) != "", rel
         git("checkout", "-q", "--", rel)
+
+
+# --- L1e-4c : conf des machines -> machines/<machine>/, contenu -> machine.yml -----------------
+
+# Écrits en dur. Ce que la sim prend de l'ancienne conf/ du robot (machines/sim/, à plat), le banc
+# x86 du robot et celui de la vision.
+SIM_A_PLAT = ["coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "fumee.sh",
+              "fumee_page.py", "installer-fumee.sh", "launch-sim-in-docker.sh", "pub.sh",
+              "validate-catalogue.sh", "validate-jeu-a1.sh", "validate-namespace.sh",
+              "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
+              "validate-rehearsal-route.sh"]
+BANC_ROBOT = ["Dockerfile-sim", "Dockerfile-x86", "docker-compose-sim.yml", "docker-compose-x86.yml"]
+BANC_VISION = ["asound-pc.conf", "audio_banc.py", "build-x86.sh", "docker-compose-x86.yml"]
+# Hôte de l'inventaire -> machine (dossier machines/<machine>/).
+HOTES_MACHINES = {"r": "robot", "test": "robot", "ai": "vision", "c": "telecommande",
+                  "gl": "gant-gauche", "gr": "gant-droit", "s": "sono", "d": "disque"}
+# Variables de CONTENU (spec L1e-4, décision 5) : jamais dans hosts.
+VARIABLES_DE_CONTENU = ["packages", "sentinelle_build", "launch_cmd", "noeuds_attendus",
+                        "dossiers_montes", "secrets_hote", "telechargements_hote", "fichiers_etc",
+                        "unites_systemd", "paquets_hote", "project_ros_dir", "project_name",
+                        "local_project_dir", "donnees_dir", "conf_machine_dir", "apt_packages"]
+CHEMINS_RETIRES_SIM = [
+    "src/robot/conf/docker/sim", "src/robot/conf/docker/x8664",
+    *(f"src/robot/conf/scripts/{f}" for f in (
+        "coeurs_reserves.py", "fumee.sh", "fumee_page.py", "launch-sim-in-docker.sh", "pub.sh",
+        "validate-catalogue.sh", "validate-jeu-a1.sh", "validate-namespace.sh",
+        "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
+        "validate-rehearsal-route.sh")),
+    "src/robot/conf/systemd/didier-fumee.service", "src/robot/conf/systemd/didier-fumee.timer",
+    "src/robot/conf/systemd/installer-fumee.sh", "src/vision/conf/docker/x86",
+]
+CHEMINS_RETIRES_LEGACY_VISION = [
+    "src/vision/.github", "src/vision/ARCHITECTURE.md", "src/vision/CLAUDE.md", "src/vision/README.md",
+    "src/vision/mediamtx", "src/vision/requirements-test.txt", "src/vision/requirements.txt",
+    "src/vision/tools",
+]
+
+
+def test_la_conf_des_machines_a_quitte_legacy():
+    # Nextcloud ressuscite parfois un dossier après `git mv` : même vide, il ne doit pas revenir.
+    for ancien in (ROBOT / "conf", VISION / "conf", VISION / "mediamtx", VISION / "tools",
+                   VISION / ".dockerignore"):
+        assert not ancien.exists(), ancien
+    for neuf in ("robot/docker/arm/docker-compose-arm.yml", "robot/scripts/launch-ros-in-docker.sh",
+                 "robot/systemd/avahi-alias-didier.service", "vision/docker/arm/Dockerfile-arm",
+                 "vision/rpi/asound.conf", "vision/secret.example", "vision/mediamtx/mediamtx.yml"):
+        assert (MACHINES / neuf).is_file(), neuf
+    assert (PACKAGES / "didier_vision" / "tools" / "banc_bouche.py").is_file()
+
+
+def test_la_sim_vit_dans_machines_sim():
+    sim = MACHINES / "sim"
+    assert sorted(p.name for p in sim.iterdir() if p.is_file() and p.name != "README.md") == SIM_A_PLAT
+    assert sorted(p.name for p in (sim / "banc-robot").iterdir() if p.is_file()) == BANC_ROBOT
+    assert sorted(p.name for p in (sim / "banc-vision").iterdir()
+                  if p.is_file() and p.suffix != ".pyc") == BANC_VISION
+    # Rien de la sim n'est resté dans la conf du robot (elle part sur le Pi)…
+    for nom in SIM_A_PLAT:
+        assert not list((MACHINES / "robot").rglob(nom)), nom
+    assert not (MACHINES / "robot" / "docker" / "sim").exists()
+    assert not (MACHINES / "robot" / "docker" / "x8664").exists()
+    assert not (MACHINES / "vision" / "docker" / "x86").exists()
+    # … sauf le protocole caméra, qui tourne dans le conteneur du VRAI robot.
+    assert (MACHINES / "robot" / "scripts" / "validate-cmdvel-protocol.sh").is_file()
+
+
+def test_chaque_hote_de_l_inventaire_designe_une_machine_qui_a_son_machine_yml():
+    hotes = {h: v for g in _hosts().values() for h, v in (g.get("hosts") or {}).items()}
+    assert {h: v["machine"] for h, v in hotes.items()} == HOTES_MACHINES
+    for machine in set(HOTES_MACHINES.values()):
+        assert (MACHINES / machine / "machine.yml").is_file(), machine
+
+
+def test_hosts_ne_garde_que_l_inventaire():
+    inventaire = _hosts()
+    for groupe, contenu in inventaire.items():
+        assert set(contenu) <= {"hosts", "children", "vars"}, groupe
+        assert set(contenu.get("vars") or {}) <= {"ansible_user", "ansible_ssh_private_key_file"}, groupe
+        for hote, variables in (contenu.get("hosts") or {}).items():
+            assert set(variables) <= {"ansible_host", "machine"}, (groupe, hote, sorted(variables))
+    texte = HOSTS.read_text(encoding="utf-8")
+    for nom in VARIABLES_DE_CONTENU:
+        assert f"{nom}:" not in texte, nom
+
+
+def test_les_playbooks_chargent_machine_yml_avant_les_roles():
+    for pb in ("deploy-pios.yml", "install-pios-lite.yml"):
+        jeu = yaml.safe_load((DEPLOY / pb).read_text(encoding="utf-8"))[0]
+        premiere = jeu["pre_tasks"][0]
+        assert premiere["ansible.builtin.include_vars"]["file"] == \
+            "{{ machines_dir }}/{{ machine }}/machine.yml", pb
+        # Plus aucun chemin legacy/<projet>/conf dans les playbooks courants.
+        assert "local_project_dir }}/conf" not in (DEPLOY / pb).read_text(encoding="utf-8"), pb
+
+
+def test_robot_et_vision_prennent_leur_conf_dans_machines():
+    for nom in ("robot", "vision"):
+        contenu = _machine(nom)
+        assert contenu["conf_machine_dir"] == "{{ machines_dir }}/" + nom
+        assert contenu["project_ros_dir"] == nom and contenu["project_name"] == nom
+    # Chemins Pi INCHANGÉS (décision L1e-4) : le compose ARM reste lu dans src/<projet>/conf/.
+    defauts = yaml.safe_load((DEPLOY / "roles/conteneur/defaults/main.yml").read_text(encoding="utf-8"))
+    assert defauts["conteneur_compose"] == ("{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}"
+                                            "/conf/docker/arm/docker-compose-arm.yml")
+    assert _machine("robot")["unites_systemd"] == ["{{ machines_dir }}/robot/systemd/avahi-alias-didier.service"]
+    assert _machine("vision")["fichiers_etc"][0]["source"] == "{{ machines_dir }}/vision/rpi/asound.conf"
+    assert _machine("vision")["secrets_hote"][0]["modele"] == "{{ machines_dir }}/vision/secret.example"
+    # Les machines restées dans legacy/ (télécommande) gardent leur copie « projet ».
+    assert _machine("telecommande")["local_project_dir"] == "dadou_control_ros"
+
+
+def test_chemins_retires_sim_et_legacy_vision_sont_les_listes_gravees_et_epargnent_l_essentiel():
+    variables = yaml.safe_load(VARS.read_text(encoding="utf-8"))
+    assert sorted(variables["chemins_retires_sim"]) == sorted(CHEMINS_RETIRES_SIM)
+    assert sorted(variables["chemins_retires_legacy_vision"]) == sorted(CHEMINS_RETIRES_LEGACY_VISION)
+    tous = variables["chemins_retires_sim"] + variables["chemins_retires_legacy_vision"]
+    assert len(tous) == len(set(tous))
+    for garde in ("src/robot/conf/scripts/validate-cmdvel-protocol.sh", "src/robot/conf",
+                  "src/robot/conf/docker", "src/robot/conf/docker/arm", "src/vision/conf",
+                  "src/vision/conf/docker/arm", "src/vision/medias", "src/vision/db",
+                  "src/vision/.dockerignore", "src/vision/conf/secret"):
+        assert garde not in tous, garde
+    # Idempotence : aucune copie ne recrée ce que la liste efface.
+    for chemin in tous:
+        projet, rel = chemin.split("/")[1], chemin.split("/", 2)[2]
+        source = (_source_robot if projet == "robot" else _source_vision)(rel)
+        assert source is None or not source.exists(), chemin
+    taches = _taches()
+    for liste in ("chemins_retires_sim", "chemins_retires_legacy_vision"):
+        assert any(liste in str(t.get("shell", "")) for t in taches), liste
+        assert any(liste in str(t.get("loop", "")) for t in taches), liste
+
+
+def test_le_secret_de_la_vision_ne_peut_entrer_ni_dans_l_image_ni_dans_git():
+    """SÉCURITÉ (image publiée sur le Hub, dépôt public). Le Dockerfile ARM fait COPY conf/ : seul
+    Dockerfile-arm.dockerignore (à côté du Dockerfile, lu par BuildKit) en exclut conf/secret."""
+    ignore = (MACHINES / "vision/docker/arm/Dockerfile-arm.dockerignore").read_text(encoding="utf-8")
+    assert "conf/secret" in ignore.splitlines()
+    service = _service(MACHINES / "vision/docker/arm/docker-compose-arm.yml")
+    assert service["build"]["dockerfile"] == "conf/docker/arm/Dockerfile-arm"
+    assert service["build"]["context"] == "../../.."
+    ignores = (MONO / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "machines/*/secret" in ignores and "machines/robot/DEPLOY_SHA" in ignores
+    assert "--exclude=./vision/secret" in (MACHINES / "sim/banc-vision/build-x86.sh").read_text(encoding="utf-8")
+
+
+def test_la_sim_garde_gz_ip_et_la_fumee_pointe_le_banc():
+    """GZ_IP=127.0.0.1 = correctif de l'A1 intermittent (11/11) : il doit survivre au déménagement."""
+    assert "GZ_IP=127.0.0.1" in _service(MACHINES / "sim/banc-robot/docker-compose-sim.yml")["environment"]
+    fumee = (MACHINES / "sim" / "fumee.sh").read_text(encoding="utf-8")
+    assert 'DOCKER_DIR="$DEPOT/machines/sim/banc-robot"\n' in fumee
+    assert 'CHEMIN_DOCKER_SIM="machines/sim/banc-robot"' in fumee
+    assert 'FUMEE_SH="$ICI/fumee.sh"\n' in (MACHINES / "sim" / "installer-fumee.sh").read_text(encoding="utf-8")
+    volumes = _service(MACHINES / "sim/banc-robot/docker-compose-sim.yml")["volumes"]
+    for script in ("launch-sim-in-docker.sh", "validate-namespace.sh", "validate-catalogue.sh",
+                   "validate-rehearsal-chantiers.sh", "validate-jeu-a1.sh"):
+        montage = next(v for v in volumes if v.startswith(f"../{script}:"))
+        assert (MACHINES / "sim" / "banc-robot" / montage.split(":")[0]).resolve() == MACHINES / "sim" / script

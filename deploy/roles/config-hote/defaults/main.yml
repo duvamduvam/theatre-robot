@@ -1,6 +1,6 @@
 ---
-# Système d'un hôte hors code ROS (lot « Ansible nickel », 07/11). Listes PAR HÔTE dans
-# `hosts` ; vides par défaut : un hôte qui ne déclare rien ne reçoit rien.
+# Système d'un hôte hors code ROS (lot « Ansible nickel », 07/11). Listes PAR MACHINE dans
+# machines/<machine>/machine.yml (L1e-4c) ; vides par défaut : qui ne déclare rien ne reçoit rien.
 # Paquets apt dont l'hôte a besoin (installés, jamais mis à jour ici : la mise à jour de
 # l'OS est un geste à part, cf. docs/ansible-ecarts.md « grosse mise à jour »).
 paquets_hote: []

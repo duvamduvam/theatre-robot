@@ -1,6 +1,6 @@
 - name: install desktop file for automatic lunch
   copy:
-    src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/rpi/remote.desktop"
+    src: "{{ conf_machine_dir }}/rpi/remote.desktop"
     dest: "{{ ansible_env.HOME }}/.config/autostart/"
     #owner: utilisateur # Remplace par le propriétaire du fichier
     #group: groupe # Remplace par le groupe du fichier

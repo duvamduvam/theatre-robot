@@ -1,11 +1,16 @@
 # Depuis le lot L0 (2026-11-02) les déploiements partent du mono-dépôt theatre-robot, dossier legacy/
-# (les anciens dépôts frères sont archivés). Changera de nouveau quand machines/<hôte>/ existera.
+# (les anciens dépôts frères sont archivés). Depuis L1e-4c (11/11), robot et vision partent de
+# machines/<machine>/ ; legacy/ ne sert plus qu'aux machines pas encore déménagées (télécommande).
 # Lot « Ansible nickel » (07/11) : chemins DÉDUITS du playbook au lieu d'un chemin absolu vers le
 # checkout principal — un worktree déploie SON arbre sans `-e local_projects_dir=… -e
 # packages_dir=…` (surchargeables quand même par -e). Lot L1e-4a (08/11) : Ansible vit dans
 # deploy/ à la racine du dépôt (ex legacy/dadou_utils_ros/ansible/) : un seul `dirname` mène
 # à la racine, au lieu de deux (legacy/) et trois (packages/).
 local_projects_dir: "{{ playbook_dir | dirname }}/legacy"
+# Lot L1e-4c (11/11) : une machine = un dossier machines/<machine>/ (conf copiée dans
+# src/<project_ros_dir>/conf/ du Pi + machine.yml, le CONTENU de la machine, chargé par
+# `include_vars` en tête des playbooks d'après la variable `machine` de l'hôte dans hosts).
+machines_dir: "{{ playbook_dir | dirname }}/machines"
 # Racine du dépôt (L1e-4b) : le `git status` du sha déployé (rôle synchronise) s'y exécute, pour
 # que les chemins de `chemins_deployes` ci-dessous soient relatifs à la racine.
 depot_dir: "{{ playbook_dir | dirname }}"
@@ -13,12 +18,12 @@ depot_dir: "{{ playbook_dir | dirname }}"
 # `-dirty` du sha publié par le robot (L1e-4b, 08/11). Avant : `git status` de TOUT le dépôt — une
 # fumée en cours, qui écrit docs/fumee/journaux/ (non suivi), rendait le sha faussement « -dirty »
 # et ecart-pi.sh rouge (vécu le 08/11 au soir). docs/ ne part sur aucun Pi. Gravée par
-# test_arborescence.py ; un dossier nouvellement déployé (machines/ en L1e-4c) s'ajoute ici.
+# test_arborescence.py ; un dossier nouvellement déployé s'ajoute ici. L1e-4c : machines/ remplace
+# legacy/dadou_robot_ros/conf et legacy/dadou_vision_ros (plus rien n'en part sur un Pi).
 chemins_deployes:
   - packages
   - data
-  - legacy/dadou_robot_ros/conf
-  - legacy/dadou_vision_ros
+  - machines
   - deploy
 # Packages du mono-dépôt (rôle synchronise) : rsync vers ros2_ws/src/<package> de la
 # machine. Liste PAR MACHINE : variable `packages` de l'hôte dans `hosts`, à défaut
@@ -154,6 +159,48 @@ chemins_retires_vision:
   - src/vision/conf/ros2
   - build/vision
   - install/vision
+
+# Lot L1e-4c (11/11) : la partie SIM de l'ancienne conf/ du robot (banc x86, scripts de la sim et
+# de la fumée, minuterie) et le banc x86 de la vision vivent dans machines/sim/, qui ne part sur
+# aucun Pi. Leurs copies poussées jadis par le rsync de conf/ (sans --delete) sont des DÉCHETS sur
+# les Pi : effacées si présentes (même tâche conditionnelle que chemins_retires_robot). Rien ne les
+# recrée (gravé par test_arborescence.py) ; la liste ne se vide jamais (un Pi resté éteint
+# rattrape). validate-cmdvel-protocol.sh n'y est PAS : protocole caméra du robot, il reste.
+chemins_retires_sim:
+  - src/robot/conf/docker/sim
+  - src/robot/conf/docker/x8664
+  - src/robot/conf/scripts/coeurs_reserves.py
+  - src/robot/conf/scripts/fumee.sh
+  - src/robot/conf/scripts/fumee_page.py
+  - src/robot/conf/scripts/launch-sim-in-docker.sh
+  - src/robot/conf/scripts/pub.sh
+  - src/robot/conf/scripts/validate-catalogue.sh
+  - src/robot/conf/scripts/validate-jeu-a1.sh
+  - src/robot/conf/scripts/validate-namespace.sh
+  - src/robot/conf/scripts/validate-rehearsal-chantiers.sh
+  - src/robot/conf/scripts/validate-rehearsal-faults.sh
+  - src/robot/conf/scripts/validate-rehearsal-route.sh
+  - src/robot/conf/systemd/didier-fumee.service
+  - src/robot/conf/systemd/didier-fumee.timer
+  - src/robot/conf/systemd/installer-fumee.sh
+  - src/vision/conf/docker/x86
+# Lot L1e-4c (11/11) : la vision ne reçoit plus le projet legacy/dadou_vision_ros/ ENTIER mais sa
+# seule conf (machines/vision/ -> src/vision/conf/). Le reste, poussé par l'ancienne copie
+# « projet », est un DÉCHET sur le Pi (relevé le 11/11) : docs, requirements, l'ancien outil tools/
+# (désormais packages/didier_vision/tools/, arrivé avec le package), mediamtx/ (désormais
+# src/vision/conf/mediamtx/ ; aucun consommateur sur le Pi), .github/ (CI morte). Effacé s'il
+# est présent. JAMAIS conf/, medias/, db/ ni .dockerignore (ceinture de l'exclusion de
+# conf/secret, voir machines/vision/docker/arm/Dockerfile-arm.dockerignore) — gravé par
+# test_arborescence.py.
+chemins_retires_legacy_vision:
+  - src/vision/.github
+  - src/vision/ARCHITECTURE.md
+  - src/vision/CLAUDE.md
+  - src/vision/README.md
+  - src/vision/mediamtx
+  - src/vision/requirements-test.txt
+  - src/vision/requirements.txt
+  - src/vision/tools
 
 # Déchets que l'ancien rsync a poussés dans ros2_ws/src/<projet>/ (relevé du 07/11) : venv de
 # test du PC (269 Mo robot, 342 Mo vision) et workspace colcon du banc x86 de la vision (50 Mo).

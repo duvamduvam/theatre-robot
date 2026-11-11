@@ -1,0 +1,101 @@
+FROM ros:jazzy-ros-base
+LABEL authors="dadouuu"
+WORKDIR /home
+
+EXPOSE 4421
+
+RUN mkdir /home/ros2_ws
+RUN mkdir /home/ros2_ws/src
+# src/vision/ ne porte plus que les DONNÉES (conf/, medias/, db/, models/) depuis L1e-3d : le
+# code est le package src/didier_vision (contexte nommé plus bas).
+RUN mkdir /home/ros2_ws/src/vision
+
+WORKDIR /home/ros2_ws/
+
+# conf/secret est exclu par Dockerfile-arm.dockerignore (à côté de ce fichier,
+# lu par BuildKit ; L1e-4c, ex .dockerignore racine) : jamais de secret dans
+# l'image (registre public).
+COPY conf/ /home/ros2_ws/src/vision/conf/
+COPY medias/ /home/ros2_ws/src/vision/medias/
+
+# didier_vision (L1e-3d) : le code de la vision, ex-package `vision` (module, package.xml,
+# setup.py, launch/vision.launch.py), package de packages/ ; plus de setup.py ni de module
+# dans src/vision/.
+COPY --from=didier_vision . /home/ros2_ws/src/didier_vision
+# Packages communs du mono-dépôt (lot L1a), en contextes NOMMÉS : fournis par
+# docker-compose-arm.yml (additional_contexts) sur le Pi, par build-x86.sh
+# (--build-context) sur le banc PC. theatre_contrats est OBLIGATOIRE : le shim
+# dadou_utils_ros/utils_static.py l'importe.
+COPY --from=theatre_interfaces . /home/ros2_ws/src/theatre_interfaces
+COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
+# dadou_utils_ros (L1e-3a) : lib partagée, package de packages/ (plus de symlink).
+COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
+
+# Leçon apt du parc (payée 3 fois sur dadou_robot_ros) : filtrer les
+# commentaires avant xargs (une ligne '#' brute ferait planter apt-get) ;
+# -r évite d'invoquer apt-get install sans argument si le fichier est vide.
+RUN apt-get update && sed -E 's/#.*$//' /home/ros2_ws/src/vision/conf/packages-docker.txt | xargs -r apt-get install -y
+
+RUN ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
+
+# Modèle MediaPipe EfficientDet-Lite0 int8 (~4,5 Mo), suivi de personne V1
+# (didier_vision/tracking/detector.py) : téléchargé DANS L'IMAGE, pas au démarrage
+# du node person_tracker_node (pas de dépendance réseau au runtime, robot de
+# théâtre = pas toujours connecté). curl -f : échoue le build (pas juste un
+# fichier HTML d'erreur silencieusement enregistré) si l'URL renvoie une
+# erreur HTTP — mieux vaut un build cassé visible qu'un modèle corrompu.
+RUN mkdir -p /home/ros2_ws/models && \
+    curl -fL --retry 3 -o /home/ros2_ws/models/efficientdet_lite0.tflite \
+      https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite
+
+ENV PYTHONPATH "${PYTHONPATH}:/home/ros2_ws"
+
+# Ubuntu 24.04 (Jazzy) : pip refuse d'écrire dans l'environnement système sans ce flag.
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+# Pas de `pip install --upgrade pip` (leçon du parc : casse la version pip
+# fournie par l'image de base, déjà compatible avec Jazzy).
+RUN pip3 install --no-cache-dir --ignore-installed -r /home/ros2_ws/src/vision/conf/requirements.txt
+
+# Voix Piper de Didier (V2 conversation, didier_vision/ai/tts_piper.py — chemin
+# attendu = vision_config.config["chat_piper_voice"]) : téléchargée DANS
+# L'IMAGE (curl -fL --retry 3, même pattern que le modèle MediaPipe
+# ci-dessus) — fr_FR-siwis-medium, voix française medium-quality retenue au
+# proto validé du 10/07 (cf. CLAUDE.md du dépôt). Piper exige DEUX fichiers
+# (le .onnx et son config .json à côté, cf. PiperVoice.load) : les deux sont
+# téléchargés, renommés "didier.onnx"(.json) pour matcher le chemin de config.
+#
+# PIÈGE DÉCOUVERT (non corrigé ici — vision_config.py est déjà committé, hors
+# périmètre de ce lot) : ce chemin est SOUS medias/, bind-monté par
+# docker-compose-arm.yml en dev/prod (volume ../../../medias:.../medias) —
+# contrairement au modèle MediaPipe et au cache faster-whisper ci-dessous,
+# rangés eux HORS de tout bind-mount. Sur le Pi (déploiement ansible = rsync
+# du checkout LOCAL, pas de git sur le Pi, cf. CLAUDE.md), si medias/voices/
+# n'existe pas aussi sur la machine source du rsync, le bind-mount masque la
+# voix téléchargée ici au build et le node chat échoue au démarrage avec un
+# message actionnable (ChatStartupError "voix Piper introuvable"), pas un
+# crash silencieux — mais ça reste à surveiller au premier déploiement V2 :
+# soit committer medias/voices/didier.onnx(.json), soit les déposer
+# manuellement sur la machine de déploiement avant le premier lancement.
+RUN mkdir -p /home/ros2_ws/src/vision/medias/voices && \
+    curl -fL --retry 3 -o /home/ros2_ws/src/vision/medias/voices/didier.onnx \
+      https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx && \
+    curl -fL --retry 3 -o /home/ros2_ws/src/vision/medias/voices/didier.onnx.json \
+      https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json
+
+# Modèle STT faster-whisper "base" int8 (V2 conversation, didier_vision/ai/stt.py —
+# FasterWhisperStt) : préchargé DANS L'IMAGE pour un fonctionnement HORS
+# LIGNE (robot de spectacle de rue, pas toujours connecté au moment de jouer).
+# HF_HOME fixé à un chemin HORS de tout bind-mount docker-compose-arm.yml
+# (contrairement à medias/ ci-dessus, cf. piège documenté) : le cache
+# HuggingFace rempli ici au build SURVIT donc aux montages de dev, comme le
+# modèle MediaPipe. stt.py n'a PAS besoin de connaître ce chemin : c'est
+# cette variable d'environnement, présente au runtime (ENV persiste dans
+# l'image), qui fait que WhisperModel("base", ...) sans download_root
+# explicite retrouve le même cache que celui rempli par la commande
+# ci-dessous, sans appel réseau au démarrage du node.
+ENV HF_HOME=/home/ros2_ws/models/whisper-cache
+RUN python3 -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')"
+
+ENTRYPOINT ["/bin/bash", "-c", "source /home/ros2_ws/src/vision/conf/scripts/launch-ros-in-docker.sh"]

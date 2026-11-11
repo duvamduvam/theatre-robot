@@ -16,7 +16,7 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
 - Le playbook : système de l'hôte (alias `didier.local`, `/etc/asound.conf`, `.asoundrc`,
   `.bashrc`), rsync du code, sentinelle de build, secrets depuis `~/.config/didier/` du PC
   (échec clair s'il en manque un), `docker compose up -d --force-recreate`, attente des nœuds
-  attendus (`noeuds_attendus` dans `hosts`) puis `running` + `restarts=0` — sinon il échoue.
+  attendus (`noeuds_attendus` du `machines/<machine>/machine.yml`) puis `running` + `restarts=0` — sinon il échoue.
   Durée : ≈ 1 min vision, ≈ 2-3 min robot (build incrémental).
 - IP par défaut dans `hosts` (robot .131, vision .151 ; mDNS cassé côté PC) ; une autre IP :
   `-e ansible_host=192.168.1.x`. Utilisateur `pi` et clé `~/.ssh/keys/didier` : dans `hosts`.
@@ -29,6 +29,10 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   Hub, l'image tirée est la Humble de 2024 : reconstruire sur le Pi
   (`~/scripts/compose-up-pi.sh build`, ≈ 35 min Pi 4) avant le `deploy-pios.yml`.
 - Jamais sur le robot aux roues câblées avant le protocole caméra (verrou L1b).
+- **Où est quoi (L1e-4c, 11/11)** : `deploy/hosts` = inventaire seul (IP, utilisateur, clé,
+  `machine:`) ; ce qui tourne sur la machine = `machines/<machine>/machine.yml` (packages, launch,
+  nœuds attendus, secrets, fichiers système) ; sa conf = `machines/<machine>/`, copiée dans
+  `~/ros2_ws/src/<robot|vision>/conf/` (chemin Pi inchangé). Convention : `machines/README.md`.
 - Historique (gestes manuels d'avant ce lot, et pourquoi chacun existe) : sections
   « Premier déploiement d'une branche… », « Déploiement de main… », « Déploiement de 3b… »
   ci-dessous, et `docs/ansible-ecarts.md` à la racine.
@@ -44,8 +48,8 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   `/tf_static`, `/rosout`, `/parameter_events`.
 - **La CLI ne suit pas** : un nom relatif tapé dans `ros2 topic pub/echo` se
   résout à la racine. Toujours préfixer (`ros2 topic pub /didier/face …`) et
-  lancer les `ros2 run` avec `--ros-args -r __ns:=/didier`. Les scripts de
-  `conf/scripts/` posent `NS="/${ROBOT_NAME:-didier}"` et préfixent tout.
+  lancer les `ros2 run` avec `--ros-args -r __ns:=/didier`. Les scripts CLI de
+  `machines/<machine>/scripts/` et `machines/sim/` posent `NS="/${ROBOT_NAME:-didier}"` et préfixent tout.
 - Vérif en sim (démarrer la sim avec `ROBOT_NAME=didier2`, puis sans) :
   `docker exec dadou-sim-container bash /home/ros2_ws/validate-namespace.sh`
   — tout topic/nœud sous le namespace, twist_mux configuré, bridge relayé.
@@ -62,7 +66,7 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   rsyncé n'était PAS un commit propre : le sha seul mentirait, il faut lire le
   `git status` du PC au moment du déploiement pour savoir ce qui tourne. Depuis L1e-4b
   (08/11), seuls les chemins DÉPLOYÉS comptent (`chemins_deployes` de `deploy/vars/main.yml` :
-  `packages data legacy/dadou_robot_ros/conf legacy/dadou_vision_ros deploy`) — les journaux
+  `packages data machines deploy` depuis L1e-4c) — les journaux
   non suivis d'une fumée en cours (`docs/fumee/journaux/`) ne salissent plus le sha.
   Pas de badge = le robot n'a rien publié (nœud absent, ancien déploiement).
 - Tâche Ansible (rôle `synchronise`, robot seulement) : écrit `conf/DEPLOY_SHA` au rsync,
@@ -188,15 +192,16 @@ cite encore l'ancien nom.
 ## La vision `didier_vision` (lot L1e-3d, 08/11)
 
 L'ex-package `vision` est `packages/didier_vision/` (code `didier_vision/`, tests `test/`,
-launch `launch/vision.launch.py`) ; exécutables, nœuds et topics inchangés. Les données
-(`conf/`, `medias/`, `db/`, `models/`, `mediamtx/`) restent dans `legacy/dadou_vision_ros/`
-(`DIDIER_VISION_DATA_DIR`). Il exige SON venv (le venv robot n'a pas `sqlobject`) :
+launch `launch/vision.launch.py`, outil `tools/banc_bouche.py` depuis L1e-4c) ; exécutables,
+nœuds et topics inchangés. Sa conf (ex `conf/` et `mediamtx/`) est `machines/vision/` depuis
+L1e-4c (copiée dans `src/vision/conf/` du Pi) ; `DIDIER_VISION_DATA_DIR` des tests hôte vise
+toujours `legacy/dadou_vision_ros/` (`db/`, `medias/` d'exécution, non suivis). Il exige SON venv (le venv robot n'a pas `sqlobject`) :
 
 ```bash
 cd packages/didier_vision && ../../legacy/dadou_vision_ros/.venv/bin/python -m pytest -q -o addopts=
 ```
 
-Banc x86 : `legacy/dadou_vision_ros/conf/docker/x86/build-x86.sh` (contexte nommé
+Banc x86 : `machines/sim/banc-vision/build-x86.sh` (contexte nommé
 `didier_vision`), puis vider `workspace/{build,install,log}` (l'ancien `install/vision`
 n'a plus de raison d'exister) et poser `touch packages/didier_vision/change`.
 
@@ -229,13 +234,15 @@ dans le conteneur : `ls /home/ros2_ws/src /home/ros2_ws/install` ne montre plus 
 déplacés tels quels ; voir `data/README.md`). **Rien ne change sur le Pi ni dans les conteneurs** :
 `~/ros2_ws/src/robot/{json,medias,db,conf}`, `DIDIER_DATA_DIR=/home/ros2_ws/src/robot/`.
 
-- **Ansible** (rôle `synchronise`) : l'hôte robot (variable `donnees_dir` dans `deploy/hosts`)
-  ne reçoit plus le projet `legacy/dadou_robot_ros/` entier, mais deux copies explicites :
-  `data/{json,medias,db}` → `src/robot/{json,medias,db}` et `legacy/dadou_robot_ros/conf/` →
-  `src/robot/conf/` (jusqu'à L1e-4c). Les anciens déchets (docs 139 Mo, essais, firmware,
+- **Ansible** (rôle `synchronise`) : la machine robot (variable `donnees_dir` de
+  `machines/robot/machine.yml`) ne reçoit plus le projet `legacy/dadou_robot_ros/` entier, mais
+  des copies explicites : `data/{json,medias,db}` → `src/robot/{json,medias,db}` et sa conf
+  (`machines/robot/` depuis L1e-4c) → `src/robot/conf/`. Les anciens déchets (docs 139 Mo, essais, firmware,
   `CLAUDE.md`, réglages d'éditeur, `launch.txt`…) sont effacés du Pi s'ils y sont encore (liste
-  `chemins_retires_legacy_robot`). La vision garde sa copie « projet » (L1e-4c).
-- **Compose et images** : sim et banc x86 montent `../../../../../data/{json,medias}` et copient
+  `chemins_retires_legacy_robot`). Depuis L1e-4c la vision ne reçoit plus que `machines/vision/`
+  (déchets de son ancienne copie « projet » : `chemins_retires_legacy_vision`).
+- **Compose et images** : sim et banc x86 (`machines/sim/banc-robot/` depuis L1e-4c) montent
+  `../../../data/{json,medias}` et copient
   par un contexte nommé `data` (`COPY --from=data json/ …`). Le compose ARM tourne SUR LE PI :
   `data: ../../..` (= `src/robot/`, où Ansible a posé les données), montages `../../../json`
   inchangés. ⚠️ Après ce lot, l'image ARM du robot a été reconstruite sur le Pi puis poussée.
@@ -278,7 +285,7 @@ Pas de build colcon ni de sim : la fumée nocturne s'en charge.
   `ssh pi@192.168.1.151 'sudo docker restart dadou-vision-container'` restores it.
 
 ## Web interface in sim (W0 + W3 sim)
-- `cd conf/docker/sim && WEB=true docker compose -f docker-compose-sim.yml up -d`
+- `cd machines/sim/banc-robot && WEB=true docker compose -f docker-compose-sim.yml up -d`
   then open `http://localhost:8765` (`WEB_PORT` overrides it — the container
   runs on host networking, 8088 was already taken by Superset on the dev PC).
   Add `ANIMATIONS=true` alongside `WEB=true`
@@ -324,7 +331,7 @@ ne vaut pas sur le Pi 5), et le ronflement secteur du Pi reste à régler par
 l'alim batterie. Le banc sert à travailler CONTENU et COMPORTEMENT
 (conversation, personas, didascalies, suivi) en attendant le matériel.
 
-**1. La sim (corps)** — depuis `conf/docker/sim/` de ce dépôt :
+**1. La sim (corps)** — depuis `machines/sim/banc-robot/` du mono-dépôt :
 ```bash
 ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
 ```
@@ -343,7 +350,7 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
   (puis activer le suivi roues : topic `follow` « on » — il démarre OFF.)
 
 **2. La perception + la parole (tête)** — depuis
-`../dadou_vision_ros/conf/docker/x86/` :
+`machines/sim/banc-vision/` :
 ```bash
 ./build-x86.sh                                        # 1re fois seulement (long)
 CHAT=true docker compose -f docker-compose-x86.yml up -d
@@ -421,7 +428,7 @@ Le trajet des Nefs à la grue Titan grise (`docs/etude-repetition-simulee.md`
 chemin déclenchent ses lubies, David joue au casque et à la page scène.
 Tout sur le domaine **43**.
 
-**1. Le corps + la régie** (`conf/docker/sim/`, HEADLESS recommandé) :
+**1. Le corps + la régie** (`machines/sim/banc-robot/`, HEADLESS recommandé) :
 ```bash
 WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
@@ -444,7 +451,7 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
   voit » = l'image analysée par la perception (`/perception`). Le panneau extérieur exige
   un REDÉMARRAGE de la sim entière (le link et le capteur sont dans le robot spawné).
 
-**2. La tête** (`../dadou_vision_ros/conf/docker/x86/`) :
+**2. La tête** (`machines/sim/banc-vision/`) :
 `CHAT=true docker compose -f docker-compose-x86.yml up -d` — puis, depuis la
 page scène, persona **mauvaisefoi**.
 - Au **casque Bluetooth** (M50, profil HFP — réglages du 22/10, banc PC
@@ -472,8 +479,8 @@ VRAI robot (alias publié par le Pi, visé par la télécommande) — le script 
 
 **Son et micro de Didier** (casque Bluetooth) — voir qui est branché à quoi, et choisir :
 ```bash
-python3 ../dadou_vision_ros/conf/docker/x86/audio_banc.py               # état
-python3 ../dadou_vision_ros/conf/docker/x86/audio_banc.py choisir M50   # ou un autre casque, ou « defaut »
+python3 machines/sim/banc-vision/audio_banc.py               # état
+python3 machines/sim/banc-vision/audio_banc.py choisir M50   # ou un autre casque, ou « defaut »
 ```
 `choisir` connecte le casque, le met en profil casque+micro, règle la tête et la redémarre.
 
@@ -509,7 +516,7 @@ n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
 
 **Ticket « Noter un problème » (08/11)** : champ du bandeau de la page scène, utilisable sans
 la main. Le pont écrit un JSON dans `log/tickets/` (texte, heure, topics visibles — jamais
-les topics masqués). En sim, `log/` est monté sur le PC : `conf/docker/sim/workspace/log/`
+les topics masqués). En sim, `log/` est monté sur le PC : `machines/sim/banc-robot/workspace/log/`
 (gitignoré), il survit aux recréations du conteneur. Le ramasseur qui les range avec les
 journaux reste à faire (`docs/seances/2026-11-08-a1-casque.md` #11).
 
@@ -548,7 +555,7 @@ et un **scénario vide** `jeu-a1` (0 bug, 0 lubie : les lubies viennent du
 sélecteur). Tout se passe sur le domaine **43** ; `jeu_node` refuse de démarrer ailleurs.
 
 ```bash
-cd conf/docker/sim
+cd machines/sim/banc-robot
 WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d --build
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true'
@@ -593,7 +600,7 @@ il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
 
 ## Fumée automatique — la sim rejouée toute seule (lot F, 07/11)
 
-Un script shell (`conf/scripts/fumee.sh`, zéro token) rejoue sur le **checkout de main** toutes
+Un script shell (`machines/sim/fumee.sh` depuis L1e-4c, zéro token) rejoue sur le **checkout de main** toutes
 les épreuves de la sim et compare chaque compteur à une valeur **gravée en tête du script** :
 namespace 5, catalogue 4, `parle` 3 états, V-R3 21, A1 14. Il **mesure, il ne juge pas** ; un
 agent n'intervient que pour lire une page rouge. Pourquoi : l'environnement bouge sans commit
@@ -601,7 +608,7 @@ agent n'intervient que pour lire une page rouge. Pourquoi : l'environnement boug
 régression du code) et chaque lot payait ≈ 1 h d'épreuves.
 
 **Ordre, arrêt au PREMIER rouge** (les suivantes restent « non lancée » sur la page) :
-image sim (reconstruite seulement si `conf/docker/sim` a changé depuis la dernière fumée verte,
+image sim (reconstruite seulement si `machines/sim/banc-robot` a changé depuis la dernière fumée verte,
 ou si elle manque) → sim headless domaine 43 + colcon → **sonde RTF 20 s** (rouge si < 0,8 : le
 reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.sh` → animation
 `parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) → chaîne roues + régisseur +
@@ -610,10 +617,10 @@ regard puis `validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validat
 
 **Cœurs réservés (08/11)** : pendant la fumée, la sim est seule sur les CPU **8-15** (4 cœurs
 rapides) ; tes processus et tes autres conteneurs sont poussés sur les 28 autres fils, puis tout
-est rendu à la fin (`conf/scripts/coeurs_reserves.py`, sans sudo : `sched_setaffinity` sur tes
+est rendu à la fin (`machines/sim/coeurs_reserves.py`, sans sudo : `sched_setaffinity` sur tes
 processus, `docker update --cpuset-cpus` sur les conteneurs). Mesuré sous un pic artificiel sur
 les 32 fils : RTF 0,76 sim libre, 0,987 sim sur cœurs réservés. `FUMEE_COEURS=` (vide) la
-désactive. Fumée tuée sans ménage : `python3 conf/scripts/coeurs_reserves.py liberer` rend tout.
+désactive. Fumée tuée sans ménage : `python3 machines/sim/coeurs_reserves.py liberer` rend tout.
 Limite : les processus root hors conteneur ne sont pas déplacés.
 
 **Trois façons de la lancer**
@@ -621,8 +628,8 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
   si rien n'est dû ; dû = un commit touchant un **chemin TESTÉ** est entré dans `main` après le
   sha de la dernière page VERTE, OU 7 jours sans fumée verte. Chemins testés (règle du 10/11,
   liste gravée `CHEMINS_TESTES` en tête de `fumee_page.py`) : `packages/`, `data/`, `deploy/`,
-  `machines/`, `legacy/dadou_robot_ros/conf/`, `legacy/dadou_robot_ros/{json,medias,db}/`,
-  `legacy/dadou_vision_ros/conf/`. La doc (`docs/`, README, CLAUDE.md, `docs/fumee/` elle-même)
+  `machines/`, `legacy/dadou_robot_ros/{json,medias,db}/` (les `conf/` legacy sont devenues
+  `machines/` au L1e-4c). La doc (`docs/`, README, CLAUDE.md, `docs/fumee/` elle-même)
   ne déclenche rien : le 08/11, 14 commits d'étude du torse avaient lancé des sims pour rien.
   **Après un rouge** sur un « sha de code » (dernier commit de `main` touchant un chemin testé) :
   UNE relance de confirmation, puis plus rien sur ce même code (« bloquée ») tant qu'aucun commit
@@ -652,7 +659,7 @@ durée, RTF, charge, une ligne par épreuve avec son compteur (`21 / 21 OK, 0 KO
 Les journaux sont COPIÉS hors du conteneur avant son arrêt : `docs/fumee/journaux/<id>/`
 (`<épreuve>.log`, `conteneur-<phase>.tar.gz` = logs ROS + journaux de séance + sortie du conteneur,
 les fichiers > 1 Mo réduits à leurs 3000 dernières lignes) et **`resultat.json`**, qui est la vérité
-(la page n'en est que le rendu : `python3 conf/scripts/fumee_page.py pages --sortie docs/fumee`
+(la page n'en est que le rendu : `python3 machines/sim/fumee_page.py pages --sortie docs/fumee`
 la régénère). **Avant d'accuser une épreuve rouge, regarder le RTF** : sous 0,8 le régisseur
 (horloge murale) manque l'arrivée. Un arrêt propre (Ctrl-C, SIGTERM) en cours de route laisse une page
 rouge « interrompue » ; un SIGKILL ou une coupure de courant n'en laisse aucune.
@@ -675,13 +682,13 @@ dépose puis supprime `json/sequences/tmp-l1c/` dans l'arbre.
 - Une fumée n'a de sens que sur `main` : si le checkout est sur une autre branche, la minuterie
   reporte (une fumée à la main marque la branche sur la page).
 
-**Minuterie systemd utilisateur** (`conf/systemd/`, sans sudo) :
+**Minuterie systemd utilisateur** (`machines/sim/`, sans sudo) :
 ```bash
-conf/systemd/installer-fumee.sh                 # copie didier-fumee.{service,timer} dans ~/.config/systemd/user/, active
+machines/sim/installer-fumee.sh                 # copie didier-fumee.{service,timer} dans ~/.config/systemd/user/, active
 systemctl --user list-timers didier-fumee.timer # prochain essai (toutes les :00 et :30 ; Persistent=true rattrape un PC éteint)
 journalctl --user -u didier-fumee.service -e    # sortie du dernier essai
 tail ~/.local/state/didier-fumee/journal.log    # reporté / début / fin
-conf/systemd/installer-fumee.sh --desinstaller  # arrête, désactive, supprime les unités
+machines/sim/installer-fumee.sh --desinstaller  # arrête, désactive, supprime les unités
 ```
 Le chemin de `fumee.sh` écrit dans l'unité est celui du checkout d'où l'on lance l'installeur :
 **le relancer depuis le checkout de `main`** une fois le lot fusionné (un worktree peut disparaître).
@@ -708,7 +715,7 @@ Monde `rue` + package SIM-ONLY `didier_rehearsal` (étude
 complet et règles de séance : `packages/didier_rehearsal/README.md` (racine du mono-dépôt).
 
 ```bash
-cd conf/docker/sim && WORLD=rue HEADLESS=true ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
+cd machines/sim/banc-robot && WORLD=rue HEADLESS=true ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
 # chaîne roues puis cheminement (OFF au démarrage), même prudence que follow/gaze :
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
 docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py'
@@ -786,7 +793,7 @@ La console répond aussi sur `http://didier.local:8765` (alias mDNS publié par
 le Pi robot). Pratique depuis un téléphone/une tablette ; le **PC de dev a un
 mDNS cassé** → y garder l'entrée IP du sélecteur. Mécanique : service systemd
 `avahi-alias-didier.service` (source versionnée :
-`conf/systemd/avahi-alias-didier.service`) qui lance `avahi-publish` —
+`machines/robot/systemd/avahi-alias-didier.service`) qui lance `avahi-publish` —
 `/etc/avahi/hosts` ne publie PAS sur le réseau (résolution locale seulement,
 vérifié). L'IP est relue au démarrage du service : le redémarrer si l'adresse
 du Pi change (réseau 4G de tournée). Depuis le 07/11, paquet et service sont posés par
@@ -816,10 +823,10 @@ personnalité déjà active est sans effet. Défaut au démarrage : `bougon`
 
 ### Alias audio du Pi 5 vision — `/etc/asound.conf` (micro changé le 2026-08-26)
 
-**Versionné depuis le 07/11** dans `../dadou_vision_ros/conf/rpi/asound.conf` (copie
+**Versionné depuis le 07/11** dans `machines/vision/rpi/asound.conf` (L1e-4c ; copie
 exacte du Pi ; l'ancien fichier du même nom était une version périmée en `card 0` que rien ne
-posait) et posé par Ansible à chaque déploiement (rôle `config-hote`, `fichiers_etc` de l'hôte
-vision). **Modifier le fichier du dépôt, puis déployer** — le déploiement recrée le conteneur,
+posait) et posé par Ansible à chaque déploiement (rôle `config-hote`, `fichiers_etc` de
+`machines/vision/machine.yml`). **Modifier le fichier du dépôt, puis déployer** — le déploiement recrée le conteneur,
 ce qui règle aussi le piège d'inode ci-dessous.
 
 Les index ALSA (`card 0`, `card 1`…) dépendent de l'ordre de branchement : les

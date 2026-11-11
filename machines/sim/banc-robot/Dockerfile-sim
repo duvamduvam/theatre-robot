@@ -1,0 +1,105 @@
+# Environnement de SIMULATION (x86, PC de dev) : Gazebo Harmonic + outils.
+# Le vrai Didier peut rester éteint pendant qu'on travaille ici.
+FROM ros:jazzy-ros-base
+LABEL authors="dadouuu"
+
+# ros-jazzy-ros-gz installe Gazebo Harmonic (paire officielle de Jazzy)
+# via les paquets vendored de packages.ros.org — pas de dépôt en plus.
+RUN apt-get update && apt-get install -y \
+    ros-jazzy-ros-gz \
+    ros-jazzy-xacro \
+    ros-jazzy-robot-state-publisher \
+    ros-jazzy-joint-state-publisher-gui \
+    ros-jazzy-rviz2 \
+    ros-jazzy-teleop-twist-keyboard \
+    ros-jazzy-twist-mux \
+    python3-pip \
+    python3-aiohttp \
+    python3-pil \
+    # imageio : lu par didier_core/visual/visual.py (Visual, chargement des PNG
+    # bouche/yeux) -- chaîne d'imports de face_sim (paquet "didier_core", nouveau
+    # node d'aperçu web du visage). Paquet apt dispo sur Noble (universe,
+    # vérifié packages.ubuntu.com/noble/python3-imageio) : cohérent avec
+    # python3-pil/python3-aiohttp ci-dessus, pas de pip pour cette lib-là.
+    python3-imageio \
+    # py_trees : behaviour trees du sélecteur de jeu (packages/didier_jeu, lot
+    # A1). Paquet ROS officiel (2.6.0 au 02/11) ; la même version est épinglée
+    # dans requirements-test.txt pour les tests hôte.
+    ros-jazzy-py-trees \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /home/ros2_ws/src
+WORKDIR /home/ros2_ws
+
+# Les sources sont aussi montées en volume par le compose (itération sans
+# rebuild) ; la copie permet de lancer l'image seule.
+# Packages du robot (L1e-1) : packages/ du mono-dépôt, contextes nommés du compose
+# (additional_contexts) — ils ont déménagé de conf/ du robot vers packages/, noms inchangés.
+COPY --from=didier_description . /home/ros2_ws/src/didier_description
+COPY --from=didier_sim . /home/ros2_ws/src/didier_sim
+# theatre_interfaces et theatre_contrats : packages/ du mono-dépôt (lot L1a),
+# contextes nommés fournis par docker-compose-sim.yml (additional_contexts).
+COPY --from=theatre_interfaces . /home/ros2_ws/src/theatre_interfaces
+COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
+# dadou_utils_ros (L1e-3a) : lib partagée, package de packages/ (ex-symlink du dépôt).
+COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
+# didier_jeu (lot A1, SIM-ONLY) : sélecteur de jeu, packages/ du mono-dépôt.
+COPY --from=didier_jeu . /home/ros2_ws/src/didier_jeu
+COPY --from=didier_drive . /home/ros2_ws/src/didier_drive
+COPY --from=didier_web . /home/ros2_ws/src/didier_web
+COPY --from=didier_rehearsal . /home/ros2_ws/src/didier_rehearsal
+# didier_core (L1e-3c) : le cœur, ex-paquet robot (animations_node, face_sim, gaze_follower…).
+COPY --from=didier_core . /home/ros2_ws/src/didier_core
+# L1e-4c : contexte principal = machines/sim/ (docker-compose-sim.yml), où vit le script.
+COPY launch-sim-in-docker.sh /home/ros2_ws/
+
+# json/ : robot_lights.json, lights_base.json, colors.json lus par leds_sim_node
+# (mêmes fichiers que le vrai robot, cf. didier_core/robot_config.py) pour que la visu
+# LED en sim résolve les mêmes séquences/couleurs. Monté aussi en volume par le
+# compose (itération sans rebuild), comme les packages de packages/. Depuis L1e-4b les
+# données sont dans data/ du mono-dépôt, hors du contexte principal : contexte nommé `data`.
+COPY --from=data json/ /home/ros2_ws/json/
+
+# --- Paquet "didier_core" (animations_node, param animations:=true du launch sim) ---
+# Rejoue les séquences JSON (json/sequences/**) dans la sim : servos + faces +
+# LED via les topics StringTime déjà consommés par servos_sim_node/leds_sim_node.
+# Reproduit la disposition du vrai robot (rôle Ansible synchronise) : depuis L1e-3c
+# le CODE est le package src/didier_core (COPY --from plus haut, ex-paquet "robot"),
+# les DONNÉES restent sous src/robot/ (json/ ici, medias/ par volume), racine lue
+# par didier_core/robot_config.py dans DIDIER_DATA_DIR (posée par le compose).
+# La chaîne d'imports RÉELLEMENT parcourue par animations_node (robot_config,
+# RobotJsonManager, AnimationManager, abstract_json_actions, animation,
+# random_animation_start, + le sous-ensemble de dadou_utils_ros qu'ils importent)
+# ne touche AUCUNE lib matérielle (adafruit_*, RPi.GPIO, board...) -- celles-ci ne
+# sont importées QUE par didier_core/actions/servo.py, actions/lights.py etc.
+# (jamais chargés ici). Seules 3 libs pures manquent à l'image ROS de base :
+# filetype (dadou_utils_ros.misc au niveau module) et colorlog/psutil (logging_conf
+# et d'autres modules dadou_utils_ros importés transitivement). medias/ et db/ ne
+# sont PAS nécessaires À CE NODE : il ne lit que du JSON sous json/.
+#
+# EXCEPTION face_sim (param face:=true, didier_core/nodes/face_sim_node.py) : ce
+# SECOND point d'entrée du même paquet charge Face -> Visual, qui LUI importe
+# imageio (les PNG de medias/visuals/{mouth,eye}) -- d'où python3-imageio
+# ci-dessus -- et sert un flux MJPEG en aiohttp/PIL (déjà installés pour
+# didier_web). medias/ N'EST PAS copié dans l'image (seulement monté en volume par
+# docker-compose-sim.yml) : sans ce volume, Face.load_visuals() échoue au démarrage
+# avec un log actionnable (voir face_sim_node.py) plutôt qu'un plantage silencieux.
+#
+# JSON_DIRECTORY résolu par robot_config.py = <DIDIER_DATA_DIR>/json/ avec
+# DIDIER_DATA_DIR="/home/ros2_ws/src/robot/" (chemin DIFFÉRENT de la copie json/
+# ci-dessus, dédiée à leds_sim_node) : les séquences vivent sous json/sequences/.
+COPY --from=data json/ /home/ros2_ws/src/robot/json/
+# log/ : logging_conf.py écrit un TimedRotatingFileHandler sur ce chemin exact
+# (robot_config.LOGGING_FILE_NAME) -- le dossier doit exister avant le premier
+# `logging.config.dictConfig(...)` (fait dans AnimationsNode.__init__), sinon
+# le node meurt à l'instanciation (FileNotFoundError).
+RUN mkdir -p /home/ros2_ws/log
+
+# filetype/colorlog/psutil : seules dépendances pip RÉELLEMENT requises par la
+# chaîne d'imports d'animations_node (cf. investigation ci-dessus) -- pas tout
+# requirements.txt (adafruit-*, PyAudio... inutiles ici et lourds à builder).
+# --break-system-packages : Ubuntu Noble (Jazzy) refuse pip hors venv sans ce
+# flag (même contournement que machines/robot/docker/arm/Dockerfile-arm).
+RUN pip3 install --no-cache-dir --break-system-packages filetype colorlog psutil
+
+ENTRYPOINT ["/bin/bash", "-c", "/home/ros2_ws/launch-sim-in-docker.sh"]

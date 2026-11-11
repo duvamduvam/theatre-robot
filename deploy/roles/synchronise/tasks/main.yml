@@ -44,10 +44,12 @@
 # `secrets` depuis le PC (hors dépôt) : le rsync ne doit JAMAIS en écraser un, même si un
 # conf/secret traînait dans l'arbre du PC. Pas de --delete : rien de ce que le Pi porte
 # n'est effacé par le rsync.
-# Lot L1e-4b (08/11) : copie « projet » réservée aux hôtes SANS `donnees_dir` (vision,
-# télécommande) ; le robot reçoit à la place les deux copies explicites qui suivent.
-- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}"
-  when: donnees_dir is not defined
+# Lot L1e-4b (08/11) : copie « projet » réservée aux hôtes SANS `donnees_dir` ; le robot reçoit à
+# la place les copies explicites qui suivent. Lot L1e-4c (11/11) : réservée aux machines dont le
+# projet vit ENCORE dans legacy/ (`local_project_dir` dans leur machine.yml : télécommande, gants,
+# sono, disque) ; robot et vision reçoivent leur conf depuis machines/<machine>/ (plus bas).
+- name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir | default('') }}/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}"
+  when: local_project_dir is defined
   synchronize:
     src: "{{ local_projects_dir }}/{{ local_project_dir }}/"
     dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
@@ -86,7 +88,7 @@
 
 # Lot L1e-4b (08/11) : données du robot. data/{json,medias,db} du dépôt → src/robot/{json,medias,db}
 # (chemin Pi INCHANGÉ : DIDIER_DATA_DIR, compose ARM et Dockerfile-arm les y lisent). Hôte robot
-# seul (`donnees_dir` dans hosts). Une copie PAR dossier, nommée : rien d'autre de data/ (README)
+# seul (`donnees_dir` de machines/robot/machine.yml). Une copie PAR dossier, nommée : rien d'autre de data/ (README)
 # ne part. Pas de --delete, comme la copie « projet » qu'elles remplacent.
 - name: Synchronize robot data "{{ donnees_dir | default('') }}/{{ item }}/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/{{ item }}/"
   when: donnees_dir is defined
@@ -101,14 +103,17 @@
       - "--exclude=__pycache__/"
   loop: [json, medias, db]
 
-# Lot L1e-4b (08/11) : conf/ du robot, seule autre partie de legacy/dadou_robot_ros/ qui part sur
-# le Pi (jusqu'à L1e-4c : machines/robot/). Mêmes exclusions que la copie « projet », ancrées à
-# conf/ : workspaces colcon des bancs (déchets de la fumée), conf/secret (rôle secrets, jamais le
-# rsync), caches Python.
-- name: Synchronize robot conf "{{ local_projects_dir }}/{{ local_project_dir }}/conf/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/"
-  when: donnees_dir is defined
+# Lot L1e-4c (11/11) : la conf de la machine = machines/<machine>/ (`conf_machine_dir` du
+# machine.yml) -> src/<projet>/conf/, chemin Pi INCHANGÉ (ex copie de legacy/dadou_robot_ros/conf/
+# du L1e-4b ; la vision la reçoit aussi, à la place de sa copie « projet »). Machines dont le projet
+# vit encore dans legacy/ : leur conf/ arrive avec la copie « projet » (plus haut). Exclus :
+# machine.yml et README.md (le contenu et la doc de la machine, lus sur le PC seulement),
+# `secret` (rôle secrets, jamais le rsync), caches Python. Les bancs x86 (workspaces colcon de la
+# fumée) ne sont plus sous machines/robot|vision : machines/sim/ ne part sur aucun Pi.
+- name: Synchronize machine conf "{{ conf_machine_dir | default('') }}/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/"
+  when: local_project_dir is not defined
   synchronize:
-    src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/"
+    src: "{{ conf_machine_dir }}/"
     dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/conf/"
     recursive: yes
     copy_links: yes
@@ -122,16 +127,17 @@
       - "--exclude=venv/"
       - "--exclude=.venv/"
       - "--exclude=.pytest_cache/"
-      - "--exclude=/docker/x86/workspace/"
-      - "--exclude=/docker/sim/workspace/"
+      - "--exclude=/machine.yml"
+      - "--exclude=/README.md"
       - "--exclude=/secret"
 
 - name: Synchronize directory "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/"
   # La vision n'a plus de conf/ros2/ depuis L1e-3d (sa forme ament est dans packages/didier_vision).
   # L1e-4b : plus pour le robot non plus — son conf/ros2/ ne portait plus que launch.txt, que
   # rien ne lit (déchet effacé par chemins_retires_legacy_robot) ; il arrive avec conf/.
+  # L1e-4c : seulement les machines restées dans legacy/ (même condition que la copie « projet »).
   when:
-    - donnees_dir is not defined
+    - local_project_dir is defined
     - (local_projects_dir ~ '/' ~ local_project_dir ~ '/conf/ros2') is directory
   synchronize:
     src: "{{ local_projects_dir }}/{{ local_project_dir }}/conf/ros2/"
@@ -212,7 +218,7 @@
   become: yes
   shell: |
     cd "{{ ansible_env.HOME }}/{{ ros2_ws }}" 2>/dev/null || exit 0
-    for chemin in {{ (chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot) | join(' ') }}; do
+    for chemin in {{ (chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot + chemins_retires_sim + chemins_retires_legacy_vision) | join(' ') }}; do
       [ -e "$chemin" ] && echo "$chemin"
     done
     exit 0
@@ -231,7 +237,9 @@
     state: absent
   # L1e-3d : même tâche pour la vision (chemins distincts, absents de l'autre hôte). L1e-4b : et
   # pour les déchets de l'ancienne copie « projet » du robot (chemins_retires_legacy_robot).
-  loop: "{{ chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot }}"
+  # L1e-4c : et pour la partie sim de l'ancienne conf/ (chemins_retires_sim) et les déchets de
+  # l'ancienne copie « projet » de la vision (chemins_retires_legacy_vision).
+  loop: "{{ chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot + chemins_retires_sim + chemins_retires_legacy_vision }}"
   when: item in robot_ancien.stdout_lines
 
 # Déchets laissés par l'ancien rsync (vars/main.yml, `dechets_rsync`) : désormais exclus de
@@ -247,7 +255,7 @@
 # communs, lot L1e-1 (2026-11-06) pour les 6 packages ROS autonomes du robot qui
 # vivaient dans conf/ du robot (le dossier a disparu — plus de stat ni de rsync
 # conditionnel). Chaque machine reçoit une LISTE EXPLICITE : `packages` de l'hôte
-# (deploy/hosts), à défaut `packages_default` (vars/main.yml). Pourquoi explicite
+# (machines/<machine>/machine.yml depuis L1e-4c), à défaut `packages_default` (vars/main.yml). Pourquoi explicite
 # et non « tout packages/ » : le `colcon build` d'un Pi compile TOUT ros2_ws/src/ ;
 # un package qui n'a rien à y faire (didier_jeu, sim-only ; didier_drive et son
 # twist_mux sur le Pi vision...) y casserait la compilation sur ses dépendances
@@ -300,7 +308,7 @@
 # manuel `touch` jusque-là) : le launch-ros-in-docker.sh du projet lance `colcon build` au
 # démarrage du conteneur si elle existe, puis l'efface. Toujours la poser = le code rsyncé est
 # toujours celui qui tourne (le build est incrémental, build/ et install/ ne sont plus effacés).
-# Nom par hôte (`sentinelle_build` dans hosts) : robot/change, vision/CHANGE — gardés tels que
+# Nom par machine (`sentinelle_build` du machine.yml) : robot/change, vision/CHANGE — gardés tels que
 # les lisent les scripts, puisque plus personne ne les tape à la main. Pas en --check (elle
 # n'existe que le temps d'un démarrage : la détection d'écart la verrait toujours manquer).
 - name: Set the colcon build sentinel "{{ sentinelle_build | default('') }}"

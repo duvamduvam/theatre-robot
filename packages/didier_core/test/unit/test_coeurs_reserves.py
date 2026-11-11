@@ -13,7 +13,8 @@ import sys
 
 import pytest
 
-SCRIPTS = pathlib.Path(__file__).resolve().parents[4] / "legacy" / "dadou_robot_ros" / "conf" / "scripts"
+# L1e-4c (11/11) : coeurs_reserves.py suit fumee.sh dans machines/sim/.
+SCRIPTS = pathlib.Path(__file__).resolve().parents[4] / "machines" / "sim"
 _spec = importlib.util.spec_from_file_location("coeurs_reserves", SCRIPTS / "coeurs_reserves.py")
 cr = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(cr)

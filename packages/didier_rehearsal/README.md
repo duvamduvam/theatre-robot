@@ -230,7 +230,7 @@ Tests : `test_goto_tour.py`, `test_tours.py`, `test_director_tour.py`,
   sans rien redémarrer : `docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && gz sim -g'`.
   Clic droit sur Didier → « Follow ». ⚠️ Ne pas fermer la fenêtre pendant une séance.
 - **Caméra de Didier + régie** : http://localhost:8765 (`WEB=true`) ; **visage LED** : http://localhost:8766 (`FACE=true`).
-- **Après la séance** : `legacy/dadou_robot_ros/conf/scripts/rehearsal/capture_seance.py` (images caméra aux
+- **Après la séance** : `machines/robot/scripts/rehearsal/capture_seance.py` (images caméra aux
   instants choisis + trajectoire, à lancer DANS le conteneur) puis `carte_seance.py`
   (rue vue de dessus + vitesse aux roues, pannes du journal en couleur). Exemple :
   `docs/pictures/repetition-simulee/2026-10-08_carte-seance-demo.png`.
@@ -245,7 +245,7 @@ Tests : `test_goto_tour.py`, `test_tours.py`, `test_director_tour.py`,
   `route_speed`** (fader à zéro = Didier s'arrête), le fader 2 le cou. Profils
   décrits dans `dadou_control_ros/docs/interfaces.md`.
 
-**Dans le conteneur sim** (`legacy/dadou_robot_ros/conf/docker/sim`, domaine 43) :
+**Dans le conteneur sim** (`machines/sim/banc-robot`, domaine 43) :
 ```bash
 # 1. la sim avec la rue (HEADLESS=true recommandé) :
 WORLD=rue ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d

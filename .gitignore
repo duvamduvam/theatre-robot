@@ -19,3 +19,14 @@ packages/didier_core/change
 # Sentinelle de build de la vision (L1e-3d) : posée par Ansible / à la main, effacée par
 # launch-ros-in-docker.sh après `colcon build`. Elle était SUIVIE (vision/change) : dette soldée.
 packages/didier_vision/change
+
+# Lot L1e-4c (11/11) : la conf des machines est dans machines/ (ex conf/ des projets legacy, dont
+# les .gitignore portaient ces lignes). SÉCURITÉ (dépôt PUBLIC) : un secret ne se versionne jamais
+# — sur le Pi il est posé par le rôle Ansible `secrets` depuis ~/.config/didier/ du PC.
+machines/*/secret
+# Sha déployé : écrit SUR LE ROBOT par Ansible (src/robot/conf/DEPLOY_SHA), jamais sur le PC — s'il
+# existait ici, la sim (conf montée) afficherait un faux sha au lieu de « dev ».
+machines/robot/DEPLOY_SHA
+# Workspaces colcon jetables des bancs PC (sim du robot : traces de la fumée ; banc vision).
+machines/sim/banc-robot/workspace/
+machines/sim/banc-vision/workspace/

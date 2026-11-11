@@ -1,0 +1,12 @@
+# Contenu de la machine « telecommande » (console de pilotage : Pi 4 + écran, hostname control,
+# Pi OS Full trixie flashé le 2026-07-04) — chargé par Ansible (`include_vars`, lot L1e-4c du
+# 11/11) pour tout hôte de deploy/hosts qui porte `machine: telecommande`. Ici tout tourne en
+# Docker comme sur le robot. Convention : machines/README.md.
+# La télécommande n'a PAS encore déménagé (réécriture = lot L4) : son projet entier vit toujours
+# dans legacy/dadou_control_ros/ et part par la copie « projet » du rôle synchronise
+# (`local_project_dir` défini).
+local_project_dir: dadou_control_ros
+conf_machine_dir: "{{ local_projects_dir }}/dadou_control_ros/conf"
+project_ros_dir: controller
+project_name: controller
+launch_cmd: ros2 run controller controller_node --ros-args -r __ns:=/didier

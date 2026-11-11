@@ -55,4 +55,7 @@ def test_la_variable_remplace_la_racine_et_la_barre_finale_est_ajoutee():
 def test_sous_pytest_le_conftest_pointe_les_donnees_de_legacy():
     from didier_vision import vision_config
     assert vision_config.DATA_DIR == str(LEGACY_VISION) + "/"
-    assert (LEGACY_VISION / "conf" / "secret.example").is_file()
+    # L1e-4c (11/11) : conf/ a quitté la racine de données de l'hôte pour machines/vision/ (copiée
+    # en src/vision/conf/ sur le Pi : le chemin conteneur, lui, ne change pas).
+    assert not (LEGACY_VISION / "conf").exists()
+    assert (LEGACY_VISION.parents[1] / "machines" / "vision" / "secret.example").is_file()

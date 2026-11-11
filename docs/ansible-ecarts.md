@@ -34,7 +34,7 @@ Rien ne change sur les Pi : mêmes chemins, mêmes `attendu/*.txt`.
 |---|---|
 | 1. Gestes manuels du déploiement | **fait** : utilisateur + clé (groupe `didier_pi`) et IP par défaut dans `hosts` ; chemins de l'arbre déduits du playbook (un worktree déploie sans `-e`) ; squelette `ros2_ws` + `chown` de `src/` avant le rsync ; sentinelle posée à chaque synchronisation (noms gardés : ceux que lisent les scripts d'entrée, plus personne ne les tape) ; `up -d --force-recreate` ; attente des nœuds attendus + `running` / `restarts=0`, sinon échec. `chemins_retires_lib` : build/install effacés seulement s'ils contiennent encore la lib embarquée (build incrémental : 4,6 s vision, 21 s robot). |
 | 2. Secrets | **fait** : rôle `secrets` (`~/.config/didier/` → Pi, 600, `no_log`, sans diff ; échec clair si une source ou une clé de `secret.example` manque). `secrets.env` (clé Anthropic) **non poussé** : aucun consommateur sur les Pi tant que la bascule de `chat_node` n'est pas faite. |
-| 3. Système | **fait** dans `deploy-pios.yml` (rôle `config-hote`, rejoué à chaque déploiement donc vu par la détection) : `avahi-utils` + `avahi-alias-didier.service` (robot), `/etc/asound.conf` (vision, versionné dans `dadou_vision_ros/conf/rpi/asound.conf`). `~/.asoundrc` : c'était déjà le gabarit du rôle `usb-audio` (identique sur les deux Pi), désormais rejoué au déploiement. `.bashrc` : voir la correction du relevé ci-dessous ; `set-bashrc` rendu idempotent et rejoué au déploiement. Rsync : `.venv/`, `.pytest_cache/`, workspace x86, `conf/secret`, sentinelles commitées exclus ; `.venv` déjà poussés effacés (269 Mo robot, 342 Mo vision). |
+| 3. Système | **fait** dans `deploy-pios.yml` (rôle `config-hote`, rejoué à chaque déploiement donc vu par la détection) : `avahi-utils` + `avahi-alias-didier.service` (robot), `/etc/asound.conf` (vision, versionné dans `machines/vision/rpi/asound.conf` depuis L1e-4c). `~/.asoundrc` : c'était déjà le gabarit du rôle `usb-audio` (identique sur les deux Pi), désormais rejoué au déploiement. `.bashrc` : voir la correction du relevé ci-dessous ; `set-bashrc` rendu idempotent et rejoué au déploiement. Rsync : `.venv/`, `.pytest_cache/`, workspace x86, `conf/secret`, sentinelles commitées exclus ; `.venv` déjà poussés effacés (269 Mo robot, 342 Mo vision). |
 | 4. Images sur le Hub | **FAIT le 07/11** : `dadouuu/dadou-robot-arm:latest` (0,83 Go) et `dadouuu/dadou-vision-arm:latest` (1,15 Go, reconstruite le jour même) publiées ; jeton Docker Hub `didier-pi` (Read & Write, sans expiration, révocable sur app.docker.com) dans `~/.config/didier/dockerhub-token` du PC, les 2 Pi connectés. **Republier = seulement quand un Dockerfile ou une liste de paquets change** (le code est monté, pas dans l'image) : sur le Pi concerné, `cd ~/ros2_ws/src/<robot\|vision>/conf/docker/arm && sudo docker compose -f docker-compose-arm.yml build && sudo docker push dadouuu/dadou-<robot\|vision>-arm:latest`, puis redéployer. Un Pi reflashé doit d'abord `docker login -u dadouuu --password-stdin < jeton` pour POUSSER (tirer ne demande rien : dépôts publics). Automatisation prévue : GitHub Actions (lot L2). |
 | 5. Détection d'écart | **fait** : `ecart-pi.sh <groupe>` = (a) `--check --diff` + (b) inventaire comparé à `attendu/<groupe>.txt` (gravés le 07/11). Pas encore branché dans un `deploy-hors-robot.sh` (n'existe pas). Fichiers de `/etc` hors Ansible : non inventoriés (trop de bruit de l'OS ; à revoir si besoin). |
 | 6. Preuve | **partielle faite** : `~/ros2_ws` effacé sur la vision, une commande, tout revient (secret : même taille, même sha256). **Reste** : reflash des deux cartes par David. |
@@ -76,6 +76,31 @@ restarts=0, catalogue 6 familles, sha `5895e24` sans `-dirty`, `ecart-pi.sh` ver
 regraver `attendu/`. Piège vu : une connexion multiplexée d'Ansible (`~/.ansible/cp/`) restée
 pendue a figé un `ecart-pi.sh` 10 min sur la première tâche `become` ; tuer le mux et relancer
 suffit.
+
+**L1e-4c (11/11) : `machines/`, et `hosts` ne garde que l'inventaire.** La conf de chaque machine
+est `machines/<machine>/` (robot : ex `legacy/dadou_robot_ros/conf/` sans la sim ; vision : ex
+`legacy/dadou_vision_ros/{conf,mediamtx}` ; la sim, la fumée et les bancs PC : `machines/sim/`, qui
+ne part sur aucun Pi). Le CONTENU d'une machine (packages, launch, nœuds attendus, secrets,
+fichiers système…) a quitté `hosts` pour `machines/<machine>/machine.yml`, chargé par
+`include_vars` en `pre_tasks` ; `hosts` = groupes, IP, utilisateur, clé et `machine:` (convention :
+`machines/README.md`). Le rôle `synchronise` copie `machines/<machine>/` (sans `machine.yml`,
+`README.md`, `secret`) dans `src/<robot|vision>/conf/` : **chemins Pi et conteneur inchangés**. La
+vision ne reçoit plus sa copie « projet » ; la télécommande, oui (`local_project_dir`, lot L4).
+Nettoyage conditionnel au premier déploiement (listes qui ne se vident jamais) :
+`chemins_retires_sim` (la partie sim restée dans `src/robot/conf/` — banc x86, scripts de fumée et
+de vérification de la sim, minuterie — et `src/vision/conf/docker/x86`) et
+`chemins_retires_legacy_vision` (`.github/` mort, docs, requirements, `tools/` — désormais
+`src/didier_vision/tools/` —, `mediamtx/` — désormais `conf/mediamtx/`). Gardés exprès :
+`validate-cmdvel-protocol.sh` (protocole caméra, tourne dans le conteneur du robot) et
+`src/vision/.dockerignore`. **Secret de la vision** : le `.dockerignore` racine du dépôt vision ne
+partait plus sur le Pi ; il est devenu `machines/vision/docker/arm/Dockerfile-arm.dockerignore`,
+que BuildKit lit à la place d'un `.dockerignore` racine — prouvé sur le Pi par une construction
+d'essai sans `.dockerignore` racine (le secret factice reste dehors), et l'image neuve ne contient
+pas `conf/secret`. Images reconstruites sur les Pi et poussées : vision `b3d364ac…`, robot
+`40652ca9…` ; redéploiement = `build/` et `install/` vidés par le rôle `conteneur`, colcon complet,
+`running` restarts=0, robot : 17 nœuds sous `/didier/` (16 + `vision_status`), catalogue 6
+familles. À la fusion : relancer `machines/sim/installer-fumee.sh` depuis main (l'unité visait
+`legacy/dadou_robot_ros/conf/scripts/fumee.sh`).
 
 **Voix de Didier (trouvé le 07/11 au soir)** : `medias/voices/didier.onnx` n'existait que sur la
 vision, déposée à la main ; `medias/` est bind-monté et MASQUE la voix que le Dockerfile met dans

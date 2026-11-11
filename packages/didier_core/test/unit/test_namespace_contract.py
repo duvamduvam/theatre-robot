@@ -28,6 +28,8 @@ MONO = LEGACY.parent
 VISION = LEGACY / "dadou_vision_ros"
 CONTROL = LEGACY / "dadou_control_ros"
 DEPS = MONO / "packages"      # L1e-1 : les packages ROS autonomes ont déménagé ici
+# L1e-4c : conf/ du robot et de la vision -> machines/{robot,vision}/, la sim -> machines/sim/.
+MACHINES = MONO / "machines"
 
 # Les SEULS noms globaux admis, par construction ROS (TimeSource, TF, logs,
 # événements de paramètres). Rien d'autre — validate-namespace.sh applique la
@@ -211,7 +213,9 @@ def test_constantes_sim_gravees_relatives():
 # --- (d) scripts CLI ----------------------------------------------------------
 
 def _scripts_cli():
-    return [p for r in (ROBOT, VISION, CONTROL) for p in _fichiers(r / "conf" / "scripts", "*.sh")
+    racines = (MACHINES / "robot" / "scripts", MACHINES / "vision" / "scripts", MACHINES / "sim",
+               CONTROL / "conf" / "scripts")
+    return [p for r in racines for p in _fichiers(r, "*.sh")
             if "ros2 topic" in p.read_text(encoding="utf-8")]
 
 
@@ -244,7 +248,7 @@ def test_regex_cli_attrape_les_formes_fautives():
 
 
 def test_pilote_rclpy_de_jeu_a1_namespace():
-    src = (ROBOT / "conf" / "scripts" / "validate-jeu-a1.sh").read_text(encoding="utf-8")
+    src = (MACHINES / "sim" / "validate-jeu-a1.sh").read_text(encoding="utf-8")
     assert 'super().__init__("validate_jeu_a1", namespace=NS)' in src
     assert 'python3 - "$CAP/capture.json" "$DUREE" "$NS"' in src
 
@@ -252,9 +256,11 @@ def test_pilote_rclpy_de_jeu_a1_namespace():
 # --- variable ROBOT_NAME : compose + télécommande ------------------------------
 
 def test_les_compose_posent_robot_name():
-    composes = [ROBOT / "conf/docker/arm/docker-compose-arm.yml", ROBOT / "conf/docker/x8664/docker-compose-x86.yml",
-                ROBOT / "conf/docker/sim/docker-compose-sim.yml",
-                VISION / "conf/docker/arm/docker-compose-arm.yml", VISION / "conf/docker/x86/docker-compose-x86.yml",
+    composes = [MACHINES / "robot/docker/arm/docker-compose-arm.yml",
+                MACHINES / "sim/banc-robot/docker-compose-x86.yml",
+                MACHINES / "sim/banc-robot/docker-compose-sim.yml",
+                MACHINES / "vision/docker/arm/docker-compose-arm.yml",
+                MACHINES / "sim/banc-vision/docker-compose-x86.yml",
                 CONTROL / "conf/docker/arm/docker-compose-arm.yml", CONTROL / "conf/docker/x86/docker-compose-x86.yml"]
     for p in composes:
         assert "- ROBOT_NAME=${ROBOT_NAME:-didier}" in p.read_text(encoding="utf-8"), p
@@ -268,9 +274,9 @@ def test_la_telecommande_prend_le_meme_namespace():
 
 
 def test_validate_namespace_monte_dans_la_sim():
-    compose = (ROBOT / "conf/docker/sim/docker-compose-sim.yml").read_text(encoding="utf-8")
-    assert "- ../../scripts/validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro" in compose
-    script = (ROBOT / "conf" / "scripts" / "validate-namespace.sh").read_text(encoding="utf-8")
+    compose = (MACHINES / "sim/banc-robot/docker-compose-sim.yml").read_text(encoding="utf-8")
+    assert "- ../validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro" in compose
+    script = (MACHINES / "sim" / "validate-namespace.sh").read_text(encoding="utf-8")
     # Même liste d'exceptions que ce test (gravée des deux côtés).
     for nom in sorted(EXCEPTIONS_GLOBALES):
         assert nom in script

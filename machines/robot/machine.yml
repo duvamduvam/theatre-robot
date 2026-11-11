@@ -1,0 +1,61 @@
+# Contenu de la machine « robot » (Pi 4 du robot) — chargé par Ansible au début de
+# deploy-pios.yml et install-pios-lite.yml (`include_vars`, lot L1e-4c du 11/11) pour tout hôte
+# de deploy/hosts qui porte `machine: robot`. deploy/hosts ne dit QUE où est la machine
+# (IP, utilisateur, clé) ; ce fichier dit CE QUI y tourne. Convention : machines/README.md.
+
+# Chemins sur le Pi : ~/ros2_ws/src/<project_ros_dir>/ — INCHANGÉS par L1e-4 (décision de la spec).
+project_ros_dir: robot
+project_name: robot
+# Conf de la machine = CE dossier, copiée dans src/robot/conf/ (rôle synchronise ; machine.yml et
+# README.md exclus). Ex legacy/dadou_robot_ros/conf/ sans la partie sim (machines/sim/).
+conf_machine_dir: "{{ machines_dir }}/robot"
+# L1e-4b (08/11) : données du robot = data/ du dépôt, copiées dans src/robot/{json,medias,db}
+# (chemin Pi inchangé). Seul hôte à en porter (gravé par test_arborescence.py).
+donnees_dir: "{{ playbook_dir | dirname }}/data"
+launch_cmd: ros2 launch didier_bringup robot_app.launch.py
+# Sentinelle de build (rôle synchronise) : le nom est celui que lit
+# scripts/launch-ros-in-docker.sh de cette machine — chemin relatif à ros2_ws/.
+# L1e-3c : dans le package du cœur (src/didier_core), plus dans le module robot de src/robot/.
+sentinelle_build: src/didier_core/change
+# Système (rôle config-hote) : alias mDNS didier.local (perdu à la réinstallation
+# du 04/11, source versionnée ici).
+paquets_hote:
+  - avahi-utils
+unites_systemd:
+  - "{{ machines_dir }}/robot/systemd/avahi-alias-didier.service"
+# Contrôle de fin de déploiement (rôle conteneur) : les 16 nœuds du robot seul
+# (vision_status vient du Pi vision, il n'est pas exigé ici). Un nœud renommé ou
+# ajouté au launch = cette liste à suivre (relays_node et wheels_node tournent même
+# sans carte I²C : hors robot ils restent présents).
+noeuds_attendus:
+  - /didier/animations_node
+  - /didier/audio_node
+  - /didier/catalogue_node
+  - /didier/left_arm_node
+  - /didier/left_eye_node
+  - /didier/lights_node
+  - /didier/neck_node
+  - /didier/relays_node
+  - /didier/right_arm_node
+  - /didier/right_eye_node
+  - /didier/system_node
+  - /didier/twist_deadman
+  - /didier/twist_mux
+  - /didier/web_bridge_node
+  - /didier/wheels_bridge
+  - /didier/wheels_node
+# Packages poussés dans ros2_ws/src/ (rôle synchronise) : les 3 communs (dont la lib
+# dadou_utils_ros, package à part depuis L1e-3a) + les 6 packages ROS autonomes + le cœur
+# didier_core (L1e-3c). La liste est gravée par test_arborescence.py ; une machine qui n'en
+# déclare pas prend packages_default (deploy/vars/main.yml).
+packages:
+  - theatre_contrats
+  - theatre_interfaces
+  - dadou_utils_ros
+  - didier_core
+  - didier_bringup
+  - didier_description
+  - didier_drive
+  - didier_rehearsal
+  - didier_sim
+  - didier_web

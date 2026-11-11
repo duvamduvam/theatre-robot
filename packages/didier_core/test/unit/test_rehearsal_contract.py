@@ -69,7 +69,7 @@ def test_verite_terrain_declaree_dans_le_xacro_et_le_bridge():
 def test_anti_fuite_aucune_reference_dans_le_code_embarque():
     zones = [
         PACKAGES / "didier_core" / "didier_core",   # ex-robot/ (L1e-3c)
-        ROOT / "conf" / "ros2",
+        ROOT.parents[1] / "machines" / "robot" / "ros2",   # ex conf/ros2 du robot (L1e-4c)
         PACKAGES / "didier_bringup",
         PACKAGES / "didier_drive",
         PACKAGES / "didier_web",
