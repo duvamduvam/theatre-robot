@@ -48,14 +48,14 @@ def test_aucune_fumee_verte_est_due():
 def test_main_inchangee_et_recente_n_est_pas_due():
     due, raison, depuis = fp.decider(vert(jours_avant=2), 0, None, MAINTENANT)
     assert (due, depuis) == (False, None)
-    assert raison == "dernière fumée verte abc1234 = main, moins de 7 jours"
+    assert raison == "dernière fumée verte abc1234 = code de main, moins de 7 jours"
 
 
 def test_un_commit_apres_la_verte_la_rend_due_depuis_ce_commit():
     commit = MAINTENANT - timedelta(hours=5)
     due, raison, depuis = fp.decider(vert(jours_avant=1), 3, commit, MAINTENANT)
     assert due is True
-    assert raison == "3 commit(s) dans main depuis la dernière fumée verte (abc1234)"
+    assert raison == "3 commit(s) de code dans main depuis la dernière fumée verte (abc1234)"
     assert depuis == commit
 
 
@@ -150,21 +150,173 @@ def _commit(depot, chemin, message):
 
 
 def test_les_commits_de_docs_fumee_ne_comptent_pas(depot):
-    sha_teste = _commit(depot, "code.txt", "code 1")
+    sha_teste = _commit(depot, "packages/code.txt", "code 1")
     _commit(depot, "docs/fumee/2026-11-07.html", "page de la fumée")      # le commit de la fumée elle-même
     n, premier = fp.commits_apres_sha(str(depot), sha_teste)
     assert (n, premier) == (0, None)
-    _commit(depot, "code.txt", "code 2")
+    _commit(depot, "packages/code.txt", "code 2")
     _commit(depot, "docs/fumee/index.html", "index")
-    _commit(depot, "autre.txt", "autre")
+    _commit(depot, "deploy/autre.txt", "autre")
     n, premier = fp.commits_apres_sha(str(depot), sha_teste)
     assert n == 2
     assert isinstance(premier, datetime)
 
 
 def test_sha_absent_du_depot_donne_none(depot):
-    _commit(depot, "code.txt", "code 1")
+    _commit(depot, "packages/code.txt", "code 1")
     assert fp.commits_apres_sha(str(depot), "0123456789abcdef0123456789abcdef01234567") == (None, None)
+
+
+# --- Règle du 10/11 : chemins TESTÉS seulement, et un rouge n'est rejoué qu'une fois ------
+
+def test_liste_des_chemins_testes_gravee():
+    assert fp.CHEMINS_TESTES == (
+        "packages/", "data/", "deploy/", "machines/", "legacy/dadou_robot_ros/conf/",
+        "legacy/dadou_robot_ros/json/", "legacy/dadou_robot_ros/medias/", "legacy/dadou_robot_ros/db/",
+        "legacy/dadou_vision_ros/conf/")
+    assert fp.ROUGES_MAX_PAR_CODE == 2
+
+
+@pytest.mark.parametrize("chemin,compte", [
+    ("packages/didier_jeu/x.py", 1), ("data/x.json", 1), ("deploy/hosts", 1), ("machines/robot.yml", 1),
+    ("legacy/dadou_robot_ros/conf/scripts/fumee.sh", 1), ("legacy/dadou_robot_ros/json/a.json", 1),
+    ("legacy/dadou_robot_ros/medias/a.png", 1), ("legacy/dadou_robot_ros/db/a.db", 1),
+    ("legacy/dadou_vision_ros/conf/v.yaml", 1),
+    # la doc, même dans legacy/, ne déclenche rien (vécu le 08/11 : 14 commits d'étude du torse)
+    ("docs/etude-torse.md", 0), ("legacy/dadou_robot_ros/docs/chantiers.md", 0), ("README.md", 0),
+    ("CLAUDE.md", 0), ("legacy/dadou_vision_ros/README.md", 0), ("docs/fumee/index.html", 0),
+    ("packagesX/faux.py", 0),
+])
+def test_seul_un_commit_sur_un_chemin_teste_compte(depot, chemin, compte):
+    sha_vert = _commit(depot, "packages/code.txt", "code 1")
+    _commit(depot, chemin, "modif")
+    n, premier = fp.commits_apres_sha(str(depot), sha_vert)
+    assert n == compte
+    assert (premier is None) == (compte == 0)
+
+
+def test_sha_de_code_saute_les_commits_de_doc(depot):
+    code = _commit(depot, "packages/code.txt", "code 1")
+    _commit(depot, "docs/etude.md", "étude")
+    doc2 = _commit(depot, "README.md", "readme")
+    assert fp.sha_de_code(str(depot), doc2) == code
+    assert fp.sha_de_code(str(depot), "main") == code
+    autre = _commit(depot, "deploy/hosts", "hôtes")
+    assert fp.sha_de_code(str(depot), "main") == autre
+
+
+def test_sha_de_code_sans_aucun_commit_de_code_est_none(depot):
+    _commit(depot, "docs/etude.md", "étude")
+    assert fp.sha_de_code(str(depot), "main") is None
+
+
+def test_un_rouge_est_due_pour_une_confirmation():
+    commit = MAINTENANT - timedelta(hours=5)
+    due, raison, depuis = fp.decider(vert(jours_avant=1), 3, commit, MAINTENANT,
+                                     rouges_meme_code=1, sha_code="def5678" + "0" * 33)
+    assert due is True
+    assert raison == ("relance de confirmation du rouge sur le code def5678 ; "
+                      "3 commit(s) de code dans main depuis la dernière fumée verte (abc1234)")
+    assert depuis == commit
+
+
+@pytest.mark.parametrize("rouges", [2, 3, 9])
+def test_deux_rouges_sur_le_meme_code_bloquent(rouges):
+    commit = MAINTENANT - timedelta(hours=5)
+    due, raison, depuis = fp.decider(vert(jours_avant=1), 3, commit, MAINTENANT,
+                                     rouges_meme_code=rouges, sha_code="def5678" + "0" * 33)
+    assert due is False
+    assert raison == ("bloquée : {} fumées rouges sur le code def5678, plus de relance tant qu'aucun "
+                      "commit de code n'arrive (3 commit(s) de code dans main depuis la dernière "
+                      "fumée verte (abc1234))").format(rouges)
+    assert depuis == commit          # gardé : c'est lui qui fait partir le rappel « > 2 jours »
+
+
+def test_le_blocage_l_emporte_aussi_sur_les_sept_jours_et_sans_verte():
+    due, raison, depuis = fp.decider(vert(jours_avant=10), 0, None, MAINTENANT,
+                                     rouges_meme_code=2, sha_code="def5678")
+    assert (due, depuis) == (False, datetime(2026, 11, 7, 12, 0, tzinfo=CET))
+    assert raison.startswith("bloquée : 2 fumées rouges sur le code def5678")
+    due, raison, depuis = fp.decider(None, None, None, MAINTENANT, rouges_meme_code=2, sha_code="def5678")
+    assert (due, depuis) == (False, MAINTENANT)
+    due, _, _ = fp.decider(None, None, None, MAINTENANT, rouges_meme_code=1, sha_code="def5678")
+    assert due is True
+
+
+def test_rien_de_du_reste_pas_du_meme_avec_des_rouges():
+    """Des rouges sans rien de dû (ex. vieux rouges d'un code devenu vert) : pas due, pas bloquée."""
+    due, _, depuis = fp.decider(vert(jours_avant=1), 0, None, MAINTENANT, rouges_meme_code=5, sha_code="x")
+    assert (due, depuis) == (False, None)
+
+
+def _res(sha_complet, verdict, fin, essai=False):
+    return {"sha": sha_complet[:7], "sha_complet": sha_complet, "verdict": verdict, "fin": fin, "essai": essai}
+
+
+def test_rouges_sur_code_compte_par_sha_de_code(depot):
+    """Un commit de doc après un rouge ne change pas le code : le rouge suivant est le même code."""
+    a = _commit(depot, "packages/code.txt", "code A")
+    b = _commit(depot, "packages/code.txt", "code B")
+    c_doc = _commit(depot, "docs/etude.md", "doc après B")
+    verte = _res(a, "vert", "2026-11-08T21:00:00+01:00")
+    resultats = [_res(a, "rouge", "2026-11-08T20:00:00+01:00"),            # AVANT la verte : ignoré
+                 verte,
+                 _res(b, "rouge", "2026-11-08T23:00:00+01:00"),
+                 _res(b, "rouge", "2026-11-08T23:30:00+01:00", essai=True),  # essai provoqué : ignoré
+                 _res(c_doc, "rouge", "2026-11-09T00:00:00+01:00"),
+                 _res("f" * 40, "rouge", "2026-11-09T01:00:00+01:00")]      # sha inconnu : ignoré
+    assert fp.rouges_sur_code(str(depot), resultats, verte, b) == 2
+    assert fp.rouges_sur_code(str(depot), resultats, verte, a) == 0
+    assert fp.rouges_sur_code(str(depot), resultats, None, a) == 1         # sans verte : tout compte
+    assert fp.rouges_sur_code(str(depot), resultats, verte, None) == 0
+
+
+def _ecrire_resultat(depot, ident, res):
+    d = depot / "docs" / "fumee" / "journaux" / ident
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "resultat.json").write_text(json.dumps(res), encoding="utf-8")
+
+
+def _due(depot, maintenant):
+    return subprocess.run(["python3", str(FUMEE_PY), "due", "--sortie", str(depot / "docs" / "fumee"),
+                           "--depot", str(depot), "--maintenant", maintenant.isoformat()],
+                          capture_output=True, text=True)
+
+
+def test_cli_due_rouge_puis_confirmation_puis_blocage_puis_nouveau_code(depot):
+    """Le scénario du 08/11 rejoué : un rouge, UNE confirmation, puis silence jusqu'au code suivant."""
+    ici = datetime.now().astimezone()          # les commits portent l'heure réelle
+    a = _commit(depot, "packages/code.txt", "code A")
+    _ecrire_resultat(depot, "2026-11-09-2100", _res(a, "vert", (ici - timedelta(hours=3)).isoformat()))
+    b = _commit(depot, "packages/code.txt", "code B")
+    p = _due(depot, ici)
+    assert p.returncode == 0 and p.stdout.startswith("due\t1 commit(s) de code dans main")
+    _ecrire_resultat(depot, "2026-11-09-2300", _res(b, "rouge", (ici - timedelta(hours=2)).isoformat()))
+    p = _due(depot, ici)
+    assert p.returncode == 0
+    assert p.stdout.startswith("due\trelance de confirmation du rouge sur le code {} ; ".format(b[:7]))
+    _commit(depot, "docs/etude.md", "doc")              # la doc ne débloque rien
+    _ecrire_resultat(depot, "2026-11-09-2330", _res(b, "rouge", (ici - timedelta(hours=1)).isoformat()))
+    p = _due(depot, ici)
+    assert p.returncode == 1
+    etat, raison, depuis, rappel = p.stdout.rstrip("\n").split("\t")
+    assert etat == "bloquee" and raison.startswith("bloquée : 2 fumées rouges sur le code " + b[:7])
+    assert depuis != "" and rappel == "non"
+    assert _due(depot, ici + timedelta(days=3)).stdout.rstrip("\n").split("\t")[3] == "oui"
+    _commit(depot, "packages/code.txt", "code C")       # nouveau code : de nouveau due
+    p = _due(depot, ici)
+    assert p.returncode == 0 and p.stdout.startswith("due\t2 commit(s) de code dans main")
+
+
+def test_cli_doc_seule_apres_la_verte_n_est_pas_due(depot):
+    ici = datetime.now().astimezone()
+    a = _commit(depot, "packages/code.txt", "code A")
+    _ecrire_resultat(depot, "2026-11-09-2100", _res(a, "vert", (ici - timedelta(hours=3)).isoformat()))
+    for i in range(14):
+        _commit(depot, "docs/etude-torse.md", "étude {}".format(i))
+    p = _due(depot, ici)
+    assert p.returncode == 1
+    assert p.stdout == "pas_due\tdernière fumée verte {} = code de main, moins de 7 jours\t\tnon\n".format(a[:7])
 
 
 # --- pages -------------------------------------------------------------------------
@@ -301,7 +453,7 @@ def banc(tmp_path):
     _git(depot, "config", "user.email", "t@t")
     _git(depot, "config", "user.name", "t")
     _git(depot, "config", "commit.gpgsign", "false")
-    sha = _commit(depot, "code.txt", "code 1")
+    sha = _commit(depot, "packages/code.txt", "code 1")
     res = vert(sha[:7])
     res.update(sha_complet=sha, fin=datetime.now().astimezone().isoformat(), id="2026-11-07-2130")
     dossier = depot / "docs" / "fumee" / "journaux" / "2026-11-07-2130"
@@ -343,7 +495,7 @@ def test_si_due_main_a_jour_ne_fait_rien_du_tout(banc):
 
 def test_si_due_apres_un_commit_mais_pc_charge_reporte_sans_lancer_la_sim(banc):
     depot, env, tmp = banc
-    _commit(depot, "code.txt", "code 2")
+    _commit(depot, "packages/code.txt", "code 2")
     # Charge max forcée à -1 : le PC est toujours « trop chargé ».
     p = subprocess.run([str(FUMEE_SH), "--si-due"], env=dict(env, FUMEE_CHARGE_MAX="-1"),
                        capture_output=True, text=True, timeout=60)
@@ -373,16 +525,52 @@ def test_rappel_apres_deux_jours_de_report_une_fois_par_demi_journee(banc):
 
 def test_pas_de_rappel_tant_que_la_fumee_est_due_depuis_moins_de_deux_jours(banc):
     depot, env, tmp = banc
-    _commit(depot, "code.txt", "code 2")          # due depuis l'instant, pas depuis 2 jours
+    _commit(depot, "packages/code.txt", "code 2")          # due depuis l'instant, pas depuis 2 jours
     p = subprocess.run([str(FUMEE_SH), "--si-due"], env=dict(env, FUMEE_CHARGE_MAX="-1"),
                        capture_output=True, text=True, timeout=60)
     assert p.returncode == 0 and "RAPPEL" not in _journal(tmp)
     assert not (tmp / "notifs.txt").exists()
 
 
+def _bloquer(depot, jours_vert):
+    """Verte il y a `jours_vert` jours, puis un commit de code et DEUX rouges sur lui."""
+    f = next((depot / "docs" / "fumee" / "journaux").glob("*/resultat.json"))
+    res = json.loads(f.read_text(encoding="utf-8"))
+    ici = datetime.now().astimezone()
+    res["fin"] = (ici - timedelta(days=jours_vert)).isoformat()
+    f.write_text(json.dumps(res), encoding="utf-8")
+    b = _commit(depot, "packages/code.txt", "code 2")
+    for i, h in enumerate((2, 1)):
+        _ecrire_resultat(depot, "2026-11-09-23{}0".format(i), _res(b, "rouge", (ici - timedelta(hours=h)).isoformat()))
+
+
+def test_si_due_bloquee_ne_lance_rien_et_rappelle_apres_deux_jours(banc):
+    """Rouge confirmé sur ce code et due depuis > 2 jours (7 j sans verte) : rappel, jamais de sim."""
+    depot, env, tmp = banc
+    _bloquer(depot, jours_vert=10)
+    for _ in range(2):
+        p = _lancer(env, "--si-due")
+        assert p.returncode == 0 and p.stdout == ""
+    j = _journal(tmp)
+    assert j.count("RAPPEL : une fumée est due depuis") == 1 and "et reste bloquée : 2 fumées rouges sur le code" in j
+    assert "reporté" not in j and "début fumée" not in j
+    assert (tmp / "appels.txt").read_text(encoding="utf-8") == ""          # docker jamais appelé
+    notifs = (tmp / "notifs.txt").read_text(encoding="utf-8").splitlines()
+    assert len(notifs) == 1 and notifs[0].startswith("Didier : fumée rouge confirmée")
+
+
+def test_si_due_bloquee_recente_est_silencieuse(banc):
+    depot, env, tmp = banc
+    _bloquer(depot, jours_vert=1)
+    p = _lancer(env, "--si-due")
+    assert p.returncode == 0 and p.stdout == "" and _journal(tmp) == ""
+    assert (tmp / "appels.txt").read_text(encoding="utf-8") == ""
+    assert not (tmp / "notifs.txt").exists()
+
+
 def test_si_due_ne_touche_jamais_a_la_sim_de_quelqu_un(banc):
     depot, env, tmp = banc
-    _commit(depot, "code.txt", "code 2")
+    _commit(depot, "packages/code.txt", "code 2")
     env = dict(env, FAUX_DOCKER_PS="dadou-sim-container\n")
     p = _lancer(env, "--si-due")
     assert p.returncode == 0

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Lot F — fumée nocturne : décision « due ? » et pages HTML (stdlib seulement).
 
-Appelé par fumee.sh ; testé sur l'hôte (robot/tests/unit/test_fumee.py). Aucune
+Appelé par fumee.sh ; testé sur l'hôte (packages/didier_core/test/unit/test_fumee.py). Aucune
 dépendance : le script tourne sous une minuterie systemd, sans venv.
 
 La vérité d'une fumée est son `resultat.json` (jamais le HTML, qui n'est qu'un
@@ -49,7 +49,27 @@ from pathlib import Path
 VERSION = 1
 SEUIL_JOURS = 7        # décision 2 : 7 jours sans fumée verte = due (dérive de l'environnement)
 RAPPEL_JOURS = 2       # décision 2 : due depuis plus de 2 jours = on prévient David
-EXCLUSION_GIT = ":(exclude)docs/fumee"   # le commit d'une page ne rend pas une fumée « due »
+
+# Chemins TESTÉS par la fumée (règle décidée le 10/11) : seul un commit qui touche l'un
+# d'eux rend une fumée due. Avant, tout commit comptait — le 08/11, 14 commits de DOC
+# (étude du torse) ont lancé des sims de 35 min pour rien. docs/ n'y est pas (pas plus que
+# docs/fumee, nos propres pages). Les trois dossiers de données de legacy/dadou_robot_ros
+# restent listés tant qu'ils existent sur main (un chemin absent ne fait simplement rien).
+CHEMINS_TESTES = (
+    "packages/",
+    "data/",
+    "deploy/",
+    "machines/",
+    "legacy/dadou_robot_ros/conf/",
+    "legacy/dadou_robot_ros/json/",
+    "legacy/dadou_robot_ros/medias/",
+    "legacy/dadou_robot_ros/db/",
+    "legacy/dadou_vision_ros/conf/",
+)
+# Après un rouge sur un « sha de code » (dernier commit touchant un chemin testé) : UNE
+# relance de confirmation, puis plus rien sur ce même code (le 08/11 un rouge a été rejoué
+# toutes les 30 min). 2 = le rouge d'origine + sa confirmation.
+ROUGES_MAX_PAR_CODE = 2
 
 # Ordre et noms des épreuves (décision 3). Le script shell n'envoie que les id.
 EPREUVES = [
@@ -87,33 +107,50 @@ def dernier_vert(resultats: list):
     return verts[-1] if verts else None
 
 
-def decider(vert, commits_apres, premier_commit_apres, maintenant, max_jours=SEUIL_JOURS):
+def decider(vert, commits_apres, premier_commit_apres, maintenant, max_jours=SEUIL_JOURS,
+            rouges_meme_code=0, sha_code=None):
     """Une fumée est-elle due ? -> (due, raison, depuis).
 
     vert                  dernier resultat.json vert (dict) ou None
-    commits_apres         nombre de commits de main après vert["sha_complet"] hors
-                          docs/fumee, ou None si ce sha est inconnu du dépôt
+    commits_apres         nombre de commits de main après vert["sha_complet"] touchant un
+                          chemin de CHEMINS_TESTES, ou None si ce sha est inconnu du dépôt
     premier_commit_apres  datetime du plus ancien de ces commits, ou None
     maintenant            datetime (avec fuseau)
-    depuis                datetime depuis lequel elle est due (None si pas due)
+    rouges_meme_code      fumées ROUGES (hors essais) après la dernière verte dont le sha
+                          de code est celui de main aujourd'hui
+    sha_code              ce sha de code (pour la raison), ou None
+    depuis                datetime depuis lequel elle est due (None si rien n'est dû)
+
+    BLOQUÉE = due par les règles ci-dessus mais déjà rouge ROUGES_MAX_PAR_CODE fois sur ce
+    code : due=False, et `depuis` reste renseigné pour que le rappel « > 2 jours » parte.
     """
-    if vert is None:
-        return True, "aucune fumée verte connue", maintenant
-    fin = datetime.fromisoformat(vert["fin"])
     raisons, depuis = [], []
-    if commits_apres is None:
-        raisons.append("le sha de la dernière fumée verte ({}) est inconnu de main".format(vert["sha"]))
+    if vert is None:
+        raisons.append("aucune fumée verte connue")
         depuis.append(maintenant)
-    elif commits_apres > 0:
-        raisons.append("{} commit(s) dans main depuis la dernière fumée verte ({})".format(
-            commits_apres, vert["sha"]))
-        depuis.append(premier_commit_apres or maintenant)
-    if maintenant - fin >= timedelta(days=max_jours):
-        raisons.append("{} jours sans fumée verte (dernière : {})".format(max_jours, fin.date().isoformat()))
-        depuis.append(fin + timedelta(days=max_jours))
-    if not raisons:
-        return False, "dernière fumée verte {} = main, moins de {} jours".format(vert["sha"], max_jours), None
-    return True, " ; ".join(raisons), min(depuis)
+    else:
+        fin = datetime.fromisoformat(vert["fin"])
+        if commits_apres is None:
+            raisons.append("le sha de la dernière fumée verte ({}) est inconnu de main".format(vert["sha"]))
+            depuis.append(maintenant)
+        elif commits_apres > 0:
+            raisons.append("{} commit(s) de code dans main depuis la dernière fumée verte ({})".format(
+                commits_apres, vert["sha"]))
+            depuis.append(premier_commit_apres or maintenant)
+        if maintenant - fin >= timedelta(days=max_jours):
+            raisons.append("{} jours sans fumée verte (dernière : {})".format(max_jours, fin.date().isoformat()))
+            depuis.append(fin + timedelta(days=max_jours))
+        if not raisons:
+            return False, "dernière fumée verte {} = code de main, moins de {} jours".format(
+                vert["sha"], max_jours), None
+    raison, depuis = " ; ".join(raisons), min(depuis)
+    code = (sha_code or "?")[:7]
+    if rouges_meme_code >= ROUGES_MAX_PAR_CODE:
+        return False, "bloquée : {} fumées rouges sur le code {}, plus de relance tant qu'aucun commit " \
+                      "de code n'arrive ({})".format(rouges_meme_code, code, raison), depuis
+    if rouges_meme_code == 1:
+        return True, "relance de confirmation du rouge sur le code {} ; {}".format(code, raison), depuis
+    return True, raison, depuis
 
 
 def rappel_necessaire(depuis, maintenant, jours=RAPPEL_JOURS) -> bool:
@@ -127,7 +164,7 @@ def _git(depot: str, *args: str):
 
 
 def commits_apres_sha(depot: str, sha: str):
-    """(nombre, date du plus ancien) des commits de main après `sha`, hors docs/fumee.
+    """(nombre, date du plus ancien) des commits de main après `sha` touchant CHEMINS_TESTES.
 
     (None, None) si `sha` n'existe pas dans le dépôt (réécriture d'historique, clone récent).
     """
@@ -135,11 +172,33 @@ def commits_apres_sha(depot: str, sha: str):
     if code != 0:
         return None, None
     code, sortie = _git(depot, "log", "--reverse", "--format=%cI", "{}..main".format(sha),
-                        "--", ".", EXCLUSION_GIT)
+                        "--", *CHEMINS_TESTES)
     if code != 0:
         return None, None
     dates = [ligne for ligne in sortie.splitlines() if ligne]
     return len(dates), (datetime.fromisoformat(dates[0]) if dates else None)
+
+
+def sha_de_code(depot: str, rev: str):
+    """Le « sha de code » de `rev` : son dernier commit touchant CHEMINS_TESTES, ou None."""
+    code, sortie = _git(depot, "log", "-1", "--format=%H", rev, "--", *CHEMINS_TESTES)
+    return sortie if code == 0 and sortie else None
+
+
+def rouges_sur_code(depot: str, resultats: list, vert, code_main):
+    """Fumées rouges (hors essais) APRÈS la dernière verte dont le sha de code est `code_main`."""
+    if code_main is None:
+        return 0
+    borne = datetime.fromisoformat(vert["fin"]) if vert is not None else None
+    n = 0
+    for r in resultats:
+        if r.get("verdict") != "rouge" or r.get("essai") or not r.get("fin"):
+            continue
+        if borne is not None and datetime.fromisoformat(r["fin"]) <= borne:
+            continue
+        if r.get("sha_complet") and sha_de_code(depot, r["sha_complet"]) == code_main:
+            n += 1
+    return n
 
 
 # --------------------------------------------------------------------------
@@ -344,13 +403,19 @@ def _maintenant(texte):
 
 def cmd_due(args) -> int:
     sortie, maintenant = Path(args.sortie), _maintenant(args.maintenant)
-    vert = dernier_vert(lire_resultats(sortie))
+    resultats = lire_resultats(sortie)
+    vert = dernier_vert(resultats)
     nombre, premier = (None, None)
     if vert is not None:
         nombre, premier = commits_apres_sha(args.depot, vert["sha_complet"])
-    due, raison, depuis = decider(vert, nombre, premier, maintenant)
+    code_main = sha_de_code(args.depot, "main")
+    due, raison, depuis = decider(vert, nombre, premier, maintenant,
+                                  rouges_meme_code=rouges_sur_code(args.depot, resultats, vert, code_main),
+                                  sha_code=code_main)
     # Une seule ligne, champs séparés par des tabulations : état, raison, depuis, rappel.
-    print("\t".join(["due" if due else "pas_due", raison, depuis.isoformat() if depuis else "",
+    # « bloquee » (code 1, rien n'est lancé) garde son `depuis` : fumee.sh fait partir le rappel.
+    etat = "due" if due else ("bloquee" if depuis else "pas_due")
+    print("\t".join([etat, raison, depuis.isoformat() if depuis else "",
                      "oui" if rappel_necessaire(depuis, maintenant) else "non"]))
     return 0 if due else 1
 

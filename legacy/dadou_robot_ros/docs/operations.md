@@ -578,9 +578,17 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
 
 **Trois façons de la lancer**
 - `fumee.sh --si-due` : appelé toutes les 30 min par la minuterie (voir plus bas). Ne fait RIEN
-  si rien n'est dû ; dû = un commit est entré dans `main` après le sha gravé dans la dernière
-  page VERTE (les commits de `docs/fumee/` ne comptent pas, sinon chaque page rappellerait la
-  suivante), OU 7 jours sans fumée verte. Dû mais PC occupé → note « reporté » dans
+  si rien n'est dû ; dû = un commit touchant un **chemin TESTÉ** est entré dans `main` après le
+  sha de la dernière page VERTE, OU 7 jours sans fumée verte. Chemins testés (règle du 10/11,
+  liste gravée `CHEMINS_TESTES` en tête de `fumee_page.py`) : `packages/`, `data/`, `deploy/`,
+  `machines/`, `legacy/dadou_robot_ros/conf/`, `legacy/dadou_robot_ros/{json,medias,db}/`,
+  `legacy/dadou_vision_ros/conf/`. La doc (`docs/`, README, CLAUDE.md, `docs/fumee/` elle-même)
+  ne déclenche rien : le 08/11, 14 commits d'étude du torse avaient lancé des sims pour rien.
+  **Après un rouge** sur un « sha de code » (dernier commit de `main` touchant un chemin testé) :
+  UNE relance de confirmation, puis plus rien sur ce même code (« bloquée ») tant qu'aucun commit
+  de code n'arrive — le 08/11 un rouge avait été rejoué toutes les 30 min. Les essais provoqués
+  ne comptent pas ; une fumée forcée à la main, si. Bloquée depuis plus de 2 jours → même rappel
+  qu'en cas de report (ci-dessous), avec la cause. Dû mais PC occupé → note « reporté » dans
   `~/.local/state/didier-fumee/journal.log` et sort 0 : **jamais de plage à réserver**, l'essai
   de 30 min plus tard réessaie. Sont reportés : charge 1 min > nb de cœurs × 0,5 (seuil
   `FUMEE_CHARGE_MAX`, 16 sur ce PC de 32 cœurs ; le RTF reste le vrai juge), RTF < 0,8 après
@@ -643,6 +651,15 @@ a été perdue avec /tmp lors de l'extinction accidentelle ci-dessus. Aucune pag
 dans `docs/fumee/` : la fumée est « due » et c'est la minuterie qui écrira la première page réelle.
 Tests hôte : `packages/didier_core/test/unit/test_fumee.py` (décision « due ? », pages, garde-fous du script avec
 un faux `docker`).
+
+**A1 rouge à 7/14 par intermittence (08-11/11) — cause et correctif.** La sim tourne en réseau
+`host` ; sans `GZ_IP`, la découverte gz-transport part sur toutes les interfaces du PC (ponts
+docker, VPN `wg-maison`…), perd des milliers de paquets UDP (port 10317) et, une fois sur trois à
+six, `ground_truth/odom` n'est jamais relayé vers ROS : la 2e sim de la fumée ne publie alors
+aucun `cmd_vel`. Mesures (10 démarrages par série) : sans `GZ_IP` 3/10 ratés PC calme, 6/10 PC
+chargé ; avec `GZ_IP=127.0.0.1` 0/20, puis 5 passes A1 complètes à 14/14. Correctif : `GZ_IP=127.0.0.1`
+dans `docker-compose-sim.yml` (11/11). Si `ground_truth` se tait à nouveau, regarder d'abord
+`GZ_IP` dans le conteneur. Outils et journaux du diagnostic : `~/.local/state/didier-fumee/diag-a1/` (PC).
 
 ## Salle de répétition simulée — Didier chemine seul dans la rue (lot R1, 2026-10-07)
 
