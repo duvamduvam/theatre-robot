@@ -1,0 +1,42 @@
+=== T1 départ + start 21:33:05 ===
+  x après 9 s : 0.5682193461031633
+  ✅ route on : Didier est parti (x > 0,3 m après 9 s)
+  ✅ journal : scenario_start
+  lubies tirées   : lubie_nefs lubie_poubelle_tri lubie_velo_cadenas lubie_lampadaire lubie_bollard lubie_chien lubie_tas_de_sable lubie_horloge_arretee lubie_pelouse lubie_tag_mur lubie_titan_grise
+  lubies écartées : lubie_elephant lubie_carrousel lubie_table_basse lubie_poster_bizarre lubie_pigeon lubie_banc lubie_flaque lubie_terrasse lubie_grue_jaune lubie_cale lubie_panneau_info lubie_rails lubie_anneaux lubie_loire lubie_plot_chantier lubie_caisse_bois lubie_hangar_bananes lubie_bouche_incendie lubie_conteneur_rouge
+  ✅ au moins une lubie tirée avec la graine du fichier
+=== T2 première lubie : arrêt, fermeture au fader, consigne posée puis levée 21:33:51 ===
+  ✅ fault_start de la première lubie tirée (lubie_nefs)
+  cmd_vel_follow pendant la lubie : 0.0
+  ✅ lubie : Didier s'arrête (route_speed 0 -> consigne nulle)
+  cmd_vel_follow après le fader : 0.23999998590101346
+  ✅ fermeture au fader : Didier repart avant la fin de la lubie
+  ✅ fault_stop de la première lubie
+  ✅ fermée par le fader (journal closed_by: fader), pas à l'échéance
+=== T4 arrivée + POI (attente de « finished » ou 540 s) 21:34:05 ===
+  x final : 143.9060972267187 (482 s) ; relance jouée : 0
+  ✅ arrivée au pied de la Titan grise (x ≥ dernier waypoint − 3 m = 144.38 − 3)
+  poi_enter : 30, ordonnés : 1
+  ✅ ≥ 25 POI atteints
+  ✅ POI dans l'ordre du YAML
+=== T5 fin de scénario + couverture (attente scenario_end) 21:41:36 ===
+  ✅ journal : scenario_end
+  bugs du scénario : 20
+  ✅ 20 bugs déclarés
+  bugs jamais partis ni sautés : aucun
+  ✅ chaque bug a fault_start ou fault_skip (plus aucun pending)
+  ✅ aucun fault_error
+  statuts :      30 done;      1 skipped;
+  pending/error : aucun
+  ✅ aucune panne ni lubie en pending/error à la fin (done ou skipped seulement)
+  route_speed = 0 publiés : 10, lubies démarrées : 10
+  ✅ chaque lubie démarrée a publié route_speed 0 (arrêt devant l'objet)
+=== T3 (relu sur les captures) consignes et pannes chat 21:48:29 ===
+  chat_instruction : 10 consignes posées, 10 levées ; lubies démarrées : 10
+  ✅ une consigne publiée par lubie démarrée
+  ✅ chaque consigne est levée ("")
+  rehearsal/chat_fault :       1 "op": "deaf";      1 "op": "delay";      1 "op": "garble";      1 "op": "mute";      4 "op": "pass";      1 "op": "phantom";
+  ✅ chaque panne chat démarrée a publié son op (5)
+  ✅ au moins un « pass » publié (fin de panne chat)
+  journal : /home/ros2_ws/log/rehearsal/2026-11-11_21-32-40-237_1951_chantiers.jsonl
+=== V-R3 : 21 OK, 0 KO 21:48:30 ===
