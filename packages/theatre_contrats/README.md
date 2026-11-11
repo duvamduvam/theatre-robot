@@ -25,6 +25,19 @@ Ce qui n'est **pas** ici et reste dans `utils_static.py` jusqu'à L5 : chemins e
 répertoires, logging, plateforme (`RPI_TYPE`, `SERIAL_ID`, `MSG_SIZE`), couleurs
 (`ORANGE`), constantes internes à `dadou_utils_ros`.
 
+## Règle : ce qui est physique est typé (décidée le 2026-11-11)
+
+`StringTime` (du JSON dans une chaîne) est réservé aux **ordres de jeu** : animation, visage,
+son, lumières, consignes de parole, états de séance. **Toute grandeur physique ou perçue
+voyage dans un message ROS standard typé** — `Twist`, `LaserScan`, `Odometry`, `JointState`,
+`PointStamped`, `DiagnosticArray`… — jamais dans un nouveau payload JSON. Pourquoi : le
+middleware et les outils (enregistrement, tracé, moniteur de collision) ne comprennent que
+les types ; un nombre caché dans une chaîne ne se trace pas et ne se vérifie pas.
+
+Corollaire pour la santé du matériel : les prochains signaux (batterie, lidar, odométrie)
+vont sur `diagnostics` (`diagnostic_msgs`), pas dans de nouveaux champs de `HardwareStatus`.
+Les topics existants ne sont pas réécrits. Origine : `docs/etudes/etude-standards-robotique.md` §6.2.
+
 ## Tester
 
 ```bash

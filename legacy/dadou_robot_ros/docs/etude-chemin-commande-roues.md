@@ -226,6 +226,9 @@ Sur la carte `wheel-odometry` (PCB pas encore gravé — étape 4, après valida
   watchdog**. Cette intégration n'est pas conçue. Un demi-étage déjà câblé sur la carte,
   c'est l'invitation à le brancher « vite fait » hors chaîne de sécurité.
 
+*(Note du 11/11 : l'étape 5 est reformulée « contrat `odom`/TF + briques Nav2 choisies », sans
+`ros2_control` — `docs/etudes/etude-standards-robotique.md` §5.2. La condition ci-dessous tient.)*
+
 **Réouvrir cette étude si, et seulement si**, l'étape 5 (`ros2_control` + nav2) montre qu'un
 asservissement de vitesse à 20 Hz depuis le Pi ne tient pas — auquel cas la boucle locale
 dans le Pico devient le sujet, avec l'intégration à la chaîne de sécurité comme préalable.

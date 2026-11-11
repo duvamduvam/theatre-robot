@@ -136,6 +136,14 @@ robustesse. Topics enregistrés (légers, quelques centaines de Mo/mois) :
 proportion ; les détections `/vision/person*` suffisent à dire ce que le
 robot percevait).
 
+**Précision du 2026-11-11** (étude standards §5.4, acceptée par David) : l'enregistreur est
+`rosbag2` au format **MCAP** (défaut de Jazzy ; le fichier embarque ses définitions de
+messages), aucun enregistreur maison. À évaluer à l'ouverture du lot : le **mode instantané**
+(`--snapshot-mode`, tampon circulaire en mémoire vidé par appel de service) pour le bouton
+START, en complément ou à la place des segments continus, mesure d'usure de la SD à l'appui.
+Lecture hors ligne : Foxglove (offre gratuite) ou PlotJuggler ; le JSON de `StringTime` s'y
+lit comme du texte.
+
 ### Deuxième usage, apparu le 2026-08-26 : l'étude d'APRÈS-SHOW
 
 La boîte noire n'a pas été pensée que pour l'après-incident. Le chantier voix

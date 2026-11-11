@@ -242,6 +242,23 @@ déplacés tels quels ; voir `data/README.md`). **Rien ne change sur le Pi ni da
 - **Tests hôte** : `DIDIER_DATA_DIR` → `data/` (conftest du cœur) ; jeu et télécommande lisent
   `data/json`. Éditer une séquence pour la sim = éditer `data/json/sequences/…` (monté).
 
+## CI à la racine — les tests unitaires à chaque poussée (11/11)
+
+`.github/workflows/tests.yml` (racine du mono-dépôt) rejoue sur GitHub, à chaque poussée et
+chaque demande de fusion, six suites « hôte » : `didier_core`, `dadou_utils_ros`,
+`didier_jeu`, `theatre_contrats`, `didier_vision`, et la télécommande de
+`legacy/dadou_control_ros`. Ubuntu 24.04, Python 3.12, aucun ROS (modules factices), la
+commande de cette page : `python -m pytest -q -o addopts=` depuis le dossier de la suite.
+Pas de build colcon ni de sim : la fumée nocturne s'en charge.
+
+- Voir le résultat : `gh run list --workflow tests --limit 5`, puis `gh run view <id> --log-failed`.
+- Ajouter une suite : une entrée dans `matrix.include` (dossier + fichier d'exigences).
+- Rejouer comme la CI, hors de l'arbre de travail : `git archive HEAD | tar -x -C /tmp/x`,
+  un venv neuf, `pip install -r <exigences>`. ⚠️ Dans une telle copie,
+  `test_arborescence.py` rougit sur l'absence de `.git` : attendu, GitHub en a un.
+- Les anciens `legacy/*/.github/workflows/tests.yml` sont supprimés : GitHub ne lit que la
+  racine, ils ne tournaient plus depuis le lot L0 (02/11).
+
 ## Calibration & verification tooling
 - **Face LED patterns** (expressions, publish on `face`): `"calib"` (digits
   123 + E + eye F — fine orientation), `"calib-couleurs"` (one colour per

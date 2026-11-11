@@ -13,7 +13,7 @@ physical subsystems.
   `conf/`) stays in this repo, root read from `DIDIER_DATA_DIR`. It is coupled to the
   shared library `dadou_utils_ros` (a standalone package of `packages/` since L1e-3a,
   2026-11-07 — it used to be a symlink in this repo; no versioning, protected by
-  contract tests and a cross-repo CI job).
+  contract tests and the root CI).
 - **`packages/`** (mono-repo root; they lived in this repo's `conf/` until L1e-1,
   2026-11-06, names unchanged) — standalone ROS 2 (ament) packages built by colcon:
 
@@ -87,8 +87,10 @@ dies mid-animation, wheels stop and servos return to rest.
 ## Tests
 1618 unit tests on 2026-11-07 (pytest, `packages/didier_core/test/unit`, run from
 `packages/didier_core` with this repo's `.venv`; no hardware — deferred hardware
-imports pattern), run by CI on every push; `dadou_utils_ros` CI re-runs the
-consumers' tests to catch shared-contract breaks. Data contracts (expressions,
+imports pattern), run by CI on every push — since 2026-11-11 the single workflow
+`.github/workflows/tests.yml` at the mono-repo root (six suites: core, shared lib, game
+selector, contracts, vision, legacy remote); between L0 (2026-11-02) and that date the
+per-repo workflows sat under `legacy/` and GitHub ran nothing. Data contracts (expressions,
 lights, sequences, referenced assets) are tested too.
 
 Complementary documentation: `interfaces.md` (topics & payload contract),

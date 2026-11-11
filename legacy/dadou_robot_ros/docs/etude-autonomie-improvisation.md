@@ -185,6 +185,17 @@ L'enveloppe est **nécessaire** mais ne rend pas le déplacement « sûr » à e
 **sûre la décision autonome**, ce qui est différent. La **marge d'erreur de décision** voulue
 par David (il est derrière, l'erreur se joue) est entièrement à l'intérieur de ça.
 
+**Ajout du 2026-11-11** (étude standards §5.3 et §6.1, accepté par David) :
+- **Lot A0** : avant d'écrire le filtre, essayer en sim le moniteur de collision de Nav2
+  (`nav2_collision_monitor` : zones d'arrêt, de ralenti et d'approche déclarées en YAML sur un
+  `LaserScan`). Trois critères d'acceptation : il exprime les règles du tableau ci-dessus, il
+  arrête sur capteur muet, sa charge sur Pi 4 est mesurée. Les verrous (capteur perdu,
+  superviseur perdu) resteraient un petit nœud maison autour de lui. Un critère en échec →
+  filtre maison, sans regret.
+- **Spec A2** : les déplacements du sélecteur (`aller_voir`, `tourner`, `avancer`) deviennent
+  des **actions ROS** (retour, résultat, annulation ; client fourni par `py_trees_ros`), au
+  lieu de nouveaux topics d'état et de cause.
+
 ### 3.3 Où ça se place dans la chaîne roues
 
 ```

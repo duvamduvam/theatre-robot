@@ -4,8 +4,28 @@
 les standards qu'applique une petite entreprise de robotique ? ROS est-il toujours le bon
 choix ? Y a-t-il des méthodes ou des logiciels meilleurs à intégrer ?*
 
-**⚠️ RIEN N'EST DÉCIDÉ ICI.** Six arbitrages sont proposés au §7 ; tout le reste confirme des
-décisions déjà prises (rappelées, pas rouvertes).
+**✅ DÉCIDÉ par David le 2026-11-11** — voir §0. Le corps de l'étude est laissé tel qu'il a été
+soumis ; le §7 porte l'état de chaque action.
+
+## 0. Décisions de David (11/11)
+
+1. **Les recommandations sont acceptées** : les six arbitrages du §7 (CI à la racine, règle
+   « physique = typé », analyse de risques, étape 5 sans `ros2_control`, essai du moniteur de
+   collision Nav2 au lot A0, actions ROS pour les déplacements) sont à intégrer, chacun au
+   moment indiqué.
+2. **Lyrical et Zenoh seront étudiés ensemble, après la migration en cours — logicielle (L5)
+   ET physique (refonte électrique) — et en mode banc d'essai, donc réversible.** Conséquences :
+   Jazzy + Fast DDS reste la référence pendant tout le banc ; le banc tourne sur des images
+   Docker **parallèles** (revenir en arrière = changer d'étiquette d'image) ; rien n'est
+   déployé sur le robot câblé avant un verdict chiffré. La spec du banc écrira les mesures
+   avant de les faire : découverte entre machines en Wi-Fi, perte de topics latchés sous
+   charge, charge processeur du Pi 4, facteur temps réel de la sim, latence du `Twist` de la
+   télécommande. Le §5.1 (« non maintenant ») et la ligne 9 du §7 sont lus à cette lumière.
+3. **Il n'y a pas d'assurance à ce jour.** La question écrite à l'assureur (§5.6) n'a donc pas
+   de destinataire. Ce que ça change : l'analyse de risques devient le dossier à présenter le
+   jour où une assurance sera souscrite, et **souscrire une responsabilité civile couvrant le
+   robot devient un préalable à la première sortie publique roues actives** — c'est à ce
+   moment que la question du règlement Machines se posera, à l'assureur ou à un conseil.
 
 **Sources.** Le dépôt, relevé le 11/11 (commit `46ecb38`). Trois collectes web du 11/11,
 conservées brutes : `docs/veille/brut/2026-11-11-standards-distros-zenoh.md`,
@@ -297,15 +317,15 @@ champs de `HardwareStatus` — les outils les affichent sans rien écrire.
 | # | Action | Nature | Coût | Quand |
 |---|---|---|---|---|
 | 0 | Carte Sécurité, publieur `e_stop`, refonte électrique | **déjà décidé** | — | en cours, avant tout roulage |
-| 1 | **Remettre une CI à la racine** : tests unitaires des trois packages à chaque poussée | arbitrage D1 | une séance ; Opus suffit | maintenant, sans attendre L2 |
-| 2 | Règle « physique = typé » + santé sur `/diagnostics` dans `theatre_contrats` | arbitrage D2 | une heure, doc et un test | au prochain lot qui touche le contrat |
-| 3 | Boîte noire en `rosbag2` MCAP, mode instantané à évaluer | précise une décision du 12/07 | le lot prévu | télédiagnostic étape 2 |
-| 4 | Analyse de risques d'une page + question écrite à l'assureur | arbitrage D3 | une séance avec David | avant le premier roulage au sol |
-| 5 | Étape 5 reformulée : contrat `odom`/TF, sans `ros2_control` | arbitrage D4 | zéro (c'est un renoncement) | à acter |
-| 6 | Essai du moniteur de collision Nav2 en sim, trois critères | arbitrage D5 | dans le lot A0 | à l'arrivée du lidar |
-| 7 | Actions ROS pour les déplacements du sélecteur | arbitrage D6 | dans la spec A2 | lot d'autonomie suivant |
+| 1 | **Remettre une CI à la racine** : tests unitaires à chaque poussée | accepté (D1) — **FAIT le 11/11** : `.github/workflows/tests.yml`, six suites ; les quatre workflows morts de `legacy/` supprimés | — | — |
+| 2 | Règle « physique = typé » + santé sur `/diagnostics` dans `theatre_contrats` | accepté (D2) — **règle écrite le 11/11** dans `packages/theatre_contrats/README.md` (sans test : rien de vérifiable mécaniquement tant qu'aucun topic neuf n'existe) | — | s'applique dès le prochain topic |
+| 3 | Boîte noire en `rosbag2` MCAP, mode instantané à évaluer | accepté, noté dans `etude-telediagnostic.md` §6 | le lot prévu | télédiagnostic étape 2 |
+| 4 | Analyse de risques d'une page ; assurance à souscrire avant la première sortie publique roues actives (§0) | accepté (D3) | une séance avec David | avant le premier roulage au sol |
+| 5 | Étape 5 reformulée : contrat `odom`/TF, sans `ros2_control` | accepté (D4) — **acté le 11/11**, reporté dans `chantiers.md` et `etude-chemin-commande-roues.md` | — | — |
+| 6 | Essai du moniteur de collision Nav2 en sim, trois critères | accepté (D5), noté dans `etude-autonomie-improvisation.md` §3.2 | dans le lot A0 | à l'arrivée du lidar |
+| 7 | Actions ROS pour les déplacements du sélecteur | accepté (D6), noté au même endroit | dans la spec A2 | lot d'autonomie suivant |
 | 8 | Supprimer les rôles `ros_humble_*` | ménage | minutes | lot 4e |
-| 9 | Essai de Lyrical en sim | veille | une séance | après L5, pas avant 2027 |
+| 9 | **Banc d'essai Lyrical + Zenoh, réversible** (§0, décision 2) | **décidé le 11/11** | une spec (Fable) puis un banc | après L5 **et** la refonte électrique |
 
 **À ne pas rouvrir** : mono-dépôt et noms de packages (01/11), télécommande Twist direct
 (01/11), `ros2_control` pour les servos (26/09), `rosbridge` et Zenoh reportés (11/07),
