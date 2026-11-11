@@ -303,23 +303,21 @@ pour les servos (support vide tant que le code vise 0x40 pour tout). Le PCF8574 
 (code actuel ; la refonte prévoit 0x22). J1 se câble en fils Dupont un par un : aucune broche 5 V du
 Pi ne peut arriver sur la plaque.
 
-**Variante plaque à bandes 100 × 160 mm** (demandée par David le 11/11) :
+**Plaque à bandes 60 × 140 mm** (la seule du stock assez grande, 11/11 ; pas d'achat) :
 [`banc-temoin-bandes.svg`](banc-temoin-bandes.svg), générée et **vérifiée** par
-`atelier/outils/implantation_banc_temoin_bandes.py` (`--liste` : 31 coupures, 26 straps, composants).
-Le script reconstruit les liaisons (bandes − coupures + straps) et refuse d'écrire le dessin au
-moindre court-circuit ou réseau coupé ; contrôlé en retirant une coupure, en décalant un strap et
-en posant une coupure sur une broche : les trois sont refusés. Même circuit, trois choix propres
-aux bandes : bus I²C **sur le cuivre** (ISO1540 côté 2 et PCA9685 ROUES alignés sur les bandes 5-6),
-J1 coupé en **J1a** (I²C) et **J1b** (GPIO), témoins J4 en **signal/masse alternés** avec
-résistances en ligne. **Liaisons hors plaque en JST-XH** du stock (remarque de David) : J1a et J1b (4 pts, câble JST → Dupont
-femelle côté Pi), J3 matrice (3 pts), et **J5/J6 vers le MDD10A** (3 pts, étage B3) : « sens · GND · PWM »
-par roue, pris avant les résistances des témoins, que l'alternance de J4 donne sans strap. Le pas
-XH (2,50 mm) sur une plaque au pas de 2,54 passe sans forcer jusqu'à 4 points. **J7 = extension du bus I²C 5 V** (JST 4 pts,
-5 V · SDA · SCL · GND, même ordre que J11 de la carte Moteurs) : un module de plus sans dessouder.
-Pas d'extension côté Pi (J13/J14 de la carte Sécurité) : un module 3,3 V se branche sur le Pi
-lui-même ; un INA226 (0x40 d'usine) n'irait jamais côté 5 V, où il prendrait l'adresse du PCA ROUES. La matrice tire son courant **par le bornier J2, jamais par les bandes** (une
-bande ne supporte pas les ~4 A d'une matrice 8×8 en blanc). Contours des modules indicatifs : les
-poser à blanc avant de souder.
+`atelier/outils/implantation_banc_temoin_bandes.py` (`--liste` : coupures, straps, composants ;
+54 trous × 23 bandes). Le script reconstruit les liaisons (bandes − coupures + straps) et refuse
+d'écrire le dessin au moindre court-circuit ou réseau coupé (contrôlé par trois mutations).
+Sur cette surface, **le PCA9685 0x41 (servos) et le PCF8574 (relais) quittent la plaque** : ils se
+branchent en chaîne sur **J7** (bus I²C 5 V, JST 4 pts, 5 V · SDA · SCL · GND, ordre de J11 de la
+carte Moteurs) par leurs barrettes traversantes, posés sur le socle. Restent sur la plaque : J1a/J1b
+(JST 4 pts vers le Pi, câble JST → Dupont femelle), ISO1540, PCA9685 ROUES avec R10/JP1, témoins J4
+(signal/masse alternés, résistances en ligne), **J5/J6 vers le MDD10A** (JST 3 pts « sens · GND · PWM »
+par roue, pris avant les résistances des témoins), 74AHCT125, boutons, LED d'état, J2 (bornier),
+J3 (matrice, JST 3 pts). La matrice tire son courant **par J2, jamais par les bandes**. Bus I²C
+sur le cuivre (ISO1540 côté 2 et PCA ROUES alignés). Pas d'extension côté Pi : un module 3,3 V se
+branche sur le Pi, et un INA226 (0x40 d'usine) n'irait jamais sur J7. Contours des modules
+indicatifs : les poser à blanc avant de souder ; compter les trous de la plaque (54 attendus).
 
 **À savoir avant B1** :
 - la configuration du robot écrit 1 000 LED et place le visage aux LED 513-673 : sur une matrice de

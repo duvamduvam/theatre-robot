@@ -30,6 +30,9 @@ Brochages : mêmes sources et même réserve que la plaque à pastilles (À VÉR
 réels avant de souder). Les contours des modules sont INDICATIFS : poser les modules à blanc
 sur leurs barrettes avant de souder.
 
+Plaque : 60 × 140 mm (54 trous × 23 bandes), la seule du stock assez grande (11/11) ; le
+PCA9685 0x41 et le PCF8574 n'y tiennent pas : ils se branchent en chaîne sur J7, hors plaque.
+
 Usage : implantation_banc_temoin_bandes.py [sortie.svg]  (défaut : docs/etudes/banc-temoin-bandes.svg)
         implantation_banc_temoin_bandes.py --liste       (coupures, straps, composants en Markdown)
 """
@@ -41,9 +44,9 @@ from collections import defaultdict
 from pathlib import Path
 
 PAS = 2.54
-ECHELLE = 1.6  # dessin agrandi : on compte les trous
-COLS, RANGS = 63, 39  # plaque à bandes 100 × 160 mm, bandes horizontales
-X0, Y0 = 31.0, 24.0
+ECHELLE = 1.8  # dessin agrandi : on compte les trous
+COLS, RANGS = 54, 23  # plaque à bandes 60 × 140 mm, bandes dans la longueur
+X0, Y0 = 34.0, 26.0
 TEXTE, PETIT = 3.0, 2.6
 
 Trou = tuple[int, int]
@@ -89,120 +92,96 @@ couper(7, 4, 5, 6)  # sépare les deux côtés de l'ISO1540 (la masse, commune, 
 couper(13, 4)  # VCC2 (5 V) | OE des roues
 couper(11, 7)  # masse côté gauche | 5 V du bus
 strap("5V", (12, 4), (12, 7))  # VCC2 de l'ISO1540 au 5 V du bus
-strap("GND", (1, 3), (1, 7))  # masse du Pi et de l'ISO1540 à la bande GND du bus
+strap("GND", (1, 3), (1, 7))  # masse du Pi et de l'ISO1540 à la bande GND du bus (bande 3)
 
-# ------------------------------------------------------------------- PCA9685 0x40 ROUES (rangées 3-8)
+# ------------------------------------------------------------------- PCA9685 0x40 ROUES (bandes 3-8)
 PCA_BROCHES = ["GND", "OE", "SCL", "SDA", "VCC", "V+"]
 for i, nom in enumerate(PCA_BROCHES):
     net = {"OE": "OE_ROUES", "VCC": "5V", "V+": "V+_ROUES"}.get(nom, nom)
     broche(15, 3 + i, net, f"PCA40.{nom}")
+couper(13, 8)  # V+ des roues : la bande ne va pas dans la zone de gauche
 dipole("R10", "10 kΩ", (40, 4), "OE_ROUES", (40, 7), "5V", "resistance")
-broche(42, 3, "GND", "JP1.2")
-broche(42, 4, "OE_ROUES", "JP1.1")
+broche(41, 3, "GND", "JP1.2")
+broche(41, 4, "OE_ROUES", "JP1.1")
 
-# ------------------------------------------------------------------- J4 + LED témoins (rangées 0-7)
-couper(43, 4, 5, 6, 7)  # isole la zone des témoins du bus
+# ------------------------------------------------------------------- J4/J5/J6 + LED témoins (bandes 0-7)
+couper(42, 4, 5, 6, 7)  # isole la zone des témoins du bus
 for k in range(4):
     r = 2 * k
-    broche(44, r, f"CH{k}", f"J4.ch{k}")
+    broche(43, r, f"CH{k}", f"J4.ch{k}")
     if k < 3:
-        broche(44, r + 1, "GND", f"J4.GND{k + 1}")
-    couper(51, r)  # résistance en ligne : une coupure entre ses pattes
-    dipole(f"R{4 + k}", "330 Ω", (49, r), f"CH{k}", (53, r), f"LED{k}", "resistance")
-    dipole(f"D{1 + k}", "LED", (55, r), f"LED{k}", (55, r + 1), "GND", "led")
+        broche(43, r + 1, "GND", f"J4.GND{k + 1}")
+    couper(49, r)  # résistance en ligne : une coupure entre ses pattes
+    dipole(f"R{4 + k}", "330 Ω", (47, r), f"CH{k}", (51, r), f"LED{k}", "resistance")
+    dipole(f"D{1 + k}", "LED", (52, r), f"LED{k}", (52, r + 1), "GND", "led")
 # J5/J6 : JST 3 points vers le MDD10A (étage B3), pris AVANT les résistances des témoins.
 # L'alternance signal/masse de J4 donne gratuitement « sens · GND · PWM » par roue
 # (robot_config : gauche = sens ch0 + PWM ch1, droite = PWM ch2 + sens ch3).
 for i, net in enumerate(["CH0", "GND", "CH1"]):
-    broche(47, i, net, f"J5.{i + 1}")
+    broche(45, i, net, f"J5.{i + 1}")
 for i, net in enumerate(["CH2", "GND", "CH3"]):
-    broche(47, 4 + i, net, f"J6.{i + 1}")
-strap("GND", (58, 1), (58, 3))
-strap("GND", (59, 3), (59, 5))
-strap("GND", (58, 5), (58, 7))
+    broche(45, 4 + i, net, f"J6.{i + 1}")
+strap("GND", (53, 1), (53, 3))
+strap("GND", (53, 5), (53, 7))
+strap("GND", (50, 3), (50, 5))
 
-# ------------------------------------------------------------------- J7 : extension du bus I²C 5 V
-# Même rôle et même ordre que J11 de la carte Moteurs (5 V · SDA · SCL · GND) : un module de plus
-# sur le bus côté modules sans dessouder. JST 4 points, bandes 9-12 (côté droit).
+# ------------------------------------------------------------------- J7 : bus I²C 5 V vers les modules déportés
+# Même ordre que J11 de la carte Moteurs (5 V · SDA · SCL · GND). Sur la plaque de 60 × 140, le
+# PCA9685 0x41 (servos) et le PCF8574 0x21 (relais) n'ont plus de place : ils se branchent en
+# chaîne sur J7 (barrettes traversantes des modules), posés sur le socle.
 for i, net in enumerate(["5V", "SDA", "SCL", "GND"]):
-    broche(61, 9 + i, net, f"J7.{i + 1}")
-couper(13, 8, 9, 10, 11)  # ces bandes ne vont pas jusqu'à la zone de gauche
+    broche(53, 9 + i, net, f"J7.{i + 1}")
+couper(13, 9, 10, 11, 12)
 strap("5V", (41, 7), (41, 9))
 strap("SDA", (39, 6), (39, 10))
 strap("SCL", (38, 5), (38, 11))
-strap("GND", (36, 12), (36, 14))
+strap("GND", (44, 3), (44, 12))
+strap("GND", (26, 12), (26, 13))  # bande 12 (GND de J7) à la broche 1 de U1
 
-# ------------------------------------------------------------------- PCA9685 0x41 SERVOS (rangées 14-19)
-for i, nom in enumerate(PCA_BROCHES):
-    net = {"OE": "GND", "VCC": "5V", "V+": "V+_SERVOS"}.get(nom, nom)
-    broche(15, 14 + i, net, f"PCA41.{nom}")
-couper(13, 15, 16, 17, 18, 19)
-strap("GND", (16, 14), (16, 15))  # OE des servos à la masse : sorties toujours actives
-strap("GND", (17, 3), (17, 14))
-strap("SCL", (19, 5), (19, 16))
-strap("SDA", (21, 6), (21, 17))
-strap("5V", (23, 7), (23, 18))
-
-# ------------------------------------------------------------------- PCF8574 0x21 (rangées 25-28)
-for i, nom in enumerate(["VCC", "GND", "SDA", "SCL"]):
-    broche(15, 25 + i, {"VCC": "5V"}.get(nom, nom), f"PCF.{nom}")
-couper(13, 25, 26, 27, 28)
-strap("5V", (25, 18), (25, 25))
-strap("GND", (27, 14), (27, 26))
-strap("SDA", (29, 17), (29, 27))
-strap("SCL", (31, 16), (31, 28))
-
-# ------------------------------------------------------------------- rails du bas
-# rangée 36 = 5 V, rangée 37 = DIN de la matrice, rangée 38 = masse
-strap("5V", (33, 25), (33, 36))
-strap("GND", (24, 26), (24, 38))
-broche(60, 36, "5V", "J2.+5V")
-broche(60, 38, "GND", "J2.GND")
-dipole("C2", "1000 µF", (57, 36), "5V", (57, 38), "GND", "chimique")
-broche(62, 36, "5V", "J3.5V")
-broche(62, 37, "DIN", "J3.DIN")
-broche(62, 38, "GND", "J3.GND")
-
-# ------------------------------------------------------------------- 74AHCT125 (support DIP-14)
-# Broches 1-7 colonne 36, rangées 29-35 ; broches 14-8 colonne 39, mêmes rangées.
+# ------------------------------------------------------------------- 74AHCT125 (support DIP-14) + rails
+# Broches 1-7 colonne 36, bandes 13-19 ; broches 14-8 colonne 39. Rails : 20 = 5 V, 21 = DIN, 22 = GND.
 U1_GAUCHE = ["GND", "GPIO18", "1Y", "5V", "GND", "NC6", "GND"]  # 1OE 1A 1Y 2OE 2A 2Y GND
 U1_DROITE = ["5V", "5V", "GND", "NC11", "5V", "GND", "NC8"]  # VCC 4OE 4A 4Y 3OE 3A 3Y
 for i in range(7):
-    broche(36, 29 + i, U1_GAUCHE[i], f"U1.{i + 1}")
-    broche(39, 29 + i, U1_DROITE[i], f"U1.{14 - i}")
-couper(37, *range(29, 36))
-strap("GND", (32, 29), (32, 33))
-strap("GND", (31, 33), (31, 35))
-strap("GND", (30, 35), (30, 38))
-strap("5V", (35, 32), (35, 36))
-dipole("R2", "330 Ω", (34, 31), "1Y", (34, 37), "DIN", "resistance")
-dipole("C1", "100 nF", (40, 29), "5V", (40, 31), "GND", "ceramique")
-strap("5V", (41, 29), (41, 30))
-strap("5V", (42, 30), (42, 33))
-strap("5V", (43, 33), (43, 36))
-strap("GND", (44, 31), (44, 34))
-strap("GND", (45, 34), (45, 38))
+    broche(36, 13 + i, U1_GAUCHE[i], f"U1.{i + 1}")
+    broche(39, 13 + i, U1_DROITE[i], f"U1.{14 - i}")
+couper(37, *range(13, 20))
+couper(13, 13, 15, 16, 17, 18, 19, 20, 21)  # la bande 14 (GPIO18) va de J1b à U1 sans coupure
+couper(33, 21)  # DIN : seulement de R2 à J3
+strap("GND", (32, 13), (32, 17))
+strap("GND", (31, 17), (31, 19))
+strap("GND", (30, 19), (30, 22))
+strap("5V", (35, 16), (35, 20))
+dipole("R2", "330 Ω", (34, 15), "1Y", (34, 21), "DIN", "resistance")
+dipole("C1", "100 nF", (40, 13), "5V", (40, 15), "GND", "ceramique")
+strap("5V", (41, 13), (41, 14))
+strap("5V", (42, 14), (42, 17))
+strap("5V", (43, 17), (43, 20))
+strap("GND", (44, 15), (44, 18))
+strap("GND", (45, 18), (45, 22))
+strap("5V", (28, 7), (28, 20))  # rail 5 V vers le bus (bande 7)
+broche(51, 20, "5V", "J2.+5V")
+broche(51, 22, "GND", "J2.GND")
+dipole("C2", "1000 µF", (48, 20), "5V", (48, 22), "GND", "chimique")
+broche(53, 20, "5V", "J3.5V")
+broche(53, 21, "DIN", "J3.DIN")
+broche(53, 22, "GND", "J3.GND")
 
 # ------------------------------------------------------------------- J1b (GPIO), boutons, LED d'état
 J1B = [("GPIO16", "GPIO16 (36)"), ("GPIO20", "GPIO20 (38)"), ("GPIO12", "GPIO12 (32)"), ("GPIO18", "GPIO18 (12)")]
-for i, (net, _) in enumerate(J1B):  # JST 4 points, rangées 21-24
-    broche(0, 21 + i, net, f"J1b.{i + 1}")
-strap("GPIO16", (1, 21), (1, 12))
-strap("GPIO20", (2, 22), (2, 16))
-strap("GPIO12", (3, 23), (3, 18))
-strap("GPIO18", (1, 24), (1, 30))
-couper(13, 12)
-# Bouton 6×6 : pattes 6,5 mm (même bande, reliées dans le bouton) × 4,5 mm (le contact)
-for repere, net, rang in (("SW1", "GPIO16", 12), ("SW2", "GPIO20", 14)):
-    c = 2 if repere == "SW1" else 8
-    haut, bas = (net, "GND") if repere == "SW1" else ("GND", net)
+for i, (net, _) in enumerate(J1B):  # JST 4 points, bandes 11-14
+    broche(0, 11 + i, net, f"J1b.{i + 1}")
+# Boutons 6×6 sur les bandes 20 (signal) et 22 (masse) ; la bande 20 est coupée entre les deux.
+couper(6, 20)
+for repere, net, c in (("SW1", "GPIO16", 1), ("SW2", "GPIO20", 8)):
     for dc in (0, 3):
-        broche(c + dc, rang, haut, f"{repere}.{'a' if dc == 0 else 'b'}")
-        broche(c + dc, rang + 2, bas, f"{repere}.{'c' if dc == 0 else 'd'}")
-couper(4, 18)
-dipole("R3", "330 Ω", (2, 18), "GPIO12", (6, 18), "LED_ETAT", "resistance")
-dipole("D5", "LED", (8, 18), "LED_ETAT", (8, 20), "GND", "led")
-strap("GND", (12, 14), (12, 20))
+        broche(c + dc, 20, net, f"{repere}.{'a' if dc == 0 else 'b'}")
+        broche(c + dc, 22, "GND", f"{repere}.{'c' if dc == 0 else 'd'}")
+strap("GPIO16", (2, 11), (2, 20))
+strap("GPIO20", (9, 12), (9, 20))
+dipole("R3", "330 Ω", (4, 13), "GPIO12", (4, 17), "LED_ETAT", "resistance")
+dipole("D5", "LED", (6, 17), "LED_ETAT", (6, 18), "GND", "led")
+strap("GND", (7, 18), (7, 22))
 
 
 # =================================================================== vérification
@@ -317,9 +296,9 @@ STYLE = {"5V": (0.9, ""), "GND": (0.6, "1.6,0.9")}
 
 def dessiner() -> str:
     # ---- titre, plaque, bandes, trous, numéros
-    texte(148.5, 9, "Banc témoin — implantation sur plaque à bandes 100 × 160 mm (vue côté composants)",
+    texte(148.5, 9, "Banc témoin — implantation sur plaque à bandes 60 × 140 mm (vue côté composants)",
           4.2, "middle", True)
-    texte(148.5, 14.5, "Dessin agrandi ×1,6 : compter les trous (colonnes 0-62, bandes 0-38 horizontales). "
+    texte(148.5, 14.5, "Dessin agrandi ×1,8 : compter les trous (colonnes 0-53, bandes 0-22 dans la longueur). "
           "✕ = coupure de bande (côté cuivre) ; trait plein = strap côté composants.", PETIT, "middle")
     bx1, by1 = P(-0.5, -0.5)
     bx2, by2 = P(COLS - 0.5, RANGS - 0.5)
@@ -338,18 +317,16 @@ def dessiner() -> str:
         texte(x, by1 - 1.2, str(c), PETIT, "middle")
     for r in range(0, RANGS, 5):
         _, y = P(0, r)
-        texte(bx2 + 1.2, y + 0.9, str(r), PETIT, "start")
+        texte(bx2 + 11, y + 0.9, str(r), PETIT, "start")
 
     # ---- contours des modules (indicatifs) et titres
     contour(2.5, 2, 12.5, 9, "ISO1540")
     texte_trou(5, 8.2, "côté 1", ancre="middle")
     texte_trou(10, 8.2, "côté 2", ancre="middle")
     contour(14, 0.5, 39, 10.5, "PCA9685 0x40 — ROUES", "aucun driver moteur sur le banc", titre_en_bas=True)
-    contour(14, 11.5, 39, 21.5, "PCA9685 0x41 — SERVOS", "OE à la masse", titre_en_bas=True)
-    contour(14, 22.5, 33, 29.5, "PCF8574 0x21", "relais", titre_en_bas=False)
-    contour(35.5, 28.4, 39.5, 35.6, indicatif=False)
-    texte_trou(37.5, 27.6, "U1 74AHCT125", ancre="middle", gras=True)
-    texte_trou(36, 29, "1", dx=-1.6, ancre="end")
+    contour(35.5, 12.4, 39.5, 19.6, indicatif=False)
+    texte_trou(37.5, 11.5, "U1 74AHCT125", ancre="middle", gras=True)
+    texte_trou(36, 13, "1", dx=-1.6, ancre="end")
 
     # ---- straps
     for net, a, b in STRAPS:
@@ -394,48 +371,46 @@ def dessiner() -> str:
 
     # ---- étiquettes
     for i, (_, nom) in enumerate(J1A):
-        texte_trou(0, 4 + i, nom, dx=-2.2, ancre="end")
-    texte_trou(0, 2.6, "J1a Pi", dx=-2.2, ancre="end", gras=True)
+        texte_trou(0, 4 + i, nom, dx=-3.4, ancre="end")
+    texte_trou(0, 2.6, "J1a Pi", dx=-3.4, ancre="end", gras=True)
     for i, (_, nom) in enumerate(J1B):
-        texte_trou(0, 21 + i, nom, dx=-2.2, ancre="end")
-    texte_trou(0, 19.6, "J1b Pi", dx=-2.2, ancre="end", gras=True)
+        texte_trou(0, 11 + i, nom, dx=-3.4, ancre="end")
+    texte_trou(0, 9.6, "J1b Pi", dx=-3.4, ancre="end", gras=True)
     # embases JST-XH (contour du boîtier, côté verrou à droite)
-    for c, r0, n in ((0, 4, 4), (0, 21, 4), (62, 36, 3), (47, 0, 3), (47, 4, 3), (61, 9, 4)):
+    for c, r0, n in ((0, 4, 4), (0, 11, 4), (53, 20, 3), (45, 0, 3), (45, 4, 3), (53, 9, 4)):
         x1, y1 = P(c - 0.45, r0 - 0.6)
         x2, y2 = P(c + 0.45, r0 + n - 0.4)
         el.append(f'<rect x="{x1:.2f}" y="{y1:.2f}" width="{x2 - x1:.2f}" height="{y2 - y1:.2f}" '
                   f'fill="none" stroke="black" stroke-width="0.6"/>')
     for i, nom in enumerate(PCA_BROCHES):
         texte_trou(15, 3 + i, nom, dx=1.8)
-        texte_trou(15, 14 + i, nom, dx=1.8)
-    for i, nom in enumerate(["VCC", "GND", "SDA", "SCL"]):
-        texte_trou(15, 25 + i, nom, dx=1.8)
     texte_trou(40, 5.5, "R10", dx=2.0)
     texte_trou(40, 6.5, "10k", dx=2.0)
-    texte_trou(41.4, 2.4, "JP1", ancre="end", gras=True)
-    texte_trou(44, 7.4, "J4", ancre="middle", gras=True)
-    texte_trou(47, 1, "J5", dx=3.0, gras=True)
-    texte_trou(47, 5, "J6", dx=3.0, gras=True)
-    texte_trou(61, 8.0, "J7 I²C 5 V", ancre="end", dx=1.2, gras=True)
+    texte_trou(41, 2.0, "JP1", ancre="middle", gras=True)
+    texte_trou(43, 7.4, "J4", ancre="middle", gras=True)
+    texte_trou(45, 1, "J5", dx=2.6, gras=True)
+    texte_trou(45, 5, "J6", dx=2.6, gras=True)
+    texte_trou(53, 8.0, "J7 I²C 5 V", ancre="end", dx=1.2, gras=True)
     for i, nom in enumerate(["5V", "SDA", "SCL", "GND"]):
-        texte_trou(61, 9 + i, nom, dx=-1.9, ancre="end")
-    texte_trou(3.5, 11.2, "SW1", ancre="middle", gras=True)
-    texte_trou(9.5, 14.9, "SW2", ancre="middle", gras=True)
-    for c, r in ((2, 12), (8, 14)):  # contour des boutons 6×6
-        contour(c, r, c + 3, r + 2, indicatif=False)
-    texte_trou(4, 19.2, "R3 330", ancre="middle")
-    texte_trou(8, 21.3, "D5 état", ancre="middle")
-    texte_trou(34, 33.6, "R2", dx=-1.9, ancre="end")
-    texte_trou(34, 34.6, "330", dx=-1.9, ancre="end")
-    texte_trou(40, 30, "C1", dx=2.2)
-    texte_trou(57, 34.8, "C2 1000 µF", ancre="middle")
-    texte_trou(60, 34.8, "J2", ancre="middle", gras=True)
-    texte_trou(62, 34.8, "J3", ancre="middle", gras=True)
-    for r, nom in ((36, "5 V"), (37, "DIN"), (38, "GND")):
-        texte_trou(62, r, nom, dx=2.4, gras=True)
+        texte_trou(53, 9 + i, nom, dx=-2.2, ancre="end")
+    texte_trou(2.5, 18.9, "SW1", ancre="middle", gras=True)
+    texte_trou(9.5, 18.9, "SW2", ancre="middle", gras=True)
+    for c in (1, 8):  # contour des boutons 6×6
+        contour(c, 20, c + 3, 22, indicatif=False)
+    texte_trou(4, 15, "R3", dx=1.9)
+    texte_trou(6, 17.5, "D5", dx=1.9)
+    texte_trou(34, 17.6, "R2", dx=-1.9, ancre="end")
+    texte_trou(40, 14, "C1", dx=2.2)
+    texte_trou(48, 18.9, "C2", ancre="middle")
+    texte_trou(51, 18.9, "J2", ancre="middle", gras=True)
+    texte_trou(53, 18.9, "J3", ancre="middle", gras=True)
+    for r, nom in ((20, "5 V"), (21, "DIN"), (22, "GND")):
+        texte_trou(53, r, nom, dx=2.6, gras=True)
+    texte_trou(30, 16.3, "PCA 0x41 (servos) et PCF8574 (relais) :", ancre="end")
+    texte_trou(30, 17.3, "hors plaque, en chaîne sur J7", ancre="end")
 
     # ---- légende
-    lx, ly = 14, 190
+    lx, ly = 14, 150
     texte(lx, ly - 4, "Légende :", TEXTE, gras=True)
     for i, (net, nom) in enumerate((("5V", "strap 5 V"), ("GND", "strap masse"), ("SIG", "strap signal"))):
         x = lx + i * 40
