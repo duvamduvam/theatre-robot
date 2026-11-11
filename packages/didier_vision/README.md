@@ -32,9 +32,12 @@ Hors du package, dans le dossier désigné par **`DIDIER_VISION_DATA_DIR`** (lu 
 | `conf/` | `secret` (clés API, **posé par le rôle Ansible `secrets`, gitignoré, jamais affiché**), `secret.example` (le modèle) | `get_secret` |
 | `medias/` | `voices/didier.onnx` + `.json` (voix Piper, **téléchargée par Ansible**, absente du dépôt), `pictures/` | TTS Piper, caméra |
 | `db/` | historique de conversation (SQLite, gitignoré) | `db/chat_db.py` |
-| `models/`, `mediamtx/` | modèle de détection (téléchargé dans l'image), config du flux vidéo | détecteur, streaming |
+| `models/` | modèle de détection (téléchargé dans l'image) | détecteur |
 
-Ces données vivent dans `legacy/dadou_vision_ros/` jusqu'au lot L1e-4 (→ `data/`).
+`conf/` (et l'ancien flux vidéo `conf/mediamtx/`) = `machines/vision/` du dépôt depuis L1e-4c (11/11),
+copié par Ansible ; `medias/` et `db/` sont des fichiers d'exécution du Pi (voix téléchargée,
+historique), absents du dépôt. L'outil `tools/banc_bouche.py` (banc des modèles de la bouche) vit
+dans ce package, non installé.
 
 ## Variables d'environnement
 

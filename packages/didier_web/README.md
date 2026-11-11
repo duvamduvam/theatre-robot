@@ -29,4 +29,4 @@ PAS `catalogue` (la page garde `/api/catalog`).
 
 Tests (hôte, sans ROS) : `robot/tests/unit/test_web_catalog.py`,
 `test_catalogue_node.py` ; télécommande : `test_buttons_vs_catalogue.py`.
-Preuve sim : `legacy/dadou_robot_ros/conf/scripts/validate-catalogue.sh`.
+Preuve sim : `machines/sim/validate-catalogue.sh`.
