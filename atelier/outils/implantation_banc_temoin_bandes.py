@@ -1,0 +1,457 @@
+#!/usr/bin/env python3
+"""Génère l'implantation du banc témoin sur PLAQUE À BANDES (stripboard), avec vérification.
+
+Même circuit que `implantation_banc_temoin.py` (plaque à pastilles) et que le schéma
+`schema_banc_temoin.py`. Sur une plaque à bandes, chaque rangée est une bande de cuivre continue :
+le circuit se fait par COUPURES (foret de 3-4 mm tourné à la main sur le trou, côté cuivre) et par
+STRAPS (fils posés côté composants, soudés à leurs deux bouts seulement).
+
+Pourquoi un générateur qui VÉRIFIE : sur une plaque à bandes, une coupure oubliée ou un strap
+décalé d'un trou fait un court-circuit invisible. Le script reconstruit les liaisons électriques
+(bandes moins coupures, plus straps) et les compare à la liste des réseaux attendus : il refuse
+d'écrire le dessin s'il trouve un court-circuit ou une coupure de trop.
+
+Choix d'implantation :
+- les rangées des modules sont ALIGNÉES sur les bandes : ISO1540 côté 2 → SCL rangée 5, SDA
+  rangée 6, comme le support du PCA9685 ROUES (GND · OE · SCL · SDA · VCC · V+, rangées 3 à 8) :
+  le bus I²C passe par le cuivre, sans strap ;
+- J1 est coupé en deux : le connecteur I²C en face de l'ISO1540, les quatre GPIO un par un plus
+  bas (fils Dupont un par un : aucune broche 5 V du Pi n'arrive sur la plaque) ;
+- les LED témoins des roues alternent signal et masse (J4 = ch0 · GND · ch1 · GND · ch2 · GND · ch3) :
+  chaque LED tient entre deux bandes voisines, sa résistance est EN LIGNE sur la bande (une coupure
+  entre ses deux pattes) ;
+- la matrice WS2812B ne tire JAMAIS son courant par les bandes : ses fils d'alimentation vont au
+  bornier J2 ; J3 ne porte que DIN et la référence.
+
+Brochages : mêmes sources et même réserve que la plaque à pastilles (À VÉRIFIER sur les modules
+réels avant de souder). Les contours des modules sont INDICATIFS : poser les modules à blanc
+sur leurs barrettes avant de souder.
+
+Usage : implantation_banc_temoin_bandes.py [sortie.svg]  (défaut : docs/etudes/banc-temoin-bandes.svg)
+        implantation_banc_temoin_bandes.py --liste       (coupures, straps, composants en Markdown)
+"""
+
+from __future__ import annotations
+
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+PAS = 2.54
+ECHELLE = 1.6  # dessin agrandi : on compte les trous
+COLS, RANGS = 63, 39  # plaque à bandes 100 × 160 mm, bandes horizontales
+X0, Y0 = 31.0, 24.0
+TEXTE, PETIT = 3.0, 2.6
+
+Trou = tuple[int, int]
+
+# =================================================================== données du circuit
+# Broches : (trou, réseau, repère). Le réseau sert à la vérification.
+BROCHES: list[tuple[Trou, str, str]] = []
+# Straps (fils côté composants) : (réseau, trou A, trou B)
+STRAPS: list[tuple[str, Trou, Trou]] = []
+# Coupures de bande (côté cuivre) : le trou coupé ne touche plus rien
+COUPURES: set[Trou] = set()
+# Composants à deux pattes posés à travers ou le long des bandes : (repère, valeur, A, B)
+DIPOLES: list[tuple[str, str, Trou, Trou, str]] = []  # (repère, valeur, A, B, sorte)
+
+
+def broche(c: int, r: int, reseau: str, repere: str) -> None:
+    BROCHES.append(((c, r), reseau, repere))
+
+
+def strap(reseau: str, a: Trou, b: Trou) -> None:
+    STRAPS.append((reseau, a, b))
+
+
+def couper(c: int, *rangs: int) -> None:
+    for r in rangs:
+        COUPURES.add((c, r))
+
+
+def dipole(repere: str, valeur: str, a: Trou, net_a: str, b: Trou, net_b: str, sorte: str) -> None:
+    DIPOLES.append((repere, valeur, a, b, sorte))
+    broche(*a, net_a, f"{repere}.1")
+    broche(*b, net_b, f"{repere}.2")
+
+
+# ------------------------------------------------------------------- J1a (I²C du Pi) + ISO1540
+J1A = [("3V3", "3,3 V (1)"), ("SCL_PI", "SCL (5)"), ("SDA_PI", "SDA (3)"), ("GND", "GND (6)")]
+for i, (net, _) in enumerate(J1A):
+    broche(0, 4 + i, net, f"J1a.{i + 1}")
+for i, (n1, n2) in enumerate((("3V3", "5V"), ("SCL_PI", "SCL"), ("SDA_PI", "SDA"), ("GND", "GND"))):
+    broche(5, 4 + i, n1, f"ISO.côté1.{i + 1}")
+    broche(10, 4 + i, n2, f"ISO.côté2.{i + 1}")
+couper(7, 4, 5, 6)  # sépare les deux côtés de l'ISO1540 (la masse, commune, n'est pas coupée)
+couper(13, 4)  # VCC2 (5 V) | OE des roues
+couper(11, 7)  # masse côté gauche | 5 V du bus
+strap("5V", (12, 4), (12, 7))  # VCC2 de l'ISO1540 au 5 V du bus
+strap("GND", (1, 3), (1, 7))  # masse du Pi et de l'ISO1540 à la bande GND du bus
+
+# ------------------------------------------------------------------- PCA9685 0x40 ROUES (rangées 3-8)
+PCA_BROCHES = ["GND", "OE", "SCL", "SDA", "VCC", "V+"]
+for i, nom in enumerate(PCA_BROCHES):
+    net = {"OE": "OE_ROUES", "VCC": "5V", "V+": "V+_ROUES"}.get(nom, nom)
+    broche(15, 3 + i, net, f"PCA40.{nom}")
+dipole("R10", "10 kΩ", (40, 4), "OE_ROUES", (40, 7), "5V", "resistance")
+broche(42, 3, "GND", "JP1.2")
+broche(42, 4, "OE_ROUES", "JP1.1")
+
+# ------------------------------------------------------------------- J4 + LED témoins (rangées 0-7)
+couper(43, 4, 5, 6, 7)  # isole la zone des témoins du bus
+for k in range(4):
+    r = 2 * k
+    broche(45, r, f"CH{k}", f"J4.ch{k}")
+    if k < 3:
+        broche(45, r + 1, "GND", f"J4.GND{k + 1}")
+    couper(49, r)  # résistance en ligne : une coupure entre ses pattes
+    dipole(f"R{4 + k}", "330 Ω", (47, r), f"CH{k}", (51, r), f"LED{k}", "resistance")
+    dipole(f"D{1 + k}", "LED", (53, r), f"LED{k}", (53, r + 1), "GND", "led")
+strap("GND", (58, 1), (58, 3))
+strap("GND", (59, 3), (59, 5))
+strap("GND", (58, 5), (58, 7))
+
+# ------------------------------------------------------------------- PCA9685 0x41 SERVOS (rangées 14-19)
+for i, nom in enumerate(PCA_BROCHES):
+    net = {"OE": "GND", "VCC": "5V", "V+": "V+_SERVOS"}.get(nom, nom)
+    broche(15, 14 + i, net, f"PCA41.{nom}")
+couper(13, 15, 16, 17, 18, 19)
+strap("GND", (16, 14), (16, 15))  # OE des servos à la masse : sorties toujours actives
+strap("GND", (17, 3), (17, 14))
+strap("SCL", (19, 5), (19, 16))
+strap("SDA", (21, 6), (21, 17))
+strap("5V", (23, 7), (23, 18))
+
+# ------------------------------------------------------------------- PCF8574 0x21 (rangées 25-28)
+for i, nom in enumerate(["VCC", "GND", "SDA", "SCL"]):
+    broche(15, 25 + i, {"VCC": "5V"}.get(nom, nom), f"PCF.{nom}")
+couper(13, 25, 26, 27, 28)
+strap("5V", (25, 18), (25, 25))
+strap("GND", (27, 14), (27, 26))
+strap("SDA", (29, 17), (29, 27))
+strap("SCL", (31, 16), (31, 28))
+
+# ------------------------------------------------------------------- rails du bas
+# rangée 36 = 5 V, rangée 37 = DIN de la matrice, rangée 38 = masse
+strap("5V", (33, 25), (33, 36))
+strap("GND", (24, 26), (24, 38))
+broche(60, 36, "5V", "J2.+5V")
+broche(60, 38, "GND", "J2.GND")
+dipole("C2", "1000 µF", (57, 36), "5V", (57, 38), "GND", "chimique")
+broche(62, 36, "5V", "J3.5V")
+broche(62, 37, "DIN", "J3.DIN")
+broche(62, 38, "GND", "J3.GND")
+
+# ------------------------------------------------------------------- 74AHCT125 (support DIP-14)
+# Broches 1-7 colonne 36, rangées 29-35 ; broches 14-8 colonne 39, mêmes rangées.
+U1_GAUCHE = ["GND", "GPIO18", "1Y", "5V", "GND", "NC6", "GND"]  # 1OE 1A 1Y 2OE 2A 2Y GND
+U1_DROITE = ["5V", "5V", "GND", "NC11", "5V", "GND", "NC8"]  # VCC 4OE 4A 4Y 3OE 3A 3Y
+for i in range(7):
+    broche(36, 29 + i, U1_GAUCHE[i], f"U1.{i + 1}")
+    broche(39, 29 + i, U1_DROITE[i], f"U1.{14 - i}")
+couper(37, *range(29, 36))
+strap("GND", (32, 29), (32, 33))
+strap("GND", (31, 33), (31, 35))
+strap("GND", (30, 35), (30, 38))
+strap("5V", (35, 32), (35, 36))
+dipole("R2", "330 Ω", (34, 31), "1Y", (34, 37), "DIN", "resistance")
+dipole("C1", "100 nF", (40, 29), "5V", (40, 31), "GND", "ceramique")
+strap("5V", (41, 29), (41, 30))
+strap("5V", (42, 30), (42, 33))
+strap("5V", (43, 33), (43, 36))
+strap("GND", (44, 31), (44, 34))
+strap("GND", (45, 34), (45, 38))
+
+# ------------------------------------------------------------------- J1b (GPIO), boutons, LED d'état
+broche(0, 12, "GPIO16", "J1b.GPIO16")
+broche(0, 16, "GPIO20", "J1b.GPIO20")
+broche(0, 18, "GPIO12", "J1b.GPIO12")
+broche(0, 30, "GPIO18", "J1b.GPIO18")
+couper(13, 12)
+# Bouton 6×6 : pattes 6,5 mm (même bande, reliées dans le bouton) × 4,5 mm (le contact)
+for repere, net, rang in (("SW1", "GPIO16", 12), ("SW2", "GPIO20", 14)):
+    c = 2 if repere == "SW1" else 8
+    haut, bas = (net, "GND") if repere == "SW1" else ("GND", net)
+    for dc in (0, 3):
+        broche(c + dc, rang, haut, f"{repere}.{'a' if dc == 0 else 'b'}")
+        broche(c + dc, rang + 2, bas, f"{repere}.{'c' if dc == 0 else 'd'}")
+couper(4, 18)
+dipole("R3", "330 Ω", (2, 18), "GPIO12", (6, 18), "LED_ETAT", "resistance")
+dipole("D5", "LED", (8, 18), "LED_ETAT", (8, 20), "GND", "led")
+strap("GND", (12, 14), (12, 20))
+
+
+# =================================================================== vérification
+def verifier() -> list[str]:
+    """Reconstruit les liaisons (bandes − coupures + straps) et les compare aux réseaux attendus."""
+    parent: dict[Trou, Trou] = {}
+
+    def racine(t: Trou) -> Trou:
+        parent.setdefault(t, t)
+        while parent[t] != t:
+            parent[t] = parent[parent[t]]
+            t = parent[t]
+        return t
+
+    def unir(a: Trou, b: Trou) -> None:
+        parent[racine(a)] = racine(b)
+
+    for r in range(RANGS):
+        for c in range(COLS - 1):
+            if (c, r) not in COUPURES and (c + 1, r) not in COUPURES:
+                unir((c, r), (c + 1, r))
+    for _, a, b in STRAPS:
+        unir(a, b)
+
+    erreurs: list[str] = []
+    occupes: dict[Trou, str] = {}
+    for t, _, rep in BROCHES:
+        if t in occupes:
+            erreurs.append(f"trou {t} pris deux fois : {occupes[t]} et {rep}")
+        occupes[t] = rep
+    for net, a, b in STRAPS:
+        for t in (a, b):
+            if t in occupes:
+                erreurs.append(f"strap {net} {a}-{b} : trou {t} déjà pris par {occupes[t]}")
+            occupes[t] = f"strap {net}"
+    for t in occupes:
+        if t in COUPURES:
+            erreurs.append(f"{occupes[t]} posé sur une coupure {t}")
+        if not (0 <= t[0] < COLS and 0 <= t[1] < RANGS):
+            erreurs.append(f"{occupes[t]} hors plaque {t}")
+
+    par_reseau: dict[str, set[Trou]] = defaultdict(set)
+    par_groupe: dict[Trou, set[str]] = defaultdict(set)
+    for t, net, rep in BROCHES:
+        par_reseau[net].add(racine(t))
+        par_groupe[racine(t)].add(net)
+    for net, a, b in STRAPS:  # un strap doit relier deux points de SON réseau
+        par_groupe[racine(a)].add(net)
+    for net, groupes in par_reseau.items():
+        if len(groupes) > 1:
+            erreurs.append(f"réseau {net} coupé en {len(groupes)} morceaux")
+    for nets in par_groupe.values():
+        if len(nets) > 1:
+            erreurs.append(f"COURT-CIRCUIT entre {sorted(nets)}")
+    return erreurs
+
+
+# =================================================================== dessin
+el: list[str] = []
+
+
+def P(c: float, r: float) -> tuple[float, float]:
+    return (X0 + (c + 0.5) * PAS * ECHELLE, Y0 + (r + 0.5) * PAS * ECHELLE)
+
+
+def esc(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def texte(x: float, y: float, s: str, t: float = PETIT, ancre: str = "start", gras: bool = False) -> None:
+    g = ' font-weight="bold"' if gras else ""
+    el.append(f'<text x="{x:.2f}" y="{y:.2f}" font-size="{t}" text-anchor="{ancre}"{g}>{esc(s)}</text>')
+
+
+def texte_trou(c: float, r: float, s: str, dx: float = 0, dy: float = 0, ancre: str = "start",
+               gras: bool = False, t: float = PETIT) -> None:
+    x, y = P(c, r)
+    texte(x + dx, y + dy + 0.9, s, t, ancre, gras)
+
+
+def ligne(a: Trou, b: Trou, ep: float, tirets: str = "") -> None:
+    (x1, y1), (x2, y2) = P(*a), P(*b)
+    d = f' stroke-dasharray="{tirets}"' if tirets else ""
+    el.append(f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" stroke="black" '
+              f'stroke-width="{ep}" stroke-linecap="round"{d}/>')
+
+
+def pastille(c: int, r: int, carree: bool = False) -> None:
+    x, y = P(c, r)
+    if carree:
+        el.append(f'<rect x="{x - 1.1:.2f}" y="{y - 1.1:.2f}" width="2.2" height="2.2" fill="black"/>')
+    else:
+        el.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="1.1" fill="black"/>')
+
+
+def contour(c1: float, r1: float, c2: float, r2: float, titre: str = "", sous: str = "",
+            indicatif: bool = True, titre_en_bas: bool = False) -> None:
+    x1, y1 = P(c1 - 0.5, r1 - 0.5)
+    x2, y2 = P(c2 + 0.5, r2 + 0.5)
+    d = ' stroke-dasharray="2.5,1.2"' if indicatif else ""
+    el.append(f'<rect x="{x1:.2f}" y="{y1:.2f}" width="{x2 - x1:.2f}" height="{y2 - y1:.2f}" '
+              f'fill="none" stroke="black" stroke-width="0.5"{d}/>')
+    if titre:
+        ty = y2 - 4.6 if titre_en_bas else y1 + 4.2
+        texte(x2 - 1.5, ty, titre, TEXTE, "end", True)
+        if sous:
+            texte(x2 - 1.5, ty + 3.4, sous, PETIT, "end")
+
+
+STYLE = {"5V": (0.9, ""), "GND": (0.6, "1.6,0.9")}
+
+
+def dessiner() -> str:
+    # ---- titre, plaque, bandes, trous, numéros
+    texte(148.5, 9, "Banc témoin — implantation sur plaque à bandes 100 × 160 mm (vue côté composants)",
+          4.2, "middle", True)
+    texte(148.5, 14.5, "Dessin agrandi ×1,6 : compter les trous (colonnes 0-62, bandes 0-38 horizontales). "
+          "✕ = coupure de bande (côté cuivre) ; trait plein = strap côté composants.", PETIT, "middle")
+    bx1, by1 = P(-0.5, -0.5)
+    bx2, by2 = P(COLS - 0.5, RANGS - 0.5)
+    el.append(f'<rect x="{bx1:.2f}" y="{by1:.2f}" width="{bx2 - bx1:.2f}" height="{by2 - by1:.2f}" '
+              f'fill="none" stroke="black" stroke-width="0.8"/>')
+    for r in range(RANGS):
+        _, y = P(0, r)
+        h = PAS * ECHELLE * 0.62
+        el.append(f'<rect x="{bx1 + 0.4:.2f}" y="{y - h / 2:.2f}" width="{bx2 - bx1 - 0.8:.2f}" '
+                  f'height="{h:.2f}" rx="0.6" fill="none" stroke="black" stroke-width="0.1"/>')
+        for c in range(COLS):
+            x, _ = P(c, r)
+            el.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="0.35" fill="none" stroke="black" stroke-width="0.13"/>')
+    for c in range(0, COLS, 5):
+        x, _ = P(c, 0)
+        texte(x, by1 - 1.2, str(c), PETIT, "middle")
+    for r in range(0, RANGS, 5):
+        _, y = P(0, r)
+        texte(bx2 + 1.2, y + 0.9, str(r), PETIT, "start")
+
+    # ---- contours des modules (indicatifs) et titres
+    contour(2.5, 2, 12.5, 9, "ISO1540")
+    texte_trou(5, 8.2, "côté 1", ancre="middle")
+    texte_trou(10, 8.2, "côté 2", ancre="middle")
+    contour(14, 0.5, 39, 10.5, "PCA9685 0x40 — ROUES", "aucun driver moteur sur le banc", titre_en_bas=True)
+    contour(14, 11.5, 39, 21.5, "PCA9685 0x41 — SERVOS", "OE à la masse", titre_en_bas=True)
+    contour(14, 22.5, 33, 29.5, "PCF8574 0x21", "relais", titre_en_bas=False)
+    contour(35.5, 28.4, 39.5, 35.6, indicatif=False)
+    texte_trou(37.5, 27.6, "U1 74AHCT125", ancre="middle", gras=True)
+    texte_trou(36, 29, "1", dx=-1.6, ancre="end")
+
+    # ---- straps
+    for net, a, b in STRAPS:
+        ep, t = STYLE.get(net, (0.45, ""))
+        ligne(a, b, ep, t)
+
+    # ---- dipôles
+    for repere, valeur, a, b, sorte in DIPOLES:
+        (x1, y1), (x2, y2) = P(*a), P(*b)
+        ligne(a, b, 0.4)
+        mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+        vertical = a[0] == b[0]
+        if sorte == "resistance":
+            w, h = (2.8, 6.5) if vertical else (6.5, 2.8)
+            el.append(f'<rect x="{mx - w / 2:.2f}" y="{my - h / 2:.2f}" width="{w}" height="{h}" '
+                      f'fill="white" stroke="black" stroke-width="0.4"/>')
+        elif sorte == "led":
+            el.append(f'<polygon points="{mx - 1.8:.2f},{my - 1.4:.2f} {mx + 1.8:.2f},{my - 1.4:.2f} '
+                      f'{mx:.2f},{my + 1.4:.2f}" fill="white" stroke="black" stroke-width="0.4"/>')
+            el.append(f'<line x1="{mx - 1.8:.2f}" y1="{my + 1.4:.2f}" x2="{mx + 1.8:.2f}" y2="{my + 1.4:.2f}" '
+                      f'stroke="black" stroke-width="0.4"/>')
+        elif sorte in ("ceramique", "chimique"):
+            for dy in (-0.8, 0.8):
+                el.append(f'<line x1="{mx - 2:.2f}" y1="{my + dy:.2f}" x2="{mx + 2:.2f}" y2="{my + dy:.2f}" '
+                          f'stroke="black" stroke-width="0.6"/>')
+            if sorte == "chimique":
+                texte(mx + 2.3, my - 1.2, "+", PETIT)
+        pastille(*a, carree=(sorte == "led"))
+        pastille(*b)
+
+    # ---- broches des composants et connecteurs
+    for (c, r), _, rep in BROCHES:
+        if not rep.split(".")[0] in {d[0] for d in DIPOLES}:
+            pastille(c, r, carree=rep.endswith(".1") or rep in ("PCA40.GND", "PCA41.GND"))
+
+    # ---- coupures (par-dessus tout)
+    for c, r in sorted(COUPURES):
+        x, y = P(c, r)
+        for s in (1, -1):
+            el.append(f'<line x1="{x - 1.5:.2f}" y1="{y - 1.5 * s:.2f}" x2="{x + 1.5:.2f}" y2="{y + 1.5 * s:.2f}" '
+                      f'stroke="black" stroke-width="0.7"/>')
+
+    # ---- étiquettes
+    for i, (_, nom) in enumerate(J1A):
+        texte_trou(0, 4 + i, nom, dx=-2.2, ancre="end")
+    texte_trou(0, 2.6, "J1a Pi", dx=-2.2, ancre="end", gras=True)
+    for r, nom in ((12, "GPIO16 (36)"), (16, "GPIO20 (38)"), (18, "GPIO12 (32)"), (30, "GPIO18 (12)")):
+        texte_trou(0, r, nom, dx=-2.2, ancre="end")
+    texte_trou(0, 10.8, "J1b Pi", dx=-2.2, ancre="end", gras=True)
+    for i, nom in enumerate(PCA_BROCHES):
+        texte_trou(15, 3 + i, nom, dx=1.8)
+        texte_trou(15, 14 + i, nom, dx=1.8)
+    for i, nom in enumerate(["VCC", "GND", "SDA", "SCL"]):
+        texte_trou(15, 25 + i, nom, dx=1.8)
+    texte_trou(40, 5.5, "R10", dx=2.0)
+    texte_trou(40, 6.5, "10k", dx=2.0)
+    texte_trou(41.4, 2.4, "JP1", ancre="end", gras=True)
+    texte_trou(45, 1, "J4", dx=1.6, gras=True)
+    for k in range(4):
+        texte_trou(45, 2 * k, f"ch{k}", dx=-1.8, ancre="end")
+    texte_trou(52, 8.0, "J4 : ch0 · GND · ch1 · GND · ch2 · GND · ch3", ancre="middle")
+    texte_trou(52, 9.0, "4 × 330 Ω en ligne + 4 LED (□ = anode)", ancre="middle")
+    texte_trou(3.5, 11.2, "SW1", ancre="middle", gras=True)
+    texte_trou(9.5, 14.9, "SW2", ancre="middle", gras=True)
+    for c, r in ((2, 12), (8, 14)):  # contour des boutons 6×6
+        contour(c, r, c + 3, r + 2, indicatif=False)
+    texte_trou(4, 19.2, "R3 330", ancre="middle")
+    texte_trou(8, 21.3, "D5 état", ancre="middle")
+    texte_trou(34, 33.6, "R2", dx=-1.9, ancre="end")
+    texte_trou(34, 34.6, "330", dx=-1.9, ancre="end")
+    texte_trou(40, 30, "C1", dx=2.2)
+    texte_trou(57, 34.8, "C2 1000 µF", ancre="middle")
+    texte_trou(60, 34.8, "J2", ancre="middle", gras=True)
+    texte_trou(62, 34.8, "J3", ancre="middle", gras=True)
+    for r, nom in ((36, "5 V"), (37, "DIN"), (38, "GND")):
+        texte_trou(62, r, nom, dx=2.4, gras=True)
+
+    # ---- légende
+    lx, ly = 14, 192
+    texte(lx, ly - 4, "Légende :", TEXTE, gras=True)
+    for i, (net, nom) in enumerate((("5V", "strap 5 V"), ("GND", "strap masse"), ("SIG", "strap signal"))):
+        x = lx + i * 40
+        ep, t = STYLE.get(net, (0.45, ""))
+        d = f' stroke-dasharray="{t}"' if t else ""
+        el.append(f'<line x1="{x}" y1="{ly}" x2="{x + 10}" y2="{ly}" stroke="black" stroke-width="{ep}"{d}/>')
+        texte(x + 12, ly + 1, nom, PETIT)
+    texte(lx + 122, ly + 1, "✕ coupure · □ broche 1 / anode · tirets = module (contour indicatif)", PETIT)
+    texte(lx, ly + 7, "RÈGLE N° 1 : le Pi n'est alimenté QUE par son USB-C ; J1a/J1b en fils Dupont un par un, "
+          "aucune broche 5 V du Pi sur la plaque. JP1 posé = roues actives ; retiré = PWM roues coupés.",
+          PETIT, gras=True)
+    texte(lx, ly + 12.5, "Coupures côté cuivre : plaque retournée, la colonne 0 passe à DROITE. "
+          "Matrice : ses fils d'alimentation vont au bornier J2, jamais par les bandes. "
+          "Bouton 6×6 : vérifier au multimètre quelles pattes commutent.", PETIT)
+
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210" '
+            'font-family="DejaVu Sans, sans-serif">\n<rect width="297" height="210" fill="white"/>\n'
+            + "\n".join(el) + "\n</svg>\n")
+
+
+def liste() -> str:
+    lignes = ["## Coupures (côté cuivre, colonne, bande)", ""]
+    par_col: dict[int, list[int]] = defaultdict(list)
+    for c, r in sorted(COUPURES):
+        par_col[c].append(r)
+    for c, rangs in sorted(par_col.items()):
+        lignes.append(f"- colonne {c} : bandes {', '.join(map(str, sorted(rangs)))}")
+    lignes += ["", f"Total : {len(COUPURES)} coupures.", "", "## Straps (côté composants)", "",
+               "| Réseau | De (col, bande) | À (col, bande) |", "|---|---|---|"]
+    for net, a, b in STRAPS:
+        lignes.append(f"| {net} | {a[0]}, {a[1]} | {b[0]}, {b[1]} |")
+    lignes += ["", "## Composants à deux pattes", "", "| Repère | Valeur | Patte 1 | Patte 2 |", "|---|---|---|---|"]
+    for repere, valeur, a, b, _ in DIPOLES:
+        lignes.append(f"| {repere} | {valeur} | {a[0]}, {a[1]} | {b[0]}, {b[1]} |")
+    return "\n".join(lignes)
+
+
+if __name__ == "__main__":
+    erreurs = verifier()
+    if erreurs:
+        print("Implantation REFUSÉE :", *erreurs, sep="\n  ", file=sys.stderr)
+        sys.exit(1)
+    if "--liste" in sys.argv:
+        print(liste())
+    else:
+        sortie = Path(sys.argv[1]) if len(sys.argv) > 1 else \
+            Path(__file__).resolve().parents[2] / "docs/etudes/banc-temoin-bandes.svg"
+        sortie.write_text(dessiner(), encoding="utf-8")
+        print(f"Implantation vérifiée ({len(COUPURES)} coupures, {len(STRAPS)} straps) : {sortie}")

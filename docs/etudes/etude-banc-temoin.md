@@ -303,6 +303,18 @@ pour les servos (support vide tant que le code vise 0x40 pour tout). Le PCF8574 
 (code actuel ; la refonte prévoit 0x22). J1 se câble en fils Dupont un par un : aucune broche 5 V du
 Pi ne peut arriver sur la plaque.
 
+**Variante plaque à bandes 100 × 160 mm** (demandée par David le 11/11) :
+[`banc-temoin-bandes.svg`](banc-temoin-bandes.svg), générée et **vérifiée** par
+`atelier/outils/implantation_banc_temoin_bandes.py` (`--liste` : 31 coupures, 26 straps, composants).
+Le script reconstruit les liaisons (bandes − coupures + straps) et refuse d'écrire le dessin au
+moindre court-circuit ou réseau coupé ; contrôlé en retirant une coupure, en décalant un strap et
+en posant une coupure sur une broche : les trois sont refusés. Même circuit, trois choix propres
+aux bandes : bus I²C **sur le cuivre** (ISO1540 côté 2 et PCA9685 ROUES alignés sur les bandes 5-6),
+J1 coupé en **J1a** (I²C) et **J1b** (GPIO un par un), témoins J4 en **signal/masse alternés** avec
+résistances en ligne. La matrice tire son courant **par le bornier J2, jamais par les bandes** (une
+bande ne supporte pas les ~4 A d'une matrice 8×8 en blanc). Contours des modules indicatifs : les
+poser à blanc avant de souder.
+
 **À savoir avant B1** :
 - la configuration du robot écrit 1 000 LED et place le visage aux LED 513-673 : sur une matrice de
   64, sans réglage propre au banc, on voit les 64 premières LED du **corps**, pas le visage
