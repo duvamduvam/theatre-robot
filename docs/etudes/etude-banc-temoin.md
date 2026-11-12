@@ -360,6 +360,15 @@ garantie mécanique, dans l'esprit des règles roues, et elle doit le rester. Bo
 fixée à la coque, elle voit toujours les mêmes zones (bras, roues, visage) sous le même angle,
 ce qui rend le test « ça bouge / ça ne bouge pas » fiable.
 
+**Révisé par David le 12/11 (concept v1, `plans/banc-temoin/`, mini-Didier)** : il **peut rouler**
+(deux N20 motrices + une roue folle à bille arrière), mais **au banc il est posé sur sa cale**, qui
+porte le socle et laisse les roues 12 mm au-dessus du plateau. Plus de cou (tête fixe) ; bras sur
+les **2 TowerPro SG90** en stock. Conséquence assumée : la garantie n'est plus « par construction »
+mais **« tant qu'il est sur sa cale »** — la cale a des logements qui tiennent le socle, et le banc
+se pose loin du bord de la table (un N20 qui s'emballe ne le fait pas sauter de la cale, mais un
+robot posé à même la table, si). Le protocole caméra des roues se joue **sur la cale**.
+
 **Le gain réel des roues en l'air** : répéter sur la table le protocole caméra des roues (sens par
 roue, deadman, e_stop, OE) avant de le faire sur Didier, sans aucun danger. Le socle n'est pas le
-mini-robot roulant reporté au lidar (§3) : il ne roule jamais. 
+mini-robot roulant reporté au lidar (§3) : il peut rouler (démonstrations), mais les essais se
+font sur la cale. 
