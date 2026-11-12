@@ -19,6 +19,8 @@
   <exec_depend>rclpy</exec_depend>
   <exec_depend>ros_gz_interfaces</exec_depend>
   <exec_depend>theatre_interfaces</exec_depend>
+  <!-- Lot L1d : leds_sim_node relit les lumières sur verdict data_edit_result (theatre_contrats.donnees). -->
+  <exec_depend>theatre_contrats</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

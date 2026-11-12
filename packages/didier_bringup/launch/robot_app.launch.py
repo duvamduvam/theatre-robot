@@ -3,6 +3,7 @@ from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDesc
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node, PushRosNamespace
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 # Contrat inter-machines (noms des topics servo) : reste sur la lib partagée.
@@ -185,6 +186,18 @@ def generate_launch_description():
         }],
     )
 
+    # Écrivain des données (L1d) : toujours lancé ; DÉSACTIVÉ tant que la variable DATA_EDIT
+    # n'est pas "true" (il répond alors edition_desactivee à chaque demande). L'activer sur le
+    # vrai robot est une décision de David (spec L1d, décision 10). data_dir par défaut =
+    # src/robot (json/ et medias/ à plat, montés en lecture-écriture par le compose ARM).
+    data_edit_node = Node(
+        package="didier_web",
+        executable="data_edit",
+        name="data_edit_node",
+        parameters=[{"enabled": ParameterValue(
+            EnvironmentVariable("DATA_EDIT", default_value="false"), value_type=bool)}],
+    )
+
     # Chaîne de commande roues (twist_mux -> twist_deadman -> cmd_vel + wheels_bridge).
     # Inoffensive en mode legacy : personne ne consomme /cmd_vel tant que
     # WHEELS_CMD_VEL_ENABLED est False. Nécessaire en mode /cmd_vel pour alimenter
@@ -210,6 +223,7 @@ def generate_launch_description():
     group.append(right_eye_server_node)
     group.append(web_bridge_node)
     group.append(catalogue_node)
+    group.append(data_edit_node)
     group.append(drive_launch)
 
     # drive.launch.py pousse lui aussi /<robot_name> en absolu : inclus ici, il

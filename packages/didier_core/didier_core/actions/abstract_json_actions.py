@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import random
@@ -5,7 +6,8 @@ import random
 from dadou_utils_ros.files.files_utils import FilesUtils
 from dadou_utils_ros.utils.time_utils import TimeUtils
 from didier_core.robot_static import RANDOM_ANIMATION_LOW, RANDOM_ANIMATION_HIGH, LOOP_DURATION, TYPES
-from dadou_utils_ros.utils_static import KEY, KEYS, NAME, LOOP, DURATION, BASE_PATH, TYPE
+from dadou_utils_ros.utils_static import KEY, KEYS, NAME, LOOP, DURATION, BASE_PATH, TYPE, \
+    JSON_DIRECTORY
 from didier_core.actions.action import Action
 
 
@@ -29,13 +31,35 @@ class AbstractJsonActions(Action):
         self.msg_time = 0
 
     def load_keys_and_names_sequences(self, json_manager):
-        sequences = json_manager.open_json(self.json_file)
+        self.sequences_key, self.sequences_name = self._indexer(json_manager.open_json(self.json_file))
+
+    @staticmethod
+    def _indexer(sequences):
+        """(par touche, par nom) d'un fichier à plusieurs entrées ; NAME injecté depuis la clé."""
+        par_touche, par_nom = {}, {}
         for seq_key in sequences:
             if KEYS in sequences[seq_key].keys():
                 for key in sequences[seq_key][KEYS]:
-                    self.sequences_key[key] = sequences[seq_key]
-            self.sequences_name[seq_key] = sequences[seq_key]
-            self.sequences_name[seq_key][NAME] = seq_key
+                    par_touche[key] = sequences[seq_key]
+            par_nom[seq_key] = sequences[seq_key]
+            par_nom[seq_key][NAME] = seq_key
+        return par_touche, par_nom
+
+    def relire_entrees(self):
+        """Lot L1d (rechargement à chaud) : relit self.json_file SUR LE DISQUE après une
+        écriture du robot (data_edit_result). Illisible = ERROR, anciennes entrées gardées.
+        L'échange des deux index est atomique : une commande en cours garde son entrée."""
+        chemin = os.path.join(self.config[JSON_DIRECTORY], self.json_file)
+        try:
+            with open(chemin, encoding="utf-8") as f:
+                sequences = json.load(f)
+            index = self._indexer(sequences)
+        except (OSError, ValueError, TypeError, AttributeError) as e:
+            logging.error("rechargement de %s impossible, ancienne version gardée : %s", chemin, e)
+            return False
+        self.sequences_key, self.sequences_name = index
+        logging.info("rechargé : %s (%d entrées)", chemin, len(self.sequences_name))
+        return True
 
     def load_multi_files_sequences(self, sequence_dir):
         sequences_files = FilesUtils.get_folder_files(sequence_dir)

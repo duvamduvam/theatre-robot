@@ -10,6 +10,7 @@ from adafruit_led_animation.helper import PixelSubset
 from rclpy.node import Node
 import time
 from theatre_interfaces.msg._string_time import StringTime
+from theatre_contrats import donnees, qos, topics
 
 
 from dadou_utils_ros.misc import Misc
@@ -59,7 +60,22 @@ class LightsNode(Node):
         self.face_subscription = self.create_subscription(
             StringTime, FACE, self.face_callback, 10)
 
+        # Lot L1d (rechargement à chaud) : expressions, images, lumières et briques écrites
+        # par data_edit_node sont relues du disque ; l'affichage en cours n'est pas touché.
+        self.data_edit_subscription = self.create_subscription(
+            StringTime, topics.DATA_EDIT_RESULT, self.data_edit_callback, qos.volatile(10))
+
         self.timer = self.create_timer(TICK_PERIOD_S, self.timer_callback)
+
+    def data_edit_callback(self, ros_msg):
+        recharge = donnees.verdict_a_recharger(ros_msg.msg, ("expression", "image", "lumiere", "brique"))
+        if not recharge:
+            return
+        kind, name = recharge
+        if kind in ("expression", "image"):
+            self.face.recharger(image=name if kind == "image" else None)
+        else:
+            self.lights.recharger()
 
     def face_callback(self, ros_msg):
         msg = decode(ros_msg, FACE)

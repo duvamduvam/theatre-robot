@@ -37,7 +37,14 @@ def test_topics_catalogue_graves():
     assert topics.DEPLOY_SHA == "deploy_sha"
 
 
+def test_topics_edition_graves():
+    # Lot L1d : valeurs DE FIL, partagées avec la page scène (L1d-3), le rechargement à
+    # chaud des nœuds du robot et validate-data-edit.sh.
+    assert topics.DATA_EDIT == "data_edit"
+    assert topics.DATA_EDIT_RESULT == "data_edit_result"
+
+
 def test_nombre_de_topics_grave():
     # 10 organes + 6 StringTime hors organes + 3 perception + 4 jeu (lot A1)
-    # + 2 catalogue/version (lot L1c).
-    assert len(_noms_de_topics()) == 25
+    # + 2 catalogue/version (lot L1c) + 2 édition (lot L1d).
+    assert len(_noms_de_topics()) == 27

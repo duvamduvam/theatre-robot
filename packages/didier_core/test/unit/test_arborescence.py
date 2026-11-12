@@ -818,7 +818,7 @@ def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
 # x86 du robot et celui de la vision.
 SIM_A_PLAT = ["coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "fumee.sh",
               "fumee_page.py", "installer-fumee.sh", "launch-sim-in-docker.sh", "pub.sh",
-              "validate-catalogue.sh", "validate-jeu-a1.sh", "validate-namespace.sh",
+              "validate-catalogue.sh", "validate-data-edit.sh", "validate-jeu-a1.sh", "validate-namespace.sh",
               "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
               "validate-rehearsal-route.sh"]
 BANC_ROBOT = ["Dockerfile-sim", "Dockerfile-x86", "docker-compose-sim.yml", "docker-compose-x86.yml"]

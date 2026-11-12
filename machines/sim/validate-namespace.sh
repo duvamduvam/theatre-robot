@@ -59,7 +59,8 @@ sleep "$ATTENTE"
 # --- Lecture du graphe (sans démon : pas de topics périmés d'une passe précédente) --
 # Sentinelles : sans elles, une liste vide passerait pour « aucun intrus ».
 SENT_TOPICS="$NS/cmd_vel $NS/cmd_vel_mux $NS/e_stop $NS/route_state $NS/ground_truth/odom $NS/neck/position"
-SENT_NODES="$NS/twist_mux $NS/twist_deadman $NS/wheels_bridge $NS/director $NS/route_driver $NS/web_bridge_node"
+# data_edit_node (L1d) : toujours lancé par sim.launch.py, comme sur le robot.
+SENT_NODES="$NS/twist_mux $NS/twist_deadman $NS/wheels_bridge $NS/director $NS/route_driver $NS/web_bridge_node $NS/data_edit_node"
 pgrep -f "/jeu_node( |$)" >/dev/null && SENT_TOPICS="$SENT_TOPICS $NS/jeu/intention" && SENT_NODES="$SENT_NODES $NS/jeu_node"
 for essai in 1 2 3 4; do
   topics=$(ros2 topic list --no-daemon --spin-time 5 2>/dev/null | sort -u)

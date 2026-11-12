@@ -1,10 +1,12 @@
 # Imports matériels différés (pattern wheels.py) : le module doit s'importer sans les libs Pi.
+import json
 import logging.config
+import os
 
 from dadou_utils_ros.utils.time_utils import TimeUtils
 from didier_core.robot_static import JSON_COLORS
 from dadou_utils_ros.utils_static import METHOD, DEFAULT, DURATION, SEQUENCES, LOOP, COLOR, \
-    NAME, JSON_LIGHTS_BASE, BRIGHTNESS, STOP
+    NAME, JSON_LIGHTS_BASE, BRIGHTNESS, STOP, JSON_DIRECTORY
 from didier_core.actions.abstract_json_actions import AbstractJsonActions
 from didier_core.sequences.track import Track
 from didier_core.visual.lights_animations import LightsAnimations
@@ -64,6 +66,24 @@ class Lights(AbstractJsonActions):
                 lights_base[light_name][COLOR] = self.get_color(lights_base[light_name][COLOR])
 
         return lights_base
+
+    def recharger(self):
+        """Lot L1d (rechargement à chaud, verdict ok sur data_edit_result) : relit
+        robot_lights.json et lights_base.json. Illisible = ERROR, ancienne version gardée.
+        L'animation en cours n'est pas touchée : la nouvelle version vaut à la commande suivante."""
+        self.relire_entrees()
+        chemin = os.path.join(self.config[JSON_DIRECTORY], self.config[JSON_LIGHTS_BASE])
+        try:
+            with open(chemin, encoding="utf-8") as f:
+                lights_base = json.load(f)
+            for light_name in lights_base:
+                if COLOR in lights_base[light_name]:
+                    lights_base[light_name][COLOR] = self.get_color(lights_base[light_name][COLOR])
+        except (OSError, ValueError, TypeError) as e:
+            logging.error("rechargement de %s impossible, ancienne version gardée : %s", chemin, e)
+            return
+        self.lights_base = lights_base
+        logging.info("briques rechargées : %s", chemin)
 
     def update(self, msg):
 

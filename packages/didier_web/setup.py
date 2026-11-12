@@ -29,6 +29,7 @@ setup(
         'console_scripts': [
             'web_bridge = didier_web.web_bridge_node:main',
             'catalogue = didier_web.catalogue_node:main',
+            'data_edit = didier_web.data_edit_node:main',
         ],
     },
 )

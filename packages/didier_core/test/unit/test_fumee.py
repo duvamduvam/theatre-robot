@@ -105,7 +105,7 @@ def test_un_compteur_n_est_vert_qu_a_la_valeur_gravee(ok, attendu, ko, statut):
 
 def test_ordre_canonique_des_epreuves():
     assert [i for i, _ in fp.EPREUVES] == [
-        "image", "demarrage", "rtf", "namespace", "catalogue", "parle", "chantiers", "a1"]
+        "image", "demarrage", "rtf", "namespace", "catalogue", "parle", "edition", "chantiers", "a1"]
 
 
 def test_verdict_global_premier_rouge_bloque():
@@ -120,7 +120,8 @@ def test_completer_marque_non_lancees_les_suivantes():
     complet = fp.completer_epreuves([{"id": "image", "statut": "vert"}, {"id": "rtf", "statut": "rouge"}])
     assert [(e["id"], e["statut"]) for e in complet] == [
         ("image", "vert"), ("demarrage", "non_lance"), ("rtf", "rouge"), ("namespace", "non_lance"),
-        ("catalogue", "non_lance"), ("parle", "non_lance"), ("chantiers", "non_lance"), ("a1", "non_lance")]
+        ("catalogue", "non_lance"), ("parle", "non_lance"), ("edition", "non_lance"), ("chantiers", "non_lance"),
+        ("a1", "non_lance")]
 
 
 # --- git : les commits de docs/fumee ne rendent pas une fumée due ------------------
@@ -340,6 +341,7 @@ def test_page_verte_porte_sha_rtf_et_compteurs():
             {"id": "namespace", "statut": "vert", "ok": 5, "attendu": 5, "ko": 0, "journal": "namespace.log"},
             {"id": "catalogue", "statut": "vert", "ok": 4, "attendu": 4, "ko": 0},
             {"id": "parle", "statut": "vert", "ok": 3, "attendu": 3, "ko": 0},
+            {"id": "edition", "statut": "vert", "ok": 12, "attendu": 12, "ko": 0},
             {"id": "chantiers", "statut": "vert", "ok": 21, "attendu": 21, "ko": 0, "duree_s": 585},
             {"id": "a1", "statut": "vert", "ok": 14, "attendu": 14, "ko": 0}]
     page = fp.rendre_page(resultat(tout))
@@ -359,7 +361,7 @@ def test_page_rouge_dit_ou_et_ce_qui_n_a_pas_ete_lance():
                 {"id": "rtf", "statut": "rouge", "obtenu": "0.49", "detail": "RTF 0.49 < 0.8"}]
     page = fp.rendre_page(resultat(epreuves, verdict="rouge", bloquant="rtf", rtf=0.49))
     assert "ROUGE à l&#x27;épreuve « Sonde du facteur temps réel (20 s) » : les suivantes n&#x27;ont pas été lancées." in page
-    assert page.count("non lancée") == 5
+    assert page.count("non lancée") == 6   # namespace, catalogue, parle, edition (L1d), chantiers, a1
     assert "RTF 0.49 &lt; 0.8" in page                      # échappé
 
 
@@ -413,7 +415,7 @@ def test_valeurs_attendues_gravees_en_tete_du_script():
     src = _lire_sh()
     gravees = dict(re.findall(r"^(ATTENDU_[A-Z0-9]+)=(\d+)", src, re.M))
     assert gravees == {"ATTENDU_NAMESPACE": "5", "ATTENDU_CATALOGUE": "4", "ATTENDU_PARLE": "3",
-                       "ATTENDU_CHANTIERS": "21", "ATTENDU_A1": "14"}
+                       "ATTENDU_EDITION": "12", "ATTENDU_CHANTIERS": "21", "ATTENDU_A1": "14"}
     assert re.search(r"^RTF_MIN_DEFAUT=0\.8$", src, re.M)
 
 
@@ -423,6 +425,9 @@ def test_les_compteurs_gravees_sont_ceux_des_scripts_de_verification():
     cat = (SCRIPTS / "validate-catalogue.sh").read_text(encoding="utf-8")
     assert len(re.findall(r'verdict "\$\(', ns)) == 5
     assert len(re.findall(r'verdict "\$\(', cat)) == 4
+    # validate-data-edit.sh : épreuves numérotées « verdict(…, "N. … ») » dans son python.
+    edition = (SCRIPTS / "validate-data-edit.sh").read_text(encoding="utf-8")
+    assert re.findall(r'"(\d+)\. \S', edition) == [str(n) for n in range(1, 13)]
 
 
 def test_garde_fous_presents_dans_le_script():

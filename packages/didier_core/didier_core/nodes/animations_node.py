@@ -17,6 +17,7 @@ from didier_core.robot_config import config
 from didier_core.robot_static import TICK_PERIOD_S
 from didier_core.sequences.animation_manager import AnimationManager
 from theatre_interfaces.msg._string_time import StringTime
+from theatre_contrats import donnees, qos, topics
 
 
 PUBLISHER_LIST = [AUDIO, FACE, ROBOT_LIGHTS, RELAY, NECK, LEFT_EYE, RIGHT_EYE, LEFT_ARM, RIGHT_ARM, WHEELS]
@@ -63,6 +64,11 @@ class AnimationsNode(Node):
             self.listener_callback,
             10)
 
+        # Lot L1d (rechargement à chaud) : une séquence écrite par data_edit_node est relue du
+        # disque, sans redémarrage. Abonnement seul : la publication des pistes ne change pas.
+        self.create_subscription(StringTime, topics.DATA_EDIT_RESULT, self.data_edit_callback,
+                                 qos.volatile(10))
+
         self.timer = self.create_timer(TICK_PERIOD_S, self.timer_callback)
 
         # Publie l'état de repos "" dès le boot : un abonné latché voit
@@ -86,6 +92,11 @@ class AnimationsNode(Node):
         # façon deadman si ce node meurt en pleine séquence) — sans
         # re-publication, leur garde-fou expirerait en pleine séquence vivante.
         self._publish_state(force=True)
+
+    def data_edit_callback(self, ros_msg):
+        recharge = donnees.verdict_a_recharger(ros_msg.msg, ("sequence",))
+        if recharge:
+            self.animations_manager.recharger_sequence(recharge[1])
 
     def timer_callback(self):
         # Logique à exécuter en continu ici

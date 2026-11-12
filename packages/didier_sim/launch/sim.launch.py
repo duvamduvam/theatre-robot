@@ -13,6 +13,10 @@ robot_description, robot_state_publisher et le bridge ros_gz.
     # puis, dans un autre terminal (même domaine ROS que la sim, 43) :
     #   ros2 topic pub -1 /didier/animation theatre_interfaces/msg/StringTime '{msg: "\\"parle\\""}'
 
+    # Édition des données à travers le robot (lot L1d, data_edit_node toujours lancé,
+    # désactivé par défaut) :
+    ros2 launch didier_sim sim.launch.py data_edit:=true
+
     # Aperçu web du visage LED (face_sim, package "didier_core" -- les matrices LED
     # n'ont aucun rendu dans Gazebo) -- OFF par défaut, même prudence :
     ros2 launch didier_sim sim.launch.py face:=true
@@ -59,6 +63,9 @@ def generate_launch_description():
     # boutons de répétition de la page /scene ; ne lance rien d'autre (la route
     # et le régisseur se lancent À LA MAIN, cf. README du package de répétition).
     rehearsal = ParameterValue(LaunchConfiguration("rehearsal"), value_type=bool)
+    # Lot L1d : édition des données à travers le robot (data_edit_node, toujours lancé).
+    # Défaut false = le nœud répond `edition_desactivee` à chaque demande.
+    data_edit = ParameterValue(LaunchConfiguration("data_edit"), value_type=bool)
 
     # ⚠️ `robot_description` (variable, paramètre de robot_state_publisher, topic du
     # spawn) = nom STANDARD ROS de l'URDF, PAS le package (didier_description depuis
@@ -119,6 +126,11 @@ def generate_launch_description():
                                            " /scene affiche ses boutons de route et de séance. Défaut"
                                            " false. NE LANCE PAS la route ni le régisseur (à la main)."
                                            " Sans effet sans web:=true."),
+        DeclareLaunchArgument("data_edit", default_value="false",
+                              description="true = data_edit_node ÉCRIT les retouches reçues sur"
+                                           " data_edit (json/ et medias/visuals/ du robot, après"
+                                           " contrat et sauvegarde). Défaut false : le nœud tourne"
+                                           " quand même et refuse (edition_desactivee)."),
         DeclareLaunchArgument("face", default_value="false",
                               description="true = lance face_sim (paquet didier_core, aperçu web du visage"
                                            " LED -- les matrices LED n'ont aucun rendu dans Gazebo)."
@@ -232,6 +244,17 @@ def generate_launch_description():
                 executable="catalogue",
                 name="catalogue_node",
                 output="screen",
+            ),
+
+            # Écrivain des données (L1d) : toujours lancé, comme sur le robot ; enabled =
+            # argument data_edit (DATA_EDIT du compose). data_dir par défaut
+            # (/home/ros2_ws/src/robot, montage sim de data/json et data/medias).
+            Node(
+                package="didier_web",
+                executable="data_edit",
+                name="data_edit_node",
+                output="screen",
+                parameters=[{"enabled": data_edit}],
             ),
 
             # Pont web W0 (paquet didier_web, autonome façon didier_drive). Pas de
