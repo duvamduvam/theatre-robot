@@ -1,0 +1,193 @@
+/*
+ * Page « scène » (scene.html) — styles propres à cette page, chargés APRÈS
+ * style.css. Les jetons (:root), le bandeau, les badges, les cartes vidéo et les
+ * chips .bouton-catalogue viennent de style.css, partagé avec la régie : ne rien
+ * y changer pour la scène (spec-refonte-page-scene.md, D10).
+ */
+/* --- Page « scène » (scene.html) ---------------------------------------- */
+/* Classes préfixées scene- : elles n'existent que sur cette page. Le bandeau,
+   les badges, les cartes vidéo et les chips .bouton-catalogue sont ceux de la
+   console (règles ci-dessus). */
+
+/* Barre de contrôle : groupes côte à côte, qui passent à la ligne. */
+.scene-barre {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  align-items: flex-start;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--bord);
+  background: var(--bg-carte);
+}
+
+.scene-groupe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+
+.scene-groupe h2 {
+  margin: 0;
+}
+
+/* PIÈGE déjà vécu sur .video-placeholder : un display:flex d'auteur ÉCRASE le
+   display:none de l'attribut hidden. Sans cette règle, les groupes de
+   répétition resteraient visibles sur le vrai robot. */
+.scene-groupe[hidden] {
+  display: none;
+}
+
+.scene-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.scene-vitesse {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--texte-doux);
+}
+
+.scene-vitesse b {
+  color: var(--texte);
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-vitesse input[type="range"] {
+  width: 10rem;
+  accent-color: var(--accent);
+}
+
+/* Trois colonnes : caméra | visage | conversation (une seule sur téléphone). */
+.scene-colonnes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 1700px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1000px) {
+  .scene-colonnes {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+}
+
+.scene-colonne {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;   /* autorise le rétrécissement en grid */
+}
+
+.scene-colonne h2 {
+  margin: 0;
+}
+
+/* Le visage LED est une matrice de gros pixels : pas de lissage. */
+.scene-visage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* Fil de conversation : défile, le plus récent en bas. */
+.scene-fil {
+  list-style: none;
+  margin: 0;
+  padding: 0.6rem;
+  height: 22rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--bg-carte);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+  color-scheme: dark;   /* barre de défilement sombre, comme le reste */
+}
+
+.scene-msg {
+  max-width: 88%;
+  padding: 0.4rem 0.7rem;
+  border-radius: 12px;
+  background: var(--bg-carte-2);
+  overflow-wrap: anywhere;
+}
+
+/* David = ce que Didier a ENTENDU (à droite), Didier = sa voix (à gauche). */
+.scene-msg-david {
+  align-self: flex-end;
+  background: #1c3358;
+}
+
+.scene-msg-didier {
+  align-self: flex-start;
+}
+
+.scene-msg-role {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--texte-doux);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.scene-saisie {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.scene-saisie input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Ticket dans le bandeau (08/11) : poussé à droite, largeur bornée pour ne pas
+   écraser les badges de mode/connexion. */
+.scene-ticket { margin-left: auto; width: min(26rem, 40vw); }
+
+/* --- Oreille de Didier (page scène, 31/10) ------------------------------- */
+.scene-oreille { margin: 0 0 0.6em; font-size: 0.85em; }
+.scene-oreille summary { cursor: pointer; font-weight: bold; }
+.scene-chaine { width: 100%; border-collapse: collapse; margin: 0.3em 0; }
+.scene-chaine td { padding: 1px 4px; vertical-align: top; word-break: break-all; }
+.scene-chaine td.label { white-space: nowrap; color: #999; word-break: normal; }
+.scene-entendu { list-style: none; margin: 0; padding: 0; max-height: 12em; overflow-y: auto; }
+.scene-entendu li { display: flex; flex-direction: column; padding: 2px 4px; border-left: 3px solid; margin-bottom: 2px; }
+.scene-entendu-garde { border-color: #2e7d32; }
+.scene-entendu-jete { border-color: #b26a00; opacity: 0.75; }
+
+/* --- Panneau « Jeu » (lot A1, sélecteur de jeu, SIM-ONLY) ------------------------ */
+/* Même piège que .scene-groupe : un display d'auteur écraserait hidden. */
+.scene-jeu[hidden] { display: none; }
+.scene-jeu {
+  display: grid;
+  grid-template-columns: minmax(18rem, 2fr) minmax(16rem, 1fr);
+  gap: 0.6rem 1.4rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--bord);
+}
+.jeu-intention h2 { margin: 0 0 0.3rem; }
+.jeu-action { font-size: 1.8em; }
+.jeu-cible { font-size: 1.3em; opacity: 0.85; }
+.jeu-pourquoi { font-size: 0.9em; opacity: 0.85; min-height: 2.4em; }
+.jeu-barre { height: 6px; background: var(--bord); margin-top: 0.3rem; }
+.jeu-barre div { height: 100%; width: 0; background: #2e7d32; transition: width 0.2s linear; }
+.jeu-stop { font-weight: bold; }
+.jeu-commandes { display: flex; flex-wrap: wrap; gap: 0.4rem; align-content: flex-start; }
+.jeu-jauges { display: grid; grid-template-columns: 7em 1fr 3em; gap: 2px 0.5em; font-size: 0.85em; align-items: center; }
+.jeu-jauge { height: 8px; background: var(--bord); }
+.jeu-jauge div { height: 100%; background: #b26a00; }
+.jeu-journal { list-style: none; margin: 0; padding: 0; max-height: 12em; overflow-y: auto; font-size: 0.8em; grid-column: 1 / -1; }
+.jeu-journal li { padding: 1px 4px; border-left: 3px solid var(--bord); margin-bottom: 1px; }
+.jeu-journal li.jeu-decision { border-color: #2e7d32; }
+.jeu-journal li.jeu-refus, .jeu-journal li.jeu-relais_stop { border-color: #b26a00; }
