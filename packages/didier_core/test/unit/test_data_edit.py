@@ -343,3 +343,35 @@ def test_vider_tmp(data_dir):
     assert data_edit.vider_tmp(data_dir) == 1
     assert os.listdir(tmp) == []
     assert data_edit.vider_tmp(data_dir / "inexistant") == 0
+
+
+def test_temporaire_d_image_sur_le_montage_medias(data_dir, monkeypatch):
+    # json/ et medias/ sont deux montages (sim, compose ARM) : os.replace de json/backup/.tmp
+    # vers medias/visuals/ échoue en EXDEV (mesuré en sim le 12/11). Le temporaire d'une image
+    # vit sur medias/, HORS de medias/visuals/ que Face.load_visuals lit en entier.
+    vus = []
+    vrai_replace = os.replace
+
+    def espion(src, dst):
+        vus.append(os.path.relpath(src, data_dir))
+        vrai_replace(src, dst)
+    monkeypatch.setattr(data_edit.os, "replace", espion)
+    v = lancer(data_dir, demande("image", "create", "eye/clin", base64.b64encode(OEIL).decode(), id_="img"))
+    assert v["code"] == "ok"
+    assert vus == ["medias/.tmp/img"]
+    assert os.listdir(data_dir / "medias/.tmp") == []
+
+
+def test_droits_du_fichier_remplace_conserves(data_dir):
+    # robot_lights.json est suivi en 755 : une retouche ne doit pas le rendre 644 (vu en sim).
+    cible = data_dir / "json/robot_lights.json"
+    os.chmod(cible, 0o755)
+    lancer(data_dir, demande("lumiere", "create", "neuve", LUMIERES["calme"]))
+    assert oct(os.stat(cible).st_mode & 0o777) == "0o755"
+
+
+def test_vider_tmp_des_deux_temporaires(data_dir):
+    for relatif in ("json/backup/.tmp", "medias/.tmp"):
+        (data_dir / relatif).mkdir(parents=True)
+        (data_dir / relatif / "vieux").write_text("x")
+    assert data_edit.vider_tmp(data_dir) == 2

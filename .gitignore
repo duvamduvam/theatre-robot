@@ -35,3 +35,5 @@ machines/sim/banc-vision/workspace/
 # (json/backup/<date>/, .tmp/, EDITIONS-EN-ATTENTE.jsonl). En sim ils tombent dans data/json/ du
 # PC : jamais versionnés. Ce qui y était déjà suivi (maker_fair.json) le reste jusqu'à sa suppression.
 data/json/backup/
+# Temporaire des images (même montage que medias/visuals/, hors de ce dossier), vide après chaque écriture.
+data/medias/.tmp/

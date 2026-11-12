@@ -79,6 +79,7 @@ EPREUVES = [
     ("namespace", "validate-namespace.sh"),
     ("catalogue", "validate-catalogue.sh"),
     ("parle", "Animation « parle » (animation_state \"\" → \"parle\" → \"\")"),
+    ("edition", "validate-data-edit.sh (édition à travers le robot, L1d)"),
     ("chantiers", "Chaîne roues + régisseur + regard, puis validate-rehearsal-chantiers.sh (V-R3)"),
     ("a1", "Sim relancée, validate-jeu-a1.sh (A1)"),
 ]

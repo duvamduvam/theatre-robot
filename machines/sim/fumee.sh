@@ -26,7 +26,7 @@
 # Ordre (décision 3), arrêt au PREMIER rouge bloquant (les suivantes : « non lancée ») :
 #   image (reconstruite seulement si machines/sim/banc-robot a changé depuis la dernière verte)
 #   -> sim headless + colcon -> sonde RTF 20 s (rouge si < 0,8 : le reste n'est pas fiable)
-#   -> validate-namespace -> validate-catalogue -> animation parle
+#   -> validate-namespace -> validate-catalogue -> animation parle -> validate-data-edit (L1d)
 #   -> chaîne roues + régisseur + regard, validate-rehearsal-chantiers (V-R3)
 #   -> sim relancée, validate-jeu-a1 (A1).        ≈ 40 min.
 #
@@ -38,8 +38,10 @@
 #   - verrou flock : jamais deux fumées en même temps ;
 #   - l'arbre de travail du dépôt n'est jamais modifié hors docs/fumee/ (le seul commit
 #     est `git commit -- docs/fumee`, sans -a ni add .). Arbre sale : on teste quand même,
-#     le sha porte « -dirty ». Seule exception connue : validate-catalogue.sh dépose puis
-#     supprime une séquence temporaire dans json/sequences/tmp-l1c (monté depuis l'arbre).
+#     le sha porte « -dirty ». Exceptions connues : validate-catalogue.sh dépose puis
+#     supprime une séquence temporaire dans json/sequences/tmp-l1c (monté depuis l'arbre) ;
+#     validate-data-edit.sh (L1d) écrit par le robot dans data/ puis restaure tout ce qu'il
+#     a touché (empreinte de json/ et medias/visuals/ identique, sinon code 1).
 #
 # Variables (toutes facultatives) :
 #   FUMEE_DEPOT        checkout de main à tester (défaut : le dépôt de David)
@@ -62,6 +64,7 @@ set -euo pipefail
 ATTENDU_NAMESPACE=5     # validate-namespace.sh : sentinelles, topics, nœuds, twist_mux, bridge
 ATTENDU_CATALOGUE=4     # validate-catalogue.sh : 6 familles, sha dev, ajout, suppression
 ATTENDU_PARLE=3         # états vus dans l'ordre : "" -> "parle" -> ""
+ATTENDU_EDITION=12      # validate-data-edit.sh (L1d-1 : épreuves 1 à 12 ; 13 avec la porte sim, L1d-2)
 ATTENDU_CHANTIERS=21    # validate-rehearsal-chantiers.sh (V-R3)
 ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
 RTF_MIN_DEFAUT=0.8
@@ -355,7 +358,7 @@ demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis a
   SIM_A_NOUS=1
   # ROS_DOMAIN_ID forcé ICI : le compose le lirait dans l'environnement de l'appelant.
   (cd "$DOCKER_DIR" && env ROS_DOMAIN_ID=43 ROBOT_NAME=didier HEADLESS=true WORLD=chantiers \
-      REHEARSAL=true FACE=true WEB=true ANIMATIONS=true WEB_DRIVE=false \
+      REHEARSAL=true FACE=true WEB=true ANIMATIONS=true WEB_DRIVE=false DATA_EDIT=true \
       docker compose -f docker-compose-sim.yml up -d) >>"$TMP/demarrage.log" 2>&1 || return 1
   epingler_sim
   local domaine; domaine="$(docker exec "$CONTENEUR" printenv ROS_DOMAIN_ID 2>/dev/null || echo ?)"
@@ -556,7 +559,10 @@ phase_simples() {
   ok="$(sed -nE 's/^PARLE ([0-9]+) OK.*/\1/p' <<<"$sortie" | tail -1)"; ok="${ok:-0}"
   epreuve parle --ok "$ok" --attendu "$ATTENDU_PARLE" --ko "$((ATTENDU_PARLE - ok))" \
     --detail "$(grep '^ETATS=' <<<"$sortie" | tail -1)" --duree "$((SECONDS - t0))" --journal parle.log
-  [ "$ok" = "$ATTENDU_PARLE" ]
+  [ "$ok" = "$ATTENDU_PARLE" ] || return 1
+  # Édition à travers le robot (L1d) : lance puis arrête elle-même la chaîne roues (l'épreuve 7
+  # mesure la tenue de cmd_vel) ; restaure ce qu'elle écrit dans data/.
+  lancer_validation edition validate-data-edit.sh "$ATTENDU_EDITION" 'validate-data-edit' 300
 }
 
 phase_chantiers() {

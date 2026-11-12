@@ -11,7 +11,8 @@ Ordre d'écriture (échec à une étape = `erreur_ecriture`, cible intacte) :
   (b) ligne au journal des éditions non rapatriées, fsync, AVANT l'écriture : un crash laisse
       au pire une ligne en trop, jamais une retouche inconnue du journal ;
   (c) contenu dans json/backup/.tmp/<id> (fsync) — JAMAIS sous sequences/ ni medias/visuals/,
-      dont les chargeurs lisent tout fichier présent au démarrage ;
+      dont les chargeurs lisent tout fichier présent au démarrage ; une image passe par
+      medias/.tmp/<id> (même montage que sa cible : os.replace ne traverse pas les montages) ;
   (d) os.replace vers la cible, fsync du dossier ;
   (e) fichiers et dossiers créés rendus au propriétaire de json/ (en sim le conteneur tourne
       en root dans l'arbre de travail du PC).
@@ -22,6 +23,7 @@ import json
 import os
 import re
 import shutil
+import stat
 
 from theatre_contrats import donnees
 
@@ -54,6 +56,10 @@ CLES_AUTORISEES = {
 DOSSIER_SAUVEGARDES = "json/backup"
 JOURNAL = DOSSIER_SAUVEGARDES + "/EDITIONS-EN-ATTENTE.jsonl"
 DOSSIER_TMP = DOSSIER_SAUVEGARDES + "/.tmp"
+# Temporaire des IMAGES : medias/ est un AUTRE montage que json/ (sim et compose ARM) et
+# os.replace ne traverse pas les montages (EXDEV, mesuré en sim le 12/11). Il vit donc sur le
+# montage medias/, hors de medias/visuals/ que Face.load_visuals lit en entier.
+DOSSIER_TMP_IMAGES = "medias/.tmp"
 QUOTA_JOUR = 200
 DOSSIERS_DATES_GARDES = 30
 MOTIF_DOSSIER_DATE = r"\d{4}-\d{2}-\d{2}"
@@ -332,7 +338,7 @@ def _ecrire(demande, cible, octets, sha, sauvegarder, data_dir, maintenant):
     kind, name, id_demande = demande["kind"], demande["name"], demande["id"]
     json_dir = os.path.join(data_dir, "json")
     racine = os.path.join(data_dir, DOSSIER_SAUVEGARDES)
-    tmp_dir = os.path.join(data_dir, DOSSIER_TMP)
+    tmp_dir = os.path.join(data_dir, DOSSIER_TMP_IMAGES if kind == "image" else DOSSIER_TMP)
     proprietaire = os.stat(json_dir)
     crees = []
     sauvegarde = None
@@ -369,6 +375,9 @@ def _ecrire(demande, cible, octets, sha, sauvegarder, data_dir, maintenant):
             f.write(octets)
             f.flush()
             os.fsync(f.fileno())
+        if os.path.exists(cible):
+            # Le fichier remplacé garde ses droits (un 755 suivi par git ne devient pas 644).
+            os.chmod(tmp, stat.S_IMODE(os.stat(cible).st_mode))
         # (d) remplacement atomique
         os.replace(tmp, cible)
         _fsync_dossier(os.path.dirname(cible))
@@ -418,14 +427,16 @@ def _tourner(racine):
 
 def vider_tmp(data_dir):
     """Au démarrage du nœud : un temporaire laissé par un crash ne sert plus à rien."""
-    tmp_dir = os.path.join(str(data_dir), DOSSIER_TMP)
-    if not os.path.isdir(tmp_dir):
-        return 0
-    noms = os.listdir(tmp_dir)
-    for nom in noms:
-        chemin = os.path.join(tmp_dir, nom)
-        if os.path.isdir(chemin) and not os.path.islink(chemin):
-            shutil.rmtree(chemin)
-        else:
-            os.remove(chemin)
-    return len(noms)
+    total = 0
+    for relatif in (DOSSIER_TMP, DOSSIER_TMP_IMAGES):
+        tmp_dir = os.path.join(str(data_dir), relatif)
+        if not os.path.isdir(tmp_dir):
+            continue
+        for nom in os.listdir(tmp_dir):
+            chemin = os.path.join(tmp_dir, nom)
+            if os.path.isdir(chemin) and not os.path.islink(chemin):
+                shutil.rmtree(chemin)
+            else:
+                os.remove(chemin)
+            total += 1
+    return total
