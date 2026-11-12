@@ -497,3 +497,64 @@
 .scene-entendu li { display: flex; flex-direction: column; padding: 2px 4px; border-left: 3px solid; margin-bottom: 2px; }
 .scene-entendu-garde { border-color: var(--scene-garde); }
 .scene-entendu-jete { border-color: var(--scene-jete); opacity: 0.75; }
+
+/* --- Écran moyen (tablette en paysage, petit portable) ------------------------
+   Rail et conversation resserrés pour laisser au centre de quoi voir. */
+@media (min-width: 900px) and (max-width: 1199px) {
+  .scene-poste { grid-template-columns: 180px minmax(0, 1fr) 290px; }
+  .scene-rail { padding: 0.55rem; }
+  .jeu-urgence { min-width: 6.5rem; }
+  .scene-media { grid-template-columns: minmax(0, 1fr) minmax(110px, 25%); }
+}
+
+/* --- Écran étroit : téléphone, tablette en portrait (D9) ---------------------
+   Une colonne, par ordre d'usage pendant le jeu : vues, Jeu, conversation, puis
+   « Préparer » replié (scene.js le ferme au chargement). La page défile
+   normalement. STOP est collé en bas de l'écran tant que le Jeu est affiché. */
+@media (max-width: 899px) {
+  .scene-poste {
+    display: flex;
+    flex-direction: column;
+  }
+  .scene-centre { order: 1; display: flex; flex-direction: column; }
+  .scene-conversation { order: 2; }
+  .scene-rail { order: 3; overflow: visible; }
+  .scene-rail[open] .scene-rail-titre { margin-bottom: 0.7rem; }
+
+  /* Ticket sur sa propre ligne, pleine largeur, en fin de bandeau. */
+  .scene-ticket { flex-basis: 100%; width: auto; margin-left: 0; }
+
+  /* Vue principale pleine largeur, vignettes en bande horizontale dessous. */
+  .scene-media {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+  }
+  .scene-tuile { grid-column: auto; grid-row: 2; }
+  .scene-tuile.principale { grid-column: 1 / -1; grid-row: 1; }
+  .scene-tuile .video-wrap { aspect-ratio: 4 / 3; height: auto; }
+
+  .scene-jeu {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "intention" "ordres" "jauges" "journal";
+  }
+  .jeu-jauges { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  /* STOP toujours sous le pouce. GO à gauche, STOP plus large à droite. */
+  .jeu-urgence {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
+    flex-direction: row;
+    padding: 0.5rem 0.8rem calc(0.5rem + env(safe-area-inset-bottom));
+    background: rgba(15, 17, 20, 0.96);
+    border-top: 1px solid var(--bord);
+  }
+  .jeu-urgence .jeu-go { flex: 1; }
+  .jeu-urgence .jeu-stop { flex: 2; min-height: 56px; }
+  /* Réserve la place de la barre STOP pour ne rien cacher en bas de page. */
+  .scene-page:has(#scene-jeu:not([hidden])) { padding-bottom: 5.5rem; }
+
+  .scene-fil { flex: none; height: 55vh; }
+}

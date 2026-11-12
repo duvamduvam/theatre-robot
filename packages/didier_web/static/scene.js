@@ -722,6 +722,10 @@ function installerErreurs() {
   majCompteur();
 }
 
+// Écran étroit (même seuil que scene.css) : « Préparer » part replié en bas de page.
+if (window.matchMedia("(max-width: 899px)").matches) {
+  $("scene-preparer").open = false;
+}
 construirePersonas();
 installerErreurs();
 installerVues();
