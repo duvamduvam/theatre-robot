@@ -115,9 +115,10 @@ def test_tampon_ecrit_au_format_grave_sans_temporaire(banc):
 def test_relance_du_meme_nom_interrompt(banc):
     obs, racine, _, _ = banc
     assert obs.etat_animation(0, "calme") == []
-    assert codes(obs.etat_animation(2000, "calme")) == [("sequence", "essai/calme", "interrompue", False)]
+    # Relancée à 3900 ms, DANS la fenêtre (≥ 0,95 × 4000) : seule la relance la disqualifie.
+    assert codes(obs.etat_animation(3900, "calme")) == [("sequence", "essai/calme", "interrompue", False)]
     # La relance, elle, jouée jusqu'au bout, est tamponnée.
-    assert codes(obs.etat_animation(6000, "")) == [("sequence", "essai/calme", "tamponnee", True)]
+    assert codes(obs.etat_animation(7900, "")) == [("sequence", "essai/calme", "tamponnee", True)]
 
 
 def test_empreinte_deja_au_registre_aucune_ecriture(banc):

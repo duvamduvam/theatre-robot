@@ -8,6 +8,7 @@ Package ROS 2 du robot Didier, autonome (aucun import `robot.*` ni `dadou_utils_
 | — | `static/` | pages servies telles quelles, sans build : console `index.html` + `app.js`, scène `scene.html` + `scene.js` + `scene.css`, communs `commun.js` + `style.css` (ne pas y mettre de style propre à la scène) |
 | `catalogue` | `catalogue_node` | **lot L1c** : publie le catalogue du robot et sa version |
 | `data_edit` | `data_edit_node` | **lot L1d** : le SEUL écrivain des données du robot (désactivé par défaut) |
+| `validation_sim` | `validation_sim_node` | **lot L1d-2**, SIM SEULEMENT : l'observateur de la porte sim, qui tamponne `json/validations-sim.json` |
 
 ## `catalogue_node` (L1c)
 
@@ -55,4 +56,23 @@ Ce qu'il écrit : la cible (séquence, entrée d'`expressions.json` / `robot_lig
 
 Tests (hôte) : `packages/didier_core/test/unit/test_data_edit.py` (octets et sha gravés, un cas
 par code), `test_rechargement.py` ; contrat : `packages/theatre_contrats/test/test_donnees.py`.
-Preuve sim : `machines/sim/validate-data-edit.sh` (12 épreuves, aussi jouée par la fumée).
+Preuve sim : `machines/sim/validate-data-edit.sh` (13 épreuves, aussi jouée par la fumée).
+
+## `validation_sim_node` (L1d-2, sim seulement)
+
+L'observateur de la porte sim : il regarde ce qui se joue (`animation_state` latché, `face`,
+`robot_lights`, `cmd_vel`), quel que soit le déclencheur, et pose le tampon `rejeu` du registre
+`json/validations-sim.json` quand un élément a été joué jusqu'au bout sans incident ; il répond
+aux demandes de validation des roues (`validation_sim_demande`). Verdicts sur `validation_sim`.
+Critères et codes : `docs/interfaces.md` § « Sim gate ». Mince : la logique est dans
+`validation_sim.Observateur` (pure, horloge injectée), qui **refuse de se construire hors domaine
+43** — le registre ne s'écrit qu'en sim. Lancé par `sim.launch.py` seul, jamais sur le robot.
+
+Paramètres : `data_dir` (`/home/ros2_ws/src/robot`), `journal` (`/home/ros2_ws/log/robot.log`,
+le `LOGGING_FILE_NAME` de `didier_core`, égalité gravée). Écriture atomique (temporaire sous
+`json/backup/.tmp/`), propriétaire de `json/` rendu, orphelines retirées à chaque écriture.
+Ne lit pas `/rosout` (règle gravée : aucun abonnement à un nom absolu).
+
+Tests (hôte) : `packages/didier_core/test/unit/test_validation_sim.py` (un tampon posé / refusé
+par critère, bornes à leur valeur limite), `test_validations_sim.py` (le registre de `data/` est
+complet). Par lot : `machines/sim/rejouer-modifiees.sh`.

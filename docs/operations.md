@@ -77,7 +77,7 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   (6 familles non vides, sha `dev`, une séquence déposée apparaît en <= 5 s).
   À la main : `ros2 topic echo /didier/catalogue --once --qos-durability transient_local --field msg`.
 
-## Édition des données à travers le robot (lot L1d, 12/11 — L1d-1 fait, page web en L1d-3)
+## Édition des données à travers le robot (lot L1d, 12/11 — L1d-1 et L1d-2 faits, page web en L1d-3)
 - **Un seul écrivain** : `data_edit_node` (`didier_web`), toujours lancé (robot et sim),
   **désactivé par défaut** (`DATA_EDIT`) — il répond alors `edition_desactivee`. Sur le vrai
   robot, l'activer est une décision de David (après L1d-4 et une relecture adverse). Contrat,
@@ -95,14 +95,48 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   image refusée l'est avec sa raison dans `detail`.
 - **Roues** : une piste `wheels` est une donnée bornée par le contrat (consigne ≤ 0.89, tenue ≤ 60 s,
   durée ≤ 300 s, dernière image `[0, 0]`) ; le verdict d'une séquence à roues porte
-  `roues_a_valider_en_sim` (la porte sim arrive en L1d-2). Ces bornes n'autorisent aucun roulage
+  `roues_a_valider_en_sim` (voir « La porte sim » ci-dessous). Ces bornes n'autorisent aucun roulage
   au sol. **Constat mesuré le 12/11 (épreuve 7)** : en mode `cmd_vel`, une image roues tenue 1,6 s
   ne produit qu'UN `cmd_vel` non nul, coupé 0,41 s plus tard par `twist_deadman` — les pistes
   roues jouent des impulsions. Non corrigé (chemin roues intouché) ; à traiter avant le premier
   roulage au sol.
 - **Épreuve sim** : `docker exec dadou-sim-container bash /home/ros2_ws/validate-data-edit.sh`
-  (12 épreuves, ≈ 35 s ; lance puis arrête la chaîne roues ; restaure ce qu'elle touche dans
-  `data/` — code 1 si un résidu reste). Jouée aussi par la fumée (`ATTENDU_EDITION=12`).
+  (13 épreuves, la 13e = porte sim ; ≈ 50 s ; lance puis arrête la chaîne roues ; restaure ce
+  qu'elle touche dans `data/`, registre compris — code 1 si un résidu reste). Jouée aussi par la
+  fumée (`ATTENDU_EDITION=13`).
+
+### La porte sim : rejouer, valider les roues (lot L1d-2)
+Rien de modifié n'atteint le vrai robot sans avoir été joué en sim. **Registre** :
+`data/json/validations-sim.json` (versionné, part sur le Pi avec `data/`, ne s'écrit qu'en sim) —
+un tampon `rejeu` par séquence, expression et lumière (empreinte de ce qui a été joué jusqu'au
+bout), un tampon `roues` par piste roues (`origine_roues` : `sim` = vue à l'œil, `heritee` = sur
+le robot avant L1d, jamais regardée en sim). **Ne jamais le retoucher à la main.**
+- **Qui tamponne** : l'observateur `validation_sim_node` (`didier_web`), lancé par `sim.launch.py`
+  seul (refus hors domaine 43). Il regarde ce qui se joue, quel que soit le déclencheur (page,
+  régisseur, script, `ros2 topic pub`) : séquence jouée jusqu'au bout (entre 0,95 × `duration` et
+  `duration` + 5 s), sans ERROR au journal du robot, nœuds toujours là, et pour une piste roues
+  `cmd_vel` nul 1 s après la fin (chaîne roues lancée) ; expression / lumière tenue
+  min(`duration`, 10 s) sans autre commande. Verdict sur `/didier/validation_sim`.
+- **Retouche à la main dans git, ou rapatriée du robot** : UNE commande, depuis le PC :
+  `machines/sim/rejouer-modifiees.sh`. Elle démarre la sim sans écran si besoin (depuis CET arbre
+  — elle refuse une sim lancée d'un autre arbre), lance la chaîne roues si elle manque, rejoue un
+  par un ce qui a changé, affiche OK / KO, puis ce qui reste : `à rejouer` (KO à regarder) et
+  `roues à valider`. La sim est laissée en marche (pour la page).
+- **Valider une piste roues** (le seul geste à l'œil) : la regarder jouer en sim jusqu'au bout,
+  puis publier `{"id", "name": "<dossier>/<nom>"}` sur `/didier/validation_sim_demande` — bouton
+  « Valider les roues pour le robot » de la page scène en L1d-3. Refusé (`non_rejouee`) si la
+  version actuelle n'a pas été jouée jusqu'au bout.
+- **Où ça bloque** : `test_validations_sim.py` (suite du cœur, CI) est rouge tant qu'un élément
+  de `data/` n'est pas rejoué ou qu'une piste roues n'est pas validée ; la garde Ansible (L1d-4)
+  refusera le déploiement. Sur le robot, une piste roues non validée n'est PAS jouée (le reste de
+  la séquence joue) : WARNING au journal et `{name, raison: "non_validee_sim"}` sur
+  `roues_refusees` (paramètre `exiger_validation_roues` d'`animations_node`, levé en sim seule).
+- **Liste à la main** : `PYTHONPATH=packages/theatre_contrats python3 -m theatre_contrats.donnees
+  non-validees data` (code 1 si quelque chose attend).
+- **Limites dites** : un nom de séquence présent dans deux dossiers (`appel-eternel-life`) n'est
+  jamais tamponné (`homonyme`) — `animation_state` ne dit pas lequel a joué ; les erreurs de
+  `leds_sim_node` (qui journalise par `/rosout`, pas dans `robot.log`) ne sont pas vues.
+
 - **Piège** : un script de vérification monté en fichier seul (`validate-*.sh`) ne suit pas une
   édition qui REMPLACE le fichier (sed -i, la plupart des éditeurs) — le conteneur garde l'ancien
   inode. Recréer le conteneur, ou `docker cp` le script dans `/tmp` pour itérer.
@@ -687,7 +721,7 @@ image sim (reconstruite seulement si `machines/sim/banc-robot` a changé depuis 
 ou si elle manque) → sim headless domaine 43 + colcon → **sonde RTF 20 s** (rouge si < 0,8 : le
 reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.sh` → animation
 `parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) → `validate-data-edit.sh`
-(L1d, 12 épreuves ; sim lancée avec `DATA_EDIT=true`) → chaîne roues + régisseur +
+(L1d, 13 épreuves ; sim lancée avec `DATA_EDIT=true`) → chaîne roues + régisseur +
 regard puis `validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh`
 (A1). ≈ 40 min.
 

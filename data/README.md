@@ -29,6 +29,14 @@ image `[0, 0]`), expressions (images présentes, 24x16 / 8x8), lumières et briq
 (RVB 8 bits ; 21 images héritées en exception gravée, `test_visuels_png.py`). Les tests de
 `didier_core` appellent ce module sur tout `data/`.
 
+**Porte sim** (lot L1d-2) : `json/validations-sim.json`, versionné, dit pour chaque séquence,
+expression et lumière que sa version actuelle a été jouée jusqu'au bout en sim (tampon `rejeu`), et
+pour chaque piste roues qu'elle a été validée (`roues`, origine `sim` ou `heritee`). Il ne s'écrit
+qu'en sim, par l'observateur `validation_sim_node` — jamais à la main. Une retouche ici (git)
+se rejoue par `machines/sim/rejouer-modifiees.sh` ; sinon `test_validations_sim.py` est rouge,
+et sur le robot une piste roues non validée n'est pas jouée. Mode d'emploi :
+`docs/operations.md`, « La porte sim ».
+
 **Vérité unique, éditée à travers le robot** (lot L1d, en cours) : `data_edit_node` écrit une
 séquence, une entrée d'expression, de lumière ou de brique, ou une image, après contrat et
 sauvegarde (`json/backup/`, non versionné). En sim, la retouche tombe directement ici (le

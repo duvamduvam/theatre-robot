@@ -53,6 +53,9 @@ Invalid payloads are rejected with an explicit ERROR log naming the topic
 | `deploy_sha` | `catalogue_node` (`didier_web`) | `"a1b2c3d…"`, `"a1b2c3d…-dirty"`, `"dev"` | **State topic**, latched, lot L1c. Git sha written by Ansible into `conf/DEPLOY_SHA` at rsync (read once at start), `"dev"` when the file is absent (sim). `-dirty` = the rsynced tree was not a clean commit. Read by the web bridge (`TOPICS_LECTURE`) for the version badge. |
 | `data_edit` | `data_edit_node` (`didier_web`) | `{"id": "a1", "kind": "sequence", "mode": "replace", "name": "eternel-show/parle", "content": {…}, "base_sha256": "…"}` | **Edit request**, lot L1d. Volatile (`qos.volatile(10)` both sides), **never latched** (a replayed request would rewrite an old edit). ≤ 131 072 bytes. Written only when the node's `enabled` is true (`DATA_EDIT` flag, OFF by default everywhere) ; otherwise answered `edition_desactivee`. See « Data editing through the robot » below. |
 | `data_edit_result` | `data_edit_node` (`didier_web`) | `{"id": "a1", "ok": true, "code": "ok", "detail": [], "kind": "sequence", "name": "…", "mode": "replace", "sha256": "…", "sauvegarde": "json/backup/…", "avertissements": ["a_rejouer_en_sim"]}` | **Verdict**, lot L1d, volatile, seen by ALL : `animations_node` (sequence), `lights_node` / `face_sim` (expression, image ; lights_node also light, brick) and `leds_sim_node` (light, brick) re-read the written file on `ok` (hot reload, the message carries no content). |
+| `validation_sim` | `validation_sim_node` (`didier_web`, **SIM ONLY**, refuses outside domain 43) | `{"kind": "sequence", "name": "eternel-show/parle", "ok": true, "code": "tamponnee", "detail": []}` (+ `"id"` when answering a wheel validation request) | **Sim gate verdict**, lot L1d-2, volatile. One per thing played (whatever the trigger) and per wheel validation request. See « Sim gate » below. |
+| `validation_sim_demande` | page scène (L1d-3), scripts | `{"id": "v1", "name": "eternel-show/trip"}` | **Wheel validation request** (« Valider les roues pour le robot »), lot L1d-2, volatile, sim only. Accepted only if the current version was played to the end in sim (`non_rejouee` otherwise). |
+| `roues_refusees` | `animations_node` | `{"name": "trip", "raison": "non_validee_sim"}` | **Play gate**, lot L1d-2, volatile : a wheel track not validated in sim is built EMPTY on the robot (the rest of the sequence plays) ; WARNING in the log. |
 
 Other inputs: `/vision/person` (`PointStamped`, from the vision Pi) feeds
 `gaze_follower_node`.
@@ -77,7 +80,7 @@ Spec: [`spec-L1-contrats-donnees.md`](spec-L1-contrats-donnees.md) « L1d ». ON
   `nom_invalide`, `dossier_absent`, `existe_deja`, `absent`, `nom_en_double` (the loaders index by
   bare file name), `conflit`, `cle_inconnue` (top-level keys outside the engraved list),
   `contrat`, `quota_jour` (200 backups/day), `erreur_ecriture` (target untouched).
-  Warnings : `a_rejouer_en_sim`, `roues_a_valider_en_sim` (sim gate, lot L1d-2).
+  Warnings : `a_rejouer_en_sim`, `roues_a_valider_en_sim` (sim gate below).
 - **Contract** : `theatre_contrats.donnees` (`verifier_sequence`, `verifier_expression`,
   `verifier_lumiere`, `verifier_brique`, `verifier_image`) — the SAME functions as the data
   tests. Wheel tracks are bounded : `[fraction, [left, right]]` numbers only, |value| ≤ 0.89,
@@ -89,6 +92,31 @@ Spec: [`spec-L1-contrats-donnees.md`](spec-L1-contrats-donnees.md) « L1d ». ON
   `json/backup/EDITIONS-EN-ATTENTE.jsonl` (BEFORE writing) → temp file `json/backup/.tmp/<id>`
   (`medias/.tmp/<id>` for an image : other mount) → `os.replace` + fsync of the folder → owner of
   `json/` restored, mode of the replaced file kept.
+
+### Sim gate (lot L1d-2)
+
+Nothing modified reaches the real robot without having been played in sim. Register
+`data/json/validations-sim.json` (versioned ; `indent=1`, sorted keys ; written ONLY in sim by
+`validation_sim_node`, never by hand) : `{"version": 1, "sequence": {"<dossier>/<nom>": {"rejeu",
+"roues", "origine_roues": "sim"|"heritee"}}, "expression": {"<nom>": {"rejeu"}}, "lumiere": {…}}`.
+Fingerprints : `theatre_contrats.donnees.empreinte_contenu` / `empreinte_roues`.
+
+- **Stamp `rejeu`** (observer, whatever triggered the play) : sequence — `animation_state` goes to
+  the name then back to `""` between 0.95 × `duration` and `duration` + 5 s, no new ERROR/CRITICAL
+  line in the robot log, nodes present at start still there, and for a wheel track a `cmd_vel`
+  received during the play and the last one null 1 s after the end ; expression / light — name
+  received on `face` / `robot_lights`, `face_sim_node` / `leds_sim_node` alive and error-free for
+  min(`duration`, 10 s) without another command. Same fingerprint already stamped → no write.
+- **Codes** (engraved, `didier_web.validation_sim`) : played — `tamponnee`, `deja_tamponnee` (ok),
+  `interrompue`, `trop_longue`, `erreur_journal`, `noeud_absent`, `roues_sans_cmd_vel`,
+  `roues_non_arretees`, `absente`, `homonyme` (same bare name in two folders : never stamped),
+  `erreur_ecriture` ; wheel request — `roues_validees`, `deja_validees` (ok), `non_rejouee`,
+  `sans_roues`, `absente`, `nom_invalide`, `payload_invalide`, `erreur_ecriture`.
+- **Barriers** : host test `test_validations_sim.py` (every element stamped, every wheel track
+  validated, no orphan) ; `python3 -m theatre_contrats.donnees non-validees <data>` (exit 1 if
+  anything waits — read by the Ansible guard, L1d-4) ; on the robot, `animations_node` parameter
+  `exiger_validation_roues` (default true ; set false by `sim.launch.py` only, ignored outside
+  domain 43).
 
 ## Drive chain (geometry_msgs/Twist — safety path, frozen contract)
 
