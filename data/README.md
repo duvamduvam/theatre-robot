@@ -24,4 +24,5 @@ de `machines/robot/machine.yml` depuis L1e-4c) — chemin Pi et conteneur **inch
 
 **Vérité unique, éditée à travers le robot** : c'est le lot L1d, à venir — on éditera une
 séquence par le robot (qui publie le catalogue), pas en recopiant des JSON ailleurs. Les copies
-de JSON de la télécommande (`legacy/dadou_control_ros/json/`) sont périmées et partent avec elle (L4).
+de JSON de la télécommande (`legacy/dadou_control_ros/json/`) sont périmées : 61 partent à L1d, les
+10 qu'elle lit encore partent avec elle (L4) — conception du 12/11, spec L1 § L1d.

@@ -22,7 +22,8 @@ porte de sortie vérifiée, la sim verte en fin de chaque sous-lot, David valide
 chemins/logging/couleurs/réglages, qui restent à la lib jusqu'à L5) ; les 3 constantes
 mortes ; 11 décodeurs StringTime sur 12 (le 12ᵉ, `wheels_bridge`, part avec le pont en L4) ; 2 copies de `robot_interfaces` sur 3 ; `BUTTONS_LAYOUT` comme vérité (il
 reste un cache vérifié par test jusqu'à L4) ; les 71 JSON de la télécommande (sauvegardés
-dans git, supprimés du disque et du déploiement).
+dans git, supprimés du disque et du déploiement) — précisé le 12/11 : 61 à L1d, les 10 que la
+télécommande lit encore partent avec elle à L4, voir L1d décision 14).
 
 ## 2. Sous-lots
 
@@ -277,6 +278,234 @@ un éditeur **minimal** (une séquence : texte JSON + bouton « envoyer ») — 
 réglage, pas l'éditeur final. Porte (celle de l'étude) : **une retouche faite depuis la
 page scène arrive dans `json/` du robot (sim) et est rejouée** ; un payload invalide est
 refusé et visible. Les 71 JSON de la télécommande : **supprimés** (ils sont dans git).
+
+#### L1d — conception détaillée (12/11, Fable ; spec FERMÉE pour l'implémenteur) : une seule écriture, jamais perdue au déploiement
+
+**Faits relevés le 12/11** :
+- **Les contrats de données n'existent que sous forme de tests** : `packages/didier_core/test/unit/
+  test_sequences_json.py` (format : `keys` str, `duration` > 0, keyframes `[t, valeur]`, t ∈ [0,1]
+  croissant, servos, roues) et `test_sequences_assets.py` (références : `faces` → clés
+  d'`expressions.json`, `robot_lights` → clés de `robot_lights.json`, `audios` → `stop` ou fichier
+  sous `medias/audios/`). Aucune fonction réutilisable : « les mêmes contrats que les tests »
+  exige de les EXTRAIRE, pas de les recopier.
+- **48 séquences** sous `data/json/sequences/<dossier>/<nom>.json` (6 dossiers), toutes conformes
+  à `^[a-z0-9][a-z0-9_-]{0,63}/[a-z0-9][a-z0-9_-]{0,63}$` ; la plus grosse fait 38 580 octets ;
+  17 clés de premier niveau en usage (liste en décision 6) ; **24 portent une piste `wheels`
+  non vide**. Un nom existe dans deux dossiers (`appel-eternel-life`). 16 fichiers sur 48
+  seulement sont au format `json.dumps(indent=4)` (les autres sont formatés à la main).
+- **Une piste `wheels` commande réellement les roues** : `animations_node` la publie sur `wheels`
+  (`PUBLISHER_LIST`, `anim=true`) → `wheels_bridge` → `twist_mux` (anim 10) → `twist_deadman`.
+  Les keyframes sont en fraction de `duration` : changer `duration` change la durée du mouvement.
+- **Les séquences sont lues UNE fois**, au démarrage d'`animations_node`
+  (`AbstractJsonActions.load_multi_files_sequences`, indexées par nom de fichier sans dossier) :
+  sans rechargement, une retouche n'est rejouée qu'après redémarrage. Ce chargeur lit **tout
+  fichier** sous `sequences/` (`FilesUtils.get_folder_files`, sans filtre d'extension) : un
+  fichier temporaire laissé là ferait tomber le nœud au démarrage suivant.
+- `catalogue_node` republie si la liste des NOMS change (L1c) : une création le fait bouger, une
+  retouche de contenu NON.
+- **Montages** : `json/` est monté en lecture-écriture partout (compose ARM :
+  `../../../json:/home/ros2_ws/src/robot/json` ; sim : `data/json` du PC monté deux fois,
+  `/home/ros2_ws/json` et `/home/ros2_ws/src/robot/json`). Les conteneurs tournent en root : en
+  sim, un fichier écrit par le conteneur appartient à root DANS l'arbre de travail du PC.
+- **Déploiement** : le rôle `synchronise` copie `data/{json,medias,db}` vers `src/robot/` sans
+  `--delete` ni `--update` : un fichier retouché sur le Pi est ÉCRASÉ par la version du PC, un
+  fichier créé sur le Pi y reste sans jamais revenir dans git. `ecart-pi.sh` (a) voit « changed »
+  dans les deux sens, sans dire lequel a raison.
+- **Pont web** : écriture réservée à la session « writer » (jeton), publishers créés par liste
+  blanche seulement ; `TOPICS_FLUX` → messages `feed` ; `rehearsal_enabled` ignoré hors 43.
+  Le pont tourne aussi sur le vrai robot (`noeuds_attendus`).
+- **Télécommande** (`legacy/dadou_control_ros/json/`, 71 fichiers) : le seul lanceur
+  (`controller/nodes/main_gui.py`) ouvre `SmallGui` ; `NormalGui`, qui porte les fenêtres
+  d'édition (les « 8 modules qui écrivent »), n'est instancié nulle part. Le chemin vivant lit
+  `expressions.json`, `lights_base.json`, `lights_methods.json` (`ControlJsonManager.__init__`)
+  et `playlists/*.json` (7, `small_playlist.py`) : **10 fichiers lus, 61 que rien de lancé ne lit**.
+- `data/json/backup/maker_fair.json` (suivi) : ancienne sauvegarde d'une playlist, aucun lecteur
+  dans `packages/`.
+
+**Décisions (ne pas rouvrir)** :
+1. **Deux topics, pas un service** : `DATA_EDIT = 'data_edit'` (demande) et
+   `DATA_EDIT_RESULT = 'data_edit_result'` (verdict), dans `theatre_contrats.topics` et
+   l'inventaire gravé, relatifs (namespace du robot), StringTime, **`qos.volatile(10)` des deux
+   côtés**. Pourquoi : tout le parc parle StringTime (codec, pont web, télécommande) ; le verdict
+   doit être vu de TOUS (page, journal, rechargement), pas du seul appelant ; un `.srv` imposerait
+   de reconstruire `theatre_interfaces` sur chaque image. Le défaut d'un topic (pas de
+   corrélation) est payé par un `id` recopié dans le verdict et une attente de 5 s côté client.
+   **Jamais latché** : une demande rejouée à un écrivain redémarré réécrirait une vieille retouche.
+2. **Demande** (`msg` = JSON, ≤ **131 072 octets**, sinon `trop_gros` avant tout décodage) :
+   `{"id": 1-64 car. [A-Za-z0-9_-], "kind": "sequence", "mode": "create"|"replace",
+   "name": "<dossier>/<nom>", "content": {…}, "base_sha256": "<hex>"}` (`base_sha256` exigé en
+   `replace` : sha256 des octets du fichier que l'éditeur a chargé ; différent du disque →
+   `conflit`). **Verdict** : `{"id", "ok", "code", "detail": [≤ 20 chaînes ≤ 300 car.], "kind",
+   "name", "mode", "sha256", "sauvegarde"}`. Codes GRAVÉS : `ok`, `inchange` (contenu identique :
+   ni sauvegarde ni journal), `edition_desactivee`, `payload_invalide`, `trop_gros`,
+   `kind_inconnu`, `mode_inconnu`, `nom_invalide`, `dossier_absent`, `existe_deja`, `absent`,
+   `nom_en_double`, `conflit`, `cle_inconnue`, `roues_gelees`, `contrat`, `quota_jour`,
+   `erreur_ecriture`. Journal ROS : INFO si `ok`, WARNING sinon (id, nom, code — jamais le contenu).
+3. **Liste blanche `kind` = `sequence` seul.** Expressions, lumières, relais (fichiers à
+   plusieurs entrées, contrat PNG avec `imageio`) viennent avec l'éditeur de la télécommande
+   (L4) : la table `KINDS` les accueillera, L1d ne les écrit pas. **Pas de suppression, pas de
+   renommage, pas de création de dossier** par le topic : ça passe par git et un déploiement.
+4. **Le contrat devient un module pur, `theatre_contrats/donnees.py`** (stdlib seule) :
+   `nom_valide(name) -> bool` (regex des faits, donc ni `.`, ni `/` en trop, ni majuscule),
+   `charger_references(data_dir)`, `verifier_sequence(sequence, references) -> list[str]`
+   (TOUTES les erreurs, liste vide = conforme ; mêmes règles et mêmes messages que les deux tests
+   actuels, aucune règle ajoutée ni retirée). `test_sequences_json.py` et
+   `test_sequences_assets.py` sont **réécrits pour l'appeler** (`== []` sur les 48 fichiers) :
+   un seul contrat, lu par les tests, l'écrivain, le rapatriement et, demain, la télécommande.
+   Nouveau `packages/theatre_contrats/test/test_donnees.py` : une séquence fautive par règle,
+   message attendu GRAVÉ.
+5. **L'écrivain = un nœud dédié, `didier_web/data_edit_node.py`, exécutable `data_edit`**, mince ;
+   toute la logique dans `didier_web/data_edit.py` (stdlib + `theatre_contrats`), fonction
+   `traiter(brut, data_dir, enabled, maintenant) -> dict`, testée sans ROS sur `tmp_path`. Pas dans
+   `catalogue_node` (lecteur, toujours actif, ne doit pas tomber avec l'écrivain), pas dans le
+   pont web (optionnel). Paramètres : `data_dir` (défaut `/home/ros2_ws/src/robot`, enfants
+   `json/` et `medias/` — même chemin en sim et sur le Pi), `enabled` (défaut `false`). Lancé
+   TOUJOURS par `robot_app.launch.py` et `sim.launch.py` (ajouté à `noeuds_attendus`) : désactivé,
+   il répond `edition_desactivee` à chaque demande — un refus visible vaut mieux qu'un silence.
+6. **Règles propres à l'édition** (dans `data_edit.py`, après le contrat) :
+   clés de premier niveau ⊂ liste GRAVÉE `audio, audio_name, audio_path, audios, duration, faces,
+   keys, left_arm, left_eye, lights, loop, neck, right_arm, right_eye, robot_lights, types,
+   wheels` (`cle_inconnue`) ; le dossier existe déjà (`dossier_absent`) ; `create` refuse un
+   fichier présent (`existe_deja`) et un nom déjà porté dans un autre dossier (`nom_en_double`,
+   le chargeur indexe par nom nu) ; `replace` refuse un fichier absent (`absent`) et un nom en
+   double ; chemin résolu (`realpath`) strictement sous `json/sequences/<dossier>/`, cible ni lien
+   symbolique ni dossier (`nom_invalide`).
+7. **Roues GELÉES (`roues_gelees`), en sim comme en réel** : `create` → `wheels` absente ou `[]` ;
+   `replace` d'un fichier dont la piste `wheels` est non vide → `wheels` ET `duration` strictement
+   égales à celles du disque ; `replace` d'un fichier sans roues → `wheels` absente ou `[]`.
+   Une piste roues ne se crée et ne se retouche que dans git, donc par un déploiement relu : L1d
+   ne donne à aucun éditeur un mouvement de roues que le dépôt ne contient pas déjà. Le chemin
+   roues (`wheels_bridge`, `twist_mux`, `twist_deadman`, `wheels_node`) n'est pas touché.
+8. **Écriture, dans cet ordre** (échec à une étape = `erreur_ecriture`, cible intacte) :
+   (a) `replace` : copie de l'ancien fichier dans
+   `json/backup/<AAAA-MM-JJ>/<dossier>__<nom>__<HHMMSS>__<id>.json` ; ≥ 200 fichiers dans le
+   dossier du jour → `quota_jour` ; (b) ligne ajoutée + `fsync` au **journal des éditions non
+   rapatriées** `json/backup/EDITIONS-EN-ATTENTE.jsonl` : `{t, id, kind, name, mode, sha256,
+   sauvegarde}` — AVANT l'écriture : un crash laisse au pire une ligne en trop, jamais une
+   retouche inconnue du journal ; (c) contenu sérialisé `json.dumps(content, indent=4,
+   ensure_ascii=False) + "\n"` (ordre des clés conservé) dans `json/backup/.tmp/<id>.json`
+   (`fsync`) — **jamais sous `sequences/`**, voir les faits ; (d) `os.replace` vers la cible,
+   `fsync` du dossier ; (e) fichiers et dossiers créés prennent l'uid/gid de `json/`
+   (`os.chown`, `PermissionError` ignorée) : rien n'appartient à root dans l'arbre du PC.
+   Rotation : au-delà des **30** dossiers datés les plus récents (`^\d{4}-\d{2}-\d{2}$`), les plus
+   anciens sont effacés ; `.tmp/` vidé au démarrage du nœud. Premier passage sur un fichier
+   formaté à la main = diff de mise en forme, une fois : accepté.
+9. **Rechargement à chaud** : `animations_node` s'abonne à `data_edit_result` ; sur `ok` +
+   `kind == "sequence"` + `nom_valide`, il appelle `AnimationManager.recharger_sequence(name)`,
+   qui RELIT le fichier du disque (le message ne porte aucun contenu : un verdict forgé ne fait
+   que relire un fichier), remplace l'entrée de `sequences_name`, purge puis repose celle de
+   `sequences_key`, reconstruit `random_animation_sequence`. Fichier illisible = log ERROR,
+   ancienne version gardée. Une séquence en cours finit sur ses pistes déjà construites
+   (`Track.emissions` au départ) : aucune piste ne change en plein jeu. Test gravé : après
+   rechargement, la piste `wheels` d'une séquence à roues est égale à l'ancienne.
+10. **Activation : un seul drapeau, `DATA_EDIT`, OFF par défaut partout.** Compose sim
+    `DATA_EDIT=${DATA_EDIT:-false}` → `launch-sim-in-docker.sh` → argument `data_edit` de
+    `sim.launch.py` → `enabled` de l'écrivain et `data_edit_enabled` du pont. Robot : même
+    variable dans le compose ARM, lue par `robot_app.launch.py`, posée par le mot-clé `environment:`
+    de la tâche « Recreate the project container » depuis `edition_donnees: false` de `machines/robot/machine.yml`.
+    **Pas de garde de domaine** (à la différence de la répétition : éditer sur le vrai robot EST
+    le but), mais **`edition_donnees` reste `false` dans le dépôt à la fin de L1d** : le passer à
+    `true` est une décision de David, après sa validation du lot et une relecture adverse (Fable).
+    Qui peut écrire : quiconque publie sur le domaine ROS du robot — même frontière de confiance
+    que tous les topics d'actionneurs aujourd'hui (réseau du robot) ; par le web, la session
+    « writer » et son jeton. Ce qui borne les dégâts : drapeau, contrat, roues gelées,
+    sauvegarde, journal.
+11. **Pont web** : nouveau type WebSocket `data_edit` (writer seul ; parseur pur
+    `_parse_data_edit` dans `web_protocol.py` : forme + taille, constante dupliquée et égalité
+    gravée par test, motif du package) → publication sur `data_edit` par un publisher créé
+    SEULEMENT si `data_edit_enabled` ; `data_edit` n'entre dans aucune `WHITELIST` (un `cmd`
+    générique ne peut pas le publier). `data_edit_result` entre dans `TOPICS_FLUX`. Lecture :
+    `GET /api/data?kind=sequence` → liste triée des `<dossier>/<nom>` ; `&name=…` →
+    `{name, content, sha256}` (nom validé par `nom_valide`, 404 sinon). `build_hello` gagne
+    `data_edit` (défaut `False`). La lecture du contenu par ROS (télécommande) = L4.
+12. **Éditeur de la page scène** (`scene.html`/`scene.js`), panneau `<details>` masqué si
+    `hello.data_edit` est faux : liste des séquences, « Charger », zone de texte JSON, champ nom,
+    « Envoyer » (`replace` avec le sha chargé si le nom est celui chargé, sinon `create`),
+    « Rejouer » (publie `animation` avec le nom nu, par le `cmd` existant), ligne de verdict
+    (code + détails, vert/rouge). JSON illisible = erreur locale, rien n'est envoyé ; pas de
+    verdict du même `id` en 5 s = « pas de réponse du robot ».
+13. **Retour vers git — le Pi ne garde jamais une retouche que le dépôt ignore** :
+    - `deploy/rapatrier-editions.yml` (`-e target_group=robot`) : renomme le journal en
+      `EDITIONS-EN-ATTENTE.rapatriement.jsonl` (les retouches suivantes ouvrent un journal
+      neuf) ; refuse si un des fichiers visés a une modification locale non commitée
+      (`git status --porcelain -- <fichier>`), sans rien copier ; tire chaque fichier du Pi vers
+      `data/json/sequences/` ; lance `test_sequences_json.py` + `test_sequences_assets.py` (rouge =
+      arrêt, journal laissé en attente) ; copie chaque fichier rapatrié dans
+      `json/backup/<date>/<dossier>__<nom>__rapatrie.json` et archive le journal en
+      `json/backup/<date>/EDITIONS-rapatriees-<HHMMSS>.jsonl` ; affiche `git status --short
+      data/json` et « relis, commite, déploie ». **Il ne commite pas.**
+    - **Garde de déploiement** : première tâche du rôle `synchronise` (`donnees_dir` défini,
+      exécutée aussi en `--check`) : un `EDITIONS-EN-ATTENTE*.jsonl` non vide sur le Pi → `fail`
+      « N édition(s) non rapatriée(s) : ansible-playbook -i hosts rapatrier-editions.yml … ».
+      Échappatoire explicite `-e ecraser_editions=true` : le journal est alors archivé en
+      `EDITIONS-ecrasees-<HHMMSS>.jsonl` (les sauvegardes restent sur le Pi).
+    - `ecart-pi.sh` : volet **(c)** « éditions non rapatriées : N » (rouge si N > 0, avec la
+      commande) ; le `--check` du volet (a) est rouge aussi, par la garde.
+    - Copie des données : `--exclude=/backup/` (le journal d'une sim du PC ne part jamais sur le
+      Pi) ; `.gitignore` : `data/json/backup/`. En sim, la retouche tombe directement dans
+      `data/json/` du PC : `git diff` la montre, rien à rapatrier.
+14. **JSON de la télécommande : 61 supprimés, 10 restent jusqu'à L4** (corrige le « 71 » du §1).
+    Supprimés (`git rm`) : `json/sequences/**` (41), `json/backup/`, `json/projects_lights/` (3),
+    et les 16 fichiers de la racine autres que `expressions.json`, `lights_base.json`,
+    `lights_methods.json`. Restent : ces 3 et `json/playlists/` (7). Test gravé
+    `controller/tests/unit/test_json_restants.py` : la liste exacte des 10, et
+    `ControlJsonManager()` se construit (`monkeypatch.setitem(config, JSON_DIRECTORY, …)` vers
+    `legacy/dadou_control_ros/json/` : sur l'hôte, le chemin par défaut est celui du Pi), chaque
+    playlist se charge. Les fenêtres d'édition mortes ne sont pas touchées
+    (L4). Rien n'est effacé sur un Pi de télécommande (rsync sans `--delete`).
+15. **Preuve sim** : `machines/sim/validate-data-edit.sh` (domaine 43 exigé ; sim lancée avec
+    `DATA_EDIT=true ANIMATIONS=true`), compteur gravé **8** ajouté à `fumee.sh` : (1) création
+    de `tmp-l1d/l1d-retouche` → `ok`, fichier présent, nom au catalogue en ≤ 5 s ; (2) retouche
+    (`neck` à 0.37) → `ok`, octets du fichier = attendu, sauvegarde présente, 2 lignes au
+    journal ; (3) `animation "l1d-retouche"` → `animation_state` porte le nom ET `neck` reçoit
+    0.37 (le rechargement est prouvé) ; (4) `faces` vers une expression inconnue → `contrat`,
+    fichier inchangé ; (5) `name` = `../x/y` puis `tmp-l1d/../../x` → `nom_invalide`, aucun fichier
+    créé hors cible ; (6) création avec `wheels` non vide → `roues_gelees` ; (7) `base_sha256`
+    faux → `conflit` ; (8) demande de 131 073 octets → `trop_gros`. Le script crée
+    `sequences/tmp-l1d/` lui-même et nettoie en sortant (dossier, sauvegardes `tmp-l1d__*`,
+    lignes `tmp-l1d/` du journal) : `git status --porcelain` identique avant et après.
+16. **Tests hôte, valeurs GRAVÉES** (`packages/didier_core/test/unit/test_data_edit.py`, sur
+    `tmp_path`, horloge injectée) : octets exacts du fichier écrit et son sha256 en littéral ;
+    nom exact de la sauvegarde ; ligne exacte du journal ; un cas par code de la décision 2 ;
+    rotation à 31 dossiers ; `.tmp/` vide après succès et après échec ; rien de neuf sous
+    `sequences/` après un refus. **Mutations à jouer et à lister au rapport (chacune doit
+    rougir)** : gel des roues retiré ; regex du nom relâchée ; sauvegarde sautée ; ligne de
+    journal sautée ; une règle du contrat retirée de `donnees.py` ; drapeau ignoré ; temporaire
+    sous `sequences/` ; garde Ansible retirée (`test_arborescence.py` grave sa présence et sa
+    place avant la copie des données, ainsi que `--exclude=/backup/`).
+17. **Quatre sous-étapes, une porte chacune, fusionnées une à une** :
+    - **L1d-1 (Opus, ≈ 3 h)** — contrat pur, écrivain + journal, topics, rechargement, tests et
+      mutations, `validate-data-edit.sh`, fumée. Porte : 6 suites vertes, épreuve 8/8,
+      namespace 5/5 (nouveau nœud sous le namespace), fumée complète verte.
+    - **L1d-2 (Opus, ≈ 2 h)** — pont web + éditeur. Porte de l'étude, en sim : une retouche faite
+      depuis la page scène arrive dans `json/`, « Rejouer » la joue ; un JSON hors contrat
+      affiche son refus ; drapeau OFF = panneau absent ; `test_web_protocol.py` étendu.
+    - **L1d-3 (Opus, ≈ 2 h 30)** — rapatriement, garde, `ecart-pi.sh` (c), exclusions, drapeau du
+      compose ARM. Porte, **Pi hors robot, aucun actionneur** : déploiement par défaut → une
+      demande reçoit `edition_desactivee` ; `-e edition_donnees=true` → une retouche, `ecart-pi.sh`
+      ROUGE (c), `deploy-pios.yml` REFUSE, rapatriement, `git diff` montre la retouche (puis
+      `git checkout` : c'est une retouche d'essai), redéploiement par défaut, `ecart-pi.sh` VERT
+      sur robot ET vision.
+    - **L1d-4 (Sonnet, ≈ 45 min)** — décision 14 + doc. Porte : suite télécommande verte, test des
+      10 restants, liens Markdown morts = 0.
+    Orchestration Opus ; David valide après L1d-2 (le nouveau mode d'édition) et tranche
+    l'activation sur le robot après L1d-3.
+18. **Interdits (toutes sous-étapes)** : toucher `wheels_bridge`, `twist_mux.yaml`,
+    `twist_deadman`, `wheels_node`, ou la publication des pistes dans `animations_node` (seuls
+    l'abonnement et l'appel de rechargement y entrent) ; écrire hors de `json/sequences/` et
+    `json/backup/` ; un second écrivain (toute écriture passe par `traiter`) ; recopier une
+    règle du contrat au lieu d'appeler `donnees.py` ; `edition_donnees: true` dans le dépôt ;
+    domaine 42 depuis le PC ; `git add -A`, `git push`, commit dans la plage sans commit ;
+    extinction du poste.
+19. **Ce que L1d supprime** : les contrats de séquence écrits dans les tests (remplacés par
+    l'appel du module) ; 61 JSON de la télécommande ; `data/json/backup/maker_fair.json` ;
+    l'écrasement silencieux d'une retouche par un déploiement.
+20. **Doc vivante, à chaque sous-étape** : `docs/interfaces.md` (deux topics, demande, verdict,
+    codes), README de `didier_web` et de `theatre_contrats`, `data/README.md`,
+    `deploy/README.md` + `docs/ansible-ecarts.md` (garde, rapatriement), `docs/operations.md`
+    (« Retoucher une séquence », « Rapatrier avant de déployer », épreuve et fumée),
+    `legacy/dadou_control_ros/README.md`, README racine, tableau de bord ; CLAUDE.md listés au
+    rapport, appliqués par l'orchestrateur.
 
 ### L1e — renommages `didier_*` et déplacement dans `packages/`
 
