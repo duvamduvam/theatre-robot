@@ -145,7 +145,8 @@ function surlignerGroupe(groupeId, attendu) {
 
 function majBadgeEtat(id, libelles, valeur, actif) {
   const badge = $(id);
-  badge.textContent = valeur === null ? "—" : (libelles[valeur] || valeur);
+  // Vide quand on ne sait rien : le CSS masque le badge (pas de « — » orphelin).
+  badge.textContent = valeur === null ? "" : (libelles[valeur] || valeur);
   badge.className = "badge " + (actif ? "badge-on" : "badge-off");
 }
 
@@ -479,6 +480,11 @@ function installerVisage() {
     return url.toString();
   });
   $("scene-visage-refresh").addEventListener("click", () => fluxVisage.charger());
+  // L'adresse ne sert qu'une fois : rangée derrière ⚙ (spec refonte, D7).
+  $("scene-visage-reglage").addEventListener("click", (event) => {
+    event.stopPropagation();   // ne pas promouvoir la vignette au passage
+    $("scene-form-visage").hidden = !$("scene-form-visage").hidden;
+  });
 
   $("scene-form-visage").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -493,6 +499,7 @@ function installerVisage() {
       logErreur("adresse du flux visage invalide (http://hôte:port/chemin) : " + saisie);
       return;
     }
+    $("scene-form-visage").hidden = true;
     fluxVisage.charger();
   });
   fluxVisage.charger();
@@ -534,6 +541,7 @@ function afficherJeu(msg) {
     $("jeu-action").textContent = intention.action || "—";
     $("jeu-cible").textContent = intention.cible ? "→ " + intention.cible : "";
     $("jeu-pourquoi").textContent = intention.pourquoi || "";
+    $("jeu-pourquoi").title = intention.pourquoi || "";   // la ligne est tronquée
     $("jeu-verrou").hidden = intention.verrou !== true;
     $("jeu-proposition").hidden = !intention.proposition;
     afficherJauges(intention.jauges || {});
@@ -546,10 +554,14 @@ function afficherJeu(msg) {
 }
 
 function afficherJauges(jauges) {
+  // Une rangée de mini-barres : libellé au-dessus, valeur exacte en infobulle.
   const boite = $("jeu-jauges");
   boite.replaceChildren();
   for (const [cle, libelle] of JAUGES) {
     const v = typeof jauges[cle] === "number" ? clamp(jauges[cle], 0, 1) : 0;
+    const cas = document.createElement("div");
+    cas.className = "jeu-jauge-case";
+    cas.title = libelle + " : " + v.toFixed(2);
     const nom = document.createElement("span");
     nom.textContent = libelle;
     const barre = document.createElement("div");
@@ -557,9 +569,8 @@ function afficherJauges(jauges) {
     const plein = document.createElement("div");
     plein.style.width = Math.round(v * 100) + "%";
     barre.appendChild(plein);
-    const val = document.createElement("span");
-    val.textContent = v.toFixed(2);
-    boite.append(nom, barre, val);
+    cas.append(nom, barre);
+    boite.appendChild(cas);
   }
 }
 
@@ -660,7 +671,26 @@ afficherJauges({});
 
 // --- Démarrage ------------------------------------------------------------------------
 
+// --- Erreurs récentes dans le bandeau (spec refonte, D8) -----------------------
+// logErreur (commun.js, partagé avec la régie) remplit #journal-erreurs ; on ne
+// touche pas commun.js : un observateur tient le compteur à jour.
+function installerErreurs() {
+  const liste = $("journal-erreurs");
+  const majCompteur = () => {
+    const nb = liste.children.length;
+    $("scene-erreurs-nb").textContent = String(nb);
+    $("scene-erreurs").hidden = nb === 0;
+    if (nb === 0) {
+      $("scene-erreurs").open = false;
+    }
+  };
+  new MutationObserver(majCompteur).observe(liste, { childList: true });
+  $("scene-erreurs-vider").addEventListener("click", () => liste.replaceChildren());
+  majCompteur();
+}
+
 construirePersonas();
+installerErreurs();
 // Tout est inerte et la répétition masquée jusqu'au premier hello du serveur.
 installerPerception();
 installerExterieur();

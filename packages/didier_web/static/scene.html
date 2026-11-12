@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <!--
-  Page « scène » de Didier -- caméra, visage LED et conversation côte à côte,
-  avec les commandes de la répétition. Servie par le pont web (GET /scene), même
-  WebSocket et mêmes sessions que la console de régie (/). Vanilla JS, zéro
-  dépendance externe (aucun CDN). La liaison (WebSocket, auth, bandeau, flux
-  MJPEG) vient de commun.js ; ce qui est propre à la scène est dans scene.js.
+  Page « scène » de Didier -- un POSTE DE JEU qui tient dans l'écran : à gauche
+  ce qu'on règle avant de jouer, au centre ce qu'on regarde et dirige, à droite
+  ce qu'on écoute et souffle (docs/spec-refonte-page-scene.md, 12/11). Servie
+  par le pont web (GET /scene), même WebSocket et mêmes sessions que la console
+  de régie (/). Vanilla JS, zéro dépendance externe (aucun CDN). La liaison
+  (WebSocket, auth, bandeau, flux MJPEG) vient de commun.js ; ce qui est propre
+  à la scène est dans scene.js, ses styles dans scene.css.
 
   Ce que la page n'affiche JAMAIS : les pannes ni les consignes injectées par le
   régisseur de la répétition (David ne voit pas le tirage). Elle ne lit donc que
@@ -14,9 +16,13 @@
   Panneau « Jeu » (lot A1) : intention du sélecteur de jeu, ordres macro, jauges,
   20 dernières lignes de son journal « pourquoi ». SIM-ONLY comme la route.
 
-  SÉCURITÉ : le groupe « Répétition » (route, vitesse, séance) n'est affiché que
-  si le serveur l'annonce (hello.rehearsal, SIM-ONLY, domaine 43) ; le serveur
-  refuse de toute façon ces topics sinon. Aucun accès aux roues par cette page.
+  SÉCURITÉ : les groupes de répétition (route, vitesse, séance, vision, jeu) ne
+  sont affichés que si le serveur l'annonce (hello.rehearsal, SIM-ONLY, domaine
+  43) ; le serveur refuse de toute façon ces topics sinon. Aucun accès aux roues
+  par cette page.
+
+  Tous les ids et data-topic/data-value/data-jeu sont adressés par scene.js,
+  commun.js et les gardes de test_web_protocol.py : ne pas les renommer.
 -->
 <html lang="fr">
 <head>
@@ -45,6 +51,16 @@
       <input id="token-input" type="password" placeholder="token" autocomplete="off">
       <button id="btn-token" type="button">Connexion</button>
     </span>
+    <!-- Erreurs récentes (les 5 dernières, remplies par logErreur de commun.js) :
+         un compteur dans le bandeau plutôt qu'un pied de page hors écran. Masqué
+         tant qu'il n'y a rien ; scene.js tient le compte (MutationObserver). -->
+    <details id="scene-erreurs" class="scene-erreurs" hidden>
+      <summary title="erreurs récentes">⚠ <span id="scene-erreurs-nb">0</span></summary>
+      <div class="scene-erreurs-panneau">
+        <ul id="journal-erreurs"></ul>
+        <button id="scene-erreurs-vider" type="button">Effacer</button>
+      </div>
+    </details>
     <!-- « Noter un problème » (08/11) : TOUJOURS visible et utilisable SANS la main
          (un ticket n'actionne rien). Message WS {type:"ticket"} : le pont écrit un
          fichier, le ramasseur du PC le range dans traces/tickets/ avec les journaux
@@ -56,143 +72,129 @@
     </form>
   </header>
 
-  <!-- Barre de contrôle. Les boutons .bouton-catalogue (data-topic/data-value)
-       sont servis par l'écouteur délégué de commun.js, comme dans la console. -->
-  <section class="scene-barre">
+  <main class="scene-poste">
 
-    <div class="scene-groupe">
-      <h2>Parole</h2>
-      <!-- id groupe-chat : surbrillance pilotée par chat_state (l'ÉTAT RÉEL, pas le
-           dernier clic) ; chat_node pas lancé = aucun bouton vert. -->
-      <span id="groupe-chat" class="scene-boutons">
-        <button class="bouton-catalogue" type="button" data-topic="chat" data-value="on">Parole ON</button>
-        <button class="bouton-catalogue" type="button" data-topic="chat" data-value="off">Parole OFF</button>
-      </span>
-      <span id="scene-etat-chat" class="badge badge-off" title="état de la conversation (chat_state)">—</span>
-    </div>
+    <!-- ===================== PRÉPARER : réglages d'avant séance =====================
+         Les boutons .bouton-catalogue (data-topic/data-value) sont servis par
+         l'écouteur délégué de commun.js, comme dans la console. Chaque paire ON/OFF
+         reste DEUX boutons (contrôle segmenté) : le segment allumé est l'ÉTAT RÉEL,
+         qui arrive avec 2 s de retard -- un interrupteur enverrait l'inverse de ce
+         qu'on veut (même raison que STOP/GO distincts, revue A1). -->
+    <details id="scene-preparer" class="scene-rail" open>
+      <summary class="scene-rail-titre">Préparer</summary>
+      <!-- Un <details> n'applique pas display:flex à son contenu : d'où ce corps. -->
+      <div class="scene-rail-corps">
 
-    <div class="scene-groupe">
-      <h2>Personnalité</h2>
-      <!-- Boutons générés par scene.js depuis une liste GRAVÉE (le catalogue du
-           pont ne connaît pas les personas, qui vivent côté Pi vision).
-           Surbrillance pilotée par persona_state. -->
-      <span id="groupe-persona" class="scene-boutons"></span>
-    </div>
+      <div class="scene-groupe">
+        <div class="scene-groupe-tete">
+          <h2>Parole</h2>
+          <span id="scene-etat-chat" class="badge badge-off" title="état de la conversation (chat_state)"></span>
+        </div>
+        <!-- id groupe-chat : surbrillance pilotée par chat_state (l'ÉTAT RÉEL, pas le
+             dernier clic) ; chat_node pas lancé = aucun bouton vert. -->
+        <span id="groupe-chat" class="scene-boutons scene-segment">
+          <button class="bouton-catalogue" type="button" data-topic="chat" data-value="on">ON</button>
+          <button class="bouton-catalogue" type="button" data-topic="chat" data-value="off">OFF</button>
+        </span>
+      </div>
 
-    <!-- Groupes de répétition (classe scene-repetition) : MASQUÉS tant que
-         hello.rehearsal n'est pas vrai (sur le vrai robot, ils n'existent pas). -->
-    <div class="scene-groupe scene-repetition" hidden>
-      <h2>Route</h2>
-      <span id="groupe-route" class="scene-boutons">
-        <button class="bouton-catalogue" type="button" data-topic="route" data-value="on">Route ON</button>
-        <button class="bouton-catalogue" type="button" data-topic="route" data-value="off">Route OFF</button>
-        <button class="bouton-catalogue" type="button" data-topic="route" data-value="restart">Recommencer</button>
-      </span>
-      <span id="scene-etat-route" class="badge badge-off" title="état du cheminement (route_state)">—</span>
-      <!-- Arrêt vocal (rehearsal/state) : Didier est RETENU par un « stop » dit à voix
-           haute alors que la route est « en marche » -- sans ce badge il restait figé
-           sans explication (vécu le 31/10). Masqué tant que le régisseur ne l'annonce pas. -->
-      <span id="scene-arret-vocal" class="badge badge-alerte" hidden
-            title="route_speed 0 retenu par un « stop » vocal">arrêt vocal — bouger le curseur ou dire « avance » en séance</span>
-      <label class="scene-vitesse" title="Consigne envoyée au relâchement. Pas de relecture : la page ne montre pas la vitesse réelle.">
-        <span>Vitesse <b id="scene-vitesse-val">50 %</b></span>
-        <input id="scene-vitesse" type="range" min="0" max="1" step="0.05" value="0.5">
-      </label>
-    </div>
+      <div class="scene-groupe">
+        <div class="scene-groupe-tete"><h2>Personnalité</h2></div>
+        <!-- Boutons générés par scene.js depuis une liste GRAVÉE (le catalogue du
+             pont ne connaît pas les personas, qui vivent côté Pi vision).
+             Surbrillance pilotée par persona_state. -->
+        <span id="groupe-persona" class="scene-boutons scene-grille2"></span>
+      </div>
 
-    <div class="scene-groupe scene-repetition" hidden>
-      <h2>Séance</h2>
-      <span id="groupe-seance" class="scene-boutons">
-        <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="start">Séance START</button>
-        <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="stop">Séance STOP</button>
-      </span>
-      <!-- Retour visuel du régisseur (rehearsal/state, latché) : sans lui, 5 clics sur START
-           faute de savoir s'il était pris en compte (vécu le 31/10). -->
-      <span id="scene-etat-seance" class="badge badge-off" title="état de la séance (rehearsal/state)">—</span>
-    </div>
+      <!-- Groupes de répétition (classe scene-repetition) : MASQUÉS tant que
+           hello.rehearsal n'est pas vrai (sur le vrai robot, ils n'existent pas). -->
+      <div class="scene-groupe scene-repetition" hidden>
+        <div class="scene-groupe-tete">
+          <h2>Vision</h2>
+          <span id="scene-etat-camera" class="badge badge-off" title="état de la webcam de perception (camera_state)"></span>
+        </div>
+        <span id="groupe-camera" class="scene-boutons scene-segment">
+          <button class="bouton-catalogue" type="button" data-topic="camera_enable" data-value="on">Webcam ON</button>
+          <button class="bouton-catalogue" type="button" data-topic="camera_enable" data-value="off">OFF</button>
+        </span>
+        <!-- Source des images de la perception (camera_source / camera_source_state). Le bouton
+             Gazebo reste masqué tant que la vision n'annonce pas "gazebo" (camera_sources). -->
+        <span id="groupe-source" class="scene-boutons scene-segment" title="source des images de la perception">
+          <button class="bouton-catalogue" type="button" data-topic="camera_source" data-value="webcam">Webcam PC</button>
+          <button id="bouton-source-gazebo" class="bouton-catalogue" type="button" data-topic="camera_source" data-value="gazebo" hidden>Gazebo</button>
+        </span>
+      </div>
 
-    <div class="scene-groupe scene-repetition" hidden>
-      <h2>Vision</h2>
-      <span id="groupe-camera" class="scene-boutons">
-        <button class="bouton-catalogue" type="button" data-topic="camera_enable" data-value="on">Webcam ON</button>
-        <button class="bouton-catalogue" type="button" data-topic="camera_enable" data-value="off">Webcam OFF</button>
-      </span>
-      <span id="scene-etat-camera" class="badge badge-off" title="état de la webcam de perception (camera_state)">—</span>
-      <!-- Source des images de la perception (camera_source / camera_source_state). Le bouton
-           Gazebo reste masqué tant que la vision n'annonce pas "gazebo" (camera_sources). -->
-      <span id="groupe-source" class="scene-boutons">
-        <button class="bouton-catalogue" type="button" data-topic="camera_source" data-value="webcam">Webcam PC</button>
-        <button id="bouton-source-gazebo" class="bouton-catalogue" type="button" data-topic="camera_source" data-value="gazebo" hidden>Caméra Gazebo</button>
-      </span>
-    </div>
+      <div class="scene-groupe scene-repetition" hidden>
+        <div class="scene-groupe-tete">
+          <h2>Route</h2>
+          <span id="scene-etat-route" class="badge badge-off" title="état du cheminement (route_state)"></span>
+        </div>
+        <span id="groupe-route" class="scene-boutons scene-segment">
+          <button class="bouton-catalogue" type="button" data-topic="route" data-value="on">ON</button>
+          <button class="bouton-catalogue" type="button" data-topic="route" data-value="off">OFF</button>
+          <button class="bouton-catalogue" type="button" data-topic="route" data-value="restart" title="Recommencer la route depuis le départ">↺</button>
+        </span>
+        <!-- Arrêt vocal (rehearsal/state) : Didier est RETENU par un « stop » dit à voix
+             haute alors que la route est « en marche » -- sans ce badge il restait figé
+             sans explication (vécu le 31/10). Masqué tant que le régisseur ne l'annonce pas. -->
+        <span id="scene-arret-vocal" class="badge badge-alerte scene-alerte" hidden
+              title="route_speed 0 retenu par un « stop » vocal">arrêt vocal — bouger le curseur ou dire « avance » en séance</span>
+        <label class="scene-vitesse" title="Consigne envoyée au relâchement. Pas de relecture : la page ne montre pas la vitesse réelle.">
+          <span>Vitesse <b id="scene-vitesse-val">50 %</b></span>
+          <input id="scene-vitesse" type="range" min="0" max="1" step="0.05" value="0.5">
+        </label>
+      </div>
 
-  </section>
+      <div class="scene-groupe scene-repetition" hidden>
+        <div class="scene-groupe-tete">
+          <h2>Séance</h2>
+          <!-- Retour visuel du régisseur (rehearsal/state, latché) : sans lui, 5 clics sur START
+               faute de savoir s'il était pris en compte (vécu le 31/10). -->
+          <span id="scene-etat-seance" class="badge badge-off" title="état de la séance (rehearsal/state)"></span>
+        </div>
+        <span id="groupe-seance" class="scene-boutons scene-segment">
+          <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="start">Démarrer</button>
+          <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="stop">Finir</button>
+        </span>
+      </div>
+      </div>
+    </details>
 
-  <!-- Panneau « Jeu » (lot A1, 02/11) : le SÉLECTEUR DE JEU (didier_jeu, SIM-ONLY).
-       Masqué tant que hello.rehearsal n'est pas vrai, comme la route : le serveur
-       refuse de toute façon jeu/console hors domaine 43. Lit jeu/intention (latché,
-       via `state`), rehearsal/objects (latché) et le flux jeu/journal ; écrit
-       jeu/console (ordres macro + battement « presence » à 2 Hz tant que l'onglet
-       est visible et qu'on a la main). -->
-  <section id="scene-jeu" class="scene-jeu scene-repetition" hidden>
-    <div class="jeu-intention">
-      <h2>Jeu — intention
-        <span id="jeu-verrou" class="badge badge-alerte" hidden>arrêté jusqu'au go</span>
-        <span id="jeu-proposition" class="badge badge-alerte" hidden>repartir ?</span>
-      </h2>
-      <div><b id="jeu-action" class="jeu-action">—</b> <span id="jeu-cible" class="jeu-cible"></span></div>
-      <div id="jeu-pourquoi" class="jeu-pourquoi">sélecteur pas lancé ? (ros2 run didier_jeu jeu_node)</div>
-      <div class="jeu-barre" title="temps restant de l'action en cours"><div id="jeu-barre-temps"></div></div>
-    </div>
-    <div class="jeu-commandes">
-      <!-- « va là » : objets de rehearsal/objects (aller voir) et pistes vues
-           (se tourner vers elle puis avancer d'1 m). -->
-      <select id="jeu-cible-va-la" aria-label="Cible de « va là »"></select>
-      <button type="button" class="jeu-bouton" data-jeu="va_la">Va là</button>
-      <button type="button" class="jeu-bouton" data-jeu="joue_avec" title="la piste que Didier regarde">Joue avec lui</button>
-      <button type="button" class="jeu-bouton" data-jeu="ignore" title="la cible de l'intention en cours, 30 s">Ignore</button>
-      <button type="button" class="jeu-bouton" data-jeu="reviens" title="rejoindre la route">Reviens</button>
-      <button type="button" class="jeu-bouton" data-jeu="plus_lent" title="réfractaires × 2 pendant 60 s">Plus lent</button>
-      <!-- STOP et GO DISTINCTS (revue A1) : un interrupteur dont l'état vient de
-           `state` (2 s de retard) pouvait envoyer « go » à qui voulait arrêter. -->
-      <button type="button" class="jeu-bouton jeu-stop" data-jeu="stop">STOP</button>
-      <button type="button" class="jeu-bouton" data-jeu="go">GO</button>
-    </div>
-    <div id="jeu-jauges" class="jeu-jauges"></div>
-    <ol id="jeu-journal" class="jeu-journal" aria-live="polite"></ol>
-  </section>
+    <!-- ================= REGARDER + DIRIGER : vues, puis le Jeu ================= -->
+    <section class="scene-centre">
 
-  <main class="scene-colonnes">
+      <!-- Quatre vues : une PRINCIPALE (grande), les autres en vignettes. Un clic sur
+           une vignette la promeut (scene.js, data-vue ; choix mémorisé). Les <img>
+           gardent leurs ids : commun.js et scene.js y branchent les flux MJPEG. -->
+      <div id="scene-media" class="scene-media">
 
-    <!-- ===================== COLONNE 1 : caméra de Didier ===================== -->
-    <section class="scene-colonne">
-      <!-- Caméra de POURSUITE (derrière et au-dessus, tourne avec lui), LECTURE SEULE,
-           SIM-ONLY : pour juger comment Didier bouge. Placée en premier ; masquée
-           tant que le serveur n'annonce pas hello.exterior. -->
-      <div id="scene-exterieur" class="scene-exterieur" hidden>
-        <h2>Didier vu de l'extérieur</h2>
-        <div class="carte carte-video">
+        <!-- Caméra de POURSUITE (derrière et au-dessus, tourne avec lui), LECTURE SEULE,
+             SIM-ONLY : pour juger comment Didier bouge. Masquée tant que le serveur
+             n'annonce pas hello.exterior. -->
+        <div id="scene-exterieur" class="scene-tuile principale" data-vue="exterieur" hidden>
+          <h2 class="scene-tuile-titre" title="caméra de poursuite, derrière et au-dessus de Didier">Extérieur</h2>
           <div class="video-wrap">
             <img id="exterieur" alt="Didier vu de l'extérieur (caméra de poursuite)">
             <div id="exterieur-placeholder" class="video-placeholder">pas de vidéo</div>
             <button id="btn-exterieur-refresh" type="button" title="Recharger le flux">⟳</button>
           </div>
         </div>
-      </div>
-      <h2>Caméra de Didier (Gazebo)</h2>
-      <div class="carte carte-video">
-        <div class="video-wrap">
-          <img id="video" alt="flux caméra embarquée">
-          <div id="video-placeholder" class="video-placeholder">pas de vidéo</div>
-          <button id="btn-video-refresh" type="button" title="Recharger le flux">⟳</button>
+
+        <div id="scene-camera" class="scene-tuile" data-vue="camera">
+          <h2 class="scene-tuile-titre" title="la caméra du buste de Didier (Gazebo en sim)">Caméra de Didier</h2>
+          <div class="video-wrap">
+            <img id="video" alt="flux caméra embarquée">
+            <div id="video-placeholder" class="video-placeholder">pas de vidéo</div>
+            <button id="btn-video-refresh" type="button" title="Recharger le flux">⟳</button>
+          </div>
         </div>
-      </div>
-      <!-- Second flux, LECTURE SEULE : l'image que la perception de Didier analyse
-           (en sim, la webcam du PC) et sur laquelle le LLM de réflexion raisonne.
-           Masqué tant que le serveur n'annonce pas hello.perception. -->
-      <div id="scene-perception" class="scene-perception" hidden>
-        <h2>Ce que Didier voit <span id="perception-source">(webcam)</span></h2>
-        <div class="carte carte-video">
+
+        <!-- Second flux, LECTURE SEULE : l'image que la perception de Didier analyse
+             (en sim, la webcam du PC) et sur laquelle le LLM de réflexion raisonne.
+             Masqué tant que le serveur n'annonce pas hello.perception. -->
+        <div id="scene-perception" class="scene-tuile" data-vue="perception" hidden>
+          <h2 class="scene-tuile-titre" title="l'image que la perception analyse">Ce qu'il voit <span id="perception-source">(webcam)</span></h2>
           <div class="video-wrap">
             <img id="perception" alt="image analysée par la perception de Didier">
             <div id="perception-placeholder" class="video-placeholder">pas de vidéo</div>
@@ -202,41 +204,73 @@
             <button id="btn-perception-refresh" type="button" title="Recharger le flux">⟳</button>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- ======================= COLONNE 2 : visage LED ======================== -->
-    <section class="scene-colonne">
-      <h2>Visage</h2>
-      <!-- Flux MJPEG de face_sim, servi sur SON port (8766), pas par le pont :
-           l'adresse est modifiable et mémorisée. -->
-      <div class="carte carte-video">
-        <div class="video-wrap">
-          <img id="scene-visage" class="scene-visage" alt="visage LED de Didier">
-          <div id="scene-visage-placeholder" class="video-placeholder">pas de visage</div>
-          <button id="scene-visage-refresh" type="button" title="Recharger le flux">⟳</button>
+        <!-- Visage LED : flux MJPEG de face_sim, servi sur SON port (8766), pas par le
+             pont. L'adresse est modifiable (⚙) et mémorisée. Toujours visible. -->
+        <div id="scene-visage-tuile" class="scene-tuile" data-vue="visage">
+          <h2 class="scene-tuile-titre">Visage</h2>
+          <div class="video-wrap">
+            <img id="scene-visage" class="scene-visage" alt="visage LED de Didier">
+            <div id="scene-visage-placeholder" class="video-placeholder">pas de visage</div>
+            <button id="scene-visage-refresh" type="button" title="Recharger le flux">⟳</button>
+            <button id="scene-visage-reglage" type="button" title="Adresse du flux visage">⚙</button>
+          </div>
+          <form id="scene-form-visage" class="scene-saisie scene-form-visage" hidden>
+            <input id="scene-visage-url" type="text" aria-label="Adresse du flux visage"
+                   spellcheck="false" autocomplete="off">
+            <button type="submit">Charger</button>
+          </form>
         </div>
       </div>
-      <form id="scene-form-visage" class="scene-saisie">
-        <input id="scene-visage-url" type="text" aria-label="Adresse du flux visage"
-               spellcheck="false" autocomplete="off">
-        <button type="submit">Charger</button>
-      </form>
+
+      <!-- Panneau « Jeu » (lot A1, 02/11) : le SÉLECTEUR DE JEU (didier_jeu, SIM-ONLY).
+           Masqué tant que hello.rehearsal n'est pas vrai, comme la route : le serveur
+           refuse de toute façon jeu/console hors domaine 43. Lit jeu/intention (latché,
+           via `state`), rehearsal/objects (latché) et le flux jeu/journal ; écrit
+           jeu/console (ordres macro + battement « presence » à 2 Hz tant que l'onglet
+           est visible et qu'on a la main). -->
+      <section id="scene-jeu" class="scene-jeu scene-repetition" hidden>
+        <div class="jeu-intention">
+          <div class="jeu-ligne">
+            <h2>Jeu</h2>
+            <b id="jeu-action" class="jeu-action">—</b>
+            <span id="jeu-cible" class="jeu-cible"></span>
+            <span id="jeu-verrou" class="badge badge-alerte" hidden>arrêté jusqu'au go</span>
+            <span id="jeu-proposition" class="badge badge-alerte" hidden>repartir ?</span>
+          </div>
+          <div id="jeu-pourquoi" class="jeu-pourquoi">sélecteur pas lancé ? (ros2 run didier_jeu jeu_node)</div>
+          <div class="jeu-barre" title="temps restant de l'action en cours"><div id="jeu-barre-temps"></div></div>
+        </div>
+        <div class="jeu-commandes">
+          <!-- « va là » : objets de rehearsal/objects (aller voir) et pistes vues
+               (se tourner vers elle puis avancer d'1 m). -->
+          <select id="jeu-cible-va-la" aria-label="Cible de « va là »"></select>
+          <button type="button" class="jeu-bouton" data-jeu="va_la">Va là</button>
+          <button type="button" class="jeu-bouton" data-jeu="joue_avec" title="la piste que Didier regarde">Joue avec lui</button>
+          <button type="button" class="jeu-bouton" data-jeu="ignore" title="la cible de l'intention en cours, 30 s">Ignore</button>
+          <button type="button" class="jeu-bouton" data-jeu="reviens" title="rejoindre la route">Reviens</button>
+          <button type="button" class="jeu-bouton" data-jeu="plus_lent" title="réfractaires × 2 pendant 60 s">Plus lent</button>
+        </div>
+        <!-- STOP et GO DISTINCTS (revue A1) : un interrupteur dont l'état vient de
+             `state` (2 s de retard) pouvait envoyer « go » à qui voulait arrêter.
+             STOP est unique en son genre (rouge, gros, toujours au même endroit) ;
+             il précède GO dans le document (ordre gravé par les tests), GO est
+             remonté au-dessus par CSS. -->
+        <div class="jeu-urgence">
+          <button type="button" class="jeu-bouton jeu-stop" data-jeu="stop">STOP</button>
+          <button type="button" class="jeu-bouton jeu-go" data-jeu="go">GO</button>
+        </div>
+        <div id="jeu-jauges" class="jeu-jauges"></div>
+        <details class="jeu-details">
+          <summary>Journal du jeu</summary>
+          <ol id="jeu-journal" class="jeu-journal" aria-live="polite"></ol>
+        </details>
+      </section>
     </section>
 
-    <!-- ======================= COLONNE 3 : conversation ====================== -->
-    <section class="scene-colonne">
+    <!-- ================= ÉCOUTER + SOUFFLER : la conversation ================= -->
+    <section class="scene-conversation">
       <h2>Conversation</h2>
-      <!-- « Oreille de Didier » (31/10) : le BRANCHEMENT du son (chat_audio_chain,
-           latché) et, à chaque tour, ce qu'il a ENTENDU (chat_hearing) — y compris
-           les tours JETÉS, que le fil de conversation ne montre pas. -->
-      <details id="scene-oreille" class="scene-oreille" open>
-        <summary>Oreille de Didier <span id="scene-oreille-moteur" class="badge badge-off">—</span></summary>
-        <table class="scene-chaine">
-          <tbody id="scene-chaine"><tr><td colspan="2">branchement inconnu (tête éteinte ?)</td></tr></tbody>
-        </table>
-        <ol id="scene-entendu" class="scene-entendu" aria-live="polite"></ol>
-      </details>
       <!-- Fil en direct : le texte que Didier A ENTENDU (david) et ce qu'il dit
            (didier), un message par événement du flux chat_transcript. -->
       <ol id="scene-fil" class="scene-fil" aria-live="polite"></ol>
@@ -257,15 +291,23 @@
         <button type="submit">Poser</button>
         <button id="scene-consigne-lever" type="button">Lever</button>
       </form>
+
+      <!-- « Oreille de Didier » (31/10) : le BRANCHEMENT du son (chat_audio_chain,
+           latché) et, à chaque tour, ce qu'il a ENTENDU (chat_hearing) — y compris
+           les tours JETÉS, que le fil de conversation ne montre pas. Repliée par
+           défaut : c'est un outil de diagnostic, pas de jeu. -->
+      <details id="scene-oreille" class="scene-oreille">
+        <summary>Oreille de Didier <span id="scene-oreille-moteur" class="badge badge-off">—</span></summary>
+        <div class="scene-oreille-corps">
+          <table class="scene-chaine">
+            <tbody id="scene-chaine"><tr><td colspan="2">branchement inconnu (tête éteinte ?)</td></tr></tbody>
+          </table>
+          <ol id="scene-entendu" class="scene-entendu" aria-live="polite"></ol>
+        </div>
+      </details>
     </section>
 
   </main>
-
-  <!-- Journal des 5 dernières erreurs (visible partout). -->
-  <footer>
-    <h2>Erreurs récentes</h2>
-    <ul id="journal-erreurs"></ul>
-  </footer>
 
   <script src="/static/commun.js"></script>
   <script src="/static/scene.js"></script>
