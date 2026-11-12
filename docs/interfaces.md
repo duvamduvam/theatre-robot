@@ -51,9 +51,44 @@ Invalid payloads are rejected with an explicit ERROR log naming the topic
 | `animation_state` | `animations_node` | `"parle"`, `""` (idle) | **State topic** (not an actuator track), latched (`TRANSIENT_LOCAL`, depth 1 — subscribers MUST use the same durability or they miss the latch): current sequence name or `""` at rest. Published on transition AND on every sequence (re)start (same name included) with `time = remaining_ms`, so subscribers can arm a deadman-style expiry (remaining + 2 s) in case `animations_node` dies mid-sequence. Actuator-arbitration upstream (lot B, [`etude-arbitrage-actionneurs.md`](etude-arbitrage-actionneurs.md)): `gaze_follower_node` (robot) and `chat_node` (vision Pi) subscribe and go silent on face/head while a sequence has the hand. |
 | `catalogue` | `catalogue_node` (`didier_web`) | `{"faces": [...], "audios": [{"label", "value": path}], "animations": [...], "relays": [...], "robot_lights": [...], "visuals": [...]}` | **State topic**, latched (`TRANSIENT_LOCAL` on BOTH sides), lot L1c. What the robot can play, built from `json/` by `didier_web.web_catalog.build_catalog` (same function as `GET /api/catalog`, plus `visuals`). Re-published only when the serialized JSON changes (checked every `refresh_period_s`, 2 s) : dropping a file in `json/` is enough. Audio `value` is the PATH the robot expects on `audio`, not the label. The remote's `test_buttons_vs_catalogue` compares `BUTTONS_LAYOUT` to it.  |
 | `deploy_sha` | `catalogue_node` (`didier_web`) | `"a1b2c3d…"`, `"a1b2c3d…-dirty"`, `"dev"` | **State topic**, latched, lot L1c. Git sha written by Ansible into `conf/DEPLOY_SHA` at rsync (read once at start), `"dev"` when the file is absent (sim). `-dirty` = the rsynced tree was not a clean commit. Read by the web bridge (`TOPICS_LECTURE`) for the version badge. |
+| `data_edit` | `data_edit_node` (`didier_web`) | `{"id": "a1", "kind": "sequence", "mode": "replace", "name": "eternel-show/parle", "content": {…}, "base_sha256": "…"}` | **Edit request**, lot L1d. Volatile (`qos.volatile(10)` both sides), **never latched** (a replayed request would rewrite an old edit). ≤ 131 072 bytes. Written only when the node's `enabled` is true (`DATA_EDIT` flag, OFF by default everywhere) ; otherwise answered `edition_desactivee`. See « Data editing through the robot » below. |
+| `data_edit_result` | `data_edit_node` (`didier_web`) | `{"id": "a1", "ok": true, "code": "ok", "detail": [], "kind": "sequence", "name": "…", "mode": "replace", "sha256": "…", "sauvegarde": "json/backup/…", "avertissements": ["a_rejouer_en_sim"]}` | **Verdict**, lot L1d, volatile, seen by ALL : `animations_node` (sequence), `lights_node` / `face_sim` (expression, image ; lights_node also light, brick) and `leds_sim_node` (light, brick) re-read the written file on `ok` (hot reload, the message carries no content). |
 
 Other inputs: `/vision/person` (`PointStamped`, from the vision Pi) feeds
 `gaze_follower_node`.
+
+## Data editing through the robot (lot L1d)
+
+Spec: [`spec-L1-contrats-donnees.md`](spec-L1-contrats-donnees.md) « L1d ». ONE writer,
+`data_edit_node` (`didier_web/data_edit.py`, `traiter()`), launched always by
+`robot_app.launch.py` and `sim.launch.py`, enabled only by `DATA_EDIT=true`.
+
+- **Kinds** (`theatre_contrats.donnees.KINDS`) : `sequence` → `json/sequences/<dossier>/<nom>.json`
+  (name `<dossier>/<nom>`) ; `expression` / `lumiere` / `brique` → ONE entry of
+  `expressions.json` / `robot_lights.json` / `lights_base.json` (entry name
+  `[a-z0-9][a-z0-9 _-]{0,63}`) ; `image` → `medias/visuals/<mouth|eye>/<nom>.png`, content = PNG
+  bytes in base64. No delete, no rename, no folder creation (git + deploy).
+- **Request** : `{id, kind, mode: create|replace, name, content, base_sha256?}` ; `base_sha256`
+  required in `replace` = sha256 of what the editor loaded (file bytes for `sequence`/`image`,
+  canonical JSON of the ENTRY for the three others) ; different from disk → `conflit`.
+  Canonical JSON : `json.dumps(x, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`.
+- **Verdict codes** (engraved) : `ok`, `inchange` (identical content : no backup, no journal),
+  `edition_desactivee`, `payload_invalide`, `trop_gros`, `kind_inconnu`, `mode_inconnu`,
+  `nom_invalide`, `dossier_absent`, `existe_deja`, `absent`, `nom_en_double` (the loaders index by
+  bare file name), `conflit`, `cle_inconnue` (top-level keys outside the engraved list),
+  `contrat`, `quota_jour` (200 backups/day), `erreur_ecriture` (target untouched).
+  Warnings : `a_rejouer_en_sim`, `roues_a_valider_en_sim` (sim gate, lot L1d-2).
+- **Contract** : `theatre_contrats.donnees` (`verifier_sequence`, `verifier_expression`,
+  `verifier_lumiere`, `verifier_brique`, `verifier_image`) — the SAME functions as the data
+  tests. Wheel tracks are bounded : `[fraction, [left, right]]` numbers only, |value| ≤ 0.89,
+  a non-zero image held ≤ 60 000 ms, `duration` ≤ 300 000 ms when the track is non-empty, last
+  image `[0, 0]`. Images entering : PNG, CRCs right, 24x16 (mouth) / 8x8 (eye), RGB 8 bits
+  non-interlaced, ≤ 16 384 bytes.
+- **Write order** : backup of the old file in `json/backup/<YYYY-MM-DD>/` (replace, and any
+  entry-file write ; 30 dated folders kept) → line appended + fsync to
+  `json/backup/EDITIONS-EN-ATTENTE.jsonl` (BEFORE writing) → temp file `json/backup/.tmp/<id>`
+  (`medias/.tmp/<id>` for an image : other mount) → `os.replace` + fsync of the folder → owner of
+  `json/` restored, mode of the replaced file kept.
 
 ## Drive chain (geometry_msgs/Twist — safety path, frozen contract)
 
@@ -207,10 +242,14 @@ réseau (`robot/tests/unit/test_web_protocol.py`, `test_web_catalog.py`).
 
 ## Files & directories consumed
 - `json/expressions.json`, `json/sequences/**`, `json/robot_lights.json`,
-  `json/lights_base.json`, `json/colors.json`: validated by data-contract tests
-  (`robot/tests/unit/test_expressions_json.py`, `test_lights_json.py`,
-  `test_sequences_assets.py`) — every referenced visual/audio/brick must exist.
-- `medias/visuals/{mouth,eye}/`: PNG assets, mouth 24x16 / eye 8x8 (enforced).
+  `json/lights_base.json`, `json/colors.json`: validated by the data contract
+  `theatre_contrats.donnees` (lot L1d), called by the data tests
+  (`packages/didier_core/test/unit/test_sequences_json.py`, `test_sequences_assets.py`,
+  `test_expressions_json.py`, `test_lights_json.py`) AND by the robot's writer — every
+  referenced visual/audio/brick must exist, wheel tracks are bounded.
+- `medias/visuals/{mouth,eye}/`: PNG assets, mouth 24x16 / eye 8x8 (enforced) ;
+  `test_visuels_png.py` holds them to the strict image contract, 21 legacy exceptions engraved.
+- `json/backup/` (lot L1d, not versioned) : backups, journal of edits not yet brought back.
 - `medias/audios/`: audio assets (versioned).
 
 ## Outputs

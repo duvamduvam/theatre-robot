@@ -77,6 +77,36 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   (6 familles non vides, sha `dev`, une séquence déposée apparaît en <= 5 s).
   À la main : `ros2 topic echo /didier/catalogue --once --qos-durability transient_local --field msg`.
 
+## Édition des données à travers le robot (lot L1d, 12/11 — L1d-1 fait, page web en L1d-3)
+- **Un seul écrivain** : `data_edit_node` (`didier_web`), toujours lancé (robot et sim),
+  **désactivé par défaut** (`DATA_EDIT`) — il répond alors `edition_desactivee`. Sur le vrai
+  robot, l'activer est une décision de David (après L1d-4 et une relecture adverse). Contrat,
+  codes et ordre d'écriture : `docs/interfaces.md` § « Data editing through the robot ».
+- **Retoucher une séquence, une expression, une lumière ou une brique (sim)** : sim lancée avec
+  `DATA_EDIT=true ANIMATIONS=true FACE=true` ; publier sur `/didier/data_edit` un StringTime dont
+  `msg` est `{"id", "kind", "mode": "create"|"replace", "name", "content", "base_sha256"?}` et
+  lire le verdict sur `/didier/data_edit_result` (rclpy plutôt que la CLI, qui perd des messages ;
+  modèle : `machines/sim/validate-data-edit.sh`). En `replace`, `base_sha256` = sha256 des octets
+  du fichier (séquence, image) ou du JSON canonique de l'entrée. La retouche tombe dans `data/`
+  du PC (`git diff` la montre), la sauvegarde dans `data/json/backup/<date>/` (non versionné),
+  et le robot la rejoue **sans redémarrage** (rechargement à chaud sur verdict `ok`).
+- **Envoyer une image** : `kind: "image"`, `name: "mouth/<nom>"` ou `"eye/<nom>"`, `content` =
+  les octets du PNG en base64 ; le robot juge (24x16 ou 8x8, RVB 8 bits, ≤ 16 384 octets) ; une
+  image refusée l'est avec sa raison dans `detail`.
+- **Roues** : une piste `wheels` est une donnée bornée par le contrat (consigne ≤ 0.89, tenue ≤ 60 s,
+  durée ≤ 300 s, dernière image `[0, 0]`) ; le verdict d'une séquence à roues porte
+  `roues_a_valider_en_sim` (la porte sim arrive en L1d-2). Ces bornes n'autorisent aucun roulage
+  au sol. **Constat mesuré le 12/11 (épreuve 7)** : en mode `cmd_vel`, une image roues tenue 1,6 s
+  ne produit qu'UN `cmd_vel` non nul, coupé 0,41 s plus tard par `twist_deadman` — les pistes
+  roues jouent des impulsions. Non corrigé (chemin roues intouché) ; à traiter avant le premier
+  roulage au sol.
+- **Épreuve sim** : `docker exec dadou-sim-container bash /home/ros2_ws/validate-data-edit.sh`
+  (12 épreuves, ≈ 35 s ; lance puis arrête la chaîne roues ; restaure ce qu'elle touche dans
+  `data/` — code 1 si un résidu reste). Jouée aussi par la fumée (`ATTENDU_EDITION=12`).
+- **Piège** : un script de vérification monté en fichier seul (`validate-*.sh`) ne suit pas une
+  édition qui REMPLACE le fichier (sed -i, la plupart des éditeurs) — le conteneur garde l'ancien
+  inode. Recréer le conteneur, ou `docker cp` le script dans `/tmp` pour itérer.
+
 ## Premier déploiement d'une branche sur les Pi hors robot (vécu le 2026-11-04, L1b+L1c)
 
 > Historique. Depuis le 07/11, tous les gestes ci-dessous (`-e …`, `chown`, sentinelle,
@@ -638,7 +668,8 @@ régression du code) et chaque lot payait ≈ 1 h d'épreuves.
 image sim (reconstruite seulement si `machines/sim/banc-robot` a changé depuis la dernière fumée verte,
 ou si elle manque) → sim headless domaine 43 + colcon → **sonde RTF 20 s** (rouge si < 0,8 : le
 reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.sh` → animation
-`parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) → chaîne roues + régisseur +
+`parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) → `validate-data-edit.sh`
+(L1d, 12 épreuves ; sim lancée avec `DATA_EDIT=true`) → chaîne roues + régisseur +
 regard puis `validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh`
 (A1). ≈ 40 min.
 
@@ -698,8 +729,9 @@ rouge « interrompue » ; un SIGKILL ou une coupure de courant n'en laisse aucun
 **Ce que le script ne fait jamais** : modifier l'arbre de travail hors `docs/fumee/` (le seul
 commit est `git commit -- docs/fumee`, sans `-a` ni `add .`, sans push) ; lancer quoi que ce soit
 hors du domaine ROS 43 (forcé dans la commande, revérifié dans le conteneur) ; laisser la sim
-tourner (arrêt en `trap EXIT`, quoi qu'il arrive). Seule trace transitoire : `validate-catalogue.sh`
-dépose puis supprime `json/sequences/tmp-l1c/` dans l'arbre.
+tourner (arrêt en `trap EXIT`, quoi qu'il arrive). Traces transitoires : `validate-catalogue.sh`
+dépose puis supprime `json/sequences/tmp-l1c/` dans l'arbre ; `validate-data-edit.sh` écrit par
+le robot dans `data/` puis restaure tout (empreinte de `json/` et `medias/visuals/` vérifiée).
 
 **Pièges connus**
 - La sim « headless » a quand même besoin d'une **autorité X valide** (le compose monte
