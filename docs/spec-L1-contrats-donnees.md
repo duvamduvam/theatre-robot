@@ -274,12 +274,22 @@ Topic `data_edit` (StringTime, payload JSON `{kind, name, content}`) ; le robot 
 le contenu avec les mêmes contrats que les tests (schéma de séquence, audio/visuel
 existant), écrit `json/<kind>/<name>.json` **après** une sauvegarde `json/backup/<date>/`,
 republie `catalogue` ; refus loggué + publié sur `data_edit_result`. La page scène obtient
-un éditeur **minimal** (une séquence : texte JSON + bouton « envoyer ») — c'est l'outil de
+un éditeur **minimal** (texte JSON + bouton « envoyer » ; depuis l'amendement du 12/11 :
+séquences, expressions, lumières, et envoi d'une image du visage) — c'est l'outil de
 réglage, pas l'éditeur final. Porte (celle de l'étude) : **une retouche faite depuis la
 page scène arrive dans `json/` du robot (sim) et est rejouée** ; un payload invalide est
 refusé et visible. Les 71 JSON de la télécommande : **supprimés** (ils sont dans git).
 
 #### L1d — conception détaillée (12/11, Fable ; spec FERMÉE pour l'implémenteur) : une seule écriture, jamais perdue au déploiement
+
+**Amendée le 12/11 au soir après réponses de David** : (1) édition sur le vrai robot désactivée à
+la fin de L1d, activée sur sa décision — retenu ; (2) mêmes règles d'édition en sim et en réel —
+retenu ; (3) **roues PAS gelées** : une piste `wheels` est une donnée, bornée par le contrat
+(décision 7) ; (4) **séquences, lumières ET expressions dès L1d**, avec envoi d'image validé par le
+robot (décisions 3, 4, 6, 12) ; (5) **« validation sim obligatoire avant déploiement », sans
+corvée** : rejeu automatique en sim de tout ce qui a changé, validation à l'œil pour les roues
+seulement, deux barrières (décisions 7 bis, 7 ter). Cinq sous-étapes au lieu de quatre,
+**≈ 14 h** au lieu de ≈ 8 h (décision 17).
 
 **Faits relevés le 12/11** :
 - **Les contrats de données n'existent que sous forme de tests** : `packages/didier_core/test/unit/
@@ -322,6 +332,52 @@ refusé et visible. Les 71 JSON de la télécommande : **supprimés** (ils sont 
 - `data/json/backup/maker_fair.json` (suivi) : ancienne sauvegarde d'une playlist, aucun lecteur
   dans `packages/`.
 
+**Faits relevés le 12/11 au soir (amendement)** :
+- **Les 24 pistes `wheels`** ne contiennent que des paires numériques `[gauche, droite]` — aucune
+  commande texte, aucun dict, alors que le test les tolère. Plus forte consigne : **0.89**
+  (`eternel-show/seq1`, 1 s, clé `C2`) ; puis 0.8 (`iloveyou2`), 0.6 (les 5 `bugs/`), ≤ 0.5 ailleurs.
+  Plus longue `duration` d'une séquence à roues : **300 000 ms** (`appel-eternel-life2`) ; 600 000
+  sans roues. Plus longue TENUE d'une consigne non nulle (écart jusqu'à l'image suivante ×
+  `duration`) : **55,8 s** (`trip`). 22 pistes finissent par `[0, 0]` (12 à la fraction 1, 10 avant,
+  de 0.75 à 0.99) ; **2 finissent en mouvement** : `iloveyou2` (`[-0.8, 0.8]` à 0.6) et `seq1`
+  (`[0.84, 0.78]` à 1.0). `moon-walk` porte deux images à la même fraction 1.
+- **Unités** : la paire est une consigne dans [-1, 1]. Chaîne `cmd_vel` : `wheels_bridge` en fait un
+  Twist avec `max_wheel_speed` = 1,0 m/s à consigne 1.0, valeur nominale (« calibration physique à
+  venir ») — **aucune vitesse réelle n'est mesurée**. PWM : rapport cyclique = `MIN_PWM` 5 000 +
+  |consigne| × (`MAX_PWM` 39 318 − 5 000), sur 65 535 → 34 % à 0.5, 54 % à 0.89, 60 % à 1.0. Le
+  protocole caméra du 04/07 n'a validé que 50 %.
+- **Fin de séquence** : `animations_node` publie `stop` sur TOUTES les pistes (`send_msgs`), roues
+  comprises. La durée passée au lancement (`time` du message `animation`) remplace `duration`.
+- **Lu dans le code, pas mesuré** : en mode `cmd_vel` (config officielle depuis le 04/07) une image
+  roues est émise UNE fois (`Track.emissions`) → un seul Twist → `twist_deadman` coupe 400 ms plus
+  tard. La tenue jusqu'à l'image suivante était le fait du mode legacy (`animation_deadline`). Si
+  la mesure le confirme, les pistes roues ne jouent aujourd'hui que des impulsions : constat à
+  établir à l'épreuve 7 (décision 15), **pas à corriger dans L1d** (chemin roues intouché).
+- **Expressions** : `expressions.json`, 37 entrées, clés en usage `name, follow audio, loop, keys,
+  duration, left_eyes, right_eyes, mouths, default` ; contrat déjà écrit en test
+  (`test_expressions_json.py` : `duration` > 0, `loop` bool, 3 pistes obligatoires `[t, fichier]`,
+  fichier présent, bouche 24×16, œil 8×8). **Images** : 127 PNG sous `medias/visuals/{mouth,eye}/`
+  (3 en sous-dossiers `persos/`, `test/`), au plus 12 460 octets ; 106 en RVB 8 bits, 20 bouches en
+  RVB 16 bits (15 référencées par une expression), 1 en RVBA. `Face.load_visuals` les charge TOUTES
+  au démarrage (`imageio.imread`, récursif, sans filtre d'extension, indexées par nom de fichier nu,
+  bouche et yeux dans le même dictionnaire — aucun homonyme aujourd'hui) : un fichier illisible
+  ferait tomber le visage au démarrage suivant. Pixels posés tels quels : **aucune palette**, la
+  luminosité est le réglage global du ruban ; une image de mauvaise taille est refusée en silence.
+- **Lumières** : `robot_lights.json` (13 entrées, clés `loop, duration, keys, sequences, default` ;
+  `sequences` = dict ORDONNÉ `{brique: fraction}`) enchaîne les briques de `lights_base.json` (20,
+  clés `method, color, speed, period, max_intensity, min_intensity`) ; couleurs dans `colors.json`
+  (13). Contrat déjà en test (`test_lights_json.py`). `lights_methods.json` ne peut pas servir de
+  référence : ses noms (`colorcycle`) ne sont pas les `method` des briques (`color_cycle`).
+  Les 70 noms d'entrées tiennent dans `^[a-z0-9][a-z0-9 _-]{0,63}$` (l'espace est en usage).
+- **Lecture unique** : expressions, images, lumières et briques sont lues au démarrage (sur le robot,
+  visage et lumières vivent dans `lights_node`). **En sim** : le visage est `face_sim` (`FACE=true`,
+  la vraie classe `Face` sur un ruban factice) ; les lumières sont `leds_sim_node`, logique propre à
+  la sim — la vraie classe `Lights` dépend de bibliothèques qui n'existent que sur le Pi.
+- **Fumée** : elle ne modifie jamais l'arbre de travail hors `docs/fumee/` ; elle ne peut donc pas
+  écrire un registre versionné. Somme des `duration` des 48 séquences : 2 521,5 s (42 min).
+- **Télécommande** : sa copie d'`expressions.json` a 15 entrées contre 37 côté robot (déjà périmée) ;
+  `lights_base.json` et `lights_methods.json` sont identiques à ceux du robot.
+
 **Décisions (ne pas rouvrir)** :
 1. **Deux topics, pas un service** : `DATA_EDIT = 'data_edit'` (demande) et
    `DATA_EDIT_RESULT = 'data_edit_result'` (verdict), dans `theatre_contrats.topics` et
@@ -332,59 +388,210 @@ refusé et visible. Les 71 JSON de la télécommande : **supprimés** (ils sont 
    corrélation) est payé par un `id` recopié dans le verdict et une attente de 5 s côté client.
    **Jamais latché** : une demande rejouée à un écrivain redémarré réécrirait une vieille retouche.
 2. **Demande** (`msg` = JSON, ≤ **131 072 octets**, sinon `trop_gros` avant tout décodage) :
-   `{"id": 1-64 car. [A-Za-z0-9_-], "kind": "sequence", "mode": "create"|"replace",
-   "name": "<dossier>/<nom>", "content": {…}, "base_sha256": "<hex>"}` (`base_sha256` exigé en
-   `replace` : sha256 des octets du fichier que l'éditeur a chargé ; différent du disque →
-   `conflit`). **Verdict** : `{"id", "ok", "code", "detail": [≤ 20 chaînes ≤ 300 car.], "kind",
-   "name", "mode", "sha256", "sauvegarde"}`. Codes GRAVÉS : `ok`, `inchange` (contenu identique :
+   `{"id": 1-64 car. [A-Za-z0-9_-], "kind": <décision 3>, "mode": "create"|"replace",
+   "name": <forme propre au kind>, "content": {…} (pour `image` : les octets du PNG en base64),
+   "base_sha256": "<hex>"}` (`base_sha256` exigé en `replace` : sha256 de ce que l'éditeur a
+   chargé — octets du fichier pour `sequence` et `image`, **JSON canonique de l'ENTRÉE** pour les
+   trois autres, afin que deux retouches d'entrées différentes du même fichier ne se gênent pas ;
+   différent du disque → `conflit`). JSON canonique, partout dans L1d : `json.dumps(x,
+   sort_keys=True, separators=(",", ":"), ensure_ascii=False)` en UTF-8. **Verdict** : `{"id", "ok",
+   "code", "detail": [≤ 20 chaînes ≤ 300 car.], "kind", "name", "mode", "sha256", "sauvegarde",
+   "avertissements": [chaînes GRAVÉES : `a_rejouer_en_sim`, `roues_a_valider_en_sim`]}`. Codes
+   GRAVÉS : `ok`, `inchange` (contenu identique :
    ni sauvegarde ni journal), `edition_desactivee`, `payload_invalide`, `trop_gros`,
    `kind_inconnu`, `mode_inconnu`, `nom_invalide`, `dossier_absent`, `existe_deja`, `absent`,
-   `nom_en_double`, `conflit`, `cle_inconnue`, `roues_gelees`, `contrat`, `quota_jour`,
-   `erreur_ecriture`. Journal ROS : INFO si `ok`, WARNING sinon (id, nom, code — jamais le contenu).
-3. **Liste blanche `kind` = `sequence` seul.** Expressions, lumières, relais (fichiers à
-   plusieurs entrées, contrat PNG avec `imageio`) viennent avec l'éditeur de la télécommande
-   (L4) : la table `KINDS` les accueillera, L1d ne les écrit pas. **Pas de suppression, pas de
-   renommage, pas de création de dossier** par le topic : ça passe par git et un déploiement.
-4. **Le contrat devient un module pur, `theatre_contrats/donnees.py`** (stdlib seule) :
-   `nom_valide(name) -> bool` (regex des faits, donc ni `.`, ni `/` en trop, ni majuscule),
-   `charger_references(data_dir)`, `verifier_sequence(sequence, references) -> list[str]`
-   (TOUTES les erreurs, liste vide = conforme ; mêmes règles et mêmes messages que les deux tests
-   actuels, aucune règle ajoutée ni retirée). `test_sequences_json.py` et
-   `test_sequences_assets.py` sont **réécrits pour l'appeler** (`== []` sur les 48 fichiers) :
-   un seul contrat, lu par les tests, l'écrivain, le rapatriement et, demain, la télécommande.
-   Nouveau `packages/theatre_contrats/test/test_donnees.py` : une séquence fautive par règle,
-   message attendu GRAVÉ.
+   `nom_en_double`, `conflit`, `cle_inconnue`, `contrat`, `quota_jour`, `erreur_ecriture`
+   (`roues_gelees` est retiré : une piste roues hors bornes est une faute de `contrat`). Journal ROS : INFO si `ok`, WARNING sinon (id, nom, code — jamais le contenu).
+3. **Liste blanche `kind` : cinq, table `KINDS` gravée** (amendée : « on édite à travers le
+   robot » vaut pour tout ce que la page règle) :
+
+   | `kind` | cible | `name` | `content` |
+   |---|---|---|---|
+   | `sequence` | `json/sequences/<dossier>/<nom>.json` (un fichier) | `<dossier>/<nom>` | objet |
+   | `expression` | une entrée d'`expressions.json` | nom d'entrée | objet |
+   | `lumiere` | une entrée de `robot_lights.json` | nom d'entrée | objet |
+   | `brique` | une entrée de `lights_base.json` | nom d'entrée | objet |
+   | `image` | `medias/visuals/<zone>/<nom>.png`, zone ∈ `mouth`, `eye` | `<zone>/<nom>` | PNG en base64 |
+
+   Noms d'entrée : `^[a-z0-9][a-z0-9 _-]{0,63}$` ; dossier, nom de séquence et nom d'image :
+   `^[a-z0-9][a-z0-9_-]{0,63}$`. Hors liste : relais, audios, `colors.json`, `visuals.json`,
+   playlists (L4). **Pas de suppression, pas de renommage, pas de création de dossier** par le
+   topic : ça passe par git et un déploiement. **Pas d'outil de dessin** : l'image se fabrique
+   ailleurs et s'envoie ; le dessin dans la page est explicitement reporté (éditeur final, L4).
+4. **Le contrat devient un module pur, `theatre_contrats/donnees.py`** (stdlib seule, donc ni
+   `imageio` ni `didier_core`) : `nom_valide(kind, name) -> bool`, `charger_references(data_dir)`,
+   et une fonction par kind, qui rend TOUTES les erreurs (liste vide = conforme) :
+   - `verifier_sequence(sequence, references)` : les règles et les messages des deux tests actuels,
+     **plus les bornes roues de la décision 7** (seul durcissement) ;
+   - `verifier_expression(nom, expression, references)` : les règles de `test_expressions_json.py` ;
+     la taille d'une image se lit dans l'en-tête PNG (plus d'`imageio` dans le contrat) ;
+   - `verifier_lumiere(nom, lumiere, references)` et `verifier_brique(nom, brique, references)` :
+     les règles de `test_lights_json.py` ; `keys` = liste de chaînes ou la chaîne `"None"` (3
+     entrées la portent) ; `method` ∈ `METHODES_LUMIERE`, liste gravée dans `donnees.py`, dont
+     l'égalité avec les méthodes de `LightsAnimations` est gravée par un test de `didier_core` ;
+     `color` ∈ `colors.json` ; les autres champs d'une brique sont des nombres ;
+   - `verifier_image(zone, octets)` — **contrat d'image, strict pour tout ce qui ENTRE** : signature
+     PNG, CRC de chaque bloc juste, `IHDR` = 24×16 (`mouth`) ou 8×8 (`eye`), **RVB 8 bits, non
+     entrelacé** (le format de 106 des 127 images), `IDAT` décompressé de la longueur attendue
+     (`hauteur × (1 + largeur × 3)`), au plus **16 384 octets** (max relevé 12 460). Aucune
+     contrainte de palette : le code n'en a pas.
+   Les quatre tests de données (`test_sequences_json.py`, `test_sequences_assets.py`,
+   `test_expressions_json.py`, `test_lights_json.py`) sont **réécrits pour appeler le module**
+   (`== []` sur tout `data/`) : un seul contrat, lu par les tests — donc aussi par ce qui arrive par
+   git —, l'écrivain, le rapatriement et, demain, la télécommande. Nouveau test sur les images de
+   `data/` : les 127 passent `verifier_image`, sauf une **liste d'exceptions gravée par nom** — les
+   20 bouches en 16 bits et l'image RVBA, héritées (leur rendu réel sur la matrice n'est pas
+   relevé : à convertir ou non, décision à part, hors L1d). Nouveau
+   `packages/theatre_contrats/test/test_donnees.py` : une donnée fautive par règle, message attendu
+   GRAVÉ ; PNG d'essai construits octet par octet dans le test.
 5. **L'écrivain = un nœud dédié, `didier_web/data_edit_node.py`, exécutable `data_edit`**, mince ;
    toute la logique dans `didier_web/data_edit.py` (stdlib + `theatre_contrats`), fonction
    `traiter(brut, data_dir, enabled, maintenant) -> dict`, testée sans ROS sur `tmp_path`. Pas dans
    `catalogue_node` (lecteur, toujours actif, ne doit pas tomber avec l'écrivain), pas dans le
    pont web (optionnel). Paramètres : `data_dir` (défaut `/home/ros2_ws/src/robot`, enfants
-   `json/` et `medias/` — même chemin en sim et sur le Pi), `enabled` (défaut `false`). Lancé
+   `json/` et `medias/` — même chemin en sim et sur le Pi ; ⚠️ vérifier que `medias/` est monté en
+   lecture-écriture comme `json/`, sinon le corriger dans les deux compose), `enabled` (défaut
+   `false`). Lancé
    TOUJOURS par `robot_app.launch.py` et `sim.launch.py` (ajouté à `noeuds_attendus`) : désactivé,
    il répond `edition_desactivee` à chaque demande — un refus visible vaut mieux qu'un silence.
-6. **Règles propres à l'édition** (dans `data_edit.py`, après le contrat) :
-   clés de premier niveau ⊂ liste GRAVÉE `audio, audio_name, audio_path, audios, duration, faces,
-   keys, left_arm, left_eye, lights, loop, neck, right_arm, right_eye, robot_lights, types,
-   wheels` (`cle_inconnue`) ; le dossier existe déjà (`dossier_absent`) ; `create` refuse un
-   fichier présent (`existe_deja`) et un nom déjà porté dans un autre dossier (`nom_en_double`,
-   le chargeur indexe par nom nu) ; `replace` refuse un fichier absent (`absent`) et un nom en
-   double ; chemin résolu (`realpath`) strictement sous `json/sequences/<dossier>/`, cible ni lien
-   symbolique ni dossier (`nom_invalide`).
-7. **Roues GELÉES (`roues_gelees`), en sim comme en réel** : `create` → `wheels` absente ou `[]` ;
-   `replace` d'un fichier dont la piste `wheels` est non vide → `wheels` ET `duration` strictement
-   égales à celles du disque ; `replace` d'un fichier sans roues → `wheels` absente ou `[]`.
-   Une piste roues ne se crée et ne se retouche que dans git, donc par un déploiement relu : L1d
-   ne donne à aucun éditeur un mouvement de roues que le dépôt ne contient pas déjà. Le chemin
-   roues (`wheels_bridge`, `twist_mux`, `twist_deadman`, `wheels_node`) n'est pas touché.
-8. **Écriture, dans cet ordre** (échec à une étape = `erreur_ecriture`, cible intacte) :
-   (a) `replace` : copie de l'ancien fichier dans
-   `json/backup/<AAAA-MM-JJ>/<dossier>__<nom>__<HHMMSS>__<id>.json` ; ≥ 200 fichiers dans le
+6. **Règles propres à l'édition** (dans `data_edit.py`, après le contrat), listes de clés GRAVÉES
+   (`cle_inconnue`) : séquence `audio, audio_name, audio_path, audios, duration, faces, keys,
+   left_arm, left_eye, lights, loop, neck, right_arm, right_eye, robot_lights, types, wheels` ;
+   expression `name, follow audio, loop, keys, duration, left_eyes, right_eyes, mouths, default` ;
+   lumière `loop, duration, keys, sequences, default` ; brique `method, color, speed, period,
+   max_intensity, min_intensity`. `create` refuse une cible présente (`existe_deja`), `replace` une
+   cible absente (`absent`). Séquence : le dossier existe déjà (`dossier_absent`) ; un nom déjà
+   porté dans un autre dossier est refusé en `create` comme en `replace` (`nom_en_double`, le
+   chargeur indexe par nom nu). Image : même refus si le nom existe dans l'AUTRE zone (`Face` indexe
+   par nom de fichier nu). Chemin résolu (`realpath`) strictement sous le dossier cible, cible ni
+   lien symbolique ni dossier (`nom_invalide`). **Une référence ne casse jamais** : rien ne se
+   supprime, et remplacer une entrée ou une image garde son nom.
+7. **Roues : BORNÉES par le contrat, pas gelées** (amendée — David : « pourquoi je ne pourrais pas
+   modifier un chemin de roue ? »). La règle « sim + protocole caméra » protège le CODE du chemin
+   roues, qui reste intouché ; une piste `wheels` est une DONNÉE qui passe par cette chaîne
+   (télécommande 100 > animation 10, deadman 400 ms, verrou `e_stop`) et qu'on retouche déjà à la
+   main dans le JSON. L'éditeur n'est pas plus sévère que cette pratique, mais une faute de frappe
+   ne doit pas lancer 50 kg. Bornes gravées dans `donnees.py`, appliquées par `verifier_sequence`
+   à TOUTE séquence — éditeur, tests de `data/`, donc git :
+
+   | Borne | Valeur | Source (faits du 12/11 au soir) |
+   |---|---|---|
+   | forme d'une image | `[fraction, [gauche, droite]]`, deux nombres finis, ni booléen ni texte ni dict | 24 pistes sur 24 ; `{"speed": …}` réglerait en plus le plafond de vitesse du pont pour la télécommande |
+   | fractions | dans [0, 1], croissantes au sens large | règle existante ; `moon-walk` a deux images à 1 |
+   | `VITESSE_ROUES_MAX` | \|consigne\| ≤ **0.89** | plus forte consigne relevée (`seq1`) ; 54 % de PWM, le protocole caméra n'a validé que 50 % |
+   | `TENUE_ROUES_MAX_MS` | (fraction suivante − fraction) × `duration` ≤ **60 000** pour toute image non nulle ; la dernière compte jusqu'à 1 | plus longue relevée 55,8 s (`trip`) |
+   | `DUREE_ROUES_MAX_MS` | `duration` ≤ **300 000** si la piste est non vide | plus longue relevée (`appel-eternel-life2`) ; un zéro de trop est refusé |
+   | arrêt final | la dernière image vaut `[0, 0]`, à n'importe quelle fraction | 22 pistes sur 24 |
+
+   Les consignes sont sans unité : aucune vitesse réelle n'est mesurée (faits), les bornes disent
+   « pas plus que ce qui a déjà été écrit », pas « sûr en m/s ». **Arrêt final à n'importe quelle
+   fraction, et non à 1.0** : 10 pistes s'arrêtent AVANT la fin (0.75 à 0.99), ce qui est plus
+   prudent, et l'arrêt de fin de séquence existe déjà (`stop` sur toutes les pistes).
+   **Deux séquences violent l'arrêt final** : `eternel-show/iloveyou2` et `eternel-show/seq1`.
+   Choix : corriger la donnée — L1d-1 leur ajoute l'image `[1, [0, 0]]`, sans effet sur le jeu
+   (c'est l'instant du `stop` de fin). Aucune autre séquence ne viole une borne. À trancher par
+   David, hors L1d : si `seq1` est un reste d'essai, la supprimer ramène la borne à 0.8, et à 0.6
+   sans `iloveyou2`.
+   Ce que les bornes ne couvrent pas, dit : la `time` passée au lancement d'une animation étire la
+   séquence sans passer par le contrat (existant, inchangé). **Le roulage au sol reste verrouillé**
+   (refonte électrique + protocole caméra), indépendamment de L1d : ces bornes n'autorisent rien.
+   Le chemin roues (`wheels_bridge`, `twist_mux`, `twist_deadman`, `wheels_node`) n'est pas touché.
+7 bis. **Porte sim : rien de modifié n'atteint le vrai robot sans avoir été joué en sim** (David,
+   12/11 : « validation sim obligatoire avant déploiement », et « ça serait peut-être super
+   laborieux »). Les bornes ne disent rien de OÙ va le robot ; et la porte ne doit pas être une
+   corvée. Donc : **automatique pour tout, à l'œil pour les roues seulement**.
+   - **Empreintes** (pures, `donnees.py`, sha256 du JSON canonique, nombres convertis en `float`) :
+     `empreinte_contenu` — séquence : le fichier ; expression : l'entrée + le sha256 de chaque
+     image référencée ; lumière : l'entrée + les briques référencées (une image ou une brique
+     retouchée périme donc ce qui la montre ; une expression retouchée ne périme PAS les séquences
+     qui la citent : pas de cascade) ; `empreinte_roues` — `{duration, wheels}` d'une séquence à
+     piste non vide, sinon `None`.
+   - **Registre versionné `data/json/validations-sim.json`** (`indent=1`, clés triées, écriture
+     atomique) : `{"version": 1, "sequence": {"<dossier>/<nom>": {"rejeu": <empreinte_contenu>,
+     "roues": <empreinte_roues>, "origine_roues": "sim"|"heritee"}}, "expression": {"<nom>":
+     {"rejeu": …}}, "lumiere": {…}}`. Il part sur le Pi avec `data/` ; **il ne s'écrit qu'en sim**
+     (rien à rapatrier : le Pi ne le modifie jamais).
+   - **Rejeu automatique = un observateur, `didier_web/validation_sim_node.py`** (exécutable
+     `validation_sim`, logique pure dans `validation_sim.py`), lancé par `sim.launch.py` SEUL et qui
+     s'arrête hors domaine 43 (même garde que `rehearsal_enabled`). Il regarde ce qui se joue,
+     **quel que soit le déclencheur** (page, régisseur, script), et pose le tampon `rejeu` quand :
+     séquence — `animation_state` passe au nom puis revient à `""` entre 0,95 × `duration` et
+     `duration` + 5 s (jouée jusqu'au bout, pas interrompue), aucune ligne ERROR ou CRITICAL
+     nouvelle dans le journal du robot (`config[LOGGING_FILE_NAME]`, lu depuis l'offset noté au
+     départ ; si la sim n'écrit pas ce journal, l'implémenteur s'arrête et le rapporte), les nœuds
+     attendus toujours présents, et pour une piste roues le dernier `cmd_vel` reçu est nul 1 s
+     après la fin ; expression — nom reçu sur `face`, `face_sim` vivant et sans erreur pendant
+     min(`duration`, 10 s) sans autre commande ; lumière — idem sur `robot_lights` avec
+     `leds_sim_node`. Les bornes des servos ne sont pas remesurées : le contrat les garantit.
+     Empreinte déjà au registre → aucune écriture (la fumée, qui joue `parle`, ne salit rien).
+     Verdict publié sur `validation_sim` (StringTime, `qos.volatile(10)`, JSON `{kind, name, ok,
+     code, detail}`).
+   - **Validation à l'œil des roues** : demande `{id, name}` sur `validation_sim_demande` (bouton
+     « Valider les roues pour le robot » de la page, décision 12). Acceptée seulement si le tampon
+     `rejeu` de la séquence égale son empreinte actuelle (`non_rejouee` sinon) : on ne valide pas
+     une trajectoire qu'on n'a pas vue jusqu'au bout. Écrit `roues` + `origine_roues: "sim"`.
+   - **Par lot, sans page** : `machines/sim/rejouer-modifiees.sh` démarre la sim sans écran si elle
+     ne tourne pas (`ANIMATIONS=true FACE=true`, domaine 43), publie tour à tour chaque élément que
+     `donnees.a_rejouer(data_dir)` rend, attend son tampon, affiche OK / KO et ce qui reste à
+     valider à l'œil. Aucune logique propre : l'observateur décide.
+   - **Registre initial** : les tampons `rejeu` des 48 séquences, 37 expressions et 13 lumières
+     sont posés par un VRAI passage de `rejouer-modifiees.sh` en L1d-2 (≈ 50 min de machine, aucun
+     geste). Les 24 pistes roues entrent **validées d'office, `origine_roues: "heritee"`** : la
+     porte attrape les CHANGEMENTS, ces pistes sont sur le robot depuis des années, et les exiger
+     bloquerait tout déploiement — banc témoin compris — jusqu'à une séance de 24 visionnages.
+     « Héritée » veut dire « jamais regardée en sim » et reste lisible dans la page ; la moindre
+     retouche la fait passer par la porte. Les revoir en sim avant le premier roulage au sol est
+     recommandé (voir le fait « impulsions »), et relève de ce verrou-là, pas de L1d.
+   - **Ce que ça coûte à David** :
+
+     | Cas | Gestes en plus | Attente |
+     |---|---|---|
+     | retouche sans roues, en sim, par la page | **0** (Envoyer puis Rejouer, qu'il fait de toute façon) | la durée de la séquence, jouée jusqu'au bout |
+     | retouche des roues, en sim, par la page | **1 clic** (Valider les roues) | idem |
+     | retouche à la main dans git, ou rapatriée du robot | **1 commande** (`rejouer-modifiees.sh`), + 1 clic par piste roues touchée | démarrage de la sim (à mesurer en L1d-2) + somme des durées touchées |
+     | commit et déploiement | 0 : le registre est un fichier de plus dans le commit | — |
+
+     Une séquence interrompue avant la fin n'est pas tamponnée ; la commande par lot la rattrape.
+     Limite dite : la porte empêche l'OUBLI, pas la fraude — le registre est un fichier git, le
+     modifier à la main se voit dans le diff.
+7 ter. **Deux barrières, parce que chacune a un trou que l'autre ferme.**
+   - **Au déploiement (tôt, bruyant, pour tout)** : test hôte `test_validations_sim.py` (dans les
+     suites et la CI) — chaque séquence, expression et lumière de `data/` a son tampon `rejeu` à
+     jour, chaque piste roues son tampon `roues`, aucune entrée orpheline au registre ; et garde
+     Ansible dans `synchronise`, avant la copie des données, jouée aussi en `--check`
+     (`python3 -m theatre_contrats.donnees non-validees data/` sur le PC) : liste non vide → `fail`
+     avec la liste et les deux commandes. **Aucune échappatoire** : passer la porte coûte moins
+     que la contourner. C'est aussi elle qui soumet les retouches faites à la main dans git à la
+     même porte que l'éditeur. Son trou : elle ne voit pas un fichier écrit directement sur le Pi.
+   - **Au jeu, sur le robot (tard, pour les roues seulement)** : `AnimationManager` construit la
+     piste `wheels` VIDE si `donnees.roues_validees` ne reconnaît pas l'empreinte de la séquence
+     (un homonyme non validé refuse aussi) ; le reste de la séquence joue ; WARNING au journal et
+     message `{name, raison: "non_validee_sim"}` sur `roues_refusees` (StringTime,
+     `qos.volatile(10)`). Paramètre `exiger_validation_roues` d'`animations_node`, **vrai par
+     défaut**, mis à faux par `sim.launch.py` seul et ignoré hors domaine 43 : il faut bien pouvoir
+     jouer en sim ce qu'on vient y valider. C'est la seule barrière pour une retouche faite sur le
+     robot (édition activée) ou un fichier posé à la main sur le Pi. Son trou : elle se découvre
+     en scène — d'où la première.
+   - **Conséquence à connaître avant d'activer l'édition sur le robot** : une retouche SANS roues
+     faite sur le vrai robot y joue tout de suite, sans sim (c'est le but du réglage, borné par le
+     contrat) ; elle passera la porte au rapatriement. Une retouche DES roues y est écrite, mais sa
+     piste ne jouera qu'après rapatriement, visionnage en sim et redéploiement — le verdict porte
+     l'avertissement `roues_a_valider_en_sim`.
+   - Topics ajoutés au contrat et à l'inventaire gravé : `VALIDATION_SIM`, `VALIDATION_SIM_DEMANDE`,
+     `ROUES_REFUSEES`.
+8. **Écriture, dans cet ordre** (échec à une étape = `erreur_ecriture`, cible intacte ; le FICHIER
+   écrit est le fichier de séquence, le PNG, ou — pour `expression`, `lumiere`, `brique` — le
+   fichier à plusieurs entrées relu, l'entrée posée par la fonction pure `donnees.poser_entree`
+   (ordre des autres entrées conservé, entrée neuve en fin), puis réécrit EN ENTIER) :
+   (a) `replace`, et toute écriture dans un fichier à plusieurs entrées : copie de l'ancien fichier
+   dans `json/backup/<AAAA-MM-JJ>/<kind>__<nom, « / » et espaces en « _ »>__<HHMMSS>__<id>.<ext>` ; ≥ 200 fichiers dans le
    dossier du jour → `quota_jour` ; (b) ligne ajoutée + `fsync` au **journal des éditions non
    rapatriées** `json/backup/EDITIONS-EN-ATTENTE.jsonl` : `{t, id, kind, name, mode, sha256,
    sauvegarde}` — AVANT l'écriture : un crash laisse au pire une ligne en trop, jamais une
    retouche inconnue du journal ; (c) contenu sérialisé `json.dumps(content, indent=4,
-   ensure_ascii=False) + "\n"` (ordre des clés conservé) dans `json/backup/.tmp/<id>.json`
-   (`fsync`) — **jamais sous `sequences/`**, voir les faits ; (d) `os.replace` vers la cible,
+   ensure_ascii=False) + "\n"` (ordre des clés conservé ; pour une image, les octets reçus tels
+   quels) dans `json/backup/.tmp/<id>` (`fsync`) — **jamais sous `sequences/` ni sous
+   `medias/visuals/`**, dont les chargeurs lisent tout fichier, voir les faits ; (d) `os.replace` vers la cible,
    `fsync` du dossier ; (e) fichiers et dossiers créés prennent l'uid/gid de `json/`
    (`os.chown`, `PermissionError` ignorée) : rien n'appartient à root dans l'arbre du PC.
    Rotation : au-delà des **30** dossiers datés les plus récents (`^\d{4}-\d{2}-\d{2}$`), les plus
@@ -396,8 +603,15 @@ refusé et visible. Les 71 JSON de la télécommande : **supprimés** (ils sont 
    que relire un fichier), remplace l'entrée de `sequences_name`, purge puis repose celle de
    `sequences_key`, reconstruit `random_animation_sequence`. Fichier illisible = log ERROR,
    ancienne version gardée. Une séquence en cours finit sur ses pistes déjà construites
-   (`Track.emissions` au départ) : aucune piste ne change en plein jeu. Test gravé : après
-   rechargement, la piste `wheels` d'une séquence à roues est égale à l'ancienne.
+   (`Track.emissions` au départ) : aucune piste ne change en plein jeu. Le même verdict fait
+   relire le registre des validations (décision 7 ter). **Visage et lumières, même principe** :
+   `lights_node` (robot) et `face_sim` (sim) s'abonnent au verdict ; `expression` ou `image` →
+   `Face.recharger()` relit `expressions.json` et le SEUL fichier image nommé (illisible = ERROR,
+   ancienne image gardée) ; `lumiere` ou `brique` → `Lights.recharger()` relit `robot_lights.json`
+   et `lights_base.json`. L'affichage en cours n'est pas touché : la nouvelle version s'applique à
+   la commande suivante. `leds_sim_node` : même abonnement seulement s'il lit ces fichiers (à
+   relever par l'implémenteur). Tests gravés : après rechargement, l'entrée retouchée a sa
+   nouvelle valeur et une entrée voisine est inchangée.
 10. **Activation : un seul drapeau, `DATA_EDIT`, OFF par défaut partout.** Compose sim
     `DATA_EDIT=${DATA_EDIT:-false}` → `launch-sim-in-docker.sh` → argument `data_edit` de
     `sim.launch.py` → `enabled` de l'écrivain et `data_edit_enabled` du pont. Robot : même
@@ -408,29 +622,43 @@ refusé et visible. Les 71 JSON de la télécommande : **supprimés** (ils sont 
     `true` est une décision de David, après sa validation du lot et une relecture adverse (Fable).
     Qui peut écrire : quiconque publie sur le domaine ROS du robot — même frontière de confiance
     que tous les topics d'actionneurs aujourd'hui (réseau du robot) ; par le web, la session
-    « writer » et son jeton. Ce qui borne les dégâts : drapeau, contrat, roues gelées,
-    sauvegarde, journal.
+    « writer » et son jeton. Ce qui borne les dégâts : drapeau, contrat (bornes roues comprises),
+    porte sim (roues non validées jamais jouées sur le robot), sauvegarde, journal.
 11. **Pont web** : nouveau type WebSocket `data_edit` (writer seul ; parseur pur
     `_parse_data_edit` dans `web_protocol.py` : forme + taille, constante dupliquée et égalité
     gravée par test, motif du package) → publication sur `data_edit` par un publisher créé
     SEULEMENT si `data_edit_enabled` ; `data_edit` n'entre dans aucune `WHITELIST` (un `cmd`
-    générique ne peut pas le publier). `data_edit_result` entre dans `TOPICS_FLUX`. Lecture :
-    `GET /api/data?kind=sequence` → liste triée des `<dossier>/<nom>` ; `&name=…` →
-    `{name, content, sha256}` (nom validé par `nom_valide`, 404 sinon). `build_hello` gagne
-    `data_edit` (défaut `False`). La lecture du contenu par ROS (télécommande) = L4.
+    générique ne peut pas le publier). `data_edit_result`, `validation_sim` et `roues_refusees` entrent dans
+    `TOPICS_FLUX`. Lecture : `GET /api/data?kind=<kind>` → liste triée des noms, chacun avec
+    `rejeu` et `roues` (`a_jour`, `a_faire`, `heritee`, ou absent) lus au registre ; `&name=…` →
+    `{name, content, sha256}` (base64 pour une image ; nom validé par `nom_valide`, 404 sinon).
+    Second type WebSocket, `valider_roues` (writer seul), publié sur `validation_sim_demande` par
+    un publisher créé SEULEMENT en domaine 43. `build_hello` gagne `data_edit` et `validation_sim`
+    (défaut `False`). La lecture du contenu par ROS (télécommande) = L4.
 12. **Éditeur de la page scène** (`scene.html`/`scene.js`), panneau `<details>` masqué si
-    `hello.data_edit` est faux : liste des séquences, « Charger », zone de texte JSON, champ nom,
-    « Envoyer » (`replace` avec le sha chargé si le nom est celui chargé, sinon `create`),
-    « Rejouer » (publie `animation` avec le nom nu, par le `cmd` existant), ligne de verdict
-    (code + détails, vert/rouge). JSON illisible = erreur locale, rien n'est envoyé ; pas de
-    verdict du même `id` en 5 s = « pas de réponse du robot ».
+    `hello.data_edit` est faux — **tout au même endroit** : sélecteur de famille (séquence,
+    expression, lumière, brique), liste, « Charger », zone de texte JSON, champ nom, « Envoyer »
+    (`replace` avec le sha chargé si le nom est celui chargé, sinon `create`), « Rejouer » (publie
+    `animation`, `face` ou `robot_lights` avec le nom, par le `cmd` existant ; rien pour une
+    brique), ligne de verdict (code, détails, avertissements ; vert/rouge). **Envoi d'image** :
+    choix d'un fichier PNG, zone (bouche/œil), nom, aperçu agrandi du fichier choisi, « Envoyer
+    l'image » — la page ne juge rien, c'est le robot qui valide (décision 4) et son refus
+    s'affiche comme les autres. Pas de dessin (décision 3). **En sim seulement**
+    (`hello.validation_sim`) : chaque nom porte son état (« rejouée », « à rejouer », « roues à
+    valider », « roues héritées ») et le bouton « Valider les roues pour le robot » apparaît pour
+    une séquence rejouée dont la piste roues attend. JSON illisible = erreur locale, rien n'est
+    envoyé ; pas de verdict du même `id` en 5 s = « pas de réponse du robot ».
 13. **Retour vers git — le Pi ne garde jamais une retouche que le dépôt ignore** :
     - `deploy/rapatrier-editions.yml` (`-e target_group=robot`) : renomme le journal en
       `EDITIONS-EN-ATTENTE.rapatriement.jsonl` (les retouches suivantes ouvrent un journal
       neuf) ; refuse si un des fichiers visés a une modification locale non commitée
-      (`git status --porcelain -- <fichier>`), sans rien copier ; tire chaque fichier du Pi vers
-      `data/json/sequences/` ; lance `test_sequences_json.py` + `test_sequences_assets.py` (rouge =
-      arrêt, journal laissé en attente) ; copie chaque fichier rapatrié dans
+      (`git status --porcelain -- <fichier>`), sans rien copier ; tire du Pi chaque séquence et
+      chaque image vers `data/` ; pour `expression`, `lumiere`, `brique`, tire le fichier du Pi dans
+      un dossier temporaire et n'en reporte QUE les entrées du journal dans le fichier du PC
+      (`donnees.poser_entree` — tirer le fichier entier écraserait une entrée commitée sur le PC
+      et pas encore déployée) ; lance les quatre tests de données et celui des images (rouge =
+      arrêt, journal laissé en attente) ; `test_validations_sim.py` rouge n'arrête PAS : c'est
+      attendu, le script affiche « N élément(s) à rejouer en sim : machines/sim/rejouer-modifiees.sh » ; copie chaque fichier rapatrié dans
       `json/backup/<date>/<dossier>__<nom>__rapatrie.json` et archive le journal en
       `json/backup/<date>/EDITIONS-rapatriees-<HHMMSS>.jsonl` ; affiche `git status --short
       data/json` et « relis, commite, déploie ». **Il ne commite pas.**
@@ -441,6 +669,8 @@ refusé et visible. Les 71 JSON de la télécommande : **supprimés** (ils sont 
       `EDITIONS-ecrasees-<HHMMSS>.jsonl` (les sauvegardes restent sur le Pi).
     - `ecart-pi.sh` : volet **(c)** « éditions non rapatriées : N » (rouge si N > 0, avec la
       commande) ; le `--check` du volet (a) est rouge aussi, par la garde.
+    - **Seconde garde, juste après** : celle des validations sim (décision 7 ter), sans
+      échappatoire.
     - Copie des données : `--exclude=/backup/` (le journal d'une sim du PC ne part jamais sur le
       Pi) ; `.gitignore` : `data/json/backup/`. En sim, la retouche tombe directement dans
       `data/json/` du PC : `git diff` la montre, rien à rapatrier.
@@ -453,57 +683,102 @@ refusé et visible. Les 71 JSON de la télécommande : **supprimés** (ils sont 
     `legacy/dadou_control_ros/json/` : sur l'hôte, le chemin par défaut est celui du Pi), chaque
     playlist se charge. Les fenêtres d'édition mortes ne sont pas touchées
     (L4). Rien n'est effacé sur un Pi de télécommande (rsync sans `--delete`).
+    **Revue après l'élargissement du périmètre : décision inchangée.** Expressions et lumières
+    s'éditent désormais à travers le robot, et les copies de la télécommande ne suivront pas —
+    c'est déjà le cas (15 expressions chez elle, 37 chez le robot) et rien ne s'y aggrave. Les
+    synchroniser serait écrire un second chemin d'édition, ce que L1d supprime ; les effacer
+    casserait `ControlJsonManager`. Le test grave la LISTE des 10, pas leur contenu ; aucun `kind`
+    ne les vise ; la télécommande neuve lira le catalogue (L4).
 15. **Preuve sim** : `machines/sim/validate-data-edit.sh` (domaine 43 exigé ; sim lancée avec
-    `DATA_EDIT=true ANIMATIONS=true`), compteur gravé **8** ajouté à `fumee.sh` : (1) création
-    de `tmp-l1d/l1d-retouche` → `ok`, fichier présent, nom au catalogue en ≤ 5 s ; (2) retouche
-    (`neck` à 0.37) → `ok`, octets du fichier = attendu, sauvegarde présente, 2 lignes au
-    journal ; (3) `animation "l1d-retouche"` → `animation_state` porte le nom ET `neck` reçoit
+    `DATA_EDIT=true ANIMATIONS=true FACE=true`), compteur gravé **13** ajouté à `fumee.sh` :
+    (1) création de `tmp-l1d/l1d-retouche` → `ok`, fichier présent, nom au catalogue en ≤ 5 s ;
+    (2) retouche (`neck` à 0.37) → `ok`, octets du fichier = attendu, sauvegarde présente, 2 lignes
+    au journal ; (3) `animation "l1d-retouche"` → `animation_state` porte le nom ET `neck` reçoit
     0.37 (le rechargement est prouvé) ; (4) `faces` vers une expression inconnue → `contrat`,
     fichier inchangé ; (5) `name` = `../x/y` puis `tmp-l1d/../../x` → `nom_invalide`, aucun fichier
-    créé hors cible ; (6) création avec `wheels` non vide → `roues_gelees` ; (7) `base_sha256`
-    faux → `conflit` ; (8) demande de 131 073 octets → `trop_gros`. Le script crée
-    `sequences/tmp-l1d/` lui-même et nettoie en sortant (dossier, sauvegardes `tmp-l1d__*`,
-    lignes `tmp-l1d/` du journal) : `git status --porcelain` identique avant et après.
+    créé hors cible ; (6) roues HORS bornes, trois demandes — consigne 0.95, dernière image
+    `[0.2, 0.2]`, image `{"speed": 100}` → `contrat` chaque fois, message gravé, aucun fichier ;
+    (7) roues DANS les bornes — `tmp-l1d/l1d-roues`, `duration` 4000, `wheels` `[[0.1, [0.2, 0.2]],
+    [0.5, [0, 0]]]` → `ok` avec l'avertissement `roues_a_valider_en_sim` ; jouée : `cmd_vel` non
+    nul observé, puis nul à la fin ; **la durée pendant laquelle `cmd_vel` est resté non nul est
+    écrite au rapport** (constat « impulsion ou tenue », pas un critère) ; (8) `base_sha256` faux →
+    `conflit` ; (9) demande de 131 073 octets → `trop_gros` ; (10) image : un PNG 24×16 RVB 8 bits
+    en `mouth/l1d-bouche` → `ok`, fichier présent ; le même en zone `eye` → `contrat` ; des octets
+    qui ne sont pas un PNG → `contrat` ; (11) expression `l1d visage` qui montre cette image → `ok`,
+    au catalogue (`faces`) en ≤ 5 s ; publiée sur `face`, `face_sim` l'affiche sans erreur
+    (rechargement prouvé) ; (12) lumière `l1d lumiere` chaînant deux briques existantes → `ok`, au
+    catalogue ; avec une brique inconnue → `contrat` ; (13) porte sim : `valider_roues` sur
+    `l1d-roues` interrompue en cours de jeu → `non_rejouee` ; rejouée jusqu'au bout → tampon
+    `rejeu` au registre ; `valider_roues` → tampon `roues`, `origine_roues: "sim"`.
+    Le script sauvegarde puis restaure `expressions.json`, `robot_lights.json` et
+    `validations-sim.json`, efface ce qu'il a créé (dossier `tmp-l1d/`, image, sauvegardes, lignes
+    du journal) : `git status --porcelain` identique avant et après. La barrière de jeu (7 ter) ne
+    se prouve pas en sim, où elle est levée : elle est gravée en test hôte (décision 16).
 16. **Tests hôte, valeurs GRAVÉES** (`packages/didier_core/test/unit/test_data_edit.py`, sur
-    `tmp_path`, horloge injectée) : octets exacts du fichier écrit et son sha256 en littéral ;
-    nom exact de la sauvegarde ; ligne exacte du journal ; un cas par code de la décision 2 ;
-    rotation à 31 dossiers ; `.tmp/` vide après succès et après échec ; rien de neuf sous
-    `sequences/` après un refus. **Mutations à jouer et à lister au rapport (chacune doit
-    rougir)** : gel des roues retiré ; regex du nom relâchée ; sauvegarde sautée ; ligne de
-    journal sautée ; une règle du contrat retirée de `donnees.py` ; drapeau ignoré ; temporaire
-    sous `sequences/` ; garde Ansible retirée (`test_arborescence.py` grave sa présence et sa
-    place avant la copie des données, ainsi que `--exclude=/backup/`).
-17. **Quatre sous-étapes, une porte chacune, fusionnées une à une** :
-    - **L1d-1 (Opus, ≈ 3 h)** — contrat pur, écrivain + journal, topics, rechargement, tests et
-      mutations, `validate-data-edit.sh`, fumée. Porte : 6 suites vertes, épreuve 8/8,
-      namespace 5/5 (nouveau nœud sous le namespace), fumée complète verte.
-    - **L1d-2 (Opus, ≈ 2 h)** — pont web + éditeur. Porte de l'étude, en sim : une retouche faite
-      depuis la page scène arrive dans `json/`, « Rejouer » la joue ; un JSON hors contrat
-      affiche son refus ; drapeau OFF = panneau absent ; `test_web_protocol.py` étendu.
-    - **L1d-3 (Opus, ≈ 2 h 30)** — rapatriement, garde, `ecart-pi.sh` (c), exclusions, drapeau du
-      compose ARM. Porte, **Pi hors robot, aucun actionneur** : déploiement par défaut → une
-      demande reçoit `edition_desactivee` ; `-e edition_donnees=true` → une retouche, `ecart-pi.sh`
-      ROUGE (c), `deploy-pios.yml` REFUSE, rapatriement, `git diff` montre la retouche (puis
-      `git checkout` : c'est une retouche d'essai), redéploiement par défaut, `ecart-pi.sh` VERT
+    `tmp_path`, horloge injectée) : octets exacts du fichier écrit et son sha256 en littéral, pour
+    chacun des cinq kinds ; nom exact de la sauvegarde ; ligne exacte du journal ; un cas par code
+    de la décision 2 ; rotation à 31 dossiers ; `.tmp/` vide après succès et après échec ; rien de
+    neuf sous `sequences/` ni `medias/visuals/` après un refus ; une entrée posée ne change pas les
+    octets canoniques des entrées voisines. `test_donnees.py` : chaque borne roues à sa valeur
+    limite (0.89 passe, 0.9 refuse ; 60 000 ms passe, 60 001 refuse ; 300 000 passe, 300 001
+    refuse), empreintes en littéral. `test_validation_sim.py` (logique pure, horloge injectée) :
+    tampon posé / refusé pour chaque critère. `test_animation_manager.py` : séquence à roues non
+    validée → piste roues vide, autres pistes jouées, refus émis ; validée → piste jouée.
+    **Mutations à jouer et à lister au rapport (chacune doit rougir)** : `VITESSE_ROUES_MAX` portée
+    à 1.0 ; règle d'arrêt final retirée ; plafond de tenue retiré ; commande texte acceptée dans
+    une piste roues ; contrôle de taille d'image inversé (bouche ↔ œil) ; contrôle CRC du PNG
+    retiré ; regex du nom relâchée ; sauvegarde sautée ; ligne de journal sautée ; une règle du
+    contrat retirée de `donnees.py` ; drapeau ignoré ; temporaire sous `sequences/` ; tampon
+    `rejeu` posé sur un jeu interrompu ; validation des roues acceptée sans rejeu ; observateur
+    actif hors domaine 43 ; barrière de jeu ignorée (roues non validées jouées) ; l'une et l'autre
+    garde Ansible retirée (`test_arborescence.py` grave leur présence et leur place avant la copie
+    des données, ainsi que `--exclude=/backup/`).
+17. **Cinq sous-étapes, une porte chacune, fusionnées une à une — ≈ 14 h** (≈ 8 h avant
+    l'amendement ; le périmètre élargi en coûte ≈ 3, la porte sim ≈ 3) :
+    - **L1d-1 (Opus, ≈ 4 h)** — contrat pur des cinq kinds et bornes roues, empreintes et lecture
+      du registre (pures ; registre absent = tout est « à faire »), correction des deux séquences
+      (décision 7), écrivain + journal, topics, rechargements (séquences, visage,
+      lumières), tests et mutations, `validate-data-edit.sh` épreuves 1 à 12, fumée. Porte : 6
+      suites vertes, épreuve 12/12, namespace 5/5 (nouveau nœud sous le namespace), fumée verte.
+    - **L1d-2 (Opus, ≈ 3 h)** — porte sim : écriture du registre, observateur, validation des
+      roues, barrière de jeu, `rejouer-modifiees.sh`, registre initial (≈ 50 min de machine en
+      tâche détachée), `test_validations_sim.py`, épreuve 13. Porte : épreuve 13/13, suites vertes,
+      registre complet, mutations de la porte rouges, fumée verte.
+    - **L1d-3 (Opus, ≈ 3 h)** — pont web + éditeur (quatre familles, envoi d'image, états et bouton
+      de validation). Porte de l'étude, en sim : une retouche faite depuis la page scène arrive
+      dans `json/`, « Rejouer » la joue et la tamponne ; une image envoyée s'affiche dans
+      `face_sim` ; un JSON ou un PNG hors contrat affiche son refus ; drapeau OFF = panneau absent ;
+      `test_web_protocol.py` étendu.
+    - **L1d-4 (Opus, ≈ 3 h)** — rapatriement (par entrée, images), les deux gardes, `ecart-pi.sh`
+      (c), exclusions, drapeau du compose ARM. Porte, **Pi hors robot, aucun actionneur** :
+      déploiement par défaut → une demande reçoit `edition_desactivee` ; `-e edition_donnees=true` →
+      une retouche de séquence, une d'expression, une image ; `ecart-pi.sh` ROUGE (c),
+      `deploy-pios.yml` REFUSE, rapatriement, `git diff` montre les trois ; déploiement REFUSÉ par
+      la seconde garde tant que `rejouer-modifiees.sh` n'est pas passé, accepté après (puis
+      `git checkout` : ce sont des retouches d'essai), redéploiement par défaut, `ecart-pi.sh` VERT
       sur robot ET vision.
-    - **L1d-4 (Sonnet, ≈ 45 min)** — décision 14 + doc. Porte : suite télécommande verte, test des
+    - **L1d-5 (Sonnet, ≈ 45 min)** — décision 14 + doc. Porte : suite télécommande verte, test des
       10 restants, liens Markdown morts = 0.
-    Orchestration Opus ; David valide après L1d-2 (le nouveau mode d'édition) et tranche
-    l'activation sur le robot après L1d-3.
+    Orchestration Opus ; David valide après L1d-3 (le nouveau mode d'édition) et tranche
+    l'activation sur le robot après L1d-4 et la relecture adverse.
 18. **Interdits (toutes sous-étapes)** : toucher `wheels_bridge`, `twist_mux.yaml`,
-    `twist_deadman`, `wheels_node`, ou la publication des pistes dans `animations_node` (seuls
-    l'abonnement et l'appel de rechargement y entrent) ; écrire hors de `json/sequences/` et
-    `json/backup/` ; un second écrivain (toute écriture passe par `traiter`) ; recopier une
+    `twist_deadman`, `wheels_node`, ou la publication des pistes dans `animations_node` (seuls y
+    entrent l'abonnement, l'appel de rechargement et — exception nommée — la piste roues
+    construite vide pour une séquence non validée, décision 7 ter : elle ne peut que RETIRER un
+    mouvement) ; écrire hors des cibles de la décision 3, de `json/backup/` et du registre ; écrire
+    le registre ailleurs qu'en domaine 43 ; une échappatoire à la garde des validations ; un second écrivain (toute écriture passe par `traiter`) ; recopier une
     règle du contrat au lieu d'appeler `donnees.py` ; `edition_donnees: true` dans le dépôt ;
     domaine 42 depuis le PC ; `git add -A`, `git push`, commit dans la plage sans commit ;
     extinction du poste.
-19. **Ce que L1d supprime** : les contrats de séquence écrits dans les tests (remplacés par
-    l'appel du module) ; 61 JSON de la télécommande ; `data/json/backup/maker_fair.json` ;
+19. **Ce que L1d supprime** : les contrats de séquence, d'expression et de lumière écrits dans les
+    tests (remplacés par l'appel du module), et avec eux `imageio` comme juge de la taille d'une
+    image ; la tolérance des commandes texte et des dicts dans une piste roues de séquence ; 61 JSON de la télécommande ; `data/json/backup/maker_fair.json` ;
     l'écrasement silencieux d'une retouche par un déploiement.
 20. **Doc vivante, à chaque sous-étape** : `docs/interfaces.md` (deux topics, demande, verdict,
     codes), README de `didier_web` et de `theatre_contrats`, `data/README.md`,
     `deploy/README.md` + `docs/ansible-ecarts.md` (garde, rapatriement), `docs/operations.md`
-    (« Retoucher une séquence », « Rapatrier avant de déployer », épreuve et fumée),
+    (« Retoucher une séquence, une expression, une lumière », « Envoyer une image », « La porte
+    sim : rejouer, valider les roues », « Rapatrier avant de déployer », épreuve et fumée),
     `legacy/dadou_control_ros/README.md`, README racine, tableau de bord ; CLAUDE.md listés au
     rapport, appliqués par l'orchestrateur.
 
