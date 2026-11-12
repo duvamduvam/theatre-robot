@@ -181,7 +181,9 @@ for i, (kind, name) in enumerate(a_rejouer, 1):
         ko += 1
         print("  [{}/{}] KO {} {} : {} {}".format(i, len(a_rejouer), kind, name, v["code"], v["detail"][:3]), flush=True)
     if kind == "sequence" and v is not None and v["code"] in ("homonyme", "absente"):
-        tourner(duree / 1000 + 1)   # jugée dès le départ : on laisse la séquence finir avant la suivante
+        # Jugée dès le départ (jamais tamponnée) : inutile de la laisser jouer, on l'arrête.
+        pub[topics.ANIMATION].publish(StringTime(msg=json.dumps(False), time=0, anim=False))
+        tourner(2)
     if kind != "sequence":
         # Une expression ou une lumière en boucle resterait affichée : on rend la main.
         pub[topic].publish(StringTime(msg=json.dumps("stop"), time=0, anim=False))
