@@ -46,6 +46,7 @@ from didier_sim_lib.leds_logic import (  # noqa: E402
 
 import rclpy  # noqa: E402
 from rclpy.node import Node  # noqa: E402
+from theatre_contrats import donnees, qos, topics  # noqa: E402
 from theatre_interfaces.msg import StringTime  # noqa: E402
 from ros_gz_interfaces.msg import Entity, MaterialColor  # noqa: E402
 
@@ -91,6 +92,9 @@ class LedsSimNode(Node):
 
         self.create_subscription(StringTime, "robot_lights", self._on_robot_lights, 10)
         self.create_subscription(StringTime, "face", self._on_face, 10)
+        # Lot L1d (rechargement à chaud) : ce nœud LIT robot_lights.json et lights_base.json,
+        # il suit donc les écritures de data_edit_node (lumière ou brique) sans redémarrage.
+        self.create_subscription(StringTime, topics.DATA_EDIT_RESULT, self._on_data_edit, qos.volatile(10))
 
         # 10 Hz : largement suffisant pour une visu, pas un rendu temps réel fidèle.
         self.create_timer(0.1, self._on_timer)
@@ -123,6 +127,20 @@ class LedsSimNode(Node):
             self.get_logger().error('robot_lights: séquence inconnue : "{}"'.format(payload))
             return
         self.get_logger().info('robot_lights: "{}"'.format(payload))
+
+    def _on_data_edit(self, msg):
+        if not donnees.verdict_a_recharger(msg.msg, ("lumiere", "brique")):
+            return
+        try:
+            robot_lights = self._load_json(self.get_parameter("robot_lights_json").value)
+            lights_base = self._load_json(self.get_parameter("lights_base_json").value)
+        except (OSError, ValueError) as e:
+            self.get_logger().error("rechargement des lumières impossible, ancienne version gardée : {}".format(e))
+            return
+        # La séquence en cours garde sa frise déjà construite ; la nouvelle vaut à la suivante.
+        self.state.robot_lights_json = robot_lights
+        self.lights_base = lights_base
+        self.get_logger().info("lumières rechargées (robot_lights.json, lights_base.json)")
 
     def _on_face(self, msg):
         try:

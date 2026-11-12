@@ -34,6 +34,7 @@ from aiohttp import web
 from PIL import Image as PILImage
 from rclpy.node import Node
 from theatre_interfaces.msg import StringTime
+from theatre_contrats import donnees, qos, topics
 
 from dadou_utils_ros.logging_conf import LoggingConf
 from dadou_utils_ros.utils_static import DURATION, FACE, LOGGING_FILE_NAME
@@ -114,6 +115,9 @@ class FaceSimNode(Node):
 
         self.face_subscription = self.create_subscription(
             StringTime, FACE, self.face_callback, 10)
+        # Lot L1d : même rechargement à chaud que lights_node sur le robot (expression, image).
+        self.data_edit_subscription = self.create_subscription(
+            StringTime, topics.DATA_EDIT_RESULT, self.data_edit_callback, qos.volatile(10))
         self.timer = self.create_timer(TICK_PERIOD_S, self.timer_callback)
 
         logging.info("face_sim_node prêt : aperçu sur http://localhost:%s", self.face_port)
@@ -143,6 +147,12 @@ class FaceSimNode(Node):
             return
         logging.info('Face (sim): "%s"', msg)
         self.face.update({FACE: msg, DURATION: ros_msg.time})
+
+    def data_edit_callback(self, ros_msg):
+        recharge = donnees.verdict_a_recharger(ros_msg.msg, ("expression", "image"))
+        if recharge:
+            kind, name = recharge
+            self.face.recharger(image=name if kind == "image" else None)
 
     def timer_callback(self):
         try:

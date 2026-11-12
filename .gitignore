@@ -30,3 +30,8 @@ machines/robot/DEPLOY_SHA
 # Workspaces colcon jetables des bancs PC (sim du robot : traces de la fumée ; banc vision).
 machines/sim/banc-robot/workspace/
 machines/sim/banc-vision/workspace/
+
+# Lot L1d (12/11) : sauvegardes, temporaires et journal des éditions écrits par data_edit_node
+# (json/backup/<date>/, .tmp/, EDITIONS-EN-ATTENTE.jsonl). En sim ils tombent dans data/json/ du
+# PC : jamais versionnés. Ce qui y était déjà suivi (maker_fair.json) le reste jusqu'à sa suppression.
+data/json/backup/

@@ -1,10 +1,12 @@
+import json
 import logging
+import os
 import random
 
 from dadou_utils_ros.utils.time_utils import TimeUtils
 from didier_core.robot_static import STOP_ANIMATION_KEYS, TYPES, RANDOM_ANIMATION_LOW, \
     RANDOM_ANIMATION_HIGH, STOP_KEY, RANDOM_TYPE
-from dadou_utils_ros.utils_static import ANIMATION, AUDIO, AUDIOS, KEY, NECK, FACE, FACES, \
+from dadou_utils_ros.utils_static import ANIMATION, AUDIO, AUDIOS, KEY, KEYS, NECK, FACE, FACES, \
     LIGHTS, WHEELS, NAME, DURATION, RANDOM, SEQUENCES_DIRECTORY, LEFT_ARM, RIGHT_ARM, LEFT_EYE, \
     RIGHT_EYE, ROBOT_LIGHTS, TYPE
 from didier_core.actions.abstract_json_actions import AbstractJsonActions
@@ -60,6 +62,32 @@ class AnimationManager(AbstractJsonActions):
                     if t in random_types:
                         self.random_animation_sequence.append(sequence[NAME])
                         continue
+
+    def recharger_sequence(self, name):
+        """Lot L1d (rechargement à chaud) : relit DU DISQUE la séquence `<dossier>/<nom>` que
+        le robot vient d'écrire (verdict ok sur data_edit_result). Le verdict ne porte aucun
+        contenu : un verdict forgé ne fait que relire un fichier. Illisible = ERROR, ancienne
+        version gardée. La séquence en cours finit sur ses pistes déjà construites
+        (Track.emissions au départ) : aucune piste ne change en plein jeu."""
+        chemin = os.path.join(self.config[SEQUENCES_DIRECTORY], name + ".json")
+        try:
+            with open(chemin, encoding="utf-8") as f:
+                nouvelle = json.load(f)
+            touche = nouvelle[KEYS]
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            logging.error("rechargement de la séquence %s impossible, ancienne version gardée : %s", name, e)
+            return False
+        nom = os.path.basename(name)  # le chargeur indexe par nom de fichier nu
+        nouvelle[NAME] = nom
+        ancienne = self.sequences_name.get(nom)
+        for cle in [c for c, seq in self.sequences_key.items() if seq is ancienne]:
+            del self.sequences_key[cle]
+        self.sequences_key[touche] = nouvelle
+        self.sequences_name[nom] = nouvelle
+        self.random_animation_sequence = []
+        self.load_random_animation_sequences()
+        logging.info("séquence %s rechargée", name)
+        return True
 
     def random(self):
         # Non branché — futur mode autonome : déclenche une animation aléatoire

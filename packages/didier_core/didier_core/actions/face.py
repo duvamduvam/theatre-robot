@@ -1,4 +1,5 @@
 import logging.config
+import os
 
 from dadou_utils_ros.files.files_utils import FilesUtils
 from dadou_utils_ros.utils.time_utils import TimeUtils
@@ -59,6 +60,26 @@ class Face(AbstractJsonActions):
         for visual_path in mouth_names + eye_names:
             visual = Visual(visual_path)
             self.visuals[visual.name] = visual
+
+    def recharger(self, image=None):
+        """Lot L1d (rechargement à chaud, verdict ok sur data_edit_result) : relit
+        expressions.json et, pour une image, le SEUL fichier `<zone>/<nom>` écrit (illisible =
+        ERROR, ancienne image gardée). L'affichage en cours n'est pas touché ; la nouvelle
+        version s'applique à la commande suivante — y compris si elle redemande l'expression
+        affichée (sinon update() ne ferait que relancer son chrono)."""
+        if self.relire_entrees():
+            self.current_face = ""
+        if image is None:
+            return
+        zone, nom = image.split("/")
+        dossier = self.config[MOUTH_VISUALS_PATH] if zone == "mouth" else self.config[EYE_VISUALS_PATH]
+        try:
+            visual = Visual(os.path.join(dossier, nom + ".png"))
+        except Exception as e:  # imageio lève des types variés selon le format reçu
+            logging.error("rechargement de l'image %s impossible, ancienne gardée : %s", image, e)
+            return
+        self.visuals[visual.name] = visual
+        logging.info("image %s rechargée", image)
 
     def get_visual(self, name):
         if name in self.visuals.keys():

@@ -82,6 +82,11 @@ services:
       # par défaut. http://localhost:8766 une fois lancé (FACE=true).
       - FACE=${FACE:-false}
       - FACE_PORT=${FACE_PORT:-8766}
+      # Lot L1d : data_edit_node (toujours lancé) ÉCRIT les retouches reçues sur data_edit
+      # seulement si DATA_EDIT=true ; sinon il répond edition_desactivee. Il écrit dans
+      # data/json et data/medias du PC (montages ci-dessous), sauvegardes dans
+      # data/json/backup/ (gitignoré), fichiers rendus au propriétaire de data/json.
+      - DATA_EDIT=${DATA_EDIT:-false}
       # Transport Gazebo (gz-transport) confiné au loopback (11/11, cause d'A1 7/14) :
       # en réseau host, sans GZ_IP, la découverte gz part en multicast sur TOUTES les
       # interfaces du PC (ponts docker, VPN wg-maison…) ; ~48 000 paquets perdus sur le
@@ -143,6 +148,9 @@ services:
       # L1c : preuve que le robot publie catalogue + deploy_sha et que le catalogue
       # suit json/ (dépose puis supprime une séquence temporaire, nettoyée en sortant).
       - ../validate-catalogue.sh:/home/ros2_ws/validate-catalogue.sh:ro
+      # L1d : preuve de l'édition à travers le robot (épreuves 1 à 12, DATA_EDIT=true
+      # ANIMATIONS=true FACE=true) ; restaure ce qu'elle touche dans data/.
+      - ../validate-data-edit.sh:/home/ros2_ws/validate-data-edit.sh:ro
       # json/ : mêmes fichiers de séquences/couleurs LED que le vrai robot,
       # lus par leds_sim_node (params robot_lights_json/lights_base_json/colors_json).
       - ../../../data/json:/home/ros2_ws/json
