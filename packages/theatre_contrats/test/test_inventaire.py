@@ -29,6 +29,9 @@ TOPICS_JEU = {
 TOPICS_CATALOGUE = {"CATALOGUE": "catalogue", "DEPLOY_SHA": "deploy_sha"}
 # Nouveaux au lot L1d (édition à travers le robot) : PAS repris de utils_static.
 TOPICS_EDITION = {"DATA_EDIT": "data_edit", "DATA_EDIT_RESULT": "data_edit_result"}
+# Nouveaux au lot L1d-2 (porte sim) : PAS repris de utils_static.
+TOPICS_PORTE_SIM = {"VALIDATION_SIM": "validation_sim", "VALIDATION_SIM_DEMANDE": "validation_sim_demande",
+                    "ROUES_REFUSEES": "roues_refusees"}
 CLES = {
     "A": "A", "ANGLO": "anglo", "AUDIOS": "audios", "B": "B", "BACKWARD": "backward",
     "BRIGHTNESS": "brightness", "COLOR": "color", "DEFAULT": "default", "DEVICES": "devices",
@@ -52,7 +55,7 @@ def test_organes():
 
 def test_topics():
     assert _constantes(topics) == {**ORGANES, **TOPICS_HORS_ORGANES, **TOPICS_PERCEPTION, **TOPICS_JEU,
-                                         **TOPICS_CATALOGUE, **TOPICS_EDITION}
+                                         **TOPICS_CATALOGUE, **TOPICS_EDITION, **TOPICS_PORTE_SIM}
 
 
 def test_cles():

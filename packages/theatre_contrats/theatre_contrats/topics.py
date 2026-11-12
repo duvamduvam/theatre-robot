@@ -77,3 +77,15 @@ DATA_EDIT = 'data_edit'
 # name, mode, sha256, sauvegarde, avertissements}. animations_node, lights_node, face_sim et
 # leds_sim_node s'y abonnent pour relire ce qui vient d'être écrit.
 DATA_EDIT_RESULT = 'data_edit_result'
+
+# ---------------------------------------------------------------- porte sim (lot L1d-2)
+# Spec : « L1d », décisions 7 bis et 7 ter. StringTime, qos.volatile(10) des deux côtés.
+# Verdict de l'observateur validation_sim_node (sim SEULEMENT, domaine 43) : {kind, name, ok,
+# code, detail} (+ id pour une demande de validation des roues).
+VALIDATION_SIM = 'validation_sim'
+# Demande {id, name} du bouton « Valider les roues pour le robot » (page scène, L1d-3) :
+# acceptée seulement si la version actuelle a été jouée jusqu'au bout en sim.
+VALIDATION_SIM_DEMANDE = 'validation_sim_demande'
+# Refus de jouer une piste roues non validée, publié par animations_node sur le robot :
+# {name, raison: "non_validee_sim"} ; le reste de la séquence joue.
+ROUES_REFUSEES = 'roues_refusees'

@@ -1,7 +1,7 @@
 #!/bin/bash
 # L1d — preuve REJOUABLE de l'édition des données à travers le robot, en simulation (spec
-# theatre-robot/docs/spec-L1-contrats-donnees.md, « L1d », décision 15, épreuves 1 à 12 ; la 13,
-# porte sim, arrive avec L1d-2), DANS le conteneur sim (domaine 43) démarré avec
+# theatre-robot/docs/spec-L1-contrats-donnees.md, « L1d », décision 15, épreuves 1 à 13), DANS le
+# conteneur sim (domaine 43) démarré avec
 # DATA_EDIT=true ANIMATIONS=true FACE=true.
 #   1. création d'une séquence -> ok, fichier présent, nom au catalogue en <= 5 s ;
 #   2. retouche (neck à 0.37) -> ok, octets exacts, sauvegarde, 2 lignes au journal ;
@@ -14,11 +14,14 @@
 #   8. base_sha256 faux -> conflit ;  9. 131 073 octets -> trop_gros ;
 #  10. PNG 24x16 en bouche -> ok ; le même en œil -> contrat ; des octets non PNG -> contrat ;
 #  11. expression qui montre cette image -> ok, au catalogue, face_sim l'affiche sans erreur ;
-#  12. lumière chaînant deux briques -> ok, au catalogue ; brique inconnue -> contrat.
+#  12. lumière chaînant deux briques -> ok, au catalogue ; brique inconnue -> contrat ;
+#  13. porte sim (L1d-2) : l1d-roues retouchée puis interrompue en cours de jeu ->
+#      valider_roues = non_rejouee ; rejouée jusqu'au bout -> tampon `rejeu` au registre ;
+#      valider_roues -> tampon `roues`, origine_roues "sim".
 # Lance la chaîne roues (drive.launch.py) si elle manque, l'arrête en sortant.
 # Restaure expressions.json, robot_lights.json (et validations-sim.json s'il existe), efface ce
 # qu'il a créé (tmp-l1d/, image, sauvegardes, lignes du journal) : empreinte de json/ et
-# medias/visuals/ identique avant et après, sinon code 1 même à 12/12.
+# medias/visuals/ identique avant et après, sinon code 1 même à 13/13.
 # Sortie 0 = OK ; 1 = KO ; 2 = banc faux (hors sim, nœud absent, édition désactivée).
 # Rien ici ne peut atteindre le vrai robot : refus hors domaine 43.
 source /opt/ros/${ROS_DISTRO}/setup.sh
@@ -50,7 +53,7 @@ for essai in 1 2 3 4; do
   noeuds=$(ros2 node list --no-daemon --spin-time 5 2>/dev/null)
   manque=""
   # animations_node se nomme « animation_node » (ANIMATION + "_node") : nom historique.
-  for n in data_edit_node animation_node face_sim_node catalogue_node; do
+  for n in data_edit_node animation_node face_sim_node catalogue_node validation_sim_node; do
     grep -qx "$NS/$n" <<<"$noeuds" || manque="$manque $NS/$n"
   done
   [ -z "$manque" ] && break; sleep 2
@@ -65,6 +68,7 @@ import rclpy
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import Twist
 from theatre_interfaces.msg import StringTime
+from theatre_contrats import donnees
 
 NS = os.environ["NS"]
 DATA = "/home/ros2_ws/src/robot"
@@ -115,7 +119,7 @@ os.makedirs(TMP_DIR)  # le topic ne crée jamais de dossier (dossier_absent) : f
 rclpy.init()
 node = rclpy.create_node("validate_data_edit", namespace=NS)
 latche = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL, reliability=ReliabilityPolicy.RELIABLE)
-resultats, etats, cous, cmd = [], [], [], []
+resultats, etats, cous, cmd, validations = [], [], [], [], []
 catalogue = {}
 node.create_subscription(StringTime, "data_edit_result", lambda m: resultats.append(json.loads(m.msg)), 10)
 node.create_subscription(StringTime, "catalogue", lambda m: catalogue.update(json.loads(m.msg)), latche)
@@ -125,6 +129,8 @@ node.create_subscription(Twist, "cmd_vel", lambda m: cmd.append((time.monotonic(
 pub_edit = node.create_publisher(StringTime, "data_edit", 10)
 pub_anim = node.create_publisher(StringTime, "animation", 10)
 pub_face = node.create_publisher(StringTime, "face", 10)
+node.create_subscription(StringTime, "validation_sim", lambda m: validations.append(json.loads(m.msg)), 10)
+pub_valider = node.create_publisher(StringTime, "validation_sim_demande", 10)
 
 def tourner(secondes, condition=lambda: False):
     fin = time.monotonic() + secondes
@@ -295,6 +301,45 @@ try:
     verdict(r1["code"] == "ok" and present and r2["code"] == "contrat",
             "12. lumière -> {} ; au catalogue : {} ; brique inconnue -> {} {}".format(
                 r1["code"], present, r2["code"], r2["detail"]))
+
+    # 13. porte sim. L'épreuve 7 a pu tamponner l1d-roues (jouée jusqu'au bout) : on la retouche
+    # d'abord, sinon « interrompue -> non_rejouee » ne prouverait rien.
+    REGISTRE = JSON + "/validations-sim.json"
+    def valider_roues(nom):
+        id_ = "{}-v{}".format(PREFIXE, len(validations))
+        vus = len(validations)
+        pub_valider.publish(StringTime(msg=json.dumps({"id": id_, "name": nom}), time=0, anim=False))
+        tourner(DELAI, lambda: any(v.get("id") == id_ for v in validations[vus:]))
+        return next((v["code"] for v in validations[vus:] if v.get("id") == id_), "pas de réponse")
+    def tampon(champ):
+        registre = json.load(open(REGISTRE, encoding="utf-8")) if os.path.exists(REGISTRE) else {}
+        return registre.get("sequence", {}).get("tmp-l1d/l1d-roues", {}).get(champ)
+    def verdict_observateur(code, depuis, secondes):
+        les_notres = lambda: [v["code"] for v in validations[depuis:] if v.get("name") == "tmp-l1d/l1d-roues"]
+        if tourner(secondes, lambda: code in les_notres()):
+            return code
+        return ",".join(les_notres()) or "aucun"
+    roues2 = {**roues, "duration": 3000}
+    r = envoyer("sequence", "replace", "tmp-l1d/l1d-roues", roues2, base_sha256=sha_fichier(SEQ + "/tmp-l1d/l1d-roues.json"))
+    tourner(1)
+    vus = len(validations)
+    pub_anim.publish(StringTime(msg=json.dumps("l1d-roues"), time=0, anim=False))
+    tourner(1.0)
+    pub_anim.publish(StringTime(msg=json.dumps(False), time=0, anim=False))
+    interrompue = verdict_observateur("interrompue", vus, 3)
+    avant = valider_roues("tmp-l1d/l1d-roues")
+    vus = len(validations)
+    pub_anim.publish(StringTime(msg=json.dumps("l1d-roues"), time=0, anim=False))
+    tamponnee = verdict_observateur("tamponnee", vus, 3.0 + 5.0 + 1.0 + 3.0)
+    rejeu_ok = tampon("rejeu") == donnees.empreinte_contenu("sequence", "tmp-l1d/l1d-roues", DATA)
+    apres = valider_roues("tmp-l1d/l1d-roues")
+    roues_ok = tampon("roues") == donnees.empreinte_roues(roues2) and tampon("origine_roues") == "sim"
+    verdict(r["code"] == "ok" and interrompue == "interrompue" and avant == "non_rejouee"
+            and tamponnee == "tamponnee" and rejeu_ok and apres == "roues_validees" and roues_ok,
+            "13. porte sim : retouche -> {} ; jeu coupé -> {} ; valider -> {} ; rejouée -> {}, tampon rejeu {} ; "
+            "valider -> {}, tampon roues sim {}".format(r["code"], interrompue, avant, tamponnee,
+                                                       "au registre" if rejeu_ok else "ABSENT", apres,
+                                                       "au registre" if roues_ok else "ABSENT"))
 finally:
     # ---- remise en état : fichiers restaurés, créations effacées, journal rendu
     for p, (octets, mode) in sauves.items():

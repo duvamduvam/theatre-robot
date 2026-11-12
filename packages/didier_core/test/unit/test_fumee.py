@@ -415,7 +415,7 @@ def test_valeurs_attendues_gravees_en_tete_du_script():
     src = _lire_sh()
     gravees = dict(re.findall(r"^(ATTENDU_[A-Z0-9]+)=(\d+)", src, re.M))
     assert gravees == {"ATTENDU_NAMESPACE": "5", "ATTENDU_CATALOGUE": "4", "ATTENDU_PARLE": "3",
-                       "ATTENDU_EDITION": "12", "ATTENDU_CHANTIERS": "21", "ATTENDU_A1": "14"}
+                       "ATTENDU_EDITION": "13", "ATTENDU_CHANTIERS": "21", "ATTENDU_A1": "14"}
     assert re.search(r"^RTF_MIN_DEFAUT=0\.8$", src, re.M)
 
 
@@ -427,7 +427,7 @@ def test_les_compteurs_gravees_sont_ceux_des_scripts_de_verification():
     assert len(re.findall(r'verdict "\$\(', cat)) == 4
     # validate-data-edit.sh : épreuves numérotées « verdict(…, "N. … ») » dans son python.
     edition = (SCRIPTS / "validate-data-edit.sh").read_text(encoding="utf-8")
-    assert re.findall(r'"(\d+)\. \S', edition) == [str(n) for n in range(1, 13)]
+    assert re.findall(r'"(\d+)\. \S', edition) == [str(n) for n in range(1, 14)]
 
 
 def test_garde_fous_presents_dans_le_script():

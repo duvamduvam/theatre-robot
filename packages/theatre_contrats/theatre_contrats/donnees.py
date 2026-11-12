@@ -547,9 +547,17 @@ def registre_vide():
     return {"version": VERSION_REGISTRE, "sequence": {}, "expression": {}, "lumiere": {}}
 
 
+def serialiser_registre(registre):
+    """Octets du registre sur disque (décision 7 bis) : `indent=1`, clés triées. Un seul
+    format, lu par l'écrivain (didier_web.validation_sim) et gravé par test_validations_sim :
+    un registre retouché à la main dans un autre format se voit."""
+    return (json.dumps(registre, indent=1, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
+
+
 def lire_registre(data_dir):
     """Registre `json/validations-sim.json` ; absent = vide (tout est « à faire »).
-    Il ne s'écrit qu'en sim (L1d-2) : ce module ne fait que le lire."""
+    Il ne s'écrit qu'en sim, par l'observateur (didier_web.validation_sim, domaine 43
+    seulement) : ce module ne fait que le lire."""
     registre = _lire_json(os.path.join(str(data_dir), FICHIER_REGISTRE), None)
     if registre is None:
         return registre_vide()
@@ -601,6 +609,40 @@ def roues_a_valider(data_dir, registre=None):
     return a_valider
 
 
+def orphelines(data_dir, registre=None):
+    """[(kind, nom)] présents au registre sans élément correspondant dans `data_dir` (élément
+    effacé ou renommé par git) : un tampon qui ne tamponne plus rien."""
+    registre = lire_registre(data_dir) if registre is None else registre
+    presents = set(elements(data_dir))
+    return sorted((kind, nom) for kind in FAMILLES_REJOUEES for nom in registre.get(kind, {})
+                  if (kind, nom) not in presents)
+
+
+def non_validees(data_dir):
+    """Lignes lisibles de tout ce qui n'a pas passé la porte sim (décision 7 ter) : ce que la
+    garde de déploiement refuse. Liste vide = tout est rejoué, toute piste roues validée."""
+    registre = lire_registre(data_dir)
+    lignes = ["à rejouer en sim : {} {}".format(kind, nom) for kind, nom in a_rejouer(data_dir, registre)]
+    lignes += ["roues à valider en sim : sequence {}".format(nom) for nom in roues_a_valider(data_dir, registre)]
+    return lignes
+
+
+def main(argv=None):
+    """`python3 -m theatre_contrats.donnees non-validees <data_dir>` : liste ce qui n'a pas
+    passé la porte sim ; code 1 si la liste n'est pas vide, 0 sinon, 2 si l'appel est faux.
+    Lu par la garde Ansible du déploiement (L1d-4) et par machines/sim/rejouer-modifiees.sh."""
+    import sys
+    argv = sys.argv[1:] if argv is None else argv
+    if len(argv) != 2 or argv[0] != "non-validees":
+        print("usage : python3 -m theatre_contrats.donnees non-validees <data_dir>", file=sys.stderr)
+        return 2
+    lignes = non_validees(argv[1])
+    for ligne in lignes:
+        print(ligne)
+    print("{} élément(s) non validé(s) en sim".format(len(lignes)))
+    return 1 if lignes else 0
+
+
 # ================================================================ rechargement à chaud (décision 9)
 def verdict_a_recharger(brut, kinds):
     """(kind, name) si le verdict `brut` (msg de data_edit_result) dit qu'un élément d'un des
@@ -616,3 +658,7 @@ def verdict_a_recharger(brut, kinds):
     if kind not in kinds or not nom_valide(kind, name):
         return None
     return kind, name
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

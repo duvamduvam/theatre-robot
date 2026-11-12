@@ -8,10 +8,21 @@ from didier_core.robot_static import STOP_ANIMATION_KEYS, TYPES, RANDOM_ANIMATIO
     RANDOM_ANIMATION_HIGH, STOP_KEY, RANDOM_TYPE
 from dadou_utils_ros.utils_static import ANIMATION, AUDIO, AUDIOS, KEY, KEYS, NECK, FACE, FACES, \
     LIGHTS, WHEELS, NAME, DURATION, RANDOM, SEQUENCES_DIRECTORY, LEFT_ARM, RIGHT_ARM, LEFT_EYE, \
-    RIGHT_EYE, ROBOT_LIGHTS, TYPE
+    RIGHT_EYE, ROBOT_LIGHTS, TYPE, JSON_DIRECTORY
 from didier_core.actions.abstract_json_actions import AbstractJsonActions
 from didier_core.sequences.track import Track
 from didier_core.sequences.random_animation_start import RandomAnimationStart
+from theatre_contrats import donnees
+
+# Barrière de jeu (lot L1d-2, décision 7 ter) : raison publiée sur roues_refusees.
+RAISON_ROUES_NON_VALIDEES = "non_validee_sim"
+DOMAINE_SIM = "43"
+
+
+def exiger_validation_roues(parametre, environ):
+    """Barrière roues effective : levée SEULEMENT si le paramètre la lève ET que le domaine
+    est la simulation (43). Sur le robot (42) ou un domaine inconnu, elle tient toujours."""
+    return not (parametre is False and environ.get("ROS_DOMAIN_ID", "").strip() == DOMAINE_SIM)
 
 
 class AnimationManager(AbstractJsonActions):
@@ -39,6 +50,10 @@ class AnimationManager(AbstractJsonActions):
         self.lights_animation = None
         self.wheels_animation = None
         self.current_animation = None
+        # Barrière de jeu roues (L1d-2) : vraie par défaut ; le nœud la pose depuis son
+        # paramètre exiger_validation_roues (faux en sim seulement, voir exiger_validation_roues).
+        self.exiger_validation_roues = True
+        self.refus_roues = []  # {name, raison} à publier sur roues_refusees, vidé par le nœud
 
         self.config = config
         super().__init__(config=config, json_manager=json_manager, action_type=ANIMATION, sequence_dir=self.config[SEQUENCES_DIRECTORY])
@@ -48,6 +63,27 @@ class AnimationManager(AbstractJsonActions):
         RandomAnimationStart.value = TimeUtils.current_milli_time()
         logging.debug("random duration time {}".format(self.random_duration))
         self.load_random_animation_sequences()
+        self.relire_registre()
+
+    def relire_registre(self):
+        """Registre des validations sim (json/validations-sim.json), relu au démarrage et après
+        chaque séquence écrite par le robot. Illisible = ERROR et registre vide : aucune piste
+        roues ne joue (sens sûr)."""
+        data_dir = os.path.dirname(os.path.normpath(self.config[JSON_DIRECTORY]))
+        try:
+            self.registre = donnees.lire_registre(data_dir)
+        except (OSError, ValueError) as e:
+            logging.error("registre des validations sim illisible, aucune piste roues ne jouera : %s", e)
+            self.registre = donnees.registre_vide()
+
+    def roues_autorisees(self, sequence):
+        """Vrai si la piste roues de `sequence` peut jouer : barrière levée (sim), piste vide,
+        ou empreinte {duration, wheels} validée au registre pour le FICHIER chargé (un homonyme
+        non validé refuse aussi : le registre est indexé par <dossier>/<nom>)."""
+        if not self.exiger_validation_roues:
+            return True
+        chemin = self.chemins_sequences.get(sequence[NAME])
+        return chemin is not None and donnees.roues_validees(self.registre, chemin, sequence)
 
     def load_random_animation_sequences(self):
         random_types = []
@@ -84,6 +120,8 @@ class AnimationManager(AbstractJsonActions):
             del self.sequences_key[cle]
         self.sequences_key[touche] = nouvelle
         self.sequences_name[nom] = nouvelle
+        self.chemins_sequences[nom] = name
+        self.relire_registre()  # « le même verdict fait relire le registre » (décision 9)
         self.random_animation_sequence = []
         self.load_random_animation_sequences()
         logging.info("séquence %s rechargée", name)
@@ -154,7 +192,17 @@ class AnimationManager(AbstractJsonActions):
         self.necks_animation = Track.emissions(self.current_animation.get(NECK), self.duration, now)
         self.faces_animation = Track.emissions(self.current_animation.get(FACES), self.duration, now)
         self.lights_animation = Track.emissions(self.current_animation.get(ROBOT_LIGHTS), self.duration, now)
-        self.wheels_animation = Track.emissions(self.current_animation.get(WHEELS), self.duration, now)
+        # Barrière de jeu (L1d-2, décision 7 ter, exception nommée de la décision 18) : une
+        # piste roues non validée en sim est construite VIDE — elle ne peut que retirer un
+        # mouvement ; le reste de la séquence joue. La chaîne roues n'est pas touchée.
+        roues = self.current_animation.get(WHEELS)
+        if roues and not self.roues_autorisees(self.current_animation):
+            roues = None
+            refus = {NAME: self.current_animation[NAME], "raison": RAISON_ROUES_NON_VALIDEES}
+            self.refus_roues.append(refus)
+            logging.warning("piste roues de %s NON JOUÉE : non validée en sim (registre des validations)",
+                            self.current_animation[NAME])
+        self.wheels_animation = Track.emissions(roues, self.duration, now)
 
     def stop(self):
         if self.playing:
