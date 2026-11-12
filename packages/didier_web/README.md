@@ -5,6 +5,7 @@ Package ROS 2 du robot Didier, autonome (aucun import `robot.*` ni `dadou_utils_
 | Exécutable | Nœud | Rôle |
 |---|---|---|
 | `web_bridge` | `web_bridge_node` | pont HTTP + WebSocket (console `/`, page scène `/scene`) — voir `docs/interfaces.md` §API web |
+| — | `static/` | pages servies telles quelles, sans build : console `index.html` + `app.js`, scène `scene.html` + `scene.js` + `scene.css`, communs `commun.js` + `style.css` (ne pas y mettre de style propre à la scène) |
 | `catalogue` | `catalogue_node` | **lot L1c** : publie le catalogue du robot et sa version |
 | `data_edit` | `data_edit_node` | **lot L1d** : le SEUL écrivain des données du robot (désactivé par défaut) |
 

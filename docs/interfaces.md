@@ -228,7 +228,10 @@ détenue ou non).
 répétition : caméra (`/video`), visage LED (flux MJPEG de `face_sim`, URL
 modifiable), conversation en direct (`feed`), clavier (`chat_text`), consigne
 (`chat_instruction`), Parole/persona, et — si `hello.rehearsal` — route
-on/off/restart, slider `route_speed`, séance start/stop. La scène ignore la
+on/off/restart, slider `route_speed`, séance start/stop. Fichiers :
+`scene.html` + `scene.js` + `scene.css` (styles propres, chargés après le
+`style.css` partagé avec la console ; disposition : `docs/spec-refonte-page-scene.md`,
+12/11). La scène ignore la
 cible mémorisée de la console (jamais de bascule silencieuse vers le vrai
 Didier) et n'affiche ni pannes ni consignes.
 

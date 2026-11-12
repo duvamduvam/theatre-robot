@@ -495,17 +495,17 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
 - `REHEARSAL=true` : la page scène obtient les boutons route / vitesse /
   séance (SIM-ONLY, jamais sur le robot). `seed:=N` sur le launch rehearsal
   pour rejouer exactement la même séance (même tirage de bugs et de lubies).
-- Page scène, deux caméras : « Caméra de Didier (Gazebo) » = le rendu du monde
-  simulé (`camera/image_raw`) ; « Ce que Didier voit (webcam) » = l'image que
+- Page scène, deux caméras : « Caméra de Didier » = le rendu du monde
+  simulé (`camera/image_raw`) ; « Ce qu'il voit (webcam) » = l'image que
   person_tracker analyse (webcam du PC, `camera/image_raw/compressed`) et sur
   laquelle le LLM de réflexion raisonne. Ce 2e panneau (lecture seule, paramètre
   `perception_topic`) n'apparaît que si le pont l'annonce ; en sim `sim.launch.py`
   le passe d'office.
-- Page scène, quel panneau montre quoi : « Didier vu de l'extérieur » = caméra de
+- Page scène, quelle vue montre quoi : « Extérieur » = caméra de
   POURSUITE Gazebo (3 m derrière, 2 m au-dessus, tourne avec lui ; `camera_ext/image_raw`,
   `/exterior`, paramètre `exterior_topic`, SIM-ONLY, lecture seule) pour juger comment il
-  bouge ; « Caméra de Didier (Gazebo) » = ce que voit son buste (`/video`) ; « Ce que Didier
-  voit » = l'image analysée par la perception (`/perception`). Le panneau extérieur exige
+  bouge ; « Caméra de Didier » = ce que voit son buste (`/video`) ; « Ce qu'il
+  voit » = l'image analysée par la perception (`/perception`). La vue extérieure exige
   un REDÉMARRAGE de la sim entière (le link et le capteur sont dans le robot spawné).
 
 **2. La tête** (`machines/sim/banc-vision/`) :
@@ -541,29 +541,46 @@ python3 machines/sim/banc-vision/audio_banc.py choisir M50   # ou un autre casqu
 ```
 `choisir` connecte le casque, le met en profil casque+micro, règle la tête et la redémarre.
 
-**3. La page scène** : http://localhost:8765/scene — caméra de Didier, visage
-LED en direct, conversation (ce que Didier a *compris* et ce qu'il dit), un
-champ texte pour lui parler au clavier, une consigne de jeu à la main. Puis
-**route on**, vitesse au slider (ou au fader de la vraie télécommande en
-`ROS_DOMAIN_ID=43 SLIDERS_PROFILE=repetition`), **séance start**. La page
+**3. La page scène** : http://localhost:8765/scene — un poste de jeu qui tient
+dans l'écran (refonte du 12/11, `docs/spec-refonte-page-scene.md`, captures
+`docs/pictures/page-scene/`) :
+- **à gauche, « Préparer »** : Parole, Personnalité, Vision, Route (+ vitesse),
+  Séance. Chaque paire ON/OFF est un contrôle segmenté : le segment **vert est
+  l'état réel** (il arrive avec ~2 s de retard), pas le dernier clic ; le badge
+  d'état est à droite du titre du groupe ;
+- **au centre** : une **vue principale** et trois vignettes (extérieur, caméra
+  de Didier, ce qu'il voit, visage LED). **Cliquer une vignette l'agrandit** ; le
+  choix est retenu par le navigateur. ⟳ recharge un flux, ⚙ (visage) change
+  l'adresse du flux visage. Dessous, le panneau **Jeu** avec **STOP rouge** au
+  coin bas droit ;
+- **à droite** : la conversation (ce que Didier a *compris* et ce qu'il dit),
+  le champ « Souffler » pour lui parler au clavier, la consigne de jeu à la
+  main, et l'« Oreille de Didier » repliée (diagnostic du son) ;
+- **bandeau** : mode, connexion, prise de main, un **⚠ n** quand des erreurs
+  récentes existent (clic = liste), et le ticket ;
+- sur **téléphone** : une colonne (vues, Jeu, conversation, « Préparer »
+  replié en bas) et **STOP collé en bas de l'écran**.
+
+Puis **Route ON**, vitesse au curseur (ou au fader de la vraie télécommande en
+`ROS_DOMAIN_ID=43 SLIDERS_PROFILE=repetition`), **Séance → Démarrer**. La page
 n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
 - **Badges de retour (31/10)** : dans le groupe Séance, « séance : en attente /
   en cours / terminée » (topic latché `rehearsal/state`, publié par le
-  régisseur) — inutile de recliquer START tant qu'il ne dit pas « en cours ».
+  régisseur) — inutile de recliquer « Démarrer » tant qu'il ne dit pas « en cours ».
   À côté de « route en marche », un badge orange **« arrêt vocal — bouger le
   curseur ou dire « avance » en séance »** apparaît quand un « stop » dit à voix
   haute retient Didier (route_speed 0) : le « go » vocal est ignoré hors
   séance, d'où un Didier figé sous un « route en marche » trompeur. Il se lève
   en bougeant le curseur, par un « avance » en séance, ou à la fin/abort de la
   séance. Ces badges ne portent jamais d'info de panne ni de lubie.
-- **Vision (31/10)** : groupe « Vision » (sim seulement) — boutons Webcam ON/OFF
+- **Vision (31/10)** : groupe « Vision » (sim seulement) — boutons ON/OFF de la webcam
   (`camera_enable`) et badge d'état réel (`camera_state`, latché par la tête
-  vision). Caméra coupée : le panneau « Ce que Didier voit » affiche « caméra
+  vision). Caméra coupée : la vue « Ce qu'il voit » affiche « caméra
   coupée » au lieu d'une image figée. **Source des images** : boutons « Webcam
-  PC » / « Caméra Gazebo » (`camera_source`, à chaud), surlignage d'après la
+  PC » / « Gazebo » (`camera_source`, à chaud), surlignage d'après la
   source réellement utilisée (`camera_source_state`) ; le bouton Gazebo n'apparaît
   que si la vision annonce « gazebo » (`camera_sources`, ex. `["webcam","gazebo"]`).
-  Le titre du panneau indique la source courante : « (webcam) » ou « (Gazebo) ».
+  Le titre de la vue indique la source courante : « (webcam) » ou « (Gazebo) ».
 - Deux bugs demandent une **réaction de David** : après un *reboot sans
   reprise* (Didier reste planté, route OFF après le respawn), c'est lui qui
   relance (**route on**) — et tant que la route est OFF, un reboot suivant ne
@@ -624,11 +641,12 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
   l'arrêt vocal passe toujours.
 - `--build` est nécessaire une fois : l'image doit contenir `ros-jazzy-py-trees`.
   Le code de `didier_jeu` est monté en volume et rebâti à chaque démarrage.
-- Page scène http://localhost:8765/scene : **Route ON**, **Séance START**. La séance
+- Page scène http://localhost:8765/scene : **Route ON**, **Séance → Démarrer**. La séance
   doit être startée, car le régisseur ignore un « go » hors séance, et c'est par
   ce « go » que Didier repart après SES arrêts. Le panneau **« Jeu »** (sim
   seulement) montre l'intention en cours avec son pourquoi et le temps restant,
-  les jauges, les 20 dernières lignes du journal, et sept boutons : va là
+  les jauges, les 20 dernières lignes du journal (repliées sous « Journal du
+  jeu »), et sept boutons : va là
   (objet, ou dernière piste vue), joue avec lui, ignore, reviens, plus lent,
   STOP et GO (deux boutons distincts). La page envoie un battement (`presence`)
   tant que l'onglet est visible et qu'elle a la main. **STOP CONTENUS** arrête

@@ -6,6 +6,10 @@ protocole, de topic, de pont (`web_bridge_node.py`) ni de la console de régie (
 
 Capture de l'état de départ : `docs/pictures/page-scene/avant-1600.png`.
 
+**État : FAITE le 12/11** (S1 548626c, S2 2ffc82c, S3 1f092da, S4 24dfbae, S5 = doc).
+Captures après : `apres-1600.png`, `apres-1280.png`, `apres-telephone.png`. Écarts et
+découvertes en §8.
+
 ## 1. Ce qui ne va pas (constat sur la capture, 1600 × 1400)
 
 1. **Rien ne tient dans l'écran.** Les trois vidéos sont empilées en pleine largeur de colonne :
@@ -143,3 +147,22 @@ puis recharger la page (le pont sert les fichiers à chaque requête).
 - Tout nouveau contenu (carte du trajet, courbe des jauges, etc.) : cette refonte range, elle
   n'ajoute rien.
 - L'éditeur en pistes (`docs/chantiers.md`) : il aura sa page.
+
+## 8. Écarts et découvertes à l'implémentation (12/11, Opus)
+
+- **`.scene-lien` est commun** : la régie s'en sert pour son lien « Scène → ». Sorti par
+  erreur en S1, vu en comparant les captures de la régie ; il reste dans `style.css`.
+- **Boutons de séance renommés « Démarrer » / « Finir »** : avec le STOP rouge du Jeu à
+  côté, un « STOP » de séance prêtait à confusion. Mêmes `data-value` (start/stop).
+- **Un `<details>` n'applique pas `display:flex` à son contenu** : le rail a un
+  `.scene-rail-corps` intérieur.
+- **Règle `[hidden] { display: none !important }`** dans `scene.css` plutôt qu'une règle
+  `[hidden]` par classe : couvre d'un coup tuiles, groupes de répétition et Jeu.
+- **Ticket sur téléphone** : pas replié derrière un bouton (D9), simplement sur sa propre
+  ligne pleine largeur — CSS seul, aucun JS.
+- **Plage 900-1199 px** ajoutée (rail 180 px, conversation 290 px) : à 1024 px le centre
+  tombait à 340 px.
+- **Vérification** : « Prendre la main » ouvre un `confirm()` qui bloque un Chromium piloté
+  sans fenêtre ; pour un essai automatisé, remplacer `window.confirm` dans la page avant
+  le clic.
+
