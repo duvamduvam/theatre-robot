@@ -186,6 +186,7 @@ let sourceCourante = null;
 
 function majVisibilitePerception() {
   $("scene-perception").hidden = !perceptionAnnoncee || sourceCourante === "gazebo";
+  majVuePrincipale();
 }
 
 function afficherSourceCamera(source, brutSources) {
@@ -671,6 +672,38 @@ afficherJauges({});
 
 // --- Démarrage ------------------------------------------------------------------------
 
+// --- Vue principale et vignettes (spec refonte, D2) ---------------------------
+// Quatre tuiles (extérieur, caméra, perception, visage) : une seule est
+// « principale » (grande), les autres sont des vignettes. Promouvoir = changer
+// une classe CSS, jamais recharger un flux. Le choix est mémorisé ; s'il porte
+// sur une tuile que le serveur masque (pas d'extérieur sur le vrai robot,
+// perception non annoncée), on retombe sur l'extérieur puis la caméra.
+const CLE_VUE_PRINCIPALE = "sceneVuePrincipale";
+const VUES_PAR_DEFAUT = ["exterieur", "camera"];
+
+function majVuePrincipale() {
+  const tuiles = [...document.querySelectorAll("#scene-media .scene-tuile")];
+  const tuile = (vue) => tuiles.find((t) => t.dataset.vue === vue && !t.hidden);
+  const voulue = localStorage.getItem(CLE_VUE_PRINCIPALE);
+  const choisie = [voulue, ...VUES_PAR_DEFAUT].map(tuile).find(Boolean);
+  tuiles.forEach((t) => t.classList.toggle("principale", t === choisie));
+}
+
+function installerVues() {
+  $("scene-media").addEventListener("click", (event) => {
+    // Les boutons (⟳, ⚙) et le formulaire du visage gardent leur propre rôle.
+    if (event.target.closest("button, form, input")) {
+      return;
+    }
+    const t = event.target.closest(".scene-tuile");
+    if (!t || t.classList.contains("principale")) {
+      return;
+    }
+    localStorage.setItem(CLE_VUE_PRINCIPALE, t.dataset.vue);
+    majVuePrincipale();
+  });
+}
+
 // --- Erreurs récentes dans le bandeau (spec refonte, D8) -----------------------
 // logErreur (commun.js, partagé avec la régie) remplit #journal-erreurs ; on ne
 // touche pas commun.js : un observateur tient le compteur à jour.
@@ -691,6 +724,7 @@ function installerErreurs() {
 
 construirePersonas();
 installerErreurs();
+installerVues();
 // Tout est inerte et la répétition masquée jusqu'au premier hello du serveur.
 installerPerception();
 installerExterieur();
