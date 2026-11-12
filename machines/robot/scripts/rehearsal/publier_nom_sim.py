@@ -2,8 +2,8 @@
 """Publie un nom mDNS pour la SALLE DE RÉPÉTITION (PC de dev) sans avahi-utils
 ni sudo : on parle directement au démon avahi par D-Bus (EntryGroup.AddAddress).
 
-    python3 conf/scripts/rehearsal/publier_nom_sim.py             # didier-sim.local -> IP du PC
-    python3 conf/scripts/rehearsal/publier_nom_sim.py autre.local 192.168.1.18
+    python3 machines/robot/scripts/rehearsal/publier_nom_sim.py             # didier-sim.local -> IP du PC
+    python3 machines/robot/scripts/rehearsal/publier_nom_sim.py autre.local 192.168.1.18
 
 ⚠️ JAMAIS « didier.local » : c'est le nom du VRAI robot (alias publié par le Pi,
 conf/systemd/avahi-alias-didier.service) et la télécommande le vise. Un PC qui

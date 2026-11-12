@@ -528,7 +528,7 @@ page scène, persona **mauvaisefoi**.
   --break-system-packages --only-binary=:all: "av>=14,<15"` puis
   `docker restart dadou-vision-x86-container`.
 
-**Depuis un téléphone ou une tablette** : `python3 conf/scripts/rehearsal/publier_nom_sim.py`
+**Depuis un téléphone ou une tablette** : `python3 machines/robot/scripts/rehearsal/publier_nom_sim.py`
 (sur le PC, laisser tourner) publie **`didier-sim.local`** → la page devient
 http://didier-sim.local:8765/scene sur tout le réseau. Sans sudo ni avahi-utils
 (D-Bus direct vers le démon avahi). ⚠️ Jamais `didier.local` : c'est le nom du
@@ -579,7 +579,7 @@ journaux reste à faire (`docs/seances/2026-11-08-a1-casque.md` #11).
 
 **4. Après** : le journal JSONL de la séance est dans
 `/home/ros2_ws/log/rehearsal/` du conteneur sim (ce qui a été tiré, quand) ;
-`conf/scripts/rehearsal/carte_seance.py` en fait la carte.
+`machines/robot/scripts/rehearsal/carte_seance.py` en fait la carte.
 
 **Vérification technique rejouable** (sans la tête, dans le conteneur, étapes 1
 faites, route OFF) : `docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-chantiers.sh`
