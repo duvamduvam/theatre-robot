@@ -66,3 +66,14 @@ CATALOGUE = 'catalogue'
 # StringTime LATCHÉ, même nœud : msg = json.dumps du sha git déployé (suffixe
 # "-dirty" si l'arbre de travail l'était au rsync) ou "dev" (sim, pas de fichier).
 DEPLOY_SHA = 'deploy_sha'
+
+# ---------------------------------------------------------------- édition à travers le robot (lot L1d)
+# Spec : docs/spec-L1-contrats-donnees.md, « L1d », décisions 1 et 2. StringTime, qos.volatile(10)
+# des DEUX côtés, JAMAIS latché : une demande rejouée à un écrivain redémarré réécrirait une
+# vieille retouche. Demande (msg = objet JSON ≤ 131 072 octets) : {id, kind, mode, name,
+# content, base_sha256?} ; écrivain = data_edit_node (didier_web), désactivé par défaut.
+DATA_EDIT = 'data_edit'
+# Verdict, vu de TOUS (page, journal, rechargement à chaud) : {id, ok, code, detail, kind,
+# name, mode, sha256, sauvegarde, avertissements}. animations_node, lights_node, face_sim et
+# leds_sim_node s'y abonnent pour relire ce qui vient d'être écrit.
+DATA_EDIT_RESULT = 'data_edit_result'

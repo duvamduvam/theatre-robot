@@ -1,64 +1,33 @@
-"""Valide le format de toutes les séquences JSON du dossier json/sequences/.
+"""Valide le FORMAT de toutes les séquences de data/json/sequences/ — par le contrat unique
+theatre_contrats.donnees.verifier_sequence (lot L1d, 12/11).
 
-Contrat vérifié (celui qu'attendent AnimationManager/Animation et les actions) :
- - champs obligatoires : keys (str), duration (nombre > 0) ;
- - chaque piste d'actionneur est une liste de keyframes [t, valeur] ;
- - t est un nombre dans [0, 1], croissant au fil de la piste ;
- - servos : valeur dans [0, 1], ou 'up'/'down'/'stop', ou dict avec 'mode' ;
- - roues : paire [gauche, droite] dans [-1, 1], ou commande texte, ou dict.
+Jusqu'au lot L1d ce test PORTAIT le contrat (keys, duration, keyframes [t, valeur] dans
+[0, 1] croissants, servos, roues) ; il est désormais extrait dans theatre_contrats/donnees.py,
+lu aussi par l'écrivain du robot (didier_web.data_edit) : un seul juge pour ce qui arrive par
+git et pour ce qui arrive par le topic data_edit. Une règle se change LÀ, jamais ici.
+Les références croisées (faces, robot_lights, audios) : test_sequences_assets.py.
+Durcissement de L1d : les bornes roues (décision 7 de la spec L1d : consigne ≤ 0.89, tenue
+≤ 60 s, durée ≤ 300 s, arrêt final [0, 0], plus de commande texte ni de dict).
 """
-
 import glob
 import json
 import os
 
 import pytest
 
+from theatre_contrats import donnees
+
 # data/ du mono-dépôt (données du robot, L1e-4b) ; le test vit dans packages/didier_core/test/unit.
 DATA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))), "data")
 SEQUENCES_DIR = os.path.join(DATA_ROOT, "json", "sequences")
 
-SERVO_TRACKS = ("neck", "left_arm", "right_arm", "left_eye", "right_eye")
-OTHER_TRACKS = ("audios", "faces", "wheels", "robot_lights")
-SERVO_COMMANDS = ("up", "down", "stop")
-WHEELS_COMMANDS = ("forward", "backward", "left", "right", "stop")
-
 SEQUENCE_FILES = sorted(glob.glob(os.path.join(SEQUENCES_DIR, "**", "*.json"), recursive=True))
+REFERENCES = donnees.charger_references(DATA_ROOT)
 
-
-def is_number(v):
-    return isinstance(v, (int, float)) and not isinstance(v, bool)
-
-
-def check_track(name, track):
-    assert isinstance(track, list), "piste {} : liste attendue".format(name)
-    previous_t = -1
-    for i, keyframe in enumerate(track):
-        where = "{}[{}]".format(name, i)
-        assert isinstance(keyframe, list) and len(keyframe) == 2, \
-            "{} : keyframe [t, valeur] attendu, reçu {!r}".format(where, keyframe)
-        t, value = keyframe
-        assert is_number(t) and 0 <= t <= 1, "{} : temps hors [0,1] : {!r}".format(where, t)
-        assert t >= previous_t, "{} : keyframes non triés (t={} après t={})".format(where, t, previous_t)
-        previous_t = t
-
-        if name in SERVO_TRACKS:
-            if is_number(value):
-                assert 0 <= value <= 1, "{} : position servo hors [0,1] : {!r}".format(where, value)
-            elif isinstance(value, str):
-                assert value in SERVO_COMMANDS, "{} : commande servo inconnue : {!r}".format(where, value)
-            else:
-                assert isinstance(value, dict) and "mode" in value, \
-                    "{} : valeur servo invalide : {!r}".format(where, value)
-        elif name == "wheels":
-            if isinstance(value, list):
-                assert len(value) == 2 and all(is_number(v) and -1 <= v <= 1 for v in value), \
-                    "{} : consigne roues hors [-1,1] : {!r}".format(where, value)
-            elif isinstance(value, str):
-                assert value in WHEELS_COMMANDS, "{} : commande roues inconnue : {!r}".format(where, value)
-            else:
-                assert isinstance(value, dict), "{} : valeur roues invalide : {!r}".format(where, value)
+# Erreurs de FORMAT seulement (les messages de références sont jugés par test_sequences_assets.py).
+MOTIFS_REFERENCES = ("référence l'expression", "référence la séquence lumière",
+                     "nom.mp3/nom.wav", "fichier audio introuvable")
 
 
 def test_sequences_directory_exists():
@@ -69,11 +38,20 @@ def test_sequences_directory_exists():
 def test_sequence_file(path):
     with open(path) as f:
         sequence = json.load(f)
+    erreurs = [e for e in donnees.verifier_sequence(sequence, REFERENCES)
+               if not any(m in e for m in MOTIFS_REFERENCES)]
+    assert erreurs == []
 
-    assert isinstance(sequence.get("keys"), str), "champ 'keys' (str) obligatoire"
-    assert is_number(sequence.get("duration")) and sequence["duration"] > 0, \
-        "champ 'duration' (ms > 0) obligatoire"
 
-    for track_name in SERVO_TRACKS + OTHER_TRACKS:
-        if track_name in sequence:
-            check_track(track_name, sequence[track_name])
+def test_pistes_roues_de_data_gravees():
+    # Faits du 12/11 au soir (spec L1d, décision 7) : 24 pistes roues non vides, toutes
+    # terminées par [0, 0] depuis que L1d-1 a ajouté l'arrêt final à iloveyou2 et seq1.
+    a_roues = {}
+    for path in SEQUENCE_FILES:
+        with open(path) as f:
+            sequence = json.load(f)
+        if sequence.get("wheels"):
+            a_roues[os.path.relpath(path, SEQUENCES_DIR)[:-5]] = sequence["wheels"][-1]
+    assert len(a_roues) == 24
+    assert a_roues["eternel-show/seq1"] == [1, [0, 0]]
+    assert a_roues["eternel-show/iloveyou2"] == [1, [0, 0]]
