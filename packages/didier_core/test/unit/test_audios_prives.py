@@ -84,3 +84,14 @@ def test_le_dossier_prive_est_exactement_le_manifeste():
     # python3 -m theatre_contrats.donnees manifeste-audios data, docs/operations.md).
     fautes, en_trop = donnees.ecarts_audios(MANIFESTE, donnees.sommes_du_dossier(DOSSIER_PRIVE))
     assert (fautes, en_trop) == ([], [])
+
+
+EXTENSIONS_AUDIO = (".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".opus")
+
+
+def test_aucun_fichier_audio_suivi_nulle_part():
+    """Gravé le 14/11 (décision de David : « tout déclarer ») : le dépôt public ne suit AUCUN
+    fichier audio, quel que soit son dossier — le test du manifeste ne voyait pas les 140
+    copies de la télécommande ni les 4 sorties de synthèse vocale qui n'y figuraient pas."""
+    audios = [f for f in fichiers_de_l_arbre_git() if f.lower().endswith(EXTENSIONS_AUDIO)]
+    assert audios == []

@@ -12,3 +12,6 @@ secret
 __pycache__/
 *.pyc
 test_logs/
+
+# Audios hors dépôt public (14/11) : ~/Nextcloud/dev/didier/medias-prives/telecommande/audios/
+medias/audios/
