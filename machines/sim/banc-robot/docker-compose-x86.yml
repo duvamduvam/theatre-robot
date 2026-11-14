@@ -45,6 +45,9 @@ services:
       - ../../robot:/home/ros2_ws/src/robot/conf
       - ../../../data/json:/home/ros2_ws/src/robot/json
       - ../../../data/medias:/home/ros2_ws/src/robot/medias
+      # Audios privés (14/11) : hors dépôt, montés en lecture seule à leur place (même montage
+      # que docker-compose-sim.yml).
+      - ${DIDIER_MEDIAS_PRIVES:-${HOME}/Nextcloud/dev/didier/medias-prives}/audios:/home/ros2_ws/src/robot/medias/audios:ro
       - ../../../packages/didier_bringup:/home/ros2_ws/src/didier_bringup
       - ../../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats

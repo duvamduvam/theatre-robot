@@ -169,3 +169,9 @@ services:
       # volume, Face.load_visuals() lève FileNotFoundError au démarrage du node
       # (voir le log actionnable dans face_sim_node.py).
       - ../../../data/medias:/home/ros2_ws/src/robot/medias
+      # Audios privés (14/11) : les sons ne sont plus dans le dépôt public mais dans
+      # $DIDIER_MEDIAS_PRIVES/audios/ du PC (défaut ~/Nextcloud/dev/didier/medias-prives), montés
+      # EN LECTURE SEULE à leur place habituelle, par-dessus data/medias/audios/ (qui ne porte
+      # que son README). Dossier privé absent : Docker le crée VIDE (en root) et
+      # launch-sim-in-docker.sh l'annonce en tête du journal (verifier-audios).
+      - ${DIDIER_MEDIAS_PRIVES:-${HOME}/Nextcloud/dev/didier/medias-prives}/audios:/home/ros2_ws/src/robot/medias/audios:ro
