@@ -377,6 +377,42 @@ déplacés tels quels ; voir `data/README.md`). **Rien ne change sur le Pi ni da
 - **Tests hôte** : `DIDIER_DATA_DIR` → `data/` (conftest du cœur) ; jeu et télécommande lisent
   `data/json`. Éditer une séquence pour la sim = éditer `data/json/sequences/…` (monté).
 
+## Audios privés — les sons hors du dépôt public (14/11)
+
+Décision de David du 13/11 : aucun fichier sonore dans ce dépôt public (des chansons du commerce y
+étaient). Historique git non réécrit.
+
+- **Où ils sont** : `~/Nextcloud/dev/didier/medias-prives/audios/` (variable
+  `DIDIER_MEDIAS_PRIVES` pour une autre racine), hors git, synchronisé par Nextcloud, même
+  arborescence que l'ancien `data/medias/audios/` (254 audios au 14/11). Le dépôt n'en garde que le
+  manifeste `data/json/audios-prives.json` (chemin, sha256, taille, durée des wav) ;
+  `data/medias/audios/` est ignoré par git, sauf son README.
+- **Sim** : `docker-compose-sim.yml` (et le banc x86 du robot) monte le dossier privé en lecture
+  seule sur `/home/ros2_ws/src/robot/medias/audios`. Dossier absent : Docker le crée vide et
+  `launch-sim-in-docker.sh` affiche « AVERTISSEMENT audios privés » en tête du journal. La sim ne
+  lance pas `audio_node` (aucun son n'y est joué) ; l'écrivain des données y juge les séquences à
+  audio contre ce dossier.
+- **Pi robot** : Ansible (rôle `synchronise`) vérifie le dossier privé contre le manifeste, le copie
+  dans `src/robot/medias/audios/` (chemin inchangé), relit les sha sur le Pi ; `ecart-pi.sh robot`,
+  volet (d). Détail : `docs/ansible-ecarts.md`.
+- **Tests** : un audio cité par une séquence doit être au manifeste ; dossier privé présent (PC de
+  David) : présent aussi, avec son sha. La CI GitHub (sans dossier privé) ne juge que
+  l'inscription. Simuler la CI : `DIDIER_MEDIAS_PRIVES=/nulle-part` devant la commande de la suite.
+  `test_audios_prives.py` rougit si un fichier du manifeste entre dans l'arbre git, même renommé.
+
+**Ajouter (ou remplacer, retirer) un audio** :
+
+```bash
+cp mon-son.mp3 ~/Nextcloud/dev/didier/medias-prives/audios/speak/   # jamais dans le dépôt
+PYTHONPATH=packages/theatre_contrats python3 -m theatre_contrats.donnees manifeste-audios data
+PYTHONPATH=packages/theatre_contrats python3 -m theatre_contrats.donnees verifier-audios data   # 0 faute
+# puis regraver le nombre de test_le_manifeste_porte_les_254_audios_du_14_11 (test_audios_prives.py),
+# citer l'audio (speak/mon-son.mp3) dans la séquence, commiter le manifeste ; déployer le robot.
+```
+
+Autre machine de David : attendre que Nextcloud ait synchronisé `medias-prives/` avant une sim
+ou un déploiement (le rôle refuse un dossier privé incomplet).
+
 ## Venvs et commandes de test (lot L1e-4e, 11/11)
 
 Deux venvs gitignorés, à créer une fois (`uv`, Python 3.12) :

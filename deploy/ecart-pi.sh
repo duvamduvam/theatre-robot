@@ -5,7 +5,7 @@
 #   ./ecart-pi.sh <groupe> [-e ansible_host=…]   → vert (code 0) ou rouge (code 1)
 #   ./ecart-pi.sh <groupe> --graver [-e …]       → réécrit attendu/<groupe>.txt depuis le Pi
 #
-# Trois volets :
+# Quatre volets :
 #  (a) ce qu'Ansible CHANGERAIT : deploy-pios.yml en --check --diff (aucune modification du Pi ;
 #      les tâches de redémarrage et la sentinelle sont sautées en --check). Toute tâche
 #      « changed » = écart, nommée dans la sortie.
@@ -15,6 +15,10 @@
 #  (c) éditions faites SUR le Pi et pas encore rapatriées dans git (lot L1d-4, 13/11) : lignes
 #      des journaux json/backup/EDITIONS-EN-ATTENTE*.jsonl de data_edit_node. Rouge si N > 0 —
 #      le déploiement les refuserait (garde du rôle synchronise, rouge aussi dans (a)).
+#  (d) audios privés (14/11) : sur un Pi dont la machine porte les données (`donnees_dir` dans
+#      machines/<machine>/machine.yml : le robot), chaque audio du manifeste
+#      data/json/audios-prives.json présent dans src/*/medias/audios/ avec son sha256. Un fichier
+#      du Pi hors manifeste est signalé, pas rouge (Ansible n'efface rien). Sans objet ailleurs.
 #
 # Format d'attendu/<groupe>.txt : une entrée `famille:nom` par ligne ; `#` = commentaire ;
 # une entrée préfixée `?` est TOLÉRÉE (présente ou absente, jamais un écart — outils d'atelier
@@ -117,6 +121,39 @@ elif [ "$EDITIONS" -gt 0 ]; then
     echo "ROUGE (c) éditions non rapatriées : $EDITIONS — ansible-playbook -i hosts rapatrier-editions.yml -e target_group=$GROUPE"
 else
     echo "vert  (c) éditions non rapatriées : 0"
+fi
+
+# --- (d) audios privés -----------------------------------------------------------------------
+# La machine de l'hôte (variable `machine` de hosts) dit si le Pi porte les données ; le sha256 est
+# lu SUR le Pi (même commande que le rôle synchronise) et jugé ici par le contrat (stdlib).
+MACHINE=$(ansible "$GROUPE" -i hosts "${EXTRA[@]}" -m ansible.builtin.debug -a var=machine \
+          </dev/null 2>/dev/null | sed -nE 's/^ *"machine": "([^"]+)".*/\1/p' | head -1)
+if [ -z "$MACHINE" ] || [ ! -f "../machines/$MACHINE/machine.yml" ]; then
+    ECART=1
+    echo "ROUGE (d) machine de $GROUPE introuvable (variable machine de hosts : '$MACHINE')"
+elif ! grep -q '^donnees_dir:' "../machines/$MACHINE/machine.yml"; then
+    echo "vert  (d) audios privés : sans objet sur $GROUPE (machine $MACHINE sans données)"
+else
+    SORTIE_D=$(ansible "$GROUPE" -i hosts "${EXTRA[@]}" -m ansible.builtin.shell \
+        -a "cd \"\$HOME\"/ros2_ws/src/*/medias/audios && find . -type f \\( -iname '*.mp3' -o -iname '*.wav' \\) -print0 | sort -z | xargs -0 -r sha256sum" \
+        </dev/null 2>/dev/null)
+    if ! printf '%s' "$SORTIE_D" | head -1 | grep -q "rc=0 >>"; then
+        ECART=1
+        echo "ROUGE (d) audios illisibles sur $GROUPE ($(printf '%s\n' "$SORTIE_D" | head -1))"
+    else
+        VERDICT_D=$(printf '%s\n' "$SORTIE_D" | tail -n +2 \
+            | PYTHONPATH=../packages/theatre_contrats python3 -m theatre_contrats.donnees verifier-sommes ../data 2>&1)
+        RC_D=$?
+        BILAN_D=$(printf '%s\n' "$VERDICT_D" | tail -1)
+        if [ "$RC_D" -ne 0 ]; then
+            ECART=1
+            echo "ROUGE (d) audios privés de $GROUPE ≠ manifeste ($BILAN_D) :"
+            printf '%s\n' "$VERDICT_D" | sed '$d' | sed 's/^/  /'
+        else
+            echo "vert  (d) audios privés : $(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1]))["audios"]))' ../data/json/audios-prives.json) au manifeste, présents avec leur sha256 ($BILAN_D)"
+            printf '%s\n' "$VERDICT_D" | grep '^en trop' | sed 's/^/  signalé : /'
+        fi
+    fi
 fi
 
 # --- (a) ce qu'Ansible changerait ------------------------------------------------------------

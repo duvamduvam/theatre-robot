@@ -43,6 +43,17 @@ DOSSIER_VISUELS = "medias/visuals"
 DOSSIER_AUDIOS = "medias/audios"
 FICHIER_COULEURS = "json/colors.json"
 
+# Audios privés (lot « audios privés », 14/11, décision de David du 13/11) : les fichiers sonores
+# ne sont plus dans le dépôt PUBLIC (chansons du commerce) mais dans un dossier privé synchronisé
+# par Nextcloud, `$DIDIER_MEDIAS_PRIVES/audios/` (défaut ci-dessous), même arborescence que
+# medias/audios/. Le dépôt n'en garde que le MANIFESTE : chemin tel que les séquences le citent,
+# sha256, taille, durée (wav seulement, lue par la stdlib). Sur le Pi et dans la sim, les fichiers
+# sont à leur place habituelle, <data_dir>/medias/audios/ (copie Ansible, montage en lecture seule).
+FICHIER_MANIFESTE_AUDIOS = "json/audios-prives.json"
+VERSION_MANIFESTE_AUDIOS = 1
+VARIABLE_MEDIAS_PRIVES = "DIDIER_MEDIAS_PRIVES"
+MEDIAS_PRIVES_DEFAUT = "~/Nextcloud/dev/didier/medias-prives"
+
 # Noms (décision 3) : l'espace est en usage dans les noms d'entrées (« chase me »), pas
 # dans les noms de fichiers. Comparés par re.fullmatch (un « $ » laisserait passer un \n final).
 MOTIF_NOM_ENTREE = r"[a-z0-9][a-z0-9 _-]{0,63}"
@@ -150,22 +161,29 @@ def _lire_json(chemin, defaut):
         return json.load(f)
 
 
-def charger_references(data_dir):
+def charger_references(data_dir, dossier_audios=None):
     """Ce que les contrats consultent : les fichiers référencés et les dossiers d'assets.
 
     Fichier absent = dict vide (toute référence vers lui sera une faute) ; fichier
     illisible = l'exception de json.load remonte (c'est le robot qui est cassé, pas la
-    donnée examinée). `audios_verifiables` est faux si medias/audios/ n'existe pas : seul
-    le format du nom est alors vérifié (même tolérance que l'ancien test).
+    donnée examinée). Un audio cité doit figurer au manifeste json/audios-prives.json ;
+    `dossier_audios` (défaut <data_dir>/medias/audios, là où le Pi et la sim les portent ;
+    les tests du dépôt passent dossier_audios_prives()) : s'il existe, l'audio doit en plus
+    y être, avec le sha256 du manifeste. Absent (CI GitHub), seule l'inscription est jugée.
     """
     d = str(data_dir)
+    dossier = os.path.join(d, DOSSIER_AUDIOS) if dossier_audios is None else str(dossier_audios)
     return {
         "data_dir": d,
         "expressions": _lire_json(os.path.join(d, FICHIERS_A_ENTREES["expression"]), {}),
         "robot_lights": _lire_json(os.path.join(d, FICHIERS_A_ENTREES["lumiere"]), {}),
         "lights_base": _lire_json(os.path.join(d, FICHIERS_A_ENTREES["brique"]), {}),
         "colors": _lire_json(os.path.join(d, FICHIER_COULEURS), {}),
-        "audios_verifiables": os.path.isdir(os.path.join(d, DOSSIER_AUDIOS)),
+        "audios_manifeste": lire_manifeste_audios(d),
+        "dossier_audios": dossier,
+        "audios_verifiables": os.path.isdir(dossier),
+        # Cache chemin -> sha256 : une séquence cite souvent le même fichier, un test les juge toutes.
+        "sha_audios": {},
     }
 
 
@@ -250,9 +268,24 @@ def _verifier_valeur(piste, ou, valeur, references, erreurs):
         if not (isinstance(valeur, str) and MOTIF_FICHIER_AUDIO.match(valeur)):
             erreurs.append("{} : {!r} n'a pas la forme nom.mp3/nom.wav (ni la sentinelle "
                            "'stop')".format(ou, valeur))
-        elif references["audios_verifiables"] and not os.path.isfile(
-                os.path.join(references["data_dir"], DOSSIER_AUDIOS, valeur)):
-            erreurs.append("{} : fichier audio introuvable : {}/{}".format(ou, DOSSIER_AUDIOS, valeur))
+        elif valeur not in references["audios_manifeste"]:
+            erreurs.append("{} : fichier audio introuvable au manifeste {} : {}".format(
+                ou, FICHIER_MANIFESTE_AUDIOS, valeur))
+        elif references["audios_verifiables"]:
+            _verifier_fichier_audio(ou, valeur, references, erreurs)
+
+
+def _verifier_fichier_audio(ou, valeur, references, erreurs):
+    """Dossier des audios présent : le fichier y est, et c'est celui du manifeste."""
+    chemin = os.path.join(references["dossier_audios"], valeur)
+    if not os.path.isfile(chemin):
+        erreurs.append("{} : fichier audio introuvable : {}/{}".format(ou, DOSSIER_AUDIOS, valeur))
+        return
+    if chemin not in references["sha_audios"]:
+        references["sha_audios"][chemin] = sha256_fichier(chemin)
+    if references["sha_audios"][chemin] != references["audios_manifeste"][valeur].get("sha256"):
+        erreurs.append("{} : fichier audio introuvable tel qu'au manifeste (sha256 différent) : "
+                       "{}/{}".format(ou, DOSSIER_AUDIOS, valeur))
 
 
 def _consigne_nulle(valeur):
@@ -542,6 +575,112 @@ def empreinte_contenu(kind, nom, data_dir):
     raise ValueError("kind sans empreinte de rejeu : {!r}".format(kind))
 
 
+# ================================================================ audios privés (manifeste)
+def dossier_audios_prives():
+    """`$DIDIER_MEDIAS_PRIVES/audios` (défaut ~/Nextcloud/dev/didier/medias-prives/audios) : les
+    fichiers sonores sur le PC, hors dépôt. Une variable pointant vers un dossier absent rend
+    le PC semblable à la CI (seule l'inscription au manifeste est alors jugée)."""
+    racine = os.environ.get(VARIABLE_MEDIAS_PRIVES) or MEDIAS_PRIVES_DEFAUT
+    return os.path.join(os.path.expanduser(racine), "audios")
+
+
+def sha256_fichier(chemin):
+    h = hashlib.sha256()
+    with open(chemin, "rb") as f:
+        for morceau in iter(lambda: f.read(1 << 20), b""):
+            h.update(morceau)
+    return h.hexdigest()
+
+
+def duree_wav(chemin):
+    """Durée en secondes (2 décimales) d'un wav lisible par le module `wave` ; None sinon
+    (mp3, wav compressé) : aucune dépendance pour la seule commodité d'une durée."""
+    import wave
+    try:
+        with wave.open(chemin, "rb") as w:
+            return round(w.getnframes() / float(w.getframerate()), 2)
+    except (wave.Error, EOFError, ZeroDivisionError, OSError):
+        return None
+
+
+def lister_audios(dossier):
+    """Chemins relatifs (séparateur « / », comme les séquences les citent) des .mp3/.wav de
+    `dossier`, triés ; dossiers cachés compris (didier20/.attachments.*/ est cité)."""
+    resultat = []
+    for racine, _, fichiers in os.walk(str(dossier)):
+        for f in fichiers:
+            if MOTIF_FICHIER_AUDIO.match(f):
+                relatif = os.path.relpath(os.path.join(racine, f), str(dossier))
+                resultat.append(relatif.replace(os.sep, "/"))
+    return sorted(resultat)
+
+
+def construire_manifeste(dossier):
+    audios = {}
+    for relatif in lister_audios(dossier):
+        chemin = os.path.join(str(dossier), relatif)
+        audios[relatif] = {
+            "sha256": sha256_fichier(chemin),
+            "taille": os.path.getsize(chemin),
+            "duree_s": duree_wav(chemin) if relatif.lower().endswith(".wav") else None,
+        }
+    return {"version": VERSION_MANIFESTE_AUDIOS, "audios": audios}
+
+
+def serialiser_manifeste(manifeste):
+    """Octets du manifeste sur disque : `indent=1`, clés triées (même format que le registre)."""
+    return (json.dumps(manifeste, indent=1, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def lire_manifeste_audios(data_dir):
+    """{chemin relatif: {sha256, taille, duree_s}} ; manifeste absent = {} (tout audio cité
+    sera une faute)."""
+    manifeste = _lire_json(os.path.join(str(data_dir), FICHIER_MANIFESTE_AUDIOS), {})
+    return manifeste.get("audios", {}) if isinstance(manifeste, dict) else {}
+
+
+def ecarts_audios(manifeste, sommes):
+    """(fautes, en_trop) entre le manifeste et `sommes` = {chemin relatif: sha256} de ce qu'un
+    dossier porte. Faute = audio du manifeste absent ou d'un autre sha ; en trop = fichier
+    hors manifeste (signalé, pas une faute : Ansible ne supprime rien sur le Pi)."""
+    fautes = []
+    for relatif in sorted(manifeste):
+        if relatif not in sommes:
+            fautes.append("audio absent : {}".format(relatif))
+        elif sommes[relatif] != manifeste[relatif].get("sha256"):
+            fautes.append("audio différent du manifeste (sha256) : {}".format(relatif))
+    en_trop = sorted(r for r in sommes if r not in manifeste)
+    return fautes, en_trop
+
+
+def sommes_du_dossier(dossier):
+    return {r: sha256_fichier(os.path.join(str(dossier), r)) for r in lister_audios(dossier)}
+
+
+def lire_sommes(texte):
+    """Sortie de `sha256sum` lancée depuis le dossier des audios (lignes `<sha>  ./<chemin>`)
+    -> {chemin relatif: sha256}. Une ligne préfixée « \\ » (nom à échapper) est refusée : aucun
+    nom d'audio n'en porte, mieux vaut une faute visible qu'un nom mal relu."""
+    sommes = {}
+    for ligne in texte.splitlines():
+        if not ligne.strip():
+            continue
+        sha, _, chemin = ligne.partition("  ")
+        if ligne.startswith("\\") or not re.fullmatch(r"[0-9a-f]{64}", sha) or not chemin:
+            raise ValueError("ligne sha256sum illisible : {!r}".format(ligne))
+        sommes[chemin[2:] if chemin.startswith("./") else chemin] = sha
+    return sommes
+
+
+def _afficher_ecarts(fautes, en_trop, quoi):
+    import sys
+    for ligne in fautes:
+        print(ligne)
+    for relatif in en_trop:
+        print("en trop (hors manifeste) : {}".format(relatif), file=sys.stderr)
+    print("{} : {} faute(s), {} fichier(s) hors manifeste".format(quoi, len(fautes), len(en_trop)))
+
+
 # ================================================================ registre (LECTURE seule ici)
 def registre_vide():
     return {"version": VERSION_REGISTRE, "sequence": {}, "expression": {}, "lumiere": {}}
@@ -627,20 +766,61 @@ def non_validees(data_dir):
     return lignes
 
 
+USAGE = """usage :
+  python3 -m theatre_contrats.donnees non-validees <data_dir>
+  python3 -m theatre_contrats.donnees manifeste-audios <data_dir> [<dossier_audios>]
+  python3 -m theatre_contrats.donnees verifier-audios <data_dir> [<dossier_audios>]
+  python3 -m theatre_contrats.donnees verifier-sommes <data_dir>   (sortie de sha256sum sur stdin)
+<dossier_audios> par défaut : $DIDIER_MEDIAS_PRIVES/audios (défaut ~/Nextcloud/dev/didier/medias-prives/audios)"""
+
+
 def main(argv=None):
-    """`python3 -m theatre_contrats.donnees non-validees <data_dir>` : liste ce qui n'a pas
-    passé la porte sim ; code 1 si la liste n'est pas vide, 0 sinon, 2 si l'appel est faux.
-    Lu par la garde Ansible du déploiement (L1d-4) et par machines/sim/rejouer-modifiees.sh."""
+    """Sous-commandes ; code 0 = conforme, 1 = écart, 2 = appel faux.
+
+    - `non-validees <data_dir>` : ce qui n'a pas passé la porte sim. Lu par la garde Ansible
+      du déploiement (L1d-4) et par machines/sim/rejouer-modifiees.sh.
+    - `manifeste-audios <data_dir> [dossier]` : (ré)écrit json/audios-prives.json depuis le
+      dossier privé (geste après l'ajout d'un audio, docs/operations.md).
+    - `verifier-audios <data_dir> [dossier]` : le dossier porte-t-il chaque audio du manifeste,
+      et rien d'autre ? (le rôle synchronise, avant de copier vers le Pi ; un fichier hors
+      manifeste est ici une faute : le manifeste est à régénérer.)
+    - `verifier-sommes <data_dir>` : la sortie `sha256sum` d'un Pi (stdin) contre le manifeste
+      (rôle synchronise après la copie, ecart-pi.sh volet (d)) ; hors manifeste = signalé."""
     import sys
     argv = sys.argv[1:] if argv is None else argv
-    if len(argv) != 2 or argv[0] != "non-validees":
-        print("usage : python3 -m theatre_contrats.donnees non-validees <data_dir>", file=sys.stderr)
-        return 2
-    lignes = non_validees(argv[1])
-    for ligne in lignes:
-        print(ligne)
-    print("{} élément(s) non validé(s) en sim".format(len(lignes)))
-    return 1 if lignes else 0
+    commande, arguments = (argv[0], argv[1:]) if argv else (None, [])
+    if commande == "non-validees" and len(arguments) == 1:
+        lignes = non_validees(arguments[0])
+        for ligne in lignes:
+            print(ligne)
+        print("{} élément(s) non validé(s) en sim".format(len(lignes)))
+        return 1 if lignes else 0
+    if commande in ("manifeste-audios", "verifier-audios") and len(arguments) in (1, 2):
+        dossier = arguments[1] if len(arguments) == 2 else dossier_audios_prives()
+        if not os.path.isdir(dossier):
+            print("dossier des audios absent : {}".format(dossier), file=sys.stderr)
+            return 1
+        if commande == "manifeste-audios":
+            manifeste = construire_manifeste(dossier)
+            with open(os.path.join(arguments[0], FICHIER_MANIFESTE_AUDIOS), "wb") as f:
+                f.write(serialiser_manifeste(manifeste))
+            print("{} audio(s) au manifeste {}".format(len(manifeste["audios"]), FICHIER_MANIFESTE_AUDIOS))
+            return 0
+        fautes, en_trop = ecarts_audios(lire_manifeste_audios(arguments[0]), sommes_du_dossier(dossier))
+        fautes += ["hors manifeste (régénérer : manifeste-audios) : {}".format(r) for r in en_trop]
+        _afficher_ecarts(fautes, [], dossier)
+        return 1 if fautes else 0
+    if commande == "verifier-sommes" and len(arguments) == 1:
+        try:
+            sommes = lire_sommes(sys.stdin.read())
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            return 1
+        fautes, en_trop = ecarts_audios(lire_manifeste_audios(arguments[0]), sommes)
+        _afficher_ecarts(fautes, en_trop, "audios reçus")
+        return 1 if fautes else 0
+    print(USAGE, file=sys.stderr)
+    return 2
 
 
 # ================================================================ rechargement à chaud (décision 9)

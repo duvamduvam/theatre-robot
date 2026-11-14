@@ -139,6 +139,27 @@ création y restait sans jamais revenir dans git). Mode d'emploi : `docs/operati
   Limite : un `docker compose up` lancé hors Ansible (à la main) le remet à faux.
 - Prouvé le 13/11 sur les deux Pi hors robot (épreuve au rapport du lot, `ecart-pi.sh` vert ×2).
 
+**Audios privés (14/11, décision de David du 13/11) : les sons quittent le dépôt public.** Les
+254 audios vivent dans `medias_prives_dir`/audios/ du PC (`deploy/vars/main.yml` :
+`$DIDIER_MEDIAS_PRIVES`, défaut `~/Nextcloud/dev/didier/medias-prives`), le dépôt n'en porte que
+le manifeste `data/json/audios-prives.json`. Rôle `synchronise`, hôte robot seul (`donnees_dir`) :
+- la copie de `data/medias` exclut `/audios/` (elle ne peut ni y écrire ni en effacer) ;
+- (1) sur le PC, `python3 -m theatre_contrats.donnees verifier-audios data <dossier privé>` : le
+  dossier privé doit être EXACTEMENT le manifeste (chaque audio, son sha, rien en plus), sinon
+  refus avec la commande qui régénère le manifeste ;
+- (2) rsync du dossier privé → `src/robot/medias/audios/` (chemin Pi inchangé), sans `--delete` ;
+- (3) sha256 relus sur le Pi, jugés sur le PC (`verifier-sommes`) ; un fichier du Pi hors
+  manifeste est signalé, pas refusé (rien n'est effacé sur le Pi : un audio retiré du dossier
+  privé y reste, à effacer à la main si on le veut).
+- `ecart-pi.sh` : volet **(d)** « audios privés : N au manifeste, présents avec leur sha256 » sur
+  une machine qui porte les données, « sans objet » ailleurs. `attendu/` non regravé.
+- Prouvé le 14/11 : déploiement robot puis vision `rc=0`, `ecart-pi.sh` vert ×2 ; sur le Pi robot
+  254 audios, mêmes chemins et mêmes sha que le dossier privé.
+- Reste hors de ce lot : l'image ARM du robot poussée sur le Hub le 08/11 (`e1420fc9…`) a été
+  construite avec `COPY --from=data medias/` — elle contient les audios d'alors ; les Dockerfile
+  ARM et x86 du robot copient toujours `medias/` (sur le Pi, `medias/audios/` est rempli). Aucune
+  décision prise ici sur la publication des images.
+
 ## Relevé du 07/11 (lecture seule, Pi hors robot)
 
 Robot = Pi 4 de rechange en .131, SD réinstallée le 04/11 ; vision = Pi 5 en .151, SD d'origine.

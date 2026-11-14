@@ -1,0 +1,1275 @@
+{
+ "audios": {
+  "didier20/.attachments.372811/c-est-gagne.mp3": {
+   "duree_s": null,
+   "sha256": "28ad1030fbb0551ae3d58adc63ee5dc4d33931f839c5e48a521409ca0e36d2e4",
+   "taille": 156360
+  },
+  "didier20/Je-sens-plus-rien.mp3": {
+   "duree_s": null,
+   "sha256": "ac86388c5ada3f6f2ec95f8626be0ffd9fc18bd84a8590d4f6d19b2bef3af097",
+   "taille": 67012
+  },
+  "didier20/Qu-est-ce-que-tu-ma-fait.mp3": {
+   "duree_s": null,
+   "sha256": "877dab35b3752d53de5336fe6110e0b0874c20092df5e1fb6262c2d5afc116cf",
+   "taille": 85789
+  },
+  "didier20/Quoi-ce-tas-de-feraille.mp3": {
+   "duree_s": null,
+   "sha256": "b102f37c84bc5d4a966533952f009d51add32a26b6de25ce85b2b4972f174984",
+   "taille": 90325
+  },
+  "didier20/acces_4g.mp3": {
+   "duree_s": null,
+   "sha256": "ea3f14f21b498676566c0204f735d8ea7741980edbbb7edd592c334b53a3d576",
+   "taille": 251887
+  },
+  "didier20/adopteunmec.mp3": {
+   "duree_s": null,
+   "sha256": "6c07da7b3defb87077d15024ab89a2449f3176790aedc52f500cbe0c77074f3c",
+   "taille": 376172
+  },
+  "didier20/allez_soit_cool.mp3": {
+   "duree_s": null,
+   "sha256": "8de4b9cdfcf7cef199ea4a6f596dacebb214bf642867033c03294694a06b22b1",
+   "taille": 12105
+  },
+  "didier20/alors-les-petits-poulets.mp3": {
+   "duree_s": null,
+   "sha256": "535eed0ba81ad368f263cd8846bc72f56f9ce0b8a4934251ec8d74a55de62113",
+   "taille": 68589
+  },
+  "didier20/arrete_de_me_regarder_le_cul.mp3": {
+   "duree_s": null,
+   "sha256": "50d15a20a027a53f752f1a0786b078285008f9f35f38e76ec4f02a6664637031",
+   "taille": 9739
+  },
+  "didier20/bordel-de-cul.mp3": {
+   "duree_s": null,
+   "sha256": "3713b323cd276de9b961610980326e82ca24a181f7fcba403e57898272f9adcf",
+   "taille": 170875
+  },
+  "didier20/c-est-extraordinaire.mp3": {
+   "duree_s": null,
+   "sha256": "f6da4d35ea9d15c115295ff6351a269df347ab31599c1d8948761671c20fb574",
+   "taille": 155733
+  },
+  "didier20/c-est-gagne.mp3": {
+   "duree_s": null,
+   "sha256": "28ad1030fbb0551ae3d58adc63ee5dc4d33931f839c5e48a521409ca0e36d2e4",
+   "taille": 156360
+  },
+  "didier20/c-est-genial.mp3": {
+   "duree_s": null,
+   "sha256": "adba310e755bcf0cdfa334d031b3b8a674aa019e683e4e254a7ff602582ded6f",
+   "taille": 100354
+  },
+  "didier20/c_est_moi_qui_control.mp3": {
+   "duree_s": null,
+   "sha256": "c006c612ab2a8676e07568a339f1f3516bcac4a0259456c972d6e1ec5f29509b",
+   "taille": 258194
+  },
+  "didier20/c_est_pas_le_pape.mp3": {
+   "duree_s": null,
+   "sha256": "9a444f18f4258180544e8ba0de6d1a79fb16694cee470d698207cef811913f23",
+   "taille": 49168
+  },
+  "didier20/c_est_quoi_ce_bordel.mp3": {
+   "duree_s": null,
+   "sha256": "358c833187c838ad4d2d22c073406b0e4276390f79efb1e001d9fea9485638c9",
+   "taille": 9405
+  },
+  "didier20/c_est_quoi_le_darknet.mp3": {
+   "duree_s": null,
+   "sha256": "cd3edcb87d5e236ec720074d1b7e01f5beea53bbfdbd04cb22fc769e250b7353",
+   "taille": 98097
+  },
+  "didier20/ca-donne-quoi-aigue.mp3": {
+   "duree_s": null,
+   "sha256": "237c4bd20ae4fc615a54fcc56dca1c06240d82e8d9a0bfd23b94685d8e7bfa34",
+   "taille": 269627
+  },
+  "didier20/comment_je_vais_picoler.mp3": {
+   "duree_s": null,
+   "sha256": "589b959af4f9013a06a699cac81f153d1229ccfed637bbd307703f7f316d9aed",
+   "taille": 10917
+  },
+  "didier20/comment_t_as_fait_ca.mp3": {
+   "duree_s": null,
+   "sha256": "f52de8db54da11625d80e7d9fd8892db09bfbb4d39c3703b6105cbc1e38213e6",
+   "taille": 10053
+  },
+  "didier20/crever.wav": {
+   "duree_s": 54.0,
+   "sha256": "a599e7b92bade84800b40e8d6c43adc9d104a59d26637ed72420be917b4a1ad2",
+   "taille": 14288480
+  },
+  "didier20/elle_est_ou_ma_86.mp3": {
+   "duree_s": null,
+   "sha256": "ba17e4039647c14f12d7f3e408dcc3a9371ecd1fcb76b7fcdc876ae4c1bb69b4",
+   "taille": 10269
+  },
+  "didier20/fait_pas_ca.mp3": {
+   "duree_s": null,
+   "sha256": "2f92ea614150fe168d6e14ff14521485186f8ef3d20b246692d46f4d1d3418e1",
+   "taille": 59328
+  },
+  "didier20/historique_web.mp3": {
+   "duree_s": null,
+   "sha256": "1d9ab5505e36be864a8a4b87d90529a93b43c13a4c636e26b74315cbbf1cc670",
+   "taille": 17505
+  },
+  "didier20/il-est-genial-ce-corps.mp3": {
+   "duree_s": null,
+   "sha256": "7d5f2ca7cff00bf46c524fbff261660bd7f42f81b122b75bf0ace9304a39079f",
+   "taille": 251973
+  },
+  "didier20/il_te_reste_des_cartons.mp3": {
+   "duree_s": null,
+   "sha256": "f59c7b7bb1fa10d813c16e3058de172512ead763208c959afcad6de7ffaee9cf",
+   "taille": 220622
+  },
+  "didier20/ils_sont_pas_sympa.mp3": {
+   "duree_s": null,
+   "sha256": "bd8d7f9fe3bdba775682d63d60bce4c5fac596499a25db131a3e580052afc3df",
+   "taille": 374200
+  },
+  "didier20/je-dis-rien-qd-tu-chantes.wav": {
+   "duree_s": 10.0,
+   "sha256": "a2cb88fafe5e04bcad1ea0749f998e274c844961d20876c58d1227cc871024b0",
+   "taille": 2646080
+  },
+  "didier20/je_dis_ce_que_tu_fais.mp3": {
+   "duree_s": null,
+   "sha256": "c82f41cfcb59201649bcf2423576b5ee477c69497b285ddf2c0ef2abb0666384",
+   "taille": 245460
+  },
+  "didier20/je_me_sens_chelou.mp3": {
+   "duree_s": null,
+   "sha256": "752729180e734674eca06daed196cb455601362d5552a242b3ff84d6c135519e",
+   "taille": 10207
+  },
+  "didier20/je_ne_suis_pas_un_jouet.mp3": {
+   "duree_s": null,
+   "sha256": "ef325123c917c068c11c5319f8e69526e23d437deb5c9638a07dcf073067aba1",
+   "taille": 820497
+  },
+  "didier20/je_ne_suis_pas_un_jouet2.mp3": {
+   "duree_s": null,
+   "sha256": "6af39e2ddae9d1cae383ce8da1864d605b780d66a2f8277fee8e76f93245d2b8",
+   "taille": 2800325
+  },
+  "didier20/je_t_adore.mp3": {
+   "duree_s": null,
+   "sha256": "ea8537eac683976c8d9c7c4dc653693baadecb2b0005a409887f9de2b9a985c0",
+   "taille": 19017
+  },
+  "didier20/jim.mp3": {
+   "duree_s": null,
+   "sha256": "76a02d8923566551cd295bd4e2274fecd794f1d739fcf9bed91639d55cc3887a",
+   "taille": 83862
+  },
+  "didier20/jprefere-crever.mp3": {
+   "duree_s": null,
+   "sha256": "539b39fe3850c0fc3a8fd8cf7b23725d9d773e0322121ae3c1f630810d33d71e",
+   "taille": 2041729
+  },
+  "didier20/juste_un_petit_hack.mp3": {
+   "duree_s": null,
+   "sha256": "2a75b19c2096184c1a5fe17507a8770196b8023f9bcb102692a6e5dda7a3e271",
+   "taille": 68589
+  },
+  "didier20/leonardo.mp3": {
+   "duree_s": null,
+   "sha256": "59d07a4342807221e735d6692e8bcfa60bee9053be0b603b0e48ae7fd124f970",
+   "taille": 94579
+  },
+  "didier20/leonardo.wav": {
+   "duree_s": 6.0,
+   "sha256": "167300faef49e63eb9447fc9c817ea3e7419e8c0155f4625dca57374ac0d36cf",
+   "taille": 1587680
+  },
+  "didier20/libéré.wav": {
+   "duree_s": 8.0,
+   "sha256": "1fd625a6108994f1058500322329e28c710ad66521683698e5be92b67e4ca907",
+   "taille": 2116880
+  },
+  "didier20/mais-tu-me-drogue.mp3": {
+   "duree_s": null,
+   "sha256": "c71c45562632bbeb1606b9e00fcf3737e48c54628c19ea4c688f29a1953e0a1b",
+   "taille": 56851
+  },
+  "didier20/mais_tu_m_as_fait_quoi.mp3": {
+   "duree_s": null,
+   "sha256": "97439345e9b42b30bc586866c4ef6ffd1e4819b08cfcb1b518c2b93e78c6014f",
+   "taille": 122534
+  },
+  "didier20/mon_pere.mp3": {
+   "duree_s": null,
+   "sha256": "42b62901c4b3252917d562996f292d9633d19fdae8f1e3b26f3db9ee0f9045cb",
+   "taille": 13941
+  },
+  "didier20/nan_juste_soif.mp3": {
+   "duree_s": null,
+   "sha256": "c14203f04e10fa60bb3bbe032e4f585c4600a3b5b335c59aeec3421196e29698",
+   "taille": 14095
+  },
+  "didier20/ouha-mais le chili.mp3": {
+   "duree_s": null,
+   "sha256": "1df7fe1800f5194a0b5ba6f2e47c296385ecdd5428912227dd41a6e07d84e9ea",
+   "taille": 257506
+  },
+  "didier20/papa_tu_connais_ca.mp3": {
+   "duree_s": null,
+   "sha256": "e7bd9a4f035c84260faddfcc180b8dc789b66fbce4f817a4b2b78e81efa1d054",
+   "taille": 9729
+  },
+  "didier20/papa_tu_peux_tout_faire.mp3": {
+   "duree_s": null,
+   "sha256": "3bb999258ad6c7ae2660823eb9bb7a60cb5b466795d9f30d067870746f25e5d6",
+   "taille": 19557
+  },
+  "didier20/quoi-on-se-calme.wav": {
+   "duree_s": 4.0,
+   "sha256": "118d2d619d7322ba9f8fcd85459c864359fc287556f460e4db64440379ec653c",
+   "taille": 1058480
+  },
+  "didier20/quoi_attend.mp3": {
+   "duree_s": null,
+   "sha256": "5c103c4f7bdc2472757c647ed7556cf07db38c64f9c7af9ac708303d9b31f80d",
+   "taille": 39332
+  },
+  "didier20/quoi_on_se_calme.mp3": {
+   "duree_s": null,
+   "sha256": "a4f1809d81932988e1d9837e4101f1a295b0029d677804d05281c720c4a20294",
+   "taille": 76647
+  },
+  "didier20/reconfiguration_emotionelle.mp3": {
+   "duree_s": null,
+   "sha256": "c83197791b9a21b94c2d51d7632b9407e43a99b6712590b58a7395d7e2093b7d",
+   "taille": 16857
+  },
+  "didier20/reconfiguration_familliale.mp3": {
+   "duree_s": null,
+   "sha256": "6513fafe22178148323309ae670d914f69457cc6e8f62fce1939fd271ff7aba9",
+   "taille": 13617
+  },
+  "didier20/rire-drogue.mp3": {
+   "duree_s": null,
+   "sha256": "0b414363b1d74b493c091c1ca5e406575fe305c6a5702f9dfc59e500ce1f18f2",
+   "taille": 80212
+  },
+  "didier20/s-adapter-de-quoi.mp3": {
+   "duree_s": null,
+   "sha256": "ded24fc542a24aa457a79ac816a1c4744322972b640a68d3074d4fa8c5b22761",
+   "taille": 239033
+  },
+  "didier20/suicide.mp3": {
+   "duree_s": null,
+   "sha256": "39ec362c101ed4e83d53450e0265e521329ca0bf5ea2c9eaefbc84e3b933d6a6",
+   "taille": 539973
+  },
+  "didier20/superbe-jack.mp3": {
+   "duree_s": null,
+   "sha256": "8c9e519d293e6a8c29e1db7c215580e876d8873f95e43dde21efabec7c435c8f",
+   "taille": 860185
+  },
+  "didier20/t-es-extraordinaire.mp3": {
+   "duree_s": null,
+   "sha256": "7b4cabf2550a7a12b3bf2277d635c5f01fc0a1b9d5dde8801894e3f34079af09",
+   "taille": 113259
+  },
+  "didier20/tiens_t_as_des_messages.mp3": {
+   "duree_s": null,
+   "sha256": "1be9a2643c9302544d591c0f30faa103a564050b67692bd69ce001a0eea8f77a",
+   "taille": 120834
+  },
+  "didier20/tout_le_public.mp3": {
+   "duree_s": null,
+   "sha256": "690c6be0b2bbcc4ce04d9c1cb6a2a7a0a68adb74ccce2ca58bb33811753560ae",
+   "taille": 12969
+  },
+  "didier20/transfer_impossible.mp3": {
+   "duree_s": null,
+   "sha256": "b2615e0ceb85d6e985aafbd26ce215fa2388b7e02c2792ef3e396541994482f3",
+   "taille": 15129
+  },
+  "didier20/trop_tard.mp3": {
+   "duree_s": null,
+   "sha256": "1c87b0c0311749e0811eff2a238ce65d201eefc5172a2ded0e41c91885de749b",
+   "taille": 71119
+  },
+  "didier20/tu-es-extraordinaire-jack.mp3": {
+   "duree_s": null,
+   "sha256": "5cef9eea90d4947e75fa8785d4159a44e2f4db54c93a20feba471356ac8d4f3d",
+   "taille": 461889
+  },
+  "didier20/tu-m-en-redonne-aigue.mp3": {
+   "duree_s": null,
+   "sha256": "8c11cf3485ef749c8e85947ae2fbb5c3ea8541b86407d863cd91b3d55884ea4b",
+   "taille": 83022
+  },
+  "didier20/tu-m-en-redonnes.mp3": {
+   "duree_s": null,
+   "sha256": "c898b0e8e8b36064e4e23d569d3aa774527eb2301adf01bfa6db361b346992d2",
+   "taille": 100354
+  },
+  "didier20/tu_m_as_fait_quoi.mp3": {
+   "duree_s": null,
+   "sha256": "eeb94cfb4954cad34a378cc0ed826f5e1d3e6616575cbbf3fd84a02b612e6c6e",
+   "taille": 8541
+  },
+  "didier20/tu_m_as_fait_quoi1.mp3": {
+   "duree_s": null,
+   "sha256": "d2259cc98c06873bdb9784e3c82b8eeee45f44670d04e00a5d82e16a7493ebda",
+   "taille": 12550
+  },
+  "didier20/tu_te_fou_de_ma_geule.mp3": {
+   "duree_s": null,
+   "sha256": "e8b5348ef8caeee8d0be8c82331dbd986144f029b1c8ff06da37ded653941a95",
+   "taille": 9405
+  },
+  "didier20/upload_en_cours.mp3": {
+   "duree_s": null,
+   "sha256": "9412dedbe31518cb07cb064ec87fce0c59853bf6b7bcb2ab37949f64942b0a14",
+   "taille": 33705
+  },
+  "didier20/vous-allez-me-respecter.mp3": {
+   "duree_s": null,
+   "sha256": "7eddb8eb4fec81c7689e256e9fb758b258a9c12ebeb762c9d031a0c436d9f091",
+   "taille": 607910
+  },
+  "effects/Access-Granted.mp3": {
+   "duree_s": null,
+   "sha256": "3471438c052890d21114f14bae2a90753cfc46332e3b917700745c0eac16bc51",
+   "taille": 97312
+  },
+  "effects/alerte.mp3": {
+   "duree_s": null,
+   "sha256": "b424dd14c93bd5d9683692aeb412605d47fcce3d5ff1647c17817e6c63ad5e0f",
+   "taille": 89786
+  },
+  "effects/applause.mp3": {
+   "duree_s": null,
+   "sha256": "0b563ebac1afc4972fa4278bd4c8b2bca7d55779ecd17a407e8d5595454d09fb",
+   "taille": 218935
+  },
+  "effects/applause.wav": {
+   "duree_s": 6.8,
+   "sha256": "715d16655a950f9ac685856e969c033c244f8a79012fa962d4c59f421259f5ee",
+   "taille": 1199526
+  },
+  "effects/applause2.mp3": {
+   "duree_s": null,
+   "sha256": "0ba788a947d4869b29b38f0c6b341c4df7fb900fe07de056d1f0701e1435d7a4",
+   "taille": 600818
+  },
+  "effects/failling.mp3": {
+   "duree_s": null,
+   "sha256": "94fc34ec1d261384331ea95d184c1d04f01e21f1a93c1c9d17ca32a6547ffb4c",
+   "taille": 785691
+  },
+  "effects/finished.mp3": {
+   "duree_s": null,
+   "sha256": "12282c1da866a6b705deb3ddf284c0f567df58003d308f3edd9e0f45c3333e15",
+   "taille": 39225
+  },
+  "effects/shutdown.mp3": {
+   "duree_s": null,
+   "sha256": "4aa234dd644d7dbd70560c11e04e4515a2a91ef2a4b76c10647a757df18135a8",
+   "taille": 193861
+  },
+  "effects/start.mp3": {
+   "duree_s": null,
+   "sha256": "28cb998d588983520d79aabaa2db400b5d0416c0d8859ad2bd844cf5039575e1",
+   "taille": 123644
+  },
+  "effects/upgrade.mp3": {
+   "duree_s": null,
+   "sha256": "599e374346b1f186651d1f7cdbe1bd47705d7e82659eb6293e08e58056f5a575",
+   "taille": 883493
+  },
+  "eternel-short/1-demarrage.mp3": {
+   "duree_s": null,
+   "sha256": "e8364e06088de03925de194a143c7117388cc9c54b1fed2fae59f1651ab2c042",
+   "taille": 153477
+  },
+  "eternel-short/10-pleure.mp3": {
+   "duree_s": null,
+   "sha256": "8d49e4c87881dc910dbc62b6c8aa2f2cf4df9687e2679ce611a68ae873c7ed06",
+   "taille": 41747
+  },
+  "eternel-short/11-relance-patate.mp3": {
+   "duree_s": null,
+   "sha256": "05acc53d899e280a56cd41253d5af9dc89bada1b075e3f0d89aa903e4bdd1017",
+   "taille": 65439
+  },
+  "eternel-short/12-presentation-technique.mp3": {
+   "duree_s": null,
+   "sha256": "d6a8fa83ad5a23779e8bee6f059ffc3c760afbe4e827338d02506ef7c2cc2f89",
+   "taille": 73524
+  },
+  "eternel-short/13-cloud-couillon.mp3": {
+   "duree_s": null,
+   "sha256": "f0d6a6dc100e25ace3303db7da0553d9562ba6dad881284969eaad45389ed18d",
+   "taille": 40858
+  },
+  "eternel-short/14-cloud.mp3": {
+   "duree_s": null,
+   "sha256": "26868bb6f646b93ee3463210b02e88cda63f808e63a6d75d9207df8144ae6ebd",
+   "taille": 35588
+  },
+  "eternel-short/15-evite-les-balgues.mp3": {
+   "duree_s": null,
+   "sha256": "714d04d2798951837aee4c72f470d7223efce497fa723d8dec362fca1adf32d7",
+   "taille": 50356
+  },
+  "eternel-short/16-qu-est-ce-je-viens-de-dire.mp3": {
+   "duree_s": null,
+   "sha256": "31a3653de2b2d34b59994a71f584c5c63dc2135dc8b068056a9208c5bd005fbb",
+   "taille": 97321
+  },
+  "eternel-short/17-65-milliard.mp3": {
+   "duree_s": null,
+   "sha256": "cf2e7116e0ef02fd49f5e019916350f53c7c730de4922eada411a5c168394429",
+   "taille": 108721
+  },
+  "eternel-short/18-comment-fonctionne-les-neuronnes.mp3": {
+   "duree_s": null,
+   "sha256": "42cdb6a4384d9e83f68d885d2359f0bf29c59fe105822cb4d79462ca0cff549f",
+   "taille": 77705
+  },
+  "eternel-short/19-explique-circulation-information.mp3": {
+   "duree_s": null,
+   "sha256": "b38121f5816829af9afdcd8bf719375efd295e1aa40348f8cd23019c7d0bf281",
+   "taille": 76184
+  },
+  "eternel-short/2-2-ca-marche-a-nouveau.mp3": {
+   "duree_s": null,
+   "sha256": "710faa0b9c5874d42d96ed447aa94a81fbe803e24c1e32a709720a6f24f356dd",
+   "taille": 120857
+  },
+  "eternel-short/2-ca-marche-plus.mp3": {
+   "duree_s": null,
+   "sha256": "123824db7ee7416998d3b02a8e072900c6153051c882d71dfbdff245ad0a7d7e",
+   "taille": 107390
+  },
+  "eternel-short/20-engule-pas-public.mp3": {
+   "duree_s": null,
+   "sha256": "741e50a103f7b3c1a8f7c5cb3f6533f7d05599fa5184dc7609b8866228e20478",
+   "taille": 111231
+  },
+  "eternel-short/21-bah-fait-mieux.mp3": {
+   "duree_s": null,
+   "sha256": "2a5e3154c126b6d9c1c42887efc6ddb7fdad54af251fabf184d220f830d803cd",
+   "taille": 203023
+  },
+  "eternel-short/22-corps-bio.mp3": {
+   "duree_s": null,
+   "sha256": "5a46a6169d66dbabce7b2b17047b99521df6c2e05dcdcbaa16f93d5f7cf14b21",
+   "taille": 64703
+  },
+  "eternel-short/23-le-casque.mp3": {
+   "duree_s": null,
+   "sha256": "4573282a36c37a175a04a08f463d904fd51a03ce5a5fa4cda7a05792da2c0650",
+   "taille": 71392
+  },
+  "eternel-short/24-arrete-ton-char.mp3": {
+   "duree_s": null,
+   "sha256": "76f65a49417a9676a092e1e2b9d44ac2e9cc0651b5b5b6edb6357e660e2b45fd",
+   "taille": 100713
+  },
+  "eternel-short/25-qui-commande.mp3": {
+   "duree_s": null,
+   "sha256": "c5fc0a9b5b78f829717331f2024bf103d058c86dd42804599e9cf525d2e2356c",
+   "taille": 97271
+  },
+  "eternel-short/26-pas-net-internet.mp3": {
+   "duree_s": null,
+   "sha256": "31f4c44c5ba1392b8a94cb0096ff2a09232bd76567182d39931e8da97557682d",
+   "taille": 107505
+  },
+  "eternel-short/27-controle-plus-rien.mp3": {
+   "duree_s": null,
+   "sha256": "766a5bf9ecf302cf88817158ecb22016bdd1f9cb37577a0f1e06e581ffae713d",
+   "taille": 98623
+  },
+  "eternel-short/28-m-ouvre-pas.mp3": {
+   "duree_s": null,
+   "sha256": "98f3f655b12982f98661acd204d94e7c5922fbefed4150915f7b67c89f0ffe8d",
+   "taille": 94346
+  },
+  "eternel-short/29-nazi.mp3": {
+   "duree_s": null,
+   "sha256": "6b9cc5fca0fe5efec639f76b5ed1f3d6ccc658f26b2059991aade3a4d627bb46",
+   "taille": 110636
+  },
+  "eternel-short/3-c-est-pas-gagne.mp3": {
+   "duree_s": null,
+   "sha256": "bd39333a85a83908c14cc412a1dcce1d7bc879e309c6bdbd46a95396e8d93f8f",
+   "taille": 44043
+  },
+  "eternel-short/30-j-en-est-marre.mp3": {
+   "duree_s": null,
+   "sha256": "360df337b3763af7df7a8f1abf9cc52370fd4bede5e4740f5cbe79814cdaa072",
+   "taille": 65546
+  },
+  "eternel-short/303-1-j-en-est-marre-tete-enclume.mp3": {
+   "duree_s": null,
+   "sha256": "7e0177c7185a411f17044c4401ed167807b037e951dea16d8f48f0ba91dda52d",
+   "taille": 124978
+  },
+  "eternel-short/31-thunes.mp3": {
+   "duree_s": null,
+   "sha256": "90a44a0562d161afd1bc7d5e38610101314109e99c29f316a18a7b00cccc3717",
+   "taille": 93045
+  },
+  "eternel-short/32-bete-de-foire.mp3": {
+   "duree_s": null,
+   "sha256": "4364acaed5839832863321cb201036a89dd9ada53d8a01836215497c7b9d150c",
+   "taille": 121804
+  },
+  "eternel-short/33-prendre-vos-boulots.mp3": {
+   "duree_s": null,
+   "sha256": "6d315b191769810a8790655fa40031e51a290e8d807445e62254c221833cdcf3",
+   "taille": 199023
+  },
+  "eternel-short/34-chaire-de-robots.mp3": {
+   "duree_s": null,
+   "sha256": "8bb5d56daf54e0e973b30110fe7f940d1be507ea0437e6dc260ab15c7860223d",
+   "taille": 88396
+  },
+  "eternel-short/4-commence.mp3": {
+   "duree_s": null,
+   "sha256": "83586bfc0d368c9c4233096cd86f1e5cdd61589a6bcae068215edb378e2087de",
+   "taille": 60113
+  },
+  "eternel-short/5-lance-presentation.mp3": {
+   "duree_s": null,
+   "sha256": "e16097047ede0b9ac51a0094022f8c77766c04d166c9c8acc4013d337f4b8d18",
+   "taille": 53697
+  },
+  "eternel-short/6-le-texte.mp3": {
+   "duree_s": null,
+   "sha256": "4e873a4cc7692955575ff894500386f82cec9e8db64b665bbe41af128975e550",
+   "taille": 70133
+  },
+  "eternel-short/65-milliars.mp3": {
+   "duree_s": null,
+   "sha256": "c66191bbc4d397234feea877bb67dd3f3c7e1f5860848845f85e930c9069cb0b",
+   "taille": 127358
+  },
+  "eternel-short/7-continue.mp3": {
+   "duree_s": null,
+   "sha256": "7dd7bf3ca6d8c0668dc0e93fdc9e5fe2214ca9f68ed45814267c64dc44fd8ffa",
+   "taille": 46862
+  },
+  "eternel-short/70-arrete-de-gigoter.mp3": {
+   "duree_s": null,
+   "sha256": "d89ec7fe470bd0f389f8d469fed6a937b1428778e4bbc984f1298cc48aa02072",
+   "taille": 64602
+  },
+  "eternel-short/71-je-bouge-tout-seul.mp3": {
+   "duree_s": null,
+   "sha256": "593e43844c9526d349b42ba75ce688b141486fa8bf4c605179b91a0a81d24a68",
+   "taille": 380654
+  },
+  "eternel-short/72-je-controle-plus.mp3": {
+   "duree_s": null,
+   "sha256": "eecb4ec7284da122fda3c63aa0d7c17eb1c3b56cdc722dc3b556d735d6cfba87",
+   "taille": 298909
+  },
+  "eternel-short/73-je-vais-pas-continuer-de-tourner.mp3": {
+   "duree_s": null,
+   "sha256": "bd654dcc09760421458138fa97d4dbe25c9547864118cc41d98aadee974c8d8c",
+   "taille": 281828
+  },
+  "eternel-short/74-laisse-moi-pas-tourner.mp3": {
+   "duree_s": null,
+   "sha256": "418f59f2c027ef00c86178167c15ec3eef52d07e3617f81607b3bec7c23c0a25",
+   "taille": 174602
+  },
+  "eternel-short/75-mal-de-mer.mp3": {
+   "duree_s": null,
+   "sha256": "dd1ea81aafea482b573e6eea30c13a500c862aa287120780f3da24df743a563f",
+   "taille": 152893
+  },
+  "eternel-short/76-qu-est-ce-qui-ce-passe.mp3": {
+   "duree_s": null,
+   "sha256": "2d9c73f687e3e888fa376c7817707deb107f2b661e904e4a7a639642df3cc8ff",
+   "taille": 50664
+  },
+  "eternel-short/76-ta-bousiller-mes-reglages.mp3": {
+   "duree_s": null,
+   "sha256": "af7d76b5c6c7af97b9c9a93695a13be6f77069574516287ebde42f3b9c89f4b7",
+   "taille": 272583
+  },
+  "eternel-short/77-t-es-ou-je-te-vois-plus.mp3": {
+   "duree_s": null,
+   "sha256": "8939743eec9bc067e08122d9ed11542b55336ffe4c1529ec4269760528cd9ef9",
+   "taille": 118691
+  },
+  "eternel-short/8-la-cagnotte.mp3": {
+   "duree_s": null,
+   "sha256": "98243409d9fed0acad600164655da5f685245b2cbd998e13fdb3ca8644c4dda6",
+   "taille": 76815
+  },
+  "eternel-short/9-emotion.mp3": {
+   "duree_s": null,
+   "sha256": "0e47643fef1efc3cf90b3bf5afad4a499c7072b14baaba1fc513dcf0be35a8ab",
+   "taille": 66954
+  },
+  "eternel-short/appel-1-1.mp3": {
+   "duree_s": null,
+   "sha256": "8fe4f800c62250c78684e3c3189a033d06387b4589feac88685a494a8ed759e7",
+   "taille": 84510
+  },
+  "eternel-short/appel-1-2.mp3": {
+   "duree_s": null,
+   "sha256": "590d847c14cfff80d663e8a0e2585f2dc7b64ec9cb817d1103873d280aea6b17",
+   "taille": 126515
+  },
+  "eternel-short/appel-10-1.mp3": {
+   "duree_s": null,
+   "sha256": "ec0686f652b113fa29c5dcf31ef0423b18b82512ab62f5ff7a161379ba278313",
+   "taille": 164698
+  },
+  "eternel-short/appel-10-2.mp3": {
+   "duree_s": null,
+   "sha256": "3e828633539addc4ce1891bd7b088adc5f38ab2605eae9729954e99be240ac97",
+   "taille": 117477
+  },
+  "eternel-short/appel-2-1.mp3": {
+   "duree_s": null,
+   "sha256": "aba3b8330a67f694e61a9fdab9e5a6066b1237c1363a2bcf70262c05d0399cb7",
+   "taille": 113759
+  },
+  "eternel-short/appel-2-2.mp3": {
+   "duree_s": null,
+   "sha256": "be3bd23f221b63775371ca2be5e149608629850c774cb44f3336e936d085ceaf",
+   "taille": 126404
+  },
+  "eternel-short/appel-3-1.mp3": {
+   "duree_s": null,
+   "sha256": "5397b23c04f96562e7cc2e550bc2dbee45fcc2454012a33123e7d489faccff23",
+   "taille": 127300
+  },
+  "eternel-short/appel-3-2.mp3": {
+   "duree_s": null,
+   "sha256": "71a8ec7460dee7cc48efff7b1b9a337e0f012afc4309b8ec97e890a3f940de87",
+   "taille": 115148
+  },
+  "eternel-short/appel-4-1.mp3": {
+   "duree_s": null,
+   "sha256": "615a50e4841d17913822b4d3101da3d204587d7a9cbb2765473e51d0057c4171",
+   "taille": 116294
+  },
+  "eternel-short/appel-4-2.mp3": {
+   "duree_s": null,
+   "sha256": "ea38a2e5d0d1ef08d95956a635a17bf9282f3c358bedb178ecdcbd5b06251859",
+   "taille": 159380
+  },
+  "eternel-short/appel-5-1.mp3": {
+   "duree_s": null,
+   "sha256": "9795e7910eb796f4e758b916fc4ab52971fd954ac2d6b6d97b4317fed40b9bba",
+   "taille": 125967
+  },
+  "eternel-short/appel-5-2.mp3": {
+   "duree_s": null,
+   "sha256": "95dc29b10ae3900deaf67e0f0cd03a57f57fca4bfa206f045dff875765f522c1",
+   "taille": 155007
+  },
+  "eternel-short/appel-6-1.mp3": {
+   "duree_s": null,
+   "sha256": "8aa7e8086bae3b3806edd0848aec8f62e68bbadee1ac7bd8507815b0adfc4dda",
+   "taille": 160106
+  },
+  "eternel-short/appel-6-2.mp3": {
+   "duree_s": null,
+   "sha256": "af1121fe254f8c19cd1fddc537bce3331c4c40efe27f82736f85ca3d738570d6",
+   "taille": 121659
+  },
+  "eternel-short/appel-7-1.mp3": {
+   "duree_s": null,
+   "sha256": "95afe72c6f56ff89deb55fb9e0f4354514c50cf0039282a66958da4156b9a118",
+   "taille": 166320
+  },
+  "eternel-short/appel-7-2.mp3": {
+   "duree_s": null,
+   "sha256": "8425513c74296cbe5c61554e520f000da62b9f9ce38f84c30d138c2b4bb0e174",
+   "taille": 54860
+  },
+  "eternel-short/appel-8-1.mp3": {
+   "duree_s": null,
+   "sha256": "d2027d789738e0ee9a735e726f4df7813db15095ae989111c4404bd0b96f2570",
+   "taille": 120448
+  },
+  "eternel-short/appel-8-2.mp3": {
+   "duree_s": null,
+   "sha256": "a8af0691fc493f4b59fcfd007e28eb82b3c069fdf6e054d2fd7a226fe51e4364",
+   "taille": 122339
+  },
+  "eternel-short/appel-9-1.mp3": {
+   "duree_s": null,
+   "sha256": "2f5d32a9d4f7b6bbae105f3c3b327c6a94e5d0756e6e34ae1cf3a6c0054d125a",
+   "taille": 124157
+  },
+  "eternel-short/appel-9-2.mp3": {
+   "duree_s": null,
+   "sha256": "9b4fd93cc80a284ba11185e102fa4ea72c6436dc53d087f79a53aba286bee976",
+   "taille": 121969
+  },
+  "eternel-short/arrete-ton-char.mp3": {
+   "duree_s": null,
+   "sha256": "06173a2c30346999d0fb6823204bb9eb69de3e95ad8fd68f8a587c711c43ccfa",
+   "taille": 120295
+  },
+  "eternel-short/cequonarepeter.mp3": {
+   "duree_s": null,
+   "sha256": "09718d26b591b0ed34bea8fb1991ce71a612fc75b4703c00935919f82cab90d3",
+   "taille": 79600
+  },
+  "eternel-short/chaire-a-robot.mp3": {
+   "duree_s": null,
+   "sha256": "d5d77a0ba87ebddc8f17f8a5395fbd230663911b67fe3244595a7f0899afba88",
+   "taille": 79391
+  },
+  "eternel-short/chiale.mp3": {
+   "duree_s": null,
+   "sha256": "063a83116541915e281e7769ec440c7530fd15cef2f5f4fbe48c1086b95bf04e",
+   "taille": 76298
+  },
+  "eternel-short/cloud.mp3": {
+   "duree_s": null,
+   "sha256": "ea3606a0be0420fb33e3f9eb2b0f7ed81674453d7c8118ad0d50d6940476e6f1",
+   "taille": 70349
+  },
+  "eternel-short/comment-circule-information.mp3": {
+   "duree_s": null,
+   "sha256": "6bcd51e8cf38a05be82bc0c64bc61cb28c970a5ddaeaccc6032405f9a423f161",
+   "taille": 120009
+  },
+  "eternel-short/comment-fonctionn-les-neuronnes.mp3": {
+   "duree_s": null,
+   "sha256": "3c76dce895e39d7d02e36b5eb2744e66fd8cbe92ea2c099bc53849fb0ab22baf",
+   "taille": 115955
+  },
+  "eternel-short/continue.mp3": {
+   "duree_s": null,
+   "sha256": "70a119a3f319a90ee1adf7485f3f13eb20441170edc64fbe2db971a683f07246",
+   "taille": 73801
+  },
+  "eternel-short/cours-upload.mp3": {
+   "duree_s": null,
+   "sha256": "ead195268b48cd1f551d3d19cd4aa1a80b3c17b0cc92548f46a2b0b90cb1d0a3",
+   "taille": 155706
+  },
+  "eternel-short/engeuler-le-public.mp3": {
+   "duree_s": null,
+   "sha256": "ed7b9e423bfdad0fa2bb97d877918de1d1952a6d8303b8e22b6cd4028171b147",
+   "taille": 169355
+  },
+  "eternel-short/evite-les-blagues.mp3": {
+   "duree_s": null,
+   "sha256": "a12d499216a58e9af951830efaf260112ecb7bd573abf2284dabc13f04f60443",
+   "taille": 74791
+  },
+  "eternel-short/il-se-passe-quoi.mp3": {
+   "duree_s": null,
+   "sha256": "fb788788a4e70b1cce0279a0f8cfd4fa368e6c7b11e083951fba75de0266f951",
+   "taille": 117309
+  },
+  "eternel-short/lacagnoette.mp3": {
+   "duree_s": null,
+   "sha256": "6f5c4c69122607fc1a6f5b3eb1dd06e5ef2c5c1214432d73dd007c064f37d922",
+   "taille": 77612
+  },
+  "eternel-short/lance-presentation.mp3": {
+   "duree_s": null,
+   "sha256": "01321c62a3e5c5cf79fa2de9d1e59839ca07dd23b0c0b3255a8381433cc2cfc0",
+   "taille": 75156
+  },
+  "eternel-short/merdier.mp3": {
+   "duree_s": null,
+   "sha256": "41d60d765f3f4e861b429f3b39a228f0a06b54849d941d10dd947ea0f92549a7",
+   "taille": 114260
+  },
+  "eternel-short/nazi.mp3": {
+   "duree_s": null,
+   "sha256": "7ad3c4196cb51fc1441dac64e601be8515817bc04e723ccd7e233af22f591d4b",
+   "taille": 119792
+  },
+  "eternel-short/ouvre-pas.mp3": {
+   "duree_s": null,
+   "sha256": "850aaeac42fa3d07cd0cf03f846276a98342660dd3d09d6556c0909af0d3b8cb",
+   "taille": 115749
+  },
+  "eternel-short/p1-1.mp3": {
+   "duree_s": null,
+   "sha256": "999996efb70074eeb2ca8f3cb59f9fe27aac866e142be066eddde390661c9d2e",
+   "taille": 101549
+  },
+  "eternel-short/p1-2.mp3": {
+   "duree_s": null,
+   "sha256": "c2db24899c66c472243dc93b4e31c5aef6f633d36152f2c78dea1401b47d348c",
+   "taille": 88921
+  },
+  "eternel-short/p10-1.mp3": {
+   "duree_s": null,
+   "sha256": "9def4451df7728f0e81e13bbe52eb30783b0d9cf320bc61abedf187cb5183aeb",
+   "taille": 126803
+  },
+  "eternel-short/p10-2.mp3": {
+   "duree_s": null,
+   "sha256": "1d38f6b3ad8b95038df429e36645c6c6359da4ac808410df2f51b4b837f08a9a",
+   "taille": 146214
+  },
+  "eternel-short/p2-1.mp3": {
+   "duree_s": null,
+   "sha256": "a75ec7775862f75d329dd16073a3801f41ce205c6f5e9ae2984e8adc23e444bc",
+   "taille": 115274
+  },
+  "eternel-short/p2-2.mp3": {
+   "duree_s": null,
+   "sha256": "03bdeb079f5e392d432dabd226104ef2dfdf07136941d95e41db133cf8a9a098",
+   "taille": 82820
+  },
+  "eternel-short/p3-1.mp3": {
+   "duree_s": null,
+   "sha256": "fa83290f6ca25441d602504334dd11844e6536289883b449e9c25f2d86fe9727",
+   "taille": 125920
+  },
+  "eternel-short/p3-2.mp3": {
+   "duree_s": null,
+   "sha256": "c44948007e200a0d5ad83346718af568b0b443064f829220519308d4b649fec4",
+   "taille": 118441
+  },
+  "eternel-short/p4-1.mp3": {
+   "duree_s": null,
+   "sha256": "806c992b245adaec8955ffe104071de097479493d7d9d3c674bada23cc6b2ec5",
+   "taille": 184952
+  },
+  "eternel-short/p4-2.mp3": {
+   "duree_s": null,
+   "sha256": "ef0d53b09d8d996187b9a2dee7debe318d7a157146e8dc22643ef3ccfa9c14cd",
+   "taille": 106041
+  },
+  "eternel-short/p5-1.mp3": {
+   "duree_s": null,
+   "sha256": "9da9d7b585cd0a1a2a338fb9d53e2f76c77553aa8a58d2bd44895d1b3548eb6b",
+   "taille": 125767
+  },
+  "eternel-short/p5-2.mp3": {
+   "duree_s": null,
+   "sha256": "e145aeca33f097d02a424173c2e89b5e3d06e9e331c34d092bdbf129e72960b5",
+   "taille": 135469
+  },
+  "eternel-short/p6-1.mp3": {
+   "duree_s": null,
+   "sha256": "102f3ac3bbed807ba5291550086d491a18d6241562f6c1bf2c72aebebc6f60c8",
+   "taille": 151753
+  },
+  "eternel-short/p6-2.mp3": {
+   "duree_s": null,
+   "sha256": "0a29bc760f7ebc62295858e962495726a2f2f98d23f5b0899d7508cedfabb8f3",
+   "taille": 104680
+  },
+  "eternel-short/p7-1.mp3": {
+   "duree_s": null,
+   "sha256": "8195535d9a9c8a46d05dfc951b8c6e7d8547526507e9ff0544d5f16c51538eb7",
+   "taille": 148470
+  },
+  "eternel-short/p7-2.mp3": {
+   "duree_s": null,
+   "sha256": "ccf00e055261bc427b5f364a0c35cc53caa61d8144700b1f053ac0d211ffe46c",
+   "taille": 107055
+  },
+  "eternel-short/p8-1.mp3": {
+   "duree_s": null,
+   "sha256": "cc7cbe23f34ca728d17bef318b22dd6797c0a2503980180b886a137f39de0656",
+   "taille": 120696
+  },
+  "eternel-short/p8-2.mp3": {
+   "duree_s": null,
+   "sha256": "36813a8be7ce7e01b7a16940aaa4903fea606f68d15e6e6489552d833b875fcd",
+   "taille": 123049
+  },
+  "eternel-short/p9-1.mp3": {
+   "duree_s": null,
+   "sha256": "a2a2156abf8bccccccd41a516daec2ed65001e2b8191b80576a5878975ebd766",
+   "taille": 105203
+  },
+  "eternel-short/p9-2.mp3": {
+   "duree_s": null,
+   "sha256": "2dcf7aee7904f65057cc8dd3a7ff3ca73582bdc283b2de4121d4bce42ee27663",
+   "taille": 119607
+  },
+  "eternel-short/pas-nette-internet.mp3": {
+   "duree_s": null,
+   "sha256": "fd7740c35a71f2fdfc1d0fbe7784aafc51756a0c407549b5a0f4a20f2b64430b",
+   "taille": 163090
+  },
+  "eternel-short/presentation-eternel-life.mp3": {
+   "duree_s": null,
+   "sha256": "f215ca9b5c76912f654f081c05ac86698783b0f209a5de749a37564608e8bbd9",
+   "taille": 125128
+  },
+  "eternel-short/presentation-technique.mp3": {
+   "duree_s": null,
+   "sha256": "5af85dafb3b3330ae0acd6a2e14a09433b1da7ec87271077c64690e1407f7933",
+   "taille": 83877
+  },
+  "eternel-short/qui-commande.mp3": {
+   "duree_s": null,
+   "sha256": "6bab9a34bc1afcebe005b2cf105eedd9b26a79d07ddfd3412284ca2385afdeb0",
+   "taille": 119714
+  },
+  "eternel-short/relance-peche.mp3": {
+   "duree_s": null,
+   "sha256": "fa57ddda513c8def0b79ec67f26f0d0a40b17e60fd006b14ec20ffd6c06f342a",
+   "taille": 79539
+  },
+  "eternel-short/sequence-emotion.mp3": {
+   "duree_s": null,
+   "sha256": "ec997bc5075737eaf219ca1dcbba17e96974aff276bb65fc336678c01e9b454d",
+   "taille": 78081
+  },
+  "eternel-short/te-servir-de-moi.mp3": {
+   "duree_s": null,
+   "sha256": "eeb477d48a9a377cd7d10cd8de579804f53bc83d1262279c1378c955283022d8",
+   "taille": 120220
+  },
+  "eternel-short/tete-de-gland.mp3": {
+   "duree_s": null,
+   "sha256": "ff7c66b676780a354f9cb3e1854242a494896cbc938d35e346f88ab3b638b25d",
+   "taille": 75936
+  },
+  "eternel-short/vasy-commence.mp3": {
+   "duree_s": null,
+   "sha256": "518f084d524eae9af61691ff5fddc7c3b7025d00546572154dd75b9653c7ce5c",
+   "taille": 73998
+  },
+  "eternel-short/voice_0435__2023-12-01_183029_.mp3": {
+   "duree_s": null,
+   "sha256": "28f7da8bde922e03d6b3ded3237d3ce1ef0cb11a6dcd793082cb5c64e6544582",
+   "taille": 83362
+  },
+  "eternel-short/vous-aller-servir-les-robots.mp3": {
+   "duree_s": null,
+   "sha256": "7c79470c9194de9725573bf801316c6b117f81529a2ff0cac5069ead1e2330e1",
+   "taille": 211207
+  },
+  "maker/aille.mp3": {
+   "duree_s": null,
+   "sha256": "efa1fb041f56ab0dd0d6b1142b4ebf19e47ba40989bc5f8432701e9bb137e0e3",
+   "taille": 30137
+  },
+  "maker/bof.mp3": {
+   "duree_s": null,
+   "sha256": "b4f8756cddd6a4eebbad65fbfafd43cdce7a3a8d9c7bd0d3b5bbd3c307e01bda",
+   "taille": 30973
+  },
+  "maker/ca-roule.mp3": {
+   "duree_s": null,
+   "sha256": "4f1ec2447d6447261b96bd84ba921675df61a9f3272143045cde7885aec65df4",
+   "taille": 44347
+  },
+  "maker/cest-pas-trop-tot.mp3": {
+   "duree_s": null,
+   "sha256": "2d836f7b84c1e63d7ad8a7ba08c9e148244f03b35e8e1f9407228acaba0b2b83",
+   "taille": 48945
+  },
+  "maker/ciao.mp3": {
+   "duree_s": null,
+   "sha256": "29ed3bd8b2dfd14c90fca3fe005fc734665e239fb09f78e24339ae444d6996a5",
+   "taille": 45183
+  },
+  "maker/enculer.mp3": {
+   "duree_s": null,
+   "sha256": "3e217bfd8e8e50d9a8eec0a4190abd318dd30d36c5e190a3c4cc2031513df434",
+   "taille": 43511
+  },
+  "maker/je-pourrais.mp3": {
+   "duree_s": null,
+   "sha256": "21974e60aa5cf6487955bffa2e12d5a82b50b82cc3af09961b9a86c7ac0b74f7",
+   "taille": 53960
+  },
+  "maker/je-trouve-ce-proceder-cavalier.mp3": {
+   "duree_s": null,
+   "sha256": "0aa21cb5ce6b6182fb10c761f90016611ca69f6f3af33cfc6bae1ebc06687eaf",
+   "taille": 95338
+  },
+  "maker/lache-moi.mp3": {
+   "duree_s": null,
+   "sha256": "14525495990863ff2f03f3bebc0fba7f2551d1fe51dbba5b88355de064768f4c",
+   "taille": 55632
+  },
+  "maker/ouais.mp3": {
+   "duree_s": null,
+   "sha256": "24eb09def27be2d3725779eb77fb9eb523f54d52d152767dc820aa932831d9fa",
+   "taille": 38078
+  },
+  "maker/salut.mp3": {
+   "duree_s": null,
+   "sha256": "411d460a893e2de0453f9b8fc6854944414c27292eb0bea7c90954201a5102ee",
+   "taille": 42257
+  },
+  "maker/sans-deconner.mp3": {
+   "duree_s": null,
+   "sha256": "45630ab25db626b8dea3dd590f7d0301ec0970d1617917b247b36b7a2fd1a409",
+   "taille": 53960
+  },
+  "maker/tu-mavais-pas-parle-de-ca.mp3": {
+   "duree_s": null,
+   "sha256": "044cc266072020c54ac03b7b3a38487abe6f657a2273e773f49c0787174ec127",
+   "taille": 66917
+  },
+  "maker/tu-vas-pas-mouvrir.mp3": {
+   "duree_s": null,
+   "sha256": "74893382d9c894e00ddf9f6fa9771743a03fcf3ccba3630210e747100857e25d",
+   "taille": 73604
+  },
+  "notes/jaz_the_man_2__do-stretched.wav": {
+   "duree_s": 1.66,
+   "sha256": "fb18f53bda93f12a9830ad85bcfba4a60cd3c0e3dafc39f316dba9ad7b4594cc",
+   "taille": 292826
+  },
+  "notes/jaz_the_man_2__fa-stretched.wav": {
+   "duree_s": 1.25,
+   "sha256": "5ce751df3361fd3134a939120b237e7b87be1ae94e72b1fd2f53b514bf89823f",
+   "taille": 220238
+  },
+  "notes/jaz_the_man_2__la-stretched.wav": {
+   "duree_s": 1.43,
+   "sha256": "e3831c90eada42595fcd2877a56a5324571babbcff13b48c90da6b95672ac7b8",
+   "taille": 252274
+  },
+  "notes/jaz_the_man_2__mi-stretched.wav": {
+   "duree_s": 1.34,
+   "sha256": "32cc1c8b9545282420ee1c3f915e955dfbda2e9d40e5c54cd25fc7b1e00d5454",
+   "taille": 237186
+  },
+  "notes/jaz_the_man_2__re-stretched.wav": {
+   "duree_s": 1.51,
+   "sha256": "afb60da0f28a4aee88e6e8cd85cbb8419175d3db4807ecd3cdeffbd73bc6fc06",
+   "taille": 266158
+  },
+  "notes/jaz_the_man_2__si-stretched.wav": {
+   "duree_s": 1.56,
+   "sha256": "c9fff2889f9172357b0d693dc60b93b4b0c1c0f1798d9d3cb2e80e95ad89ba7b",
+   "taille": 275934
+  },
+  "notes/jaz_the_man_2__sol-stretched.wav": {
+   "duree_s": 1.34,
+   "sha256": "5a4f0b8d11129d5506c5c268481a5bce2bb2c6a5a3ea863f6901c30177cc4837",
+   "taille": 235818
+  },
+  "pub1/apres-avoir-transfere.mp3": {
+   "duree_s": null,
+   "sha256": "cc89cd087da9d0b4e16de83fef56ad6e21421c5077575ba95f71d48ba04f09dd",
+   "taille": 139118
+  },
+  "pub1/n-hesitez-plus.mp3": {
+   "duree_s": null,
+   "sha256": "7bda9d25f4e32db42868453f7b3bb3f0a0a9ecdc15d315dd8dd1138389769011",
+   "taille": 62169
+  },
+  "pub1/oui-apres-des-annees.mp3": {
+   "duree_s": null,
+   "sha256": "ef7fbc5ad891a8182f9c68474e8b7edb5fff410e1a082134666449cb2fd5dc07",
+   "taille": 172435
+  },
+  "pub1/voulez-vous-finir-votre-vie.mp3": {
+   "duree_s": null,
+   "sha256": "1c4c3b0f37304baa69c95e16634eb4108c75fb331c5c30a9e0a932e72d241788",
+   "taille": 103694
+  },
+  "random/aurore.mp3": {
+   "duree_s": null,
+   "sha256": "5bc81ab1fae89a4c9fbf2da9accb07bfccddaded052f47844846b96f1ad8b0e6",
+   "taille": 70719
+  },
+  "random/bon-attend.mp3": {
+   "duree_s": null,
+   "sha256": "a0ade33298f00af491fdb52bc1f76253ae9d879c99798d993b6350b19491192c",
+   "taille": 82178
+  },
+  "random/c-est-qui-le-con.mp3": {
+   "duree_s": null,
+   "sha256": "932223a8daf18bc64a5e602c92149851e59f417cb92694c2a4950808f6b1acd9",
+   "taille": 60388
+  },
+  "random/kekette-bionic.mp3": {
+   "duree_s": null,
+   "sha256": "a105e85d546ced10f4239feac41c5aa4cc2141abc3a2758da394bbd6e77f5a20",
+   "taille": 68647
+  },
+  "random/ma-petite-kekette.mp3": {
+   "duree_s": null,
+   "sha256": "7c974e42f79454b2b223f27f1eaa695196ea2fb7f840acb15ad72d37a6349c49",
+   "taille": 134319
+  },
+  "random/michel-sardou.mp3": {
+   "duree_s": null,
+   "sha256": "42363ba2f7ebf1ac92dfb87155a01b93f977e6100568b1a58c6b55e30c8112c6",
+   "taille": 89920
+  },
+  "random/pour-votre-securite.mp3": {
+   "duree_s": null,
+   "sha256": "c478abb0fe7be2277f939835eea1cb3fa2941e7d8f8709532d75c2dfd3fb695f",
+   "taille": 86986
+  },
+  "random/qd-on-voit-ce-qu-on-voit.mp3": {
+   "duree_s": null,
+   "sha256": "bc837460949f9ffc45fdf7a57954954ddb1d79605aec87a24869097274094adc",
+   "taille": 87071
+  },
+  "random/quoi-ma-geule.mp3": {
+   "duree_s": null,
+   "sha256": "3ec9da5a4f0a0c1383fa372030797fa6352168ec6875c1492fd98074bb23c269",
+   "taille": 63381
+  },
+  "random/t-es-sur.mp3": {
+   "duree_s": null,
+   "sha256": "e3a689c35322279dc90e21f1780da6da186c1b7b248a0e9803103fa36b76bbe7",
+   "taille": 56497
+  },
+  "song/annie.mp3": {
+   "duree_s": null,
+   "sha256": "d17861478bfba050b991ea00c8d5cba6d3035b47c155c14dd6a102f8a97be855",
+   "taille": 4621302
+  },
+  "song/caca-kaki.mp3": {
+   "duree_s": null,
+   "sha256": "3ad2e46b488ce62744cbc693aa209e71ac55409f2a21ecc2ace7758a609d4c6a",
+   "taille": 7619395
+  },
+  "song/gig.wav": {
+   "duree_s": 156.81,
+   "sha256": "b4c3404e268595ee8c0d44493299fa572ecad531104e05dd3943d6a0a8ac916d",
+   "taille": 27661868
+  },
+  "song/great-balls.mp3": {
+   "duree_s": null,
+   "sha256": "c6168fff630de80cc32f3bb5eff7310d4ee9e56db3bf639cc4f411ade05231ad",
+   "taille": 2894842
+  },
+  "song/le-professionnel.mp3": {
+   "duree_s": null,
+   "sha256": "e5ed83b548a741f3827ee7e3a11c2e3d5e0e3e75615dfd3c3e2a1db1e56ea023",
+   "taille": 7484973
+  },
+  "song/tactique-du-gendarme.mp3": {
+   "duree_s": null,
+   "sha256": "1c457d4d81aea5454869450bae96fcc5774afa842131012fc8a9ffc23798731d",
+   "taille": 5001925
+  },
+  "speak/aie.wav": {
+   "duree_s": 0.61,
+   "sha256": "3daee74a2005610791ee07996b067652d41a283a132e3847f573e7a3a05cea4f",
+   "taille": 107328
+  },
+  "speak/avec-life-forever-mourrir.mp3": {
+   "duree_s": null,
+   "sha256": "e720b42120b11f954816275d81b4db394e49f2ac7f95edcac8a7e06ff9d70530",
+   "taille": 159868
+  },
+  "speak/bonjour.mp3": {
+   "duree_s": null,
+   "sha256": "d17c42f8a5db5003e6f1a34ddeb70571687724726579ea1cc9500e612cfb040c",
+   "taille": 13836
+  },
+  "speak/ca-va.mp3": {
+   "duree_s": null,
+   "sha256": "509f77cfc9346229ec59acc0c002f3586c9966743d7172a0304710fb5247a8a9",
+   "taille": 29256
+  },
+  "speak/electrochoc.mp3": {
+   "duree_s": null,
+   "sha256": "ccc7f6dabee151841e2331582e50600a198bfc8e65f2fbbf25fb143a6ba95fdd",
+   "taille": 141060
+  },
+  "speak/j-en-ai-marre-de-vendre.mp3": {
+   "duree_s": null,
+   "sha256": "2ec41ba0eddfa887374dc6f2675d1338b52f365f0a33055cb899ff34a956e608",
+   "taille": 70007
+  },
+  "speak/kidnape.mp3": {
+   "duree_s": null,
+   "sha256": "a7d8f304fcf4179f5057dc7c9db04151b9f1c6510852a6b7a9a1413b0931caa5",
+   "taille": 198529
+  },
+  "speak/lunettes2.wav": {
+   "duree_s": 1.94,
+   "sha256": "51068428bb44b445daf1483badf4491dba241d156c1afc554826eee6e0ea000e",
+   "taille": 342956
+  },
+  "speak/moi-c-est-didier.mp3": {
+   "duree_s": null,
+   "sha256": "2c17ccc5b3a35967b086b8e42c275a143216dbfc0c891eeb6ca2349abe6d0884",
+   "taille": 51199
+  },
+  "speak/ne-croyez-pas.mp3": {
+   "duree_s": null,
+   "sha256": "adebe75f5c57fb41517d42438ebdd2faf259143c546beab2408ee8b74f8b83cb",
+   "taille": 60603
+  },
+  "speak/neverDie.wav": {
+   "duree_s": 4.59,
+   "sha256": "b7d9505418341b788d27dbf28446e254a5fdf91a6af4ba93489bcb2c84916c6b",
+   "taille": 1215644
+  },
+  "speak/non-enerve.mp3": {
+   "duree_s": null,
+   "sha256": "52476bd4bd627e43aa52f3a189b3de8fa845115ff87dc63d78c1dc3874e8334b",
+   "taille": 20897
+  },
+  "speak/non.mp3": {
+   "duree_s": null,
+   "sha256": "0bccf31495ef963571fa1202c45d490f0e6998ab74afffe55a3a689cd1b46183",
+   "taille": 16717
+  },
+  "speak/oui.mp3": {
+   "duree_s": null,
+   "sha256": "8b87c97132f444948850ec200e2219f462202d40c13f10871f47b3d2c2061f2f",
+   "taille": 17762
+  },
+  "speak/salut-salut-moi-cest-didier.mp3": {
+   "duree_s": null,
+   "sha256": "02b8e56a5f68495262fe7bfde00d3b7c6b51e99895d5e6ed366401de4c14aa56",
+   "taille": 140015
+  },
+  "speak/salut-salut.mp3": {
+   "duree_s": null,
+   "sha256": "e54394b431fd1f79ec9e843e0f945cf5f17fb6198620e006fb60608ebe6ab235",
+   "taille": 41795
+  },
+  "speak/silence.wav": {
+   "duree_s": 0.99,
+   "sha256": "e9d566d63dc5bace2ec2e30e7e042e0416c14c230396cea382258059216731b1",
+   "taille": 174072
+  },
+  "speak/ton-pere-travail-chez-nintendo.mp3": {
+   "duree_s": null,
+   "sha256": "bca69114d4757edfd9ce6df287559b145d8eb21f9db0b7233064853e3e88d309",
+   "taille": 160913
+  },
+  "street/ne-ratez-pas-l-ocass.mp3": {
+   "duree_s": null,
+   "sha256": "7bfb037ded60e402552189eb5de373bb651dbee15e6e3c98e129c7624cf47b12",
+   "taille": 182384
+  },
+  "street/promotion-vie-eternelle.mp3": {
+   "duree_s": null,
+   "sha256": "3ffc3ee58f6a7814c69b993cb188b7cfece0b895345cbfc7db0c79f07f3692c6",
+   "taille": 137643
+  },
+  "street/vie-eternelle-pas-chere.mp3": {
+   "duree_s": null,
+   "sha256": "d75b3d9904d590bfb4db09f2b9ec25081f26794e06e8acd466b360920cdc84d1",
+   "taille": 111173
+  }
+ },
+ "version": 1
+}

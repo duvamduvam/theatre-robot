@@ -212,6 +212,11 @@ dechets_rsync:
   # Même déchet côté sim (workspace colcon de la fumée, 8 Mo trouvés sur le robot le 08/11) :
   # exclu de la copie depuis 965aaf4, effacé ici (L1e-4b).
   - conf/docker/sim/workspace
+# Audios privés (14/11) : les sons de Didier vivent hors dépôt (dépôt public, chansons du commerce),
+# dans <medias_prives_dir>/audios/ du PC, synchronisé par Nextcloud ; copiés sur le Pi robot dans
+# src/robot/medias/audios/ par le rôle synchronise, vérifiés contre data/json/audios-prives.json.
+# Même variable d'environnement et même défaut que la sim et les tests (theatre_contrats.donnees).
+medias_prives_dir: "{{ lookup('env', 'DIDIER_MEDIAS_PRIVES') or (lookup('env', 'HOME') ~ '/Nextcloud/dev/didier/medias-prives') }}"
 # Secrets (rôle secrets) : sur le PC seulement, hors dépôt et hors Nextcloud (chmod 600).
 secrets_dir: "{{ lookup('env','HOME') }}/.config/didier"
 #controller_project_dir: "dadou_controller_ros"

@@ -178,7 +178,78 @@
       - "--exclude=__pycache__/"
       - "--exclude=/backup/"
       - "--exclude=/.tmp/"
+      # Audios privés (14/11) : medias/audios/ du Pi n'est rempli QUE par la copie du dossier
+      # privé ci-dessous (data/medias/audios/ du dépôt ne porte plus que son README). Sans
+      # --delete, cette copie n'efface rien des audios du Pi ; l'exclusion les protège même si
+      # un --delete revenait un jour ici.
+      - "--exclude=/audios/"
   loop: [json, medias, db]
+
+# Audios privés (lot du 14/11, décision de David du 13/11) : les sons ne sont plus dans le dépôt
+# public mais dans `medias_prives_dir`/audios/ du PC (vars/main.yml, $DIDIER_MEDIAS_PRIVES) ; le
+# dépôt n'en porte que le manifeste data/json/audios-prives.json (copié avec json/). Trois temps :
+# (1) sur le PC, le dossier privé doit être EXACTEMENT le manifeste (chaque audio, son sha, rien
+# en plus : sinon on déploierait un son que rien ne vérifie) ; (2) copie vers medias/audios/ du
+# Pi, chemin INCHANGÉ, sans --delete ; (3) sur le Pi, sha256 de chaque audio relu et comparé au
+# manifeste sur le PC (un fichier du Pi hors manifeste est signalé, pas refusé). ecart-pi.sh
+# rejoue (3) dans son volet (d). Hôte robot seul (`donnees_dir`).
+- name: Check the private audios folder against the manifest on the PC (audios privés 1/3)
+  when: donnees_dir is defined
+  delegate_to: localhost
+  become: false
+  command:
+    argv: ["{{ ansible_playbook_python }}", "-m", "theatre_contrats.donnees", "verifier-audios",
+           "{{ donnees_dir }}", "{{ medias_prives_dir }}/audios"]
+  environment:
+    PYTHONPATH: "{{ packages_dir }}/theatre_contrats"
+  register: audios_pc
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Refuse to deploy private audios that do not match the manifest
+  when:
+    - donnees_dir is defined
+    - audios_pc.rc != 0
+  fail:
+    msg: >-
+      {{ ['Audios privés non conformes au manifeste data/json/audios-prives.json :'] + audios_pc.stdout_lines
+         + audios_pc.stderr_lines
+         + ['dossier privé : ' ~ medias_prives_dir ~ '/audios (variable DIDIER_MEDIAS_PRIVES ; synchronisé par Nextcloud ?)',
+            'audio ajouté ou retiré exprès : python3 -m theatre_contrats.donnees manifeste-audios data (docs/operations.md), puis commiter le manifeste'] }}
+
+- name: Synchronize private audios "{{ medias_prives_dir }}/audios/" with "{{ ros2_ws }}/src/{{ project_ros_dir | default('') }}/medias/audios/" (audios privés 2/3)
+  when: donnees_dir is defined
+  synchronize:
+    src: "{{ medias_prives_dir }}/audios/"
+    dest: "{{ ros2_ws }}/src/{{ project_ros_dir }}/medias/audios/"
+    recursive: yes
+    rsync_opts:
+      - "--omit-dir-times"
+
+- name: Read the sha256 of the audios on the Pi (audios privés 3/3)
+  when: donnees_dir is defined
+  shell: >-
+    cd "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/medias/audios" &&
+    find . -type f \( -iname '*.mp3' -o -iname '*.wav' \) -print0 | sort -z | xargs -0 -r sha256sum
+  register: audios_pi
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Compare the audios of the Pi with the manifest on the PC
+  when: donnees_dir is defined
+  delegate_to: localhost
+  become: false
+  command:
+    argv: ["{{ ansible_playbook_python }}", "-m", "theatre_contrats.donnees", "verifier-sommes", "{{ donnees_dir }}"]
+    stdin: "{{ audios_pi.stdout }}"
+  environment:
+    PYTHONPATH: "{{ packages_dir }}/theatre_contrats"
+  register: audios_recus
+  changed_when: false
+  failed_when: audios_pi.rc != 0 or audios_recus.rc != 0
+  check_mode: false
 
 # Lot L1e-4c (11/11) : la conf de la machine = machines/<machine>/ (`conf_machine_dir` du
 # machine.yml) -> src/<projet>/conf/, chemin Pi INCHANGÉ (ex copie de legacy/dadou_robot_ros/conf/
