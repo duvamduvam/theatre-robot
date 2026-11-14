@@ -21,7 +21,7 @@ lumières, gants) — décidé le 2026-11-01 (`docs/etude-architecture-globale.m
 |---|---|
 | L0 sauvegardes + squelette | **FAIT le 02/11** : 6 dépôts sauvegardés et poussés, secrets purgés, squelette posé et **validé sur pièce par David**, 4 historiques importés (1 628 commits), **V-R3 rejoué depuis `legacy/` : 21 OK / 0 KO**, tests du cœur verts, Ansible pointe sur `legacy/` |
 | L1 contrats + données | **FAIT le 14/11** (hors protocole caméra) — contrats, un nom par robot, catalogue publié, packages `didier_*`, `deploy/` `data/` `machines/` `docs/`, et L1d : séquences, lumières et expressions s'éditent à travers le robot, chaque retouche passe par la sim (édition éteinte sur le robot jusqu'à décision). ⛔ Protocole caméra dû avant tout usage au sol. Détail : [tableau de bord](docs/chantiers.md), [spec L1](docs/spec-L1-contrats-donnees.md) |
-| L2 sim multi-conteneurs | **spec fermée écrite le 13/11** ; L2a (un Dockerfile par machine) en cours sur la branche `l2` (14/11) — [`docs/spec-L2-sim-multi-conteneurs.md`](docs/spec-L2-sim-multi-conteneurs.md) (5 sous-étapes L2a à L2e) |
+| L2 sim multi-conteneurs | **spec fermée écrite le 13/11** ; L2a (un Dockerfile par machine) faite le 14/11 sur la branche `l2` — [`docs/spec-L2-sim-multi-conteneurs.md`](docs/spec-L2-sim-multi-conteneurs.md) (5 sous-étapes L2a à L2e) |
 | L3 gabarit + sono | à venir |
 | L4 télécommande neuve | à venir |
 | L5 ménage | à venir |
