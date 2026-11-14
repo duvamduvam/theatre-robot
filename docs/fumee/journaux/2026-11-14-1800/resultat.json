@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "id": "2026-11-14-1800",
+  "notes": [],
+  "sha": "5199c70",
+  "sha_complet": "5199c708e8937e0116bbd53eb57ddc4482600771",
+  "sale": false,
+  "branche": "main",
+  "mode": "si-due",
+  "raison": "due : 1 commit(s) de code dans main depuis la dernière fumée verte (1a916bb)",
+  "debut": "2026-11-14T18:00:10+01:00",
+  "fin": "2026-11-14T18:35:26+01:00",
+  "duree_s": 2116,
+  "rtf": 0.998,
+  "rtf_min": 0.8,
+  "charge_1min": 1.1,
+  "nb_coeurs": 32,
+  "essai": false,
+  "image_reconstruite": true,
+  "coeurs_reserves": "8-15",
+  "epreuves": [
+    {
+      "id": "image",
+      "statut": "vert",
+      "detail": "reconstruite : Dockerfile/compose sim modifié depuis 1a916bb",
+      "duree_s": 4,
+      "journal": "image.log"
+    },
+    {
+      "id": "demarrage",
+      "statut": "vert",
+      "detail": "conteneur dadou-sim-container, domaine 43, monde chantiers, headless",
+      "duree_s": 26,
+      "journal": "demarrage.log"
+    },
+    {
+      "id": "rtf",
+      "statut": "vert",
+      "obtenu": "0.998",
+      "detail": "seuil 0.8",
+      "duree_s": 22,
+      "journal": "rtf.log"
+    },
+    {
+      "id": "namespace",
+      "ok": 5,
+      "attendu": 5,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 40,
+      "journal": "namespace.log"
+    },
+    {
+      "id": "catalogue",
+      "ok": 4,
+      "attendu": 4,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 26,
+      "journal": "catalogue.log"
+    },
+    {
+      "id": "parle",
+      "ok": 3,
+      "attendu": 3,
+      "ko": 0,
+      "statut": "vert",
+      "detail": "ETATS=[\"\", \"parle\", \"\"]",
+      "duree_s": 4,
+      "journal": "parle.log"
+    },
+    {
+      "id": "edition",
+      "ok": 13,
+      "attendu": 13,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 36,
+      "journal": "edition.log"
+    },
+    {
+      "id": "chantiers",
+      "ok": 21,
+      "attendu": 21,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 930,
+      "journal": "chantiers.log"
+    },
+    {
+      "id": "a1",
+      "ok": 14,
+      "attendu": 14,
+      "ko": 0,
+      "statut": "vert",
+      "duree_s": 911,
+      "journal": "a1.log"
+    }
+  ],
+  "verdict": "vert",
+  "bloquant": null,
+  "page": "2026-11-14-3.html"
+}
