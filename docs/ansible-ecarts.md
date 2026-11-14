@@ -119,6 +119,26 @@ les fichiers lourds hors dépôt — `ecart-pi.sh` ne voit que `~` au premier ni
 - `install-pios-lite.yml` lançait `synchronise` en `become` : tout `src/` en root, cause
   probable des code 23 du déploiement suivant. Corrigé, **non rejoué** (pas de reflash).
 
+## Éditions du robot : deux gardes et le rapatriement (lot L1d-4, 13/11)
+
+Écart fermé : le rsync des données écrasait sans rien dire une retouche faite sur le Pi (et une
+création y restait sans jamais revenir dans git). Mode d'emploi : `docs/operations.md`
+§« Rapatrier avant de déployer ».
+- **Garde 1** (première tâche du rôle `synchronise`, aussi en `--check`) : un journal
+  `json/backup/EDITIONS-EN-ATTENTE*.jsonl` non vide sur le Pi → refus, avec la commande
+  `rapatrier-editions.yml`. Échappatoire explicite `-e ecraser_editions=true` (journal archivé en
+  `json/backup/<date>/EDITIONS-ecrasees-<HHMMSS>.jsonl`, sauvegardes gardées sur le Pi).
+- **Garde 2** (juste après, sur le PC, sans échappatoire) : `python3 -m theatre_contrats.donnees
+  non-validees data/` non vide → refus (porte sim, `machines/sim/rejouer-modifiees.sh`).
+- Copie des données : `--exclude=/backup/` et `--exclude=/.tmp/` (sauvegardes, journal et
+  temporaires de l'écrivain ne voyagent jamais).
+- `ecart-pi.sh` : volet **(c)** « éditions non rapatriées : N » ; le volet (a) est rouge aussi
+  (la garde 1 fait échouer le `--check`).
+- Drapeau `DATA_EDIT` du conteneur : `edition_donnees: false` de `machines/robot/machine.yml`,
+  passé par la tâche « Recreate the project container » ; essai ponctuel `-e edition_donnees=true`.
+  Limite : un `docker compose up` lancé hors Ansible (à la main) le remet à faux.
+- Prouvé le 13/11 sur les deux Pi hors robot (épreuve au rapport du lot, `ecart-pi.sh` vert ×2).
+
 ## Relevé du 07/11 (lecture seule, Pi hors robot)
 
 Robot = Pi 4 de rechange en .131, SD réinstallée le 04/11 ; vision = Pi 5 en .151, SD d'origine.

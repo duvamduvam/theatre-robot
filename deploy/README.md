@@ -19,6 +19,7 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=robot   # ou vision
 | `roles/` | un rôle par geste ; gravés par `packages/didier_core/test/unit/test_arborescence.py` |
 | `templates/` | fichiers posés sur les Pi (scripts, unité systemd, ALSA, logging) |
 | `ecart-pi.sh`, `attendu/` | détection d'écart Pi ↔ dépôt (voir `docs/ansible-ecarts.md`) |
+| `rapatrier-editions.yml`, `rapatrier_editions.py` | L1d-4 : ramène dans `data/` du PC (sans commiter) les éditions faites sur le robot ; à lancer quand la garde du déploiement le demande (`docs/operations.md` § « Rapatrier avant de déployer ») |
 
 Secrets : `~/.config/didier/` du PC, posés par le rôle `secrets` — jamais dans le dépôt ni un log.
 Mode d'emploi détaillé : `docs/operations.md` § « Déployer / réinstaller un Pi ».

@@ -1,4 +1,76 @@
 
+# Lot L1d-4 (13/11) : DEUX GARDES, avant toute copie (spec L1d, décisions 7 ter et 13), jouées
+# aussi en --check (ecart-pi.sh les voit). Hôtes qui portent les données (`donnees_dir`) seuls.
+# Garde 1 — éditions non rapatriées : data_edit_node journalise chaque écriture faite SUR le robot
+# dans json/backup/EDITIONS-EN-ATTENTE*.jsonl (le .rapatriement.jsonl d'un rapatriement
+# interrompu compte aussi) ; le rsync des données l'écraserait par la version du PC. Une ligne =
+# une édition. Échappatoire EXPLICITE : -e ecraser_editions=true (journal archivé, sauvegardes
+# gardées sur le Pi).
+- name: Count robot data edits not brought back to git (L1d guard 1)
+  when: donnees_dir is defined
+  become: yes
+  shell: |
+    cat "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/json/backup/"EDITIONS-EN-ATTENTE*.jsonl 2>/dev/null | grep -c .
+    exit 0
+  register: editions_en_attente
+  changed_when: false
+  check_mode: false
+
+- name: Refuse to deploy over robot data edits not brought back
+  when:
+    - donnees_dir is defined
+    - (editions_en_attente.stdout | int) > 0
+    - not (ecraser_editions | default(false) | bool)
+  fail:
+    msg: >-
+      {{ editions_en_attente.stdout | int }} édition(s) non rapatriée(s) sur {{ inventory_hostname }} :
+      cd deploy && ansible-playbook -i hosts rapatrier-editions.yml -e target_group={{ target_group | default('robot') }}
+      — puis relire, commiter, redéployer. Les écraser quand même : -e ecraser_editions=true.
+
+# Archivage, pas effacement : chaque journal est d'abord DÉPLACÉ (mv atomique ; une retouche
+# faite pendant ce temps ouvre un journal neuf, que le déploiement suivant verra), puis concaténé.
+- name: Archive the overwritten edits journal (ecraser_editions=true)
+  when:
+    - donnees_dir is defined
+    - (editions_en_attente.stdout | int) > 0
+    - ecraser_editions | default(false) | bool
+    - not ansible_check_mode
+  become: yes
+  shell: |
+    cd "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}/json/backup" || exit 1
+    jour=$(date +%Y-%m-%d); heure=$(date +%H%M%S); mise_de_cote=$(mktemp -d .ecrasees-XXXXXX)
+    mv EDITIONS-EN-ATTENTE*.jsonl "$mise_de_cote/"
+    mkdir -p "$jour"
+    cat "$mise_de_cote"/*.jsonl > "$jour/EDITIONS-ecrasees-$heure.jsonl" && rm -r "$mise_de_cote"
+    chown -R {{ ansible_user_id }}:{{ ansible_user_id }} "$jour"
+
+# Garde 2 — porte sim (décision 7 ter), SANS échappatoire : tout ce que data/ du PC porte doit
+# avoir été rejoué en sim, et toute piste roues validée (registre data/json/validations-sim.json).
+# Jouée sur le PC (le contrat est stdlib : le python d'Ansible suffit). Son trou, dit : elle ne
+# voit pas un fichier écrit directement sur le Pi — c'est la barrière de jeu du robot qui le ferme.
+- name: Check that every data element passed the sim gate (L1d guard 2)
+  when: donnees_dir is defined
+  delegate_to: localhost
+  become: false
+  command:
+    argv: ["{{ ansible_playbook_python }}", "-m", "theatre_contrats.donnees", "non-validees", "{{ donnees_dir }}"]
+  environment:
+    PYTHONPATH: "{{ packages_dir }}/theatre_contrats"
+  register: porte_sim
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Refuse to deploy data that did not pass the sim gate
+  when:
+    - donnees_dir is defined
+    - porte_sim.rc != 0
+  fail:
+    msg: >-
+      {{ ['Porte sim fermée (aucune échappatoire) :'] + porte_sim.stdout_lines + porte_sim.stderr_lines
+         + ['1. rejouer en sim : machines/sim/rejouer-modifiees.sh (puis valider à l’œil les pistes roues, page scène)',
+            '2. commiter data/json/validations-sim.json, puis relancer : cd deploy && ansible-playbook -i hosts deploy-pios.yml -e target_group=' ~ (target_group | default('robot'))] }}
+
 # Lot « Ansible nickel » (07/11) : le squelette du workspace est créé ici, en utilisateur de
 # connexion, AVANT tout rsync. Pourquoi : rsync ne crée que le dernier niveau de sa
 # destination (un ~/ros2_ws effacé faisait échouer la copie), et un dossier absent au premier
@@ -90,6 +162,9 @@
 # (chemin Pi INCHANGÉ : DIDIER_DATA_DIR, compose ARM et Dockerfile-arm les y lisent). Hôte robot
 # seul (`donnees_dir` de machines/robot/machine.yml). Une copie PAR dossier, nommée : rien d'autre de data/ (README)
 # ne part. Pas de --delete, comme la copie « projet » qu'elles remplacent.
+# L1d-4 (13/11) : `/backup/` (json/backup/ : sauvegardes, temporaires et journal des éditions
+# de l'écrivain — ceux d'une sim du PC ne partent jamais sur le Pi, et ceux du Pi ne sont jamais
+# écrasés) et `/.tmp/` (medias/.tmp/, temporaire des images de l'écrivain) exclus.
 - name: Synchronize robot data "{{ donnees_dir | default('') }}/{{ item }}/" with "{{ ros2_ws }}/src/{{ project_ros_dir }}/{{ item }}/"
   when: donnees_dir is defined
   synchronize:
@@ -101,6 +176,8 @@
       - "--omit-dir-times"
       - "--exclude=.~tmp~/"
       - "--exclude=__pycache__/"
+      - "--exclude=/backup/"
+      - "--exclude=/.tmp/"
   loop: [json, medias, db]
 
 # Lot L1e-4c (11/11) : la conf de la machine = machines/<machine>/ (`conf_machine_dir` du

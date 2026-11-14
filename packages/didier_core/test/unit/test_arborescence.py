@@ -588,7 +588,9 @@ ROLES_SUPPRIMES = ["activate-spi", "download-install-docker-from-url", "root_ssh
                    "ros_dependencies", "waveshare-screen", "set-vim", "jenkins", "sonar",
                    "nginx"]   # nginx : aucun playbook ne l'appelle (git grep, L1e-4e)
 PLAYBOOKS_GARDES = ["deploy-pios.yml", "install-pios-lite.yml", "install-pios-full.yml",
-                    "install-controller-ubuntu.yml"]
+                    "install-controller-ubuntu.yml",
+                    # L1d-4 (13/11) : retour des éditions du robot vers data/ du PC.
+                    "rapatrier-editions.yml"]
 PLAYBOOKS_SUPPRIMES = ["install-ci.yml", "install-ci-github-actions.yml", "configure-local-ci.yml",
                        "install-test-pios.yml", "deploy-test-pios.yml"]
 
@@ -830,7 +832,8 @@ HOTES_MACHINES = {"r": "robot", "ai": "vision", "c": "telecommande",
 VARIABLES_DE_CONTENU = ["packages", "sentinelle_build", "launch_cmd", "noeuds_attendus",
                         "dossiers_montes", "secrets_hote", "telechargements_hote", "fichiers_etc",
                         "unites_systemd", "paquets_hote", "project_ros_dir", "project_name",
-                        "local_project_dir", "donnees_dir", "conf_machine_dir", "apt_packages"]
+                        "local_project_dir", "donnees_dir", "conf_machine_dir", "apt_packages",
+                        "edition_donnees"]
 CHEMINS_RETIRES_SIM = [
     "src/robot/conf/docker/sim", "src/robot/conf/docker/x8664",
     *(f"src/robot/conf/scripts/{f}" for f in (
@@ -1003,6 +1006,119 @@ def test_l_outillage_mort_de_legacy_est_supprime():
 def test_les_requirements_de_test_sont_a_la_racine_et_dans_la_vision():
     racine = (MONO / "requirements-test.txt").read_text(encoding="utf-8").splitlines()
     actifs = [ligne for ligne in racine if ligne and not ligne.startswith("#")]
-    assert actifs == ["pytest", "filetype", "colorlog", "psutil", "xacro", "imageio", "py_trees==2.6.0"]
+    assert actifs == ["pytest", "filetype", "colorlog", "psutil", "xacro", "imageio", "py_trees==2.6.0",
+                      "aiohttp", "Pillow"]
     vision = (PACKAGES / "didier_vision" / "requirements-test.txt").read_text(encoding="utf-8").splitlines()
     assert [ligne for ligne in vision if ligne and not ligne.startswith("#")] == ["pytest", "sqlobject", "numpy<2"]
+
+
+# --- L1d-4 : les deux gardes du déploiement, le rapatriement, le drapeau DATA_EDIT ------------
+# Spec L1d, décisions 7 ter, 10 et 13. Noms des tâches GRAVÉS : la place des gardes (avant toute
+# copie) se lit dans le vrai rôle.
+
+GARDE_1 = "Count robot data edits not brought back to git (L1d guard 1)"
+REFUS_1 = "Refuse to deploy over robot data edits not brought back"
+ECRASER = "Archive the overwritten edits journal (ecraser_editions=true)"
+GARDE_2 = "Check that every data element passed the sim gate (L1d guard 2)"
+REFUS_2 = "Refuse to deploy data that did not pass the sim gate"
+
+
+def _tache(taches, nom):
+    return next(t for t in taches if t.get("name") == nom)
+
+
+def test_les_deux_gardes_ouvrent_le_role_avant_toute_copie():
+    taches = _taches()
+    noms = [t.get("name") for t in taches]
+    assert noms[:5] == [GARDE_1, REFUS_1, ECRASER, GARDE_2, REFUS_2]
+    premiere_copie = next(i for i, t in enumerate(taches) if "synchronize" in t)
+    assert premiere_copie > 4
+    for nom in (GARDE_1, GARDE_2):
+        tache = _tache(taches, nom)
+        assert tache["check_mode"] is False, nom      # jouée aussi par ecart-pi.sh (--check)
+        assert tache["changed_when"] is False, nom
+        assert tache["when"] == "donnees_dir is defined", nom
+
+
+def test_la_garde_des_editions_a_une_echappatoire_explicite_et_celle_de_la_porte_sim_aucune():
+    taches = _taches()
+    assert _tache(taches, REFUS_1)["when"] == [
+        "donnees_dir is defined", "(editions_en_attente.stdout | int) > 0",
+        "not (ecraser_editions | default(false) | bool)"]
+    assert "rapatrier-editions.yml" in _tache(taches, REFUS_1)["fail"]["msg"]
+    assert "ecraser_editions | default(false) | bool" in _tache(taches, ECRASER)["when"]
+    assert "not ansible_check_mode" in _tache(taches, ECRASER)["when"]
+    assert _tache(taches, REFUS_2)["when"] == ["donnees_dir is defined", "porte_sim.rc != 0"]
+    assert _tache(taches, GARDE_2)["command"]["argv"] == [
+        "{{ ansible_playbook_python }}", "-m", "theatre_contrats.donnees", "non-validees", "{{ donnees_dir }}"]
+    assert _tache(taches, GARDE_2)["delegate_to"] == "localhost"
+    assert "ecraser" not in yaml.safe_dump([_tache(taches, GARDE_2), _tache(taches, REFUS_2)])
+
+
+def _compter_editions(tmp_path):
+    """Joue le shell VRAI de la garde 1 sur un faux Pi (variables Jinja remplacées)."""
+    import subprocess
+    script = _tache(_taches(), GARDE_1)["shell"].replace(
+        "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}", str(tmp_path))
+    return subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True).stdout.strip()
+
+
+def test_la_garde_des_editions_compte_chaque_ligne_de_chaque_journal_en_attente(tmp_path):
+    assert _compter_editions(tmp_path) == "0"            # Pi sans json/backup/
+    backup = tmp_path / "json" / "backup"
+    backup.mkdir(parents=True)
+    (backup / "EDITIONS-EN-ATTENTE.jsonl").write_text('{"id":"a"}\n{"id":"b"}\n', encoding="utf-8")
+    assert _compter_editions(tmp_path) == "2"
+    # Un rapatriement interrompu laisse son journal mis de côté : il compte aussi.
+    (backup / "EDITIONS-EN-ATTENTE.rapatriement.jsonl").write_text('{"id":"c"}\n\n', encoding="utf-8")
+    assert _compter_editions(tmp_path) == "3"
+    # Les journaux archivés (rapatriés, écrasés) ne comptent plus.
+    for nom in ("EDITIONS-EN-ATTENTE.jsonl", "EDITIONS-EN-ATTENTE.rapatriement.jsonl"):
+        (backup / nom).rename(backup / nom.replace("EN-ATTENTE", "rapatriees-210507"))
+    assert _compter_editions(tmp_path) == "0"
+
+
+def test_la_copie_des_donnees_exclut_les_sauvegardes_et_temporaires_de_l_ecrivain():
+    donnees_copie = next(t for t in _taches() if str(t.get("name", "")).startswith("Synchronize robot data"))
+    options = donnees_copie["synchronize"]["rsync_opts"]
+    assert "--exclude=/backup/" in options
+    assert "--exclude=/.tmp/" in options
+
+
+def test_le_drapeau_data_edit_est_faux_dans_le_depot_et_passe_au_conteneur():
+    assert _machine("robot")["edition_donnees"] is False
+    assert "DATA_EDIT=${DATA_EDIT:-false}" in _service(COMPOSE_ARM)["environment"]
+    conteneur = yaml.safe_load((DEPLOY / "roles" / "conteneur" / "tasks" / "main.yml").read_text(encoding="utf-8"))
+    recreer = next(t for t in conteneur if t.get("name") == "Recreate the project container")
+    assert recreer["environment"] == {
+        "DATA_EDIT": "{{ 'true' if (edition_donnees | default(false) | bool) else 'false' }}"}
+
+
+def test_l_ecrivain_est_attendu_sur_le_robot_et_l_observateur_sim_jamais():
+    attendus = _machine("robot")["noeuds_attendus"]
+    assert "/didier/data_edit_node" in attendus
+    assert not [n for n in attendus if "validation_sim" in n]
+
+
+def test_le_rapatriement_ne_commite_jamais_et_verifie_git_avant_de_tirer():
+    texte = (DEPLOY / "rapatrier-editions.yml").read_text(encoding="utf-8")
+    jeu = yaml.safe_load(texte)[0]
+    assert jeu["pre_tasks"][0]["ansible.builtin.include_vars"]["file"] == "{{ machines_dir }}/{{ machine }}/machine.yml"
+    for interdit in ("git commit", "git add", "git push", "git checkout", "git stash", "git reset"):
+        assert interdit not in texte, interdit
+    taches = jeu["tasks"][-1]["block"]
+    noms = [t["name"] for t in taches]
+    assert noms.index("Check the journal and the git state of every target") \
+        < noms.index("Refuse when the journal is unreadable or a target is modified in git") \
+        < noms.index("Pull the edited files from the Pi") \
+        < noms.index("Bring the edits into data/ and run the data tests") \
+        < noms.index("Stop when the data tests are red (data/ restored, journal left pending)") \
+        < noms.index("Archive the brought-back journal (the deployment guard no longer sees it)")
+    assert (DEPLOY / "rapatrier_editions.py").is_file()
+
+
+def test_ecart_pi_porte_le_volet_des_editions_non_rapatriees():
+    texte = (DEPLOY / "ecart-pi.sh").read_text(encoding="utf-8")
+    assert "json/backup/EDITIONS-EN-ATTENTE*.jsonl" in texte
+    assert "ROUGE (c) éditions non rapatriées" in texte
+    assert "rapatrier-editions.yml" in texte

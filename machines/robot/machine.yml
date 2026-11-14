@@ -23,7 +23,11 @@ paquets_hote:
   - avahi-utils
 unites_systemd:
   - "{{ machines_dir }}/robot/systemd/avahi-alias-didier.service"
-# Contrôle de fin de déploiement (rôle conteneur) : les 16 nœuds du robot seul
+# Édition des données à travers le robot (lot L1d, spec décision 10) : variable DATA_EDIT du
+# conteneur (rôle conteneur). FAUX dans le dépôt — le passer à vrai est une décision de David,
+# après sa validation de L1d et une relecture adverse. Essai ponctuel : -e edition_donnees=true.
+edition_donnees: false
+# Contrôle de fin de déploiement (rôle conteneur) : les 17 nœuds du robot seul
 # (vision_status vient du Pi vision, il n'est pas exigé ici). Un nœud renommé ou
 # ajouté au launch = cette liste à suivre (relays_node et wheels_node tournent même
 # sans carte I²C : hors robot ils restent présents).
@@ -31,6 +35,9 @@ noeuds_attendus:
   - /didier/animations_node
   - /didier/audio_node
   - /didier/catalogue_node
+  # L1d : l'écrivain des données, toujours lancé (désactivé, il répond edition_desactivee).
+  # validation_sim_node n'est PAS ici : il n'existe qu'en sim (domaine 43).
+  - /didier/data_edit_node
   - /didier/left_arm_node
   - /didier/left_eye_node
   - /didier/lights_node
