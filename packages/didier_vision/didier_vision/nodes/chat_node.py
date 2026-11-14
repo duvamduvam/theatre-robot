@@ -731,7 +731,7 @@ class ChatNode(Node):
                 f"STT indisponible (modèle faster-whisper={whisper_model!r}) : "
                 f"{exc} — vérifiez que faster-whisper est installé (conf/"
                 "requirements.txt) et que le modèle a été préchargé dans "
-                "l'image (Dockerfile-arm, pour un fonctionnement hors ligne)."
+                "l'image (machines/vision/docker/Dockerfile, pour un fonctionnement hors ligne)."
             )
             raise ChatStartupError("échec init STT") from exc
         # STT distant (23/10, « être compris correctement ») : le whisper local
@@ -784,7 +784,7 @@ class ChatNode(Node):
             self.get_logger().error(
                 f"Voix Piper absente : {piper_voice} (+ .json) — téléchargez "
                 "la voix fr_FR-siwis-medium (.onnx + .json) vers ce chemin, "
-                "cf. Dockerfile-arm (censé le faire au build) et le paramètre "
+                "cf. machines/vision/docker/Dockerfile (censé le faire au build) et le paramètre "
                 "ROS piper_voice."
             )
             raise ChatStartupError(f"voix Piper introuvable : {piper_voice}")

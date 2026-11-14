@@ -41,7 +41,7 @@ from didier_vision.tracking.camera_source import (
 from didier_vision.tracking.camera_switch import CAMERA_OFF, CAMERA_ON, decode_camera_enable
 from didier_vision.tracking.target_picker import TargetPicker
 
-# Modèle téléchargé DANS L'IMAGE Docker (Dockerfile-arm, curl au build) : pas
+# Modèle téléchargé DANS L'IMAGE Docker (machines/vision/docker/Dockerfile, curl au build) : pas
 # de dépendance réseau au démarrage du node. Chemin par défaut du paramètre
 # ROS model_path — modifiable pour du dev PC hors conteneur.
 DEFAULT_MODEL_PATH = "/home/ros2_ws/models/efficientdet_lite0.tflite"
@@ -143,7 +143,7 @@ class PersonTrackerNode(Node):
             # arguments but N were given"). On formate donc avec des f-strings.
             self.get_logger().error(
                 f"Modèle MediaPipe introuvable : {model_path} — le "
-                "Dockerfile-arm est censé le télécharger au build (curl vers "
+                "machines/vision/docker/Dockerfile est censé le télécharger au build (curl vers "
                 "ce chemin). Vérifiez le paramètre model_path et l'image Docker."
             )
             raise PersonTrackerStartupError(f"modèle introuvable : {model_path}")

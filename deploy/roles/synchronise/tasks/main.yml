@@ -366,7 +366,7 @@
   become: yes
   shell: |
     cd "{{ ansible_env.HOME }}/{{ ros2_ws }}" 2>/dev/null || exit 0
-    for chemin in {{ (chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot + chemins_retires_sim + chemins_retires_legacy_vision) | join(' ') }}; do
+    for chemin in {{ (chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot + chemins_retires_sim + chemins_retires_legacy_vision + chemins_retires_l2) | join(' ') }}; do
       [ -e "$chemin" ] && echo "$chemin"
     done
     exit 0
@@ -386,8 +386,9 @@
   # L1e-3d : même tâche pour la vision (chemins distincts, absents de l'autre hôte). L1e-4b : et
   # pour les déchets de l'ancienne copie « projet » du robot (chemins_retires_legacy_robot).
   # L1e-4c : et pour la partie sim de l'ancienne conf/ (chemins_retires_sim) et les déchets de
-  # l'ancienne copie « projet » de la vision (chemins_retires_legacy_vision).
-  loop: "{{ chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot + chemins_retires_sim + chemins_retires_legacy_vision }}"
+  # l'ancienne copie « projet » de la vision (chemins_retires_legacy_vision). L2a : et pour les
+  # anciens Dockerfile-arm et fichiers docker morts de la conf (chemins_retires_l2).
+  loop: "{{ chemins_retires_robot + chemins_retires_vision + chemins_retires_legacy_robot + chemins_retires_sim + chemins_retires_legacy_vision + chemins_retires_l2 }}"
   when: item in robot_ancien.stdout_lines
 
 # Déchets laissés par l'ancien rsync (vars/main.yml, `dechets_rsync`) : désormais exclus de

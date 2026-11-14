@@ -3,8 +3,11 @@ services:
     container_name: dadou-vision-container
     image: dadouuu/dadou-vision-arm:latest
     build:
-      context: ../../..
-      dockerfile: conf/docker/arm/Dockerfile-arm
+      # L2a (spec L2, décision 5) : le Dockerfile unique de la machine (ARM et x86) est
+      # src/vision/conf/docker/Dockerfile ; contexte principal = son dossier (rien n'en est copié),
+      # tout le reste en contextes NOMMÉS ci-dessous, chemins de la disposition du Pi.
+      context: ..
+      dockerfile: Dockerfile
       # Packages COMMUNS du mono-dépôt (lot L1a) en contextes NOMMÉS, chemins
       # de l'arborescence déployée sur le Pi (ros2_ws/src/<package>, comme le
       # volume theatre_interfaces) — Ansible doit les y synchroniser.
@@ -13,6 +16,9 @@ services:
         theatre_contrats: ../../../../theatre_contrats
         dadou_utils_ros: ../../../../dadou_utils_ros
         didier_vision: ../../../../didier_vision
+        # L2a : la conf de la machine (machines/vision/ du dépôt), src/vision/conf/ sur le Pi.
+        # Son .dockerignore (à sa racine) exclut `secret` (décision 6, verrou (a)).
+        conf: ../..
     environment:
       - ALSA_CARD=0
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}

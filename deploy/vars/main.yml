@@ -201,6 +201,25 @@ chemins_retires_legacy_vision:
   - src/vision/requirements-test.txt
   - src/vision/requirements.txt
   - src/vision/tools
+# Lot L2a (spec L2, décision 5) : un Dockerfile par machine, conf/docker/Dockerfile, construit
+# avec le dossier conf/docker/ comme contexte principal. Les anciens fichiers, poussés jadis par
+# le rsync de conf/ (sans --delete), resteraient sur les Pi : l'ancien Dockerfile-arm et son
+# .dockerignore (vision), et les fichiers morts de l'ancienne conf docker du robot — dont
+# conf/docker/.dockerignore, qui serait désormais LU (il est à la racine du nouveau contexte).
+# Effacés s'ils sont présents (même tâche conditionnelle que chemins_retires_robot) ; rien ne les
+# recrée (gravé par test_arborescence.py) ; la liste ne se vide jamais (un Pi resté éteint
+# rattrape). JAMAIS conf/docker/Dockerfile, conf/docker/arm/ ni src/vision/conf/.dockerignore
+# (verrou (a) du secret de la vision).
+chemins_retires_l2:
+  - src/robot/conf/docker/arm/Dockerfile-arm
+  - src/robot/conf/docker/arm/.dockerignore
+  - src/robot/conf/docker/.dockerignore
+  - src/robot/conf/docker/Dockerfile-bak
+  - src/robot/conf/docker/docker_bashrc
+  - src/robot/conf/docker/jenkins
+  - src/robot/conf/docker/scripts
+  - src/vision/conf/docker/arm/Dockerfile-arm
+  - src/vision/conf/docker/arm/Dockerfile-arm.dockerignore
 
 # Déchets que l'ancien rsync a poussés dans ros2_ws/src/<projet>/ (relevé du 07/11) : venv de
 # test du PC (269 Mo robot, 342 Mo vision) et workspace colcon du banc x86 de la vision (50 Mo).

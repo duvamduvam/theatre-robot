@@ -58,7 +58,7 @@ valeurs gravées par `test/unit/test_didier_vision_data_dir.py`).
 | Contexte | Comment |
 |---|---|
 | Hôte (tests) | `test/conftest.py` : la racine du package et les packages frères (`theatre_contrats`, `dadou_utils_ros`) dans `sys.path`, `DIDIER_VISION_DATA_DIR` posé |
-| Images ARM / x86 | contexte nommé `didier_vision` (compose ARM `additional_contexts`, `build-x86.sh` `--build-context`) + `COPY --from=didier_vision . /home/ros2_ws/src/didier_vision` |
+| Images ARM / x86 | contexte nommé `didier_vision` (compose ARM `additional_contexts`, compose du banc `machines/sim/banc-vision/docker-compose-x86.yml`) + `COPY --from=didier_vision . /home/ros2_ws/src/didier_vision` |
 | Conteneurs (volumes) | `packages/didier_vision` → `/home/ros2_ws/src/didier_vision` (sur le Pi : `../../../../didier_vision`) ; données sous `/home/ros2_ws/src/vision/` |
 | Sentinelle de build | `packages/didier_vision/change` (gitignorée) → `/home/ros2_ws/src/didier_vision/change`, lue puis effacée par `launch-ros-in-docker.sh` après `colcon build` |
 | Pi (Ansible) | liste `packages` de l'hôte vision — **à faire (moitié Ansible de 3d, voir chantiers.md)** |

@@ -1,5 +1,5 @@
 # Paquets apt du conteneur — minimal, chaque ligne justifiée (filtrés par
-# `sed -E 's/#.*$//' | xargs -r apt-get install -y`, cf. Dockerfile-arm).
+# `sed -E 's/#.*$//' | xargs -r apt-get install -y`, cf. machines/vision/docker/Dockerfile).
 
 # Outils pip dans le conteneur
 python3-pip
@@ -34,7 +34,7 @@ v4l-utils
 libgl1
 
 # curl : téléchargement du modèle MediaPipe EfficientDet-Lite0 int8 DANS
-# L'IMAGE (Dockerfile-arm), pas au démarrage du node person_tracker.
+# L'IMAGE (machines/vision/docker/Dockerfile), pas au démarrage du node person_tracker.
 curl
 
 # Timezone pour des logs cohérents avec le reste du parc

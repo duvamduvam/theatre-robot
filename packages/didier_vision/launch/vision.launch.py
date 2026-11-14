@@ -73,7 +73,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "model_path",
             default_value="/home/ros2_ws/models/efficientdet_lite0.tflite",
-            description="Modèle MediaPipe EfficientDet-Lite0 int8 (téléchargé DANS l'image Docker, cf. Dockerfile-arm)",
+            description="Modèle MediaPipe EfficientDet-Lite0 int8 (téléchargé DANS l'image Docker, cf. machines/vision/docker/Dockerfile)",
         ),
         DeclareLaunchArgument(
             "score_threshold", default_value="0.4",

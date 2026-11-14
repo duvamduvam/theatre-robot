@@ -285,10 +285,10 @@ EXECUTABLES_CORE = {
     "wheels_node": "didier_core.nodes.wheels_node:main",
 }
 SYNCHRONISE = DEPLOY / "roles" / "synchronise" / "tasks" / "main.yml"
-# L1e-4c : compose ARM dans la conf de la machine robot, bancs x86 dans machines/sim/banc-robot/.
+# L1e-4c : compose ARM dans la conf de la machine robot, sim dans machines/sim/banc-robot/.
+# L2a : l'ancien banc de bureau du robot (docker-compose-x86.yml) est supprimé.
 COMPOSES = [MACHINES / "robot" / "docker" / "arm" / "docker-compose-arm.yml",
-            MACHINES / "sim" / "banc-robot" / "docker-compose-sim.yml",
-            MACHINES / "sim" / "banc-robot" / "docker-compose-x86.yml"]
+            MACHINES / "sim" / "banc-robot" / "docker-compose-sim.yml"]
 
 
 def test_le_coeur_est_un_package_ament_python_dont_le_nom_est_celui_du_dossier():
@@ -484,9 +484,10 @@ def test_la_sentinelle_de_la_vision_est_dans_le_package_et_gitignoree():
 
 def test_les_compose_de_la_vision_montent_le_package_a_plat_et_posent_la_racine_des_donnees():
     # L1e-4c : compose ARM dans machines/vision/, banc x86 dans machines/sim/banc-vision/.
+    # L2a : le banc construit lui aussi par son compose (section build:, plus de build-x86.sh).
     for nom, build, compose in (
             ("arm", True, MACHINES / "vision" / "docker" / "arm" / "docker-compose-arm.yml"),
-            ("x86", False, MACHINES / "sim" / "banc-vision" / "docker-compose-x86.yml")):
+            ("x86", True, MACHINES / "sim" / "banc-vision" / "docker-compose-x86.yml")):
         service = next(iter(yaml.safe_load(compose.read_text(encoding="utf-8"))["services"].values()))
         volumes = service["volumes"]
         code = [v for v in volumes if v.endswith(":/home/ros2_ws/src/didier_vision")]
@@ -498,12 +499,10 @@ def test_les_compose_de_la_vision_montent_le_package_a_plat_et_posent_la_racine_
         assert "DIDIER_VISION_DATA_DIR=/home/ros2_ws/src/vision/" in service["environment"], nom
         if build:
             assert service["build"]["additional_contexts"]["didier_vision"].endswith("/didier_vision")
-    dockerfile = (MACHINES / "vision" / "docker" / "arm" / "Dockerfile-arm").read_text(encoding="utf-8")
+    dockerfile = (MACHINES / "vision" / "docker" / "Dockerfile").read_text(encoding="utf-8")
     assert "COPY --from=didier_vision . /home/ros2_ws/src/didier_vision\n" in dockerfile
     actives = [ligne for ligne in dockerfile.splitlines() if not ligne.lstrip().startswith("#")]
     assert not [ligne for ligne in actives if ligne.startswith("COPY vision/") or "conf/ros2" in ligne]
-    build_x86 = (MACHINES / "sim" / "banc-vision" / "build-x86.sh").read_text(encoding="utf-8")
-    assert '--build-context didier_vision="$PACKAGES/didier_vision"' in build_x86
 
 
 def test_plus_aucun_fichier_de_code_ni_de_conf_ne_cite_le_package_vision():
@@ -661,8 +660,8 @@ CHEMINS_RETIRES_LEGACY_ROBOT = [
 # Chemins (relatifs à la racine du dépôt) qui décident du suffixe -dirty du sha déployé.
 # L1e-4c : machines/ remplace legacy/dadou_robot_ros/conf et legacy/dadou_vision_ros.
 CHEMINS_DEPLOYES = ["packages", "data", "machines", "deploy"]
-COMPOSES_PC = [MACHINES / "sim/banc-robot/docker-compose-sim.yml",
-               MACHINES / "sim/banc-robot/docker-compose-x86.yml"]
+# L2a : l'ancien banc de bureau du robot (docker-compose-x86.yml) est supprimé.
+COMPOSES_PC = [MACHINES / "sim/banc-robot/docker-compose-sim.yml"]
 COMPOSE_ARM = MACHINES / "robot/docker/arm/docker-compose-arm.yml"
 
 
@@ -707,15 +706,22 @@ def test_le_compose_arm_garde_la_disposition_du_pi():
 
 
 def test_les_dockerfiles_copient_les_donnees_depuis_le_contexte_data():
-    for nom in ("robot/docker/arm/Dockerfile-arm", "sim/banc-robot/Dockerfile-x86",
-                "sim/banc-robot/Dockerfile-sim"):
+    for nom in ("robot/docker/Dockerfile", "sim/banc-robot/Dockerfile-sim"):
         lignes = (MACHINES / nom).read_text(encoding="utf-8").splitlines()
         copies = [l for l in lignes if l.startswith("COPY ")]
         assert not [l for l in copies if l.split()[1] in ("json/", "medias/", "db/")], nom
         assert "COPY --from=data json/ /home/ros2_ws/src/robot/json/" in copies, nom
-    for nom in ("robot/docker/arm/Dockerfile-arm", "sim/banc-robot/Dockerfile-x86"):
-        texte = (MACHINES / nom).read_text(encoding="utf-8")
-        assert "COPY --from=data medias/ /home/ros2_ws/src/robot/medias/\n" in texte, nom
+
+
+def test_aucun_audio_prive_n_entre_dans_l_image_publiee_du_robot():
+    """SÉCURITÉ (image dadouuu/dadou-robot-arm publiée sur le Hub, dépôt public ; audios privés du
+    14/11). Sur le Pi, le contexte `data` est src/robot/, dont medias/audios/ est rempli par Ansible
+    avec les sons du dossier privé : la SEULE copie de medias/ de l'image les exclut."""
+    lignes = (MACHINES / "robot/docker/Dockerfile").read_text(encoding="utf-8").splitlines()
+    medias = [l for l in lignes if l.startswith("COPY ") and "medias" in l]
+    assert medias == ["COPY --from=data --exclude=audios/* medias/ /home/ros2_ws/src/robot/medias/"]
+    # Aucune autre copie ne peut ramasser medias/ (copie de tout le contexte data, ADD).
+    assert not [l for l in lignes if l.startswith("COPY --from=data .") or l.startswith("ADD ")]
 
 
 def test_seule_la_machine_robot_porte_donnees_dir():
@@ -823,8 +829,10 @@ SIM_A_PLAT = ["coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer"
               "validate-catalogue.sh", "validate-data-edit.sh", "validate-jeu-a1.sh", "validate-namespace.sh",
               "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
               "validate-rehearsal-route.sh"]
-BANC_ROBOT = ["Dockerfile-sim", "Dockerfile-x86", "docker-compose-sim.yml", "docker-compose-x86.yml"]
-BANC_VISION = ["asound-pc.conf", "audio_banc.py", "build-x86.sh", "docker-compose-x86.yml"]
+# L2a : l'ancien banc de bureau du robot (Dockerfile-x86, docker-compose-x86.yml) et build-x86.sh
+# du banc vision sont supprimés.
+BANC_ROBOT = ["Dockerfile-sim", "docker-compose-sim.yml"]
+BANC_VISION = ["asound-pc.conf", "audio_banc.py", "docker-compose-x86.yml"]
 # Hôte de l'inventaire -> machine (dossier machines/<machine>/).
 HOTES_MACHINES = {"r": "robot", "ai": "vision", "c": "telecommande",
                   "gl": "gant-gauche", "gr": "gant-droit"}
@@ -857,7 +865,7 @@ def test_la_conf_des_machines_a_quitte_legacy():
                    VISION / ".dockerignore"):
         assert not ancien.exists(), ancien
     for neuf in ("robot/docker/arm/docker-compose-arm.yml", "robot/scripts/launch-ros-in-docker.sh",
-                 "robot/systemd/avahi-alias-didier.service", "vision/docker/arm/Dockerfile-arm",
+                 "robot/systemd/avahi-alias-didier.service", "vision/docker/Dockerfile",
                  "vision/rpi/asound.conf", "vision/secret.example", "vision/mediamtx/mediamtx.yml"):
         assert (MACHINES / neuf).is_file(), neuf
     assert (PACKAGES / "didier_vision" / "tools" / "banc_bouche.py").is_file()
@@ -947,16 +955,26 @@ def test_chemins_retires_sim_et_legacy_vision_sont_les_listes_gravees_et_epargne
 
 
 def test_le_secret_de_la_vision_ne_peut_entrer_ni_dans_l_image_ni_dans_git():
-    """SÉCURITÉ (image publiée sur le Hub, dépôt public). Le Dockerfile ARM fait COPY conf/ : seul
-    Dockerfile-arm.dockerignore (à côté du Dockerfile, lu par BuildKit) en exclut conf/secret."""
-    ignore = (MACHINES / "vision/docker/arm/Dockerfile-arm.dockerignore").read_text(encoding="utf-8")
-    assert "conf/secret" in ignore.splitlines()
-    service = _service(MACHINES / "vision/docker/arm/docker-compose-arm.yml")
-    assert service["build"]["dockerfile"] == "conf/docker/arm/Dockerfile-arm"
-    assert service["build"]["context"] == "../../.."
+    """SÉCURITÉ (image publiée sur le Hub, dépôt public ; spec L2, décision 6). La conf de la vision
+    entre dans l'image par le contexte nommé `conf` ; deux verrous dans le dépôt : (a) le
+    .dockerignore à la racine de ce contexte (machines/vision/, src/vision/conf/ sur le Pi) et (b)
+    le --exclude de la copie. Le verrou (c), contrôle de l'image construite, est le rôle conteneur."""
+    # (a) motif `secret` à la racine du contexte, et le fichier part bien sur le Pi avec la conf.
+    assert "secret" in (MACHINES / "vision/.dockerignore").read_text(encoding="utf-8").splitlines()
+    copie_conf = next(t for t in _taches() if "conf_machine_dir" in str(t.get("name", "")))
+    assert not [o for o in copie_conf["synchronize"]["rsync_opts"] if "dockerignore" in o]
+    # (b) la seule copie de la conf exclut `secret`.
+    lignes = (MACHINES / "vision/docker/Dockerfile").read_text(encoding="utf-8").splitlines()
+    conf = [l for l in lignes if l.startswith("COPY ") and "--from=conf" in l]
+    assert conf == ["COPY --from=conf --exclude=secret . /home/ros2_ws/src/vision/conf/"]
+    # Les deux compose donnent bien CE dossier comme contexte `conf` (Pi : src/vision/conf/ =
+    # ../.. de conf/docker/arm/ ; banc : machines/vision/ du dépôt).
+    arm = _service(MACHINES / "vision/docker/arm/docker-compose-arm.yml")["build"]
+    assert (arm["context"], arm["dockerfile"], arm["additional_contexts"]["conf"]) == ("..", "Dockerfile", "../..")
+    banc = MACHINES / "sim/banc-vision/docker-compose-x86.yml"
+    assert (banc.parent / _service(banc)["build"]["additional_contexts"]["conf"]).resolve() == MACHINES / "vision"
     ignores = (MONO / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "machines/*/secret" in ignores and "machines/robot/DEPLOY_SHA" in ignores
-    assert "--exclude=./vision/secret" in (MACHINES / "sim/banc-vision/build-x86.sh").read_text(encoding="utf-8")
 
 
 def test_la_sim_garde_gz_ip_et_la_fumee_pointe_le_banc():
@@ -1122,3 +1140,132 @@ def test_ecart_pi_porte_le_volet_des_editions_non_rapatriees():
     assert "json/backup/EDITIONS-EN-ATTENTE*.jsonl" in texte
     assert "ROUGE (c) éditions non rapatriées" in texte
     assert "rapatrier-editions.yml" in texte
+
+
+# --- L2a (spec L2, décisions 4, 5, 6, 16) : un Dockerfile par machine ----------------------------
+# Valeurs GRAVÉES en littéral (pas dérivées des fichiers testés).
+
+# Contextes nommés du Dockerfile de chaque machine = sa liste `packages` + conf (+ data, robot).
+CONTEXTES_DOCKERFILE = {
+    "robot": sorted(HOTE_ROBOT_GRAVE + ["conf", "data"]),
+    "vision": ["conf", "dadou_utils_ros", "didier_vision", "theatre_contrats", "theatre_interfaces"],
+}
+# Les compose qui construisent chaque Dockerfile (L2b y ajoutera le compose de la sim).
+COMPOSES_DOCKERFILE = {
+    "robot": ["robot/docker/arm/docker-compose-arm.yml"],
+    "vision": ["vision/docker/arm/docker-compose-arm.yml", "sim/banc-vision/docker-compose-x86.yml"],
+}
+CHEMINS_RETIRES_L2 = [
+    "src/robot/conf/docker/arm/Dockerfile-arm", "src/robot/conf/docker/arm/.dockerignore",
+    "src/robot/conf/docker/.dockerignore", "src/robot/conf/docker/Dockerfile-bak",
+    "src/robot/conf/docker/docker_bashrc", "src/robot/conf/docker/jenkins",
+    "src/robot/conf/docker/scripts", "src/vision/conf/docker/arm/Dockerfile-arm",
+    "src/vision/conf/docker/arm/Dockerfile-arm.dockerignore",
+]
+CONTENEUR = DEPLOY / "roles" / "conteneur" / "tasks" / "main.yml"
+
+
+def _copies(machine):
+    lignes = (MACHINES / machine / "docker" / "Dockerfile").read_text(encoding="utf-8").splitlines()
+    return [l for l in lignes if l.startswith(("COPY ", "ADD "))]
+
+
+def test_un_dockerfile_par_machine_qui_ne_copie_que_des_contextes_nommes():
+    for machine, contextes in CONTEXTES_DOCKERFILE.items():
+        copies = _copies(machine)
+        # Rien du contexte principal (le dossier docker/) : chaque copie vient d'un contexte nommé.
+        assert copies and all(l.startswith("COPY --from=") for l in copies), machine
+        assert sorted({l.split()[1].removeprefix("--from=") for l in copies}) == contextes, machine
+        # Exactement une copie par contexte nommé.
+        assert len(copies) == len(contextes) + (1 if machine == "robot" else 0), machine  # data : json/ + medias/
+        # Le contexte nommé de chaque package = sa liste dans machine.yml.
+        assert sorted(_machine(machine)["packages"] + ["conf"] + (["data"] if machine == "robot" else [])) == contextes
+        for paquet in _machine(machine)["packages"]:
+            assert f"COPY --from={paquet} . /home/ros2_ws/src/{paquet}" in copies, (machine, paquet)
+        assert not (MACHINES / machine / "docker" / "arm" / "Dockerfile-arm").exists(), machine
+
+
+def test_les_compose_donnent_les_memes_contextes_et_montent_les_memes_packages():
+    for machine, composes in COMPOSES_DOCKERFILE.items():
+        paquets = sorted(_machine(machine)["packages"])
+        for rel in composes:
+            compose = MACHINES / rel
+            service = _service(compose)
+            build = service["build"]
+            # Le Dockerfile de la machine, construit avec son dossier docker/ comme contexte.
+            assert (compose.parent / build["context"]).resolve() == MACHINES / machine / "docker", rel
+            assert build["dockerfile"] == "Dockerfile", rel
+            assert sorted(build["additional_contexts"]) == CONTEXTES_DOCKERFILE[machine], rel
+            montes = sorted(v.split(":")[1].removeprefix("/home/ros2_ws/src/") for v in service["volumes"]
+                            if v.split(":")[1].removeprefix("/home/ros2_ws/src/") in paquets + ["didier_jeu"])
+            assert montes == paquets, rel
+            for paquet in paquets:
+                source = build["additional_contexts"][paquet]
+                if "/arm/" in rel:
+                    # Compose du Pi : disposition ros2_ws/src/<package>, quatre niveaux au-dessus.
+                    assert source == f"../../../../{paquet}", (rel, paquet)
+                else:
+                    assert (compose.parent / source).resolve() == PACKAGES / paquet, (rel, paquet)
+        # Les compose ARM : la conf de la machine = src/<projet>/conf/, ../.. de conf/docker/arm/.
+        assert _service(MACHINES / composes[0])["build"]["additional_contexts"]["conf"] == "../.."
+
+
+def test_le_script_du_robot_construit_un_workspace_vierge_et_passe_ses_arguments():
+    """Décision 16 : build aussi sans install/ ; `exec` du launch avec "$@" — l'ENTRYPOINT n'en passe
+    aucun, donc sur le Pi le launch tourne sans argument (comportement identique)."""
+    script = (MACHINES / "robot/scripts/launch-ros-in-docker.sh").read_text(encoding="utf-8").splitlines()
+    assert 'if [ -f "$CHANGE_FILE" ] || [ ! -f /home/ros2_ws/install/setup.bash ]; then' in script
+    actives = [l for l in script if l.strip() and not l.lstrip().startswith("#")]
+    assert actives[-1] == 'exec ros2 launch didier_bringup robot_app.launch.py "$@"'
+    assert [l for l in actives if "ros2 launch" in l] == [actives[-1]]
+    entree = [l for l in (MACHINES / "robot/docker/Dockerfile").read_text(encoding="utf-8").splitlines()
+              if l.startswith("ENTRYPOINT")]
+    assert entree == ['ENTRYPOINT ["/bin/bash", "-c", "source /home/ros2_ws/src/robot/conf/scripts/launch-ros-in-docker.sh"]']
+
+
+def test_chemins_retires_l2_est_la_liste_gravee_et_epargne_le_dockerfile_et_le_verrou_du_secret():
+    variables = yaml.safe_load(VARS.read_text(encoding="utf-8"))
+    retires = variables["chemins_retires_l2"]
+    assert sorted(retires) == sorted(CHEMINS_RETIRES_L2)
+    assert len(retires) == len(set(retires))
+    for garde in ("src/robot/conf/docker", "src/robot/conf/docker/Dockerfile", "src/robot/conf/docker/arm",
+                  "src/robot/conf/docker/arm/docker-compose-arm.yml", "src/vision/conf/docker",
+                  "src/vision/conf/docker/Dockerfile", "src/vision/conf/docker/arm",
+                  "src/vision/conf/.dockerignore", "src/vision/conf/secret"):
+        assert garde not in retires, garde
+    # Idempotence : aucune copie ne recrée ce que la liste efface.
+    for chemin in retires:
+        projet, rel = chemin.split("/")[1], chemin.split("/", 2)[2]
+        source = (_source_robot if projet == "robot" else _source_vision)(rel)
+        assert source is None or not source.exists(), chemin
+    assert any("chemins_retires_l2" in str(t.get("shell", "")) for t in _taches())
+    assert any("chemins_retires_l2" in str(t.get("loop", "")) for t in _taches())
+
+
+def test_le_role_conteneur_refuse_une_image_qui_contient_un_secret_de_l_hote():
+    """Décision 6, verrou (c) : après le `up`, chaque `secrets_hote` est cherché DANS l'image
+    (/home/<dest>) ; présent ou contrôle impossible = playbook rouge."""
+    taches = yaml.safe_load(CONTENEUR.read_text(encoding="utf-8"))
+    noms = [t["name"] for t in taches]
+    controle = taches[noms.index("Check that no host secret is inside the image")]
+    echec = taches[noms.index("Fail if a host secret is inside the image (or could not be checked)")]
+    assert noms.index("Recreate the project container") < noms.index(controle["name"]) < noms.index(echec["name"])
+    assert controle["loop"] == "{{ secrets_hote | default([]) }}"
+    assert "--entrypoint test" in controle["ansible.builtin.shell"]
+    assert controle["ansible.builtin.shell"].endswith('! -e "/home/{{ item.dest }}"')
+    assert controle["check_mode"] is False and controle["failed_when"] is False
+    assert echec["when"] == "item.rc != 0"
+    # Le chemin contrôlé est bien celui où le Dockerfile copie la conf de la vision.
+    assert "/home/" + _machine("vision")["secrets_hote"][0]["dest"] == "/home/ros2_ws/src/vision/conf/secret"
+    assert "/home/ros2_ws/src/vision/conf/" in _copies("vision")[0]
+
+
+def test_docker_et_les_fichiers_docker_morts_sont_supprimes():
+    """Décision 4 : pas d'image de base commune, docker/ supprimé ; et les fichiers morts du §1."""
+    assert not (MONO / "docker").exists()
+    for mort in ("robot/docker/Dockerfile-bak", "robot/docker/.dockerignore", "robot/docker/arm/.dockerignore",
+                 "robot/docker/docker_bashrc", "robot/docker/jenkins", "robot/docker/scripts",
+                 "sim/banc-robot/Dockerfile-x86", "sim/banc-robot/docker-compose-x86.yml",
+                 "sim/banc-vision/build-x86.sh", "vision/docker/arm/Dockerfile-arm.dockerignore"):
+        assert not (MACHINES / mort).exists(), mort
+    assert "| `docker/` |" not in (MONO / "README.md").read_text(encoding="utf-8")
