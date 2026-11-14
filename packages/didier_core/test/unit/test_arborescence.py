@@ -665,8 +665,10 @@ COMPOSES_PC = [MACHINES / "sim/banc-robot/docker-compose-sim.yml"]
 COMPOSE_ARM = MACHINES / "robot/docker/arm/docker-compose-arm.yml"
 
 
-def _service(compose):
-    return next(iter(yaml.safe_load(compose.read_text(encoding="utf-8"))["services"].values()))
+def _service(compose, nom=None):
+    """Le service `nom` du compose, ou son seul (premier) service."""
+    services = yaml.safe_load(compose.read_text(encoding="utf-8"))["services"]
+    return services[nom] if nom else next(iter(services.values()))
 
 
 def _taches():
@@ -824,11 +826,15 @@ def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
 
 # Écrits en dur. Ce que la sim prend de l'ancienne conf/ du robot (machines/sim/, à plat), le banc
 # x86 du robot et celui de la vision.
-SIM_A_PLAT = ["coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "fumee.sh",
+SIM_A_PLAT = ["coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
+              "docker-compose.yml", "fumee.sh",
               "fumee_page.py", "installer-fumee.sh", "launch-sim-in-docker.sh", "pub.sh", "rejouer-modifiees.sh",
-              "validate-catalogue.sh", "validate-data-edit.sh", "validate-jeu-a1.sh", "validate-namespace.sh",
-              "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
+              "validate-catalogue.sh", "validate-data-edit.sh", "validate-jeu-a1.sh", "validate-machines.sh",
+              "validate-namespace.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
               "validate-rehearsal-route.sh"]
+# L2b : le conteneur `monde` (Dockerfile + entrée) et l'entrée du conteneur `robot` de la sim.
+SIM_MONDE = ["Dockerfile", "entree.sh"]
+SIM_ROBOT = ["entree.sh"]
 # L2a : l'ancien banc de bureau du robot (Dockerfile-x86, docker-compose-x86.yml) et build-x86.sh
 # du banc vision sont supprimés.
 BANC_ROBOT = ["Dockerfile-sim", "docker-compose-sim.yml"]
@@ -875,6 +881,8 @@ def test_la_sim_vit_dans_machines_sim():
     sim = MACHINES / "sim"
     assert sorted(p.name for p in sim.iterdir() if p.is_file() and p.name != "README.md") == SIM_A_PLAT
     assert sorted(p.name for p in (sim / "banc-robot").iterdir() if p.is_file()) == BANC_ROBOT
+    assert sorted(p.name for p in (sim / "monde").iterdir() if p.is_file()) == SIM_MONDE
+    assert sorted(p.name for p in (sim / "robot").iterdir() if p.is_file()) == SIM_ROBOT
     assert sorted(p.name for p in (sim / "banc-vision").iterdir()
                   if p.is_file() and p.suffix != ".pyc") == BANC_VISION
     # Rien de la sim n'est resté dans la conf du robot (elle part sur le Pi)…
@@ -980,15 +988,18 @@ def test_le_secret_de_la_vision_ne_peut_entrer_ni_dans_l_image_ni_dans_git():
 def test_la_sim_garde_gz_ip_et_la_fumee_pointe_le_banc():
     """GZ_IP=127.0.0.1 = correctif de l'A1 intermittent (11/11) : il doit survivre au déménagement."""
     assert "GZ_IP=127.0.0.1" in _service(MACHINES / "sim/banc-robot/docker-compose-sim.yml")["environment"]
+    # L2b : la fumée pilote le compose multi-conteneurs ; GZ_IP vit sur `monde`.
+    compose = MACHINES / "sim" / "docker-compose.yml"
+    assert "GZ_IP=127.0.0.1" in _service(compose, "monde")["environment"]
     fumee = (MACHINES / "sim" / "fumee.sh").read_text(encoding="utf-8")
-    assert 'DOCKER_DIR="$DEPOT/machines/sim/banc-robot"\n' in fumee
-    assert 'CHEMIN_DOCKER_SIM="machines/sim/banc-robot"' in fumee
+    assert 'DOCKER_DIR="$DEPOT/machines/sim"\n' in fumee
+    assert "COMPOSE=docker-compose.yml\n" in fumee
     assert 'FUMEE_SH="$ICI/fumee.sh"\n' in (MACHINES / "sim" / "installer-fumee.sh").read_text(encoding="utf-8")
-    volumes = _service(MACHINES / "sim/banc-robot/docker-compose-sim.yml")["volumes"]
-    for script in ("launch-sim-in-docker.sh", "validate-namespace.sh", "validate-catalogue.sh",
+    volumes = _service(compose, "monde")["volumes"]
+    for script in ("validate-namespace.sh", "validate-catalogue.sh", "validate-machines.sh",
                    "validate-rehearsal-chantiers.sh", "validate-jeu-a1.sh"):
-        montage = next(v for v in volumes if v.startswith(f"../{script}:"))
-        assert (MACHINES / "sim" / "banc-robot" / montage.split(":")[0]).resolve() == MACHINES / "sim" / script
+        montage = next(v for v in volumes if v.startswith(f"./{script}:"))
+        assert (compose.parent / montage.split(":")[0]).resolve() == MACHINES / "sim" / script
 
 
 # --- L1e-4e (11/11) : le ménage de L1e. Chemins gravés en dur, pas dérivés. -------------------------
@@ -1150,10 +1161,12 @@ CONTEXTES_DOCKERFILE = {
     "robot": sorted(HOTE_ROBOT_GRAVE + ["conf", "data"]),
     "vision": ["conf", "dadou_utils_ros", "didier_vision", "theatre_contrats", "theatre_interfaces"],
 }
-# Les compose qui construisent chaque Dockerfile (L2b y ajoutera le compose de la sim).
+# Les compose qui construisent chaque Dockerfile ; « fichier#service » = le service d'un compose
+# à plusieurs services (L2b : la sim multi-conteneurs).
 COMPOSES_DOCKERFILE = {
-    "robot": ["robot/docker/arm/docker-compose-arm.yml"],
-    "vision": ["vision/docker/arm/docker-compose-arm.yml", "sim/banc-vision/docker-compose-x86.yml"],
+    "robot": ["robot/docker/arm/docker-compose-arm.yml", "sim/docker-compose.yml#robot"],
+    "vision": ["vision/docker/arm/docker-compose-arm.yml", "sim/banc-vision/docker-compose-x86.yml",
+               "sim/docker-compose.yml#vision"],
 }
 CHEMINS_RETIRES_L2 = [
     "src/robot/conf/docker/arm/Dockerfile-arm", "src/robot/conf/docker/arm/.dockerignore",
@@ -1189,8 +1202,9 @@ def test_les_compose_donnent_les_memes_contextes_et_montent_les_memes_packages()
     for machine, composes in COMPOSES_DOCKERFILE.items():
         paquets = sorted(_machine(machine)["packages"])
         for rel in composes:
-            compose = MACHINES / rel
-            service = _service(compose)
+            fichier, _, nom = rel.partition("#")
+            compose = MACHINES / fichier
+            service = _service(compose, nom or None)
             build = service["build"]
             # Le Dockerfile de la machine, construit avec son dossier docker/ comme contexte.
             assert (compose.parent / build["context"]).resolve() == MACHINES / machine / "docker", rel

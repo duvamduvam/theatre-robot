@@ -57,13 +57,16 @@ def _launch_files():
 
 # --- (a) launch files ---------------------------------------------------------
 
-def test_les_sept_launch_sont_inventories():
+def test_les_neuf_launch_sont_inventories():
+    # L2b : + complement_sim.launch.py (conteneur robot de la sim) et monde.launch.py (conteneur monde).
     noms = sorted(str(p.relative_to(MONO)) for p in _launch_files())
     assert noms == [
+        "packages/didier_bringup/launch/complement_sim.launch.py",
         "packages/didier_bringup/launch/robot_app.launch.py",
         "packages/didier_description/launch/display.launch.py",
         "packages/didier_drive/launch/drive.launch.py",
         "packages/didier_rehearsal/launch/rehearsal.launch.py",
+        "packages/didier_sim/launch/monde.launch.py",
         "packages/didier_sim/launch/sim.launch.py",
         "packages/didier_vision/launch/vision.launch.py",
         "packages/didier_web/launch/web.launch.py",
@@ -259,6 +262,7 @@ def test_les_compose_posent_robot_name():
     # L2a : l'ancien banc de bureau du robot (banc-robot/docker-compose-x86.yml) est supprimé.
     composes = [MACHINES / "robot/docker/arm/docker-compose-arm.yml",
                 MACHINES / "sim/banc-robot/docker-compose-sim.yml",
+                MACHINES / "sim/docker-compose.yml",
                 MACHINES / "vision/docker/arm/docker-compose-arm.yml",
                 MACHINES / "sim/banc-vision/docker-compose-x86.yml",
                 CONTROL / "conf/docker/arm/docker-compose-arm.yml", CONTROL / "conf/docker/x86/docker-compose-x86.yml"]
@@ -276,6 +280,9 @@ def test_la_telecommande_prend_le_meme_namespace():
 def test_validate_namespace_monte_dans_la_sim():
     compose = (MACHINES / "sim/banc-robot/docker-compose-sim.yml").read_text(encoding="utf-8")
     assert "- ../validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro" in compose
+    # L2b : dans le conteneur monde du compose multi-conteneurs.
+    compose = (MACHINES / "sim/docker-compose.yml").read_text(encoding="utf-8")
+    assert "- ./validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro" in compose
     script = (MACHINES / "sim" / "validate-namespace.sh").read_text(encoding="utf-8")
     # Même liste d'exceptions que ce test (gravée des deux côtés).
     for nom in sorted(EXCEPTIONS_GLOBALES):

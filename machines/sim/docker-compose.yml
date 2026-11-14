@@ -1,0 +1,243 @@
+# Sim multi-conteneurs (spec L2, lot L2b) : UN conteneur par machine de Didier, construit avec le
+# MÊME Dockerfile que son Pi, plus le `monde` (Gazebo, matériel simulé, répétition, épreuves).
+#
+#   cd machines/sim && docker compose build          # 1re fois : 4 images locales (≈ 15 min)
+#   HEADLESS=true WORLD=chantiers docker compose up -d
+#   docker compose down
+#
+# SÉCURITÉ :
+#   - ROS_DOMAIN_ID=43 en LITTÉRAL dans chaque service (jamais lu dans l'environnement de
+#     l'appelant ; 42 = le vrai Didier) ; chaque entrée de conteneur le revérifie ;
+#   - aucun service n'est privilégié, ne monte /dev (seul /dev/dri pour le rendu de `monde`) ni
+#     n'a de `restart:` — un system_node de conteneur ne peut pas éteindre le PC ;
+#   - GZ_IP=127.0.0.1 sur `monde` SEUL (gz-transport ne sort jamais de ce conteneur, cause de
+#     l'A1 intermittent du 11/11) ; aucun autre conteneur ne lance de processus gz ;
+#   - WEB_DRIVE et REHEARSAL (SIM-ONLY) restent faux par défaut ; le pont web ignore REHEARSAL
+#     hors domaine 43.
+#
+# Réseau (décision 8) : `network_mode: host` + `ipc: host` partout — FastDDS fait la découverte
+# en UDP mais passe les DONNÉES en mémoire partagée entre participants du même hôte : sans
+# `ipc: host`, les topics se voient et aucun message ne traverse (vécu le 13/09). La télécommande
+# physique peut rejoindre la sim en domaine 43.
+# Processus (décision 10) : robot, vision et télécommande partagent l'espace de processus de
+# `monde` (`pid: "service:monde"`), pour que les épreuves (lancées dans `monde`) gardent leurs
+# pgrep/pkill. Échafaudage de TEST : absent des compose ARM (gravé).
+# Journaux (décision 11) : workspace/log partagé par monde et robot (robot.log, rehearsal/, jeu/,
+# tickets/ au même endroit pour les épreuves) ; build/ et install/ NON persistés (colcon à chaque
+# `up`). Doc : machines/sim/README.md, docs/operations.md.
+name: didier-sim
+
+services:
+  monde:
+    container_name: didier-sim-monde
+    image: didier-sim/monde:local
+    build:
+      context: ./monde
+      dockerfile: Dockerfile
+      # Chemins relatifs à ce fichier : ../../ = racine du mono-dépôt.
+      additional_contexts:
+        theatre_interfaces: ../../packages/theatre_interfaces
+        theatre_contrats: ../../packages/theatre_contrats
+        dadou_utils_ros: ../../packages/dadou_utils_ros
+        didier_core: ../../packages/didier_core
+        didier_description: ../../packages/didier_description
+        didier_sim: ../../packages/didier_sim
+        didier_rehearsal: ../../packages/didier_rehearsal
+        didier_jeu: ../../packages/didier_jeu
+        data: ../../data
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
+      - ROS_DOMAIN_ID=43
+      # Nom du robot = namespace ROS ABSOLU de tous les nœuds (lot L1b) : /didier/… par défaut.
+      # Robot, vision et télécommande d'un même Didier DOIVENT avoir le même nom.
+      - ROBOT_NAME=${ROBOT_NAME:-didier}
+      # Racine des données lue par la bibliothèque du cœur (répétition, jeu) : montages plus bas.
+      - DIDIER_DATA_DIR=/home/ros2_ws/src/robot/
+      - HEADLESS=${HEADLESS:-false}
+      # Monde Gazebo : fichier worlds/<WORLD>.sdf de didier_sim (`stage` = plateau nu, `rue` =
+      # salle de répétition, `chantiers` = Nefs à la grue Titan grise). Le NOM interne du monde
+      # reste `stage` (contrat du pont LED), seul le fichier change.
+      - WORLD=${WORLD:-stage}
+      # Transport Gazebo confiné au loopback (11/11, cause d'A1 7/14) : en réseau host, sans
+      # GZ_IP, la découverte gz part en multicast sur TOUTES les interfaces du PC ; 6 fois sur 10
+      # ground_truth/odom n'était jamais relayé. Gazebo et son pont vivent dans CE conteneur.
+      - GZ_IP=127.0.0.1
+      - COLCON_LOG_PATH=/home/ros2_ws/log/colcon-monde
+    network_mode: "host"
+    ipc: "host"
+    volumes:
+      # Écran (décision 9, ECRAN=hote) : socket X et autorité de la session, GPU pour le rendu.
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
+      - /dev/dri:/dev/dri
+      - ./workspace/log:/home/ros2_ws/log
+      - ./monde/entree.sh:/home/ros2_ws/entree.sh:ro
+      # Sources montées par-dessus la copie de l'image (itération sans rebuild) : SES packages.
+      - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
+      - ../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      - ../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
+      - ../../packages/didier_core:/home/ros2_ws/src/didier_core
+      - ../../packages/didier_description:/home/ros2_ws/src/didier_description
+      - ../../packages/didier_sim:/home/ros2_ws/src/didier_sim
+      - ../../packages/didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
+      - ../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
+      # Épreuves : elles tournent ICI (docker exec didier-sim-monde bash /home/ros2_ws/<script>).
+      - ./validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro
+      - ./validate-catalogue.sh:/home/ros2_ws/validate-catalogue.sh:ro
+      - ./validate-data-edit.sh:/home/ros2_ws/validate-data-edit.sh:ro
+      - ./validate-machines.sh:/home/ros2_ws/validate-machines.sh:ro
+      - ./validate-rehearsal-route.sh:/home/ros2_ws/validate-rehearsal-route.sh:ro
+      - ./validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
+      - ./validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
+      - ./validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
+      # La conf des machines, en lecture seule : validate-machines lit les noeuds_attendus.
+      - ..:/home/ros2_ws/machines:ro
+      # Données du dépôt aux chemins que lisent les nœuds de sim (leds_sim_node : /home/ros2_ws/json)
+      # et les épreuves (validate-catalogue, validate-data-edit : /home/ros2_ws/src/robot/…) — les
+      # mêmes dossiers que ceux du conteneur robot.
+      - ../../data/json:/home/ros2_ws/json
+      - ../../data/json:/home/ros2_ws/src/robot/json
+      - ../../data/medias:/home/ros2_ws/src/robot/medias
+      # Audios privés (14/11) : hors dépôt public, montés EN LECTURE SEULE par-dessus
+      # data/medias/audios/ (qui ne porte que son README). Dossier absent : Docker le crée VIDE et
+      # monde/entree.sh l'annonce en tête du journal.
+      - ${DIDIER_MEDIAS_PRIVES:-${HOME}/Nextcloud/dev/didier/medias-prives}/audios:/home/ros2_ws/src/robot/medias/audios:ro
+
+  robot:
+    container_name: didier-sim-robot
+    image: didier-sim/robot:local
+    build:
+      # LE Dockerfile du Pi robot (décision 5), contextes nommés dans la disposition du DÉPÔT.
+      context: ../robot/docker
+      dockerfile: Dockerfile
+      additional_contexts:
+        conf: ../robot
+        data: ../../data
+        theatre_contrats: ../../packages/theatre_contrats
+        theatre_interfaces: ../../packages/theatre_interfaces
+        dadou_utils_ros: ../../packages/dadou_utils_ros
+        didier_core: ../../packages/didier_core
+        didier_bringup: ../../packages/didier_bringup
+        didier_description: ../../packages/didier_description
+        didier_drive: ../../packages/didier_drive
+        didier_rehearsal: ../../packages/didier_rehearsal
+        didier_sim: ../../packages/didier_sim
+        didier_web: ../../packages/didier_web
+    # Décision 2 : le VRAI bringup, par le script du Pi, avec les arguments de la sim posés par
+    # cette entrée (fichier de la sim) ; plus complement_sim.launch.py (face_sim, validation_sim).
+    entrypoint: ["/bin/bash", "/home/ros2_ws/sim/entree-robot.sh"]
+    environment:
+      - ROS_DOMAIN_ID=43
+      - ROBOT_NAME=${ROBOT_NAME:-didier}
+      # Racine des DONNÉES du cœur (json/, medias/, db/, conf/) : même chemin que sur le Pi.
+      - DIDIER_DATA_DIR=/home/ros2_ws/src/robot/
+      # Lot L1d : data_edit_node (toujours lancé) ÉCRIT les retouches seulement si DATA_EDIT=true ;
+      # même variable que sur le Pi (lue par robot_app.launch.py). Il écrit dans data/ du PC.
+      - DATA_EDIT=${DATA_EDIT:-false}
+      # Arguments de robot_app.launch.py posés par robot/entree.sh (décision 2) :
+      # WEB_PORT (8088 évité : Superset du PC), et deux drapeaux SIM-ONLY, faux par défaut —
+      # WEB_DRIVE (pilotage roues du pont web, cmd_vel_web prio 50) et REHEARSAL (boutons de
+      # répétition de la page scène, ignorés hors 43).
+      - WEB_PORT=${WEB_PORT:-8765}
+      - WEB_DRIVE=${WEB_DRIVE:-false}
+      - REHEARSAL=${REHEARSAL:-false}
+      # complement_sim.launch.py : aperçu web du visage LED (http://localhost:8766), OFF par défaut.
+      - FACE=${FACE:-false}
+      - FACE_PORT=${FACE_PORT:-8766}
+      - COLCON_LOG_PATH=/home/ros2_ws/log/colcon-robot
+    network_mode: "host"
+    ipc: "host"
+    pid: "service:monde"
+    volumes:
+      - ./robot/entree.sh:/home/ros2_ws/sim/entree-robot.sh:ro
+      # La conf de la machine, comme sur le Pi (src/robot/conf/) : script de démarrage, logging.
+      - ../robot:/home/ros2_ws/src/robot/conf
+      - ../../data/json:/home/ros2_ws/src/robot/json
+      - ../../data/medias:/home/ros2_ws/src/robot/medias
+      - ${DIDIER_MEDIAS_PRIVES:-${HOME}/Nextcloud/dev/didier/medias-prives}/audios:/home/ros2_ws/src/robot/medias/audios:ro
+      - ./workspace/log:/home/ros2_ws/log
+      # Sources : la liste `packages` de machines/robot/machine.yml, ni plus ni moins (gravé).
+      - ../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
+      - ../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
+      - ../../packages/didier_core:/home/ros2_ws/src/didier_core
+      - ../../packages/didier_bringup:/home/ros2_ws/src/didier_bringup
+      - ../../packages/didier_description:/home/ros2_ws/src/didier_description
+      - ../../packages/didier_drive:/home/ros2_ws/src/didier_drive
+      - ../../packages/didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
+      - ../../packages/didier_sim:/home/ros2_ws/src/didier_sim
+      - ../../packages/didier_web:/home/ros2_ws/src/didier_web
+
+  vision:
+    container_name: didier-sim-vision
+    image: didier-sim/vision:local
+    build:
+      # LE Dockerfile du Pi vision (décision 5). Le secret n'entre pas dans l'image : .dockerignore
+      # à la racine du contexte `conf` et COPY --exclude=secret (décision 6).
+      context: ../vision/docker
+      dockerfile: Dockerfile
+      additional_contexts:
+        conf: ../vision
+        theatre_interfaces: ../../packages/theatre_interfaces
+        theatre_contrats: ../../packages/theatre_contrats
+        dadou_utils_ros: ../../packages/dadou_utils_ros
+        didier_vision: ../../packages/didier_vision
+    environment:
+      - ROS_DOMAIN_ID=43
+      - ROBOT_NAME=${ROBOT_NAME:-didier}
+      - DIDIER_VISION_DATA_DIR=/home/ros2_ws/src/vision/
+      # Conversation coupée en sim (micro physique + budget LLM) ; AUCUN secret monté ici.
+      # Parole et caméra réelles : surcouche docker-compose.banc.yml.
+      - CHAT=false
+      # Propose la caméra Gazebo (sensor_msgs/Image) comme source d'images à chaud.
+      - VISION_SIM_CAMERA_TOPIC=camera/image_raw
+      - COLCON_LOG_PATH=/home/ros2_ws/log/colcon-vision
+    network_mode: "host"
+    ipc: "host"
+    pid: "service:monde"
+    volumes:
+      # Le script de démarrage du Pi seul (pas toute la conf : elle porterait un éventuel secret
+      # local, gitignoré, de machines/vision/).
+      - ../vision/scripts:/home/ros2_ws/src/vision/conf/scripts:ro
+      - ./workspace/log-vision:/home/ros2_ws/log
+      # Sources : la liste `packages` de machines/vision/machine.yml (gravé).
+      - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
+      - ../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      - ../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros
+      - ../../packages/didier_vision:/home/ros2_ws/src/didier_vision
+
+  telecommande:
+    container_name: didier-sim-telecommande
+    image: didier-sim/telecommande:local
+    build:
+      # Décision 7 : le Dockerfile x86 legacy TEL QUEL (L4 réécrit la télécommande).
+      context: ../../legacy/dadou_control_ros
+      dockerfile: conf/docker/x86/Dockerfile-x86
+      additional_contexts:
+        theatre_interfaces: ../../packages/theatre_interfaces
+        theatre_contrats: ../../packages/theatre_contrats
+        dadou_utils_ros: ../../packages/dadou_utils_ros
+    environment:
+      # IHM tkinter hors Pi : il lui faut le serveur X de la session (ECRAN=hote).
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
+      - ROS_DOMAIN_ID=43
+      - ROBOT_NAME=${ROBOT_NAME:-didier}
+      - COLCON_LOG_PATH=/home/ros2_ws/log/colcon-telecommande
+    network_mode: "host"
+    ipc: "host"
+    pid: "service:monde"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
+      - ./workspace/log-telecommande:/home/ros2_ws/log
+      - ../../legacy/dadou_control_ros/conf:/home/ros2_ws/src/controller/conf
+      - ../../legacy/dadou_control_ros/controller:/home/ros2_ws/src/controller/controller
+      - ../../legacy/dadou_control_ros/json:/home/ros2_ws/src/controller/json
+      - ../../legacy/dadou_control_ros/medias:/home/ros2_ws/src/controller/medias
+      - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
+      - ../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
+      - ../../packages/dadou_utils_ros:/home/ros2_ws/src/dadou_utils_ros

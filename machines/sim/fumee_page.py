@@ -73,14 +73,15 @@ ROUGES_MAX_PAR_CODE = 2
 
 # Ordre et noms des épreuves (décision 3). Le script shell n'envoie que les id.
 EPREUVES = [
-    ("image", "Image sim (reconstruite seulement si un Dockerfile/compose a changé)"),
-    ("demarrage", "Sim headless + colcon build"),
+    ("image", "Images sim ×4 (reconstruites seulement si un Dockerfile/compose a changé)"),
+    ("demarrage", "Sim headless, 4 conteneurs : domaine 43, colcon ×4, nœuds attendus"),
     ("rtf", "Sonde du facteur temps réel (20 s)"),
     ("namespace", "validate-namespace.sh"),
     ("catalogue", "validate-catalogue.sh"),
     ("parle", "Animation « parle » (animation_state \"\" → \"parle\" → \"\")"),
     ("edition", "validate-data-edit.sh (édition à travers le robot, L1d)"),
-    ("chantiers", "Chaîne roues + régisseur + regard, puis validate-rehearsal-chantiers.sh (V-R3)"),
+    ("machines", "validate-machines.sh (les machines de la sim, vues depuis le monde, L2b)"),
+    ("chantiers", "Régisseur + regard (chaîne roues du bringup), puis validate-rehearsal-chantiers.sh (V-R3)"),
     ("a1", "Sim relancée, validate-jeu-a1.sh (A1)"),
 ]
 NOMS = dict(EPREUVES)
