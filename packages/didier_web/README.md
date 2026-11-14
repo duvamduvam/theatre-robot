@@ -9,6 +9,7 @@ Package ROS 2 du robot Didier, autonome (aucun import `robot.*` ni `dadou_utils_
 | `catalogue` | `catalogue_node` | **lot L1c** : publie le catalogue du robot et sa version |
 | `data_edit` | `data_edit_node` | **lot L1d** : le SEUL écrivain des données du robot (désactivé par défaut) |
 | `validation_sim` | `validation_sim_node` | **lot L1d-2**, SIM SEULEMENT : l'observateur de la porte sim, qui tamponne `json/validations-sim.json` |
+| — | `lecture_donnees` | **lot L1d-3** : lecture pure des données éditables pour `GET /api/data` (liste + états de la porte sim, contenu + sha) |
 
 ## `catalogue_node` (L1c)
 
@@ -76,3 +77,27 @@ Ne lit pas `/rosout` (règle gravée : aucun abonnement à un nom absolu).
 Tests (hôte) : `packages/didier_core/test/unit/test_validation_sim.py` (un tampon posé / refusé
 par critère, bornes à leur valeur limite), `test_validations_sim.py` (le registre de `data/` est
 complet). Par lot : `machines/sim/rejouer-modifiees.sh`.
+
+## Éditeur de la page scène (L1d-3)
+
+L'outil de réglage de `/scene` (« Éditer les données », colonne de droite) : famille, liste,
+Charger, texte JSON, Envoyer, Rejouer, verdict ; envoi d'une image PNG du visage ; en sim, états
+de la porte sim et « Valider les roues pour le robot ». **Une seule voie d'écriture** : le pont
+ne fait que relayer, `data_edit_node` juge et écrit.
+
+- Pont (`web_bridge_node`) : paramètres `data_edit_enabled` (`false` ; `DATA_EDIT` sur le robot,
+  argument `data_edit` en sim — la même valeur que l'écrivain) et `data_dir`
+  (`/home/ros2_ws/src/robot`). Types WebSocket `data_edit` (publisher `data_edit` créé seulement
+  si `data_edit_enabled`) et `valider_roues` (publisher `validation_sim_demande` créé seulement en
+  domaine 43), writer seul, hors de toute whitelist. Flux `data_edit_result`, `validation_sim`,
+  `roues_refusees`. `GET /api/data` en lecture seule. `hello.data_edit` / `hello.validation_sim`.
+- Parseur pur : `web_protocol._parse_data_edit` (enveloppe + taille, `DATA_EDIT_TAILLE_MAX` =
+  `data_edit.TAILLE_MAX_DEMANDE`, égalité gravée) et `_parse_valider_roues`. Le contrat n'est
+  jamais recopié ici : il vit dans `theatre_contrats.donnees`.
+- Page : `scene.html` (panneau `#scene-editeur`, `hidden` par défaut) + section « Éditeur des
+  données » de `scene.js` ; styles en fin de `scene.css`. La page ne juge que la syntaxe JSON.
+- Tests (hôte) : `packages/didier_core/test/unit/test_web_protocol.py` (bloc « Édition des
+  données ») — ⚠️ les tests qui construisent le pont exigent `aiohttp` et `Pillow`, absents du
+  venv racine et de la CI : ils y sont IGNORÉS (`importorskip`). Les jouer avec un venv qui les a.
+  Mode d'emploi : `docs/operations.md` § « L'éditeur de la page scène » ; protocole :
+  `docs/interfaces.md` § « API web ».

@@ -24,6 +24,7 @@ def generate_launch_description():
     max_linear = ParameterValue(LaunchConfiguration("max_linear"), value_type=float)
     max_angular = ParameterValue(LaunchConfiguration("max_angular"), value_type=float)
     rehearsal_enabled = ParameterValue(LaunchConfiguration("rehearsal_enabled"), value_type=bool)
+    data_edit_enabled = ParameterValue(LaunchConfiguration("data_edit_enabled"), value_type=bool)
 
     return LaunchDescription([
         DeclareLaunchArgument("web_port", default_value="8765",
@@ -48,6 +49,14 @@ def generate_launch_description():
                               description="SÉCURITÉ (SIM-ONLY) : true = le pont accepte les topics de"
                                            " répétition (route, route_speed, rehearsal/cmd) pour la"
                                            " page /scene. Ignoré hors domaine 43. Défaut false."),
+        # Lot L1d-3 : le pont relaie les retouches de la page scène vers data_edit_node.
+        # Défaut false = aucun publisher data_edit, éditeur absent de la page.
+        DeclareLaunchArgument("data_edit_enabled", default_value="false",
+                              description="true = le pont relaie les retouches de données (type"
+                                           " WebSocket data_edit) vers data_edit_node ; même valeur"
+                                           " que son `enabled` (drapeau DATA_EDIT). Défaut false."),
+        DeclareLaunchArgument("data_dir", default_value="/home/ros2_ws/src/robot",
+                              description="Racine des données (json/ + medias/) lue par GET /api/data"),
         DeclareLaunchArgument("camera_topic", default_value="camera/image_raw",
                               description="Topic sensor_msgs/Image de la caméra embarquée (retour vidéo)"),
         DeclareLaunchArgument("camera_compressed", default_value="false",
@@ -86,6 +95,8 @@ def generate_launch_description():
                     "max_linear": max_linear,
                     "max_angular": max_angular,
                     "rehearsal_enabled": rehearsal_enabled,
+                    "data_edit_enabled": data_edit_enabled,
+                    "data_dir": LaunchConfiguration("data_dir"),
                     "perception_topic": LaunchConfiguration("perception_topic"),
                     "exterior_topic": LaunchConfiguration("exterior_topic"),
                     "camera_topic": LaunchConfiguration("camera_topic"),

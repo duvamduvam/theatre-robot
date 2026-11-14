@@ -60,10 +60,12 @@ from theatre_interfaces.msg import StringTime
 # Codec StringTime commun (lot L1a) : `loads` et non decode_or_raw — le pont
 # n'attrape que TypeError/JSONDecodeError (pas tout ValueError) et sa
 # sémantique générique est gardée à l'identique.
-from theatre_contrats import stringtime
+from theatre_contrats import donnees, qos, stringtime
+from didier_web import lecture_donnees
 from didier_web.web_catalog import build_catalog
 from didier_web.web_protocol import (
-    DRIVE_TIMEOUT_S, TOPICS_FLUX, TOPICS_LECTURE, WRITE_TIMEOUT_S, DriveFlow,
+    DATA_EDIT_TOPIC, DRIVE_TIMEOUT_S, TOPICS_FLUX, TOPICS_LECTURE,
+    VALIDATION_SIM_DEMANDE_TOPIC, WRITE_TIMEOUT_S, DriveFlow,
     ProtocolError, SessionManager, build_ack, build_err, build_feed,
     build_hb_ack, build_hello, build_state, drive_to_twist,
     effective_whitelist, mode_from_domain_id, parse_client_message,
@@ -140,6 +142,13 @@ class WebBridgeNode(Node):
         # dossier de log du conteneur — monté sur le PC en sim, ramassé par
         # conf/scripts/ramasser_traces.py (voir didier_web/tickets.py).
         self.declare_parameter("tickets_dir", "/home/ros2_ws/log/tickets")
+        # Édition des données à travers le robot (lot L1d-3). data_edit_enabled suit le
+        # drapeau DATA_EDIT (même valeur que `enabled` de data_edit_node), FALSE par
+        # défaut : sans lui, le publisher `data_edit` n'est même pas créé et la page ne
+        # montre pas son éditeur. data_dir : racine des données (json/ + medias/), la
+        # même que data_edit_node, lue par GET /api/data (lecture seule).
+        self.declare_parameter("data_edit_enabled", False)
+        self.declare_parameter("data_dir", "/home/ros2_ws/src/robot")
 
         self.web_port = self.get_parameter("web_port").value
         self.json_dir = self.get_parameter("json_dir").value
@@ -154,6 +163,8 @@ class WebBridgeNode(Node):
         self.camera_compressed = bool(self.get_parameter("camera_compressed").value)
         self.perception_topic = str(self.get_parameter("perception_topic").value or "")
         self.exterior_topic = str(self.get_parameter("exterior_topic").value or "")
+        self.data_edit_enabled = bool(self.get_parameter("data_edit_enabled").value)
+        self.data_dir = str(self.get_parameter("data_dir").value)
 
         # ROS_DOMAIN_ID n'est pas exposé comme paramètre de node par rclpy :
         # c'est une variable d'environnement du PROCESSUS, lue une fois au
@@ -215,6 +226,18 @@ class WebBridgeNode(Node):
         for topic in sorted(TOPICS_FLUX):
             self.create_subscription(StringTime, topic, self._make_feed_listener(topic), 10)
 
+        # --- Édition des données (L1d-3) -------------------------------------------
+        # Deux publishers DÉDIÉS, hors whitelist (un `cmd` générique ne les atteint pas),
+        # qos.volatile(10) comme leurs abonnés (jamais latché : une demande rejouée à un
+        # écrivain redémarré réécrirait une vieille retouche). Chacun n'existe que sous
+        # sa condition ; None = refus explicite du handler, rien ne peut partir.
+        self.data_edit_pub = self.create_publisher(StringTime, DATA_EDIT_TOPIC, qos.volatile(10)) \
+            if self.data_edit_enabled else None
+        # La porte sim n'existe qu'en simulation : même garde que la répétition.
+        self.validation_sim = rehearsal_allowed(self.domain_id)
+        self.validation_demande_pub = self.create_publisher(
+            StringTime, VALIDATION_SIM_DEMANDE_TOPIC, qos.volatile(10)) if self.validation_sim else None
+
         # --- Pilotage roues (SIM-ONLY, W3) --------------------------------------
         # Le publisher cmd_vel_web N'EXISTE que si drive_enabled : quand il vaut
         # None, publish_twist() est un no-op -- aucun mouvement possible, quoi
@@ -254,11 +277,12 @@ class WebBridgeNode(Node):
             "web_bridge_node prêt : port={} domain_id={} token_required={} json_dir={}"
             " drive_enabled={} max_linear={} max_angular={} camera_topic={}"
             " camera_compressed={} video_fps={} rehearsal_enabled={} perception_topic={!r}"
-            " exterior_topic={!r}".format(
+            " exterior_topic={!r} data_edit_enabled={} validation_sim={} data_dir={}".format(
                 self.web_port, self.domain_id, self.sessions.token_required, self.json_dir,
                 self.drive_enabled, self.max_linear, self.max_angular,
                 self.camera_topic, self.camera_compressed, self.video_fps,
-                self.rehearsal_enabled, self.perception_topic, self.exterior_topic))
+                self.rehearsal_enabled, self.perception_topic, self.exterior_topic,
+                self.data_edit_enabled, self.validation_sim, self.data_dir))
         if self.drive_enabled:
             # Trace explicite au démarrage : le pilotage roues est ACTIF (sim).
             self.get_logger().warning(
@@ -307,6 +331,12 @@ class WebBridgeNode(Node):
         ros_msg.time = time_ms
         ros_msg.anim = False
         self.publishers_by_topic[topic].publish(ros_msg)
+
+    @staticmethod
+    def publier_brut(publisher, brut: str) -> None:
+        """Publie une demande déjà sérialisée (data_edit, valider_roues) TELLE QUELLE :
+        la chaîne mesurée par le parseur est celle qui part, sans re-sérialisation."""
+        publisher.publish(StringTime(msg=brut, time=0, anim=False))
 
     # --- Pilotage roues (SIM-ONLY) ------------------------------------------
 
@@ -434,7 +464,9 @@ class WebBridgeNode(Node):
                            max_linear=self.max_linear, max_angular=self.max_angular,
                            rehearsal=self.rehearsal_enabled,
                            perception=bool(self.perception_topic),
-                           exterior=bool(self.exterior_topic))
+                           exterior=bool(self.exterior_topic),
+                           data_edit=self.data_edit_enabled,
+                           validation_sim=self.validation_sim)
 
 
 # --- Encodage vidéo (JPEG) : fonction pure, hors du node -------------------
@@ -517,6 +549,27 @@ async def catalog_handler(request: web.Request) -> web.Response:
     # (liste de noms), l'écriture reste protégée par la session WS.
     return web.json_response(build_catalog(node.json_dir),
                              headers={"Access-Control-Allow-Origin": "*"})
+
+
+async def data_handler(request: web.Request) -> web.Response:
+    """GET /api/data?kind=<kind>[&name=<nom>] (L1d-3) : LECTURE SEULE des données
+    éditables, pour l'éditeur de la page scène. Sans name : liste triée des noms avec
+    leurs états de porte sim ; avec name : {name, content, sha256}. Kind hors liste ou
+    nom hors forme/absent = 404. Pas de CORS : la page scène reste sur son origine."""
+    node = request.app["node"]
+    kind = request.query.get("kind", "")
+    if kind not in donnees.KINDS:
+        return web.Response(status=404, text="kind inconnu")
+    try:
+        if "name" not in request.query:
+            return web.json_response(lecture_donnees.lister(node.data_dir, kind))
+        element = lecture_donnees.lire(node.data_dir, kind, request.query["name"])
+    except (OSError, ValueError) as e:
+        node.get_logger().warning("lecture /api/data {} : {}".format(kind, e))
+        return web.Response(status=500, text="lecture impossible : {}".format(e))
+    if element is None:
+        return web.Response(status=404, text="absent ou nom hors forme")
+    return web.json_response(element)
 
 
 async def _handle_auth(node, app, client_id, ws, msg):
@@ -611,6 +664,40 @@ async def _handle_ticket(node, app, client_id, ws, msg):
     await _send_json_safe(ws, build_ack("ticket"))
 
 
+async def _handle_data_edit(node, app, client_id, ws, msg):
+    """Retouche de données (L1d-3) : writer seul, publisher présent seulement si
+    data_edit_enabled. L'ack dit « demande publiée », PAS « acceptée » : le verdict
+    du robot arrive par le flux data_edit_result, corrélé par l'id. Journal : id,
+    kind, nom -- jamais le contenu (même règle que data_edit_node)."""
+    if not node.sessions.is_writer(client_id):
+        node.get_logger().warning("data_edit refusé (lecture seule) id={}".format(client_id))
+        await _send_json_safe(ws, build_err(ERR_LECTURE_SEULE))
+        return
+    if node.data_edit_pub is None:
+        await _send_json_safe(ws, build_err("édition des données désactivée (DATA_EDIT)"))
+        return
+    node.publier_brut(node.data_edit_pub, msg["brut"])
+    node.get_logger().info("data_edit relayé client={} demande={} {} {}".format(
+        client_id, msg["id"], msg["kind"], msg["name"]))
+    await _send_json_safe(ws, build_ack("data_edit"))
+
+
+async def _handle_valider_roues(node, app, client_id, ws, msg):
+    """« Valider les roues pour le robot » (L1d-3) : writer seul, domaine 43 seul
+    (publisher absent ailleurs). Verdict par le flux validation_sim, même id."""
+    if not node.sessions.is_writer(client_id):
+        node.get_logger().warning("valider_roues refusé (lecture seule) id={}".format(client_id))
+        await _send_json_safe(ws, build_err(ERR_LECTURE_SEULE))
+        return
+    if node.validation_demande_pub is None:
+        await _send_json_safe(ws, build_err("validation des roues : simulation seulement (domaine 43)"))
+        return
+    node.publier_brut(node.validation_demande_pub, msg["brut"])
+    node.get_logger().info("valider_roues relayé client={} demande={} {}".format(
+        client_id, msg["id"], msg["name"]))
+    await _send_json_safe(ws, build_ack("valider_roues"))
+
+
 # Dispatch par type : chaque handler applique et répond son propre message.
 # Table plutôt qu'une cascade if/elif -- garde handle_client_message sous le
 # seuil de complexité et isole chaque règle (motif de web_protocol._PARSERS).
@@ -622,6 +709,8 @@ _HANDLERS = {
     "cmd": _handle_cmd,
     "drive": _handle_drive,
     "ticket": _handle_ticket,
+    "data_edit": _handle_data_edit,
+    "valider_roues": _handle_valider_roues,
 }
 
 
@@ -855,6 +944,7 @@ def build_app(node: WebBridgeNode) -> web.Application:
     app.router.add_get("/", index_handler)
     app.router.add_get("/scene", scene_handler)
     app.router.add_get("/api/catalog", catalog_handler)
+    app.router.add_get("/api/data", data_handler)
     app.router.add_get("/ws", websocket_handler)
     app.router.add_get("/video", video_handler)
     app.router.add_get("/perception", perception_handler)

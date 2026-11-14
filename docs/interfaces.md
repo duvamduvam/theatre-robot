@@ -163,7 +163,13 @@ source (W1 à venir).
   relais/robot_lights, construit depuis `json/`), `GET /video` (flux MJPEG
   `multipart/x-mixed-replace` de la caméra embarquée, servi à `video_fps` ;
   **503 "pas de vidéo"** si aucune frame fraîche depuis 2 s — l'UI affiche alors
-  un placeholder).
+  un placeholder). `GET /api/data?kind=<kind>[&name=<nom>]` (lot L1d-3, LECTURE
+  SEULE, `didier_web.lecture_donnees` sur `data_dir`, défaut `/home/ros2_ws/src/robot`) :
+  sans `name`, liste triée `[{name, rejeu?, roues?}]` des éléments du kind (`sequence`,
+  `expression`, `lumiere`, `brique`, `image`) avec leur état de porte sim lu au registre
+  (`a_jour`, `a_faire`, `heritee` pour les roues ; clé absente = sans objet) ; avec `name`,
+  `{name, content, sha256}` (`content` en base64 pour une image ; `sha256` = le
+  `base_sha256` d'un `replace`). Kind hors liste, nom hors forme (`nom_valide`) ou absent → 404.
 - **Source vidéo** (paramètre `camera_compressed`, 2026-07-11) : en **sim**,
   `camera/image_raw` (sensor_msgs/Image brut de la caméra gz, encodé JPEG par le
   bridge) ; sur le **vrai robot**, `camera/image_raw/compressed`
@@ -219,6 +225,11 @@ source (W1 à venir).
 | `take_control` | — | Reprise d'écriture explicite (toujours autorisée pour un client authentifié). |
 | `stop_all` | — | Bouton STOP : publie dans l'ordre `animation=false`, `audio="stop"`, `face="stop"`, `stop` sur les 5 servos, ET un Twist nul sur `cmd_vel_web` ; répétition activée : puis `route="off"` et `rehearsal/cmd="stop"` (la route est un mode latché, la séance se termine, le régisseur révoque ses pannes). |
 | `drive` | `x: float`, `z: float` (∈ [-1, 1]) | **SIM-ONLY.** Consigne de pilotage roues normalisée (x = linéaire avant/arrière, z = angulaire). Voir bloc pilotage ci-dessous. |
+| `data_edit` | `demande: {id, kind, mode, name, content, base_sha256?}` | **Lot L1d-3**, writer seul. Publie la demande, en JSON compact, sur `data_edit` (format et codes : § « Data editing through the robot »). Le pont ne juge que l'enveloppe (objet, `id` texte non vide) et la taille (≤ 131 072 octets UTF-8, `DATA_EDIT_TAILLE_MAX`, égale à celle de l'écrivain par test) ; le reste est jugé par le robot. Publisher créé SEULEMENT si `data_edit_enabled` (drapeau `DATA_EDIT`), sinon `err`. `ack` = publiée ; le verdict arrive par le flux `data_edit_result`, même `id`. |
+| `valider_roues` | `id: str`, `name: "<dossier>/<nom>"` | **Lot L1d-3, SIM-ONLY**, writer seul. Publie `{id, name}` sur `validation_sim_demande` (publisher créé seulement en domaine 43, sinon `err`) ; verdict par le flux `validation_sim`, même `id`. |
+
+`data_edit` et `validation_sim_demande` ne sont dans AUCUNE whitelist : un `cmd` ne peut pas
+les publier.
 
 **Pilotage roues (`drive`, SIM-ONLY, W3)** — canal SÉPARÉ des `cmd` (ne passe
 PAS par la whitelist ; `cmd_vel_web` n'y figure jamais) :
@@ -243,9 +254,12 @@ PAS par la whitelist ; `cmd_vel_web` n'y figure jamais) :
 `SIMULATION`/`ROBOT RÉEL`/`INCONNU` selon `ROS_DOMAIN_ID` 43/42/autre,
 `writer`, `token_required`, + `drive_enabled`, `max_linear`, `max_angular` pour
 que l'UI verrouille le pad et affiche les plafonds), `hb_ack` (`t` échoté),
-`rehearsal` (bool : boutons route/vitesse/séance de `/scene`)), `feed`
+`rehearsal` (bool : boutons route/vitesse/séance de `/scene`), `data_edit` (bool, L1d-3 :
+le pont relaie les retouches → éditeur de `/scene`), `validation_sim` (bool, L1d-3 : domaine 43,
+états de porte sim et bouton de validation des roues)), `feed`
 (`topic`, `msg` — UN message par événement d'un topic de FLUX, `TOPICS_FLUX =
-{chat_transcript}`, diffusé immédiatement à tous les clients, sans historique),
+{chat_transcript, chat_hearing, jeu/journal, data_edit_result, validation_sim, roues_refusees}`,
+diffusé immédiatement à tous les clients, sans historique),
 `ack` (`topic` — non émis pour `drive` : 15 Hz spammerait le fil), `err`
 (`reason` — connexion JAMAIS fermée sur un message invalide, motif du
 décodage StringTime commun), `state` (toutes les 2 s : dernier payload +
@@ -261,7 +275,12 @@ on/off/restart, slider `route_speed`, séance start/stop. Fichiers :
 `style.css` partagé avec la console ; disposition : `docs/spec-refonte-page-scene.md`,
 12/11). La scène ignore la
 cible mémorisée de la console (jamais de bascule silencieuse vers le vrai
-Didier) et n'affiche ni pannes ni consignes.
+Didier) et n'affiche ni pannes ni consignes. Si `hello.data_edit` (lot L1d-3) :
+« Éditer les données », en bas de la colonne de droite — séquence, expression,
+lumière, brique (Charger / Envoyer / Rejouer, verdict corrélé par `id`, « pas de
+réponse du robot » après 5 s, JSON illisible jamais envoyé) et envoi d'une image PNG
+du visage ; si `hello.validation_sim`, états de porte sim et « Valider les roues pour
+le robot ». Mode d'emploi : `docs/operations.md` § « L'éditeur de la page scène ».
 
 **Session / heartbeat** : écriture EXCLUSIVE — le premier client authentifié
 l'obtient, les suivants sont lecteurs (`take_control` la reprend

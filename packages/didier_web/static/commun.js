@@ -59,6 +59,8 @@ const state = {
   rehearsal: false,         // hello.rehearsal : topics de répétition acceptés (SIM-ONLY)
   perception: false,        // hello.perception : le serveur sert /perception (lecture seule)
   exterior: false,          // hello.exterior : le serveur sert /exterior (caméra de poursuite sim)
+  dataEdit: false,          // hello.data_edit : le pont relaie les retouches (L1d-3, drapeau DATA_EDIT)
+  validationSim: false,     // hello.validation_sim : porte sim présente (domaine 43)
   reconnectDelayMs: RECONNECT_MIN_MS,
   rttSamples: [],           // fenêtre glissante (ms)
   hbTimer: null,
@@ -219,6 +221,8 @@ function traiterHello(msg) {
   // Second flux vidéo (ce que voit la perception) : absent = ancien serveur = non.
   state.perception = !!msg.perception;
   state.exterior = !!msg.exterior;  // absent = ancien serveur = non
+  state.dataEdit = !!msg.data_edit;            // idem : éditeur de la scène absent
+  state.validationSim = !!msg.validation_sim;  // idem : ni états ni validation des roues
   majBadgeEcriture();
   demarrerHeartbeatSiWriter();
 

@@ -290,8 +290,10 @@ def generate_launch_description():
                 # servi en lecture seule sur /perception -> panneau « Ce que Didier voit ».
                 # exterior_topic : caméra de poursuite gz (xacro, chase_camera_link),
                 # servie en lecture seule sur /exterior -> « Didier vu de l'extérieur ».
+                # data_edit_enabled = data_edit (L1d-3) : même drapeau que l'écrivain ; la
+                # page scène montre alors son éditeur. data_dir par défaut (src/robot).
                 parameters=[{"web_port": web_port, "drive_enabled": web_drive,
-                             "rehearsal_enabled": rehearsal,
+                             "rehearsal_enabled": rehearsal, "data_edit_enabled": data_edit,
                              "perception_topic": "camera/image_raw/compressed",
                              "exterior_topic": "camera_ext/image_raw"}],
                 condition=IfCondition(web),

@@ -164,10 +164,15 @@ def generate_launch_description():
         package="didier_web",
         executable="web_bridge",
         name="web_bridge_node",
+        # data_edit_enabled (L1d-3) : MÊME variable DATA_EDIT que data_edit_node plus bas
+        # (défaut false = ni publisher data_edit ni éditeur dans la page) ; data_dir par
+        # défaut = src/robot, comme l'écrivain.
         parameters=[{
             "json_dir": "/home/ros2_ws/src/robot/json",
             "camera_topic": "camera/image_raw/compressed",
             "camera_compressed": True,
+            "data_edit_enabled": ParameterValue(
+                EnvironmentVariable("DATA_EDIT", default_value="false"), value_type=bool),
         }],
     )
 
