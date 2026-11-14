@@ -1,0 +1,18 @@
+=== édition à travers le robot sous /didier/ 12:32:18 ===
+  lancé : drive (pid 1986, journal /tmp/validate-data-edit-drive.log)
+  ✅ 1. création -> ok ; fichier présent ; au catalogue en <= 5 s
+  ✅ 2. retouche -> ok ; octets exacts ; sauvegarde json/backup/2026-11-14/sequence__tmp-l1d_l1d-retouche__123232__l1d-v2036-2.json ; 2 ligne(s) au journal
+  ✅ 3. jouée : animation_state ['l1d-retouche'] ; neck reçu ['0.37']
+  ✅ 4. faces inconnue -> contrat ["faces[0] : référence l'expression inconnue 'l1d-expression-inconnue'"] ; fichier inchangé
+  ✅ 5. ../x/y, tmp-l1d/../../x -> ['nom_invalide', 'nom_invalide'] ; rien de créé
+  ✅ 6. roues hors bornes -> [('contrat', ['wheels[0] : consigne roues [0.95, 0.95] au-delà de 0.89 (VITESSE_ROUES_MAX)']), ('contrat', ['wheels : la dernière image doit valoir [0, 0] (arrêt final), reçu [0.1, [0.2, 0.2]]']), ('contrat', ["wheels[0] : consigne roues [gauche, droite] (deux nombres) attendue, reçu {'speed': 100}"])] ; aucun fichier
+IMPULSION_ROUES non_nul_pendant=0.44s premier_non_nul_a=0.41s messages_non_nuls=1 (attendu si tenue : (0.5-0.1)x4 s = 1.60 s)
+  ✅ 7. roues bornées -> ok ['a_rejouer_en_sim', 'roues_a_valider_en_sim'] ; cmd_vel non nul vu : True ; nul 1 s après la fin : True
+  ✅ 8. base_sha256 faux -> conflit
+  ✅ 9. 131073 octets -> trop_gros
+  ✅ 10. bouche 24x16 -> ok ; même PNG en œil -> contrat ['image : 24x16, attendu 8x8 pour la zone eye'] ; non-PNG -> contrat ['image : signature PNG absente']
+  ✅ 11. expression -> ok ; au catalogue : True ; image relue : True ; affichée par face_sim : True ; erreurs : []
+  ✅ 12. lumière -> ok ; au catalogue : True ; brique inconnue -> contrat ["séquence lumière 'l1d lumiere ko' -> brique 'l1d-brique-inconnue' : brique inconnue de json/lights_base.json"]
+  ✅ 13. porte sim : retouche -> ok ; jeu coupé -> interrompue ; valider -> non_rejouee ; rejouée -> tamponnee, tampon rejeu au registre ; valider -> roues_validees, tampon roues sim au registre
+  remise en état de json/ et medias/visuals/ : identique
+=== validate-data-edit (/didier) : 13 OK, 0 KO 12:32:54 ===
