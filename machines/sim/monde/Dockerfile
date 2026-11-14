@@ -42,6 +42,13 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p /home/ros2_ws/src
 WORKDIR /home/ros2_ws
 
+# Dépendances AVANT toute copie (14/11) : les sources et data/ bougent à chaque épreuve d'édition,
+# elles ne doivent pas invalider cette couche (une panne passagère de PyPI a rougi une fumée).
+# filetype/colorlog/psutil : dépendances pip de la chaîne d'imports de la bibliothèque du cœur
+# (dadou_utils_ros.misc, logging_conf) — pas tout requirements.txt du robot (adafruit-*, PyAudio).
+# --break-system-packages : Ubuntu Noble (Jazzy) refuse pip hors venv sans ce flag.
+RUN pip3 install --no-cache-dir --break-system-packages filetype colorlog psutil
+
 # Les sources sont aussi montées en volume par le compose (itération sans
 # rebuild) ; la copie permet de lancer l'image seule.
 COPY --from=didier_description . /home/ros2_ws/src/didier_description
@@ -64,10 +71,5 @@ COPY --from=data json/ /home/ros2_ws/src/robot/json/
 # log/ : logging_conf.py (bibliothèque du cœur) écrit sur ce chemin exact ; le dossier doit exister
 # avant le premier dictConfig. Monté par le compose (machines/sim/workspace/log), partagé avec `robot`.
 RUN mkdir -p /home/ros2_ws/log
-
-# filetype/colorlog/psutil : dépendances pip de la chaîne d'imports de la bibliothèque du cœur
-# (dadou_utils_ros.misc, logging_conf) — pas tout requirements.txt du robot (adafruit-*, PyAudio).
-# --break-system-packages : Ubuntu Noble (Jazzy) refuse pip hors venv sans ce flag.
-RUN pip3 install --no-cache-dir --break-system-packages filetype colorlog psutil
 
 ENTRYPOINT ["/bin/bash", "/home/ros2_ws/entree.sh"]
