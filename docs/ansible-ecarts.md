@@ -35,7 +35,7 @@ Rien ne change sur les Pi : mêmes chemins, mêmes `attendu/*.txt`.
 | 1. Gestes manuels du déploiement | **fait** : utilisateur + clé (groupe `didier_pi`) et IP par défaut dans `hosts` ; chemins de l'arbre déduits du playbook (un worktree déploie sans `-e`) ; squelette `ros2_ws` + `chown` de `src/` avant le rsync ; sentinelle posée à chaque synchronisation (noms gardés : ceux que lisent les scripts d'entrée, plus personne ne les tape) ; `up -d --force-recreate` ; attente des nœuds attendus + `running` / `restarts=0`, sinon échec. `chemins_retires_lib` : build/install effacés seulement s'ils contiennent encore la lib embarquée (build incrémental : 4,6 s vision, 21 s robot). |
 | 2. Secrets | **fait** : rôle `secrets` (`~/.config/didier/` → Pi, 600, `no_log`, sans diff ; échec clair si une source ou une clé de `secret.example` manque). `secrets.env` (clé Anthropic) **non poussé** : aucun consommateur sur les Pi tant que la bascule de `chat_node` n'est pas faite. |
 | 3. Système | **fait** dans `deploy-pios.yml` (rôle `config-hote`, rejoué à chaque déploiement donc vu par la détection) : `avahi-utils` + `avahi-alias-didier.service` (robot), `/etc/asound.conf` (vision, versionné dans `machines/vision/rpi/asound.conf` depuis L1e-4c). `~/.asoundrc` : c'était déjà le gabarit du rôle `usb-audio` (identique sur les deux Pi), désormais rejoué au déploiement. `.bashrc` : voir la correction du relevé ci-dessous ; `set-bashrc` rendu idempotent et rejoué au déploiement. Rsync : `.venv/`, `.pytest_cache/`, workspace x86, `conf/secret`, sentinelles commitées exclus ; `.venv` déjà poussés effacés (269 Mo robot, 342 Mo vision). |
-| 4. Images sur le Hub | **FAIT le 07/11** : `dadouuu/dadou-robot-arm:latest` (0,83 Go) et `dadouuu/dadou-vision-arm:latest` (1,15 Go, reconstruite le jour même) publiées ; jeton Docker Hub `didier-pi` (Read & Write, sans expiration, révocable sur app.docker.com) dans `~/.config/didier/dockerhub-token` du PC, les 2 Pi connectés. **Republier = seulement quand un Dockerfile ou une liste de paquets change** (le code est monté, pas dans l'image) : sur le Pi concerné, `cd ~/ros2_ws/src/<robot\|vision>/conf/docker/arm && sudo docker compose -f docker-compose-arm.yml build && sudo docker push dadouuu/dadou-<robot\|vision>-arm:latest`, puis redéployer. Un Pi reflashé doit d'abord `docker login -u dadouuu --password-stdin < jeton` pour POUSSER (tirer ne demande rien : dépôts publics). Automatisation prévue : GitHub Actions (lot L2). |
+| 4. Images sur le Hub | **FAIT le 07/11** : `dadouuu/dadou-robot-arm:latest` (0,83 Go) et `dadouuu/dadou-vision-arm:latest` (1,15 Go, reconstruite le jour même) publiées ; jeton Docker Hub `didier-pi` (Read & Write, sans expiration, révocable sur app.docker.com) dans `~/.config/didier/dockerhub-token` du PC, les 2 Pi connectés. **Republier = seulement quand un Dockerfile ou une liste de paquets change** (le code est monté, pas dans l'image), dans cet ordre (L2a, 14/11) : (1) déployer (le Dockerfile `conf/docker/Dockerfile` arrive sur le Pi) ; (2) sur le Pi, `cd ~/ros2_ws/src/<robot\|vision>/conf/docker/arm && sudo docker compose -f docker-compose-arm.yml build` ; (3) redéployer (`build/` et `install/` vidés, colcon complet ; **vision : le rôle `conteneur` vérifie que le secret n'est pas dans l'image**, rouge sinon) ; (4) avant de pousser, contrôler l'image : vision `sudo docker run --rm --entrypoint test <image> ! -e /home/ros2_ws/src/vision/conf/secret`, robot `sudo docker run --rm --entrypoint ls <image> -A /home/ros2_ws/src/robot/medias/audios` (vide : audios privés exclus) ; (5) `sudo docker push dadouuu/dadou-<robot\|vision>-arm:latest`. Détail et preuves : § L2a ci-dessous. Un Pi reflashé doit d'abord `docker login -u dadouuu --password-stdin < jeton` pour POUSSER (tirer ne demande rien : dépôts publics). Automatisation prévue : GitHub Actions (lot L2). |
 | 5. Détection d'écart | **fait** : `ecart-pi.sh <groupe>` = (a) `--check --diff` + (b) inventaire comparé à `attendu/<groupe>.txt` (gravés le 07/11). Pas encore branché dans un `deploy-hors-robot.sh` (n'existe pas). Fichiers de `/etc` hors Ansible : non inventoriés (trop de bruit de l'OS ; à revoir si besoin). |
 | 6. Preuve | **partielle faite** : `~/ros2_ws` effacé sur la vision, une commande, tout revient (secret : même taille, même sha256). **Reste** : reflash des deux cartes par David. |
 
@@ -159,6 +159,56 @@ le manifeste `data/json/audios-prives.json`. Rôle `synchronise`, hôte robot se
   construite avec `COPY --from=data medias/` — elle contient les audios d'alors ; les Dockerfile
   ARM et x86 du robot copient toujours `medias/` (sur le Pi, `medias/audios/` est rempli). Aucune
   décision prise ici sur la publication des images.
+
+## L2a — un Dockerfile par machine (14/11, branche `l2`)
+
+Spec L2, décisions 4, 5, 6, 16. `conf/docker/Dockerfile` (robot, vision) remplace
+`conf/docker/arm/Dockerfile-arm` ; contexte principal = `conf/docker/`, rien n'en est copié ; tout
+arrive par contextes nommés (`conf: ../..`, `data: ../../..` pour le robot, un par package). Les
+compose ARM restent à leur place (Ansible et systemd les visent). Effacement conditionnel neuf :
+`chemins_retires_l2` (anciens `Dockerfile-arm*`, et `conf/docker/{.dockerignore,Dockerfile-bak,
+docker_bashrc,jenkins,scripts}` du robot — le `.dockerignore` serait désormais LU, il est à la racine
+du nouveau contexte). Le compose ARM du robot monte en plus `didier_description`,
+`didier_rehearsal` et `didier_sim` (avant, le conteneur compilait la copie de l'IMAGE de ces trois
+packages, pas celle d'Ansible).
+
+**Secret de la vision, trois verrous** : (a) `machines/vision/.dockerignore` (racine du contexte
+`conf`, arrive sur le Pi en `src/vision/conf/.dockerignore`), (b) `COPY --from=conf --exclude=secret`,
+(c) rôle `conteneur` : après le `up`, `docker run --entrypoint test <image> ! -e /home/<dest>` pour
+chaque `secrets_hote` — rouge si le fichier est dans l'image ou si le contrôle échoue. Preuve au
+secret FACTICE, chaque verrou isolé (témoin sans verrou = présent, (a) seul = absent, (b) seul =
+absent) : **PC** (buildx 0.34) et **Pi vision** (Docker 29.6.1, buildx 0.35) identiques — aucun repli.
+Image du PC construite avec un `machines/vision/secret` factice en place : absent, aucune trace dans
+l'arborescence ni l'historique. Image du Pi : `conf/secret` absent, 0 fichier au sha256 du secret de
+l'hôte, verrou (c) vert au déploiement.
+
+**Audios privés du robot** : sur le Pi le contexte `data` est `src/robot/`, dont `medias/audios/`
+est rempli par Ansible ; la copie devient `COPY --from=data --exclude=audios/* medias/` (dossier
+vide gardé, point de montage). Les images du Hub poussées AVANT ce lot les contiennent : relu le
+14/11 sur le `latest` d'alors (construit le 11/11) : **254 audios** dans `medias/audios/` (même
+constat pour `e1420fc9…` du 08/11). Le `latest` neuf n'en a plus, mais un ancien digest peut rester
+tirable sur le Hub — à traiter là-bas (décision de David, rien fait).
+
+Script d'entrée du robot : build aussi si `install/setup.bash` manque ; `exec ros2 launch … "$@"`
+(l'`ENTRYPOINT` ne passe rien : comportement du Pi inchangé ; le launch reçoit lui-même le signal
+d'arrêt du conteneur au lieu du shell).
+
+**Porte (14/11)** : (1) les deux images construites sur le PC depuis le dépôt ; (2) secret factice
+ci-dessus ; (3) image robot x86 lancée seule (domaine 43, réseau bridge, non privilégiée, sans
+`/dev` ni montage) : 17/17 `noeuds_attendus` en 22 s puis à chacune des 10 relectures sur 5 min,
+`running 0` (`audio_node`/`system_node` vivent sans carte son : repli `asound-sim.conf` inutile) ;
+(4) images reconstruites SUR les Pi (vision ≈ 5 min, robot 11 min, caches), chaque Pi déployé deux
+fois (Dockerfile posé, puis image neuve : `build/`/`install/` vidés, colcon complet), `failed=0`,
+vision `vision_status`, robot 17 nœuds, `running` restarts=0, `ecart-pi.sh` VERT ×2 (vision 284,
+robot 286 entrées, audios 254/254) — **`attendu/` non regravé : aucun écart** ; (5) fumée complète
+de la branche verte (RTF 1,00 ; 5, 4, 3, 13, 21, 14 ; 35 min) ; (6) banc vision : `person_tracker`
+vivant sur la webcam du PC. Images republiées : vision `498c299b…`, robot `9d87ce83…` ; relues
+depuis le PC (arborescence exportée) : aucun audio hors sons système, pas de `conf/secret`.
+
+**Piège vu en route** : un déploiement du robot lancé PENDANT une fumée du même arbre a été refusé
+par la garde 2 (porte sim) : l'épreuve « édition » écrit une séquence temporaire
+`tmp-l1d/l1d-roues` dans `data/` (monté dans la sim) puis l'efface. La garde a eu raison ; règle :
+ne jamais déployer le robot depuis un arbre dont une fumée tourne.
 
 ## Relevé du 07/11 (lecture seule, Pi hors robot)
 

@@ -4,26 +4,36 @@
 # (Pi 4 fumé le 12/09, convertisseurs 24V→5V en commande) pour continuer à
 # travailler la conversation et le suivi de personne sans matériel.
 #
-# MÊME CODE QUE LE PI 5 : le Dockerfile-arm est réutilisé TEL QUEL — sa base
-# ros:jazzy-ros-base et toutes les dépendances pip existent en amd64, seul le
-# tag d'image change. Aucun fichier dupliqué : ce qu'on valide ici est ce qui
-# tournera sur le robot (règle du projet : la vérification exécute le même
+# MÊME CODE QUE LE PI 5 : machines/vision/docker/Dockerfile, le Dockerfile unique de la
+# vision (spec L2, décision 5), construit en x86 natif — sa base ros:jazzy-ros-base et
+# toutes les dépendances pip existent en amd64. Aucun fichier dupliqué : ce qu'on valide
+# ici est ce qui tournera sur le robot (règle du projet : la vérification exécute le même
 # code que la prod).
 #
 # SÉCURITÉ : ROS_DOMAIN_ID=43 par défaut — domaine de la SIMULATION (le vrai
 # robot est sur 42). Rien de ce qui part d'ici ne peut atteindre le vrai
 # Didier, même allumé sur le même réseau.
 #
-# Usage (voir dadou_robot_ros/docs/operations.md §Banc PC) :
-#   ./build-x86.sh                                        # 1re fois (long)
+# Usage (voir docs/operations.md §Banc PC) :
+#   docker compose -f docker-compose-x86.yml build        # 1re fois (long)
 #   CHAT=true docker compose -f docker-compose-x86.yml up -d
-#
-# Pas de section build: ici — le build passe par ./build-x86.sh (contextes
-# nommés des packages de packages/ passés en --build-context, voir le script).
 services:
   dadou-vision-x86:
     container_name: dadou-vision-x86-container
     image: dadouuu/dadou-vision-x86:latest
+    # L2a : plus de build-x86.sh (son `tar --transform` refabriquait la disposition du Pi) —
+    # le Dockerfile ne connaît que des contextes NOMMÉS, donnés ici dans la disposition du
+    # dépôt (../../../ = racine theatre-robot). Le secret n'y entre pas : le .dockerignore à la
+    # racine du contexte `conf` et le COPY --exclude=secret du Dockerfile (décision 6).
+    build:
+      context: ../../vision/docker
+      dockerfile: Dockerfile
+      additional_contexts:
+        conf: ../../vision
+        theatre_interfaces: ../../../packages/theatre_interfaces
+        theatre_contrats: ../../../packages/theatre_contrats
+        dadou_utils_ros: ../../../packages/dadou_utils_ros
+        didier_vision: ../../../packages/didier_vision
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-43}
       # Nom du robot = namespace ROS ABSOLU de tous les nœuds (lot L1b) : /didier/…
@@ -112,7 +122,7 @@ services:
       # medias/voices/ n'existe pas dans le checkout et le bind-mount
       # MASQUERAIT la voix Piper téléchargée dans l'image au build
       # (ChatStartupError « voix Piper introuvable » — piège documenté dans
-      # Dockerfile-arm). L'image se suffit.
+      # machines/vision/docker/Dockerfile). L'image se suffit.
       #
       # theatre_interfaces (StringTime) et theatre_contrats (contrat, importé par
       # le shim dadou_utils_ros/utils_static.py) : packages/ du mono-dépôt

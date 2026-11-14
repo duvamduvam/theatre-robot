@@ -15,7 +15,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         # Launch V1 (vision.launch.py : heartbeat + person_tracker). Le
         # dossier launch/ est bind-monté/copié à la racine du package colcon
-        # (cf. docker-compose-arm.yml et Dockerfile-arm) depuis conf/ros2/launch/.
+        # (cf. docker-compose-arm.yml et machines/vision/docker/Dockerfile) depuis conf/ros2/launch/.
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
     ],
     install_requires=['setuptools'],

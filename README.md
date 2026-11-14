@@ -8,10 +8,9 @@ lumières, gants) — décidé le 2026-11-01 (`docs/etude-architecture-globale.m
 | Dossier | Ce qu'on y trouve |
 |---|---|
 | `packages/` | **QUOI** : un package ROS 2 par fonction, à plat. Noms : `didier_*` (le robot), `telecommande_*` / `sono_*` / `lights_*` (les appareils), `theatre_*` (le commun : contrats, sim, gabarit) |
-| `machines/<machine>/` | **OÙ** : ce qui tourne sur chaque machine — **en place depuis L1e-4c (11/11)** : `machine.yml` (packages déployés, launch, nœuds attendus, secrets, fichiers système ; lu par Ansible) + la conf copiée dans `src/<robot\|vision>/conf/` du Pi (compose ARM, scripts, systemd). `machines/sim/` = bancs PC (`banc-robot/` = la sim Gazebo, `banc-vision/`), scripts de vérification et fumée ; un conteneur par machine en L2. Convention : [`machines/README.md`](machines/README.md) |
+| `machines/<machine>/` | **OÙ** : ce qui tourne sur chaque machine — **en place depuis L1e-4c (11/11)** : `machine.yml` (packages déployés, launch, nœuds attendus, secrets, fichiers système ; lu par Ansible) + la conf copiée dans `src/<robot\|vision>/conf/` du Pi (compose ARM, scripts, systemd) ; **un Dockerfile par machine**, `machines/<machine>/docker/Dockerfile`, le même pour le Pi et le PC (L2a). `machines/sim/` = bancs PC (`banc-robot/` = la sim Gazebo, `banc-vision/`), scripts de vérification et fumée ; un conteneur par machine en L2. Convention : [`machines/README.md`](machines/README.md) |
 | `data/` | le contenu du robot : `json/` (séquences, expressions, lumières, relais), `medias/` (audios, visuels du visage), `db/` — **en place depuis L1e-4b (08/11)**, copié par Ansible dans `src/robot/` du Pi ; vérité unique servie par le robot (catalogue), éditée à travers lui à L1d |
 | `deploy/` | Ansible (toutes les machines) — **en place depuis L1e-4a (08/11)** : `cd deploy && ansible-playbook -i hosts deploy-pios.yml -e target_group=robot\|vision`, puis `./ecart-pi.sh <groupe>` |
-| `docker/` | Dockerfiles communs (base ARM / x86) |
 | `docs/` | documentation **vivante** (architecture, opérations, contrats, chantiers, incidents, matériel) ; `docs/etudes/` = les études, avec leur statut en tête |
 | `atelier/` | essais, firmwares des microcontrôleurs, scripts d'atelier — jamais déployé |
 | `legacy/` | **TRANSITOIRE (lot L0)** : les quatre anciens dépôts importés avec tout leur historique. Depuis L1e-4e (11/11) il ne reste que la télécommande (`dadou_control_ros`, → L4) et des bandeaux d'archive (dont `dadou_robot_ros/CLAUDE.md`, règles de sécurité roues) ; il disparaît au lot L5 |
@@ -22,7 +21,7 @@ lumières, gants) — décidé le 2026-11-01 (`docs/etude-architecture-globale.m
 |---|---|
 | L0 sauvegardes + squelette | **FAIT le 02/11** : 6 dépôts sauvegardés et poussés, secrets purgés, squelette posé et **validé sur pièce par David**, 4 historiques importés (1 628 commits), **V-R3 rejoué depuis `legacy/` : 21 OK / 0 KO**, tests du cœur verts, Ansible pointe sur `legacy/` |
 | L1 contrats + données | **FAIT le 14/11** (hors protocole caméra) — contrats, un nom par robot, catalogue publié, packages `didier_*`, `deploy/` `data/` `machines/` `docs/`, et L1d : séquences, lumières et expressions s'éditent à travers le robot, chaque retouche passe par la sim (édition éteinte sur le robot jusqu'à décision). ⛔ Protocole caméra dû avant tout usage au sol. Détail : [tableau de bord](docs/chantiers.md), [spec L1](docs/spec-L1-contrats-donnees.md) |
-| L2 sim multi-conteneurs | **spec fermée écrite le 13/11**, rien de codé — [`docs/spec-L2-sim-multi-conteneurs.md`](docs/spec-L2-sim-multi-conteneurs.md) (5 sous-étapes L2a à L2e) |
+| L2 sim multi-conteneurs | **spec fermée écrite le 13/11** ; L2a (un Dockerfile par machine) faite le 14/11 sur la branche `l2` — [`docs/spec-L2-sim-multi-conteneurs.md`](docs/spec-L2-sim-multi-conteneurs.md) (5 sous-étapes L2a à L2e) |
 | L3 gabarit + sono | à venir |
 | L4 télécommande neuve | à venir |
 | L5 ménage | à venir |

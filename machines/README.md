@@ -7,7 +7,7 @@ est dans `packages/`, le contenu du robot dans `data/`, Ansible dans `deploy/`.
 |---|---|---|
 | `robot/` | Pi 4 du robot (hôte `r`) | conf complète (ex `legacy/dadou_robot_ros/conf/` sans la sim) |
 | `vision/` | Pi 5 de la tête (hôte `ai`) | conf complète (ex `legacy/dadou_vision_ros/{conf,mediamtx}`) |
-| `sim/` | le PC de David (bancs, pas un hôte Ansible) | `banc-robot/` (sim Gazebo + banc de bureau), `banc-vision/`, scripts de vérification, fumée et sa minuterie |
+| `sim/` | le PC de David (bancs, pas un hôte Ansible) | `banc-robot/` (sim Gazebo), `banc-vision/`, scripts de vérification, fumée et sa minuterie |
 | `telecommande/`, `gant-gauche/`, `gant-droit/` | console de pilotage, gants | `machine.yml` seul : le code et la conf sont encore dans `legacy/dadou_control_ros/` (lot L4) |
 | `lights/` | — | vide (pas encore d'hôte) |
 
@@ -57,5 +57,23 @@ conteneurs n'ont pas bougé (`src/robot/conf/docker/arm/docker-compose-arm.yml`�
 gardent donc des chemins relatifs à la disposition du Pi (`../../..` = `src/<projet>/`), pas à
 celle du dépôt. `machines/sim/` ne part sur aucun Pi. Renommer les chemins Pi est le travail de L2.
 
-Image de la vision : `conf/secret` en est exclu par `vision/docker/arm/Dockerfile-arm.dockerignore`
-(fichier propre au Dockerfile, lu par BuildKit) — l'image est publiée sur le Hub.
+## Les images Docker (L2a, 14/11)
+
+**Un Dockerfile par machine, `<machine>/docker/Dockerfile`, le même pour le Pi (ARM) et le PC
+(x86)**, construit en natif des deux côtés (aucune émulation). Son contexte principal est son
+dossier `docker/` et rien n'en est copié : tout arrive par **contextes nommés** — `conf` (la conf
+de la machine), `data` (robot seul) et un par package de la liste `packages` du `machine.yml`. Le
+compose ARM (`docker/arm/docker-compose-arm.yml`) donne les chemins du Pi ; le compose du PC (banc
+vision aujourd'hui, sim en L2b) ceux du dépôt. Même liste partout — lignes `COPY --from=<package>`,
+`packages`, contextes des compose, montages de sources : gravé par `test_arborescence.py`.
+Pas d'image de base commune (`docker/` à la racine est supprimé).
+
+Les images ARM sont **publiées sur le Hub** (dépôts publics), d'où deux règles :
+- **secret de la vision** : `conf/secret` n'y entre jamais — (a) `vision/.dockerignore` à la racine
+  du contexte `conf` (il part sur le Pi avec la conf), (b) `COPY --from=conf --exclude=secret` dans
+  le Dockerfile, (c) le rôle `conteneur` vérifie l'image construite pour chaque `secrets_hote` et
+  fait échouer le déploiement si le fichier y est ;
+- **audios privés** (robot) : sur le Pi, `medias/audios/` est rempli par Ansible ; le Dockerfile
+  copie `medias/` avec `--exclude=audios/*` (le dossier reste, vide : point de montage).
+
+Republier une image : `docs/ansible-ecarts.md` (ligne « Images sur le Hub »).

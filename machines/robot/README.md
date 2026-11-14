@@ -5,8 +5,9 @@ sim (lot L1e-4c, 11/11) ; copié dans `~/ros2_ws/src/robot/conf/` du Pi (chemin 
 
 - `machine.yml` : ce qu'Ansible déploie (10 packages, données `data/`, launch, 16 nœuds attendus,
   alias mDNS) — convention dans `../README.md`.
-- `docker/arm/` : compose et Dockerfile de l'image `dadouuu/dadou-robot-arm` (construite SUR le Pi ;
-  chemins relatifs à la disposition du Pi).
+- `docker/Dockerfile` : l'image du robot, la même sur le Pi et le PC (L2a ; contextes nommés,
+  audios privés exclus) ; `docker/arm/` : le compose du Pi, `dadouuu/dadou-robot-arm` construite
+  SUR le Pi, chemins relatifs à la disposition du Pi. Voir `../README.md` § Les images Docker.
 - `scripts/` : entrée du conteneur (`launch-ros-in-docker.sh`), `collect-incident.sh`,
   `log-charge.sh`, **`validate-cmdvel-protocol.sh`** (protocole caméra des roues, exécuté dans le
   conteneur du VRAI robot — il reste ici, pas dans `machines/sim/`), outils d'atelier.

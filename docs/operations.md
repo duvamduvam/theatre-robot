@@ -329,8 +329,8 @@ toujours `legacy/dadou_vision_ros/` (`db/`, `medias/` d'exécution, non suivis).
 cd packages/didier_vision && .venv/bin/python -m pytest -q -o addopts=
 ```
 
-Banc x86 : `machines/sim/banc-vision/build-x86.sh` (contexte nommé
-`didier_vision`), puis vider `workspace/{build,install,log}` (l'ancien `install/vision`
+Banc x86 : `cd machines/sim/banc-vision && docker compose -f docker-compose-x86.yml build`
+(le Dockerfile du Pi 5, `machines/vision/docker/Dockerfile`, contextes nommés — L2a), puis vider `workspace/{build,install,log}` (l'ancien `install/vision`
 n'a plus de raison d'exister) et poser `touch packages/didier_vision/change`.
 
 ## Le cœur `didier_core` (lot L1e-3c, 07/11)
@@ -543,10 +543,11 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
 **2. La perception + la parole (tête)** — depuis
 `machines/sim/banc-vision/` :
 ```bash
-./build-x86.sh                                        # 1re fois seulement (long)
+docker compose -f docker-compose-x86.yml build        # 1re fois seulement (long)
 CHAT=true docker compose -f docker-compose-x86.yml up -d
 ```
-- MÊME image que le Pi 5 (Dockerfile-arm réutilisé tel quel, base multi-arch) ;
+- MÊME image que le Pi 5 (`machines/vision/docker/Dockerfile`, le Dockerfile unique de la
+  vision depuis L2a, construit en x86 natif ; base multi-arch) ;
   `person_tracker` lit la webcam `/dev/video0`, publie `/didier/vision/person` (gaze)
   et `/didier/vision/person_box` (suivi roues) ; `CHAT=true` lance `chat_node`
   (micro → whisper → OpenRouter → piper → sortie audio).
@@ -578,7 +579,7 @@ CHAT=true docker compose -f docker-compose-x86.yml up -d
   de `packages/didier_vision/`, poser la sentinelle `touch packages/didier_vision/change` puis
   redémarrer le conteneur (vécu le 14/10 : chat_node tournait avec le code du
   13/09 malgré les sources à jour). Et **après un rebuild d'IMAGE**
-  (`build-x86.sh`), vider `workspace/{build,install,log}` avant de relancer :
+  (`docker compose -f docker-compose-x86.yml build`), vider `workspace/{build,install,log}` avant de relancer :
   le `build/` de l'ancienne image référence des libs qui n'existent plus
   (`libfastcdr.so.2.2.7` → `robot_interfaces` échoue, chat_node reste
   l'ancien). Puis refaire les symlinks ci-dessus.

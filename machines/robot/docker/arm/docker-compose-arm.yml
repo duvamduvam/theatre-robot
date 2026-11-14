@@ -3,8 +3,11 @@ services:
     container_name: dadou-robot-container
     image: dadouuu/dadou-robot-arm:latest
     build:
-      context: ../../..
-      dockerfile: conf/docker/arm/Dockerfile-arm
+      # L2a (spec L2, décision 5) : le Dockerfile unique de la machine (ARM et x86) est
+      # src/robot/conf/docker/Dockerfile ; contexte principal = son dossier (rien n'en est copié),
+      # tout le reste en contextes NOMMÉS ci-dessous, chemins de la disposition du Pi.
+      context: ..
+      dockerfile: Dockerfile
       # Packages COMMUNS du mono-dépôt (lot L1a) en contextes NOMMÉS. Chemins
       # de l'arborescence DÉPLOYÉE sur le Pi (ros2_ws/src/<package>, même
       # convention que le volume theatre_interfaces ci-dessous) — ⚠️ Ansible
@@ -25,11 +28,13 @@ services:
         didier_rehearsal: ../../../../didier_rehearsal
         didier_sim: ../../../../didier_sim
         didier_web: ../../../../didier_web
-        # L1e-4b : données du robot (Dockerfile-arm : COPY --from=data). Dans le dépôt elles
+        # L1e-4b : données du robot (Dockerfile : COPY --from=data). Dans le dépôt elles
         # vivent dans data/ ; sur le Pi, Ansible les copie dans src/robot/{json,medias,db}
         # (chemin Pi INCHANGÉ), c'est-à-dire ../../.. d'ici — les montages json/ et medias/
         # ci-dessous restent donc ../../../json et ../../../medias (disposition du Pi).
         data: ../../..
+        # L2a : la conf de la machine (machines/robot/ du dépôt), src/robot/conf/ sur le Pi.
+        conf: ../..
     # Supervision par le DÉMON Docker (assainissement 2026-07-11) : relance
     # sur crash et au boot, sauf arrêt volontaire (docker stop / systemctl
     # stop robot). robot.service n'est plus qu'un interrupteur up -d / stop —
@@ -78,6 +83,12 @@ services:
       # reste false sur le robot, cf. robot_app.launch.py). Même mécanique de
       # rsync que didier_drive.
       - ../../../../didier_web:/home/ros2_ws/src/didier_web
+      # L2a (décision 5 : contextes nommés = montages de sources = liste `packages`) : les trois
+      # packages de la liste qui n'étaient pas montés — le conteneur compilait la copie de
+      # l'IMAGE, pas celle rsyncée par Ansible. Aucun nœud du bringup n'en vient.
+      - ../../../../didier_description:/home/ros2_ws/src/didier_description
+      - ../../../../didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
+      - ../../../../didier_sim:/home/ros2_ws/src/didier_sim
       - ../../../../../build:/home/ros2_ws/build
       - ../../../../../install:/home/ros2_ws/install
       - ../../../../../log:/home/ros2_ws/log

@@ -256,8 +256,8 @@ def test_pilote_rclpy_de_jeu_a1_namespace():
 # --- variable ROBOT_NAME : compose + télécommande ------------------------------
 
 def test_les_compose_posent_robot_name():
+    # L2a : l'ancien banc de bureau du robot (banc-robot/docker-compose-x86.yml) est supprimé.
     composes = [MACHINES / "robot/docker/arm/docker-compose-arm.yml",
-                MACHINES / "sim/banc-robot/docker-compose-x86.yml",
                 MACHINES / "sim/banc-robot/docker-compose-sim.yml",
                 MACHINES / "vision/docker/arm/docker-compose-arm.yml",
                 MACHINES / "sim/banc-vision/docker-compose-x86.yml",

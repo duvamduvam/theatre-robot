@@ -76,6 +76,39 @@
     DATA_EDIT: "{{ 'true' if (edition_donnees | default(false) | bool) else 'false' }}"
   when: not ansible_check_mode
 
+# SÉCURITÉ (lot L2a, spec L2 décision 6, verrou (c)) : les images ARM sont PUBLIÉES sur le Hub
+# (dépôt public) ; un secret posé sur l'hôte (`secrets_hote`, rôle secrets) ne doit pas être DANS
+# l'image. Les verrous (a) .dockerignore du contexte `conf` et (b) COPY --exclude du Dockerfile
+# l'en tiennent dehors ; ce contrôle permanent le vérifie sur l'image que le compose fait tourner
+# (après le `up`, qui la construit si elle manque) — un BuildKit qui ignorerait (a) et (b) fait
+# échouer le déploiement au lieu de passer inaperçu. Chemin dans l'image = /home/<dest> : le
+# ~/ros2_ws de l'hôte est /home/ros2_ws du conteneur. `--entrypoint test` : rien d'autre ne tourne,
+# aucun montage. Aussi en --check (lecture seule) : ecart-pi.sh rougit sur une image fautive.
+- name: Check that no host secret is inside the image
+  become: yes
+  ansible.builtin.shell: >-
+    docker run --rm --network none --entrypoint test
+    "$(docker compose -f "{{ conteneur_compose }}" config --images | head -1)"
+    ! -e "/home/{{ item.dest }}"
+  loop: "{{ secrets_hote | default([]) }}"
+  register: secret_dans_image
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+# rc 1 = le fichier EST dans l'image ; tout autre échec = contrôle impossible (image absente…) :
+# rouge aussi, un secret non vérifié ne se publie pas.
+- name: Fail if a host secret is inside the image (or could not be checked)
+  ansible.builtin.fail:
+    msg: >-
+      {{ 'SECRET DANS L’IMAGE' if item.rc == 1 else 'Contrôle du secret impossible (rc=' ~ item.rc ~ ')' }} :
+      /home/{{ item.item.dest }} — ne PAS pousser cette image ; verrous du .dockerignore de la
+      conf et du COPY --exclude du Dockerfile à revoir (docs/ansible-ecarts.md, secret de la vision).
+  loop: "{{ secret_dans_image.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.dest }}"
+  when: item.rc != 0
+
 # Les nœuds n'apparaissent qu'après le colcon build du script d'entrée : les voir = build fini
 # ET lancement réussi. `failed_when: false` pour que la tâche suivante dise CE qui manque.
 - name: Wait for colcon build and ROS nodes ({{ noeuds_attendus | length }} expected)

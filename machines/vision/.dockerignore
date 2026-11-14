@@ -1,0 +1,17 @@
+# Exclusions du contexte NOMMÉ `conf` de docker/Dockerfile (spec L2, décision 6, verrou (a)) :
+# ce dossier est la racine de ce contexte — machines/vision/ sur le PC, src/vision/conf/ sur le
+# Pi, où il arrive avec la conf (rôle synchronise). BuildKit lit le .dockerignore À LA RACINE
+# d'un contexte nommé. Motifs relatifs à cette racine.
+
+# CRITIQUE (dépôt et image publics) : le fichier des clés, posé sur le Pi par le rôle secrets.
+# Le Dockerfile l'exclut aussi (COPY --exclude=secret, verrou (b)) et le rôle conteneur vérifie
+# l'image construite (verrou (c)).
+secret
+
+.git
+.gitignore
+.idea
+.venv
+venv
+__pycache__
+*.pyc

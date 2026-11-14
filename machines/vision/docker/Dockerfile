@@ -12,19 +12,28 @@ RUN mkdir /home/ros2_ws/src/vision
 
 WORKDIR /home/ros2_ws/
 
-# conf/secret est exclu par Dockerfile-arm.dockerignore (à côté de ce fichier,
-# lu par BuildKit ; L1e-4c, ex .dockerignore racine) : jamais de secret dans
-# l'image (registre public).
-COPY conf/ /home/ros2_ws/src/vision/conf/
-COPY medias/ /home/ros2_ws/src/vision/medias/
+# L2a (spec L2, décision 5) : UN Dockerfile pour le Pi (ARM) et le PC (x86), sans disposition
+# implicite. Le contexte principal est le dossier docker/ de la machine et RIEN n'en est copié :
+# tout arrive par contextes NOMMÉS, chemins donnés par le compose (Pi : disposition
+# src/vision/conf/… ; banc PC : disposition du dépôt). Plus de `COPY medias/` : sur le Pi
+# medias/ est monté et la voix y est posée par Ansible ; l'image télécharge la sienne plus bas.
+#
+# `conf` = la conf de la machine (machines/vision/ du dépôt, src/vision/conf/ du Pi).
+# SÉCURITÉ (image publiée sur le Hub, dépôt public) : conf/secret (clés, posé sur le Pi par le
+# rôle secrets) n'entre JAMAIS dans l'image — décision 6, deux verrous ici : (a) le .dockerignore
+# à la racine du contexte `conf` (machines/vision/.dockerignore, il voyage sur le Pi avec la
+# conf) et (b) le --exclude ci-dessous ; (c) le rôle Ansible `conteneur` vérifie l'image
+# construite et fait échouer le déploiement si le fichier y est.
+COPY --from=conf --exclude=secret . /home/ros2_ws/src/vision/conf/
 
+# Un contexte nommé par package de la liste `packages` de machines/vision/machine.yml (même
+# liste, mêmes contextes dans les compose, mêmes montages de sources : gravé par
+# test_arborescence.py).
 # didier_vision (L1e-3d) : le code de la vision, ex-package `vision` (module, package.xml,
 # setup.py, launch/vision.launch.py), package de packages/ ; plus de setup.py ni de module
 # dans src/vision/.
 COPY --from=didier_vision . /home/ros2_ws/src/didier_vision
-# Packages communs du mono-dépôt (lot L1a), en contextes NOMMÉS : fournis par
-# docker-compose-arm.yml (additional_contexts) sur le Pi, par build-x86.sh
-# (--build-context) sur le banc PC. theatre_contrats est OBLIGATOIRE : le shim
+# Packages communs du mono-dépôt (lot L1a). theatre_contrats est OBLIGATOIRE : le shim
 # dadou_utils_ros/utils_static.py l'importe.
 COPY --from=theatre_interfaces . /home/ros2_ws/src/theatre_interfaces
 COPY --from=theatre_contrats . /home/ros2_ws/src/theatre_contrats
