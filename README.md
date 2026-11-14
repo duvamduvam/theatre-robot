@@ -22,7 +22,7 @@ lumières, gants) — décidé le 2026-11-01 (`docs/etude-architecture-globale.m
 |---|---|
 | L0 sauvegardes + squelette | **FAIT le 02/11** : 6 dépôts sauvegardés et poussés, secrets purgés, squelette posé et **validé sur pièce par David**, 4 historiques importés (1 628 commits), **V-R3 rejoué depuis `legacy/` : 21 OK / 0 KO**, tests du cœur verts, Ansible pointe sur `legacy/` |
 | L1 contrats + données | **en cours** — FAITS, fusionnés et déployés hors robot (07/11) : L1a contrats, L1b namespace `/didier/`, L1c catalogue + sha publiés, L1e-1/2 packages `didier_*` dans `packages/`, L1e-3a lib `dadou_utils_ros`, L1e-3b messages `theatre_interfaces` ; L1e-3c cœur `didier_core` et L1e-3d vision `didier_vision` (08/11) ; L1e-4a `deploy/`, L1e-4b `data/` (11/11) ; L1e-4c `machines/` (11/11) ; L1e-4e ménage (11/11, branche : doc dans `docs/`, essais et firmwares dans `atelier/`, venvs racine). ⛔ Protocole caméra dû avant tout usage au sol. Reste : L1d édition via le robot (conception fermée le 12/11 ; L1d-1 fait sur la branche `l1d` : contrat des données avec bornes roues, écrivain désactivé par défaut, rechargement à chaud ; L1d-2 à L1d-5 à venir). Détail : [tableau de bord](docs/chantiers.md), [spec L1](docs/spec-L1-contrats-donnees.md) |
-| L2 sim multi-conteneurs | à venir |
+| L2 sim multi-conteneurs | **spec fermée écrite le 13/11**, rien de codé — [`docs/spec-L2-sim-multi-conteneurs.md`](docs/spec-L2-sim-multi-conteneurs.md) (5 sous-étapes L2a à L2e) |
 | L3 gabarit + sono | à venir |
 | L4 télécommande neuve | à venir |
 | L5 ménage | à venir |
