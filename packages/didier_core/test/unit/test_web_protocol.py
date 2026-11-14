@@ -292,7 +292,8 @@ def test_build_hello():
         "type": "hello", "domain_id": 43, "mode": "SIMULATION",
         "writer": True, "token_required": False,
         "drive_enabled": False, "max_linear": 0.5, "max_angular": 1.0,
-        "rehearsal": False, "perception": False, "exterior": False}
+        "rehearsal": False, "perception": False, "exterior": False,
+        "data_edit": False, "validation_sim": False}
 
 
 def test_build_hello_expose_les_plafonds_et_l_etat_pilotage():
@@ -579,6 +580,13 @@ TOPICS_REPETITION_GRAVES = {"route", "route_speed", "rehearsal/cmd", "camera_ena
                             "camera_source", "jeu/console"}
 
 
+def _publishers_de_base(domaine):
+    """Publishers d'un pont sans option : la whitelist de base, plus -- en domaine 43
+    seulement (L1d-3) -- le publisher DÉDIÉ de la porte sim `validation_sim_demande`
+    (hors whitelist, bouton « Valider les roues pour le robot »)."""
+    return WHITELIST_BASE_GRAVEE | ({"validation_sim_demande"} if domaine == "43" else set())
+
+
 def test_whitelist_repetition_exacte_et_hors_whitelist_de_base():
     assert WHITELIST_REPETITION == TOPICS_REPETITION_GRAVES
     assert WHITELIST_REPETITION.isdisjoint(WHITELIST)
@@ -718,7 +726,10 @@ def test_rehearsal_allowed_seulement_en_simulation(domain_id, attendu):
 # --- Page « scène » : lecture seule, flux et hello --------------------------------
 
 def test_topics_flux_graves_et_jamais_publiables():
-    assert TOPICS_FLUX == {"chat_transcript", "chat_hearing", "jeu/journal"}
+    # data_edit_result, validation_sim, roues_refusees (L1d-3) : les verdicts sont des
+    # événements, corrélés par id côté page.
+    assert TOPICS_FLUX == {"chat_transcript", "chat_hearing", "jeu/journal",
+                           "data_edit_result", "validation_sim", "roues_refusees"}
     assert TOPICS_FLUX.isdisjoint(WHITELIST | WHITELIST_REPETITION | TOPICS_LECTURE)
 
 
@@ -837,9 +848,10 @@ def test_scene_publie_seulement_des_topics_de_la_whitelist_effective():
     topics |= set(re.findall(r'envoyerSaisie\("([^"]+)"', _lire("scene.js")))
     topics |= set(re.findall(r'creerBoutonCatalogue\("([^"]+)"', _lire("scene.js")))
     # jeu/console (02/11, lot A1) : panneau « Jeu » (ordres macro du sélecteur de jeu).
+    # animation, face, robot_lights (L1d-3) : bouton « Rejouer » de l'éditeur.
     assert topics == {"chat", "persona", "chat_text", "chat_instruction",
                       "route", "route_speed", "rehearsal/cmd", "camera_enable", "camera_source",
-                      "jeu/console"}
+                      "jeu/console", "animation", "face", "robot_lights"}
     assert topics <= effective_whitelist(True)
 
 
@@ -1013,7 +1025,7 @@ def _creer_noeud(pont, monkeypatch, domaine="43", **params):
 
 def test_pont_par_defaut_sans_topics_de_repetition(pont, monkeypatch):
     noeud = _creer_noeud(pont, monkeypatch)
-    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE
+    assert set(noeud.publishers) == _publishers_de_base("43")
     assert noeud.rehearsal_enabled is False
     assert noeud.hello_message("c1")["rehearsal"] is False
 
@@ -1033,7 +1045,7 @@ def test_pont_perception_active_lecture_seule(pont, monkeypatch, domaine):
     qos, callback = noeud.abonnements["camera/image_raw/compressed"]
     assert (qos.depth, qos.reliability) == (1, "BEST_EFFORT")
     # Lecture seule : aucun publisher sur ce topic, ni dans la whitelist.
-    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE
+    assert set(noeud.publishers) == _publishers_de_base(domaine)
     for rehearsal in (False, True):
         assert "camera/image_raw/compressed" not in effective_whitelist(rehearsal)
     with pytest.raises(ProtocolError):
@@ -1080,7 +1092,7 @@ def test_pont_exterieur_actif_lecture_seule(pont, monkeypatch, domaine):
     qos, _callback = noeud.abonnements["camera_ext/image_raw"]
     assert (qos.depth, qos.reliability) == (1, "BEST_EFFORT")
     # Lecture seule : aucun publisher sur ce topic, ni dans la whitelist.
-    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE
+    assert set(noeud.publishers) == _publishers_de_base(domaine)
     for rehearsal in (False, True):
         assert "camera_ext/image_raw" not in effective_whitelist(rehearsal)
     with pytest.raises(ProtocolError):
@@ -1108,7 +1120,7 @@ def test_derniere_frame_jpeg_throttle(pont):
 
 def test_pont_repetition_activee_en_simulation(pont, monkeypatch):
     noeud = _creer_noeud(pont, monkeypatch, rehearsal_enabled=True)
-    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE | TOPICS_REPETITION_GRAVES
+    assert set(noeud.publishers) == _publishers_de_base("43") | TOPICS_REPETITION_GRAVES
     assert noeud.hello_message("c1")["rehearsal"] is True
     # Abonné aussi aux topics de répétition (la supervision voit les commandes).
     assert TOPICS_REPETITION_GRAVES <= set(noeud.abonnements)
@@ -1371,3 +1383,317 @@ def test_scene_a_le_formulaire_ticket_hors_garde_d_ecriture():
     assert 'id="form-ticket"' in html and 'maxlength="2000"' in html
     bloc = js[js.index('$("form-ticket")'):js.index("liaison.surReponse")]
     assert 'type: "ticket"' in bloc and "isWriter" not in bloc
+
+
+# --- Édition des données à travers le robot (lot L1d-3) ------------------------------
+# Spec L1 « L1d », décisions 11 et 12. Valeurs GRAVÉES : la borne de taille (en octets
+# UTF-8, pas en caractères), la chaîne exacte publiée, les états de la porte sim, les sha.
+
+from didier_web import data_edit as ecrivain, lecture_donnees  # noqa: E402
+from theatre_contrats import donnees  # noqa: E402
+
+DEMANDE_SEQUENCE = {"id": "p1", "kind": "sequence", "mode": "create", "name": "bugs/é",
+                    "content": {"a": 1}}
+BRUT_SEQUENCE = '{"id":"p1","kind":"sequence","mode":"create","name":"bugs/é","content":{"a":1}}'
+
+
+def test_lecture_donnees_reste_autonome():
+    roots = imported_roots(lecture_donnees)
+    assert roots.isdisjoint(("rclpy", "aiohttp", "dadou_utils_ros", "robot", "didier_core")), roots
+
+
+def test_data_edit_taille_max_egale_celle_de_l_ecrivain():
+    # Constante dupliquée (web_protocol reste autonome) : l'égalité est la garde.
+    assert web_protocol.DATA_EDIT_TAILLE_MAX == 131_072
+    assert web_protocol.DATA_EDIT_TAILLE_MAX == ecrivain.TAILLE_MAX_DEMANDE
+
+
+def test_data_edit_et_porte_sim_jamais_dans_une_whitelist():
+    assert web_protocol.DATA_EDIT_TOPIC == "data_edit"
+    assert web_protocol.VALIDATION_SIM_DEMANDE_TOPIC == "validation_sim_demande"
+    for rehearsal in (False, True):
+        for topic in ("data_edit", "validation_sim_demande", "data_edit_result", "validation_sim",
+                      "roues_refusees"):
+            assert topic not in effective_whitelist(rehearsal)
+            with pytest.raises(ProtocolError):
+                parse_client_message(json.dumps({"type": "cmd", "topic": topic, "value": {}}),
+                                     effective_whitelist(rehearsal))
+
+
+def test_parse_data_edit_publie_le_json_compact_exact():
+    msg = parse_client_message(json.dumps({"type": "data_edit", "demande": DEMANDE_SEQUENCE}),
+                               frozenset())
+    assert msg == {"type": "data_edit", "brut": BRUT_SEQUENCE, "id": "p1",
+                   "kind": "sequence", "name": "bugs/é"}
+    # kind/name non textuels : relayés quand même (le robot juge), absents du journal du pont.
+    msg = parse_client_message('{"type":"data_edit","demande":{"id":"p2","kind":3}}')
+    assert (msg["brut"], msg["kind"], msg["name"]) == ('{"id":"p2","kind":3}', None, None)
+
+
+def test_parse_data_edit_borne_en_octets_utf8():
+    # {"id":"p","content":{"x":""}} = 29 octets : 131 043 caractères de remplissage tiennent.
+    def demande(remplissage):
+        return json.dumps({"type": "data_edit", "demande": {"id": "p", "content": {"x": remplissage}}})
+    assert len(parse_client_message(demande("a" * 131_043))["brut"].encode("utf-8")) == 131_072
+    with pytest.raises(ProtocolError) as refus:
+        parse_client_message(demande("a" * 131_044))
+    assert refus.value.raison == "data_edit trop gros (131073 > 131072 octets)"
+    # « é » = 2 octets : 65 521 + 1 = 131 043 octets passent, 65 522 (131 044) non.
+    parse_client_message(demande("é" * 65_521 + "a"))
+    with pytest.raises(ProtocolError) as refus:
+        parse_client_message(demande("é" * 65_522))
+    assert refus.value.raison == "data_edit trop gros (131073 > 131072 octets)"
+
+
+@pytest.mark.parametrize("brut", [
+    '{"type":"data_edit"}', '{"type":"data_edit","demande":[1]}', '{"type":"data_edit","demande":"x"}',
+    '{"type":"data_edit","demande":{}}', '{"type":"data_edit","demande":{"id":""}}',
+    '{"type":"data_edit","demande":{"id":7}}',
+])
+def test_parse_data_edit_refuse_une_enveloppe_fausse(brut):
+    with pytest.raises(ProtocolError):
+        parse_client_message(brut)
+
+
+def test_parse_valider_roues():
+    assert parse_client_message('{"type":"valider_roues","id":"v1","name":"bugs/x","autre":1}') == {
+        "type": "valider_roues", "brut": '{"id":"v1","name":"bugs/x"}', "id": "v1", "name": "bugs/x"}
+    for brut in ('{"type":"valider_roues","name":"bugs/x"}', '{"type":"valider_roues","id":"v1"}',
+                 '{"type":"valider_roues","id":"","name":"x"}', '{"type":"valider_roues","id":"v","name":2}'):
+        with pytest.raises(ProtocolError):
+            parse_client_message(brut)
+
+
+def test_build_hello_annonce_l_edition_et_la_porte_sim():
+    hello = build_hello(43, writer=True, token_required=False, drive_enabled=False,
+                        max_linear=0.5, max_angular=1.0, data_edit=True, validation_sim=True)
+    assert (hello["data_edit"], hello["validation_sim"]) == (True, True)
+
+
+# --- Lecture : GET /api/data (lecture_donnees, pur) ---
+
+SEQ_A = b'{"duration": 1000, "neck": [[0, 0.5]]}\n'
+SHA_SEQ_A = "d5fba92b73d55891590b15f7d00ab633868eedf6b7164a2dfbe23d3bf811547a"
+EXPRESSION_JOIE = {"loop": False, "duration": 1000, "keys": ["k"], "mouths": [[0, "m.png"]],
+                   "left_eyes": [[0, "e.png"]], "right_eyes": [[0, "e.png"]]}
+SHA_JOIE = "82e28dd013f61dabde66cfcec477fd39466c5e7831ed3fc62f7cb631567ecbca"
+PNG_FAUX = b"\x89PNG\r\n\x1a\nfaux"
+SHA_PNG_FAUX = "2ca39923cec91a5146b92803ca2b69ce81577af42d115d624f7373806b2804e6"
+SEQ_ROUES = {"duration": 2000, "wheels": [[0, [0.2, 0.2]], [0.5, [0, 0]]]}
+
+
+@pytest.fixture
+def donnees_banc(tmp_path):
+    """Un data_dir minimal : 2 séquences (dont une à roues), une expression, une lumière,
+    une brique, deux images, et des fichiers que la liste doit IGNORER (nom hors forme,
+    pas du JSON, sous-dossier d'images)."""
+    seq = tmp_path / "json" / "sequences" / "dos"
+    seq.mkdir(parents=True)
+    (seq / "a.json").write_bytes(SEQ_A)
+    (seq / "r.json").write_text(json.dumps(SEQ_ROUES), encoding="utf-8")
+    (seq / "Majuscule.json").write_text("{}", encoding="utf-8")
+    (seq / "notes.txt").write_text("x", encoding="utf-8")
+    json_dir = tmp_path / "json"
+    (json_dir / "expressions.json").write_text(json.dumps({"joie": EXPRESSION_JOIE}), encoding="utf-8")
+    (json_dir / "robot_lights.json").write_text(json.dumps(
+        {"calme": {"loop": True, "duration": 1000, "keys": "None", "sequences": {"bleu": 1}}}),
+        encoding="utf-8")
+    (json_dir / "lights_base.json").write_text(json.dumps({"bleu": {"method": "solid"}}), encoding="utf-8")
+    for zone, nom in (("mouth", "m"), ("eye", "e")):
+        (tmp_path / "medias" / "visuals" / zone).mkdir(parents=True)
+        (tmp_path / "medias" / "visuals" / zone / (nom + ".png")).write_bytes(PNG_FAUX)
+    (tmp_path / "medias" / "visuals" / "mouth" / "persos").mkdir()
+    (tmp_path / "medias" / "visuals" / "mouth" / "persos" / "p.png").write_bytes(PNG_FAUX)
+    return tmp_path
+
+
+def _poser_registre(data_dir, **sequences):
+    registre = donnees.registre_vide()
+    registre["sequence"] = sequences
+    (data_dir / "json" / "validations-sim.json").write_bytes(donnees.serialiser_registre(registre))
+
+
+def test_lecture_registre_absent_tout_est_a_rejouer(donnees_banc):
+    assert lecture_donnees.lister(donnees_banc, "sequence") == [
+        {"name": "dos/a", "rejeu": "a_faire"},
+        {"name": "dos/r", "rejeu": "a_faire", "roues": "a_faire"}]
+    assert lecture_donnees.lister(donnees_banc, "expression") == [{"name": "joie", "rejeu": "a_faire"}]
+    assert lecture_donnees.lister(donnees_banc, "lumiere") == [{"name": "calme", "rejeu": "a_faire"}]
+    # Ni brique ni image ne se rejouent : aucun état.
+    assert lecture_donnees.lister(donnees_banc, "brique") == [{"name": "bleu"}]
+    assert lecture_donnees.lister(donnees_banc, "image") == [{"name": "eye/e"}, {"name": "mouth/m"}]
+    assert lecture_donnees.lister(donnees_banc, "relais") == []
+
+
+def test_lecture_etats_de_la_porte_sim(donnees_banc):
+    a = donnees.empreinte_contenu("sequence", "dos/a", donnees_banc)
+    r = donnees.empreinte_contenu("sequence", "dos/r", donnees_banc)
+    roues = donnees.empreinte_roues(SEQ_ROUES)
+    _poser_registre(donnees_banc, **{"dos/a": {"rejeu": a, "roues": None},
+                                     "dos/r": {"rejeu": r, "roues": roues, "origine_roues": "heritee"}})
+    assert lecture_donnees.lister(donnees_banc, "sequence") == [
+        {"name": "dos/a", "rejeu": "a_jour"},
+        {"name": "dos/r", "rejeu": "a_jour", "roues": "heritee"}]
+    _poser_registre(donnees_banc, **{"dos/r": {"rejeu": r, "roues": roues, "origine_roues": "sim"}})
+    assert lecture_donnees.lister(donnees_banc, "sequence")[1] == {
+        "name": "dos/r", "rejeu": "a_jour", "roues": "a_jour"}
+    # Une trajectoire retouchée : le tampon de rejeu ET celui des roues ne valent plus.
+    (donnees_banc / "json" / "sequences" / "dos" / "r.json").write_text(json.dumps(
+        {"duration": 2000, "wheels": [[0, [0.3, 0.3]], [0.5, [0, 0]]]}), encoding="utf-8")
+    assert lecture_donnees.lister(donnees_banc, "sequence")[1] == {
+        "name": "dos/r", "rejeu": "a_faire", "roues": "a_faire"}
+
+
+def test_lecture_contenu_et_sha_graves(donnees_banc):
+    assert lecture_donnees.lire(donnees_banc, "sequence", "dos/a") == {
+        "name": "dos/a", "content": {"duration": 1000, "neck": [[0, 0.5]]}, "sha256": SHA_SEQ_A}
+    assert lecture_donnees.lire(donnees_banc, "expression", "joie") == {
+        "name": "joie", "content": EXPRESSION_JOIE, "sha256": SHA_JOIE}
+    assert lecture_donnees.lire(donnees_banc, "image", "mouth/m") == {
+        "name": "mouth/m", "content": "iVBORw0KGgpmYXV4", "sha256": SHA_PNG_FAUX}
+    # Le sha rendu est celui que l'écrivain attend en base_sha256.
+    assert SHA_JOIE == donnees.sha256_entree(EXPRESSION_JOIE)
+
+
+@pytest.mark.parametrize("kind,name", [
+    ("sequence", "dos/absente"), ("sequence", "../x"), ("sequence", "dos/../../x"),
+    ("sequence", "dos/Majuscule"), ("expression", "absente"), ("image", "nez/m"),
+    ("image", "mouth/persos/p"), ("relais", "x"), ("sequence", None),
+])
+def test_lecture_nom_hors_forme_ou_absent(donnees_banc, kind, name):
+    assert lecture_donnees.lire(donnees_banc, kind, name) is None
+
+
+# --- Le pont : publishers conditionnels, writer seul, /api/data ---
+
+def _ecrivain(noeud, client="c1"):
+    assert noeud.sessions.authenticate(client, None, 0.0)
+    assert noeud.sessions.is_writer(client)
+
+
+def _envoyer(pont, noeud, ws, client, objet):
+    asyncio.run(pont.handle_client_message(noeud, {"clients": {}}, client, ws, json.dumps(objet)))
+
+
+@pytest.mark.parametrize("domaine", ["43", "42"])
+def test_pont_edition_desactivee_par_defaut(pont, monkeypatch, domaine):
+    noeud = _creer_noeud(pont, monkeypatch, domaine=domaine)
+    assert "data_edit" not in noeud.publishers
+    assert noeud.hello_message("c1")["data_edit"] is False
+    _ecrivain(noeud)
+    ws = _WsFactice()
+    _envoyer(pont, noeud, ws, "c1", {"type": "data_edit", "demande": DEMANDE_SEQUENCE})
+    assert ws.envoyes == [{"type": "err", "reason": "édition des données désactivée (DATA_EDIT)"}]
+
+
+@pytest.mark.parametrize("domaine", ["43", "42"])
+def test_pont_edition_activee_relaie_le_brut_writer_seul(pont, monkeypatch, domaine):
+    noeud = _creer_noeud(pont, monkeypatch, domaine=domaine, data_edit_enabled=True)
+    assert noeud.hello_message("c1")["data_edit"] is True
+    _ecrivain(noeud)
+    ws = _WsFactice()
+    _envoyer(pont, noeud, ws, "c1", {"type": "data_edit", "demande": DEMANDE_SEQUENCE})
+    assert ws.envoyes == [{"type": "ack", "topic": "data_edit"}]
+    assert [(m.msg, m.time, m.anim) for m in noeud.publishers["data_edit"].messages] == [
+        (BRUT_SEQUENCE, 0, False)]
+    # Journal : id, kind, nom -- jamais le contenu.
+    ligne = [t for niveau, t in noeud.journal.lignes if "data_edit relayé" in t]
+    assert len(ligne) == 1 and "p1 sequence bugs/é" in ligne[0] and '"a"' not in ligne[0]
+    # Un lecteur (second client) est refusé, rien ne part.
+    assert noeud.sessions.authenticate("c2", None, 0.0) and not noeud.sessions.is_writer("c2")
+    _envoyer(pont, noeud, ws, "c2", {"type": "data_edit", "demande": DEMANDE_SEQUENCE})
+    assert ws.envoyes[-1] == {"type": "err", "reason": "écriture non détenue"}
+    assert len(noeud.publishers["data_edit"].messages) == 1
+
+
+def test_pont_valider_roues_en_simulation_seulement(pont, monkeypatch):
+    sim = _creer_noeud(pont, monkeypatch, domaine="43")
+    assert sim.hello_message("c1")["validation_sim"] is True
+    _ecrivain(sim)
+    ws = _WsFactice()
+    _envoyer(pont, sim, ws, "c1", {"type": "valider_roues", "id": "v1", "name": "bugs/x"})
+    assert ws.envoyes == [{"type": "ack", "topic": "valider_roues"}]
+    assert [m.msg for m in sim.publishers["validation_sim_demande"].messages] == [
+        '{"id":"v1","name":"bugs/x"}']
+
+    robot = _creer_noeud(pont, monkeypatch, domaine="42", data_edit_enabled=True)
+    assert robot.hello_message("c1")["validation_sim"] is False
+    assert "validation_sim_demande" not in robot.publishers
+    _ecrivain(robot)
+    ws = _WsFactice()
+    _envoyer(pont, robot, ws, "c1", {"type": "valider_roues", "id": "v1", "name": "bugs/x"})
+    assert ws.envoyes == [{"type": "err",
+                           "reason": "validation des roues : simulation seulement (domaine 43)"}]
+
+
+def test_pont_verdicts_diffuses_en_flux(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch)
+    recus = []
+    noeud.feed_sink = recus.append
+    verdict = {"id": "p1", "ok": False, "code": "contrat", "detail": ["x"]}
+    for topic in ("data_edit_result", "validation_sim", "roues_refusees"):
+        assert noeud.abonnements[topic][0] == 10   # volatile, comme les publieurs
+        noeud.abonnements[topic][1](_StringTimeFactice(msg=json.dumps(verdict)))
+    assert recus == [build_feed(t, verdict) for t in ("data_edit_result", "validation_sim", "roues_refusees")]
+
+
+@pytest.mark.filterwarnings("ignore:It is recommended to use web.AppKey")
+def test_pont_api_data_de_bout_en_bout(pont, monkeypatch, donnees_banc):
+    from aiohttp.test_utils import TestClient, TestServer
+
+    noeud = _creer_noeud(pont, monkeypatch, data_dir=str(donnees_banc))
+
+    async def scenario():
+        async with TestServer(pont.build_app(noeud)) as serveur, TestClient(serveur) as client:
+            reponse = await client.get("/api/data", params={"kind": "sequence"})
+            assert reponse.status == 200
+            assert await reponse.json() == [{"name": "dos/a", "rejeu": "a_faire"},
+                                            {"name": "dos/r", "rejeu": "a_faire", "roues": "a_faire"}]
+            reponse = await client.get("/api/data", params={"kind": "sequence", "name": "dos/a"})
+            assert await reponse.json() == {"name": "dos/a", "content": {"duration": 1000, "neck": [[0, 0.5]]},
+                                            "sha256": SHA_SEQ_A}
+            for params in ({"kind": "sequence", "name": "../x"}, {"kind": "sequence", "name": "dos/zz"},
+                           {"kind": "relais"}, {}):
+                assert (await client.get("/api/data", params=params)).status == 404, params
+
+    asyncio.run(scenario())
+
+
+# --- La page : panneau masqué, une seule voie d'écriture ---
+
+def test_scene_editeur_masque_par_defaut_dans_la_colonne_conversation():
+    html = _lire("scene.html")
+    assert '<details id="scene-editeur" class="scene-editeur" hidden>' in html
+    conversation = html[html.index('<section class="scene-conversation">'):html.index("</main>")]
+    assert 'id="scene-editeur"' in conversation
+    # Les quatre familles, dans cet ordre, et les deux zones d'image du contrat.
+    familles = re.findall(r'<option value="(\w+)"', html[html.index('id="editeur-famille"'):])[:4]
+    assert familles == ["sequence", "expression", "lumiere", "brique"]
+    assert re.findall(r'<option value="(\w+)"', html[html.index('id="editeur-image-zone"'):])[:2] == [
+        "mouth", "eye"]
+    assert 'id="editeur-valider-roues" type="button" hidden' in html
+
+
+def test_scene_editeur_suit_le_hello_et_l_ecriture():
+    js, commun = _lire("scene.js"), _lire("commun.js")
+    assert "state.dataEdit = !!msg.data_edit;" in commun
+    assert "state.validationSim = !!msg.validation_sim;" in commun
+    assert "const montrer = Boolean(state.dataEdit);" in js and "panneau.hidden = !montrer;" in js
+    # Les quatre envois sont inertes en lecture seule (Charger, qui lit, ne l'est pas).
+    selecteur = js[js.index('document.querySelectorAll(".bouton-catalogue'):js.index(".forEach((el) => { el.disabled")]
+    for ident in ("#editeur-envoyer", "#editeur-rejouer", "#editeur-valider-roues", "#editeur-image-envoyer"):
+        assert ident in selecteur
+    assert "#editeur-charger" not in selecteur
+    # Le bouton de validation n'existe qu'en sim (hello.validation_sim).
+    assert "state.validationSim && familleEditeur() === \"sequence\"" in js
+
+
+def test_scene_editeur_n_ecrit_que_par_data_edit_et_valider_roues():
+    js = _lire("scene.js")
+    assert 'envoyer({ type: "data_edit", demande: demande });' in js
+    assert 'envoyer({ type: "valider_roues", id: id, name: name });' in js
+    assert not re.search(r'envoyer(Cmd|Saisie)\("(data_edit|validation_sim_demande)"', js)
+    assert "const EDITEUR_ATTENTE_MS = 5000;" in js
+    # JSON illisible : erreur locale, AUCUN envoi (le return précède la construction).
+    bloc = js[js.index("function envoyerTexte()"):js.index("function texteVerdict")]
+    assert bloc.index("JSON.parse") < bloc.index("return;\n  }\n  const demande")

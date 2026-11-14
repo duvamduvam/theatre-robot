@@ -21,6 +21,11 @@
   43) ; le serveur refuse de toute façon ces topics sinon. Aucun accès aux roues
   par cette page.
 
+  Éditeur des données (lot L1d-3), dans la colonne de droite : masqué sauf si
+  hello.data_edit (drapeau DATA_EDIT). Lit GET /api/data et les flux
+  data_edit_result / validation_sim / roues_refusees ; écrit par les types WebSocket
+  data_edit et valider_roues (writer seul), jamais par un cmd.
+
   Tous les ids et data-topic/data-value/data-jeu sont adressés par scene.js,
   commun.js et les gardes de test_web_protocol.py : ne pas les renommer.
 -->
@@ -303,6 +308,58 @@
             <tbody id="scene-chaine"><tr><td colspan="2">branchement inconnu (tête éteinte ?)</td></tr></tbody>
           </table>
           <ol id="scene-entendu" class="scene-entendu" aria-live="polite"></ol>
+        </div>
+      </details>
+
+      <!-- Éditeur des données (lot L1d-3, spec L1 « L1d » décision 12) : l'outil de
+           RÉGLAGE, pas l'éditeur final. MASQUÉ tant que hello.data_edit n'est pas vrai
+           (drapeau DATA_EDIT, OFF par défaut partout). Tout passe par le robot : la page
+           envoie un message WebSocket data_edit, le robot juge (contrat) puis écrit, et
+           son verdict revient par le flux data_edit_result ; la page ne juge rien, sauf
+           un JSON illisible (erreur locale, rien n'est envoyé). Replié par défaut ;
+           ouvert, il prend la place du fil de conversation dans la colonne (STOP n'est
+           jamais couvert). États et « Valider les roues » : sim seulement
+           (hello.validation_sim). -->
+      <details id="scene-editeur" class="scene-editeur" hidden>
+        <summary>Éditer les données</summary>
+        <div class="scene-editeur-corps">
+          <div class="scene-editeur-ligne">
+            <select id="editeur-famille" aria-label="Famille de données">
+              <option value="sequence">Séquence</option>
+              <option value="expression">Expression</option>
+              <option value="lumiere">Lumière</option>
+              <option value="brique">Brique</option>
+            </select>
+            <select id="editeur-liste" aria-label="Élément à charger"></select>
+            <button id="editeur-charger" type="button" title="Charger l'élément choisi depuis le robot">Charger</button>
+          </div>
+          <input id="editeur-nom" type="text" spellcheck="false" autocomplete="off"
+                 placeholder="nom (séquence : dossier/nom)" aria-label="Nom de l'élément">
+          <textarea id="editeur-texte" spellcheck="false" aria-label="Contenu JSON"></textarea>
+          <div class="scene-editeur-ligne">
+            <button id="editeur-envoyer" type="button" title="Remplace l'élément chargé, sinon le crée">Envoyer</button>
+            <button id="editeur-rejouer" type="button" title="Joue l'élément nommé sur le robot">Rejouer</button>
+            <button id="editeur-valider-roues" type="button" hidden
+                    title="La trajectoire a été vue jusqu'au bout en sim : elle pourra jouer sur le robot">Valider les roues pour le robot</button>
+          </div>
+          <div id="editeur-verdict" class="scene-editeur-verdict" aria-live="polite"></div>
+
+          <!-- Envoi d'une image du visage : fabriquée ailleurs (pas d'outil de dessin,
+               décision 3), envoyée telle quelle ; c'est le robot qui la valide. -->
+          <fieldset class="scene-editeur-image">
+            <legend>Envoyer une image du visage</legend>
+            <input id="editeur-image-fichier" type="file" accept="image/png" aria-label="Fichier PNG">
+            <div class="scene-editeur-ligne">
+              <select id="editeur-image-zone" aria-label="Zone du visage">
+                <option value="mouth">bouche (24×16)</option>
+                <option value="eye">œil (8×8)</option>
+              </select>
+              <input id="editeur-image-nom" type="text" spellcheck="false" autocomplete="off"
+                     placeholder="nom" aria-label="Nom de l'image">
+              <button id="editeur-image-envoyer" type="button">Envoyer l'image</button>
+            </div>
+            <img id="editeur-image-apercu" class="scene-editeur-apercu" alt="aperçu agrandi de l'image choisie" hidden>
+          </fieldset>
         </div>
       </details>
     </section>

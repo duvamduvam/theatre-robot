@@ -2,6 +2,7 @@
 import json
 import logging
 import logging.config
+import os
 
 import rclpy
 from rclpy.node import Node
@@ -15,7 +16,7 @@ from didier_core.files.robot_json_manager import RobotJsonManager
 from didier_core.nodes.payload import decode
 from didier_core.robot_config import config
 from didier_core.robot_static import TICK_PERIOD_S
-from didier_core.sequences.animation_manager import AnimationManager
+from didier_core.sequences.animation_manager import AnimationManager, exiger_validation_roues
 from theatre_interfaces.msg._string_time import StringTime
 from theatre_contrats import donnees, qos, topics
 
@@ -41,6 +42,19 @@ class AnimationsNode(Node):
 
         robot_json_manager = RobotJsonManager(config)
         self.animations_manager = AnimationManager(config, robot_json_manager)
+
+        # Lot L1d-2, barrière de jeu (décision 7 ter) : une piste roues non validée en sim n'est
+        # pas jouée. Paramètre vrai par défaut ; mis à faux par sim.launch.py SEUL, et ignoré
+        # hors domaine 43 (refus loggué) : il faut bien jouer en sim ce qu'on vient y valider.
+        self.declare_parameter("exiger_validation_roues", True)
+        demande = self.get_parameter("exiger_validation_roues").value
+        exiger = exiger_validation_roues(demande, os.environ)
+        if demande is False and exiger:
+            logging.error("exiger_validation_roues=false IGNORÉ : ROS_DOMAIN_ID=%r n'est pas la simulation (43)",
+                          os.environ.get("ROS_DOMAIN_ID"))
+        self.animations_manager.exiger_validation_roues = exiger
+        logging.info("barrière roues (validation sim) : %s", "ACTIVE" if exiger else "levée (sim)")
+        self.roues_refusees_pub = self.create_publisher(StringTime, topics.ROUES_REFUSEES, qos.volatile(10))
 
         self.action_publishers = {}
         for p in PUBLISHER_LIST:
@@ -85,6 +99,7 @@ class AnimationsNode(Node):
         if ros_msg.time != 0:
             animation_msg[DURATION] = ros_msg.time
         animations_msg = self.animations_manager.update(animation_msg)
+        self._publier_refus_roues()
         self.send_msgs(animations_msg)
         # force=True : un (re)démarrage de séquence doit TOUJOURS être republié,
         # même à nom inchangé (ex. « parle » reproclamé par le chat à chaque
@@ -92,6 +107,11 @@ class AnimationsNode(Node):
         # façon deadman si ce node meurt en pleine séquence) — sans
         # re-publication, leur garde-fou expirerait en pleine séquence vivante.
         self._publish_state(force=True)
+
+    def _publier_refus_roues(self):
+        while self.animations_manager.refus_roues:
+            refus = self.animations_manager.refus_roues.pop(0)
+            self.roues_refusees_pub.publish(StringTime(msg=json.dumps(refus), time=0, anim=False))
 
     def data_edit_callback(self, ros_msg):
         recharge = donnees.verdict_a_recharger(ros_msg.msg, ("sequence",))

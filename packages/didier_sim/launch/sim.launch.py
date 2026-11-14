@@ -215,10 +215,14 @@ def generate_launch_description():
             # mais le rejeu ne suit PAS l'horloge simulée (use_sim_time n'aurait
             # aucun effet ici ; on ne le passe donc pas, contrairement aux autres
             # nodes de ce fichier).
+            # exiger_validation_roues = false : la barrière de jeu (L1d-2, décision 7 ter) est
+            # levée en sim SEULEMENT (animations_node l'ignore hors domaine 43) — il faut bien
+            # pouvoir jouer en sim la piste roues qu'on vient y valider.
             Node(
                 package="didier_core",
                 executable="animations_node",
                 output="screen",
+                parameters=[{"exiger_validation_roues": False}],
                 condition=IfCondition(animations),
             ),
 
@@ -257,6 +261,16 @@ def generate_launch_description():
                 parameters=[{"enabled": data_edit}],
             ),
 
+            # Porte sim (L1d-2) : l'observateur qui tamponne le registre des validations
+            # (json/validations-sim.json) quand un élément a été joué jusqu'au bout. Lancé ICI
+            # SEULEMENT (jamais par robot_app.launch.py) ; refuse de démarrer hors domaine 43.
+            Node(
+                package="didier_web",
+                executable="validation_sim",
+                name="validation_sim_node",
+                output="screen",
+            ),
+
             # Pont web W0 (paquet didier_web, autonome façon didier_drive). Pas de
             # use_sim_time (voir web.launch.py) : les timeouts de session sont en
             # horloge murale. json_dir par défaut ("/home/ros2_ws/json") est déjà
@@ -276,8 +290,10 @@ def generate_launch_description():
                 # servi en lecture seule sur /perception -> panneau « Ce que Didier voit ».
                 # exterior_topic : caméra de poursuite gz (xacro, chase_camera_link),
                 # servie en lecture seule sur /exterior -> « Didier vu de l'extérieur ».
+                # data_edit_enabled = data_edit (L1d-3) : même drapeau que l'écrivain ; la
+                # page scène montre alors son éditeur. data_dir par défaut (src/robot).
                 parameters=[{"web_port": web_port, "drive_enabled": web_drive,
-                             "rehearsal_enabled": rehearsal,
+                             "rehearsal_enabled": rehearsal, "data_edit_enabled": data_edit,
                              "perception_topic": "camera/image_raw/compressed",
                              "exterior_topic": "camera_ext/image_raw"}],
                 condition=IfCondition(web),

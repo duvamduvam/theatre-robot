@@ -5,13 +5,16 @@
 #   ./ecart-pi.sh <groupe> [-e ansible_host=…]   → vert (code 0) ou rouge (code 1)
 #   ./ecart-pi.sh <groupe> --graver [-e …]       → réécrit attendu/<groupe>.txt depuis le Pi
 #
-# Deux volets :
+# Trois volets :
 #  (a) ce qu'Ansible CHANGERAIT : deploy-pios.yml en --check --diff (aucune modification du Pi ;
 #      les tâches de redémarrage et la sentinelle sont sautées en --check). Toute tâche
 #      « changed » = écart, nommée dans la sortie.
 #  (b) ce que le Pi porte HORS Ansible : paquets apt installés à la main, unités systemd
 #      activées, entrées de ~ (hors fichiers cachés), crontabs, images Docker — comparés à la
 #      liste gravée attendu/<groupe>.txt.
+#  (c) éditions faites SUR le Pi et pas encore rapatriées dans git (lot L1d-4, 13/11) : lignes
+#      des journaux json/backup/EDITIONS-EN-ATTENTE*.jsonl de data_edit_node. Rouge si N > 0 —
+#      le déploiement les refuserait (garde du rôle synchronise, rouge aussi dans (a)).
 #
 # Format d'attendu/<groupe>.txt : une entrée `famille:nom` par ligne ; `#` = commentaire ;
 # une entrée préfixée `?` est TOLÉRÉE (présente ou absente, jamais un écart — outils d'atelier
@@ -97,6 +100,23 @@ if [ -n "$MANQUANTS$EN_TROP" ]; then
     [ -n "$EN_TROP" ] && printf '  en trop  : %s\n' $EN_TROP
 else
     echo "vert  (b) inventaire de $GROUPE conforme à $ATTENDU ($(printf '%s\n' "$EXIGES" | grep -c .) entrées, $(printf '%s\n' "$TOLERES" | grep -c .) tolérées)"
+fi
+
+# --- (c) éditions non rapatriées -------------------------------------------------------------
+# src/*/ : le chemin des données ne dépend que du projet (src/robot/ aujourd'hui) ; un Pi qui
+# n'en porte pas compte 0.
+SORTIE_C=$(ansible "$GROUPE" -i hosts "${EXTRA[@]}" -m ansible.builtin.shell \
+    -a 'cat "$HOME"/ros2_ws/src/*/json/backup/EDITIONS-EN-ATTENTE*.jsonl 2>/dev/null | grep -c . ; exit 0' \
+    </dev/null 2>/dev/null)
+EDITIONS=$(printf '%s\n' "$SORTIE_C" | tail -n +2 | grep -E '^[0-9]+$' | head -1)
+if ! printf '%s' "$SORTIE_C" | head -1 | grep -q "rc=0 >>" || [ -z "$EDITIONS" ]; then
+    ECART=1
+    echo "ROUGE (c) journal des éditions illisible sur $GROUPE"
+elif [ "$EDITIONS" -gt 0 ]; then
+    ECART=1
+    echo "ROUGE (c) éditions non rapatriées : $EDITIONS — ansible-playbook -i hosts rapatrier-editions.yml -e target_group=$GROUPE"
+else
+    echo "vert  (c) éditions non rapatriées : 0"
 fi
 
 # --- (a) ce qu'Ansible changerait ------------------------------------------------------------

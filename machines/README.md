@@ -24,6 +24,7 @@ chargé par Ansible (`include_vars`, en tête de `deploy-pios.yml` et `install-p
 | `local_project_dir` | SEULEMENT les machines restées dans `legacy/` : leur projet entier part par la copie « projet » |
 | `packages` | packages de `packages/` copiés dans `ros2_ws/src/` (défaut : `packages_default` de `deploy/vars/main.yml`) |
 | `donnees_dir` | robot seul : `data/` → `src/robot/{json,medias,db}` |
+| `edition_donnees` | robot seul (L1d) : variable `DATA_EDIT` du conteneur, `false` dans le dépôt — l'activer est une décision de David |
 | `launch_cmd`, `sentinelle_build`, `noeuds_attendus` | lancement, build colcon au démarrage, contrôle de fin de déploiement |
 | `paquets_hote`, `unites_systemd`, `fichiers_etc`, `telechargements_hote`, `dossiers_montes`, `secrets_hote` | système de l'hôte, voix, points de montage, secrets (depuis `~/.config/didier/` du PC, jamais du dépôt) |
 

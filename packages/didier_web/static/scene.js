@@ -20,6 +20,10 @@
  *  - le texte soufflé n'est pas affiché à l'envoi : il apparaît dans le fil
  *    quand Didier l'a ENTENDU (chat_transcript, après d'éventuelles pannes de
  *    compréhension) -- c'est précisément ce que David doit voir.
+ *
+ * Éditeur des données (lot L1d-3, section en fin de fichier) : présent seulement
+ * si hello.data_edit ; écrit par les types WebSocket data_edit / valider_roues,
+ * lit GET /api/data et les flux data_edit_result, validation_sim, roues_refusees.
  */
 
 // Reste sur le pont qui sert la page : une cible mémorisée par la console (ex. le
@@ -100,9 +104,12 @@ function construirePersonas() {
 liaison.surLiaison = () => {
   // Boutons d'action inertes en lecture seule (le serveur refuse déjà). Le champ
   // visage et le ⟳ restent actifs : regarder ne demande pas l'écriture.
+  // Éditeur : « Charger » reste actif (lire ne demande pas l'écriture), pas les envois.
   document.querySelectorAll(".bouton-catalogue, #scene-form-texte button, "
-      + "#scene-form-consigne button, #scene-vitesse, .jeu-bouton, #jeu-cible-va-la")
+      + "#scene-form-consigne button, #scene-vitesse, .jeu-bouton, #jeu-cible-va-la, "
+      + "#editeur-envoyer, #editeur-rejouer, #editeur-valider-roues, #editeur-image-envoyer")
     .forEach((el) => { el.disabled = !state.isWriter; });
+  majEditeurVisible();
   // Route / vitesse / séance : seulement si le serveur les accepte (hello.rehearsal).
   document.querySelectorAll(".scene-repetition").forEach((el) => {
     el.hidden = !state.rehearsal;
@@ -336,6 +343,12 @@ liaison.surFeed = (msg) => {
     ajouterEntendu(msg.msg);
   } else if (msg.topic === "jeu/journal") {
     ajouterLigneJeu(msg.msg);
+  } else if (msg.topic === "data_edit_result") {
+    surVerdictEdition(msg.msg);
+  } else if (msg.topic === "validation_sim") {
+    surVerdictPorte(msg.msg);
+  } else if (msg.topic === "roues_refusees") {
+    surRouesRefusees(msg.msg);
   }
 };
 
@@ -397,13 +410,19 @@ $("form-ticket").addEventListener("submit", (event) => {
   envoyer({ type: "ticket", texte: texte });
 });
 
-liaison.surReponse = function viderTicketSiAcquitte(msg) {
+function viderTicketSiAcquitte(msg) {
   if (ticketEnAttente && msg.type === "ack" && msg.topic === "ticket") {
     $("ticket-texte").value = "";
     ticketEnAttente = false;
   } else if (ticketEnAttente && msg.type === "err") {
     ticketEnAttente = false;
   }
+}
+
+// Un seul crochet ack/err pour la page : le ticket, puis l'éditeur (L1d-3).
+liaison.surReponse = (msg) => {
+  viderTicketSiAcquitte(msg);
+  surReponseEditeur(msg);
 };
 
 // --- Vitesse de la route (SIM-ONLY, visible si hello.rehearsal) ---------------------
@@ -670,6 +689,375 @@ setInterval(() => {
 
 afficherJauges({});
 
+// --- Éditeur des données (lot L1d-3, spec L1 « L1d » décisions 11 et 12) -------------
+// L'outil de RÉGLAGE : texte JSON + Envoyer + verdict, envoi d'image, Rejouer. Une seule
+// voie d'écriture : le type WebSocket data_edit, relayé par le pont sur le topic data_edit,
+// jugé et écrit par le robot (data_edit_node), verdict par le flux data_edit_result. La
+// page ne juge RIEN (ni contrat, ni taille d'image) hormis un JSON illisible : erreur
+// locale, rien n'est envoyé. Un futur éditeur en pistes passera par le même protocole.
+// Lecture : GET /api/data (liste avec états de la porte sim, contenu + sha256).
+
+const EDITEUR_ATTENTE_MS = 5000;   // pas de verdict du même id en 5 s = « pas de réponse du robot »
+// Le topic qui JOUE chaque famille (bouton Rejouer, par le cmd existant) ; rien pour une brique.
+const EDITEUR_REJOUER = { sequence: "animation", expression: "face", lumiere: "robot_lights" };
+const LIBELLE_REJEU = { a_jour: "rejouée", a_faire: "à rejouer" };
+const LIBELLE_ROUES = { a_faire: "roues à valider", heritee: "roues héritées" };
+const LIBELLE_AVERTISSEMENT = {
+  a_rejouer_en_sim: "à rejouer en sim",
+  roues_a_valider_en_sim: "roues à valider en sim",
+};
+
+// charge : ce que « Charger » a lu ({kind, name, sha256}) -> Envoyer fait un replace avec
+// ce sha si le nom n'a pas changé, sinon un create. attentes : id -> minuterie des 5 s.
+// enAttenteAck : l'id envoyé que le pont n'a pas encore acquitté (un err lui revient).
+const editeur = { elements: {}, charge: null, attentes: {}, enAttenteAck: null, image: null };
+
+function familleEditeur() {
+  return $("editeur-famille").value;
+}
+
+function nomEditeur() {
+  return $("editeur-nom").value.trim();
+}
+
+function nouvelIdEdition() {
+  // Contrat du robot : 1 à 64 caractères [A-Za-z0-9_-].
+  return "page-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+}
+
+function afficherVerdictEditeur(texte, ok) {
+  const ligne = $("editeur-verdict");
+  ligne.textContent = texte;
+  ligne.className = "scene-editeur-verdict " + (ok ? "ok" : "ko");
+}
+
+function majEditeurVisible() {
+  const panneau = $("scene-editeur");
+  const montrer = Boolean(state.dataEdit);
+  if (montrer && panneau.hidden && panneau.open) {
+    rafraichirListe();
+  }
+  panneau.hidden = !montrer;
+  majBoutonValiderRoues();
+}
+
+// --- Lecture (GET /api/data) ---
+
+async function lireApi(kind, name) {
+  let chemin = "/api/data?kind=" + encodeURIComponent(kind);
+  if (name !== undefined) {
+    chemin += "&name=" + encodeURIComponent(name);
+  }
+  const reponse = await fetch(urlHttp(chemin), { cache: "no-store" });
+  if (reponse.status === 404) {
+    return null;
+  }
+  if (!reponse.ok) {
+    throw new Error("HTTP " + reponse.status + " : " + (await reponse.text()));
+  }
+  return reponse.json();
+}
+
+function libelleElement(element) {
+  const etats = [];
+  if (state.validationSim) {
+    if (LIBELLE_REJEU[element.rejeu]) {
+      etats.push(LIBELLE_REJEU[element.rejeu]);
+    }
+    if (LIBELLE_ROUES[element.roues]) {
+      etats.push(LIBELLE_ROUES[element.roues]);
+    }
+  }
+  return etats.length ? element.name + " — " + etats.join(", ") : element.name;
+}
+
+async function rafraichirListe() {
+  const kind = familleEditeur();
+  let elements;
+  try {
+    elements = (await lireApi(kind)) || [];
+  } catch (e) {
+    logErreur("éditeur : liste illisible (" + e.message + ")");
+    return;
+  }
+  if (kind !== familleEditeur()) {
+    return;   // la famille a changé pendant la lecture : la réponse suivante gagne
+  }
+  const liste = $("editeur-liste");
+  const choisi = liste.value;
+  editeur.elements = {};
+  liste.replaceChildren();
+  for (const element of elements) {
+    editeur.elements[element.name] = element;
+    const option = document.createElement("option");
+    option.value = element.name;
+    option.textContent = libelleElement(element);   // textContent : jamais d'HTML injecté
+    liste.appendChild(option);
+  }
+  if (Object.hasOwn(editeur.elements, choisi)) {
+    liste.value = choisi;
+  }
+  majBoutonValiderRoues();
+}
+
+async function chargerElement() {
+  const kind = familleEditeur();
+  const name = $("editeur-liste").value;
+  if (!name) {
+    return;
+  }
+  let element;
+  try {
+    element = await lireApi(kind, name);
+  } catch (e) {
+    afficherVerdictEditeur("lecture impossible : " + e.message, false);
+    return;
+  }
+  if (element === null) {
+    afficherVerdictEditeur(name + " : absent du robot", false);
+    return;
+  }
+  editeur.charge = { kind: kind, name: element.name, sha256: element.sha256 };
+  $("editeur-nom").value = element.name;
+  $("editeur-texte").value = JSON.stringify(element.content, null, 4);
+  $("editeur-verdict").textContent = "";
+  majBoutonValiderRoues();
+}
+
+// --- Envoi (type WebSocket data_edit) ---
+
+function envoyerEdition(demande, bouton) {
+  state.attenteAck.data_edit = bouton;
+  state.dernierBouton = bouton;
+  editeur.enAttenteAck = demande.id;
+  editeur.attentes[demande.id] = setTimeout(() => {
+    delete editeur.attentes[demande.id];
+    afficherVerdictEditeur(demande.name + " : pas de réponse du robot (" + EDITEUR_ATTENTE_MS / 1000 + " s)", false);
+  }, EDITEUR_ATTENTE_MS);
+  envoyer({ type: "data_edit", demande: demande });
+}
+
+function envoyerTexte() {
+  if (!state.isWriter) {
+    return;
+  }
+  const kind = familleEditeur();
+  const name = nomEditeur();
+  let contenu;
+  try {
+    contenu = JSON.parse($("editeur-texte").value);
+  } catch (e) {
+    afficherVerdictEditeur("JSON illisible, rien n'est envoyé : " + e.message, false);
+    return;
+  }
+  const demande = { id: nouvelIdEdition(), kind: kind, mode: "create", name: name, content: contenu };
+  const c = editeur.charge;
+  if (c && c.kind === kind && c.name === name) {
+    demande.mode = "replace";
+    demande.base_sha256 = c.sha256;
+  }
+  afficherVerdictEditeur(name + " : envoyé, en attente du robot…", true);
+  envoyerEdition(demande, $("editeur-envoyer"));
+}
+
+function texteVerdict(v) {
+  let texte = v.code + " — " + v.kind + " " + v.name;
+  if (Array.isArray(v.avertissements) && v.avertissements.length) {
+    texte += " · " + v.avertissements.map((a) => LIBELLE_AVERTISSEMENT[a] || a).join(", ");
+  }
+  if (Array.isArray(v.detail) && v.detail.length) {
+    texte += "\n" + v.detail.join("\n");
+  }
+  return texte;
+}
+
+function surVerdictEdition(v) {
+  if (v === null || typeof v !== "object") {
+    return;
+  }
+  if (Object.hasOwn(editeur.attentes, v.id)) {
+    clearTimeout(editeur.attentes[v.id]);
+    delete editeur.attentes[v.id];
+    afficherVerdictEditeur(texteVerdict(v), v.ok === true);
+    // Écrit (ou inchangé) : la base des retouches suivantes est la version du robot.
+    if (v.ok === true && typeof v.sha256 === "string" && v.kind !== "image") {
+      editeur.charge = { kind: v.kind, name: v.name, sha256: v.sha256 };
+    }
+  }
+  // Une retouche venue d'ailleurs (autre onglet, script) change aussi la liste.
+  if (v.ok === true && v.kind === familleEditeur() && !$("scene-editeur").hidden) {
+    rafraichirListe();
+  }
+}
+
+// Ack/err du pont pour une demande de l'éditeur : l'ack dit « publiée », le verdict
+// suivra ; un err (lecture seule, trop gros, édition désactivée) est le verdict.
+function surReponseEditeur(msg) {
+  const id = editeur.enAttenteAck;
+  if (id === null) {
+    return;
+  }
+  if (msg.type === "ack" && (msg.topic === "data_edit" || msg.topic === "valider_roues")) {
+    editeur.enAttenteAck = null;
+  } else if (msg.type === "err") {
+    editeur.enAttenteAck = null;
+    if (Object.hasOwn(editeur.attentes, id)) {
+      clearTimeout(editeur.attentes[id]);
+      delete editeur.attentes[id];
+    }
+    afficherVerdictEditeur("refusé par le pont : " + msg.reason, false);
+  }
+}
+
+// --- Rejouer (cmd existant : animation, face, robot_lights) ---
+
+function rejouer() {
+  if (!state.isWriter) {
+    return;
+  }
+  const kind = familleEditeur();
+  const name = nomEditeur();
+  const bouton = $("editeur-rejouer");
+  if (!name || !EDITEUR_REJOUER[kind]) {
+    afficherVerdictEditeur(kind === "brique" ? "une brique ne se joue pas seule : rejouer une lumière qui la chaîne"
+        : "aucun nom à rejouer", false);
+    return;
+  }
+  // Littéraux par topic (gardes de test_web_protocol.py) ; une séquence se joue par son nom nu.
+  if (kind === "sequence") {
+    envoyerSaisie("animation", name.split("/").pop(), bouton);
+  } else if (kind === "expression") {
+    envoyerSaisie("face", name, bouton);
+  } else {
+    envoyerSaisie("robot_lights", name, bouton);
+  }
+}
+
+// --- Porte sim : états, validation des roues, refus de jeu ---
+
+function majBoutonValiderRoues() {
+  const element = editeur.elements[nomEditeur()];
+  $("editeur-valider-roues").hidden = !(state.validationSim && familleEditeur() === "sequence"
+      && element && element.rejeu === "a_jour" && element.roues === "a_faire");
+}
+
+function validerRoues() {
+  if (!state.isWriter) {
+    return;
+  }
+  const id = nouvelIdEdition();
+  const name = nomEditeur();
+  const bouton = $("editeur-valider-roues");
+  state.attenteAck.valider_roues = bouton;
+  state.dernierBouton = bouton;
+  editeur.enAttenteAck = id;
+  editeur.attentes[id] = setTimeout(() => {
+    delete editeur.attentes[id];
+    afficherVerdictEditeur(name + " : pas de réponse de la porte sim (" + EDITEUR_ATTENTE_MS / 1000 + " s)", false);
+  }, EDITEUR_ATTENTE_MS);
+  envoyer({ type: "valider_roues", id: id, name: name });
+}
+
+function surVerdictPorte(v) {
+  if (v === null || typeof v !== "object") {
+    return;
+  }
+  const texte = "porte sim : " + v.code + " — " + v.kind + " " + v.name
+      + (Array.isArray(v.detail) && v.detail.length ? "\n" + v.detail.join("\n") : "");
+  if (typeof v.id === "string" && Object.hasOwn(editeur.attentes, v.id)) {
+    clearTimeout(editeur.attentes[v.id]);
+    delete editeur.attentes[v.id];
+    afficherVerdictEditeur(texte, v.ok === true);
+  } else if (v.kind === familleEditeur() && v.name === nomEditeur()) {
+    // Tampon de rejeu de l'élément affiché (posé par l'observateur après Rejouer).
+    afficherVerdictEditeur(texte, v.ok === true);
+  }
+  if (v.kind === familleEditeur() && !$("scene-editeur").hidden) {
+    rafraichirListe();
+  }
+}
+
+function surRouesRefusees(r) {
+  // Barrière de jeu (robot) : la piste roues d'une séquence non validée en sim n'a pas joué.
+  const nom = r && typeof r === "object" ? r.name : r;
+  logErreur("roues non jouées : " + JSON.stringify(nom) + " (" + (r && r.raison || "?") + ")");
+}
+
+// --- Envoi d'une image PNG du visage ---
+
+function octetsEnBase64(octets) {
+  let binaire = "";
+  for (let i = 0; i < octets.length; i += 0x8000) {   // par tranches : pas de pile géante
+    binaire += String.fromCharCode.apply(null, octets.subarray(i, i + 0x8000));
+  }
+  return btoa(binaire);
+}
+
+async function choisirImage() {
+  const fichier = $("editeur-image-fichier").files[0];
+  const apercu = $("editeur-image-apercu");
+  if (editeur.image && editeur.image.url) {
+    URL.revokeObjectURL(editeur.image.url);
+  }
+  editeur.image = null;
+  apercu.hidden = true;
+  if (!fichier) {
+    return;
+  }
+  const octets = new Uint8Array(await fichier.arrayBuffer());
+  editeur.image = { base64: octetsEnBase64(octets), url: URL.createObjectURL(fichier) };
+  apercu.src = editeur.image.url;
+  apercu.hidden = false;
+  if (!$("editeur-image-nom").value.trim()) {
+    $("editeur-image-nom").value = fichier.name.replace(/\.png$/i, "");
+  }
+}
+
+async function envoyerImage() {
+  if (!state.isWriter) {
+    return;
+  }
+  if (!editeur.image) {
+    afficherVerdictEditeur("aucun fichier PNG choisi", false);
+    return;
+  }
+  const name = $("editeur-image-zone").value + "/" + $("editeur-image-nom").value.trim();
+  const demande = { id: nouvelIdEdition(), kind: "image", mode: "create", name: name,
+                    content: editeur.image.base64 };
+  // Une image du même nom existe : on la remplace, avec le sha de ce que le robot a.
+  try {
+    const existante = await lireApi("image", name);
+    if (existante !== null) {
+      demande.mode = "replace";
+      demande.base_sha256 = existante.sha256;
+    }
+  } catch (e) {
+    afficherVerdictEditeur("lecture impossible : " + e.message, false);
+    return;
+  }
+  afficherVerdictEditeur(name + " : image envoyée, en attente du robot…", true);
+  envoyerEdition(demande, $("editeur-image-envoyer"));
+}
+
+function installerEditeur() {
+  $("scene-editeur").addEventListener("toggle", () => {
+    if ($("scene-editeur").open) {
+      rafraichirListe();
+    }
+  });
+  $("editeur-famille").addEventListener("change", () => {
+    editeur.charge = null;
+    rafraichirListe();
+  });
+  $("editeur-charger").addEventListener("click", chargerElement);
+  $("editeur-nom").addEventListener("input", majBoutonValiderRoues);
+  $("editeur-envoyer").addEventListener("click", envoyerTexte);
+  $("editeur-rejouer").addEventListener("click", rejouer);
+  $("editeur-valider-roues").addEventListener("click", validerRoues);
+  $("editeur-image-fichier").addEventListener("change", choisirImage);
+  $("editeur-image-envoyer").addEventListener("click", envoyerImage);
+}
+
 // --- Démarrage ------------------------------------------------------------------------
 
 // --- Vue principale et vignettes (spec refonte, D2) ---------------------------
@@ -729,6 +1117,7 @@ if (window.matchMedia("(max-width: 899px)").matches) {
 construirePersonas();
 installerErreurs();
 installerVues();
+installerEditeur();
 // Tout est inerte et la répétition masquée jusqu'au premier hello du serveur.
 installerPerception();
 installerExterieur();

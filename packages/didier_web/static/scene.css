@@ -558,3 +558,84 @@
 
   .scene-fil { flex: none; height: 55vh; }
 }
+
+/* --- Éditeur des données (lot L1d-3) ------------------------------------------
+   Dans la colonne de droite, replié par défaut. Ouvert, il prend la hauteur du fil
+   de conversation (qui garde une bande) : le poste reste sans défilement et STOP,
+   au centre, n'est jamais couvert. */
+
+.scene-editeur { font-size: 0.85em; }
+.scene-editeur > summary { cursor: pointer; font-weight: bold; color: var(--texte-doux); }
+.scene-editeur[open] {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  color-scheme: dark;
+}
+.scene-conversation:has(#scene-editeur[open]) .scene-fil { flex: 0 0 7rem; min-height: 7rem; }
+
+.scene-editeur-corps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.scene-editeur-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+.scene-editeur button { min-height: 32px; padding: 0.25rem 0.7rem; }
+.scene-editeur select,
+.scene-editeur textarea {
+  font: inherit;
+  background: #12151a;
+  color: var(--texte);
+  border: 1px solid var(--bord-clair);
+  border-radius: 8px;
+}
+.scene-editeur select { min-height: 32px; padding: 0.2rem 0.5rem; }
+#editeur-liste { flex: 1; min-width: 0; }
+.scene-editeur input[type="text"] { padding: 0.35rem 0.5rem; min-width: 0; }
+#editeur-image-nom { flex: 1; }
+#editeur-texte {
+  min-height: 14rem;
+  padding: 0.4rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  resize: vertical;
+  white-space: pre;
+  overflow: auto;
+}
+
+/* Verdict du robot : vert = écrit (ou inchangé), rouge = refusé / pas de réponse. */
+.scene-editeur-verdict {
+  min-height: 1.3em;
+  padding: 0.3rem 0.5rem;
+  border-left: 3px solid var(--bord);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.scene-editeur-verdict:empty { display: none; }
+.scene-editeur-verdict.ok { border-color: var(--ok); }
+.scene-editeur-verdict.ko { border-color: var(--stop); color: #ff8a80; }
+
+.scene-editeur-image {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.3rem 0 0;
+  padding: 0.5rem;
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+}
+.scene-editeur-image legend { color: var(--texte-doux); padding: 0 0.3rem; }
+/* Aperçu AGRANDI sans lissage : on doit voir chaque pixel de la matrice LED. */
+.scene-editeur-apercu {
+  align-self: flex-start;
+  width: 240px;
+  image-rendering: pixelated;
+  background: #000;
+  border: 1px solid var(--bord-clair);
+}

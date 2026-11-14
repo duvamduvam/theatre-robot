@@ -46,6 +46,10 @@ services:
       # Racine des DONNÉES du cœur (json/, medias/, db/, conf/), lue par robot_config.py
       # (L1e-3c) : le code est dans src/didier_core, les données restent sous src/robot/.
       - DIDIER_DATA_DIR=/home/ros2_ws/src/robot/
+      # Édition des données à travers le robot (L1d) : écrivain data_edit_node + éditeur de la
+      # page scène, lus par robot_app.launch.py. Posée par Ansible depuis `edition_donnees` du
+      # machine.yml (FAUX dans le dépôt, décision de David) ; absente = faux.
+      - DATA_EDIT=${DATA_EDIT:-false}
     #ports:
     #  - "80:80"
     #  - "8000-9000:8000-9000"

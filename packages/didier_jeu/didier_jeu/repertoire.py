@@ -88,7 +88,7 @@ def par_emploi(sequences, emplois: Dict[str, str]):
     NOM de fichier et n'en garde qu'une — deux fichiers du même nom dont l'un
     est JOUABLE (a un emploi) = RepertoireError au chargement (jamais deviner
     laquelle jouera). Deux homonymes SANS emploi ne seront jamais joués : ils
-    sont seulement listés (cas réel au 02/11 : appel-eternel-life, dans
+    sont seulement listés (cas réel au 02/11, levé le 13/11 par renommage : appel-eternel-life, dans
     eternel-short/ et eternel-show/, types [])."""
     pools: Dict[str, List[Sequence]] = {}
     sans_emploi: List[str] = []

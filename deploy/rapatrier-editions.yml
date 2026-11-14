@@ -1,0 +1,188 @@
+---
+# Rapatriement des éditions faites SUR le robot vers data/ du PC (lot L1d-4, 13/11 ; spec L1d,
+# décision 13) — à lancer AVANT tout déploiement quand le Pi en porte (la garde du rôle
+# synchronise refuse sinon) :
+#   cd deploy && ansible-playbook -i hosts rapatrier-editions.yml -e target_group=robot
+# Ce qu'il fait : met de côté le journal du Pi (json/backup/EDITIONS-EN-ATTENTE.jsonl →
+# .rapatriement.jsonl : les retouches suivantes ouvrent un journal neuf) ; refuse, sans rien
+# copier, si un fichier visé a une modification locale non commitée ; tire du Pi les séquences et
+# images nommées, et pour expressions / lumières / briques n'en reporte QUE les entrées du
+# journal (rapatrier_editions.py) ; lance les tests de data/ (rouges = data/ remis à l'identique,
+# journal laissé en attente) ; garde une copie de chaque élément rapatrié et archive le journal
+# dans json/backup/<date>/ du Pi ; affiche `git status` et ce qui reste à rejouer en sim.
+# IL NE COMMITE PAS : relire, rejouer en sim (machines/sim/rejouer-modifiees.sh), commiter, déployer.
+# Tests lancés avec le venv du dépôt ; depuis un worktree sans .venv :
+#   -e python_tests=/chemin/du/checkout/principal/.venv/bin/python
+- name: rapatrier les éditions de {{ target_group | default('robot') }}
+  hosts: "{{ target_group | default('robot') }}"
+
+  vars_files:
+  - vars/main.yml
+
+  vars:
+    python_tests: "{{ depot_dir }}/.venv/bin/python"
+    rapatrier_script: "{{ playbook_dir }}/rapatrier_editions.py"
+
+  pre_tasks:
+    - name: Load the machine content machines/{{ machine }}/machine.yml
+      ansible.builtin.include_vars:
+        file: "{{ machines_dir }}/{{ machine }}/machine.yml"
+
+  tasks:
+    - name: Only a machine that carries robot data has edits to bring back
+      ansible.builtin.assert:
+        that:
+          - donnees_dir is defined
+          - not ansible_check_mode
+        fail_msg: "{{ inventory_hostname }} ne porte pas de données (donnees_dir), ou --check demandé (sans objet ici)."
+
+    - name: Set the robot data path on the Pi
+      ansible.builtin.set_fact:
+        donnees_pi: "{{ ansible_env.HOME }}/{{ ros2_ws }}/src/{{ project_ros_dir }}"
+
+    # Mise de côté : `mv` est atomique, l'écrivain rouvre le journal par son nom à chaque ligne —
+    # une retouche faite pendant le rapatriement tombe dans un journal neuf, jamais perdue. Un
+    # .rapatriement.jsonl laissé par un essai rouge est COMPLÉTÉ (suite ajoutée), pas écrasé.
+    - name: Set the pending journal aside and read it
+      become: yes
+      ansible.builtin.shell: |
+        cd "{{ donnees_pi }}/json/backup" 2>/dev/null || exit 0
+        if [ -s EDITIONS-EN-ATTENTE.jsonl ]; then
+          if [ -e EDITIONS-EN-ATTENTE.rapatriement.jsonl ]; then
+            mv EDITIONS-EN-ATTENTE.jsonl EDITIONS-EN-ATTENTE.suite.jsonl
+          else
+            mv EDITIONS-EN-ATTENTE.jsonl EDITIONS-EN-ATTENTE.rapatriement.jsonl
+          fi
+        fi
+        if [ -e EDITIONS-EN-ATTENTE.suite.jsonl ]; then
+          cat EDITIONS-EN-ATTENTE.suite.jsonl >> EDITIONS-EN-ATTENTE.rapatriement.jsonl \
+            && rm EDITIONS-EN-ATTENTE.suite.jsonl
+        fi
+        cat EDITIONS-EN-ATTENTE.rapatriement.jsonl 2>/dev/null
+        exit 0
+      register: journal
+      changed_when: journal.stdout | length > 0
+
+    - name: Nothing to bring back
+      ansible.builtin.debug:
+        msg: "Aucune édition en attente sur {{ inventory_hostname }} : rien à rapatrier."
+      when: journal.stdout | trim | length == 0
+
+    - name: Stop here when the journal is empty
+      ansible.builtin.meta: end_host
+      when: journal.stdout | trim | length == 0
+
+    - block:
+        - name: Create a PC temporary dir for the files pulled from the Pi
+          ansible.builtin.tempfile:
+            state: directory
+            prefix: rapatriement-
+          register: tmp
+          delegate_to: localhost
+          become: false
+
+        - name: Write the journal on the PC
+          ansible.builtin.copy:
+            content: "{{ journal.stdout }}\n"
+            dest: "{{ tmp.path }}/journal.jsonl"
+            mode: "0600"
+          delegate_to: localhost
+          become: false
+
+        # Journal lisible, noms valides (un nom forgé ne devient jamais un chemin), aucune cible
+        # modifiée localement dans git — sinon REFUS avant toute copie.
+        - name: Check the journal and the git state of every target
+          ansible.builtin.command:
+            argv: ["{{ ansible_playbook_python }}", "{{ rapatrier_script }}", preparer,
+                   --journal, "{{ tmp.path }}/journal.jsonl", --depot, "{{ depot_dir }}",
+                   --data-dir, "{{ donnees_dir }}"]
+          environment:
+            PYTHONPATH: "{{ packages_dir }}/theatre_contrats"
+          register: preparation
+          changed_when: false
+          failed_when: false
+          delegate_to: localhost
+          become: false
+
+        - name: Refuse when the journal is unreadable or a target is modified in git
+          ansible.builtin.fail:
+            msg: "{{ preparation.stdout }}{{ preparation.stderr }} — journal laissé en attente sur le Pi."
+          when: preparation.rc != 0
+
+        - name: Pull the edited files from the Pi
+          become: yes
+          ansible.builtin.fetch:
+            src: "{{ donnees_pi }}/{{ item }}"
+            dest: "{{ tmp.path }}/pi/{{ item }}"
+            flat: yes
+            fail_on_missing: no
+          loop: "{{ preparation.stdout_lines }}"
+
+        - name: Bring the edits into data/ and run the data tests
+          ansible.builtin.command:
+            argv: ["{{ ansible_playbook_python }}", "{{ rapatrier_script }}", appliquer,
+                   --journal, "{{ tmp.path }}/journal.jsonl", --pi-dir, "{{ tmp.path }}/pi",
+                   --data-dir, "{{ donnees_dir }}", --depot, "{{ depot_dir }}",
+                   --python, "{{ python_tests }}", --sortie, "{{ tmp.path }}"]
+          environment:
+            PYTHONPATH: "{{ packages_dir }}/theatre_contrats"
+          register: application
+          failed_when: false
+          delegate_to: localhost
+          become: false
+
+        - name: Show the report
+          ansible.builtin.debug:
+            var: application.stdout_lines
+
+        - name: Stop when the data tests are red (data/ restored, journal left pending)
+          ansible.builtin.fail:
+            msg: "{{ application.stdout_lines | select('match', '^REFUS') | list | join(' ') or application.stderr }}"
+          when: application.rc != 0
+
+        - name: Read the result
+          ansible.builtin.set_fact:
+            resultat: "{{ lookup('ansible.builtin.file', tmp.path ~ '/resultat.json') | from_json }}"
+
+        - name: Keep a copy of each brought-back element on the Pi (json/backup/{{ resultat.date }}/)
+          become: yes
+          ansible.builtin.copy:
+            src: "{{ tmp.path }}/rapatries/"
+            dest: "{{ donnees_pi }}/json/backup/{{ resultat.date }}/"
+            owner: "{{ ansible_user_id }}"
+            group: "{{ ansible_user_id }}"
+            mode: "0644"
+          when: resultat.rapatries | length > 0
+
+        - name: Archive the brought-back journal (the deployment guard no longer sees it)
+          become: yes
+          ansible.builtin.shell: |
+            cd "{{ donnees_pi }}/json/backup"
+            mkdir -p "{{ resultat.date }}"
+            mv EDITIONS-EN-ATTENTE.rapatriement.jsonl "{{ resultat.date }}/EDITIONS-rapatriees-{{ resultat.heure }}.jsonl"
+            chown -R {{ ansible_user_id }}:{{ ansible_user_id }} "{{ resultat.date }}"
+
+        - name: Show git status of data/
+          ansible.builtin.command:
+            cmd: git -C "{{ depot_dir }}" status --short -- data/json data/medias
+          register: statut
+          changed_when: false
+          delegate_to: localhost
+          become: false
+
+        - name: What to do next
+          ansible.builtin.debug:
+            msg: >-
+              {{ ['git status --short data/ :'] + statut.stdout_lines
+                 + [(resultat.non_validees | length) ~ ' élément(s) à rejouer en sim : machines/sim/rejouer-modifiees.sh']
+                 + resultat.non_validees
+                 + ['Rien n’est commité : relis, commite, déploie.'] }}
+
+      always:
+        - name: Remove the PC temporary dir
+          ansible.builtin.file:
+            path: "{{ tmp.path }}"
+            state: absent
+          delegate_to: localhost
+          become: false
+          when: tmp.path is defined

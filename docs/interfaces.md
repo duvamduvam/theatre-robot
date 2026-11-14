@@ -53,6 +53,9 @@ Invalid payloads are rejected with an explicit ERROR log naming the topic
 | `deploy_sha` | `catalogue_node` (`didier_web`) | `"a1b2c3d…"`, `"a1b2c3d…-dirty"`, `"dev"` | **State topic**, latched, lot L1c. Git sha written by Ansible into `conf/DEPLOY_SHA` at rsync (read once at start), `"dev"` when the file is absent (sim). `-dirty` = the rsynced tree was not a clean commit. Read by the web bridge (`TOPICS_LECTURE`) for the version badge. |
 | `data_edit` | `data_edit_node` (`didier_web`) | `{"id": "a1", "kind": "sequence", "mode": "replace", "name": "eternel-show/parle", "content": {…}, "base_sha256": "…"}` | **Edit request**, lot L1d. Volatile (`qos.volatile(10)` both sides), **never latched** (a replayed request would rewrite an old edit). ≤ 131 072 bytes. Written only when the node's `enabled` is true (`DATA_EDIT` flag, OFF by default everywhere) ; otherwise answered `edition_desactivee`. See « Data editing through the robot » below. |
 | `data_edit_result` | `data_edit_node` (`didier_web`) | `{"id": "a1", "ok": true, "code": "ok", "detail": [], "kind": "sequence", "name": "…", "mode": "replace", "sha256": "…", "sauvegarde": "json/backup/…", "avertissements": ["a_rejouer_en_sim"]}` | **Verdict**, lot L1d, volatile, seen by ALL : `animations_node` (sequence), `lights_node` / `face_sim` (expression, image ; lights_node also light, brick) and `leds_sim_node` (light, brick) re-read the written file on `ok` (hot reload, the message carries no content). |
+| `validation_sim` | `validation_sim_node` (`didier_web`, **SIM ONLY**, refuses outside domain 43) | `{"kind": "sequence", "name": "eternel-show/parle", "ok": true, "code": "tamponnee", "detail": []}` (+ `"id"` when answering a wheel validation request) | **Sim gate verdict**, lot L1d-2, volatile. One per thing played (whatever the trigger) and per wheel validation request. See « Sim gate » below. |
+| `validation_sim_demande` | page scène (L1d-3), scripts | `{"id": "v1", "name": "eternel-show/trip"}` | **Wheel validation request** (« Valider les roues pour le robot »), lot L1d-2, volatile, sim only. Accepted only if the current version was played to the end in sim (`non_rejouee` otherwise). |
+| `roues_refusees` | `animations_node` | `{"name": "trip", "raison": "non_validee_sim"}` | **Play gate**, lot L1d-2, volatile : a wheel track not validated in sim is built EMPTY on the robot (the rest of the sequence plays) ; WARNING in the log. |
 
 Other inputs: `/vision/person` (`PointStamped`, from the vision Pi) feeds
 `gaze_follower_node`.
@@ -77,7 +80,7 @@ Spec: [`spec-L1-contrats-donnees.md`](spec-L1-contrats-donnees.md) « L1d ». ON
   `nom_invalide`, `dossier_absent`, `existe_deja`, `absent`, `nom_en_double` (the loaders index by
   bare file name), `conflit`, `cle_inconnue` (top-level keys outside the engraved list),
   `contrat`, `quota_jour` (200 backups/day), `erreur_ecriture` (target untouched).
-  Warnings : `a_rejouer_en_sim`, `roues_a_valider_en_sim` (sim gate, lot L1d-2).
+  Warnings : `a_rejouer_en_sim`, `roues_a_valider_en_sim` (sim gate below).
 - **Contract** : `theatre_contrats.donnees` (`verifier_sequence`, `verifier_expression`,
   `verifier_lumiere`, `verifier_brique`, `verifier_image`) — the SAME functions as the data
   tests. Wheel tracks are bounded : `[fraction, [left, right]]` numbers only, |value| ≤ 0.89,
@@ -89,6 +92,31 @@ Spec: [`spec-L1-contrats-donnees.md`](spec-L1-contrats-donnees.md) « L1d ». ON
   `json/backup/EDITIONS-EN-ATTENTE.jsonl` (BEFORE writing) → temp file `json/backup/.tmp/<id>`
   (`medias/.tmp/<id>` for an image : other mount) → `os.replace` + fsync of the folder → owner of
   `json/` restored, mode of the replaced file kept.
+
+### Sim gate (lot L1d-2)
+
+Nothing modified reaches the real robot without having been played in sim. Register
+`data/json/validations-sim.json` (versioned ; `indent=1`, sorted keys ; written ONLY in sim by
+`validation_sim_node`, never by hand) : `{"version": 1, "sequence": {"<dossier>/<nom>": {"rejeu",
+"roues", "origine_roues": "sim"|"heritee"}}, "expression": {"<nom>": {"rejeu"}}, "lumiere": {…}}`.
+Fingerprints : `theatre_contrats.donnees.empreinte_contenu` / `empreinte_roues`.
+
+- **Stamp `rejeu`** (observer, whatever triggered the play) : sequence — `animation_state` goes to
+  the name then back to `""` between 0.95 × `duration` and `duration` + 5 s, no new ERROR/CRITICAL
+  line in the robot log, nodes present at start still there, and for a wheel track a `cmd_vel`
+  received during the play and the last one null 1 s after the end ; expression / light — name
+  received on `face` / `robot_lights`, `face_sim_node` / `leds_sim_node` alive and error-free for
+  min(`duration`, 10 s) without another command. Same fingerprint already stamped → no write.
+- **Codes** (engraved, `didier_web.validation_sim`) : played — `tamponnee`, `deja_tamponnee` (ok),
+  `interrompue`, `trop_longue`, `erreur_journal`, `noeud_absent`, `roues_sans_cmd_vel`,
+  `roues_non_arretees`, `absente`, `homonyme` (same bare name in two folders : never stamped),
+  `erreur_ecriture` ; wheel request — `roues_validees`, `deja_validees` (ok), `non_rejouee`,
+  `sans_roues`, `absente`, `nom_invalide`, `payload_invalide`, `erreur_ecriture`.
+- **Barriers** : host test `test_validations_sim.py` (every element stamped, every wheel track
+  validated, no orphan) ; `python3 -m theatre_contrats.donnees non-validees <data>` (exit 1 if
+  anything waits — read by the Ansible guard, L1d-4) ; on the robot, `animations_node` parameter
+  `exiger_validation_roues` (default true ; set false by `sim.launch.py` only, ignored outside
+  domain 43).
 
 ## Drive chain (geometry_msgs/Twist — safety path, frozen contract)
 
@@ -135,7 +163,13 @@ source (W1 à venir).
   relais/robot_lights, construit depuis `json/`), `GET /video` (flux MJPEG
   `multipart/x-mixed-replace` de la caméra embarquée, servi à `video_fps` ;
   **503 "pas de vidéo"** si aucune frame fraîche depuis 2 s — l'UI affiche alors
-  un placeholder).
+  un placeholder). `GET /api/data?kind=<kind>[&name=<nom>]` (lot L1d-3, LECTURE
+  SEULE, `didier_web.lecture_donnees` sur `data_dir`, défaut `/home/ros2_ws/src/robot`) :
+  sans `name`, liste triée `[{name, rejeu?, roues?}]` des éléments du kind (`sequence`,
+  `expression`, `lumiere`, `brique`, `image`) avec leur état de porte sim lu au registre
+  (`a_jour`, `a_faire`, `heritee` pour les roues ; clé absente = sans objet) ; avec `name`,
+  `{name, content, sha256}` (`content` en base64 pour une image ; `sha256` = le
+  `base_sha256` d'un `replace`). Kind hors liste, nom hors forme (`nom_valide`) ou absent → 404.
 - **Source vidéo** (paramètre `camera_compressed`, 2026-07-11) : en **sim**,
   `camera/image_raw` (sensor_msgs/Image brut de la caméra gz, encodé JPEG par le
   bridge) ; sur le **vrai robot**, `camera/image_raw/compressed`
@@ -191,6 +225,11 @@ source (W1 à venir).
 | `take_control` | — | Reprise d'écriture explicite (toujours autorisée pour un client authentifié). |
 | `stop_all` | — | Bouton STOP : publie dans l'ordre `animation=false`, `audio="stop"`, `face="stop"`, `stop` sur les 5 servos, ET un Twist nul sur `cmd_vel_web` ; répétition activée : puis `route="off"` et `rehearsal/cmd="stop"` (la route est un mode latché, la séance se termine, le régisseur révoque ses pannes). |
 | `drive` | `x: float`, `z: float` (∈ [-1, 1]) | **SIM-ONLY.** Consigne de pilotage roues normalisée (x = linéaire avant/arrière, z = angulaire). Voir bloc pilotage ci-dessous. |
+| `data_edit` | `demande: {id, kind, mode, name, content, base_sha256?}` | **Lot L1d-3**, writer seul. Publie la demande, en JSON compact, sur `data_edit` (format et codes : § « Data editing through the robot »). Le pont ne juge que l'enveloppe (objet, `id` texte non vide) et la taille (≤ 131 072 octets UTF-8, `DATA_EDIT_TAILLE_MAX`, égale à celle de l'écrivain par test) ; le reste est jugé par le robot. Publisher créé SEULEMENT si `data_edit_enabled` (drapeau `DATA_EDIT`), sinon `err`. `ack` = publiée ; le verdict arrive par le flux `data_edit_result`, même `id`. |
+| `valider_roues` | `id: str`, `name: "<dossier>/<nom>"` | **Lot L1d-3, SIM-ONLY**, writer seul. Publie `{id, name}` sur `validation_sim_demande` (publisher créé seulement en domaine 43, sinon `err`) ; verdict par le flux `validation_sim`, même `id`. |
+
+`data_edit` et `validation_sim_demande` ne sont dans AUCUNE whitelist : un `cmd` ne peut pas
+les publier.
 
 **Pilotage roues (`drive`, SIM-ONLY, W3)** — canal SÉPARÉ des `cmd` (ne passe
 PAS par la whitelist ; `cmd_vel_web` n'y figure jamais) :
@@ -215,9 +254,12 @@ PAS par la whitelist ; `cmd_vel_web` n'y figure jamais) :
 `SIMULATION`/`ROBOT RÉEL`/`INCONNU` selon `ROS_DOMAIN_ID` 43/42/autre,
 `writer`, `token_required`, + `drive_enabled`, `max_linear`, `max_angular` pour
 que l'UI verrouille le pad et affiche les plafonds), `hb_ack` (`t` échoté),
-`rehearsal` (bool : boutons route/vitesse/séance de `/scene`)), `feed`
+`rehearsal` (bool : boutons route/vitesse/séance de `/scene`), `data_edit` (bool, L1d-3 :
+le pont relaie les retouches → éditeur de `/scene`), `validation_sim` (bool, L1d-3 : domaine 43,
+états de porte sim et bouton de validation des roues)), `feed`
 (`topic`, `msg` — UN message par événement d'un topic de FLUX, `TOPICS_FLUX =
-{chat_transcript}`, diffusé immédiatement à tous les clients, sans historique),
+{chat_transcript, chat_hearing, jeu/journal, data_edit_result, validation_sim, roues_refusees}`,
+diffusé immédiatement à tous les clients, sans historique),
 `ack` (`topic` — non émis pour `drive` : 15 Hz spammerait le fil), `err`
 (`reason` — connexion JAMAIS fermée sur un message invalide, motif du
 décodage StringTime commun), `state` (toutes les 2 s : dernier payload +
@@ -233,7 +275,12 @@ on/off/restart, slider `route_speed`, séance start/stop. Fichiers :
 `style.css` partagé avec la console ; disposition : `docs/spec-refonte-page-scene.md`,
 12/11). La scène ignore la
 cible mémorisée de la console (jamais de bascule silencieuse vers le vrai
-Didier) et n'affiche ni pannes ni consignes.
+Didier) et n'affiche ni pannes ni consignes. Si `hello.data_edit` (lot L1d-3) :
+« Éditer les données », en bas de la colonne de droite — séquence, expression,
+lumière, brique (Charger / Envoyer / Rejouer, verdict corrélé par `id`, « pas de
+réponse du robot » après 5 s, JSON illisible jamais envoyé) et envoi d'une image PNG
+du visage ; si `hello.validation_sim`, états de porte sim et « Valider les roues pour
+le robot ». Mode d'emploi : `docs/operations.md` § « L'éditeur de la page scène ».
 
 **Session / heartbeat** : écriture EXCLUSIVE — le premier client authentifié
 l'obtient, les suivants sont lecteurs (`take_control` la reprend

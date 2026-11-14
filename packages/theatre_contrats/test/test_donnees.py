@@ -429,6 +429,40 @@ def test_registre_a_jour_rien_a_faire(data_dir):
     assert donnees.roues_validees({}, "autre/bonjour", {"keys": "a", "duration": 1}) is True
 
 
+def test_serialisation_du_registre_gravee():
+    # indent=1, clés triées, accents en clair, saut de ligne final : GRAVÉ octet par octet.
+    registre = {"version": 1, "sequence": {"b/z": {"rejeu": "r", "roues": None}},
+                "lumiere": {"été": {"rejeu": "x"}}, "expression": {}}
+    assert donnees.serialiser_registre(registre) == (
+        b'{\n "expression": {},\n "lumiere": {\n  "\xc3\xa9t\xc3\xa9": {\n   "rejeu": "x"\n  }\n },\n'
+        b' "sequence": {\n  "b/z": {\n   "rejeu": "r",\n   "roues": null\n  }\n },\n "version": 1\n}\n')
+
+
+def test_orphelines(data_dir):
+    ecrire(data_dir, "json/sequences/essai/bonjour.json", SEQUENCE)
+    registre = {"version": 1, "sequence": {"essai/bonjour": {}, "essai/effacee": {"rejeu": "x"}},
+                "expression": {"joie": {}, "partie": {}}, "lumiere": {}}
+    assert donnees.orphelines(data_dir, registre) == [("expression", "partie"), ("sequence", "essai/effacee")]
+
+
+def test_non_validees_et_ligne_de_commande(data_dir, capsys):
+    ecrire(data_dir, "json/sequences/essai/bonjour.json", SEQUENCE)
+    attendu = ["à rejouer en sim : expression joie", "à rejouer en sim : lumiere calme",
+               "à rejouer en sim : sequence essai/bonjour", "roues à valider en sim : sequence essai/bonjour"]
+    assert donnees.non_validees(data_dir) == attendu
+    assert donnees.main(["non-validees", str(data_dir)]) == 1
+    assert capsys.readouterr().out == "\n".join(attendu) + "\n4 élément(s) non validé(s) en sim\n"
+    registre = {"version": 1, "sequence": {"essai/bonjour": {
+        "rejeu": donnees.empreinte_contenu("sequence", "essai/bonjour", data_dir),
+        "roues": donnees.empreinte_roues(SEQUENCE), "origine_roues": "heritee"}},
+        "expression": {"joie": {"rejeu": donnees.empreinte_contenu("expression", "joie", data_dir)}},
+        "lumiere": {"calme": {"rejeu": donnees.empreinte_contenu("lumiere", "calme", data_dir)}}}
+    ecrire(data_dir, "json/validations-sim.json", registre)
+    assert donnees.main(["non-validees", str(data_dir)]) == 0
+    assert capsys.readouterr().out == "0 élément(s) non validé(s) en sim\n"
+    assert donnees.main(["autre-chose", str(data_dir)]) == 2
+
+
 # ================================================================ rechargement à chaud
 @pytest.mark.parametrize("brut, attendu", [
     ('{"ok": true, "kind": "sequence", "name": "essai/bonjour"}', ("sequence", "essai/bonjour")),

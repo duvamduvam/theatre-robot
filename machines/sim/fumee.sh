@@ -64,7 +64,7 @@ set -euo pipefail
 ATTENDU_NAMESPACE=5     # validate-namespace.sh : sentinelles, topics, nœuds, twist_mux, bridge
 ATTENDU_CATALOGUE=4     # validate-catalogue.sh : 6 familles, sha dev, ajout, suppression
 ATTENDU_PARLE=3         # états vus dans l'ordre : "" -> "parle" -> ""
-ATTENDU_EDITION=12      # validate-data-edit.sh (L1d-1 : épreuves 1 à 12 ; 13 avec la porte sim, L1d-2)
+ATTENDU_EDITION=13      # validate-data-edit.sh (L1d : épreuves 1 à 12, 13 = porte sim depuis L1d-2)
 ATTENDU_CHANTIERS=21    # validate-rehearsal-chantiers.sh (V-R3)
 ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
 RTF_MIN_DEFAUT=0.8

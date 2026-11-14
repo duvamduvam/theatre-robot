@@ -25,7 +25,7 @@ python -m unittest -v -s controller/tests
 ## Repository Layout
 - `controller/`: core Python modules (input devices, GUI, button mappings, ROS nodes).
 - `ros2_ws/`: minimal ROS 2 workspace embedding the controller package for deployment under `/home/ros2_ws`.
-- `conf/`, `json/`, `medias/`: configuration and assets.
+- `conf/`, `json/`, `medias/`: configuration and assets (`json/` ne garde que les 10 fichiers lus par `SmallGui` jusqu'à L4 ; liste gravée par `test_json_restants.py`).
 - `test_logs/`: local log directory.
 
 ## Contributing

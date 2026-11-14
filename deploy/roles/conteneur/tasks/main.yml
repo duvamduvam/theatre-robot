@@ -63,10 +63,17 @@
 # `up -d --force-recreate` : relit le compose (volumes, environnement) et redémarre même si
 # rien n'a changé dans le compose — c'est le redémarrage qui fait compiler la sentinelle.
 # L'image locale est réutilisée (pas de pull : celle du Hub est périmée, docs/ansible-ecarts.md).
+# L1d-4 (13/11) : DATA_EDIT (écrivain des données et éditeur de la page, lus par
+# robot_app.launch.py) vient d'`edition_donnees` du machine.yml, FAUX dans le dépôt — l'activer
+# est une décision de David (spec L1d, décision 10) ; essai ponctuel : -e edition_donnees=true.
+# Le compose ARM lit ${DATA_EDIT:-false} : un `up` sans cette variable (à la main, au boot par
+# le service) revient à faux, jamais à vrai.
 - name: Recreate the project container
   become: yes
   ansible.builtin.command:
     cmd: docker compose -f "{{ conteneur_compose }}" up -d --force-recreate
+  environment:
+    DATA_EDIT: "{{ 'true' if (edition_donnees | default(false) | bool) else 'false' }}"
   when: not ansible_check_mode
 
 # Les nœuds n'apparaissent qu'après le colcon build du script d'entrée : les voir = build fini

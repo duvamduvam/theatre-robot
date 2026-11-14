@@ -132,7 +132,27 @@ TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chai
 # « qui n'entend rien »).
 # jeu/journal (02/11, lot A1) : une ligne du journal « pourquoi » du sélecteur de
 # jeu par message (décisions, maintiens, refus) — la page en garde les 20 dernières.
-TOPICS_FLUX = {"chat_transcript", "chat_hearing", "jeu/journal"}
+# data_edit_result, validation_sim, roues_refusees (13/11, lot L1d-3) : verdicts de
+# l'écrivain des données, de l'observateur de la porte sim et de la barrière de jeu.
+# Un verdict est un ÉVÉNEMENT (corrélé par `id` côté page), jamais un état : un
+# `state` toutes les 2 s en perdrait. Lecture seule comme les autres.
+TOPICS_FLUX = {"chat_transcript", "chat_hearing", "jeu/journal",
+               "data_edit_result", "validation_sim", "roues_refusees"}
+
+# Édition des données à travers le robot (lot L1d-3, spec L1 « L1d » décisions 1, 2
+# et 11). Deux types WebSocket, writer seul, publiés chacun par UN publisher dédié
+# créé sous condition par le node -- JAMAIS dans une WHITELIST : un `cmd`
+# générique ne peut pas les atteindre.
+#  - data_edit -> topic `data_edit` (publisher créé seulement si data_edit_enabled) ;
+#  - valider_roues -> topic `validation_sim_demande` (publisher créé seulement en
+#    domaine 43 : la porte sim n'existe qu'en simulation).
+DATA_EDIT_TOPIC = "data_edit"
+VALIDATION_SIM_DEMANDE_TOPIC = "validation_sim_demande"
+# Taille maximale d'une demande, en octets UTF-8 du JSON publié. DUPLIQUÉE de
+# didier_web.data_edit.TAILLE_MAX_DEMANDE (ce module reste autonome, motif du
+# package) : l'égalité est gravée par test_web_protocol.py. Le robot refuse de
+# toute façon au-delà (`trop_gros`) ; le pont refuse avant de publier.
+DATA_EDIT_TAILLE_MAX = 131_072
 
 # Session d'écriture : silence du writer au-delà de ce délai -> écriture
 # libérée (personne ne la récupère automatiquement, cf. §2 du protocole).
@@ -271,6 +291,48 @@ def _parse_ticket(msg: dict) -> dict:
     return {"type": "ticket", "texte": texte}
 
 
+def serialiser_demande(demande: dict) -> str:
+    """JSON publié sur `data_edit` : compact, UTF-8 tel quel. C'est CETTE chaîne
+    qui est mesurée puis publiée (jamais re-sérialisée entre les deux)."""
+    return json.dumps(demande, ensure_ascii=False, separators=(",", ":"))
+
+
+def _texte_court(valeur):
+    """Pour le journal du pont seulement : une chaîne courte, sinon None."""
+    return valeur if isinstance(valeur, str) and len(valeur) <= 200 else None
+
+
+def _parse_data_edit(msg: dict) -> dict:
+    """{type: "data_edit", demande: {id, kind, mode, name, content, base_sha256?}}.
+    Le pont ne juge que la FORME de l'enveloppe et la TAILLE : objet, `id` chaîne
+    non vide (le verdict est corrélé par lui), au plus DATA_EDIT_TAILLE_MAX octets.
+    Le contenu, le kind, le nom et le contrat sont jugés par le robot
+    (didier_web.data_edit + theatre_contrats.donnees) : rien n'est recopié ici."""
+    demande = msg.get("demande")
+    if not isinstance(demande, dict):
+        raise ProtocolError("data_edit.demande doit être un objet")
+    if not isinstance(demande.get("id"), str) or not demande["id"]:
+        raise ProtocolError("data_edit.demande.id doit être un texte non vide")
+    brut = serialiser_demande(demande)
+    taille = len(brut.encode("utf-8"))
+    if taille > DATA_EDIT_TAILLE_MAX:
+        raise ProtocolError("data_edit trop gros ({} > {} octets)".format(taille, DATA_EDIT_TAILLE_MAX))
+    return {"type": "data_edit", "brut": brut, "id": demande["id"],
+            "kind": _texte_court(demande.get("kind")), "name": _texte_court(demande.get("name"))}
+
+
+def _parse_valider_roues(msg: dict) -> dict:
+    """{type: "valider_roues", id, name} -> la demande {id, name} publiée sur
+    validation_sim_demande. Forme seulement : l'observateur juge le nom et l'état."""
+    id_demande, name = msg.get("id"), msg.get("name")
+    if not isinstance(id_demande, str) or not id_demande:
+        raise ProtocolError("valider_roues.id doit être un texte non vide")
+    if not isinstance(name, str) or not name:
+        raise ProtocolError("valider_roues.name doit être un texte non vide")
+    return {"type": "valider_roues", "brut": serialiser_demande({"id": id_demande, "name": name}),
+            "id": id_demande, "name": _texte_court(name)}
+
+
 # Dispatch par type : chaque entrée valide/normalise son propre message
 # (dict -> dict), les types sans champ additionnel se contentent de le
 # renvoyer tel quel ("cmd" est traité à part, cf. parse_client_message).
@@ -284,6 +346,8 @@ _PARSERS = {
     "take_control": lambda msg: {"type": "take_control"},
     "stop_all": lambda msg: {"type": "stop_all"},
     "ticket": _parse_ticket,
+    "data_edit": _parse_data_edit,
+    "valider_roues": _parse_valider_roues,
 }
 
 
@@ -369,7 +433,8 @@ def rehearsal_allowed(domain_id: int) -> bool:
 def build_hello(domain_id: int, writer: bool, token_required: bool,
                 drive_enabled: bool, max_linear: float, max_angular: float,
                 rehearsal: bool = False, perception: bool = False,
-                exterior: bool = False) -> dict:
+                exterior: bool = False, data_edit: bool = False,
+                validation_sim: bool = False) -> dict:
     # drive_enabled/max_linear/max_angular : l'UI affiche les plafonds et
     # VERROUILLE le pad de pilotage si drive_enabled=false (WEB_DRIVE=false),
     # elle n'a donc pas à les deviner. Le plafond DUR reste appliqué serveur
@@ -381,6 +446,10 @@ def build_hello(domain_id: int, writer: bool, token_required: bool,
     # si c'est vrai. Défaut False = flux absent, comme sur le vrai robot.
     # exterior : idem pour /exterior (« Didier vu de l'extérieur », caméra de
     # poursuite Gazebo, SIM-ONLY, lecture seule). Défaut False = absent.
+    # data_edit (L1d-3) : le pont relaie les retouches (data_edit_enabled, drapeau
+    # DATA_EDIT) -> la page scène montre son éditeur ; défaut False = panneau absent.
+    # validation_sim (L1d-3) : domaine 43, la porte sim existe -> états « rejouée /
+    # à rejouer / roues… » et bouton « Valider les roues pour le robot ».
     return {
         "type": "hello",
         "domain_id": domain_id,
@@ -393,6 +462,8 @@ def build_hello(domain_id: int, writer: bool, token_required: bool,
         "rehearsal": rehearsal,
         "perception": perception,
         "exterior": exterior,
+        "data_edit": data_edit,
+        "validation_sim": validation_sim,
     }
 
 

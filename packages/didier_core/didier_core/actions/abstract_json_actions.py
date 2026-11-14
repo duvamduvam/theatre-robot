@@ -62,12 +62,18 @@ class AbstractJsonActions(Action):
         return True
 
     def load_multi_files_sequences(self, sequence_dir):
+        # chemins_sequences : nom nu -> "<dossier>/<nom>" du fichier RETENU (le dernier lu pour
+        # un nom donné, comme sequences_name) ; le registre des validations sim est indexé par
+        # chemin (lot L1d-2) : la barrière roues doit savoir quel fichier joue.
+        self.chemins_sequences = {}
         sequences_files = FilesUtils.get_folder_files(sequence_dir)
         for sequence_file in sequences_files:
             json_sequence = FilesUtils.open_json(sequence_file, 'r')
             json_sequence[NAME] = os.path.basename(sequence_file).replace(".json", "")
             self.sequences_key[json_sequence[KEYS]] = json_sequence
             self.sequences_name[json_sequence[NAME]] = json_sequence
+            relatif = os.path.relpath(sequence_file, sequence_dir)[:-len(".json")]
+            self.chemins_sequences[json_sequence[NAME]] = relatif.replace(os.sep, "/")
 
     def get_sequence(self, msg, animation_loop):
 
