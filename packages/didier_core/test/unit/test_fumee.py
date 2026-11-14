@@ -630,11 +630,15 @@ def test_si_due_ne_touche_a_aucun_des_quatre_conteneurs_de_la_sim(banc, conteneu
 
 
 def test_un_homonyme_partiel_n_est_pas_la_sim(banc):
-    """Le nom doit être EXACT : un conteneur « didier-sim-monde-2 » n'est pas la sim."""
-    _, env, tmp = banc
-    env = dict(env, FAUX_DOCKER_PS="didier-sim-monde-2\nxdidier-sim-robot\n")
+    """Le nom doit être EXACT : un conteneur « didier-sim-monde-2 » n'est pas la sim. La fumée est
+    due (commit) ; elle passe le contrôle des conteneurs puis reporte sur la charge (seuil 0)."""
+    depot, env, tmp = banc
+    _commit(depot, "packages/code.txt", "code 2")
+    env = dict(env, FAUX_DOCKER_PS="didier-sim-monde-2\nxdidier-sim-robot\n", FUMEE_CHARGE_MAX="0")
     p = _lancer(env, "--si-due")
-    assert p.returncode == 0 and "déjà présent" not in _journal(tmp)
+    assert p.returncode == 0
+    assert "déjà présent" not in _journal(tmp)
+    assert "reporté : charge trop haute" in _journal(tmp)
 
 
 def test_les_conteneurs_de_la_fumee_sont_ceux_du_compose():
