@@ -37,3 +37,11 @@ machines/sim/banc-vision/workspace/
 data/json/backup/
 # Temporaire des images (même montage que medias/visuals/, hors de ce dossier), vide après chaque écriture.
 data/medias/.tmp/
+
+# Audios privés (14/11, décision de David du 13/11) : les fichiers sonores (dont des chansons du
+# commerce) ne sont PLUS dans ce dépôt public. Ils vivent dans ~/Nextcloud/dev/didier/medias-prives/
+# audios/ ($DIDIER_MEDIAS_PRIVES), le dépôt n'en garde que data/json/audios-prives.json (manifeste).
+# Un audio déposé ici par erreur reste local ; test_audios_prives.py rougit s'il entre dans git
+# ailleurs (même renommé). Ce dossier ne suit que son README.
+data/medias/audios/*
+!data/medias/audios/README.md

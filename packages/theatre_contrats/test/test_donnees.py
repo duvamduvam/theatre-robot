@@ -31,6 +31,8 @@ def png(largeur, hauteur, profondeur=8, couleur=2, entrelace=0, lignes=None, crc
 
 
 BOUCHE = png(24, 16)
+SHA_ID3 = "041149186b23a9502aea5a4e81bbc9620d2b4b76b4bad94e36c744abcf9d3771"   # sha256(b"ID3")
+SHA_ID4 = "b2b4bad68e70a07d669b404d0f2340089f19e8af24c66ec9179020174aa08103"   # sha256(b"ID4")
 OEIL = png(8, 8)
 
 
@@ -40,6 +42,13 @@ def data_dir(tmp_path):
     (tmp_path / "json" / "sequences" / "essai").mkdir(parents=True)
     (tmp_path / "medias" / "audios").mkdir(parents=True)
     (tmp_path / "medias" / "audios" / "bonjour.mp3").write_bytes(b"ID3")
+    # Audios privés (14/11) : un audio cité doit figurer au manifeste. « change.mp3 » y est
+    # inscrit mais son fichier diffère (sha de b"ID4"), « parti.mp3 » inscrit sans fichier.
+    (tmp_path / "medias" / "audios" / "change.mp3").write_bytes(b"ID3")
+    ecrire(tmp_path, "json/audios-prives.json", {"version": 1, "audios": {
+        "bonjour.mp3": {"sha256": SHA_ID3, "taille": 3, "duree_s": None},
+        "change.mp3": {"sha256": SHA_ID4, "taille": 3, "duree_s": None},
+        "parti.mp3": {"sha256": SHA_ID3, "taille": 3, "duree_s": None}}})
     for zone, octets in (("mouth", BOUCHE), ("eye", OEIL)):
         (tmp_path / "medias" / "visuals" / zone).mkdir(parents=True)
         (tmp_path / "medias" / "visuals" / zone / "neutre.png").write_bytes(octets)
@@ -137,7 +146,12 @@ def test_sequence_conforme(refs):
     ({**SEQUENCE, "audios": [[0, "bonjour.ogg"]]},
      ["audios[0] : 'bonjour.ogg' n'a pas la forme nom.mp3/nom.wav (ni la sentinelle 'stop')"]),
     ({**SEQUENCE, "audios": [[0, "absent.mp3"]]},
-     ["audios[0] : fichier audio introuvable : medias/audios/absent.mp3"]),
+     ["audios[0] : fichier audio introuvable au manifeste json/audios-prives.json : absent.mp3"]),
+    ({**SEQUENCE, "audios": [[0, "parti.mp3"]]},
+     ["audios[0] : fichier audio introuvable : medias/audios/parti.mp3"]),
+    ({**SEQUENCE, "audios": [[0, "change.mp3"]]},
+     ["audios[0] : fichier audio introuvable tel qu'au manifeste (sha256 différent) : "
+      "medias/audios/change.mp3"]),
 ])
 def test_sequence_une_faute_par_regle(refs, sequence, erreurs):
     assert donnees.verifier_sequence(sequence, refs) == erreurs
@@ -147,10 +161,40 @@ def test_sequence_pas_un_objet(refs):
     assert donnees.verifier_sequence([], refs) == ["séquence : objet JSON attendu, reçu list"]
 
 
-def test_audio_non_verifiable_sans_dossier_audios(refs):
-    # Même tolérance que l'ancien test : sans medias/audios/, seul le format est jugé.
-    refs["audios_verifiables"] = False
-    assert donnees.verifier_sequence({**SEQUENCE, "audios": [[0, "absent.mp3"]]}, refs) == []
+def test_sans_dossier_audios_seule_l_inscription_au_manifeste_est_jugee(data_dir, tmp_path):
+    # Audios privés (14/11) : c'est le cas de la CI GitHub, sans le dossier privé. Un audio
+    # inscrit passe (même sans fichier, même « changé ») ; un audio non inscrit reste une faute.
+    refs = donnees.charger_references(data_dir, dossier_audios=tmp_path / "absent")
+    assert refs["audios_verifiables"] is False
+    for inscrit in ("bonjour.mp3", "parti.mp3", "change.mp3"):
+        assert donnees.verifier_sequence({**SEQUENCE, "audios": [[0, inscrit]]}, refs) == []
+    assert donnees.verifier_sequence({**SEQUENCE, "audios": [[0, "absent.mp3"]]}, refs) == [
+        "audios[0] : fichier audio introuvable au manifeste json/audios-prives.json : absent.mp3"]
+
+
+def test_sans_manifeste_tout_audio_cite_est_une_faute(data_dir):
+    (data_dir / "json" / "audios-prives.json").unlink()
+    refs = donnees.charger_references(data_dir)
+    assert donnees.verifier_sequence({**SEQUENCE, "audios": [[0, "bonjour.mp3"]]}, refs) == [
+        "audios[0] : fichier audio introuvable au manifeste json/audios-prives.json : bonjour.mp3"]
+
+
+def test_dossier_audios_explicite(data_dir, tmp_path):
+    # Les tests du dépôt jugent data/ avec le dossier PRIVÉ (hors data/) : c'est lui qui compte.
+    prive = tmp_path / "prive"
+    prive.mkdir()
+    (prive / "parti.mp3").write_bytes(b"ID3")
+    refs = donnees.charger_references(data_dir, dossier_audios=prive)
+    assert donnees.verifier_sequence({**SEQUENCE, "audios": [[0, "parti.mp3"]]}, refs) == []
+    assert donnees.verifier_sequence({**SEQUENCE, "audios": [[0, "bonjour.mp3"]]}, refs) == [
+        "audios[0] : fichier audio introuvable : medias/audios/bonjour.mp3"]
+
+
+def test_dossier_audios_prives_suit_la_variable(monkeypatch):
+    monkeypatch.setenv("DIDIER_MEDIAS_PRIVES", "/srv/prives")
+    assert donnees.dossier_audios_prives() == "/srv/prives/audios"
+    monkeypatch.delenv("DIDIER_MEDIAS_PRIVES")
+    assert donnees.dossier_audios_prives().endswith("/Nextcloud/dev/didier/medias-prives/audios")
 
 
 # ---------------------------------------------------------------- bornes roues (décision 7)
@@ -461,6 +505,91 @@ def test_non_validees_et_ligne_de_commande(data_dir, capsys):
     assert donnees.main(["non-validees", str(data_dir)]) == 0
     assert capsys.readouterr().out == "0 élément(s) non validé(s) en sim\n"
     assert donnees.main(["autre-chose", str(data_dir)]) == 2
+
+
+# ================================================================ audios privés (manifeste)
+def wav_d_une_seconde(chemin):
+    import wave
+    with wave.open(str(chemin), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(1)
+        w.setframerate(8000)
+        w.writeframes(b"\x80" * 8000)
+
+
+@pytest.fixture
+def prive(tmp_path):
+    """Un dossier privé : un mp3, un wav d'une seconde dans un dossier caché, un non-audio."""
+    racine = tmp_path / "prive"
+    (racine / "speak" / ".attachments").mkdir(parents=True)
+    (racine / "bonjour.mp3").write_bytes(b"ID3")
+    wav_d_une_seconde(racine / "speak" / ".attachments" / "aie.wav")
+    (racine / "speak" / "Readme.md").write_text("pas un audio")
+    return racine
+
+
+SHA_WAV = "dd9165ab3909873fc83f23fb627ce58f8ad2623d8847dbfcecb8df034ac46131"   # sha256sum du wav ci-dessus
+
+
+def test_manifeste_construit_depuis_le_dossier(prive):
+    assert donnees.lister_audios(prive) == ["bonjour.mp3", "speak/.attachments/aie.wav"]
+    assert donnees.construire_manifeste(prive) == {"version": 1, "audios": {
+        "bonjour.mp3": {"sha256": SHA_ID3, "taille": 3, "duree_s": None},
+        "speak/.attachments/aie.wav": {"sha256": SHA_WAV, "taille": 8044, "duree_s": 1.0}}}
+
+
+def test_duree_wav_illisible():
+    assert donnees.duree_wav("/nulle/part.wav") is None
+
+
+def test_ecarts_audios():
+    manifeste = {"a.mp3": {"sha256": SHA_ID3}, "b.mp3": {"sha256": SHA_ID3}, "c.mp3": {"sha256": SHA_ID3}}
+    sommes = {"a.mp3": SHA_ID3, "b.mp3": SHA_ID4, "d.mp3": SHA_ID3}
+    assert donnees.ecarts_audios(manifeste, sommes) == (
+        ["audio différent du manifeste (sha256) : b.mp3", "audio absent : c.mp3"], ["d.mp3"])
+
+
+def test_lire_sommes():
+    texte = "{}  ./song/a b.mp3\n{}  c.wav\n\n".format(SHA_ID3, SHA_ID4)
+    assert donnees.lire_sommes(texte) == {"song/a b.mp3": SHA_ID3, "c.wav": SHA_ID4}
+    for illisible in ("\\{}  ./a\\nb.mp3".format(SHA_ID3), "pas-un-sha  ./a.mp3", SHA_ID3):
+        with pytest.raises(ValueError):
+            donnees.lire_sommes(illisible)
+
+
+def test_lignes_de_commande_des_audios(data_dir, prive, capsys, monkeypatch):
+    # manifeste-audios écrit json/audios-prives.json au format gravé (indent=1, clés triées).
+    assert donnees.main(["manifeste-audios", str(data_dir), str(prive)]) == 0
+    assert capsys.readouterr().out == "2 audio(s) au manifeste json/audios-prives.json\n"
+    octets = (data_dir / "json" / "audios-prives.json").read_bytes()
+    assert octets.startswith(b'{\n "audios": {\n  "bonjour.mp3": {\n   "duree_s": null,\n')
+    assert octets == donnees.serialiser_manifeste(donnees.construire_manifeste(prive))
+    # verifier-audios : conforme, puis un fichier hors manifeste et un fichier changé.
+    assert donnees.main(["verifier-audios", str(data_dir), str(prive)]) == 0
+    capsys.readouterr()
+    (prive / "nouveau.mp3").write_bytes(b"ID3")
+    (prive / "bonjour.mp3").write_bytes(b"ID4")
+    assert donnees.main(["verifier-audios", str(data_dir), str(prive)]) == 1
+    assert capsys.readouterr().out.splitlines() == [
+        "audio différent du manifeste (sha256) : bonjour.mp3",
+        "hors manifeste (régénérer : manifeste-audios) : nouveau.mp3",
+        "{} : 2 faute(s), 0 fichier(s) hors manifeste".format(prive)]
+    assert donnees.main(["verifier-audios", str(data_dir), str(prive / "absent")]) == 1
+    assert capsys.readouterr().err == "dossier des audios absent : {}\n".format(prive / "absent")
+    # verifier-sommes : la sortie sha256sum d'un Pi sur stdin ; hors manifeste = signalé seulement.
+    import io
+    monkeypatch.setattr("sys.stdin", io.StringIO("{}  ./bonjour.mp3\n{}  ./speak/.attachments/aie.wav\n"
+                                                 "{}  ./vieux.mp3\n".format(SHA_ID3, SHA_WAV, SHA_ID4)))
+    assert donnees.main(["verifier-sommes", str(data_dir)]) == 0
+    sortie = capsys.readouterr()
+    assert sortie.out == "audios reçus : 0 faute(s), 1 fichier(s) hors manifeste\n"
+    assert sortie.err == "en trop (hors manifeste) : vieux.mp3\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO("{}  ./bonjour.mp3\n".format(SHA_ID4)))
+    assert donnees.main(["verifier-sommes", str(data_dir)]) == 1
+    assert capsys.readouterr().out.splitlines() == [
+        "audio différent du manifeste (sha256) : bonjour.mp3", "audio absent : speak/.attachments/aie.wav",
+        "audios reçus : 2 faute(s), 0 fichier(s) hors manifeste"]
+    assert donnees.main(["verifier-sommes"]) == 2
 
 
 # ================================================================ rechargement à chaud
