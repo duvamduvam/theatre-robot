@@ -10,3 +10,6 @@ imageio
 # py_trees : behaviour trees du sélecteur de jeu (packages/didier_jeu, lot A1) —
 # même version que ros-jazzy-py-trees dans l image sim (2.6.0 au 02/11).
 py_trees==2.6.0
+# Pont web (didier_web) : sans eux, 29 tests du pont sont sautés en CI (constaté en L1d-3, 13/11).
+aiohttp
+Pillow

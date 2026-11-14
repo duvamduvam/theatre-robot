@@ -37,7 +37,9 @@ IMAGES = sorted(os.path.relpath(p, VISUELS) for zone in donnees.ZONES_IMAGE
 
 
 def test_inventaire_grave():
-    assert len(IMAGES) == 127
+    # Plancher, pas égalité (13/11) : une image créée sur le robot puis rapatriée (L1d-4) doit
+    # passer ; un plancher garde la protection contre une perte d'images.
+    assert len(IMAGES) >= 127
     assert all(i.endswith(".png") for i in IMAGES)
     assert len(EXCEPTIONS) == 21
     assert set(EXCEPTIONS) <= set(IMAGES)

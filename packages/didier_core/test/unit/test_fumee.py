@@ -528,7 +528,8 @@ def test_si_due_ne_demarre_pas_dans_une_plage_sans_commit(banc, maintenant, repo
     plages = tmp / "plages"
     plages.write_text("# commentaire ignoré\n1-5 8 19\n", encoding="utf-8")
     p = subprocess.run([str(FUMEE_SH), "--si-due"],
-                       env=dict(env, FUMEE_PLAGES=str(plages), FUMEE_MAINTENANT=maintenant),
+                       env=dict(env, FUMEE_PLAGES=str(plages), FUMEE_MAINTENANT=maintenant,
+                                FUMEE_CHARGE_MAX="9999"),   # la charge du PC ne doit pas masquer la plage
                        capture_output=True, text=True, timeout=60)
     assert ("reporté : plage sans commit" in _journal(tmp)) is reporte
     if reporte:

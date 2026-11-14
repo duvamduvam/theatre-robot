@@ -40,7 +40,9 @@ et sur le robot une piste roues non validée n'est pas jouée. Mode d'emploi :
 **Vérité unique, éditée à travers le robot** (lot L1d, en cours) : `data_edit_node` écrit une
 séquence, une entrée d'expression, de lumière ou de brique, ou une image, après contrat et
 sauvegarde (`json/backup/`, non versionné). En sim, la retouche tombe directement ici (le
-conteneur monte `data/json` et `data/medias`) : `git diff` la montre. Désactivé par défaut
+conteneur monte `data/json` et `data/medias`) : `git diff` la montre. L'outil pour la faire :
+l'éditeur de la page scène (lot L1d-3, `docs/operations.md` § « L'éditeur de la page scène »).
+Désactivé par défaut
 (`DATA_EDIT`) ; sur le vrai robot, l'activer est une décision de David. Les copies
-de JSON de la télécommande (`legacy/dadou_control_ros/json/`) sont périmées : 61 partent à L1d, les
-10 qu'elle lit encore partent avec elle (L4) — conception du 12/11, spec L1 § L1d.
+de JSON de la télécommande (`legacy/dadou_control_ros/json/`) sont périmées : 61 sont supprimées (L1d-5), les
+10 qu'elle lit encore (3 JSON + 7 playlists) partent avec elle (L4) — conception du 12/11, spec L1 § L1d.

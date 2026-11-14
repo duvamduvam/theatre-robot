@@ -77,7 +77,7 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   (6 familles non vides, sha `dev`, une séquence déposée apparaît en <= 5 s).
   À la main : `ros2 topic echo /didier/catalogue --once --qos-durability transient_local --field msg`.
 
-## Édition des données à travers le robot (lot L1d, 12/11 — L1d-1 et L1d-2 faits, page web en L1d-3)
+## Édition des données à travers le robot (lot L1d, 12-13/11 — L1d-1 à L1d-5 faits)
 - **Un seul écrivain** : `data_edit_node` (`didier_web`), toujours lancé (robot et sim),
   **désactivé par défaut** (`DATA_EDIT`) — il répond alors `edition_desactivee`. Sur le vrai
   robot, l'activer est une décision de David (après L1d-4 et une relecture adverse). Contrat,
@@ -124,7 +124,7 @@ le robot avant L1d, jamais regardée en sim). **Ne jamais le retoucher à la mai
   `roues à valider`. La sim est laissée en marche (pour la page).
 - **Valider une piste roues** (le seul geste à l'œil) : la regarder jouer en sim jusqu'au bout,
   puis publier `{"id", "name": "<dossier>/<nom>"}` sur `/didier/validation_sim_demande` — bouton
-  « Valider les roues pour le robot » de la page scène en L1d-3. Refusé (`non_rejouee`) si la
+  « Valider les roues pour le robot » de la page scène (L1d-3). Refusé (`non_rejouee`) si la
   version actuelle n'a pas été jouée jusqu'au bout.
 - **Où ça bloque** : `test_validations_sim.py` (suite du cœur, CI) est rouge tant qu'un élément
   de `data/` n'est pas rejoué ou qu'une piste roues n'est pas validée ; la garde Ansible (L1d-4)
@@ -133,13 +133,77 @@ le robot avant L1d, jamais regardée en sim). **Ne jamais le retoucher à la mai
   `roues_refusees` (paramètre `exiger_validation_roues` d'`animations_node`, levé en sim seule).
 - **Liste à la main** : `PYTHONPATH=packages/theatre_contrats python3 -m theatre_contrats.donnees
   non-validees data` (code 1 si quelque chose attend).
-- **Limites dites** : un nom de séquence présent dans deux dossiers (`appel-eternel-life`) n'est
+- **Limites dites** : un nom de séquence présent dans deux dossiers (cas levé le 13/11 : `eternel-show/appel-eternel-life` renommé `appel-eternel-life-show`) n'est
   jamais tamponné (`homonyme`) — `animation_state` ne dit pas lequel a joué ; les erreurs de
   `leds_sim_node` (qui journalise par `/rosout`, pas dans `robot.log`) ne sont pas vues.
 
 - **Piège** : un script de vérification monté en fichier seul (`validate-*.sh`) ne suit pas une
   édition qui REMPLACE le fichier (sed -i, la plupart des éditeurs) — le conteneur garde l'ancien
   inode. Recréer le conteneur, ou `docker cp` le script dans `/tmp` pour itérer.
+
+### L'éditeur de la page scène (lot L1d-3, 13/11)
+L'outil de **réglage** (pas l'éditeur final) : texte JSON + Envoyer + verdict, envoi d'image,
+Rejouer, validation des roues. Il n'existe que si le pont relaie les retouches (drapeau
+`DATA_EDIT=true`, le même que l'écrivain) ; sinon le panneau n'apparaît pas.
+- **Ouvrir** : sim lancée avec `DATA_EDIT=true WEB=true ANIMATIONS=true FACE=true` (+ la chaîne
+  roues pour valider une piste roues), http://localhost:8765/scene, prendre la main, puis
+  **« Éditer les données »** en bas de la colonne de droite (il prend la place du fil de
+  conversation ; STOP reste au centre).
+- **Retoucher une séquence, une expression, une lumière ou une brique** : choisir la famille, un
+  élément de la liste, **Charger** (le JSON arrive dans la zone de texte, le nom dans le champ),
+  modifier, **Envoyer**. Même nom que celui chargé = remplacement (avec le sha chargé : si le
+  robot a changé entre-temps, refus `conflit`, recharger) ; autre nom = création (séquence :
+  `dossier/nom`, dossier existant). La ligne de verdict dit le code du robot (`ok`, `contrat`,
+  `cle_inconnue`…), ses détails et ses avertissements, en vert ou en rouge ; « pas de réponse du
+  robot » au bout de 5 s. Un JSON illisible est signalé tout de suite et **rien n'est envoyé**.
+- **Rejouer** : joue l'élément nommé (`animation` avec le nom nu pour une séquence, `face`,
+  `robot_lights` ; rien pour une brique — rejouer une lumière qui la chaîne). Jouée jusqu'au
+  bout, la séquence est tamponnée par l'observateur : « porte sim : tamponnee » s'affiche et la
+  liste passe à « rejouée ».
+- **États (sim seulement)** : chaque nom porte « rejouée » / « à rejouer », et pour une piste
+  roues « roues à valider » ou « roues héritées ». **Valider les roues pour le robot** n'apparaît
+  que pour une séquence rejouée dont la piste roues attend ; un clic = tampon `roues` au registre.
+- **Envoyer une image du visage** : choisir un PNG (fabriqué ailleurs : pas d'outil de dessin), la
+  zone (bouche 24×16, œil 8×8), un nom, **Envoyer l'image** ; l'aperçu agrandi montre chaque pixel.
+  La page ne juge rien : le robot refuse avec sa raison (taille, format, poids). Une image du même
+  nom est remplacée. Pour la voir : une expression qui la cite, puis Rejouer.
+- **Après une séance de réglage** : `git diff data/` montre les retouches, `git status` les
+  créations ; commiter AVEC `data/json/validations-sim.json` (les tampons posés). Les sauvegardes
+  et le journal des éditions sont dans `data/json/backup/` (non versionné).
+- **Sur le vrai robot** : panneau absent tant que `edition_donnees` est faux (décision de David) ;
+  activé, pas d'états ni de bouton de validation (la porte sim n'existe qu'en domaine 43).
+- **Détails** : protocole dans `docs/interfaces.md` § « API web » (types `data_edit`,
+  `valider_roues`, `GET /api/data`) ; vérifié dans un navigateur sur la sim le 13/11 (création,
+  retouche, Rejouer tamponné, JSON illisible, refus de contrat, roues validées, PNG refusé puis
+  accepté et affiché par `face_sim`, panneau absent drapeau OFF).
+
+### Rapatrier avant de déployer (lot L1d-4, 13/11)
+Une retouche faite SUR le robot (édition activée) n'existe que sur le Pi : le déploiement suivant
+l'écraserait. Chaque écriture y laisse une ligne au journal `json/backup/EDITIONS-EN-ATTENTE.jsonl`.
+- **Le déploiement refuse** tant que ce journal n'est pas vide (« N édition(s) non rapatriée(s) »),
+  et `./ecart-pi.sh robot` est rouge (volet c). Alors, depuis `deploy/` :
+  ```bash
+  ansible-playbook -i hosts rapatrier-editions.yml -e target_group=robot
+  # depuis un worktree sans .venv : -e python_tests=<checkout principal>/.venv/bin/python
+  ```
+  Il ramène dans `data/` du PC chaque séquence et image retouchée, et pour `expressions.json`,
+  `robot_lights.json`, `lights_base.json` SEULEMENT les entrées retouchées (une entrée commitée
+  sur le PC et pas encore déployée n'est pas écrasée). Il refuse sans rien copier si un fichier
+  visé a une modification locale non commitée. Il lance les tests de `data/` : rouges, `data/` est
+  remis tel qu'il était et le journal reste en attente. Verts : copie de chaque élément et archive
+  du journal dans `json/backup/<date>/` du Pi, puis `git status` et ce qui reste à rejouer.
+  **Il ne commite pas.**
+- **Ensuite** : relire `git diff data/`, `machines/sim/rejouer-modifiees.sh` (la seconde garde
+  refuse sinon, sans échappatoire), valider à l'œil les pistes roues touchées, commiter avec
+  `data/json/validations-sim.json`, déployer.
+- **Écraser quand même** (retouches d'essai) : `deploy-pios.yml -e ecraser_editions=true` — le
+  journal est archivé en `json/backup/<date>/EDITIONS-ecrasees-<HHMMSS>.jsonl`, les sauvegardes
+  restent sur le Pi.
+- **Activer l'édition sur le robot** : `edition_donnees: false` dans `machines/robot/machine.yml`
+  (décision de David) ; essai ponctuel `deploy-pios.yml -e edition_donnees=true`, puis
+  redéploiement par défaut. Un `docker compose up` lancé à la main la remet à faux.
+- **Limite** : une image CRÉÉE sur le robot fait rougir `test_visuels_png.py` (il grave le compte
+  des images) — le rapatriement la refuse tant que ce compte n'est pas revu (relevé au L1d-4).
 
 ## Premier déploiement d'une branche sur les Pi hors robot (vécu le 2026-11-04, L1b+L1c)
 
