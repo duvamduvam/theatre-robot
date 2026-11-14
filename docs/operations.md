@@ -50,8 +50,8 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   résout à la racine. Toujours préfixer (`ros2 topic pub /didier/face …`) et
   lancer les `ros2 run` avec `--ros-args -r __ns:=/didier`. Les scripts CLI de
   `machines/<machine>/scripts/` et `machines/sim/` posent `NS="/${ROBOT_NAME:-didier}"` et préfixent tout.
-- Vérif en sim (démarrer la sim avec `ROBOT_NAME=didier2`, puis sans) :
-  `docker exec dadou-sim-container bash /home/ros2_ws/validate-namespace.sh`
+- Vérif en sim (démarrer la sim avec `ROBOT_NAME=didier2`, puis sans ; épreuves dans le conteneur `monde`) :
+  `docker exec didier-sim-monde bash /home/ros2_ws/validate-namespace.sh`
   — tout topic/nœud sous le namespace, twist_mux configuré, bridge relayé.
 - ⚠️ **Vrai robot** : les topics roues ont changé de nom (namespace, pas le
   code) — **protocole caméra à rejouer** (`validate-cmdvel-protocol.sh`, roues
@@ -60,7 +60,7 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
 ## Version déployée et catalogue publié (lot L1c, 04/11)
 - Le robot publie, latchés, `catalogue` (ce qu'il sait jouer : faces, audios,
   animations, relais, lumières, visuels) et `deploy_sha` (sa version). Nœud
-  `catalogue_node`, lancé par `robot_app.launch.py` et par la sim.
+  `catalogue_node`, lancé par `robot_app.launch.py` (sur le Pi comme dans le conteneur `robot` de la sim).
 - **Badge version** dans le bandeau de la console et de la page scène : `dev` en
   sim, sinon les 7 premiers caractères du sha. **`-dirty`** (badge orange) = l'arbre
   rsyncé n'était PAS un commit propre : le sha seul mentirait, il faut lire le
@@ -73,7 +73,7 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   jamais exécutée à ce jour (04/11) — le premier déploiement robot doit afficher son sha.
   `conf/DEPLOY_SHA` est dans le `.gitignore` : il ne doit jamais exister côté PC (la
   sim afficherait un faux sha).
-- Vérif en sim : `docker exec dadou-sim-container bash /home/ros2_ws/validate-catalogue.sh`
+- Vérif en sim : `docker exec didier-sim-monde bash /home/ros2_ws/validate-catalogue.sh`
   (6 familles non vides, sha `dev`, une séquence déposée apparaît en <= 5 s).
   À la main : `ros2 topic echo /didier/catalogue --once --qos-durability transient_local --field msg`.
 
@@ -83,7 +83,7 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   robot, l'activer est une décision de David (après L1d-4 et une relecture adverse). Contrat,
   codes et ordre d'écriture : `docs/interfaces.md` § « Data editing through the robot ».
 - **Retoucher une séquence, une expression, une lumière ou une brique (sim)** : sim lancée avec
-  `DATA_EDIT=true ANIMATIONS=true FACE=true` ; publier sur `/didier/data_edit` un StringTime dont
+  `DATA_EDIT=true FACE=true` ; publier sur `/didier/data_edit` un StringTime dont
   `msg` est `{"id", "kind", "mode": "create"|"replace", "name", "content", "base_sha256"?}` et
   lire le verdict sur `/didier/data_edit_result` (rclpy plutôt que la CLI, qui perd des messages ;
   modèle : `machines/sim/validate-data-edit.sh`). En `replace`, `base_sha256` = sha256 des octets
@@ -100,8 +100,8 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   ne produit qu'UN `cmd_vel` non nul, coupé 0,41 s plus tard par `twist_deadman` — les pistes
   roues jouent des impulsions. Non corrigé (chemin roues intouché) ; à traiter avant le premier
   roulage au sol.
-- **Épreuve sim** : `docker exec dadou-sim-container bash /home/ros2_ws/validate-data-edit.sh`
-  (13 épreuves, la 13e = porte sim ; ≈ 50 s ; lance puis arrête la chaîne roues ; restaure ce
+- **Épreuve sim** : `docker exec didier-sim-monde bash /home/ros2_ws/validate-data-edit.sh`
+  (13 épreuves, la 13e = porte sim ; ≈ 50 s ; la chaîne roues tourne dans le conteneur `robot` depuis L2b ; restaure ce
   qu'elle touche dans `data/`, registre compris — code 1 si un résidu reste). Jouée aussi par la
   fumée (`ATTENDU_EDITION=13`).
 
@@ -111,8 +111,8 @@ Rien de modifié n'atteint le vrai robot sans avoir été joué en sim. **Regist
 un tampon `rejeu` par séquence, expression et lumière (empreinte de ce qui a été joué jusqu'au
 bout), un tampon `roues` par piste roues (`origine_roues` : `sim` = vue à l'œil, `heritee` = sur
 le robot avant L1d, jamais regardée en sim). **Ne jamais le retoucher à la main.**
-- **Qui tamponne** : l'observateur `validation_sim_node` (`didier_web`), lancé par `sim.launch.py`
-  seul (refus hors domaine 43). Il regarde ce qui se joue, quel que soit le déclencheur (page,
+- **Qui tamponne** : l'observateur `validation_sim_node` (`didier_web`), lancé par
+  `complement_sim.launch.py` seul (conteneur `robot` de la sim, L2b ; refus hors domaine 43). Il regarde ce qui se joue, quel que soit le déclencheur (page,
   régisseur, script, `ros2 topic pub`) : séquence jouée jusqu'au bout (entre 0,95 × `duration` et
   `duration` + 5 s), sans ERROR au journal du robot, nœuds toujours là, et pour une piste roues
   `cmd_vel` nul 1 s après la fin (chaîne roues lancée) ; expression / lumière tenue
@@ -145,8 +145,8 @@ le robot avant L1d, jamais regardée en sim). **Ne jamais le retoucher à la mai
 L'outil de **réglage** (pas l'éditeur final) : texte JSON + Envoyer + verdict, envoi d'image,
 Rejouer, validation des roues. Il n'existe que si le pont relaie les retouches (drapeau
 `DATA_EDIT=true`, le même que l'écrivain) ; sinon le panneau n'apparaît pas.
-- **Ouvrir** : sim lancée avec `DATA_EDIT=true WEB=true ANIMATIONS=true FACE=true` (+ la chaîne
-  roues pour valider une piste roues), http://localhost:8765/scene, prendre la main, puis
+- **Ouvrir** : sim lancée avec `DATA_EDIT=true FACE=true` (pont web, animations et chaîne roues
+  tournent d'office depuis L2b), http://localhost:8765/scene, prendre la main, puis
   **« Éditer les données »** en bas de la colonne de droite (il prend la place du fil de
   conversation ; STOP reste au centre).
 - **Retoucher une séquence, une expression, une lumière ou une brique** : choisir la famille, un
@@ -329,9 +329,9 @@ toujours `legacy/dadou_vision_ros/` (`db/`, `medias/` d'exécution, non suivis).
 cd packages/didier_vision && .venv/bin/python -m pytest -q -o addopts=
 ```
 
-Banc x86 : `cd machines/sim/banc-vision && docker compose -f docker-compose-x86.yml build`
-(le Dockerfile du Pi 5, `machines/vision/docker/Dockerfile`, contextes nommés — L2a), puis vider `workspace/{build,install,log}` (l'ancien `install/vision`
-n'a plus de raison d'exister) et poser `touch packages/didier_vision/change`.
+Banc PC : `cd machines/sim && docker compose build vision` (le Dockerfile du Pi 5,
+`machines/vision/docker/Dockerfile`, contextes nommés — L2a) ; depuis L2b la vision du PC est le
+service `vision` de la sim (`build/` et `install/` non persistés : colcon à chaque `up`).
 
 ## Le cœur `didier_core` (lot L1e-3c, 07/11)
 
@@ -369,8 +369,8 @@ déplacés tels quels ; voir `data/README.md`). **Rien ne change sur le Pi ni da
   `CLAUDE.md`, réglages d'éditeur, `launch.txt`…) sont effacés du Pi s'ils y sont encore (liste
   `chemins_retires_legacy_robot`). Depuis L1e-4c la vision ne reçoit plus que `machines/vision/`
   (déchets de son ancienne copie « projet » : `chemins_retires_legacy_vision`).
-- **Compose et images** : sim et banc x86 (`machines/sim/banc-robot/` depuis L1e-4c) montent
-  `../../../data/{json,medias}` et copient
+- **Compose et images** : la sim (`machines/sim/docker-compose.yml` depuis L2b, services `robot` et
+  `monde`) monte `../../data/{json,medias}` et copie
   par un contexte nommé `data` (`COPY --from=data json/ …`). Le compose ARM tourne SUR LE PI :
   `data: ../../..` (= `src/robot/`, où Ansible a posé les données), montages `../../../json`
   inchangés. ⚠️ Après ce lot, l'image ARM du robot a été reconstruite sur le Pi puis poussée.
@@ -387,11 +387,11 @@ Décision de David du 13/11 : aucun fichier sonore dans ce dépôt public (des c
   arborescence que l'ancien `data/medias/audios/` (254 audios au 14/11). Le dépôt n'en garde que le
   manifeste `data/json/audios-prives.json` (chemin, sha256, taille, durée des wav) ;
   `data/medias/audios/` est ignoré par git, sauf son README.
-- **Sim** : `docker-compose-sim.yml` (et le banc x86 du robot) monte le dossier privé en lecture
-  seule sur `/home/ros2_ws/src/robot/medias/audios`. Dossier absent : Docker le crée vide et
-  `launch-sim-in-docker.sh` affiche « AVERTISSEMENT audios privés » en tête du journal. La sim ne
-  lance pas `audio_node` (aucun son n'y est joué) ; l'écrivain des données y juge les séquences à
-  audio contre ce dossier.
+- **Sim** : `machines/sim/docker-compose.yml` monte le dossier privé en lecture seule sur
+  `/home/ros2_ws/src/robot/medias/audios` des conteneurs `monde` et `robot`. Dossier absent : Docker
+  le crée vide et `monde/entree.sh` affiche « AVERTISSEMENT audios privés » en tête du journal de
+  `monde`. Depuis L2b `audio_node` tourne dans le conteneur `robot` (vrai bringup, sans carte son :
+  aucun son joué) ; l'écrivain des données y juge les séquences à audio contre ce dossier.
 - **Pi robot** : Ansible (rôle `synchronise`) vérifie le dossier privé contre le manifeste, le copie
   dans `src/robot/medias/audios/` (chemin inchangé), relit les sha sur le Pi ; `ecart-pi.sh robot`,
   volet (d). Détail : `docs/ansible-ecarts.md`.
@@ -476,26 +476,21 @@ Pas de build colcon ni de sim : la fumée nocturne s'en charge.
   `ssh pi@192.168.1.151 'sudo docker restart dadou-vision-container'` restores it.
 
 ## Web interface in sim (W0 + W3 sim)
-- `cd machines/sim/banc-robot && WEB=true docker compose -f docker-compose-sim.yml up -d`
-  then open `http://localhost:8765` (`WEB_PORT` overrides it — the container
-  runs on host networking, 8088 was already taken by Superset on the dev PC).
-  Add `ANIMATIONS=true` alongside `WEB=true`
-  to also trigger sequences from the UI's "Animations" grid (otherwise
-  `animation` publishes but nothing replays it).
+- `cd machines/sim && docker compose up -d` then open `http://localhost:8765`
+  (`WEB_PORT` overrides it — the containers run on host networking, 8088 was already
+  taken by Superset on the dev PC). Since L2b the `robot` container runs the REAL
+  bringup: the web bridge and `animations_node` always run (no more `WEB`/`ANIMATIONS`).
 - Console = colonne DIRECT (vidéo caméra embarquée + pad de pilotage + manette +
   STOP) et colonne CONTENUS (recherche + animation/face/audio/lumières, panneau
   technique servos/relais/gaze/système/calibration). La whitelist `cmd` n'expose
   ni roues ni e_stop — voir [`interfaces.md`](interfaces.md) §"API web".
-- **Conduire dans Gazebo (SIM-ONLY, W3)** — deux conditions, dans cet ordre :
-  1. Lancer la console AVEC le pilotage : `WEB=true WEB_DRIVE=true docker compose
-     -f docker-compose-sim.yml up -d`. `WEB_DRIVE` active le publisher
-     `cmd_vel_web` (twist_mux prio 50) ; sans lui le pad reste grisé.
-  2. Lancer la chaîne roues À LA MAIN dans le conteneur (elle n'est PAS démarrée
-     par le launch sim, par prudence — pas de mouvement automatique) :
-     `docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
-     && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive
-     drive.launch.py use_sim_time:=true'`. Le pad/la manette bougent alors Didier
-     dans Gazebo (la télécommande physique, prio 100, garderait la main).
+- **Conduire dans Gazebo (SIM-ONLY, W3)** : lancer la sim AVEC le pilotage,
+  `WEB_DRIVE=true docker compose up -d`. `WEB_DRIVE` active le publisher `cmd_vel_web`
+  (twist_mux prio 50) ; sans lui le pad reste grisé. Depuis L2b la chaîne roues fait
+  partie du vrai bringup du conteneur `robot` (`use_sim_time:=true`) : elle tourne dès le
+  démarrage, mais rien ne bouge sans commande (pad, manette, route, séquence). Le
+  pad/la manette bougent alors Didier dans Gazebo (la télécommande physique, prio 100,
+  garderait la main).
 - ⚠️ **SIM-ONLY** : rien de ce chemin ne s'active sur le vrai robot. Le passage
   au réel (roues au sol) reste conditionné au test scénique au sol (feuille de
   route §1) PUIS au protocole caméra roues hors sol (etude-interface-web.md §6,
@@ -503,8 +498,9 @@ Pas de build colcon ni de sim : la fumée nocturne s'en charge.
 - ⚠️ **Ne pas fermer la fenêtre Gazebo** : elle porte AUSSI le serveur de
   simulation (gz tourne serveur+GUI dans le même process). La fermer tue la
   sim : plus de robot, plus de caméra (la console web affiche « pas de vidéo »
-  et réessaie toutes les 5 s). Relance : `docker compose ... up -d
-  --force-recreate` avec les mêmes variables.
+  et réessaie toutes les 5 s). Relance : `docker compose down` puis `up -d` avec
+  les mêmes variables (les quatre conteneurs : robot, vision et télécommande partagent
+  l'espace de processus de `monde`).
 
 ## Banc PC — parole et caméra RÉELLES, corps simulé (créé 2026-09-13)
 
@@ -522,30 +518,26 @@ ne vaut pas sur le Pi 5), et le ronflement secteur du Pi reste à régler par
 l'alim batterie. Le banc sert à travailler CONTENU et COMPORTEMENT
 (conversation, personas, didascalies, suivi) en attendant le matériel.
 
-**1. La sim (corps)** — depuis `machines/sim/banc-robot/` du mono-dépôt :
+**1 + 2. La sim (corps) ET la tête réelle** — depuis `machines/sim/` du mono-dépôt, la
+surcouche banc sur le service `vision` (webcam, son, secret ; L2b) :
 ```bash
-ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
+FACE=true docker compose -f docker-compose.yml -f docker-compose.banc.yml build vision   # 1re fois (long)
+CHAT=true FACE=true docker compose -f docker-compose.yml -f docker-compose.banc.yml up -d
 ```
 - `FACE=true` : aperçu web du visage LED sur `http://localhost:8766` — c'est le
   rendu des didascalies de la conversation, invisible dans Gazebo (les matrices
   n'y sont pas modélisées). Exécute le vrai pipeline `Face`/`ImageMapping`.
-- `WEB=true` : console de régie `http://localhost:8765` (fenêtre sur la sim en
-  HEADLESS, boutons animations/face/gaze).
-- Suivi de personne et gaze, à lancer À LA MAIN dans le conteneur (prudence
-  habituelle : pas de mouvement automatique) :
+- Console de régie `http://localhost:8765` (fenêtre sur la sim en HEADLESS, boutons
+  animations/face/gaze) : le pont web tourne toujours (vrai bringup du robot).
+- Suivi de personne et gaze, à lancer À LA MAIN dans le conteneur `robot` (prudence
+  habituelle : pas de mouvement automatique ; la chaîne roues tourne déjà) :
 ```bash
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core person_follower --ros-args -r __ns:=/didier'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
+docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core person_follower --ros-args -r __ns:=/didier'
+docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
 ```
   (puis activer le suivi roues : topic `follow` « on » — il démarre OFF.)
 
-**2. La perception + la parole (tête)** — depuis
-`machines/sim/banc-vision/` :
-```bash
-docker compose -f docker-compose-x86.yml build        # 1re fois seulement (long)
-CHAT=true docker compose -f docker-compose-x86.yml up -d
-```
+**La perception + la parole (tête)** — le service `vision` avec la surcouche ci-dessus :
 - MÊME image que le Pi 5 (`machines/vision/docker/Dockerfile`, le Dockerfile unique de la
   vision depuis L2a, construit en x86 natif ; base multi-arch) ;
   `person_tracker` lit la webcam `/dev/video0`, publie `/didier/vision/person` (gaze)
@@ -570,24 +562,20 @@ CHAT=true docker compose -f docker-compose-x86.yml up -d
   appliqué au banc le 13/09 — mêmes symlinks que sur le Pi, dans l'install
   space (persistant, c'est le workspace monté ; à REFAIRE si un colcon build
   les efface — symptôme : chat meurt sur « Secret LLM manquant ») :
-  `docker exec dadou-vision-x86-container bash -c 'sp=/home/ros2_ws/install/vision/lib/python3.12/site-packages; ln -sfn /home/ros2_ws/src/vision/conf $sp/conf; ln -sfn /home/ros2_ws/src/vision/medias $sp/medias'`
+  `docker exec didier-sim-vision bash -c 'sp=/home/ros2_ws/install/vision/lib/python3.12/site-packages; ln -sfn /home/ros2_ws/src/vision/conf $sp/conf; ln -sfn /home/ros2_ws/src/vision/medias $sp/medias'`
   **Obsolète depuis L1e-3d (08/11)** : `vision_config` lit la racine des données dans
   `DIDIER_VISION_DATA_DIR` (posée par le compose), plus de calcul depuis l'emplacement du
   package — ces symlinks ne servent plus à rien (l'install-space est `install/didier_vision`).
-- ⚠️ **Le code qui tourne est celui de `workspace/install`, pas des sources
-  montées** (ament_python COPIE les sources au build) : après tout changement
-  de `packages/didier_vision/`, poser la sentinelle `touch packages/didier_vision/change` puis
-  redémarrer le conteneur (vécu le 14/10 : chat_node tournait avec le code du
-  13/09 malgré les sources à jour). Et **après un rebuild d'IMAGE**
-  (`docker compose -f docker-compose-x86.yml build`), vider `workspace/{build,install,log}` avant de relancer :
-  le `build/` de l'ancienne image référence des libs qui n'existent plus
-  (`libfastcdr.so.2.2.7` → `robot_interfaces` échoue, chat_node reste
-  l'ancien). Puis refaire les symlinks ci-dessus.
+- ⚠️ **Le code qui tourne est celui de `install/`, pas des sources montées**
+  (ament_python COPIE les sources au build) : depuis L2b `build/` et `install/` ne sont plus
+  persistés, colcon tourne à chaque `up` — après un changement de `packages/didier_vision/`,
+  `docker compose … up -d --force-recreate vision` suffit (vécu le 14/10 avec l'ancien banc :
+  chat_node tournait avec le code du 13/09 malgré les sources à jour).
 
 **Ce qu'on voit alors** : on se place devant la webcam → le Didier de Gazebo
 tourne la tête (gaze) et pivote/avance (suivi, si activé) ; on parle dans le
-micro → réponse dans les enceintes, gestes « parle » dans Gazebo
-(`ANIMATIONS=true` requis), didascalies sur l'aperçu visage 8766.
+micro → réponse dans les enceintes, gestes « parle » dans Gazebo, didascalies sur
+l'aperçu visage 8766 (`FACE=true`).
 
 ## V-R3 : pourquoi il a baissé le 06/11, et ce qui l'a rendu fiable (élucidé le 06/11 au soir)
 
@@ -610,8 +598,9 @@ Deux causes distinctes, toutes deux mesurées :
    À reporter dans `validate-rehearsal-route.sh` et `-faults.sh` (même `num()`), pas fait.
 
 Résultat : 21/21 le 06/11 à 23:16 (x final 142,1 m en 575 s, 9 arrêts-lubies sur 9 capturés).
-Rappel : le script EXIGE que drive, rehearsal (scenario chantiers) et gaze_follower soient lancés
-AVANT (sinon « PRÉCONDITION … absent », code 2).
+Rappel : le script EXIGE que rehearsal (scenario chantiers) et gaze_follower soient lancés
+AVANT (sinon « PRÉCONDITION … absent », code 2) ; la chaîne roues tourne dans le conteneur
+`robot` depuis L2b.
 
 ## Séance « Chantiers » — répétition simulée complète (lot R3, 14/10)
 
@@ -620,12 +609,12 @@ Le trajet des Nefs à la grue Titan grise (`docs/etude-repetition-simulee.md`
 chemin déclenchent ses lubies, David joue au casque et à la page scène.
 Tout sur le domaine **43**.
 
-**1. Le corps + la régie** (`machines/sim/banc-robot/`, HEADLESS recommandé) :
+**1. Le corps + la régie** (`machines/sim/`, HEADLESS recommandé ; la chaîne roues tourne dans le
+conteneur `robot`, la répétition se lance dans `monde`, le regard dans `robot`) :
 ```bash
-WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
+WORLD=chantiers REHEARSAL=true FACE=true HEADLESS=true docker compose up -d
+docker exec -d didier-sim-monde bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=chantiers'
+docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
 ```
 - `REHEARSAL=true` : la page scène obtient les boutons route / vitesse /
   séance (SIM-ONLY, jamais sur le robot). `seed:=N` sur le launch rehearsal
@@ -634,8 +623,8 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
   simulé (`camera/image_raw`) ; « Ce qu'il voit (webcam) » = l'image que
   person_tracker analyse (webcam du PC, `camera/image_raw/compressed`) et sur
   laquelle le LLM de réflexion raisonne. Ce 2e panneau (lecture seule, paramètre
-  `perception_topic`) n'apparaît que si le pont l'annonce ; en sim `sim.launch.py`
-  le passe d'office.
+  `perception_topic`) n'apparaît que si le pont l'annonce ; en sim l'entrée du conteneur
+  `robot` (`machines/sim/robot/entree.sh`) le passe d'office.
 - Page scène, quelle vue montre quoi : « Extérieur » = caméra de
   POURSUITE Gazebo (3 m derrière, 2 m au-dessus, tourne avec lui ; `camera_ext/image_raw`,
   `/exterior`, paramètre `exterior_topic`, SIM-ONLY, lecture seule) pour juger comment il
@@ -643,9 +632,9 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
   voit » = l'image analysée par la perception (`/perception`). La vue extérieure exige
   un REDÉMARRAGE de la sim entière (le link et le capteur sont dans le robot spawné).
 
-**2. La tête** (`machines/sim/banc-vision/`) :
-`CHAT=true docker compose -f docker-compose-x86.yml up -d` — puis, depuis la
-page scène, persona **mauvaisefoi**.
+**2. La tête** (`machines/sim/`, surcouche banc) :
+`CHAT=true docker compose -f docker-compose.yml -f docker-compose.banc.yml up -d vision` — puis,
+depuis la page scène, persona **mauvaisefoi**.
 - Au **casque Bluetooth** (M50, profil HFP — réglages du 22/10, banc PC
   seulement, le Pi n'est pas touché) : micro atténué de 12 dB dans
   `asound-pc.conf` (sinon le gate anti-sono bloque la voix) et
@@ -659,9 +648,9 @@ page scène, persona **mauvaisefoi**.
   Ligne attendue au démarrage : « micro de confiance : gate … désactivé ».
 - ⚠️ Tant que l'image vision n'est pas rebâtie avec `av>=14,<15`, chaque
   `compose up` qui RECRÉE le conteneur remet PyAV 19 (whisper casse, STT
-  vide) : `docker exec dadou-vision-x86-container pip install
+  vide) : `docker exec didier-sim-vision pip install
   --break-system-packages --only-binary=:all: "av>=14,<15"` puis
-  `docker restart dadou-vision-x86-container`.
+  `docker restart didier-sim-vision`.
 
 **Depuis un téléphone ou une tablette** : `python3 machines/robot/scripts/rehearsal/publier_nom_sim.py`
 (sur le PC, laisser tourner) publie **`didier-sim.local`** → la page devient
@@ -725,20 +714,20 @@ n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
 
 **Ticket « Noter un problème » (08/11)** : champ du bandeau de la page scène, utilisable sans
 la main. Le pont écrit un JSON dans `log/tickets/` (texte, heure, topics visibles — jamais
-les topics masqués). En sim, `log/` est monté sur le PC : `machines/sim/banc-robot/workspace/log/`
-(gitignoré), il survit aux recréations du conteneur. Le ramasseur qui les range avec les
+les topics masqués). En sim, `log/` est monté sur le PC : `machines/sim/workspace/log/`
+(gitignoré, partagé par `monde` et `robot` depuis L2b), il survit aux recréations des conteneurs. Le ramasseur qui les range avec les
 journaux reste à faire (`docs/seances/2026-11-08-a1-casque.md` #11).
 
 **4. Après** : le journal JSONL de la séance est dans
-`/home/ros2_ws/log/rehearsal/` du conteneur sim (ce qui a été tiré, quand) ;
+`/home/ros2_ws/log/rehearsal/` du conteneur `monde` (`machines/sim/workspace/log/rehearsal/` sur le PC ; ce qui a été tiré, quand) ;
 `machines/robot/scripts/rehearsal/carte_seance.py` en fait la carte.
 
-**Vérification technique rejouable** (sans la tête, dans le conteneur, étapes 1
-faites, route OFF) : `docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-chantiers.sh`
+**Vérification technique rejouable** (sans la tête, dans le conteneur `monde`, étapes 1
+faites, route OFF) : `docker exec didier-sim-monde bash /home/ros2_ws/validate-rehearsal-chantiers.sh`
 (≈ 10 min : arrivée au pied de la Titan, POI dans l'ordre, lubies tirées =
 journal, fermeture au fader, pannes chat publiées, couverture des 20 bugs).
 
-**Vue 3D à la demande** : `docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && gz sim -g'`
+**Vue 3D à la demande** : `docker exec -d didier-sim-monde bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && gz sim -g'`
 (clic droit sur Didier → Follow ; ne pas fermer la fenêtre pendant la séance).
 
 ⚠️ **Piège du PC de dev (14/10) : le CLI `ros2` est capricieux, les nodes non.**
@@ -764,18 +753,17 @@ et un **scénario vide** `jeu-a1` (0 bug, 0 lubie : les lubies viennent du
 sélecteur). Tout se passe sur le domaine **43** ; `jeu_node` refuse de démarrer ailleurs.
 
 ```bash
-cd machines/sim/banc-robot
-WORLD=chantiers REHEARSAL=true FACE=true WEB=true ANIMATIONS=true HEADLESS=true docker compose -f docker-compose-sim.yml up -d --build
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
+cd machines/sim
+WORLD=chantiers REHEARSAL=true FACE=true HEADLESS=true docker compose up -d
+docker exec -d didier-sim-monde bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true'
+docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
 ```
 - Le launch `jeu:=true` démarre **lui-même** le sélecteur (`jeu_node`, respawn).
   Ne pas le lancer à part. Si le répertoire de séquences est illisible, il
   démarre en **mode dégradé** (relais stop/go seul, ligne `degrade` au journal) :
   l'arrêt vocal passe toujours.
-- `--build` est nécessaire une fois : l'image doit contenir `ros-jazzy-py-trees`.
-  Le code de `didier_jeu` est monté en volume et rebâti à chaque démarrage.
+- L'image `monde` contient `ros-jazzy-py-trees` ; le code de `didier_jeu` est monté en volume et
+  rebâti à chaque démarrage.
 - Page scène http://localhost:8765/scene : **Route ON**, **Séance → Démarrer**. La séance
   doit être startée, car le régisseur ignore un « go » hors séance, et c'est par
   ce « go » que Didier repart après SES arrêts. Le panneau **« Jeu »** (sim
@@ -794,16 +782,16 @@ docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh
   `ros2 topic pub -r 16 /didier/vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.3, y: 0.4, z: 0.9}}"`.
   On peut aussi brancher la tête vision et sa webcam.
 - **Journal « pourquoi »** (à relire avec David, ligne par ligne) :
-  `/home/ros2_ws/log/jeu/<horodatage>_<pid>_jeu.jsonl` dans le conteneur
+  `/home/ros2_ws/log/jeu/<horodatage>_<pid>_jeu.jsonl` dans le conteneur `monde`
   (format boîte noire, une ligne par décision, maintien, refus ou relais).
 - Les réglages (`packages/didier_jeu/config/reglages.yaml`) sont des valeurs de
   départ, gravées en test : un réglage se change donc en touchant
   `test_reglages.py`.
 
-**Vérification rejouable** (dans le conteneur, les quatre commandes ci-dessus
+**Vérification rejouable** (dans le conteneur `monde`, les commandes ci-dessus
 lancées ; ≈ 16 min ; le script fait lui-même la mise en route et échoue s'il
 ne lit pas `route_state`) :
-`docker exec dadou-sim-container bash /home/ros2_ws/validate-jeu-a1.sh`.
+`docker exec didier-sim-monde bash /home/ros2_ws/validate-jeu-a1.sh`.
 Le script contient sa propre perception scriptée et joue la console et la bouche ;
 il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
 `jeu:=true` reste vérifiée par `validate-rehearsal-chantiers.sh` (V-R3).
@@ -812,22 +800,26 @@ il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
 
 Un script shell (`machines/sim/fumee.sh` depuis L1e-4c, zéro token) rejoue sur le **checkout de main** toutes
 les épreuves de la sim et compare chaque compteur à une valeur **gravée en tête du script** :
-namespace 5, catalogue 4, `parle` 3 états, V-R3 21, A1 14. Il **mesure, il ne juge pas** ; un
+namespace 5, catalogue 4, `parle` 3 états, édition 13, machines 5 (L2b), V-R3 21, A1 14. Il **mesure, il ne juge pas** ; un
 agent n'intervient que pour lire une page rouge. Pourquoi : l'environnement bouge sans commit
 (paquets Gazebo, Docker, charge du PC — V-R3 est tombé de 21/21 à 18/21 le 06/11 sans
 régression du code) et chaque lot payait ≈ 1 h d'épreuves.
 
 **Ordre, arrêt au PREMIER rouge** (les suivantes restent « non lancée » sur la page) :
-image sim (reconstruite seulement si `machines/sim/banc-robot` a changé depuis la dernière fumée verte,
-ou si elle manque) → sim headless domaine 43 + colcon → **sonde RTF 20 s** (rouge si < 0,8 : le
-reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.sh` → animation
-`parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) → `validate-data-edit.sh`
-(L1d, 13 épreuves ; sim lancée avec `DATA_EDIT=true`) → chaîne roues + régisseur +
-regard puis `validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh`
-(A1). ≈ 40 min.
+les 4 images de la sim (reconstruites seulement si un chemin de `CHEMINS_IMAGES` — `machines/sim/`,
+`machines/{robot,vision}/docker/`, leurs listes de paquets, `legacy/dadou_control_ros/conf/` — a
+changé depuis la dernière fumée verte, ou si l'une manque) → sim multi-conteneurs headless (L2b :
+domaine 43 lu dans les 4 conteneurs, colcon ×4 sans échec, pont gz, `noeuds_attendus` des
+`machine.yml` robot et vision vus depuis `monde`, 600 s au plus) → **sonde RTF 20 s** (rouge si
+< 0,8 : le reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.sh` →
+animation `parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) →
+`validate-data-edit.sh` (L1d, 13 épreuves ; sim lancée avec `DATA_EDIT=true`) →
+`validate-machines.sh` (L2b, M1-M4 et M6) → régisseur (`monde`) + regard (`robot`) puis
+`validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh` (A1). La chaîne
+roues n'est plus lancée par la fumée : elle fait partie du bringup du robot. ≈ 45-50 min.
 
-**Cœurs réservés (08/11)** : pendant la fumée, la sim est seule sur les CPU **8-15** (4 cœurs
-rapides) ; tes processus et tes autres conteneurs sont poussés sur les 28 autres fils, puis tout
+**Cœurs réservés (08/11)** : pendant la fumée, la sim (les 4 conteneurs depuis L2b) est seule sur
+les CPU **8-15** (4 cœurs rapides) ; tes processus et tes autres conteneurs sont poussés sur les 28 autres fils, puis tout
 est rendu à la fin (`machines/sim/coeurs_reserves.py`, sans sudo : `sched_setaffinity` sur tes
 processus, `docker update --cpuset-cpus` sur les conteneurs). Mesuré sous un pic artificiel sur
 les 32 fils : RTF 0,76 sim libre, 0,987 sim sur cœurs réservés. `FUMEE_COEURS=` (vide) la
@@ -850,8 +842,8 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
   `~/.local/state/didier-fumee/journal.log` et sort 0 : **jamais de plage à réserver**, l'essai
   de 30 min plus tard réessaie. Sont reportés : charge 1 min > nb de cœurs × 0,5 (seuil
   `FUMEE_CHARGE_MAX`, 16 sur ce PC de 32 cœurs ; le RTF reste le vrai juge), RTF < 0,8 après
-  démarrage de la sim, **conteneur `dadou-sim-container` déjà présent** (la sim de quelqu'un :
-  jamais touchée), checkout qui n'est pas sur la branche `main`, **plage sans commit** (11/11 :
+  démarrage de la sim, **un conteneur de la sim déjà présent** (`didier-sim-*`, ou l'ancien
+  `dadou-sim-container` tant que L2b n'est pas close — la sim de quelqu'un : jamais touchée), checkout qui n'est pas sur la branche `main`, **plage sans commit** (11/11 :
   fichier LOCAL hors dépôt `~/.config/didier/plages-sans-commit`, une ligne « JOURS DEBUT FIN »,
   jours ISO 1 = lundi, heures pleines, FIN exclue ; la fumée ne démarre ni dedans ni dans l'heure
   d'avant, puisqu'elle commite sa page ; fichier absent = aucune plage ; même fichier lu par une
@@ -871,8 +863,9 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
 **Lire une page** : `docs/fumee/index.html` (la plus récente en tête) → `AAAA-MM-JJ.html` : sha
 testé (`-dirty` = l'arbre de David n'était pas propre, ce qui a été testé n'est pas un commit),
 durée, RTF, charge, une ligne par épreuve avec son compteur (`21 / 21 OK, 0 KO`) et son journal.
-Les journaux sont COPIÉS hors du conteneur avant son arrêt : `docs/fumee/journaux/<id>/`
-(`<épreuve>.log`, `conteneur-<phase>.tar.gz` = logs ROS + journaux de séance + sortie du conteneur,
+Les journaux sont COPIÉS hors des conteneurs avant leur arrêt : `docs/fumee/journaux/<id>/`
+(`<épreuve>.log`, `conteneur-<phase>.tar.gz` = logs ROS + journaux de séance + sortie des 4
+conteneurs (`<service>-docker.log`),
 les fichiers > 1 Mo réduits à leurs 3000 dernières lignes) et **`resultat.json`**, qui est la vérité
 (la page n'en est que le rendu : `python3 machines/sim/fumee_page.py pages --sortie docs/fumee`
 la régénère). **Avant d'accuser une épreuve rouge, regarder le RTF** : sous 0,8 le régisseur
@@ -881,7 +874,7 @@ rouge « interrompue » ; un SIGKILL ou une coupure de courant n'en laisse aucun
 
 **Ce que le script ne fait jamais** : modifier l'arbre de travail hors `docs/fumee/` (le seul
 commit est `git commit -- docs/fumee`, sans `-a` ni `add .`, sans push) ; lancer quoi que ce soit
-hors du domaine ROS 43 (forcé dans la commande, revérifié dans le conteneur) ; laisser la sim
+hors du domaine ROS 43 (posé en littéral par le compose, revérifié dans les quatre conteneurs) ; laisser la sim
 tourner (arrêt en `trap EXIT`, quoi qu'il arrive). Traces transitoires : `validate-catalogue.sh`
 dépose puis supprime `json/sequences/tmp-l1c/` dans l'arbre ; `validate-data-edit.sh` écrit par
 le robot dans `data/` puis restaure tout (empreinte de `json/` et `medias/visuals/` vérifiée).
@@ -921,8 +914,9 @@ docker, VPN `wg-maison`…), perd des milliers de paquets UDP (port 10317) et, u
 six, `ground_truth/odom` n'est jamais relayé vers ROS : la 2e sim de la fumée ne publie alors
 aucun `cmd_vel`. Mesures (10 démarrages par série) : sans `GZ_IP` 3/10 ratés PC calme, 6/10 PC
 chargé ; avec `GZ_IP=127.0.0.1` 0/20, puis 5 passes A1 complètes à 14/14. Correctif : `GZ_IP=127.0.0.1`
-dans `docker-compose-sim.yml` (11/11). Si `ground_truth` se tait à nouveau, regarder d'abord
-`GZ_IP` dans le conteneur. Outils et journaux du diagnostic : `~/.local/state/didier-fumee/diag-a1/` (PC).
+dans le compose de la sim (11/11 ; depuis L2b sur le service `monde` SEUL de
+`machines/sim/docker-compose.yml`, gravé par `test_compose_sim.py`). Si `ground_truth` se tait à nouveau, regarder d'abord
+`GZ_IP` dans le conteneur `monde`. Outils et journaux du diagnostic : `~/.local/state/didier-fumee/diag-a1/` (PC).
 
 ## Salle de répétition simulée — Didier chemine seul dans la rue (lot R1, 2026-10-07)
 
@@ -931,20 +925,19 @@ Monde `rue` + package SIM-ONLY `didier_rehearsal` (étude
 complet et règles de séance : `packages/didier_rehearsal/README.md` (racine du mono-dépôt).
 
 ```bash
-cd machines/sim/banc-robot && WORLD=rue HEADLESS=true ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
-# chaîne roues puis cheminement (OFF au démarrage), même prudence que follow/gaze :
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py'
+cd machines/sim && WORLD=rue HEADLESS=true FACE=true docker compose up -d
+# cheminement (OFF au démarrage), même prudence que follow/gaze ; la chaîne roues tourne (robot) :
+docker exec -d didier-sim-monde bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py'
 # partir / s'arrêter / reprendre au début : topic `route` = "on" | "off" | "restart" ; vitesse 0..1 : topic `route_speed`
-docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route theatre_interfaces/msg/StringTime "{msg: \"on\"}"'
+docker exec didier-sim-monde bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route theatre_interfaces/msg/StringTime "{msg: \"on\"}"'
 # vérification rejouable V-R1 (départ, POI, télécommande qui écrase, zéro franc, arrivée) :
-docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-route.sh
+docker exec didier-sim-monde bash /home/ros2_ws/validate-rehearsal-route.sh
 ```
 
 - **Régisseur de pannes** (lot R2) : lancé par `rehearsal.launch.py` avec le scénario
   `demo` (chargé, en attente) ; `ros2 topic pub -1 /didier/rehearsal/cmd … "{msg: \"start\"}"`
   pour dérouler, `abort` pour tout révoquer ; journal JSONL dans
-  `/home/ros2_ws/log/rehearsal/` (conteneur). Vérif : `validate-rehearsal-faults.sh`.
+  `/home/ros2_ws/log/rehearsal/` (conteneur `monde`). Vérif : `validate-rehearsal-faults.sh`.
 - La route publie sur `cmd_vel_follow` (prio 20) : **le suivi de personne doit
   rester OFF** pendant une route ; la télécommande (prio 100) écrase toujours.
 - La pose vient de la **vérité terrain** gz (`/ground_truth/odom`), pas de
@@ -1140,7 +1133,7 @@ outdoors, in summer. Feeds lot V0b of
   `ssh r '~/ros2_ws/src/*/conf/scripts/collect-incident.sh'` → timestamped
   tarball in `~/incidents/` (logs tail, docker logs/inspect, ROS graph,
   temperatures, disk, dmesg). Testable against the sim:
-  `CONTAINER=dadou-sim-container LOG_DIR=<sim logs> ./collect-incident.sh`.
+  `CONTAINER=didier-sim-robot LOG_DIR=machines/sim/workspace/log ./collect-incident.sh`.
 - **Investigate**: open a Claude session on the workstation and invoke
   `/diag` (skill in `.claude/skills/diag/` — read-only rules, reading-points
   map, known traps). Feed it the tarball.

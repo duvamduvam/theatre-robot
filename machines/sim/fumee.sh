@@ -554,11 +554,27 @@ def lu(m):
 qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL, reliability=ReliabilityPolicy.RELIABLE)
 n.create_subscription(StringTime, NS + '/animation_state', lu, qos)
 pub = n.create_publisher(StringTime, NS + '/animation', 10)
+# L2b : `animation` a plusieurs abonnés (animations_node, web_bridge_node) dans des conteneurs
+# distincts ; « au moins un apparié » ne disait plus qu'animations_node l'était (vu le 14/11 :
+# ETATS=[""], rien reçu au journal du robot). On attend qu'il soit dans le graphe ET que tous
+# les abonnés vus soient appariés ; puis, comme pour toute commande idempotente (operations.md,
+# piège de la CLI), on vérifie PAR L'EFFET : sans « parle » en 5 s, on renvoie (3 envois au plus).
+def abonnes():
+    return [i.node_name for i in n.get_subscriptions_info_by_topic(NS + '/animation')]
 limite = time.monotonic() + 40
-while time.monotonic() < limite and (not etats or pub.get_subscription_count() < 1):
+while time.monotonic() < limite and (not etats or 'animations_node' not in abonnes()
+                                     or pub.get_subscription_count() < len(abonnes())):
     rclpy.spin_once(n, timeout_sec=0.2)
+print('ABONNES=%s apparies=%d' % (json.dumps(sorted(abonnes())), pub.get_subscription_count()))
 m = StringTime(); m.msg = json.dumps('parle'); m.time = 3000; m.anim = False
-pub.publish(m)
+for envoi in range(1, 4):
+    pub.publish(m)
+    fin_envoi = time.monotonic() + 5
+    while time.monotonic() < fin_envoi and 'parle' not in etats:
+        rclpy.spin_once(n, timeout_sec=0.2)
+    if 'parle' in etats:
+        break
+print('ENVOIS=%d' % envoi)
 limite = time.monotonic() + 20
 while time.monotonic() < limite and not (len(etats) >= 3 and etats[-1] == ''):
     rclpy.spin_once(n, timeout_sec=0.2)

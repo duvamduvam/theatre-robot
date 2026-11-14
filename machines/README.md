@@ -7,7 +7,7 @@ est dans `packages/`, le contenu du robot dans `data/`, Ansible dans `deploy/`.
 |---|---|---|
 | `robot/` | Pi 4 du robot (hôte `r`) | conf complète (ex `legacy/dadou_robot_ros/conf/` sans la sim) |
 | `vision/` | Pi 5 de la tête (hôte `ai`) | conf complète (ex `legacy/dadou_vision_ros/{conf,mediamtx}`) |
-| `sim/` | le PC de David (bancs, pas un hôte Ansible) | `banc-robot/` (sim Gazebo), `banc-vision/`, scripts de vérification, fumée et sa minuterie |
+| `sim/` | le PC de David (pas un hôte Ansible) | sim multi-conteneurs depuis L2b (`docker-compose.yml` : `monde`, `robot`, `vision`, `telecommande`, mêmes Dockerfiles que les Pi), surcouche banc vision, épreuves, fumée et sa minuterie |
 | `telecommande/`, `gant-gauche/`, `gant-droit/` | console de pilotage, gants | `machine.yml` seul : le code et la conf sont encore dans `legacy/dadou_control_ros/` (lot L4) |
 | `lights/` | — | vide (pas encore d'hôte) |
 
