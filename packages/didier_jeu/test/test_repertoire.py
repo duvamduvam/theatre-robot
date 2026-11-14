@@ -8,7 +8,7 @@ from conftest import DEPLACEMENTS_YAML, SEQUENCES
 # SANS piste roues. Une séquence ajoutée/retirée dans json/ fait rougir ici.
 JOUABLES = [
     "eternel-short/appel-eternel-life.json",
-    "eternel-show/appel-eternel-life.json", "eternel-show/bon-attend.json",
+    "eternel-show/appel-eternel-life-show.json", "eternel-show/bon-attend.json",
     "eternel-show/c-est-qui-le-con.json", "eternel-show/internet.json",
     "eternel-show/little-move.json", "eternel-show/little-neck.json",
     "eternel-show/little-neck2.json", "eternel-show/neck-side-to-side.json",
@@ -82,9 +82,11 @@ def test_emplois_grave():
                       "quand-on-voit", "quoi-ma-geule", "eye-left"],
     }
     # types [] : chargées mais sans emploi (journalisées au démarrage).
-    assert sans_emploi == ["appel-eternel-life", "internet", "upload-cerveau", "warning"]
-    # Homonymes SANS emploi (eternel-short/ et eternel-show/) : listés, pas refusés.
-    assert doublons == ["appel-eternel-life"]
+    assert sans_emploi == ["appel-eternel-life", "appel-eternel-life-show", "internet",
+                           "upload-cerveau", "warning"]
+    # Plus d'homonyme depuis le 13/11 : la copie de eternel-show/ (masquée sur le Pi, où
+    # eternel-short/ est lue en dernier et gagne) s'appelle appel-eternel-life-show.
+    assert doublons == []
 
 
 def test_vocabulaire_de_deplacements_grave():
