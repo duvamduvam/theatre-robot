@@ -90,11 +90,11 @@ def test_demande_morte_repond_dropped_trop_tot():
     def arrive(demande):
         return {"demande": demande, "effect": "accepted", "reason": None, "source": "director"}
     sel = fabriquer(pools={})
-    evs = [(0.0, marche), (1.0, bouche({"cmd": "aller_voir", "objet": "flaque"})),
-           (5.0, lambda s, t: s.sur_goto_result({"name": "flaque", "result": "arrived"}, t)),
+    evs = [(0.0, marche), (1.0, bouche({"cmd": "aller_voir", "objet": "banc"})),
+           (5.0, lambda s, t: s.sur_goto_result({"name": "banc", "result": "arrived"}, t)),
            (7.0, bouche(ELEPHANT))]
     out = jouer_regisseur(sel, 12.0, evs, arrive)
-    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "flaque"})]
+    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "banc"})]
     assert reponses(out) == [(10.0, {"demande": ELEPHANT, "effect": "dropped", "reason": "trop_tot",
                                      "source": "jeu"})]
     refus = [(t, p["pourquoi"], p["code"]) for t, p in journal(out, "refus")]

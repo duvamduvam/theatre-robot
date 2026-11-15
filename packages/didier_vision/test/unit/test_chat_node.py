@@ -465,8 +465,11 @@ def test_abonnement_objets_conditionne_au_mouvement_et_latche():
     blocs = [node for node in ast.walk(init) if isinstance(node, ast.If)
              and ast.unparse(node.test) == "config['chat_move_enabled']"]
     assert len(blocs) == 1, "bloc `if config['chat_move_enabled']:` absent ou en double"
-    attendu = [("StringTime", "REHEARSAL_OBJECTS_TOPIC", "self._on_objects")]
+    # 15/11 : objets proches (jeu/objets_proches) sous la MÊME condition.
+    attendu = [("StringTime", "REHEARSAL_OBJECTS_TOPIC", "self._on_objects"),
+               ("StringTime", "JEU_OBJETS_PROCHES_TOPIC", "self._on_near")]
     assert _subscriptions(blocs[0]) == attendu
+    attendu = attendu[:1]
     assert [a for a in _subscriptions(init) if a[1] == "REHEARSAL_OBJECTS_TOPIC"] == attendu
     assert ("self.create_subscription(StringTime, REHEARSAL_OBJECTS_TOPIC, self._on_objects, "
             "QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))"
@@ -477,7 +480,9 @@ def test_on_objects_decode_refuse_ou_remplace_sans_nouvelle_session():
     calls = _calls_in_method(CHAT_NODE_SOURCE, "_on_objects")
     assert "stage.decode_objects_payload" in calls
     assert "personas.objects_prompt" in calls
-    assert "self._brain.set_objects_prompt" in calls
+    # 15/11 : composé avec les objets proches, puis remis au cerveau.
+    assert "self._refresh_objects_prompt" in calls
+    assert "self._brain.set_objects_prompt" in _calls_in_method(CHAT_NODE_SOURCE, "_refresh_objects_prompt")
     assert "self.get_logger().warning" in calls
     # La spec l'exige : la session LLM n'est PAS réinitialisée.
     assert "self._brain.reconfigure" not in calls
@@ -657,9 +662,21 @@ def test_topic_reponse_au_geste_contrat_partage():
 def test_objets_disent_les_tours_au_cerveau():
     source = ast.unparse(_chat_node_method(_chat_node_tree(), "_on_objects"))
     assert "tours = stage.decode_tours_payload(ros_msg.msg)" in source
-    assert "self._brain.set_objects_prompt(personas.objects_prompt(objects, tours))" in source
+    assert "self._objects_line = personas.objects_prompt(objects, tours)" in source
     # Garde déterministe des gestes (15/11 21:21).
     assert "self._engine.set_gesture_vocabulary([name for name, _desc in objects], tours)" in source
+
+
+def test_objets_proches_contrat_et_peremption():
+    consts = _module_string_constants(_chat_node_tree())
+    assert consts.get("JEU_OBJETS_PROCHES_TOPIC") == "jeu/objets_proches"
+    contrat = (Path(__file__).resolve().parents[3] / "theatre_contrats" / "theatre_contrats"
+               / "topics.py").read_text(encoding="utf-8")
+    assert "JEU_OBJETS_PROCHES = 'jeu/objets_proches'" in contrat
+    near = ast.unparse(_chat_node_method(_chat_node_tree(), "_on_near"))
+    assert "personas.near_prompt(stage.decode_near_payload(ros_msg.msg))" in near
+    expire = ast.unparse(_chat_node_method(_chat_node_tree(), "_expire_near"))
+    assert "time.monotonic() - self._near_at > NEAR_TTL_S" in expire
 
 
 def test_reponse_au_geste_illisible_ignoree_sinon_move_task():

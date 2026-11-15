@@ -454,6 +454,38 @@ def decode_tours_payload(raw) -> list:
     return tours
 
 
+# Objets PROCHES (jeu/objets_proches, sélecteur de jeu, 15/11 21:29) : bornes.
+NEAR_MAX = 6
+NEAR_SIDES = ("devant", "gauche", "droite", "derriere")
+
+
+def decode_near_payload(raw) -> list:
+    """Payload de jeu/objets_proches -> [(name, distance_m, cote)] dans l'ordre
+    reçu (trié par distance côté producteur), au plus NEAR_MAX. TOLÉRANT
+    élément par élément (nom chaîne non vide, distance nombre fini >= 0, côté
+    connu) ; illisible -> [] (pas de ligne : mieux vaut rien qu'un faux voisin)."""
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(value, list):
+        return []
+    out = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        name, dist, side = item.get("name"), item.get("distance_m"), item.get("cote")
+        if not isinstance(name, str) or not name.strip() or side not in NEAR_SIDES:
+            continue
+        if isinstance(dist, bool) or not isinstance(dist, (int, float)) or not dist == dist \
+                or dist < 0 or dist == float("inf"):
+            continue
+        out.append((name.strip()[:OBJECT_NAME_MAX_CHARS], float(dist), side))
+        if len(out) == NEAR_MAX:
+            break
+    return out
+
+
 def encode_transcript(role: str, text: str, t_ms: int) -> str:
     """Payload StringTime du topic `chat_transcript` (§13.6) : JSON
     {"role", "text", "t_ms"}. ensure_ascii=False : le texte est lu par un

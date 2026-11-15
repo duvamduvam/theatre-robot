@@ -357,3 +357,16 @@ def test_issue_d_un_autre_nom_ignoree_apres_acceptation():
     assert task.on_result(ARRIVEE_ANCIEN, T0 + 5.0) is None             # « elephant » ≠ « tour de elephant »
     assert task.on_result(_arrive("tour de elephant", 9.4), T0 + 30.0).startswith(
         "Ton geste « tour de elephant » est terminé (9.4 m parcourus).")
+
+
+def test_trop_loin_dit_la_distance():
+    # Scène du 15/11 21:29 : « tour du banc » à 22,2 m refusé par le sélecteur.
+    banc = {"cmd": "tour_de", "objet": "banc", "sens": "gauche"}
+    task = MoveTask()
+    task.gesture_emitted("fais le tour du banc", False, T0, gesture=dict(banc))
+    texte = task.on_reply({"demande": banc, "effect": "dropped", "reason": "trop_loin", "distance_m": 22.2,
+                           "source": "jeu"}, T0 + 0.1)
+    assert texte.startswith("Ton geste « faire le tour de banc » n'a PAS eu lieu : il est à 22 m d'ici, bien "
+                            "plus loin, ce n'est pas ce que tu vois autour de toi. Tu n'as pas bougé.")
+    sans = _tache_elephant().on_reply(_reponse("dropped", "trop_loin", source="jeu"), T0 + 0.1)
+    assert sans.startswith("Ton geste « faire le tour de elephant » n'a PAS eu lieu : c'est trop loin d'ici.")

@@ -320,6 +320,13 @@ ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
 # (didier_vision.ai.move_task.MoveTask.on_reply). VOLATILE (une vieille
 # réponse rejouée ferait dire un échec hors de propos).
 CHAT_MOVE_REPLY_TOPIC = "rehearsal/chat_move_reply"
+# Objets PROCHES (15/11 21:29) : StringTime JSON [{"name", "distance_m",
+# "cote"}] publié à 1 Hz par le sélecteur de jeu — contrat
+# theatre_contrats.topics.JEU_OBJETS_PROCHES (gravé des deux côtés). Écouté
+# SEULEMENT si le mouvement à la voix est branché ; la ligne « Autour de toi en
+# ce moment » s'ajoute aux objets, et tombe si le flux se tait NEAR_TTL_S.
+JEU_OBJETS_PROCHES_TOPIC = "jeu/objets_proches"
+NEAR_TTL_S = 3.0
 # Période du contrôle « geste resté sans réponse » (MoveTask.check_ack, borne
 # ACK_TIMEOUT_S) : 0,5 s suffit, la borne est de plusieurs secondes.
 MOVE_ACK_PERIOD_S = 0.5
@@ -987,10 +994,16 @@ class ChatNode(Node):
         # Vocabulaire d'objets (cf. REHEARSAL_OBJECTS_TOPIC) : rien n'est
         # écouté sans mouvement à la voix — le prompt ne propose alors aucun
         # objet (et MOVE_TEMPLATE n'est pas dans le system prompt non plus).
+        # Ligne d'objets (rehearsal/objects) et objets proches (jeu/objets_proches) :
+        # composées ensemble par _refresh_objects_prompt (thread rclpy seul).
+        self._objects_line = ""
+        self._near_line, self._near_at = "", None
         if config["chat_move_enabled"]:
             self.create_subscription(
                 StringTime, REHEARSAL_OBJECTS_TOPIC, self._on_objects,
                 QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+            self.create_subscription(StringTime, JEU_OBJETS_PROCHES_TOPIC, self._on_near, 10)
+            self.create_timer(1.0, self._expire_near)
         # Issue des gestes (cf. ROUTE_GOTO_RESULT_TOPIC) : même condition, via
         # la tâche (créée seulement si le mouvement à la voix l'est).
         if self._move_task is not None:
@@ -1251,7 +1264,8 @@ class ChatNode(Node):
             return
         # Même payload : les objets dont on peut faire le tour (champ `tour`).
         tours = stage.decode_tours_payload(ros_msg.msg)
-        self._brain.set_objects_prompt(personas.objects_prompt(objects, tours))
+        self._objects_line = personas.objects_prompt(objects, tours)
+        self._refresh_objects_prompt()
         # Garde déterministe des gestes (15/11 21:21) : hors vocabulaire, jamais publié.
         self._engine.set_gesture_vocabulary([name for name, _desc in objects], tours)
         self.get_logger().info(
@@ -1274,6 +1288,23 @@ class ChatNode(Node):
         if self._move_task.on_result(payload, time.monotonic()) is not None:
             self.get_logger().info(
                 f"tâche : continuation (geste {self._move_task.steps}/{TASK_MAX_STEPS})")
+
+    def _refresh_objects_prompt(self):
+        """Objets + objets proches -> cerveau (sans reconfigure : spec §2.1)."""
+        line = " ".join(part for part in (self._objects_line, self._near_line) if part)
+        self._brain.set_objects_prompt(line)
+
+    def _on_near(self, ros_msg):
+        """Objets proches (cf. JEU_OBJETS_PROCHES_TOPIC) : illisible = pas de ligne."""
+        self._near_line = personas.near_prompt(stage.decode_near_payload(ros_msg.msg))
+        self._near_at = time.monotonic()
+        self._refresh_objects_prompt()
+
+    def _expire_near(self):
+        """Flux muet depuis NEAR_TTL_S : la ligne tombe (jamais un voisin périmé)."""
+        if self._near_line and (self._near_at is None or time.monotonic() - self._near_at > NEAR_TTL_S):
+            self._near_line = ""
+            self._refresh_objects_prompt()
 
     def _on_move_reply(self, ros_msg):
         """Réponse au geste (cf. CHAT_MOVE_REPLY_TOPIC) : JSON illisible =

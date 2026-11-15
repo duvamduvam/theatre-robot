@@ -187,6 +187,25 @@ def _tours_sentence(tours) -> str:
     return line + "." if count else TOURS_NONE
 
 
+# Objets PROCHES (15/11 21:29, jeu/objets_proches) : distance et côté depuis la
+# position RÉELLE de Didier. Sans eux, le LLM disait « le banc est là, bien en
+# vue » (il était à 22 m) et partait le chercher. Texte EXACT gravé.
+NEAR_PREFIX = "Autour de toi en ce moment : "
+NEAR_SUFFIX = (" Un objet de ta liste qui n'est pas ici est loin : ce n'est pas lui que tu vois "
+               "devant toi.")
+NEAR_SIDES = {"devant": "devant toi", "gauche": "sur ta gauche", "droite": "sur ta droite",
+              "derriere": "derrière toi"}
+
+
+def near_prompt(near) -> str:
+    """[(name, distance_m, cote)] (stage.decode_near_payload) -> phrase, ou ""."""
+    items = []
+    for name, dist, side in near:
+        where = "à moins d'un mètre" if dist < 1.0 else f"à {round(dist):d} m"
+        items.append(f"{name} {where} {NEAR_SIDES[side]}")
+    return NEAR_PREFIX + ", ".join(items) + "." + NEAR_SUFFIX if items else ""
+
+
 def objects_prompt(objects, tours=()) -> str:
     """[(name, desc)] (cf. stage.decode_objects_payload) -> ligne de prompt
     « Objets que tu peux aller voir : anneaux (bagues géantes), flaque. »

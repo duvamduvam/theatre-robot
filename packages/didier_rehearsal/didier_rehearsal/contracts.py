@@ -166,8 +166,11 @@ CHAT_MOVE_REPLY_DROPPED = "dropped"
 CHAT_MOVE_REPLY_NO_REPLY = "no_reply"
 # Raisons d'un « dropped » du sélecteur (codes gravés des deux côtés : le chat
 # les traduit en clair, didier_vision.ai.move_task.REFUSAL_REASONS).
+# « trop_loin » (15/11 21:29) : aller_voir / tour_de de la bouche au-delà de
+# geste.distance_max_chat_m (réglage du sélecteur) ; la réponse porte alors
+# "distance_m" (ancre de l'objet, m, 0,1) pour que Didier dise où il est.
 CHAT_MOVE_REPLY_JEU_REASONS = ("arrete", "sans_superviseur", "fatigue", "trop_tot", "ignore",
-                               "pas_retenu", "degrade")
+                               "pas_retenu", "degrade", "trop_loin")
 # Distance de jeu : Didier s'arrête à ce rayon de l'objet (m).
 GOTO_STANDOFF_M = 1.5
 # Plancher du standoff accepté par route_driver (revue M1) : en dessous, les

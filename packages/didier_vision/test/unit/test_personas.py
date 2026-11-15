@@ -308,3 +308,13 @@ def test_aucune_expression_toute_faite():
         assert "fétiche" not in prompt.replace("pas de formule fétiche", "")
         assert "bon sang de boulon" not in prompt
         assert "Aucune expression toute faite" in prompt
+
+
+def test_objets_proches_phrase_gravee():
+    # Scène du 15/11 21:29 : Didier vers x ≈ 14 (le banc est à 22 m, absent d'ici).
+    assert personas.near_prompt([("carrousel", 2.2, "droite"), ("table_basse", 4.0, "devant"),
+                                 ("elephant", 5.6, "derriere"), ("nefs", 0.4, "gauche")]) == (
+        "Autour de toi en ce moment : carrousel à 2 m sur ta droite, table_basse à 4 m devant toi, "
+        "elephant à 6 m derrière toi, nefs à moins d'un mètre sur ta gauche. Un objet de ta liste qui "
+        "n'est pas ici est loin : ce n'est pas lui que tu vois devant toi.")
+    assert personas.near_prompt([]) == ""

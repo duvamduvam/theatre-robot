@@ -131,6 +131,12 @@ def refusal_reason(payload) -> str:
     Défaut SÛR : une raison inconnue reste un ÉCHEC (REFUSAL_DEFAULT)."""
     effect = payload.get("effect") if isinstance(payload, dict) else None
     reason = payload.get("reason") if isinstance(payload, dict) else None
+    if effect == "dropped" and reason == "trop_loin":
+        dist = payload.get("distance_m")
+        if isinstance(dist, (int, float)) and not isinstance(dist, bool) and 0 <= dist < 1e6:
+            return (f"il est à {round(dist):d} m d'ici, bien plus loin, ce n'est pas ce que tu vois "
+                    "autour de toi")
+        return REFUSAL_REASONS["too_far"]
     if effect == "dropped":
         return REFUSAL_REASONS.get(reason, REFUSAL_DEFAULT) if isinstance(reason, str) else REFUSAL_DEFAULT
     for key in ((effect, reason), effect):

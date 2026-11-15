@@ -376,3 +376,16 @@ def test_normalisation_identique_au_regisseur():
             '"aux"))') in route
     assert stage.OBJECT_ARTICLES == frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d",
                                                "au", "aux"))
+
+
+def test_objets_proches_decodes_tolerant():
+    raw = json.dumps([{"name": "carrousel", "distance_m": 2.2, "cote": "droite"},
+                      {"name": "table_basse", "distance_m": 4.0, "cote": "devant"},
+                      {"name": "x", "distance_m": -1, "cote": "devant"}, {"name": "y", "distance_m": 1, "cote": "haut"},
+                      {"name": "z", "distance_m": True, "cote": "devant"}, 42,
+                      {"name": "elephant", "distance_m": 5.6, "cote": "derriere"}]
+                     + [{"name": f"o{i}", "distance_m": 9.0, "cote": "gauche"} for i in range(10)])
+    assert stage.decode_near_payload(raw) == [("carrousel", 2.2, "droite"), ("table_basse", 4.0, "devant"),
+                                              ("elephant", 5.6, "derriere"), ("o0", 9.0, "gauche"),
+                                              ("o1", 9.0, "gauche"), ("o2", 9.0, "gauche")]
+    assert stage.decode_near_payload("pas du json") == [] and stage.decode_near_payload('{"a": 1}') == []

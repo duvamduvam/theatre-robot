@@ -24,6 +24,7 @@ TOPICS_PERCEPTION = {
 TOPICS_JEU = {
     "JEU_CONSOLE": "jeu/console", "JEU_INTENTION": "jeu/intention",
     "JEU_CHAT_MOVE": "jeu/chat_move", "JEU_JOURNAL": "jeu/journal",
+    "JEU_OBJETS_PROCHES": "jeu/objets_proches",
 }
 # Nouveaux au lot L1c (le robot publie catalogue + sha) : PAS repris de utils_static.
 TOPICS_CATALOGUE = {"CATALOGUE": "catalogue", "DEPLOY_SHA": "deploy_sha"}

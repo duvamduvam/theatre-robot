@@ -9,7 +9,10 @@ import pytest
 from conftest import fabriquer
 
 OBJETS = [{"name": "anneaux", "desc": "bagues", "x": 10.0, "y": 10.0},
-          {"name": "flaque", "desc": "eau", "x": 30.0, "y": 0.0}]
+          {"name": "flaque", "desc": "eau", "x": 30.0, "y": 0.0},
+          # 15/11 : un objet à moins de geste.distance_max_chat_m (10 m) de la
+          # pose d'origine, pour les demandes de la bouche (flaque à 30 m : refusée).
+          {"name": "banc", "desc": "banc", "x": 5.0, "y": 0.0}]
 
 
 def jouer(sel, t0, t1, evenements=None, continu=None, dt=0.1):
@@ -425,8 +428,8 @@ def test_reviens_envoie_go():
 def test_bouche_aller_voir_devient_une_intention_ponderee():
     out = jouer(fabriquer(), 0.0, 2.0, [(0.0, marche),
                                         (0.5, lambda s, t: s.sur_chat_move_bouche({"cmd": "aller_voir",
-                                                                                  "objet": "flaque"}, t))])
-    assert moves(out) == [(0.8, {"cmd": "aller_voir", "objet": "flaque"})]
+                                                                                  "objet": "banc"}, t))])
+    assert moves(out) == [(0.8, {"cmd": "aller_voir", "objet": "banc"})]
     assert journal(out, "decision")[0][1]["action"] == "bouche"
 
 
@@ -605,7 +608,7 @@ def _bouche_puis_lubie(**surcharges):
     sel = fabriquer(surcharges, pools={})
     return jouer_avec_regisseur(sel, 60.0, [
         (0.0, marche),
-        (1.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "aller_voir", "objet": "flaque"}, t)),
+        (1.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "aller_voir", "objet": "banc"}, t)),
         # David relance (go console) : la reprise armée tombe, seul le réfractaire commun reste.
         (20.0, lambda s, t: s.sur_console({"cmd": "go"}, t)),
         (20.5, lambda s, t: s.sur_route_state("on", t)),
@@ -622,9 +625,9 @@ def test_demande_de_la_bouche_n_est_pas_un_arret_de_didier():
     rouge."""
     out = _bouche_puis_lubie()
     assert [(t, p["kind"]) for t, p in journal(out, "arret_didier")] == [(33.3, "lubie")]
-    assert decisions(out) == [(1.3, "bouche", "flaque"), (30.3, "lubie", "anneaux"),
+    assert decisions(out) == [(1.3, "bouche", "banc"), (30.3, "lubie", "anneaux"),
                               (45.3, "bouche", "avancer")]
-    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "flaque"}), (20.0, "go"), (33.3, "stop"),
+    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "banc"}), (20.0, "go"), (33.3, "stop"),
                           (45.3, {"cmd": "avancer", "metres": 1.0})]
 
 

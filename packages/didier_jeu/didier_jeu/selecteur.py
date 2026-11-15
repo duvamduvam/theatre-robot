@@ -33,7 +33,13 @@ RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.
   ordre de David n'en est jamais un ; une lubie est RÉCLAMÉE (intention) ET
   AMORCÉE (regard ; à défaut de pose/objet, l'intention seule, 3 s) puis le stop
   n'est demandé que si la console n'a dit ni ignore ni va_la entre-temps ;
-- reprise : après un arrêt de DIDIER, « repartir ? » puis « go » de lui-même
+- reprise APRÈS UN GESTE de la bouche (David, 15/11) : fini ou échoué, plus
+  aucun geste ne roulant, il rejoint sa route (« go ») après
+  reprise.apres_geste_s (10 s), parole ou pas (il écoute en marche) ; annulée
+  par un nouveau geste, un stop (bouche ou console), une Route OFF de David ;
+  le « go » dit par la bouche (« en route ») est relayé tout de suite, comme
+  le stop (sans score : sinon il mourait au réfractaire de 10 s) ;
+- reprise : après un arrêt de DIDIER (lubie, approche), « repartir ? » puis « go » de lui-même
   après reprise.delai_s de SILENCE (décision de David, 02/11 : toute parole
   entendue — chat_transcript rôle david — remet le compteur à zéro ; jamais
   de « go » tant que la scène parle), sauf stop/ignore de la console ;
@@ -59,7 +65,8 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from didier_jeu import arbre, phrases
+from didier_jeu import arbre, phrases, proximite
+from didier_rehearsal.route import normalize_name
 from didier_jeu.phrases import n as num
 from didier_jeu.offres import Offre, Offres
 from didier_jeu.pistes import Pistes
@@ -155,6 +162,7 @@ class Selecteur:
         self.pas_metteur: Dict[str, int] = {}      # piste -> pas faits sur l'indication du metteur
         self.reaction_due: List[dict] = []         # [{"cible", "kind", "t"}] : offres nées sans réponse
         self.bouche_en_attente: List[Offre] = []   # demandes de geste de la bouche sans issue encore
+        self.reprise_geste: Optional[dict] = None  # {"t", "pourquoi"} : reprise après un geste de la bouche
         self._t_prec: Optional[float] = None
         self._now = 0.0
         self._decision_tick: Optional[Decision] = None
@@ -231,20 +239,49 @@ class Selecteur:
         if valeur == STOP:
             self.relayer_stop("bouche", now)
             return
-        if valeur == GO and self.verrou_stop:
-            self.relayer_go("bouche", now)   # refusé si David a posé le verrou
+        if valeur == GO:
+            # « en route » dit par Didier (15/11) : relayé tout de suite, comme
+            # le stop — refusé si David a posé le verrou (relayer_go).
+            self.reprise_geste = None
+            self.relayer_go("bouche", now)
             return
-        if valeur == GO or (isinstance(valeur, dict) and valeur.get("cmd") in COMMANDES_REGISSEUR):
-            cible = (valeur.get("objet") or valeur.get("cmd")) if isinstance(valeur, dict) else GO
+        if isinstance(valeur, dict) and self._trop_loin(valeur, now):
+            return
+        if isinstance(valeur, dict) and valeur.get("cmd") in COMMANDES_REGISSEUR:
+            cible = valeur.get("objet") or valeur.get("cmd")
             offre = self.offres.naitre(Offre("bouche", "bouche", self.r.get("offres.valeur.bouche"), now,
                                              self.r.get("offres.ttl_s"),
                                              payload={"demande": valeur, "cible": cible}))
-            if isinstance(valeur, dict):
-                self.bouche_en_attente.append(offre)   # un GESTE : son issue revient au chat
+            self.bouche_en_attente.append(offre)   # un GESTE : son issue revient au chat
             self._journal("offre", f"il dit vouloir {phrases.demande(valeur)} : il y réfléchit",
                           kind="bouche", demande=valeur)
             return
         self._journal("refus", f"demande de mouvement incompréhensible ({valeur!r})", source="bouche")
+
+    def _trop_loin(self, demande: dict, now: float) -> bool:
+        """aller_voir / tour_de de la bouche au-delà de geste.distance_max_chat_m
+        (pose connue, objet résolu par son NOM normalisé comme au régisseur) :
+        refusé tout de suite, distance dite au chat (15/11 21:29). Pose
+        inconnue ou objet non résolu : le régisseur juge."""
+        if demande.get("cmd") not in ("aller_voir", "tour_de") or self.pose is None:
+            return False
+        cle = normalize_name(demande.get("objet"))
+        nom = next((n for n in self.objets if normalize_name(n) == cle), None) if cle else None
+        if nom is None:
+            return False
+        d = round(proximite.distance(self.pose, self.objets[nom]), 1)
+        seuil = self.r.get("geste.distance_max_chat_m")
+        if d <= seuil:
+            return False
+        self.sorties.append(("chat_move_reply", reponse_bouche(demande, "dropped", "trop_loin", distance_m=d)))
+        texte_d = f"{d:.1f}".replace(".", ",")
+        self._journal("refus", f"il voulait {phrases.demande(demande)}, mais non : « {nom} » est à {texte_d} m "
+                      f"(plus de {seuil:g} m)", source="bouche", demande=demande, code="trop_loin")
+        return True
+
+    def objets_proches(self) -> list:
+        """Pour jeu/objets_proches (contexte du chat)."""
+        return proximite.objets_proches(self.pose, self.objets)
 
     def sur_console(self, payload, now: float) -> None:
         if not isinstance(payload, dict):
@@ -332,6 +369,7 @@ class Selecteur:
         attente annulée (revue A1, bloquant 3). « boot » : rien."""
         if cause != "cmd":
             return
+        self._desarmer_reprise_geste("David a coupé la route")
         e = self.en_cours
         if e is not None and e.candidat.action == "lubie" and not e.stop_envoye:
             self._annuler(now, "David a coupé la route")
@@ -353,7 +391,8 @@ class Selecteur:
         if resultat == "arrived" and e.etapes:
             self._etape_suivante(e, now)
             return
-        if resultat == "arrived" and e.origine == "didier":
+        if resultat == "arrived" and e.origine == "didier" and e.candidat.action != "bouche":
+            # (Un geste de la BOUCHE a sa propre reprise, à 10 s : cf. _finir.)
             # Arrêt décidé par Didier (il est allé quelque part de lui-même) :
             # la reprise s'arme, il proposera de repartir.
             self.arret_didier = {"t": now, "cible": e.candidat.cible}
@@ -399,6 +438,7 @@ class Selecteur:
         self.sorties.append(("chat_move", STOP))
         self.verrou.poser(source)
         self.arret_didier = None    # arrêt de David : jamais de « go » automatique
+        self._desarmer_reprise_geste(f"stop de {source}")
         self.ordre = None
         self.leader = None
         if self.en_cours is not None and (self.en_cours.candidat.deplacement
@@ -503,6 +543,7 @@ class Selecteur:
             self.pulsions.pression_route = 0.0
         self._expirer(now)
         self._suivre_engagement(now)
+        self._reprise_apres_geste(now)
         self.arbre.tick_once()
         self._reaction(now)
         self._bouche_sans_suite(now)
@@ -610,8 +651,43 @@ class Selecteur:
                 return "trop_tot", f"il {quoi} il y a moins de {periode:g} s"
         return "pas_retenu", "autre chose l'a emporté avant que la demande ne périme"
 
+    def _desarmer_reprise_geste(self, pourquoi: str) -> None:
+        if self.reprise_geste is not None:
+            self.reprise_geste = None
+            self._journal("reprise_annulee", f"{pourquoi} → il ne rejoint pas sa route de lui-même")
+
+    def _reprise_apres_geste(self, now: float) -> None:
+        """Reprise après un geste de la bouche (cf. docstring de module) : « go »
+        à reprise.apres_geste_s, si rien ne roule et qu'aucune demande n'attend."""
+        rep = self.reprise_geste
+        if rep is None:
+            return
+        if self.route_state in ("on", "goto") or self.verrou_stop:
+            # Déjà en route (geste refusé sans quitter la route), ou arrêt posé
+            # (ceinture : le stop désarme déjà, cf. relayer_stop).
+            self.reprise_geste = None
+            return
+        if (self.en_cours is not None and self.en_cours.candidat.deplacement) or self.bouche_en_attente:
+            return                             # un nouveau geste part : il l'emporte
+        if self.superviseur_absent():
+            return
+        delai = self.r.get("reprise.apres_geste_s")
+        if now - rep["t"] < delai - EPS:
+            return
+        self.reprise_geste = None
+        self.arret_didier = None
+        self.sorties.append(("chat_move", GO))
+        self._journal("reprise", f"reprise : il rejoint sa route ({rep['pourquoi']}, {delai:g} s)",
+                      cause=rep["pourquoi"])
+        self.pourquoi_courant = f"il rejoint sa route ({rep['pourquoi']})"
+        self._publier_intention(now)
+
     def _finir(self, now: float, pourquoi: str) -> None:
         fini = self.en_cours.candidat
+        if fini.action == "bouche" and not self.verrou_stop:
+            # Geste de la bouche fini OU échoué : la route reprendra seule (15/11).
+            self.reprise_geste = {"t": now, "pourquoi": "geste terminé" if pourquoi == "il est arrivé"
+                                  else "geste échoué"}
         self.en_cours = None
         self.courante = (RIEN, None)
         self.pourquoi_courant = f"{phrases.action(fini.action, fini.cible, fini.detail)} : {pourquoi}"
@@ -683,9 +759,7 @@ class Selecteur:
                 if o.kind == "objet":
                     cands.append(Candidat("lubie", o.piste, o, "lubie"))
         for o in vivantes:
-            if o.kind == "bouche" and o.payload["demande"] == GO:
-                cands.append(Candidat("repartir", None, o))      # « go » de la bouche : repartir
-            elif o.kind == "bouche":
+            if o.kind == "bouche":   # (le « go » de la bouche est relayé, jamais une offre)
                 cands.append(Candidat("bouche", o.payload["cible"], o, None, {"demande": o.payload["demande"]}))
         if self.ordre is not None and self.ordre["action"] in ("aller_voir", "repartir"):
             cands.append(Candidat(self.ordre["action"], self.ordre["cible"]))
@@ -864,6 +938,7 @@ class Selecteur:
             etapes = [c.detail["demande"]]
         else:
             return False
+        self.reprise_geste = None   # un nouveau geste part : la reprise attendra sa fin
         e = Engagement(c, now, now + r.get("durees_s.deplacement_max") * len(etapes), origine, etapes=etapes)
         self.en_cours = e
         self._etape_suivante(e, now)

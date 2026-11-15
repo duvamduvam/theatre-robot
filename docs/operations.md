@@ -791,6 +791,19 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   journalise `tâche : geste refusé (<effet>/<raison>, <source>)`. Le prompt
   ne propose plus de faire le tour que des objets qui en ont un
   (`chantiers_tours.yaml`).
+- **Route après un geste** (15/11) : après un geste demandé par la bouche (aller
+  voir, tour, pivot, avancer), fini ou échoué, Didier **rejoint sa route tout
+  seul 10 s plus tard** (`reprise.apres_geste_s`), même si on lui parle ; journal
+  du jeu : « reprise : il rejoint sa route (geste terminé, 10 s) ». Un nouveau
+  geste repousse la reprise ; un STOP (voix ou console) ou une Route OFF de
+  David l'annule. « En route » dit par Didier repart tout de suite. Inutile de
+  recliquer Route ON, mais la séance doit être **démarrée** (hors séance, le
+  régisseur ignore le « go » : `voice_move … hors_seance`).
+- **Distances** (15/11) : le chat reçoit les 6 objets les plus proches avec
+  distance et côté (`jeu/objets_proches`, « Autour de toi en ce moment : … »).
+  Un « aller voir » ou « faire le tour » demandé par le chat au-delà de 10 m
+  (`geste.distance_max_chat_m`) est refusé et Didier le dit (« il est à 22 m
+  d'ici »). La console (« va là ») n'y est pas soumise.
 - **Perception** : en A1, elle est **scriptée**. Une personne se simule à la main :
   `ros2 topic pub -r 16 /didier/vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.3, y: 0.4, z: 0.9}}"`.
   On peut aussi brancher la tête vision et sa webcam.

@@ -185,3 +185,13 @@ séquences, garde-fou 43 effectif, aucun Twist), **pas montrable comme porte pas
   séance le 15/11). Restent : la fatigue et le réfractaire « deplacement » de 10 s ; un
   déplacement refusé ne compte pas (spec-aller-voir §9.6). Test :
   `test_tache_va_voir_l_elephant_puis_tour_du_banc_10_s_apres`.
+- **Décision de David (15/11 21:35), reprise après un geste** : une demande de geste de
+  la bouche finie OU échouée -> Didier rejoint sa route après `reprise.apres_geste_s` =
+  10 s, la parole ne remettant PAS ce compteur à zéro (il écoute en marche, 08/11).
+  Elle est annulée par un nouveau geste, un stop ou une Route OFF de David ; le `go`
+  de la bouche est relayé sans score. Les 90 s de silence restent pour les arrêts de
+  Didier (lubie, approche). Tests : `test_reprise_geste.py`.
+- **15/11 21:29, distances** : objets proches publiés pour le chat (`jeu/objets_proches`) ;
+  geste de la bouche au-delà de `geste.distance_max_chat_m` (10 m) refusé, distance
+  dite. Tests : `test_proximite.py` (scène réelle x ≈ 14 : banc à 22,2 m refusé,
+  table_basse à 4 m acceptée).

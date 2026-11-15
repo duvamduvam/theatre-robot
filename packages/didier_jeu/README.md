@@ -69,6 +69,21 @@ approche de sa propre initiative. Un ordre de David n'en est jamais un, et
 elle vient toujours d'un humain, donc une tâche peut enchaîner ses gestes).
 Restent la fatigue et le réfractaire « deplacement » de 10 s.
 
+**Reprise après un geste de la bouche** (David, 15/11) : fini ou échoué, plus
+aucun geste ne roulant, Didier rejoint sa route (`go`) après
+`reprise.apres_geste_s` = **10 s**. La parole ne remet pas ce compteur à zéro
+(il écoute en marche). Un nouveau geste le repousse ; un stop (bouche ou
+console) ou une Route OFF de David l'annule (`reprise_annulee`). Le `go` dit
+par la bouche (« en route ») est **relayé tout de suite**, comme le stop :
+pondéré, il mourait au réfractaire de 10 s. Les 90 s de silence restent pour
+SES arrêts (lubie, approche).
+
+**Distances** (15/11) : `jeu/objets_proches` (1 Hz) porte les 6 objets les plus
+proches, `[{"name", "distance_m", "cote"}]` (`proximite.py`, pose vérité
+terrain). Un `aller_voir` ou `tour_de` de la bouche au-delà de
+`geste.distance_max_chat_m` (**10 m**) est refusé tout de suite : réponse
+`dropped` / `trop_loin` + `distance_m`. La console n'y est pas soumise.
+
 **Réponse à la bouche** (15/11, séance « fais le tour de l'éléphant ») : toute
 demande de GESTE de la bouche a une issue que le chat apprend. Transmise, c'est
 le régisseur qui répond. Non transmise (offre morte au bout de ses 3 s), une
