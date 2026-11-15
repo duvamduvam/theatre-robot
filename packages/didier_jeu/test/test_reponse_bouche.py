@@ -2,7 +2,7 @@
 issue que le chat apprend (rehearsal/chat_move_reply), et un déplacement
 refusé n'a pas eu lieu (réfractaires et fatigue rendus). Valeurs et instants
 GRAVÉS (ticks de 0,1 s, réglages réels : hystérésis 0,3 s, TTL 3 s,
-deplacement_accuse 3 s, arrêt de Didier 120 s).
+deplacement_accuse 3 s, réfractaire « deplacement » 10 s).
 
 Séance du 15/11 reproduite : « fais le tour de la grue jaune » refusé par le
 régisseur (no_tour), puis « fais le tour de l'éléphant » 10 s plus tard —
@@ -83,22 +83,24 @@ def test_refus_rend_refractaires_et_fatigue():
 
 
 def test_demande_morte_repond_dropped_trop_tot():
-    """Après un geste RÉUSSI, la bouche redemande avant 120 s : non transmise,
-    et le chat le sait (code trop_tot) au tick où l'offre meurt (TTL 3 s)."""
+    """Après un geste RÉUSSI, la bouche redemande avant la fin du réfractaire
+    « deplacement » (10 s ; plus les 120 s depuis la décision de David du
+    15/11) : non transmise, et le chat le sait (code trop_tot) au tick où
+    l'offre meurt (TTL 3 s)."""
     def arrive(demande):
         return {"demande": demande, "effect": "accepted", "reason": None, "source": "director"}
     sel = fabriquer(pools={})
     evs = [(0.0, marche), (1.0, bouche({"cmd": "aller_voir", "objet": "flaque"})),
            (5.0, lambda s, t: s.sur_goto_result({"name": "flaque", "result": "arrived"}, t)),
-           (20.0, bouche(ELEPHANT))]
-    out = jouer_regisseur(sel, 25.0, evs, arrive)
+           (7.0, bouche(ELEPHANT))]
+    out = jouer_regisseur(sel, 12.0, evs, arrive)
     assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "flaque"})]
-    assert reponses(out) == [(23.0, {"demande": ELEPHANT, "effect": "dropped", "reason": "trop_tot",
+    assert reponses(out) == [(10.0, {"demande": ELEPHANT, "effect": "dropped", "reason": "trop_tot",
                                      "source": "jeu"})]
     refus = [(t, p["pourquoi"], p["code"]) for t, p in journal(out, "refus")]
-    # 20 s après l'arrivée : le déplacement (10 s) est passé, pas l'arrêt de Didier (120 s).
-    assert refus == [(23.0, "il voulait faire le tour de « elephant », mais non : il s'est déjà arrêté "
-                            "de lui-même il y a moins de 120 s", "trop_tot")]
+    # Offre née à 7 s, morte à 10 s : avant la fin du réfractaire (1,3 + 10 = 11,3 s).
+    assert refus == [(10.0, "il voulait faire le tour de « elephant », mais non : il s'est déjà déplacé "
+                            "il y a moins de 10 s", "trop_tot")]
 
 
 def test_demande_sous_verrou_repond_dropped_arrete():

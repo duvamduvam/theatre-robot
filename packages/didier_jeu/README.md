@@ -64,8 +64,10 @@ lui-même après **90 s de silence** : toute parole entendue (`chat_transcript`,
 rôle `david`) remet le compteur à zéro (décision de David du 02/11).
 
 **Un arrêt de Didier par 2 min** couvre tout arrêt de route qu'il cause : lubie,
-approche de sa propre initiative, demande de mouvement de la bouche. Un ordre
-de David n'en est jamais un.
+approche de sa propre initiative. Un ordre de David n'en est jamais un, et
+**une demande de geste de la bouche non plus** (décision de David du 15/11 :
+elle vient toujours d'un humain, donc une tâche peut enchaîner ses gestes).
+Restent la fatigue et le réfractaire « deplacement » de 10 s.
 
 **Réponse à la bouche** (15/11, séance « fais le tour de l'éléphant ») : toute
 demande de GESTE de la bouche a une issue que le chat apprend. Transmise, c'est
@@ -73,8 +75,8 @@ le régisseur qui répond. Non transmise (offre morte au bout de ses 3 s), une
 ligne `refus` dit pourquoi et `rehearsal/chat_move_reply` porte `dropped` + le
 code. Sinon Didier affirmait un geste qui n'avait pas eu lieu. Un déplacement
 **refusé** par le régisseur, ou resté sans réponse, n'a pas eu lieu : ses
-périodes réfractaires (dont l'arrêt de 2 min) et sa fatigue sont **rendues**.
-Avant, un refus bloquait en silence la demande suivante pendant 2 min.
+périodes réfractaires et sa fatigue sont **rendues**. Avant, un refus bloquait
+en silence la demande suivante.
 
 **Metteur en scène** : un mot-clé d'expression ou de regard biaise le score. Un
 mot-clé de **déplacement** (« approche ») ne fait bouger Didier que si le texte

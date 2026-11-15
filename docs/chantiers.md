@@ -1254,11 +1254,9 @@ fin de geste ÉCHOUÉE, dite en personnage (`rehearsal/chat_move_reply`,
 quels objets on peut faire le tour. Cause du « il y réfléchit » sans suite :
 l'offre de la bouche mourait en silence, bloquée par l'arrêt de Didier de
 120 s. Celui-ci était compté même pour un geste REFUSÉ (désormais rendu) et
-pour un geste réussi juste avant. ⚠️ **À trancher par David** : sous `jeu:=true`,
-une demande de la bouche compte comme « arrêt de Didier » (revue A1, point 11).
-Une tâche demandée par David (« va voir l'éléphant, puis fais-en le tour »)
-ne peut donc pas enchaîner deux gestes à moins de 2 min. Didier le dit
-maintenant honnêtement (« pas tout de suite »), mais la tâche échoue.
+pour un geste réussi juste avant. **TRANCHÉ par David le 15/11** : une demande de geste de la bouche n'est plus
+un « arrêt de Didier » de 120 s (spec A1 §9), donc une tâche enchaîne ses
+gestes. Restent la fatigue et le réfractaire « deplacement » de 10 s.
 Vérification en sim à faire.
 Verrous : aucun côté robot. Les verrous roues (test scénique, W1,
 coup-de-poing) ne bougent pas : la sim ne qualifie rien côté sécurité.

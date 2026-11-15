@@ -22,10 +22,14 @@ from didier_jeu.offres import Offre
 
 RIEN = "rien"
 # Catégories réfractaires de chaque action (reglages refractaire_s.<catégorie>).
-# « arret_didier » (revue A1, point 11) : TOUT arrêt de route causé par Didier
-# — lubie, approche de sa propre initiative, demande de la bouche (aller voir,
-# tourner, avancer, faire le tour) — au plus un par 120 s. Un ORDRE de David
-# (considération console) n'est jamais un arrêt de Didier : il n'y est pas soumis.
+# « arret_didier » (revue A1, point 11) : tout arrêt de route causé par Didier
+# — lubie, approche de sa propre initiative — au plus un par 120 s. Un ORDRE de
+# David (considération console) n'est jamais un arrêt de Didier : il n'y est pas
+# soumis. DÉCISION DE DAVID (15/11) : une demande de GESTE de la bouche non plus
+# — elle vient toujours d'un humain (un tour spontané ne bouge jamais Didier,
+# B1) ; sinon une tâche (« va voir l'éléphant, puis fais le tour du banc ») ne
+# pouvait pas enchaîner deux gestes à moins de 2 min. Fatigue et réfractaire
+# « deplacement » (10 s) s'appliquent toujours.
 ARRET_DIDIER = "arret_didier"
 CATEGORIES = {
     "regarder": ("regarder",),
@@ -33,7 +37,7 @@ CATEGORIES = {
     "spontanee": ("expression",),
     "approcher": ("deplacement", ARRET_DIDIER),
     "aller_voir": ("deplacement",),
-    "bouche": ("deplacement", ARRET_DIDIER),
+    "bouche": ("deplacement",),
     "repartir": ("deplacement",),
     "lubie": (ARRET_DIDIER,),
 }

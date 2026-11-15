@@ -614,17 +614,32 @@ def _bouche_puis_lubie(**surcharges):
     ])
 
 
-def test_demande_de_la_bouche_compte_comme_arret_de_didier():
+def test_demande_de_la_bouche_n_est_pas_un_arret_de_didier():
+    """DÉCISION DE DAVID (15/11) : une demande de geste de la bouche vient d'un
+    humain — ni bloquée par l'arrêt de Didier de 120 s, ni comptée comme tel
+    (comme un ordre de la console). Avant : ni la lubie à 30 s ni l'avancer à
+    45 s ne partaient. Mutation (ARRET_DIDIER remis dans CATEGORIES["bouche"]) :
+    rouge."""
     out = _bouche_puis_lubie()
-    arrets = journal(out, "arret_didier")
-    assert [(t, p["kind"]) for t, p in arrets] == [(1.3, "bouche")]
-    assert "lubie" not in [a for _, a, _ in decisions(out)]               # < 120 s après
-    assert [m for _, m in moves(out)] == [{"cmd": "aller_voir", "objet": "flaque"}, "go"]
+    assert [(t, p["kind"]) for t, p in journal(out, "arret_didier")] == [(33.3, "lubie")]
+    assert decisions(out) == [(1.3, "bouche", "flaque"), (30.3, "lubie", "anneaux"),
+                              (45.3, "bouche", "avancer")]
+    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "flaque"}), (20.0, "go"), (33.3, "stop"),
+                          (45.3, {"cmd": "avancer", "metres": 1.0})]
 
 
-def test_mutation_refractaire_commun_des_arrets():
-    out = _bouche_puis_lubie(**{"refractaire_s.arret_didier": 0.0})
-    assert [p["kind"] for _, p in journal(out, "arret_didier")] == ["bouche", "lubie", "bouche"]
+def test_tache_va_voir_l_elephant_puis_tour_du_banc_10_s_apres():
+    """Décision de David (15/11) : les deux gestes d'une tâche partent au régisseur."""
+    sel = fabriquer(pools={})
+    out = jouer_avec_regisseur(sel, 20.0, [
+        (0.0, marche),
+        (1.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "aller_voir", "objet": "elephant"}, t)),
+        (11.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "tour_de", "objet": "banc", "sens": "gauche"}, t)),
+    ])
+    # 11,6 s : fin du réfractaire « deplacement » (10 s après 1,3) + hystérésis 0,3 s.
+    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "elephant"}),
+                          (11.6, {"cmd": "tour_de", "objet": "banc", "sens": "gauche"})]
+    assert journal(out, "refus") == []
 
 
 def test_lubie_note_si_le_regard_est_parti():

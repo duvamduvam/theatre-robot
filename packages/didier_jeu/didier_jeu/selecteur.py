@@ -27,8 +27,9 @@ RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.
 - engagement : une action engagée se finit, sauf offre >= seuil_rupture ;
 - naissance d'une offre de personne OU d'objet -> ligne de décision (choix OU
   maintien) en <= 1 s (T3) ;
-- initiatives spontanées >= 8 s ; arrêts de Didier >= 120 s — TOUT arrêt de
-  route qu'il cause (lubie, approche de lui-même, demande de la bouche) ; un
+- initiatives spontanées >= 8 s ; arrêts de Didier >= 120 s — tout arrêt de
+  route qu'il cause (lubie, approche de lui-même ; PAS une demande de geste de
+  la bouche, qui vient d'un humain : décision de David du 15/11) ; un
   ordre de David n'en est jamais un ; une lubie est RÉCLAMÉE (intention) ET
   AMORCÉE (regard ; à défaut de pose/objet, l'intention seule, 3 s) puis le stop
   n'est demandé que si la console n'a dit ni ignore ni va_la entre-temps ;

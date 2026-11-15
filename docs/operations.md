@@ -780,8 +780,8 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   une Route OFF de David.
 - **Geste refusé** (15/11) : une demande de geste que le régisseur refuse
   (objet sans tour, inconnu, trop loin…), que le sélecteur ne transmet pas
-  (ligne `refus` au journal du jeu : arrêté, fatigué, « trop tôt » après un
-  arrêt de moins de 2 min…) ou qui reste sans réponse 8 s : Didier **dit** qu'il
+  (ligne `refus` au journal du jeu : arrêté, fatigué, « trop tôt » moins de
+  10 s après un autre déplacement…) ou qui reste sans réponse 8 s : Didier **dit** qu'il
   ne l'a pas fait, en personnage, et n'affirme jamais l'avoir fait. Le chat
   journalise `tâche : geste refusé (<effet>/<raison>, <source>)`. Le prompt
   ne propose plus de faire le tour que des objets qui en ont un
