@@ -15,8 +15,8 @@ Ansible. Seul le CODE a bougé ; les noms de nœuds, de topics et d'exécutables
 - **Exécutables** (gravés par `test/unit/test_arborescence.py`) : `animations_node`,
   `audio_node`, `face_sim` (SIM-ONLY), `gaze_follower`, `lights_node`, `person_follower`
   (SIM-ONLY, lancé à la main), `relays_node`, `servo_node`, `system_node`, `wheels_node`.
-  Lancés par `didier_bringup/launch/robot_app.launch.py` (robot) et
-  `didier_sim/launch/sim.launch.py` (sim) ; à la main : `ros2 run didier_core <exécutable>
+  Lancés par `didier_bringup/launch/robot_app.launch.py` (robot, et conteneur robot de la sim depuis
+  L2b ; `face_sim` par `complement_sim.launch.py`, sim seulement) ; à la main : `ros2 run didier_core <exécutable>
   --ros-args -r __ns:=/didier`.
 - **Dépend de** `theatre_interfaces` (StringTime), `theatre_contrats` (contrat, codec),
   `dadou_utils_ros` (lib partagée) — tous trois dans le même `src/`.

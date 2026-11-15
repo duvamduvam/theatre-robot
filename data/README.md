@@ -11,8 +11,8 @@ publie ensemble) — arrivé ici de `legacy/dadou_robot_ros/` au lot L1e-4b (08/
 
 **Qui le lit.** Le cœur `packages/didier_core` (`robot_config.py`, racine `DIDIER_DATA_DIR` :
 `json/`, `medias/`, `db/` en enfants directs) ; le catalogue du robot (`didier_web`, depuis
-`json/`) ; la sim (`docker-compose-sim.yml` monte `json/` et `medias/`, `Dockerfile-sim` copie
-`json/` par le contexte nommé `data`) ; le banc x86 du robot (même motif) ; les tests hôte (cœur,
+`json/`) ; la sim (`machines/sim/docker-compose.yml` monte `json/` et `medias/` dans les conteneurs robot
+et monde ; leurs Dockerfiles copient `json/` par le contexte nommé `data`) ; les tests hôte (cœur,
 jeu, télécommande : `test_buttons_vs_catalogue.py` compare ses boutons au catalogue construit
 depuis `json/`).
 

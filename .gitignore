@@ -28,6 +28,7 @@ machines/*/secret
 # existait ici, la sim (conf montée) afficherait un faux sha au lieu de « dev ».
 machines/robot/DEPLOY_SHA
 # Workspaces colcon jetables des bancs PC (sim du robot : traces de la fumée ; banc vision).
+# Ancien banc mono-conteneur (supprimé en L2b) : son workspace local peut rester sur un PC.
 machines/sim/banc-robot/workspace/
 machines/sim/banc-vision/workspace/
 # L2b : journaux de la sim multi-conteneurs (log/ partagé monde+robot, log-vision/, log-telecommande/).

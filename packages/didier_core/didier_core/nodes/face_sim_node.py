@@ -9,7 +9,7 @@ que ferait le vrai robot. Seul le "câblage" change -- PreviewStrip encode
 chaque show() en JPEG au lieu de piloter un ruban LED réel.
 
 Aucune lib matérielle importée (contrairement à lights_node) : ce node tourne
-sur x86 comme sur le Pi. En pratique il n'est lancé QUE par sim.launch.py
+sur x86 comme sur le Pi. En pratique il n'est lancé QUE par complement_sim.launch.py
 (argument face:=true, défaut false, même prudence que animations/web) --
 jamais dans le bringup du vrai robot.
 
@@ -102,7 +102,7 @@ class FaceSimNode(Node):
             self.face = Face(config=config, json_manager=robot_json_manager, strip=self.strip)
         except OSError as e:
             # Cas concret attendu : medias/visuals/{mouth,eye} pas montés dans
-            # le conteneur sim (docker-compose-sim.yml) -- FilesUtils.get_folder_files
+            # le conteneur robot de la sim (machines/sim/docker-compose.yml) -- FilesUtils.get_folder_files
             # fait un listdir() qui lève FileNotFoundError (sous-classe
             # d'OSError) sur un dossier absent. Message ACTIONNABLE avant de
             # laisser planter le node : sans lui, seule une trace OSError
@@ -110,7 +110,7 @@ class FaceSimNode(Node):
             logging.error(
                 "impossible de charger les visuels du visage (%s) -- le volume"
                 " medias/ est-il monté dans le conteneur sim ? voir"
-                " conf/docker/sim/docker-compose-sim.yml", e)
+                " machines/sim/docker-compose.yml (service robot)", e)
             raise
 
         self.face_subscription = self.create_subscription(

@@ -39,7 +39,7 @@
 # Garde-fous :
 #   - domaine ROS 43 : en littéral dans le compose, revérifié dans CHACUN des quatre conteneurs
 #     (42 = vrai robot, jamais) ;
-#   - un conteneur de la sim déjà présent (l'un des quatre, ou l'ancien conteneur unique) = la
+#   - un conteneur de la sim déjà présent (l'un des quatre) = la
 #     sim de quelqu'un : on reporte (ou on refuse en forcé), on ne la tue JAMAIS ; la sim lancée
 #     ici est arrêtée quoi qu'il arrive (trap EXIT), après copie des journaux ;
 #   - verrou flock : jamais deux fumées en même temps ;
@@ -92,8 +92,6 @@ COMPOSE=docker-compose.yml
 SERVICES=(monde robot vision telecommande)
 CONTENEURS=(didier-sim-monde didier-sim-robot didier-sim-vision didier-sim-telecommande)
 IMAGES=(didier-sim/monde:local didier-sim/robot:local didier-sim/vision:local didier-sim/telecommande:local)
-# Transition L2b : l'ancien conteneur unique, présent = la sim de quelqu'un (refus, comme les quatre).
-ANCIEN_CONTENEUR=dadou-sim-container
 # Chemins (relatifs au dépôt, git diff) dont un changement depuis la dernière verte reconstruit les
 # images (décision 20) : la sim, les Dockerfiles et listes de paquets du robot et de la vision, la
 # conf de la télécommande legacy (son Dockerfile y vit).
@@ -221,10 +219,9 @@ else
 fi
 
 # --- Un conteneur sim déjà là est celui de quelqu'un : jamais touché --------------
-# Les quatre de la sim multi-conteneurs ET l'ancien conteneur unique (transition L2b). Liste lue
-# une fois, sans --filter (un nom exact par ligne).
+# Les quatre de la sim multi-conteneurs. Liste lue une fois, sans --filter (un nom exact par ligne).
 EXISTANTS="$(docker ps -a --format '{{.Names}}' 2>/dev/null || true)"
-for nom_c in "${CONTENEURS[@]}" "$ANCIEN_CONTENEUR"; do
+for nom_c in "${CONTENEURS[@]}"; do
   grep -qx -- "$nom_c" <<<"$EXISTANTS" || continue
   ETAT_C="$(docker inspect -f '{{.State.Status}}' "$nom_c" 2>/dev/null || echo inconnu)"
   # Un conteneur ARRÊTÉ (exited/dead/created) ne fait tourner la sim de personne : c'est un reste

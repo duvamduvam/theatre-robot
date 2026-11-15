@@ -607,10 +607,10 @@ def test_si_due_bloquee_recente_est_silencieuse(banc):
 def test_si_due_ne_touche_jamais_a_la_sim_de_quelqu_un(banc):
     depot, env, tmp = banc
     _commit(depot, "packages/code.txt", "code 2")
-    env = dict(env, FAUX_DOCKER_PS="dadou-sim-container\n")
+    env = dict(env, FAUX_DOCKER_PS="didier-sim-monde\n")
     p = _lancer(env, "--si-due")
     assert p.returncode == 0
-    assert "reporté : conteneur dadou-sim-container déjà présent" in _journal(tmp)
+    assert "reporté : conteneur didier-sim-monde déjà présent" in _journal(tmp)
     appels = (tmp / "appels.txt").read_text(encoding="utf-8").splitlines()
     assert not [a for a in appels if a.startswith(("rm", "compose", "stop", "kill", "exec"))]
 
@@ -657,7 +657,7 @@ def test_les_conteneurs_de_la_fumee_sont_ceux_du_compose():
 
 def test_et_dodo_refuse_et_n_eteint_pas_si_une_sim_existe(banc):
     _, env, tmp = banc
-    env = dict(env, FAUX_DOCKER_PS="dadou-sim-container\n")
+    env = dict(env, FAUX_DOCKER_PS="didier-sim-robot\n")
     p = _lancer(env, "--et-dodo")
     assert p.returncode == 2
     assert "REFUS" in p.stdout

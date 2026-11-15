@@ -3,7 +3,7 @@
 # didier_description/urdf/dadou_robot_gz.urdf.xacro.
 #
 # Namespace (lot L1b) : côté ROS, les noms sont RELATIFS — le parameter_bridge
-# est lancé dans le groupe PushRosNamespace de sim.launch.py, rclcpp les étend
+# est lancé dans le groupe PushRosNamespace de monde.launch.py, rclcpp les étend
 # donc en /<ROBOT_NAME>/… (/didier/cmd_vel). DEUX exceptions, gravées par
 # robot/tests/unit/test_namespace_contract.py, globales PAR CONSTRUCTION ROS :
 #   /clock : TimeSource (rclcpp/rclpy) de TOUT nœud use_sim_time s'abonne à

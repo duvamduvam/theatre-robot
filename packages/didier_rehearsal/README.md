@@ -41,7 +41,7 @@ Commandes : `rehearsal/cmd` = `start` | `stop` | `abort`. Le journal de la
 séance est la **source de vérité du débrief** (ce qui a été tiré, quand) — à
 lire **après**, jamais pendant (étude §4.3).
 
-**Vérification V-R2** : `docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-faults.sh`
+**Vérification V-R2** : `docker exec didier-sim-monde bash /home/ros2_ws/validate-rehearsal-faults.sh`
 (start, chien de garde en gelant le régisseur pendant un `zero`, reboot →
 respawn → `route on`, couverture du scénario au journal).
 
@@ -227,9 +227,9 @@ Tests : `test_goto_tour.py`, `test_tours.py`, `test_director_tour.py`,
 ## Regarder une séance en direct
 
 - **Vue 3D** : la sim tourne en headless ; on y branche une fenêtre à chaud,
-  sans rien redémarrer : `docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && gz sim -g'`.
+  sans rien redémarrer : `docker exec -d didier-sim-monde bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && gz sim -g'`.
   Clic droit sur Didier → « Follow ». ⚠️ Ne pas fermer la fenêtre pendant une séance.
-- **Caméra de Didier + régie** : http://localhost:8765 (`WEB=true`) ; **visage LED** : http://localhost:8766 (`FACE=true`).
+- **Caméra de Didier + régie** : http://localhost:8765 (pont web du conteneur robot, toujours lancé) ; **visage LED** : http://localhost:8766 (`FACE=true`).
 - **Après la séance** : `machines/robot/scripts/rehearsal/capture_seance.py` (images caméra aux
   instants choisis + trajectoire, à lancer DANS le conteneur) puis `carte_seance.py`
   (rue vue de dessus + vitesse aux roues, pannes du journal en couleur). Exemple :
@@ -245,20 +245,21 @@ Tests : `test_goto_tour.py`, `test_tours.py`, `test_director_tour.py`,
   `route_speed`** (fader à zéro = Didier s'arrête), le fader 2 le cou. Profils
   décrits dans `dadou_control_ros/docs/interfaces.md`.
 
-**Dans le conteneur sim** (`machines/sim/banc-robot`, domaine 43) :
+**Dans la sim multi-conteneurs** (`machines/sim/`, domaine 43 ; la chaîne roues tourne dans le
+conteneur robot, la répétition se lance dans `monde`) :
 ```bash
 # 1. la sim avec la rue (HEADLESS=true recommandé) :
-WORLD=rue ANIMATIONS=true FACE=true WEB=true docker compose -f docker-compose-sim.yml up -d
-# 2. la chaîne roues, puis la route :
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_drive drive.launch.py use_sim_time:=true'
-docker exec -d dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py'
+WORLD=rue FACE=true docker compose up -d
+# 2. la route (journal dans /tmp/rehearsal.log : V-R1 le lit) :
+docker exec -d didier-sim-monde bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 launch didier_rehearsal rehearsal.launch.py > /tmp/rehearsal.log 2>&1'
 # 3. partir :
-docker exec dadou-sim-container bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route theatre_interfaces/msg/StringTime "{msg: \"on\"}"'
+docker exec didier-sim-monde bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && ros2 topic pub -1 /didier/route theatre_interfaces/msg/StringTime "{msg: \"on\"}"'
 ```
 
-**Vérification d'intégration V-R1** (rejouable, dans le conteneur, chaîne roues + rehearsal lancés, route OFF) :
+**Vérification d'intégration V-R1** (rejouable, dans `monde`, rehearsal lancé comme ci-dessus — sortie
+dans `/tmp/rehearsal.log`, sinon T2/T5 ne lisent rien —, route OFF) :
 ```bash
-docker exec dadou-sim-container bash /home/ros2_ws/validate-rehearsal-route.sh
+docker exec didier-sim-monde bash /home/ros2_ws/validate-rehearsal-route.sh
 ```
 (départ, POI enter/exit, la télécommande écrase, zéro franc à `route off`, arrivée au hangar — seuils gravés dans le script.)
 

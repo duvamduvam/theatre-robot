@@ -285,10 +285,10 @@ EXECUTABLES_CORE = {
     "wheels_node": "didier_core.nodes.wheels_node:main",
 }
 SYNCHRONISE = DEPLOY / "roles" / "synchronise" / "tasks" / "main.yml"
-# L1e-4c : compose ARM dans la conf de la machine robot, sim dans machines/sim/banc-robot/.
-# L2a : l'ancien banc de bureau du robot (docker-compose-x86.yml) est supprimé.
-COMPOSES = [MACHINES / "robot" / "docker" / "arm" / "docker-compose-arm.yml",
-            MACHINES / "sim" / "banc-robot" / "docker-compose-sim.yml"]
+# L1e-4c : compose ARM dans la conf de la machine robot. L2b : la sim = le service `robot` du
+# compose multi-conteneurs (l'ancien banc mono-conteneur banc-robot/ est supprimé).
+COMPOSES = [(MACHINES / "robot" / "docker" / "arm" / "docker-compose-arm.yml", None),
+            (MACHINES / "sim" / "docker-compose.yml", "robot")]
 
 
 def test_le_coeur_est_un_package_ament_python_dont_le_nom_est_celui_du_dossier():
@@ -387,8 +387,8 @@ def test_la_sentinelle_du_coeur_est_dans_le_package_et_gitignoree():
 
 
 def test_les_compose_montent_le_coeur_a_plat_et_posent_la_racine_des_donnees():
-    for compose in COMPOSES:
-        service = next(iter(yaml.safe_load(compose.read_text(encoding="utf-8"))["services"].values()))
+    for compose, nom in COMPOSES:
+        service = _service(compose, nom)
         volumes = service["volumes"]
         coeur = [v for v in volumes if v.endswith(":/home/ros2_ws/src/didier_core")]
         assert len(coeur) == 1 and coeur[0].split(":")[0].endswith("/didier_core"), (compose.name, coeur)
@@ -483,12 +483,12 @@ def test_la_sentinelle_de_la_vision_est_dans_le_package_et_gitignoree():
 
 
 def test_les_compose_de_la_vision_montent_le_package_a_plat_et_posent_la_racine_des_donnees():
-    # L1e-4c : compose ARM dans machines/vision/, banc x86 dans machines/sim/banc-vision/.
-    # L2a : le banc construit lui aussi par son compose (section build:, plus de build-x86.sh).
-    for nom, build, compose in (
-            ("arm", True, MACHINES / "vision" / "docker" / "arm" / "docker-compose-arm.yml"),
-            ("x86", True, MACHINES / "sim" / "banc-vision" / "docker-compose-x86.yml")):
-        service = next(iter(yaml.safe_load(compose.read_text(encoding="utf-8"))["services"].values()))
+    # L1e-4c : compose ARM dans machines/vision/. L2b : le PC = le service `vision` de la sim
+    # multi-conteneurs (l'ancien banc x86 banc-vision/docker-compose-x86.yml est supprimé).
+    for nom, build, compose, service_nom in (
+            ("arm", True, MACHINES / "vision" / "docker" / "arm" / "docker-compose-arm.yml", None),
+            ("x86", True, MACHINES / "sim" / "docker-compose.yml", "vision")):
+        service = _service(compose, service_nom)
         volumes = service["volumes"]
         code = [v for v in volumes if v.endswith(":/home/ros2_ws/src/didier_vision")]
         assert len(code) == 1 and code[0].split(":")[0].endswith("/didier_vision"), (nom, code)
@@ -660,8 +660,8 @@ CHEMINS_RETIRES_LEGACY_ROBOT = [
 # Chemins (relatifs à la racine du dépôt) qui décident du suffixe -dirty du sha déployé.
 # L1e-4c : machines/ remplace legacy/dadou_robot_ros/conf et legacy/dadou_vision_ros.
 CHEMINS_DEPLOYES = ["packages", "data", "machines", "deploy"]
-# L2a : l'ancien banc de bureau du robot (docker-compose-x86.yml) est supprimé.
-COMPOSES_PC = [MACHINES / "sim/banc-robot/docker-compose-sim.yml"]
+# L2b : la sim multi-conteneurs (services robot et monde) ; l'ancien banc mono-conteneur est supprimé.
+COMPOSE_SIM = MACHINES / "sim/docker-compose.yml"
 COMPOSE_ARM = MACHINES / "robot/docker/arm/docker-compose-arm.yml"
 
 
@@ -686,16 +686,16 @@ def test_les_donnees_sont_dans_data_et_ont_quitte_legacy():
 
 
 def test_les_compose_du_pc_montent_et_copient_depuis_data():
-    for compose in COMPOSES_PC:
-        service = _service(compose)
-        # L1e-4c : les bancs sont dans machines/sim/banc-robot/, trois niveaux sous la racine.
-        assert service["build"]["additional_contexts"]["data"] == "../../../data", compose.name
+    # L2b : machines/sim/docker-compose.yml, deux niveaux sous la racine ; robot ET monde.
+    for nom in ("robot", "monde"):
+        service = _service(COMPOSE_SIM, nom)
+        assert service["build"]["additional_contexts"]["data"] == "../../data", nom
         sources = {v.split(":")[1]: v.split(":")[0] for v in service["volumes"]}
-        assert sources["/home/ros2_ws/src/robot/json"] == "../../../data/json", compose.name
-        assert sources["/home/ros2_ws/src/robot/medias"] == "../../../data/medias", compose.name
-        assert (compose.parent / "../../../data/json").resolve() == DONNEES / "json"
-    # La sim monte AUSSI json/ pour leds_sim_node.
-    assert "../../../data/json:/home/ros2_ws/json" in _service(COMPOSES_PC[0])["volumes"]
+        assert sources["/home/ros2_ws/src/robot/json"] == "../../data/json", nom
+        assert sources["/home/ros2_ws/src/robot/medias"] == "../../data/medias", nom
+    assert (COMPOSE_SIM.parent / "../../data/json").resolve() == DONNEES / "json"
+    # Le monde monte AUSSI json/ pour leds_sim_node.
+    assert "../../data/json:/home/ros2_ws/json" in _service(COMPOSE_SIM, "monde")["volumes"]
 
 
 def test_le_compose_arm_garde_la_disposition_du_pi():
@@ -708,7 +708,7 @@ def test_le_compose_arm_garde_la_disposition_du_pi():
 
 
 def test_les_dockerfiles_copient_les_donnees_depuis_le_contexte_data():
-    for nom in ("robot/docker/Dockerfile", "sim/banc-robot/Dockerfile-sim"):
+    for nom in ("robot/docker/Dockerfile", "sim/monde/Dockerfile"):
         lignes = (MACHINES / nom).read_text(encoding="utf-8").splitlines()
         copies = [l for l in lignes if l.startswith("COPY ")]
         assert not [l for l in copies if l.split()[1] in ("json/", "medias/", "db/")], nom
@@ -828,17 +828,16 @@ def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
 # x86 du robot et celui de la vision.
 SIM_A_PLAT = ["coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
               "docker-compose.yml", "fumee.sh",
-              "fumee_page.py", "installer-fumee.sh", "launch-sim-in-docker.sh", "pub.sh", "rejouer-modifiees.sh",
+              "fumee_page.py", "installer-fumee.sh", "pub.sh", "rejouer-modifiees.sh",
               "validate-catalogue.sh", "validate-data-edit.sh", "validate-jeu-a1.sh", "validate-machines.sh",
               "validate-namespace.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
               "validate-rehearsal-route.sh"]
 # L2b : le conteneur `monde` (Dockerfile + entrée) et l'entrée du conteneur `robot` de la sim.
 SIM_MONDE = ["Dockerfile", "entree.sh"]
 SIM_ROBOT = ["entree.sh"]
-# L2a : l'ancien banc de bureau du robot (Dockerfile-x86, docker-compose-x86.yml) et build-x86.sh
-# du banc vision sont supprimés.
-BANC_ROBOT = ["Dockerfile-sim", "docker-compose-sim.yml"]
-BANC_VISION = ["asound-pc.conf", "audio_banc.py", "docker-compose-x86.yml"]
+# L2b : l'ancien banc mono-conteneur (banc-robot/) et le compose x86 du banc vision sont supprimés ;
+# banc-vision/ ne garde que l'alias ALSA et l'outil de réglage du casque.
+BANC_VISION = ["asound-pc.conf", "audio_banc.py"]
 # Hôte de l'inventaire -> machine (dossier machines/<machine>/).
 HOTES_MACHINES = {"r": "robot", "ai": "vision", "c": "telecommande",
                   "gl": "gant-gauche", "gr": "gant-droit"}
@@ -880,7 +879,11 @@ def test_la_conf_des_machines_a_quitte_legacy():
 def test_la_sim_vit_dans_machines_sim():
     sim = MACHINES / "sim"
     assert sorted(p.name for p in sim.iterdir() if p.is_file() and p.name != "README.md") == SIM_A_PLAT
-    assert sorted(p.name for p in (sim / "banc-robot").iterdir() if p.is_file()) == BANC_ROBOT
+    # L2b : banc-robot/ supprimé ; seul son workspace/ gitignoré peut rester sur un PC.
+    assert not [p for p in (sim / "banc-robot").rglob("*") if p.is_file() and "workspace" not in p.parts] \
+        if (sim / "banc-robot").exists() else True
+    assert not (sim / "launch-sim-in-docker.sh").exists()
+    assert not (PACKAGES / "didier_sim" / "launch" / "sim.launch.py").exists()
     assert sorted(p.name for p in (sim / "monde").iterdir() if p.is_file()) == SIM_MONDE
     assert sorted(p.name for p in (sim / "robot").iterdir() if p.is_file()) == SIM_ROBOT
     assert sorted(p.name for p in (sim / "banc-vision").iterdir()
@@ -979,15 +982,14 @@ def test_le_secret_de_la_vision_ne_peut_entrer_ni_dans_l_image_ni_dans_git():
     # ../.. de conf/docker/arm/ ; banc : machines/vision/ du dépôt).
     arm = _service(MACHINES / "vision/docker/arm/docker-compose-arm.yml")["build"]
     assert (arm["context"], arm["dockerfile"], arm["additional_contexts"]["conf"]) == ("..", "Dockerfile", "../..")
-    banc = MACHINES / "sim/banc-vision/docker-compose-x86.yml"
-    assert (banc.parent / _service(banc)["build"]["additional_contexts"]["conf"]).resolve() == MACHINES / "vision"
+    sim = MACHINES / "sim/docker-compose.yml"
+    assert (sim.parent / _service(sim, "vision")["build"]["additional_contexts"]["conf"]).resolve() == MACHINES / "vision"
     ignores = (MONO / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "machines/*/secret" in ignores and "machines/robot/DEPLOY_SHA" in ignores
 
 
 def test_la_sim_garde_gz_ip_et_la_fumee_pointe_le_banc():
     """GZ_IP=127.0.0.1 = correctif de l'A1 intermittent (11/11) : il doit survivre au déménagement."""
-    assert "GZ_IP=127.0.0.1" in _service(MACHINES / "sim/banc-robot/docker-compose-sim.yml")["environment"]
     # L2b : la fumée pilote le compose multi-conteneurs ; GZ_IP vit sur `monde`.
     compose = MACHINES / "sim" / "docker-compose.yml"
     assert "GZ_IP=127.0.0.1" in _service(compose, "monde")["environment"]
@@ -1165,8 +1167,7 @@ CONTEXTES_DOCKERFILE = {
 # à plusieurs services (L2b : la sim multi-conteneurs).
 COMPOSES_DOCKERFILE = {
     "robot": ["robot/docker/arm/docker-compose-arm.yml", "sim/docker-compose.yml#robot"],
-    "vision": ["vision/docker/arm/docker-compose-arm.yml", "sim/banc-vision/docker-compose-x86.yml",
-               "sim/docker-compose.yml#vision"],
+    "vision": ["vision/docker/arm/docker-compose-arm.yml", "sim/docker-compose.yml#vision"],
 }
 CHEMINS_RETIRES_L2 = [
     "src/robot/conf/docker/arm/Dockerfile-arm", "src/robot/conf/docker/arm/.dockerignore",
@@ -1280,6 +1281,9 @@ def test_docker_et_les_fichiers_docker_morts_sont_supprimes():
     for mort in ("robot/docker/Dockerfile-bak", "robot/docker/.dockerignore", "robot/docker/arm/.dockerignore",
                  "robot/docker/docker_bashrc", "robot/docker/jenkins", "robot/docker/scripts",
                  "sim/banc-robot/Dockerfile-x86", "sim/banc-robot/docker-compose-x86.yml",
-                 "sim/banc-vision/build-x86.sh", "vision/docker/arm/Dockerfile-arm.dockerignore"):
+                 "sim/banc-vision/build-x86.sh", "vision/docker/arm/Dockerfile-arm.dockerignore",
+                 # L2b : l'ancienne sim mono-conteneur et le banc x86 de la vision.
+                 "sim/banc-robot/Dockerfile-sim", "sim/banc-robot/docker-compose-sim.yml",
+                 "sim/launch-sim-in-docker.sh", "sim/banc-vision/docker-compose-x86.yml"):
         assert not (MACHINES / mort).exists(), mort
     assert "| `docker/` |" not in (MONO / "README.md").read_text(encoding="utf-8")

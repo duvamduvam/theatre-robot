@@ -166,7 +166,7 @@ def generate_launch_description():
     # (JPEG ~5 i/s, la webcam lui appartient en exclusif, cf. dadou_vision_ros)
     # -> camera_compressed=True, les octets sont servis TELS QUELS en MJPEG
     # (zéro ré-encodage sur le Pi robot). json_dir = structure assemblée par
-    # Ansible (json/ à plat dans src/robot/, cf. docker-compose-sim.yml).
+    # Ansible (json/ à plat dans src/robot/, mêmes montages dans machines/sim/docker-compose.yml).
     #
     # L2b (spec L2, décision 15) : sept arguments, lus par CE nœud seul, dont les défauts sont
     # EXACTEMENT les valeurs d'avant (robot : aucun argument passé, rien ne change). Seul le

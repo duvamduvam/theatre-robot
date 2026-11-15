@@ -26,7 +26,7 @@ setup(
             "audio_node = didier_core.nodes.audio_node:main",
             #face_node = didier_core.nodes.face_node:main",
             # Aperçu web du visage LED en SIMULATION (SIM-ONLY : lancé par
-            # sim.launch.py derrière l'argument face:=true, jamais dans le
+            # complement_sim.launch.py derrière l'argument face:=true, jamais dans le
             # bringup du vrai robot -- cf. didier_core/nodes/face_sim_node.py).
             "face_sim = didier_core.nodes.face_sim_node:main",
             # Suivi du regard (cou seulement, jamais les roues). Lancé À LA MAIN

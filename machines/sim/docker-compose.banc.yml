@@ -9,7 +9,7 @@
 # SEULE exception à la décision 8 (aucun service privilégié ni /dev) : la webcam (/dev/video0,
 # person_tracker) et l'audio l'exigent. Domaine 43 inchangé (posé en littéral par le compose de base).
 # Le secret de ~/.config/didier/ est monté ICI seulement, en lecture seule — jamais dans l'image.
-# Ex machines/sim/banc-vision/docker-compose-x86.yml (supprimé en L2b) ; asound-pc.conf et
+# Ex banc x86 de la vision (supprimé en L2b) ; asound-pc.conf et
 # audio_banc.py restent dans banc-vision/.
 services:
   vision:

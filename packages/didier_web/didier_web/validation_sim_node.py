@@ -1,6 +1,6 @@
 """Nœud `validation_sim` (lot L1d-2) : l'observateur de la porte sim, SIM SEULEMENT.
 
-Lancé par sim.launch.py seul (jamais par robot_app.launch.py) ; hors domaine 43 il refuse de
+Lancé par complement_sim.launch.py seul (jamais par robot_app.launch.py) ; hors domaine 43 il refuse de
 démarrer (même garde que rehearsal_enabled) : le registre des validations ne s'écrit qu'en sim.
 Mince : toute la logique est dans validation_sim.Observateur, pure et testée sans ROS.
 

@@ -842,8 +842,8 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
   `~/.local/state/didier-fumee/journal.log` et sort 0 : **jamais de plage à réserver**, l'essai
   de 30 min plus tard réessaie. Sont reportés : charge 1 min > nb de cœurs × 0,5 (seuil
   `FUMEE_CHARGE_MAX`, 16 sur ce PC de 32 cœurs ; le RTF reste le vrai juge), RTF < 0,8 après
-  démarrage de la sim, **un conteneur de la sim déjà présent** (`didier-sim-*`, ou l'ancien
-  `dadou-sim-container` tant que L2b n'est pas close — la sim de quelqu'un : jamais touchée), checkout qui n'est pas sur la branche `main`, **plage sans commit** (11/11 :
+  démarrage de la sim, **un conteneur de la sim déjà présent** (`didier-sim-*` — la sim de
+  quelqu'un : jamais touchée), checkout qui n'est pas sur la branche `main`, **plage sans commit** (11/11 :
   fichier LOCAL hors dépôt `~/.config/didier/plages-sans-commit`, une ligne « JOURS DEBUT FIN »,
   jours ISO 1 = lundi, heures pleines, FIN exclue ; la fumée ne démarre ni dedans ni dans l'heure
   d'avant, puisqu'elle commite sa page ; fichier absent = aucune plage ; même fichier lu par une

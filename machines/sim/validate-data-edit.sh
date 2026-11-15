@@ -2,7 +2,7 @@
 # L1d — preuve REJOUABLE de l'édition des données à travers le robot, en simulation (spec
 # theatre-robot/docs/spec-L1-contrats-donnees.md, « L1d », décision 15, épreuves 1 à 13), DANS le
 # conteneur sim (domaine 43) démarré avec
-# DATA_EDIT=true ANIMATIONS=true FACE=true.
+# DATA_EDIT=true FACE=true (L2b : machines/sim/docker-compose.yml, épreuve lancée dans monde).
 #   1. création d'une séquence -> ok, fichier présent, nom au catalogue en <= 5 s ;
 #   2. retouche (neck à 0.37) -> ok, octets exacts, sauvegarde, 2 lignes au journal ;
 #   3. jouée : animation_state porte le nom ET neck reçoit 0.37 (rechargement prouvé) ;
@@ -59,7 +59,7 @@ for essai in 1 2 3 4; do
   done
   [ -z "$manque" ] && break; sleep 2
 done
-[ -z "$manque" ] || { echo "PRÉCONDITION :$manque absent(s) (sim lancée avec DATA_EDIT=true ANIMATIONS=true FACE=true ?)"; exit 2; }
+[ -z "$manque" ] || { echo "PRÉCONDITION :$manque absent(s) (sim lancée avec DATA_EDIT=true FACE=true ?)"; exit 2; }
 lance "/twist_deadman( |$)" drive ros2 launch didier_drive drive.launch.py use_sim_time:=true
 sleep 5
 
