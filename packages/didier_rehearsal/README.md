@@ -169,7 +169,9 @@ s'il l'a dépassé), pivote face à lui, s'arrête. SIM-ONLY (vérité terrain).
 - **Réponse au geste** (15/11) : CHAQUE geste arbitré (aller_voir, tourner,
   avancer, tour_de ; jamais go/stop) publie sur `rehearsal/chat_move_reply`
   `{"demande": <le dict reçu>, "effect": <celui du journal>, "reason":
-  <sous-raison d'invalid | null>, "source": "director"}` (VOLATILE). Le chat
+  <sous-raison d'invalid | null>, "name": <nom de l'ordre si accepté, celui
+  que route_goto_result renverra | null>, "source": "director"}` (VOLATILE),
+  publiée AVANT l'ordre sur route_goto. Le chat
   en fait une fin de geste ÉCHOUÉE dite en personnage (sinon Didier affirmait
   un tour refusé) ; le sélecteur de jeu y clôt son engagement.
 

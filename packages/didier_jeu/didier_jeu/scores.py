@@ -63,7 +63,14 @@ class Candidat:
         return CATEGORIES.get(self.action, ())
 
     def cle(self) -> str:
-        """Identité pour l'hystérésis : même action, même cible."""
+        """Identité pour l'hystérésis : même action, même cible. Une demande de
+        la BOUCHE est identifiée par sa demande entière (15/11, séance 21:21 :
+        « fais le tour de l'éléphant » pendant « aller voir l'éléphant » avait
+        la même clé « bouche:elephant », passait pour l'action en cours et
+        mourait « autre chose l'a emporté ») : une nouvelle demande est une
+        nouvelle action, qui interrompt l'ancienne (offre 0,9 = seuil de rupture)."""
+        if self.action == "bouche":
+            return f"bouche:{sorted(self.detail.get('demande', {}).items())!r}"
         return f"{self.action}:{self.cible or ''}"
 
 

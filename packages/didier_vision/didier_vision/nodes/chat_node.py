@@ -1252,6 +1252,8 @@ class ChatNode(Node):
         # Même payload : les objets dont on peut faire le tour (champ `tour`).
         tours = stage.decode_tours_payload(ros_msg.msg)
         self._brain.set_objects_prompt(personas.objects_prompt(objects, tours))
+        # Garde déterministe des gestes (15/11 21:21) : hors vocabulaire, jamais publié.
+        self._engine.set_gesture_vocabulary([name for name, _desc in objects], tours)
         self.get_logger().info(
             f"objets à aller voir : {len(objects)} reçus "
             f"({', '.join(name for name, _desc in objects)}) ; tour possible : "

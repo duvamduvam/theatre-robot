@@ -41,6 +41,14 @@ GESTE REFUSÉ (15/11, séance : « fais le tour de l'éléphant », refusé faut
        « personne n'a donné suite ». Une réponse ARRIVÉE AVANT que la
        conversation ait noté son geste (le régisseur répond en quelques ms)
        est gardée EARLY_REPLY_S et appliquée à la notation.
+CORRÉLATION (15/11 21:21, séance : « aller voir l'éléphant » roulait encore
+       quand David a demandé le tour ; l'ARRIVÉE de l'ancien aller_voir a été
+       prise pour la fin du tour -> « Ton geste « elephant » est terminé » ->
+       « j'ai fait le tour ») : un geste noté AVEC son dict n'est fini que par
+       l'issue de SON ordre — le `name` que le régisseur a rendu en l'acceptant
+       (« tour de elephant » ≠ « elephant »). Pas encore accepté, ou autre nom :
+       issue ignorée (journalisée). La réponse d'acceptation part AVANT
+       l'ordre (director_node._reply puis _accept_maneuver).
 """
 from __future__ import annotations
 
@@ -198,6 +206,8 @@ class MoveTask:
         self._gesture: Optional[dict] = None
         self._emitted_at = 0.0
         self._acked = False
+        # `name` de l'ordre accepté (route_goto_result de CE geste seulement).
+        self._expected_name: Optional[str] = None
         # Réponse arrivée avant la notation de son geste : (payload, instant).
         self._early: Optional[tuple] = None
 
@@ -234,6 +244,7 @@ class MoveTask:
                 logger.info("Tâche ouverte : %r (geste 1/%d).", request, TASK_MAX_STEPS)
             self._awaiting = True
             self._gesture, self._emitted_at, self._acked = gesture, now, False
+            self._expected_name = None
             early, self._early = self._early, None
             if (early is not None and gesture is not None and now - early[1] <= EARLY_REPLY_S
                     and early[0].get("demande") == gesture):
@@ -270,6 +281,13 @@ class MoveTask:
                 return None
             if not isinstance(payload, dict):
                 self._close_locked("résultat illisible")
+                return None
+            if self._gesture is not None and (not self._acked
+                                              or payload.get("name") != self._expected_name):
+                # Issue d'un AUTRE ordre (antérieur, ou du sélecteur) : pas celle
+                # du geste de la tâche (cf. docstring CORRÉLATION).
+                logger.info("Tâche : issue de %r ignorée (attendu %r).",
+                            payload.get("name"), self._expected_name)
                 return None
             reason = payload.get("reason")
             if reason == SUPERSEDED_REASON:
@@ -316,6 +334,8 @@ class MoveTask:
     def _apply_reply_locked(self, payload: dict, now: float) -> Optional[str]:
         if payload.get("effect") == ACCEPTED:
             self._acked = True
+            name = payload.get("name")
+            self._expected_name = name if isinstance(name, str) else None
             return None
         reason = refusal_reason(payload)
         gesture, request = self._gesture, self._request

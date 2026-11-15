@@ -226,7 +226,8 @@ def test_refus_no_tour_direction_d_echec_gravee():
 
 def test_acceptation_puis_arrivee_inchangee():
     task = _tache_elephant()
-    assert task.on_reply(_reponse("accepted"), T0 + 0.1) is None
+    acceptee = dict(_reponse("accepted"), name="tour de elephant")    # nom de l'ORDRE parti
+    assert task.on_reply(acceptee, T0 + 0.1) is None
     assert task.check_ack(T0 + 60.0) is None                  # accepté : seule l'issue le finit
     assert task.on_result(_arrive("tour de elephant", 9.4), T0 + 60.0) == (
         "Ton geste « tour de elephant » est terminé (9.4 m parcourus). Ta tâche, demandée par David : "
@@ -299,7 +300,9 @@ def test_reponse_precoce_perimee_ou_autre_ignoree():
 
 def test_refus_budget_epuise_dit_l_echec_et_ferme():
     task = _tache_elephant()
+    acceptee = dict(_reponse("accepted"), name="tour de poubelle_tri")
     for k in range(2, move_task_module.TASK_MAX_STEPS + 1):     # gestes 2..8, tous arrivés
+        task.on_reply(acceptee, T0 + k)
         assert task.on_result(_arrive(), T0 + k) is not None
         task.pop_continuation()
         task.gesture_emitted(DEMANDE_ELEPHANT, True, T0 + k, gesture=dict(ELEPHANT))
@@ -319,3 +322,38 @@ def test_close_oublie_le_geste_en_vol():
     assert task.on_reply(_reponse("no_tour"), T0 + 0.1) is None
     assert task.check_ack(T0 + 30.0) is None
     assert task.pop_continuation() is None
+
+
+# --- Séance du 15/11 21:21 : l'arrivée d'un ANCIEN geste n'est jamais la fin du nouveau ---
+
+AV_ELEPHANT = {"cmd": "aller_voir", "objet": "elephant"}
+ARRIVEE_ANCIEN = {"name": "elephant", "result": "arrived", "reason": "arrived", "travelled": 3.17}
+
+
+def test_seance_2121_arrivee_de_l_ancien_aller_voir_jamais_terminee_pour_le_tour():
+    """EXACTEMENT la séquence : aller_voir elephant accepté et en route ->
+    David demande le tour (tour humain) -> tour_de émis -> l'ancien aller_voir
+    arrive (« elephant », 3,17 m) -> le sélecteur répond « pas_retenu ».
+    Avant : « Ton geste « elephant » est terminé (3.17 m parcourus) »."""
+    task = MoveTask()
+    task.gesture_emitted("va voir l'éléphant", False, T0, gesture=dict(AV_ELEPHANT))
+    task.on_reply(_reponse("accepted", demande=AV_ELEPHANT) | {"name": "elephant"}, T0 + 0.01)
+    task.close("tour humain")                                       # 21:21:16
+    task.gesture_emitted(DEMANDE_ELEPHANT, False, T0 + 21.0, gesture=dict(ELEPHANT))   # 21:21:17
+    assert task.on_result(ARRIVEE_ANCIEN, T0 + 23.0) is None        # 21:21:19 : pas la sienne
+    assert task.pop_continuation() is None
+    texte = task.on_reply(_reponse("dropped", "pas_retenu", source="jeu"), T0 + 24.0)   # 21:21:20
+    assert texte == (
+        "Ton geste « faire le tour de elephant » n'a PAS eu lieu : ton corps ne t'a pas suivi. Tu n'as pas "
+        "bougé. Ta tâche, demandée par David : « fais le tour de l'éléphant ». Dis-le en personnage, en une "
+        "phrase : ne prétends JAMAIS l'avoir fait. Ne redemande pas ce geste-là ; si un autre geste sert la "
+        "tâche, fais-le, sinon dis que tu ne peux pas, SANS clé de geste.")
+    assert task.pop_continuation() == texte and "terminé" not in texte
+
+
+def test_issue_d_un_autre_nom_ignoree_apres_acceptation():
+    task = _tache_elephant()
+    task.on_reply(dict(_reponse("accepted"), name="tour de elephant"), T0 + 0.1)
+    assert task.on_result(ARRIVEE_ANCIEN, T0 + 5.0) is None             # « elephant » ≠ « tour de elephant »
+    assert task.on_result(_arrive("tour de elephant", 9.4), T0 + 30.0).startswith(
+        "Ton geste « tour de elephant » est terminé (9.4 m parcourus).")

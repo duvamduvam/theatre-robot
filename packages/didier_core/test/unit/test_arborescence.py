@@ -829,6 +829,8 @@ def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
 SIM_A_PLAT = ["coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
               "docker-compose.yml", "fumee.sh",
               "fumee_page.py", "installer-fumee.sh", "pub.sh", "rejouer-modifiees.sh",
+              # 15/11 (567382b) : séance « Chantiers » en une commande.
+              "seance-chantiers.sh",
               "validate-catalogue.sh", "validate-data-edit.sh", "validate-jeu-a1.sh", "validate-machines.sh",
               "validate-namespace.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
               "validate-rehearsal-route.sh"]

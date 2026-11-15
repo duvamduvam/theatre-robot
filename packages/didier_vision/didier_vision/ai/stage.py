@@ -44,6 +44,7 @@ from __future__ import annotations
 import json
 import random
 import threading
+import unicodedata
 from collections import deque
 from typing import Optional, Sequence, Tuple
 
@@ -402,6 +403,27 @@ def decode_objects_payload(raw) -> list:
     if value and not objects:
         raise ValueError(f"objets : aucun élément valable (\"name\" manquant) : {raw!r}")
     return objects
+
+
+# Articles de tête retirés par normalize_object_name — MÊME liste que le
+# régisseur (didier_rehearsal/route.py _ARTICLES, gravée des deux côtés par
+# test_stage.py) : la garde du chat et la résolution du régisseur doivent
+# trouver le même objet.
+OBJECT_ARTICLES = frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "au", "aux"))
+
+
+def normalize_object_name(text) -> str:
+    """Clé de correspondance d'un nom d'objet, IDENTIQUE à
+    didier_rehearsal.route.normalize_name (minuscules, sans accents,
+    ponctuation et `_` en espaces, articles de tête retirés) ; non-chaîne -> ""."""
+    if not isinstance(text, str):
+        return ""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    plain = "".join(c for c in decomposed if not unicodedata.combining(c))
+    words = "".join(c if c.isalnum() else " " for c in plain).split()
+    while words and words[0] in OBJECT_ARTICLES:
+        words.pop(0)
+    return " ".join(words)
 
 
 def decode_tours_payload(raw) -> list:

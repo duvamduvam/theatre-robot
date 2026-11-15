@@ -8,6 +8,7 @@ la fonction testée ne teste rien) — bornes à la seconde près, tirages seed�
 (plafond 60 s, péremption 120 s, phantom ponctuel) est retiré.
 """
 import json
+import pathlib
 import random
 
 import pytest
@@ -360,3 +361,18 @@ def test_objets_bornes_longueurs_et_nombre():
     assert len(objets) == 40
     assert objets[0] == ("n" * 40, "d" * 60)
     assert objets[-1] == ("o38", "")
+
+
+def test_normalisation_identique_au_regisseur():
+    # Exemples GRAVÉS de didier_rehearsal.route.normalize_name (docstring + articles).
+    assert stage.normalize_object_name("Les Anneaux !") == "anneaux"
+    assert stage.normalize_object_name("table_basse") == "table basse"
+    assert stage.normalize_object_name("l'eau") == "eau"
+    assert stage.normalize_object_name("L'Éléphant") == "elephant"
+    assert stage.normalize_object_name(12) == ""
+    route = (pathlib.Path(__file__).resolve().parents[3] / "didier_rehearsal" / "didier_rehearsal"
+             / "route.py").read_text(encoding="utf-8")
+    assert ('_ARTICLES = frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "au", '
+            '"aux"))') in route
+    assert stage.OBJECT_ARTICLES == frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d",
+                                               "au", "aux"))

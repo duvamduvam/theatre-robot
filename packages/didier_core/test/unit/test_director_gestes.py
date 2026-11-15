@@ -101,6 +101,8 @@ def test_node_tourner_accepte_hors_seance(regisseur, monkeypatch, tmp_path):
     assert [p for t, p in _journal(n) if t == "tourner"] == [
         {"angle_deg": 90, "effect": "accepted", "name": "pivot +90°"}]   # champs du contrat seuls
     assert _ordres(n) == [{"turn_rad": 1.5707963267948966}]
+    # Nom de l'ordre dans la réponse (15/11) : celui que route_goto_result renverra.
+    assert [json.loads(m)["name"] for m in _publie(n, "rehearsal/chat_move_reply")] == ["pivot +90°"]
 
 
 def test_node_avancer_refus_recul_rien_ne_part(regisseur, monkeypatch, tmp_path):
@@ -112,7 +114,7 @@ def test_node_avancer_refus_recul_rien_ne_part(regisseur, monkeypatch, tmp_path)
     assert _ordres(n) == []
     # Le refus revient au chat avec sa sous-raison (15/11).
     assert [json.loads(m) for m in _publie(n, "rehearsal/chat_move_reply")] == [
-        {"demande": {"cmd": "avancer", "metres": -2}, "effect": "invalid", "reason": "recul",
+        {"demande": {"cmd": "avancer", "metres": -2}, "effect": "invalid", "reason": "recul", "name": None,
          "source": "director"}]
 
 

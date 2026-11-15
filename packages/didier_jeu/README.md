@@ -76,7 +76,10 @@ ligne `refus` dit pourquoi et `rehearsal/chat_move_reply` porte `dropped` + le
 code. Sinon Didier affirmait un geste qui n'avait pas eu lieu. Un déplacement
 **refusé** par le régisseur, ou resté sans réponse, n'a pas eu lieu : ses
 périodes réfractaires et sa fatigue sont **rendues**. Avant, un refus bloquait
-en silence la demande suivante.
+en silence la demande suivante. Une nouvelle demande de la bouche interrompt
+celle en cours, même sur le même objet (clé = demande entière, séance du 15/11
+21:21). Seule l'issue de l'ordre accepté (`name` de la réponse du régisseur)
+finit l'étape ; les autres sont journalisées `issue_ignoree`.
 
 **Metteur en scène** : un mot-clé d'expression ou de regard biaise le score. Un
 mot-clé de **déplacement** (« approche ») ne fait bouger Didier que si le texte

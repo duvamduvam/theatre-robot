@@ -541,12 +541,12 @@ class DirectorNode(Node):
         return self.goto_policy.off_by_david(self.reenable.latched_state, self.reenable.cause,
                                              self.reenable.off_by_cmd)
 
-    def _reply(self, intent: dict, effect: str, reason=None):
+    def _reply(self, intent: dict, effect: str, reason=None, name=None):
         """Réponse au geste (contracts.CHAT_MOVE_REPLY_TOPIC), APRÈS le journal :
         une publication en échec ne doit ni taire le journal ni empêcher la
         manœuvre acceptée (le chat borne lui-même une réponse manquante)."""
         try:
-            self.pub_reply.publish(StringTime(msg=move_reply(intent, effect, reason), time=0, anim=False))
+            self.pub_reply.publish(StringTime(msg=move_reply(intent, effect, reason, name), time=0, anim=False))
         except Exception as e:   # noqa: BLE001 — jamais fatal (cf. docstring)
             self.get_logger().error(f"chat_move_reply : {e!r}")
 
@@ -563,7 +563,8 @@ class DirectorNode(Node):
         if decision.distance is not None:
             payload["distance"] = round(decision.distance, 2)
         self.log("aller_voir", payload)
-        self._reply(intent, decision.effect)
+        self._reply(intent, decision.effect,
+                    name=decision.poi.name if decision.effect == "accepted" else None)
         if decision.effect != "accepted":
             return
         self._accept_maneuver(decision.poi.name, goto_order(decision.poi), "aller_voir", now)
@@ -585,7 +586,8 @@ class DirectorNode(Node):
         if decision.name is not None:
             payload["name"] = decision.name
         self.log(kind, payload)
-        self._reply(intent, decision.effect, decision.reason)
+        self._reply(intent, decision.effect, decision.reason,
+                    name=decision.name if decision.effect == "accepted" else None)
         if decision.effect == "accepted":
             self._accept_maneuver(decision.name, decision.order, kind, now)
 
@@ -605,7 +607,8 @@ class DirectorNode(Node):
         if decision.distance is not None:
             payload["distance"] = round(decision.distance, 2)
         self.log(CHAT_MOVE_TOUR_CMD, payload)
-        self._reply(intent, decision.effect, decision.reason)
+        self._reply(intent, decision.effect, decision.reason,
+                    name=decision.name if decision.effect == "accepted" else None)
         if decision.effect == "accepted":
             self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TOUR_CMD, now,
                                   target=decision.poi.name)

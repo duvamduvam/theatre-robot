@@ -37,10 +37,12 @@ def test_objets_payload_marque_les_objets_qui_ont_un_tour():
 def test_move_reply_payload_grave():
     assert json.loads(move_reply({"cmd": "tour_de", "objet": "éléphant", "sens": "gauche"}, "no_tour")) == {
         "demande": {"cmd": "tour_de", "objet": "éléphant", "sens": "gauche"}, "effect": "no_tour",
-        "reason": None, "source": "director"}
+        "reason": None, "name": None, "source": "director"}
     assert move_reply({"cmd": "avancer", "metres": -1}, "invalid", "recul") == (
         '{"demande": {"cmd": "avancer", "metres": -1}, "effect": "invalid", "reason": "recul", '
-        '"source": "director"}')
+        '"name": null, "source": "director"}')
+    assert json.loads(move_reply({"cmd": "tour_de", "objet": "banc"}, "accepted", name="tour de banc"))["name"] == (
+        "tour de banc")
 
 
 def test_resolution_normalisee():

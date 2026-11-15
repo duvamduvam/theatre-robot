@@ -113,6 +113,7 @@ class Engagement:
     anim_vue: bool = False            # animation_state a montré NOTRE séquence
     stop_envoye: bool = False         # lubie : le « stop » est parti
     etape: Optional[dict] = None      # chat_move de l'étape EN COURS (appariement des réponses)
+    nom_ordre: Optional[str] = None   # `name` de l'ordre ACCEPTÉ (seule son issue finit l'étape)
     # Réfractaires d'avant la décision (catégorie -> t | None) : rendus si le
     # régisseur refuse ou se tait (le déplacement n'a pas eu lieu).
     derniers_avant: Dict[str, Optional[float]] = field(default_factory=dict)
@@ -342,6 +343,12 @@ class Selecteur:
         e = self.en_cours
         if e is None or not e.candidat.deplacement or e.candidat.action == "repartir":
             return
+        nom = payload.get("name") if isinstance(payload, dict) else None
+        if e.nom_ordre is not None and nom != e.nom_ordre:
+            # Issue d'un ordre ANTÉRIEUR (séance du 15/11 21:21) : pas la nôtre.
+            self._journal("issue_ignoree", f"issue de « {nom} » ignorée : il attend celle de « {e.nom_ordre} »",
+                          nom=nom, attendu=e.nom_ordre)
+            return
         resultat = payload.get("result") if isinstance(payload, dict) else None
         if resultat == "arrived" and e.etapes:
             self._etape_suivante(e, now)
@@ -367,6 +374,8 @@ class Selecteur:
         effet = payload.get("effect")
         if effet == "accepted":
             e.accuse = True
+            nom = payload.get("name")
+            e.nom_ordre = nom if isinstance(nom, str) else None
             return
         raison = payload.get("reason")
         self._rendre_refractaires(e)
@@ -546,7 +555,7 @@ class Selecteur:
 
     def _etape_suivante(self, e: Engagement, now: float) -> None:
         etape = e.etapes.pop(0)
-        e.accuse, e.t_etape, e.etape = False, now, etape
+        e.accuse, e.t_etape, e.etape, e.nom_ordre = False, now, etape, None
         self.sorties.append(("chat_move", etape))
 
     def _rendre_refractaires(self, e: Engagement) -> None:

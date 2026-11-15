@@ -99,6 +99,8 @@ def test_node_tour_accepte_hors_seance(regisseur, monkeypatch, tmp_path):
                                   "name": "tour de banc", "distance": 4.03}]       # champs du contrat seuls
     assert _ordres(n) == [{"name": "tour de banc", "orbit_x": 5.0, "orbit_y": 0.5, "orbit_r": 2.0,
                            "orbit_dir": -1}]
+    # « tour de banc » ≠ « banc » : le chat n'attribue au tour que l'issue de CET ordre.
+    assert [json.loads(m)["name"] for m in _publie(n, "rehearsal/chat_move_reply")] == ["tour de banc"]
 
 
 def test_node_sans_fichier_de_tours_no_tour(regisseur, monkeypatch, tmp_path):
@@ -109,7 +111,7 @@ def test_node_sans_fichier_de_tours_no_tour(regisseur, monkeypatch, tmp_path):
     assert _ordres(n) == []
     # Séance du 15/11 (« fais le tour de l'éléphant ») : le refus revient au chat.
     assert [json.loads(m) for m in _publie(n, "rehearsal/chat_move_reply")] == [
-        {"demande": {"cmd": "tour_de", "objet": "banc"}, "effect": "no_tour", "reason": None,
+        {"demande": {"cmd": "tour_de", "objet": "banc"}, "effect": "no_tour", "reason": None, "name": None,
          "source": "director"}]
 
 

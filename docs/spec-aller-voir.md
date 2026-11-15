@@ -403,6 +403,28 @@ sans avoir bougé.
   (`MoveTask.check_ack`, timer de chat_node à 0,5 s).
 - **Prompt** : « Quand on te dit qu'un geste n'a PAS eu lieu, tu n'as pas
   bougé : dis-le en personnage, ne prétends jamais l'avoir fait. »
+- **Séance du 15/11 21:21** (Didier disait ENCORE « j'ai fait le tour ») :
+  l'« aller voir l'éléphant » roulait encore quand David a demandé le tour.
+  Haiku a demandé le tour malgré la liste. L'arrivée de l'ancien aller_voir
+  (`name` « elephant ») a été prise pour la fin du tour. Le sélecteur avait
+  jeté le tour (même clé `bouche:elephant` que l'action en cours, « autre
+  chose l'a emporté »), et ce refus est arrivé trop tard. Trois corrections :
+  1. **Garde déterministe** (chat, `ConversationEngine.set_gesture_vocabulary`) :
+     un `faire_le_tour` dont l'objet (normalisé comme au régisseur) n'est pas
+     dans les tours possibles, ou un `aller_voir` hors des objets, n'est
+     JAMAIS publié. Il devient tout de suite une fin ÉCHOUÉE (`no_tour` si
+     l'objet est connu, `unknown` sinon). Les alias ne passent donc plus : le
+     prompt exige le nom exact. Sans vocabulaire reçu, le régisseur juge.
+  2. **Corrélation** : la réponse `accepted` porte `name`, le nom de l'ordre
+     (celui que `route_goto_result` renverra : « tour de elephant » ≠
+     « elephant »). Un geste n'est fini que par l'issue de CET ordre ; toute
+     autre issue est ignorée et journalisée (chat `MoveTask.on_result`,
+     sélecteur `issue_ignoree`). La réponse part AVANT l'ordre.
+  3. **Nouvelle demande pendant un geste** : la clé d'hystérésis d'une
+     demande de la bouche est la demande entière. Une nouvelle demande
+     interrompt donc l'ancienne (offre 0,9 = seuil de rupture) et part au
+     régisseur, qui répond. S'il la refuse, c'est l'échec de la NOUVELLE
+     demande qui est dit.
 - **Tests** : `didier_core/test/unit/test_director_*.py` (réponse publiée,
   `tour` du vocabulaire), `didier_jeu/test/test_reponse_bouche.py` (séance
   rejouée, codes, réfractaires rendus, `no_reply` à 4,4 s), `didier_vision`

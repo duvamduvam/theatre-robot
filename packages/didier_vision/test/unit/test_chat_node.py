@@ -658,6 +658,8 @@ def test_objets_disent_les_tours_au_cerveau():
     source = ast.unparse(_chat_node_method(_chat_node_tree(), "_on_objects"))
     assert "tours = stage.decode_tours_payload(ros_msg.msg)" in source
     assert "self._brain.set_objects_prompt(personas.objects_prompt(objects, tours))" in source
+    # Garde déterministe des gestes (15/11 21:21).
+    assert "self._engine.set_gesture_vocabulary([name for name, _desc in objects], tours)" in source
 
 
 def test_reponse_au_geste_illisible_ignoree_sinon_move_task():

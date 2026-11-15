@@ -79,7 +79,7 @@ def test_refus_inconnu_rien_ne_part(regisseur, monkeypatch, tmp_path):
     assert _ordres(n) == []
     # Le refus revient au chat (15/11) : sans lui, Didier affirmait le geste.
     assert _reponses(n) == [{"demande": {"cmd": "aller_voir", "objet": "pigeon"}, "effect": "unknown",
-                             "reason": None, "source": "director"}]
+                             "reason": None, "name": None, "source": "director"}]
 
 
 def test_reponse_acceptee_publiee(regisseur, monkeypatch, tmp_path):
@@ -87,7 +87,7 @@ def test_reponse_acceptee_publiee(regisseur, monkeypatch, tmp_path):
     _odom(n, 1.0, 0.0)
     _aller_voir(n, "Le Banc")
     assert _reponses(n) == [{"demande": {"cmd": "aller_voir", "objet": "Le Banc"}, "effect": "accepted",
-                             "reason": None, "source": "director"}]
+                             "reason": None, "name": "banc", "source": "director"}]
     assert n.qos_publieurs["rehearsal/chat_move_reply"] == 10          # VOLATILE : jamais rejouée
 
 

@@ -707,12 +707,15 @@ def objects_payload(pois, tours=()) -> str:
                        for p in pois])
 
 
-def move_reply(demande, effect: str, reason: str | None = None) -> str:
+def move_reply(demande, effect: str, reason: str | None = None, name: str | None = None) -> str:
     """Payload de rehearsal/chat_move_reply (contracts.CHAT_MOVE_REPLY_TOPIC)
     pour un geste arbitré ICI : la demande TELLE QUE REÇUE (le chat apparie par
-    égalité avec ce qu'il a émis), l'effet du journal, la sous-raison."""
-    return json.dumps({"demande": demande, "effect": effect, "reason": reason, "source": "director"},
-                      ensure_ascii=False)
+    égalité avec ce qu'il a émis), l'effet du journal, la sous-raison, et
+    `name` = nom de l'ORDRE parti sur route_goto quand il est accepté (celui que
+    route_goto_result renverra : « tour de elephant » ≠ « elephant ») — le chat
+    et le sélecteur n'attribuent à une demande que l'issue de SON ordre."""
+    return json.dumps({"demande": demande, "effect": effect, "reason": reason, "name": name,
+                       "source": "director"}, ensure_ascii=False)
 
 
 def resolve_object(text, pois) -> Poi | None:

@@ -179,3 +179,47 @@ def test_objets_sans_effet_sur_la_liste():
     sel = fabriquer(pools={})
     sel.sur_objets(OBJETS + [{"name": "elephant", "desc": "statue", "x": 1.0, "y": 2.0, "tour": False}])
     assert sel.objets["elephant"] == (1.0, 2.0)
+
+
+# --- Séance du 15/11 21:21 : nouvelle demande pendant qu'un geste roule ----------------
+AV_ELEPHANT = {"cmd": "aller_voir", "objet": "elephant"}
+
+
+def regisseur_2121(demande):
+    """aller_voir accepté (ordre « elephant ») ; tour de l'éléphant refusé (côté Loire)."""
+    if demande.get("cmd") == "aller_voir":
+        return {"demande": demande, "effect": "accepted", "reason": None, "name": demande["objet"],
+                "source": "director"}
+    return {"demande": demande, "effect": "no_tour", "reason": None, "name": None, "source": "director"}
+
+
+def test_seance_2121_tour_pendant_aller_voir_puis_arrivee_de_l_ancien():
+    """aller_voir elephant en cours -> « fais le tour de l'éléphant » 10 s après ->
+    l'ancien aller_voir arrive. Avant : même clé « bouche:elephant », la demande
+    du tour mourait (« autre chose l'a emporté ») et l'arrivée de l'ancien
+    finissait « il est arrivé ». Maintenant : le tour INTERROMPT l'aller_voir,
+    part au régisseur, est refusé ; l'arrivée de l'ancien ne finit rien."""
+    out = jouer_regisseur(fabriquer(pools={}), 16.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT)), (11.0, bouche(ELEPHANT)),
+        (13.0, lambda s, t: s.sur_goto_result({"name": "elephant", "result": "arrived", "reason": "arrived",
+                                               "travelled": 3.17}, t)),
+    ], regisseur_2121)
+    assert moves(out) == [(1.3, AV_ELEPHANT), (11.6, ELEPHANT)]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "annulation")] == [
+        (11.6, "plus pressant : faire ce qu'il a dit (faire le tour de « elephant ») → il arrête de faire ce "
+               "qu'il a dit (aller voir « elephant »)")]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "fin")] == [
+        (11.7, "faire ce qu'il a dit (faire le tour de « elephant ») : le régisseur refuse (no_tour) : "
+               "il n'a pas bougé")]
+    assert journal(out, "refus") == [] and reponses(out) == []
+
+
+def test_issue_d_un_autre_ordre_ignoree_pendant_l_engagement():
+    sel = fabriquer(pools={})
+    out = jouer_regisseur(sel, 6.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT)),
+        (3.0, lambda s, t: s.sur_goto_result({"name": "tour de banc", "result": "arrived"}, t)),
+    ], regisseur_2121)
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "issue_ignoree")] == [
+        (3.0, "issue de « tour de banc » ignorée : il attend celle de « elephant »")]
+    assert journal(out, "fin") == [] and sel.en_cours.etape == AV_ELEPHANT

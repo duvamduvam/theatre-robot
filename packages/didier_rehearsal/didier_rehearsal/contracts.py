@@ -143,7 +143,11 @@ ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
 # RÉPONSE à un geste demandé (15/11, défaut vu en séance : « fais le tour de
 # l'éléphant » refusé sans tour, Didier affirmait l'avoir fait) : StringTime
 # JSON {"demande": <le dict de chat_move tel que reçu>, "effect": …,
-# "reason": <sous-raison | null>, "source": "director" | "jeu"}, VOLATILE.
+# "reason": <sous-raison | null>, "name": <nom de l'ordre accepté | null>,
+# "source": "director" | "jeu"}, VOLATILE. `name` (régisseur, accepted) = le
+# `name` que route_goto_result renverra : seule l'issue de CET ordre finit la
+# demande (séance du 15/11 21:21 : l'arrivée d'un ancien « aller voir
+# elephant » était prise pour la fin du « tour de elephant »).
 #  - source "director" : UNE réponse par geste arbitré (aller_voir, tour_de,
 #    tourner, avancer ; jamais go/stop), effect = celui du journal
 #    (accepted | unknown | no_tour | invalid | route_off_by_david | no_pose |
