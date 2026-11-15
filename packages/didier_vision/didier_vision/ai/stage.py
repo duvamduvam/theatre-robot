@@ -404,6 +404,34 @@ def decode_objects_payload(raw) -> list:
     return objects
 
 
+def decode_tours_payload(raw) -> list:
+    """MÊME payload que decode_objects_payload (15/11) -> noms des objets dont
+    le régisseur sait faire le tour (`"tour": true`), dans l'ordre reçu, mêmes
+    rognage, troncature et plafond (OBJECTS_MAX éléments VALABLES lus). Défaut
+    SÛR : champ absent ou autre que true = pas de tour (on ne propose jamais un
+    tour que le régisseur refuserait). Payload illisible -> [] (le décodage
+    des objets, appelé d'abord, a déjà levé)."""
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(value, list):
+        return []
+    tours, seen = [], 0
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        if item.get("tour") is True:
+            tours.append(name.strip()[:OBJECT_NAME_MAX_CHARS])
+        seen += 1
+        if seen == OBJECTS_MAX:
+            break
+    return tours
+
+
 def encode_transcript(role: str, text: str, t_ms: int) -> str:
     """Payload StringTime du topic `chat_transcript` (§13.6) : JSON
     {"role", "text", "t_ms"}. ensure_ascii=False : le texte est lu par un

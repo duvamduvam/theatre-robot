@@ -321,6 +321,25 @@ def test_objets_elements_invalides_sautes_desc_absente_vide():
     assert stage.decode_objects_payload(raw) == [("grue", ""), ("titan", "")]
 
 
+def test_tours_champ_tour_true_seulement():
+    # 15/11 : défaut SÛR — absent, false, "true" (chaîne), 1 = pas de tour.
+    raw = ('[{"name": " anneaux ", "tour": true}, {"name": "elephant", "tour": false}, '
+           '{"name": "grue_jaune"}, {"name": "flaque", "tour": "true"}, {"name": "banc", "tour": 1}, '
+           '{"desc": "sans nom", "tour": true}, 42, {"name": "poubelle_tri", "desc": "bacs", "tour": true}]')
+    assert stage.decode_tours_payload(raw) == ["anneaux", "poubelle_tri"]
+
+
+@pytest.mark.parametrize("raw", ["", "pas du json", '{"name": "a", "tour": true}', None])
+def test_tours_payload_illisible_vide(raw):
+    assert stage.decode_tours_payload(raw) == []
+
+
+def test_tours_meme_plafond_que_les_objets():
+    raw = json.dumps([{"name": f"o{i}", "tour": True} for i in range(60)])
+    tours = stage.decode_tours_payload(raw)
+    assert len(tours) == 40 and tours[-1] == "o39"
+
+
 def test_objets_liste_vide_valable():
     assert stage.decode_objects_payload("[]") == []
 

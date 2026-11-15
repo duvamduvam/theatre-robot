@@ -7,6 +7,10 @@ injectée (secondes, monotone) : aucun sleep dans les tests.
 
 Sorties (tuples, dans l'ordre où elles doivent partir) :
   ("chat_move", payload)       -> jeu/chat_move (régisseur), json.dumps(payload)
+  ("chat_move_reply", payload) -> rehearsal/chat_move_reply (chat_node) : une
+                                  demande de geste de la bouche NON transmise
+                                  (« dropped » + code) ou restée sans réponse
+                                  du régisseur (« no_reply ») — 15/11
   ("animation", nom)           -> animation (nom de séquence)
   ("look", {"angle_deg", "hold_ms"}) -> look (gaze_follower, « regarder » M2)
   ("intention", dict)          -> jeu/intention (latché)
@@ -34,7 +38,17 @@ RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.
   de « go » tant que la scène parle), sauf stop/ignore de la console ;
   JAMAIS de « go » automatique après un stop de David ;
 - fatigue > seuil : aucun déplacement ; « ignore » : rien vers la cible
-  pendant console.ignore_s.
+  pendant console.ignore_s ;
+- RÉPONSE À LA BOUCHE (15/11, séance : « fais le tour de l'éléphant », la
+  demande morte en silence au bout de son TTL, Didier affirmait le tour) :
+  toute demande de GESTE de la bouche finit par une issue — transmise au
+  régisseur (qui répond lui-même au chat), ou NON transmise : ligne `refus`
+  + réponse « dropped » au chat avec son code (arrete, sans_superviseur,
+  fatigue, ignore, trop_tot, pas_retenu) ; transmise mais régisseur muet
+  au-delà de durees_s.deplacement_accuse : réponse « no_reply ». Un
+  déplacement REFUSÉ ou sans suite n'a pas eu lieu : ses périodes
+  réfractaires (dont l'arrêt de Didier, 120 s) et sa fatigue sont RENDUES —
+  sinon un refus bloquait en silence la demande suivante pendant 2 min.
 SÉCURITÉ : ce module ne produit AUCUN Twist ; ses seuls effets sur les roues
 sont des DEMANDES au régisseur (jeu/chat_move), qui arbitre (spec-aller-voir §3).
 """
@@ -49,9 +63,9 @@ from didier_jeu.phrases import n as num
 from didier_jeu.offres import Offre, Offres
 from didier_jeu.pistes import Pistes
 from didier_jeu.pulsions import Pulsions
-from didier_jeu.relais import GO, STOP, Verrou
+from didier_jeu.relais import GO, STOP, Verrou, reponse_bouche
 from didier_jeu.repertoire import COMMANDES_REGISSEUR, commande
-from didier_jeu.scores import ARRET_DIDIER, DEPLACEMENTS, RIEN, Candidat, Contexte, classer
+from didier_jeu.scores import ARRET_DIDIER, CATEGORIES, DEPLACEMENTS, RIEN, Candidat, Contexte, classer
 
 # Commandes de la console (spec §4), gravées avec la page scène.
 CONSOLE_CMDS = ("va_la", "joue_avec", "ignore", "reviens", "plus_lent", "stop", "go")
@@ -97,6 +111,10 @@ class Engagement:
     t_etape: float = 0.0
     anim_vue: bool = False            # animation_state a montré NOTRE séquence
     stop_envoye: bool = False         # lubie : le « stop » est parti
+    etape: Optional[dict] = None      # chat_move de l'étape EN COURS (appariement des réponses)
+    # Réfractaires d'avant la décision (catégorie -> t | None) : rendus si le
+    # régisseur refuse ou se tait (le déplacement n'a pas eu lieu).
+    derniers_avant: Dict[str, Optional[float]] = field(default_factory=dict)
 
 
 class Selecteur:
@@ -134,6 +152,7 @@ class Selecteur:
         self.piste_regardee: Optional[str] = None
         self.pas_metteur: Dict[str, int] = {}      # piste -> pas faits sur l'indication du metteur
         self.reaction_due: List[dict] = []         # [{"cible", "kind", "t"}] : offres nées sans réponse
+        self.bouche_en_attente: List[Offre] = []   # demandes de geste de la bouche sans issue encore
         self._t_prec: Optional[float] = None
         self._now = 0.0
         self._decision_tick: Optional[Decision] = None
@@ -215,8 +234,11 @@ class Selecteur:
             return
         if valeur == GO or (isinstance(valeur, dict) and valeur.get("cmd") in COMMANDES_REGISSEUR):
             cible = (valeur.get("objet") or valeur.get("cmd")) if isinstance(valeur, dict) else GO
-            self.offres.naitre(Offre("bouche", "bouche", self.r.get("offres.valeur.bouche"), now,
-                                     self.r.get("offres.ttl_s"), payload={"demande": valeur, "cible": cible}))
+            offre = self.offres.naitre(Offre("bouche", "bouche", self.r.get("offres.valeur.bouche"), now,
+                                             self.r.get("offres.ttl_s"),
+                                             payload={"demande": valeur, "cible": cible}))
+            if isinstance(valeur, dict):
+                self.bouche_en_attente.append(offre)   # un GESTE : son issue revient au chat
             self._journal("offre", f"il dit vouloir {phrases.demande(valeur)} : il y réfléchit",
                           kind="bouche", demande=valeur)
             return
@@ -329,6 +351,26 @@ class Selecteur:
             self.arret_didier = {"t": now, "cible": e.candidat.cible}
         raison = payload.get("reason") if isinstance(payload, dict) else None
         self._finir(now, "il est arrivé" if resultat == "arrived" else f"il a renoncé ({raison or resultat})")
+
+    def sur_move_reply(self, payload, now: float) -> None:
+        """Réponse du RÉGISSEUR à un geste (rehearsal/chat_move_reply, source
+        « director » ; nos propres réponses, source « jeu », reviennent aussi
+        sur ce topic : ignorées). Appariée à l'étape EN COURS (égalité de la
+        demande) : acceptée -> accusée (pas de faux « sans suite ») ; refusée
+        -> l'engagement finit tout de suite, réfractaires et fatigue rendus."""
+        if not isinstance(payload, dict) or payload.get("source") != "director":
+            return
+        e = self.en_cours
+        if e is None or not e.candidat.deplacement or e.etape is None or payload.get("demande") != e.etape:
+            return
+        effet = payload.get("effect")
+        if effet == "accepted":
+            e.accuse = True
+            return
+        raison = payload.get("reason")
+        self._rendre_refractaires(e)
+        self._finir(now, f"le régisseur refuse ({effet}{' : ' + raison if raison else ''}) : "
+                         "il n'a pas bougé")
 
     def sur_animation_state(self, nom, now: float) -> None:
         self.animation_state = nom if isinstance(nom, str) else ""
@@ -453,6 +495,7 @@ class Selecteur:
         self._suivre_engagement(now)
         self.arbre.tick_once()
         self._reaction(now)
+        self._bouche_sans_suite(now)
         return self._decision_tick
 
     def _expirer(self, now: float) -> None:
@@ -490,15 +533,72 @@ class Selecteur:
             self._publier_intention(now)
         if e.candidat.deplacement and e.candidat.action != "repartir" and not e.accuse \
                 and now - e.t_etape > self.r.get("durees_s.deplacement_accuse") + EPS:
-            self._finir(now, "le régisseur n'a pas donné suite (voir son journal)")
+            self._rendre_refractaires(e)
+            if e.candidat.action == "bouche":
+                # Le régisseur s'est tu (sa réponse aurait accusé ou fini) : le
+                # chat doit le savoir, sinon Didier affirme le geste.
+                self.sorties.append(("chat_move_reply", reponse_bouche(e.etape, "no_reply", None)))
+            self._finir(now, "le régisseur n'a pas donné suite (voir son journal) : il n'a pas bougé")
             return
         if now >= e.fin_prevue - EPS:
             self._finir(now, "c'est fini")
 
     def _etape_suivante(self, e: Engagement, now: float) -> None:
         etape = e.etapes.pop(0)
-        e.accuse, e.t_etape = False, now
+        e.accuse, e.t_etape, e.etape = False, now, etape
         self.sorties.append(("chat_move", etape))
+
+    def _rendre_refractaires(self, e: Engagement) -> None:
+        """Le déplacement n'a pas eu lieu (refus, régisseur muet) : ses périodes
+        réfractaires reprennent leur valeur d'avant la décision, et la fatigue
+        comptée est rendue. Une seule fois par engagement."""
+        if not e.derniers_avant:
+            return
+        for cat, t in e.derniers_avant.items():
+            if t is None:
+                self.derniers.pop(cat, None)
+            else:
+                self.derniers[cat] = t
+        e.derniers_avant = {}
+        self.pulsions.sur_deplacement_refuse()
+
+    def _bouche_sans_suite(self, now: float) -> None:
+        """Toute demande de GESTE de la bouche a une issue (cf. docstring de
+        module, RÉPONSE À LA BOUCHE) : prise -> transmise, le régisseur répond ;
+        morte sans être prise -> refus journalisé + « dropped » au chat."""
+        restantes = []
+        for offre in self.bouche_en_attente:
+            if offre.prise:
+                continue
+            if offre.vivante(now):
+                restantes.append(offre)
+                continue
+            code, texte = self._raison_bouche(now)
+            demande = offre.payload["demande"]
+            self.sorties.append(("chat_move_reply", reponse_bouche(demande, "dropped", code)))
+            self._journal("refus", f"il voulait {phrases.demande(demande)}, mais non : {texte}",
+                          source="bouche", demande=demande, code=code)
+        self.bouche_en_attente = restantes
+
+    def _raison_bouche(self, now: float):
+        """(code, texte) de la non-transmission d'une demande de la bouche, dans
+        l'ordre des verrous du sélecteur (codes : contracts.CHAT_MOVE_REPLY_JEU_REASONS)."""
+        if self.verrou_stop:
+            return "arrete", "il est arrêté jusqu'au go"
+        if self.superviseur_absent():
+            return "sans_superviseur", "personne ne surveille (page fermée)"
+        if self.pulsions.deplacement_interdit():
+            return "fatigue", (f"il est fatigué ({num(self.pulsions.fatigue)} > "
+                               f"{num(self.pulsions.fatigue_seuil)})")
+        if "bouche" in self.ignores:
+            return "ignore", "David a dit d'ignorer ça"
+        tempo = self.r.get("console.plus_lent_facteur") if self.plus_lent_fin is not None else 1.0
+        for cat in CATEGORIES["bouche"]:
+            periode = self.r.get(f"refractaire_s.{cat}") * tempo
+            if cat in self.derniers and now - self.derniers[cat] < periode - EPS:
+                quoi = "s'est déjà arrêté de lui-même" if cat == ARRET_DIDIER else "s'est déjà déplacé"
+                return "trop_tot", f"il {quoi} il y a moins de {periode:g} s"
+        return "pas_retenu", "autre chose l'a emporté avant que la demande ne périme"
 
     def _finir(self, now: float, pourquoi: str) -> None:
         fini = self.en_cours.candidat
@@ -661,6 +761,9 @@ class Selecteur:
             pourquoi += f" « {c.detail['sequence']} »"
         self.pourquoi_courant = pourquoi
         if c.action != RIEN:
+            if c.deplacement and self.en_cours is not None:
+                # Photographie AVANT de compter : rendue si le régisseur refuse.
+                self.en_cours.derniers_avant = {cat: self.derniers.get(cat) for cat in c.categories}
             self.pulsions.sur_action(c.deplacement)
             for cat in c.categories:
                 if cat != ARRET_DIDIER:

@@ -8,10 +8,23 @@ RelaisSeul : le mode DÉGRADÉ de jeu_node (revue A1, bloquant 2). Avec
 `jeu:=true` le régisseur n'écoute plus la bouche : si le sélecteur ne peut
 pas se construire (répertoire ou réglages illisibles), il démarre QUAND MÊME
 et relaie stop/go (bouche et console), sans aucune initiative. Le chemin
-d'arrêt vocal ne dépend JAMAIS d'un JSON de séquence ni d'un réglage.
+d'arrêt vocal ne dépend JAMAIS d'un JSON de séquence ni d'un réglage. Une
+demande de GESTE de la bouche y est refusée ET le chat le sait (réponse
+« dropped », code « degrade » : Didier ne doit jamais affirmer un geste
+qui n'a pas eu lieu).
 """
+from didier_rehearsal.contracts import CHAT_MOVE_REPLY_JEU_REASONS, CHAT_MOVE_REPLY_NO_REPLY
 
 STOP, GO = "stop", "go"
+
+
+def reponse_bouche(demande, effet: str, code) -> dict:
+    """Payload de rehearsal/chat_move_reply émis par le JEU (contracts.
+    CHAT_MOVE_REPLY_TOPIC) : la demande de la bouche telle quelle (le chat
+    apparie par égalité), « dropped » + code connu, ou « no_reply »."""
+    if effet != CHAT_MOVE_REPLY_NO_REPLY and code not in CHAT_MOVE_REPLY_JEU_REASONS:
+        raise ValueError(f"code de refus inconnu : {code!r}")
+    return {"demande": demande, "effect": effet, "reason": code, "source": "jeu"}
 
 
 class Verrou:
@@ -63,6 +76,8 @@ class RelaisSeul:
             self.sorties.append(("chat_move", GO))
             self._journal("relais_go", f"go de {source} relayé (mode dégradé)", source=source)
         else:
+            if source == "bouche" and isinstance(valeur, dict):
+                self.sorties.append(("chat_move_reply", reponse_bouche(valeur, "dropped", "degrade")))
             self._journal("refus", f"mode dégradé : demande de {source} ignorée ({valeur!r})", source=source)
 
     def sur_chat_move_bouche(self, valeur, now):

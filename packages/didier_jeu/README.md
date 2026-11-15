@@ -21,10 +21,11 @@ par des demandes au régisseur (`jeu/chat_move`), qui les arbitre, puis par
 | `jeu/console` | page scène → sélecteur | StringTime JSON `{"cmd": "va_la"\|"joue_avec"\|"ignore"\|"reviens"\|"plus_lent"\|"stop"\|"go", "cible"?, "presence": true}` ; la page envoie `{"presence": true}` à 2 Hz (battement) |
 | `jeu/intention` | sélecteur → page | **latché**, republié toutes les 0,5 s : `{"action", "cible", "pourquoi", "t_ms", "fin_prevue_ms", "reste_ms", "verrou", "jauges", "proposition"?}` ; `"action": "rien"` au repos, jamais vide |
 | `jeu/chat_move` | sélecteur → régisseur | même payload que `rehearsal/chat_move` ; le régisseur y est remappé par `rehearsal.launch.py jeu:=true` |
+| `rehearsal/chat_move_reply` | sélecteur → chat_node (et régisseur → tous) | `{"demande", "effect", "reason", "source": "jeu"}` : demande de GESTE de la bouche **non transmise** (`dropped` + code `arrete`, `sans_superviseur`, `fatigue`, `ignore`, `trop_tot`, `pas_retenu`, `degrade`) ou transmise mais **régisseur muet** 3 s (`no_reply`). Le sélecteur écoute aussi les réponses `source: "director"` : `accepted` accuse l'étape, un refus finit l'engagement tout de suite (15/11) |
 | `jeu/journal` | sélecteur → page (+ fichier) | une ligne JSONL (format boîte noire `robot.diagnostic.journal`) par message |
 | `animation` | sélecteur → animations_node | nom de séquence (JSON chaîne) |
 | `look` | sélecteur → gaze_follower | `{"angle_deg", "hold_ms"}` (« regarder », spec-aller-voir §7.1) |
-| entrées | | `vision/person_box`, `rehearsal/poi_event`, `rehearsal/chat_move` (la bouche), `chat_transcript` (rôle `david` = parole entendue), `chat_situation`, `mission_state`, `route_state`, `route_state_cause`, `route_goto_result`, `animation_state`, `rehearsal/objects` (avec `x`, `y` depuis A1), `/ground_truth/odom` |
+| entrées | | `vision/person_box`, `rehearsal/poi_event`, `rehearsal/chat_move` (la bouche), `chat_transcript` (rôle `david` = parole entendue), `chat_situation`, `mission_state`, `route_state`, `route_state_cause`, `route_goto_result`, `rehearsal/chat_move_reply`, `animation_state`, `rehearsal/objects` (avec `x`, `y` depuis A1, `tour` depuis le 15/11), `/ground_truth/odom` |
 
 Les noms `jeu/*` sont définis dans `theatre_contrats.topics`. Ceux du régisseur
 viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
@@ -65,6 +66,15 @@ rôle `david`) remet le compteur à zéro (décision de David du 02/11).
 **Un arrêt de Didier par 2 min** couvre tout arrêt de route qu'il cause : lubie,
 approche de sa propre initiative, demande de mouvement de la bouche. Un ordre
 de David n'en est jamais un.
+
+**Réponse à la bouche** (15/11, séance « fais le tour de l'éléphant ») : toute
+demande de GESTE de la bouche a une issue que le chat apprend. Transmise, c'est
+le régisseur qui répond. Non transmise (offre morte au bout de ses 3 s), une
+ligne `refus` dit pourquoi et `rehearsal/chat_move_reply` porte `dropped` + le
+code. Sinon Didier affirmait un geste qui n'avait pas eu lieu. Un déplacement
+**refusé** par le régisseur, ou resté sans réponse, n'a pas eu lieu : ses
+périodes réfractaires (dont l'arrêt de 2 min) et sa fatigue sont **rendues**.
+Avant, un refus bloquait en silence la demande suivante pendant 2 min.
 
 **Metteur en scène** : un mot-clé d'expression ou de regard biaise le score. Un
 mot-clé de **déplacement** (« approche ») ne fait bouger Didier que si le texte

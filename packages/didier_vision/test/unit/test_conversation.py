@@ -3648,3 +3648,54 @@ def test_continuation_garde_armee_stop_crie_arrete_et_ferme(timeline):
     assert guard_vad.adopted == [7.5]            # garde armée (seuil repris)
     assert "player_interrupt" in _tags(timeline)
     assert not task.is_open()
+
+
+# --------------------------------------------------------------------------
+# Geste refusé (15/11, séance « fais le tour de l'éléphant ») : le moteur
+# signale à MoveTask le geste LUI-MÊME (appariement de la réponse du
+# régisseur) ; une continuation dont la tâche est déjà close ne bouge pas.
+# --------------------------------------------------------------------------
+
+TOUR_ELEPHANT = {"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}
+
+
+def test_geste_emis_apparie_au_refus_du_regisseur(timeline):
+    stage = StageState()
+    stage.push_text("fais le tour de l'éléphant")
+    task = MoveTask()
+    ordres = []
+    engine, _brain = _make_stage_engine(
+        timeline, stage, on_move=ordres.append, move_task=task,
+        brain_deltas=['Je file ! {"emotion": "happy", "faire_le_tour": "elephant"}'])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == [TOUR_ELEPHANT]
+    refus = {"demande": TOUR_ELEPHANT, "effect": "no_tour", "reason": None, "source": "director"}
+    assert task.on_reply(refus, time.monotonic()).startswith(
+        "Ton geste « faire le tour de elephant » n'a PAS eu lieu : impossible d'en faire le tour")
+
+
+def test_continuation_d_une_tache_close_ne_bouge_pas(timeline, clock, caplog):
+    # Budget épuisé sur un refus : MoveTask ferme la tâche MAIS sert l'échec ;
+    # la réplique qui le dit ne doit rien enchaîner.
+    task = MoveTask()
+    task.gesture_emitted(TACHE, False, clock.t, gesture=dict(TOUR_ELEPHANT))
+    for k in range(2, 9):
+        assert task.on_result(FIN_DU_TOUR, clock.t) is not None
+        task.pop_continuation()
+        task.gesture_emitted(TACHE, True, clock.t, gesture=dict(TOUR_ELEPHANT))
+    refus = {"demande": TOUR_ELEPHANT, "effect": "no_tour", "reason": None, "source": "director"}
+    assert task.on_reply(refus, clock.t) is not None and not task.is_open()
+    engine, brain, ordres = _tache_engine(
+        timeline, clock, task, deltas=['Je réessaie. {"emotion": "sad", "avancer": 2}'])
+    try:
+        with caplog.at_level("WARNING", logger="didier_vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls[0]["direction"].endswith("ne prétends JAMAIS l'avoir fait, et SANS clé de geste.")
+    assert ordres == []
+    assert "Clé \"avancer\" : 2 ignoré : la tâche est close (budget épuisé)." in [
+        r.message for r in caplog.records]

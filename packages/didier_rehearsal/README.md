@@ -166,6 +166,12 @@ s'il l'a dépassé), pivote face à lui, s'arrête. SIM-ONLY (vérité terrain).
   l'état latché), `goto_result` (détail publié par route_driver sur
   `route_goto_result` : `timeout`, `max_travel`, `stalled`, `cancelled`…),
   `goto_rejoin`.
+- **Réponse au geste** (15/11) : CHAQUE geste arbitré (aller_voir, tourner,
+  avancer, tour_de ; jamais go/stop) publie sur `rehearsal/chat_move_reply`
+  `{"demande": <le dict reçu>, "effect": <celui du journal>, "reason":
+  <sous-raison d'invalid | null>, "source": "director"}` (VOLATILE). Le chat
+  en fait une fin de geste ÉCHOUÉE dite en personnage (sinon Didier affirmait
+  un tour refusé) ; le sélecteur de jeu y clôt son engagement.
 
 Tests : `test_goto.py`, `test_route_objects.py`, `test_director_goto.py`
 (purs), `test_route_driver_goto.py`, `test_director_node_goto.py` (nodes,
@@ -212,7 +218,9 @@ laborieux »). Même canal que M1/M2.
 - **Intention** : `{"cmd": "tour_de", "objet": "<texte>", "sens": "gauche"|"droite"}`
   (absent = gauche = trigo, l'objet à gauche de Didier). Journal `tour_de`
   (`accepted`, `unknown`, `no_tour`, `invalid` + `reason` sens,
-  `route_off_by_david`, `no_pose`, `too_far` jugé au CENTRE du tour).
+  `route_off_by_david`, `no_pose`, `too_far` jugé au CENTRE du tour), même
+  réponse au geste que M1. `rehearsal/objects` porte `"tour": true|false`
+  (15/11) : le chat dit au LLM de quels objets il peut faire le tour.
   Acceptation : celle d'« aller voir » (lubie de l'objet tourné sautée).
 - **Ordre** `route_goto` : `{"name": "tour de <poi>", "orbit_x", "orbit_y",
   "orbit_r", "orbit_dir": 1|-1}` -> approche du point du cercle le plus proche

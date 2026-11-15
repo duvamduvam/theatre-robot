@@ -10,10 +10,14 @@ Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
         rehearsal/chat_move (la BOUCHE : ses demandes deviennent des intentions,
         son « stop » est relayé sans arbitrage), jeu/console (page scène),
         chat_situation, chat_transcript (parole entendue), mission_state (latché), route_state et route_state_cause (latchés),
-        route_goto_result, animation_state (latché), rehearsal/objects (latché),
+        route_goto_result, rehearsal/chat_move_reply (réponse du régisseur à un
+        geste ; les nôtres y reviennent aussi, filtrées par `source`),
+        animation_state (latché), rehearsal/objects (latché),
         /ground_truth/odom (SIM-ONLY : orienter le regard d'une lubie vers
         l'objet ; A2 le remplacera par la perception).
 Écrit : jeu/chat_move (-> régisseur, remappé par rehearsal.launch.py jeu:=true),
+        rehearsal/chat_move_reply (-> chat_node : demande de geste de la bouche
+        non transmise ou restée sans réponse, 15/11),
         animation (nom de séquence), look (« regarder », gaze_follower),
         jeu/intention (latché, republié toutes les 0,5 s), jeu/journal (+ JSONL).
 
@@ -30,7 +34,7 @@ import os
 import time
 
 # Garde-fou AVANT tout import rclpy à effet : check_domain est pur.
-from didier_rehearsal.contracts import (CHAT_MOVE_TOPIC, OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
+from didier_rehearsal.contracts import (CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC,
                                        check_domain)
 from theatre_contrats import stringtime, topics
@@ -107,6 +111,7 @@ def main(args=None):
                 demarrage = None
 
             self.pub_move = self.create_publisher(StringTime, topics.JEU_CHAT_MOVE, 10)
+            self.pub_reply = self.create_publisher(StringTime, CHAT_MOVE_REPLY_TOPIC, 10)
             self.pub_anim = self.create_publisher(StringTime, topics.ANIMATION, 10)
             self.pub_look = self.create_publisher(StringTime, LOOK_TOPIC, 10)
             self.pub_intention = self.create_publisher(StringTime, topics.JEU_INTENTION, qos.latched())
@@ -128,6 +133,7 @@ def main(args=None):
             self.create_subscription(StringTime, ROUTE_STATE_CAUSE_TOPIC, self._json(self.sel.sur_route_cause),
                                      qos.latched())
             self.create_subscription(StringTime, ROUTE_GOTO_RESULT_TOPIC, self._json(self.sel.sur_goto_result), 10)
+            self.create_subscription(StringTime, CHAT_MOVE_REPLY_TOPIC, self._json(self.sel.sur_move_reply), 10)
             self.create_subscription(StringTime, topics.ANIMATION_STATE, self._json(self.sel.sur_animation_state),
                                      qos.latched())
             self.create_subscription(StringTime, OBJECTS_TOPIC, self._on_objects, qos.latched())
@@ -201,6 +207,9 @@ def main(args=None):
                 kind = sortie[0]
                 if kind == "chat_move":
                     self.pub_move.publish(StringTime(msg=json.dumps(sortie[1]), time=0, anim=False))
+                elif kind == "chat_move_reply":
+                    self.pub_reply.publish(StringTime(msg=json.dumps(sortie[1], ensure_ascii=False),
+                                                      time=0, anim=False))
                 elif kind == "animation":
                     self.pub_anim.publish(StringTime(msg=json.dumps(sortie[1]), time=0, anim=False))
                 elif kind == "look":

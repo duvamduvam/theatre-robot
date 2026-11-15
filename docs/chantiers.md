@@ -1245,6 +1245,21 @@ en sim d'I1** (mouvement à la voix, CODE FAIT le 22/10 + revue adversariale
 corrigée le même jour — cause latchée `route_state_cause`, « stop » toujours
 republié, garde domaine 43 côté vision ; étude §13.11, limites listées là) ; puis **I0** (`etude-interaction` §9 : état de
 mission).
+
+**15/11 — Didier ne ment plus sur ses gestes** (branche `l2`, séance « fais le
+tour de l'éléphant ») : un geste refusé par le régisseur (`no_tour`…), jeté par
+le sélecteur de jeu ou resté sans réponse (borne 8 s) revient au chat comme
+fin de geste ÉCHOUÉE, dite en personnage (`rehearsal/chat_move_reply`,
+[`spec-aller-voir.md` §9.6](spec-aller-voir.md)). Le prompt dit aussi de
+quels objets on peut faire le tour. Cause du « il y réfléchit » sans suite :
+l'offre de la bouche mourait en silence, bloquée par l'arrêt de Didier de
+120 s. Celui-ci était compté même pour un geste REFUSÉ (désormais rendu) et
+pour un geste réussi juste avant. ⚠️ **À trancher par David** : sous `jeu:=true`,
+une demande de la bouche compte comme « arrêt de Didier » (revue A1, point 11).
+Une tâche demandée par David (« va voir l'éléphant, puis fais-en le tour »)
+ne peut donc pas enchaîner deux gestes à moins de 2 min. Didier le dit
+maintenant honnêtement (« pas tout de suite »), mais la tâche échoue.
+Vérification en sim à faire.
 Verrous : aucun côté robot. Les verrous roues (test scénique, W1,
 coup-de-poing) ne bougent pas : la sim ne qualifie rien côté sécurité.
 

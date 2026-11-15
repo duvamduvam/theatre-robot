@@ -164,13 +164,35 @@ def test_mouvement_apprend_la_cle_aller_voir():
 
 def test_ligne_d_objets_texte_de_la_spec():
     assert personas.objects_prompt([("anneaux", "bagues géantes"), ("flaque", "")]) == (
-        "Objets que tu peux aller voir : anneaux (bagues géantes), flaque.")
+        "Objets que tu peux aller voir : anneaux (bagues géantes), flaque. "
+        "Tu ne peux faire le tour d'aucun objet.")
+
+
+def test_ligne_d_objets_dit_les_tours_possibles():
+    # 15/11 (« fais le tour de l'éléphant », collé à la Loire, refusé) : le LLM
+    # apprend QUELS objets acceptent un tour.
+    assert personas.objects_prompt([("anneaux", ""), ("elephant", "statue"), ("poubelle_tri", "")],
+                                   ["anneaux", "poubelle_tri"]) == (
+        "Objets que tu peux aller voir : anneaux, elephant (statue), poubelle_tri. "
+        "Objets dont tu peux faire le tour : anneaux, poubelle_tri.")
+
+
+def test_ligne_des_tours_plafonnee_sans_couper_un_nom():
+    tours = [f"objet{i:02d}" for i in range(40)]
+    ligne = personas.objects_prompt([("a", "")], tours)
+    phrase = ligne.split(". ", 1)[1]
+    # Plafond GRAVÉ : 600 caractères ; 36 (préfixe) + n × 7 + (n-1) × 2 + 1 ≤ 600 -> n = 62 > 40 : tout passe.
+    assert phrase.count("objet") == 40 and phrase.endswith("objet39.")
+    longs = [f"{'n' * 38}{i:02d}" for i in range(40)]
+    phrase = personas.objects_prompt([("a", "")], longs).split(". ", 1)[1]
+    # 36 + n × 40 + (n-1) × 2 + 1 ≤ 600 -> n = 13, noms ENTIERS.
+    assert len(phrase) <= 600 and phrase.count("n" * 38) == 13 and phrase.endswith("12.")
 
 
 def test_ligne_d_objets_desc_egale_au_nom_omise():
     # Le régisseur met desc = nom par défaut : « flaque (flaque) » n'apprend rien.
     assert personas.objects_prompt([("Flaque", "flaque")]) == (
-        "Objets que tu peux aller voir : Flaque.")
+        "Objets que tu peux aller voir : Flaque. Tu ne peux faire le tour d'aucun objet.")
 
 
 def test_ligne_d_objets_vide_sans_objet():
@@ -181,10 +203,11 @@ def test_ligne_d_objets_plafonnee_sans_couper_un_nom():
     objets = [(f"objet{i:02d}", "d" * 50) for i in range(40)]
     ligne = personas.objects_prompt(objets)
     # Plafond GRAVÉ : 1200 caractères, point final compris.
-    assert len(ligne) <= 1200
-    assert ligne.endswith(")."), ligne[-20:]   # dernier objet ENTIER, puis le point
+    objets_seuls = ligne.split(". Tu ne peux faire", 1)[0] + "."
+    assert len(objets_seuls) <= 1200
+    assert objets_seuls.endswith(")."), objets_seuls[-20:]   # dernier objet ENTIER, puis le point
     # 32 (préfixe) + n × 60 (« objetNN (d×50) ») + (n-1) × 2 + 1 ≤ 1200 -> n = 18.
-    assert ligne.count("objet") == 18
+    assert objets_seuls.count("objet") == 18
 
 
 # --- Gestes chiffrés (lot M2, 31/10, spec-aller-voir.md §7) ---
@@ -235,9 +258,14 @@ def test_mouvement_liste_toutes_les_cles_a_ne_pas_ajouter():
 
 def test_mouvement_apprend_la_cle_faire_le_tour():
     template = personas.MOVE_TEMPLATE
-    assert ('- "faire_le_tour": "<nom exact de la liste>" (+ "sens": "gauche" ou "droite" '
-            'si on te le précise) : faire le tour complet d\'un objet de la liste puis '
-            't\'arrêter face à lui') in template
+    # 15/11 : seulement les objets de la liste des tours possibles.
+    assert ('- "faire_le_tour": "<nom exact de la liste des objets dont tu peux faire le tour>" '
+            '(+ "sens": "gauche" ou "droite" si on te le précise) : faire le tour complet de cet '
+            'objet puis t\'arrêter face à lui') in template
+    assert ("Un objet qui n'est pas dans cette liste-là, tu ne peux pas en faire le tour (eau, mur "
+            "ou obstacle tout près) : dis-le en personnage, sans la clé.") in template
+    assert ("- Quand on te dit qu'un geste n'a PAS eu lieu, tu n'as pas bougé : dis-le en personnage, "
+            "ne prétends jamais l'avoir fait.") in template
     assert ('« fais le tour des poubelles » -> {"emotion": "happy", '
             '"faire_le_tour": "poubelle_tri"}') in template
     # L'ancien exemple « impossible » est retiré : le geste existe.

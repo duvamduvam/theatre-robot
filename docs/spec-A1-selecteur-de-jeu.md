@@ -107,6 +107,7 @@ Règles gravées en tests (chiffres dans `reglages.yaml`, défauts = étude §4.
 | `jeu/console` | page scène → sélecteur | StringTime JSON `{"cmd": "va_la"\|"joue_avec"\|"ignore"\|"reviens"\|"plus_lent"\|"stop"\|"go", "cible": "<piste ou objet>"?, "presence": true}` ; la page renvoie `presence` à 2 Hz tant qu'elle est ouverte (battement) |
 | `jeu/intention` | sélecteur → page scène, télécommande (demain) | **latché**, JSON `{"action": "...", "cible": "...", "pourquoi": "offre:personne_proche 0.8 + curiosite 0.6", "t_ms": ..., "fin_prevue_ms": ...}` ; `{"action": "rien"}` au repos |
 | `jeu/chat_move` | sélecteur → régisseur | **même payload** que `rehearsal/chat_move` aujourd'hui (le régisseur ne change pas) |
+| `rehearsal/chat_move_reply` | sélecteur → chat_node | ajout du 15/11 (spec-aller-voir §9.6) : demande de geste de la bouche non transmise (`dropped` + code) ou régisseur muet (`no_reply`) ; le sélecteur lit aussi les réponses du régisseur (fin d'engagement, réfractaires rendus sur refus) |
 | `jeu/journal` | sélecteur → fichier JSONL (+ topic volatile pour la page) | une ligne par décision : offres vivantes, pulsions, scores des 3 meilleurs, choix, raison, et chaque refus |
 | entrées lues | `vision/person_box` (scriptée en A1), `rehearsal/poi_event`, `rehearsal/chat_move` (bouche), `chat_situation`, `mission_state`, `route_state`, `route_goto_result`, `animation_state` | existants |
 

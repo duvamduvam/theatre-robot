@@ -110,6 +110,10 @@ def test_node_avancer_refus_recul_rien_ne_part(regisseur, monkeypatch, tmp_path)
     assert [p for t, p in _journal(n) if t == "avancer"] == [
         {"metres": -2, "effect": "invalid", "reason": "recul"}]
     assert _ordres(n) == []
+    # Le refus revient au chat avec sa sous-raison (15/11).
+    assert [json.loads(m) for m in _publie(n, "rehearsal/chat_move_reply")] == [
+        {"demande": {"cmd": "avancer", "metres": -2}, "effect": "invalid", "reason": "recul",
+         "source": "director"}]
 
 
 def test_node_geste_refuse_route_off_par_david(regisseur, monkeypatch, tmp_path):

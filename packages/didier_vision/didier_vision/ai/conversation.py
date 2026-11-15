@@ -945,8 +945,16 @@ class ConversationEngine:
                 logger.warning("Clé \"%s\" : %r ignoré : tour spontané "
                                "(aucun humain ne l'a demandé).", key, value)
                 return
+            if (self._turn_continuation and self._move_task is not None
+                    and not self._move_task.is_open()):
+                # Réplique de continuation dont la tâche est déjà CLOSE (geste
+                # refusé, budget épuisé : MoveTask a fermé en servant l'échec) :
+                # rien ne doit plus enchaîner (15/11).
+                logger.warning("Clé \"%s\" : %r ignoré : la tâche est close "
+                               "(budget épuisé).", key, value)
+                return
             if self._emit_start(intent, f"Clé \"{key}\" : {value!r}"):
-                self._note_gesture()
+                self._note_gesture(intent)
             return
         if cmd != "go":
             return
@@ -956,14 +964,17 @@ class ConversationEngine:
             return
         self._emit_start("go", "Clé \"marche\" : go")
 
-    def _note_gesture(self) -> None:
+    def _note_gesture(self, intent: dict) -> None:
         """Un geste de corps vient de partir (cf. _notify_move) : noté pour la
         réplique en cours (une continuation SANS geste ferme la tâche, cf.
-        _serve_continuation) et signalé à MoveTask (None = rien)."""
+        _serve_continuation) et signalé à MoveTask (None = rien) AVEC le
+        geste lui-même — la réponse du régisseur (accepté / refusé) lui est
+        appariée par égalité (15/11)."""
         self._turn_gesture = True
         if self._move_task is not None:
             self._move_task.gesture_emitted(self._turn_request or "",
-                                            self._turn_continuation, time.monotonic())
+                                            self._turn_continuation, time.monotonic(),
+                                            gesture=intent)
 
     def _emit_start(self, intent, label: str) -> bool:
         """Émet un ordre de MISE EN MOUVEMENT ("go", aller_voir, faire_le_tour,

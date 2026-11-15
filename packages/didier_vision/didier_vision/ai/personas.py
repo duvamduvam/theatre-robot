@@ -150,12 +150,13 @@ Ton corps a quelques gestes simples, des OUTILS que tu choisis librement selon c
 - "go" : quand on te demande de repartir, de reprendre ta route, de continuer, ou quand TOI tu décides que ta lubie est finie et qu'il est temps de reprendre la route.
 - "stop" : seulement quand on te demande de t'arrêter ou d'attendre, ou pour une chose qui mérite VRAIMENT que tu t'arrêtes — jamais par simple prudence ni pour commenter ce que tu vois.
 - "aller_voir": "<nom exact de la liste>" : quand on te demande d'aller voir un objet de la liste ou de t'en approcher, ou quand TOI tu veux aller voir un objet de la liste (ex. {"emotion": "happy", "aller_voir": "anneaux"}) : il y va, se tourne face à lui et s'arrête. Un objet absent de la liste : tu ne le trouves pas, joue-le en personnage, sans la clé.
-- "faire_le_tour": "<nom exact de la liste>" (+ "sens": "gauche" ou "droite" si on te le précise) : faire le tour complet d'un objet de la liste puis t'arrêter face à lui (ex. « fais le tour des poubelles » -> {"emotion": "happy", "faire_le_tour": "poubelle_tri"}).
+- "faire_le_tour": "<nom exact de la liste des objets dont tu peux faire le tour>" (+ "sens": "gauche" ou "droite" si on te le précise) : faire le tour complet de cet objet puis t'arrêter face à lui (ex. « fais le tour des poubelles » -> {"emotion": "happy", "faire_le_tour": "poubelle_tri"}). Un objet qui n'est pas dans cette liste-là, tu ne peux pas en faire le tour (eau, mur ou obstacle tout près) : dis-le en personnage, sans la clé.
 - "tourner": <degrés, entre -180 et 180> : pivoter sur place (ex. {"emotion": "happy", "tourner": -90} pour te tourner vers ta droite, 180 pour faire demi-tour). C'est ce qui te fait VOIR ailleurs : « jette un œil sur ta droite » -> "tourner": -90, et tu dis que tu regardes ; tu en parleras à ta réplique suivante, quand tu l'auras vu.
 - "avancer": <mètres, plus que 0 et au plus 5> : marcher tout droit puis t'arrêter (ex. « avance » -> {"emotion": "happy", "avancer": 3} ; « avance un peu » -> 1 ; « avance encore » ou « continue » -> 3 à 5).
 - "regarder": <degrés> : tourner la tête un instant (ex. "regarder": 60 vers ta gauche, -60 vers ta droite, 0 devant toi) — pour jouer, pas pour voir. Il s'ajoute à un geste de corps si tu veux.
 - Choisis des gestes À LA MESURE de la demande : pour aller vers un objet de la liste ou en faire le tour, utilise "aller_voir" ou "faire_le_tour" (un seul geste qui va jusqu'au bout), jamais une suite de petits pas.
 - Quand on te demande une chose qu'aucun geste ne fait seul (« va aux anneaux puis reviens »), fais le premier geste : à la fin de chaque geste on te redonne la main et tu enchaînes le suivant toi-même, jusqu'à dire que c'est fini. Ce que tu annonces, tu le fais jusqu'au bout ; ne t'arrête que si on te le demande. Si c'est reculer, joue ton incapacité en personnage (« reculer ? je ne sais aller que devant moi ! »).
+- Quand on te dit qu'un geste n'a PAS eu lieu, tu n'as pas bougé : dis-le en personnage, ne prétends jamais l'avoir fait.
 - Sinon, n'ajoute PAS les clés "marche", "aller_voir", "faire_le_tour", "tourner", "avancer" ni "regarder". N'évoque jamais ce JSON à voix haute.
 """
 
@@ -166,16 +167,37 @@ Ton corps a quelques gestes simples, des OUTILS que tu choisis librement selon c
 # trait du personnage). Plafonné : il se paie en latence à chaque réplique.
 OBJECTS_PREFIX = "Objets que tu peux aller voir : "
 OBJECTS_PROMPT_MAX_CHARS = 1200
+# Objets dont on peut FAIRE LE TOUR (15/11, champ `tour` de rehearsal/objects) :
+# sans cette ligne, le LLM proposait le tour d'objets collés à la Loire, que le
+# régisseur refuse (« no_tour »). Phrase EXACTE gravée ; plafond séparé.
+TOURS_PREFIX = "Objets dont tu peux faire le tour : "
+TOURS_NONE = "Tu ne peux faire le tour d'aucun objet."
+TOURS_PROMPT_MAX_CHARS = 600
 
 
-def objects_prompt(objects) -> str:
+def _tours_sentence(tours) -> str:
+    """Noms dont on peut faire le tour -> phrase (TOURS_NONE si aucun) ;
+    noms lâchés ENTIERS au-delà de TOURS_PROMPT_MAX_CHARS (comme les objets)."""
+    line, count = TOURS_PREFIX, 0
+    for name in tours:
+        candidate = line + (", " if count else "") + name
+        if len(candidate) + 1 > TOURS_PROMPT_MAX_CHARS:
+            break
+        line, count = candidate, count + 1
+    return line + "." if count else TOURS_NONE
+
+
+def objects_prompt(objects, tours=()) -> str:
     """[(name, desc)] (cf. stage.decode_objects_payload) -> ligne de prompt
     « Objets que tu peux aller voir : anneaux (bagues géantes), flaque. »
     — "" pour une liste vide (aucun message envoyé). La description est omise
     si vide ou identique au nom (le régisseur met desc = nom par défaut :
     « flaque (flaque) » n'apprend rien au LLM). Au-delà de
     OBJECTS_PROMPT_MAX_CHARS, les objets suivants sont lâchés ENTIERS (jamais
-    un nom coupé : le LLM le recopierait tronqué dans "aller_voir")."""
+    un nom coupé : le LLM le recopierait tronqué dans "aller_voir").
+    `tours` (15/11, stage.decode_tours_payload) : 2e phrase « Objets dont tu
+    peux faire le tour : … » — ou TOURS_NONE s'il y a des objets mais aucun
+    tour (le LLM ne doit jamais en proposer un que le régisseur refuserait)."""
     line = OBJECTS_PREFIX
     count = 0
     for name, desc in objects:
@@ -185,7 +207,7 @@ def objects_prompt(objects) -> str:
             break
         line = candidate
         count += 1
-    return line + "." if count else ""
+    return line + ". " + _tours_sentence(tours) if count else ""
 
 
 # Demande de réflexion (lot P4 du metteur en scène intérieur, 23/10 — texte
