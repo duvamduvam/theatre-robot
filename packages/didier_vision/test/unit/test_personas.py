@@ -55,13 +55,12 @@ def test_les_quatre_variantes_sont_distinctes():
 
 
 def test_mauvaisefoi_porte_le_texte_de_la_spec():
-    # Marqueurs GRAVÉS du texte du §13.6 (titre, ressort de jeu, tics, règle
+    # Marqueurs GRAVÉS du texte du §13.6 (titre, ressort de jeu, règle
     # d'écriture qui remplace l'effet audio) : une réécriture d'atelier peut
-    # reformuler, mais pas perdre ces quatre piliers sans que ça se voie.
+    # reformuler, mais pas perdre ces trois piliers sans que ça se voie.
     prompt = personas.compose_system_prompt("mauvaisefoi")
     assert "Ta personnalité du jour : DIDIER DE MAUVAISE FOI." in prompt
     assert "chaque panne est une fonctionnalité" in prompt
-    assert "« c'est une fonctionnalité »" in prompt
     assert "un texte qui bafouille sonne décalé sans aucun effet audio." in prompt
 
 
@@ -271,3 +270,13 @@ def test_mouvement_gestes_a_la_mesure_de_la_demande():
             'geste qui va jusqu\'au bout), jamais une suite de petits pas.') in template
     assert ('« avance » -> {"emotion": "happy", "avancer": 3} ; « avance un peu » -> 1 ; '
             '« avance encore » ou « continue » -> 3 à 5') in template
+
+
+def test_aucune_expression_toute_faite():
+    # 15/11, David : plus aucune formule fétiche. Les listes de tics sont
+    # retirées de TOUTES les personnalités, et la règle l'interdit.
+    for name in personas.PERSONAS:
+        prompt = personas.compose_system_prompt(name)
+        assert "fétiche" not in prompt.replace("pas de formule fétiche", "")
+        assert "bon sang de boulon" not in prompt
+        assert "Aucune expression toute faite" in prompt
