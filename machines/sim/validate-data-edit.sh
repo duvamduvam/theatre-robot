@@ -142,6 +142,14 @@ def tourner(secondes, condition=lambda: False):
     return condition()
 
 tourner(10, lambda: pub_edit.get_subscription_count() > 0 and catalogue)
+# L2b (15/11) : `animation` a plusieurs abonnés répartis sur les conteneurs ; publier avant que
+# animations_node soit apparié perdait la commande (fumée du 15/11 13:38 : épreuve 3 à
+# animation_state [''], le robot n'a rien reçu). On attend qu'il soit dans le graphe ET que tous
+# les abonnés vus soient appariés — précondition seulement, rien de ce qui est mesuré ne change.
+def abonnes_animation():
+    return [i.node_name for i in node.get_subscriptions_info_by_topic(NS + "/animation")]
+tourner(20, lambda: "animations_node" in abonnes_animation()
+        and pub_anim.get_subscription_count() >= len(abonnes_animation()))
 compteur = [0]
 def envoyer(kind, mode, name, content, brut=None, **autres):
     compteur[0] += 1
