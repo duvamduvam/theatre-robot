@@ -101,7 +101,7 @@ from theatre_contrats import donnees, qos, topics
 
 DATA = "/home/ros2_ws/src/robot"
 NS = os.environ["NS"]
-ATTENTE_NOEUDS = ("animation_node", "face_sim_node", "leds_sim_node", "validation_sim_node", "twist_deadman")
+ATTENTE_NOEUDS = ("animations_node", "face_sim_node", "leds_sim_node", "validation_sim_node", "twist_deadman")
 
 rclpy.init()
 node = rclpy.create_node("rejouer_modifiees", namespace=NS)

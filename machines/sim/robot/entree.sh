@@ -10,6 +10,9 @@
 #     ICI, jamais par une variable lue côté robot : sur le Pi, l'ENTRYPOINT n'en passe aucun.
 #     use_sim_time:=true n'est pas déclaré par robot_app.launch.py : il atteint drive.launch.py,
 #     qui le déclare (chaîne roues en horloge simulée, aucun de ses fichiers modifié).
+#     exiger_validation_roues:=false (décision de David du 15/11) : la barrière de jeu est levée en
+#     sim — il faut bien y jouer la piste roues qu'on vient y valider ; animations_node l'ignore
+#     hors domaine 43.
 if [ "${ROS_DOMAIN_ID:-}" != 43 ]; then
     echo "REFUS : ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-absent}, le robot simulé ne tourne qu'en 43"
     exit 2
@@ -30,4 +33,5 @@ exec /bin/bash /home/ros2_ws/src/robot/conf/scripts/launch-ros-in-docker.sh \
     use_sim_time:=true \
     camera_topic:=camera/image_raw camera_compressed:=false \
     perception_topic:=camera/image_raw/compressed exterior_topic:=camera_ext/image_raw \
-    web_port:=${WEB_PORT:-8765} web_drive:=${WEB_DRIVE:-false} rehearsal:=${REHEARSAL:-false}
+    web_port:=${WEB_PORT:-8765} web_drive:=${WEB_DRIVE:-false} rehearsal:=${REHEARSAL:-false} \
+    exiger_validation_roues:=false

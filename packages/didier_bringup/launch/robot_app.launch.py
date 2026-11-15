@@ -33,10 +33,16 @@ def generate_launch_description():
         name="ai_node"
     )
 
+    # Barrière de jeu (L1d-2) : une piste roues non validée en sim n'est pas jouée. L2b (décision
+    # de David du 15/11) : argument `exiger_validation_roues`, VRAI par défaut (le robot n'en passe
+    # aucun) ; seule l'entrée du conteneur robot de la SIM (machines/sim/robot/entree.sh) le met à
+    # faux — et animations_node l'ignore hors domaine 43 (exiger_validation_roues() du cœur).
     animations_server_node = Node(
         package="didier_core",
         executable="animations_node",
-        name="animations_node"
+        name="animations_node",
+        parameters=[{"exiger_validation_roues": ParameterValue(
+            LaunchConfiguration("exiger_validation_roues"), value_type=bool)}],
     )
 
     audio_server_node = Node(
@@ -270,5 +276,9 @@ def generate_launch_description():
                               description="Ce que voit person_tracker (vide = panneau absent)"),
         DeclareLaunchArgument("exterior_topic", default_value="",
                               description="Caméra de poursuite de la sim (vide = panneau absent)"),
+        # L2b (décision de David du 15/11) : seul argument hors pont web, lu par animations_node.
+        DeclareLaunchArgument("exiger_validation_roues", default_value="true",
+                              description="SÉCURITÉ : barrière roues (piste non validée en sim = non jouée) ;"
+                                          " vrai sur le robot ; faux accepté en domaine 43 seulement"),
         GroupAction([PushRosNamespace(["/", LaunchConfiguration("robot_name")]), *group]),
     ])

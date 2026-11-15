@@ -52,8 +52,9 @@ echo "=== édition à travers le robot sous $NS/ $(date +%T) ==="
 for essai in 1 2 3 4; do
   noeuds=$(ros2 node list --no-daemon --spin-time 5 2>/dev/null)
   manque=""
-  # animations_node se nomme « animation_node » (ANIMATION + "_node") : nom historique.
-  for n in data_edit_node animation_node face_sim_node catalogue_node validation_sim_node; do
+  # L2b : le nom du VRAI bringup (robot_app.launch.py, name="animations_node") fait foi ; l'ancienne
+  # sim lançait le nœud sans name= (« animation_node », ANIMATION + "_node").
+  for n in data_edit_node animations_node face_sim_node catalogue_node validation_sim_node; do
     grep -qx "$NS/$n" <<<"$noeuds" || manque="$manque $NS/$n"
   done
   [ -z "$manque" ] && break; sleep 2

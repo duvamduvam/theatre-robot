@@ -15,7 +15,8 @@ from didier_web.validation_sim import Journal, Observateur
 from theatre_contrats import donnees
 
 SIM = {"ROS_DOMAIN_ID": "43"}
-NOEUDS = ["animation_node", "face_sim_node", "leds_sim_node", "twist_deadman", "validation_sim_node"]
+# L2b : nom du graphe = celui de robot_app.launch.py (le journal, lui, garde « animation_node »).
+NOEUDS = ["animations_node", "face_sim_node", "leds_sim_node", "twist_deadman", "validation_sim_node"]
 SANS_ROUES = {"keys": "S1", "duration": 4000, "neck": [[0, 0.5]]}
 AVEC_ROUES = {"keys": "R1", "duration": 4000, "wheels": [[0.1, [0.2, 0.2]], [0.5, [0, 0]]]}
 EXPRESSIONS = {"joie": {"duration": 2000, "loop": True, "mouths": [], "left_eyes": [], "right_eyes": []},
@@ -184,6 +185,21 @@ def test_journal_tourne_pendant_le_jeu_relu_depuis_le_debut(banc):
     assert obs.etat_animation(0, "calme") == []
     journal.write_text(LIGNE_ERREUR, encoding="utf-8")  # rotation : fichier neuf, plus court
     assert codes(obs.etat_animation(4000, "")) == [("sequence", "essai/calme", "erreur_journal", False)]
+
+
+def test_les_noeuds_surveilles_sont_ceux_du_vrai_bringup():
+    assert validation_sim.NOEUDS_SURVEILLES == ("animations_node", "face_sim_node", "leds_sim_node", "servos_sim_node",
+                                    "catalogue_node", "data_edit_node", "twist_deadman", "twist_mux",
+                                    "wheels_bridge")
+
+
+def test_animations_node_disparu_pendant_le_jeu_empeche_le_tampon(banc):
+    obs, _, _, noeuds = banc
+    assert obs.etat_animation(0, "calme") == []
+    noeuds.remove("animations_node")
+    v = obs.etat_animation(4000, "")
+    assert codes(v) == [("sequence", "essai/calme", "noeud_absent", False)]
+    assert v[0]["detail"] == ["animations_node"]
 
 
 def test_noeud_disparu_pendant_le_jeu(banc):
