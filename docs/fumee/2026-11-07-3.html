@@ -47,14 +47,15 @@ image sim reconstruite : non</p>
 <h2>Épreuves</h2>
 <table>
 <tr><th>Épreuve</th><th>Résultat</th><th>Compteur</th><th>Durée</th><th>Journal</th></tr>
-<tr><td>Image sim (reconstruite seulement si un Dockerfile/compose a changé)</td><td><span class="verdict vert">vert</span></td><td></td><td>0 s</td><td></td></tr><tr><td colspan="5" class="meta">inchangée depuis la dernière fumée verte (d7d0236), non reconstruite</td></tr>
-<tr><td>Sim headless + colcon build</td><td><span class="verdict vert">vert</span></td><td></td><td>25 s</td><td><a href="journaux/2026-11-07-2330/demarrage.log">journal</a></td></tr><tr><td colspan="5" class="meta">conteneur dadou-sim-container, domaine 43, monde chantiers, headless</td></tr>
+<tr><td>Images sim ×4 (reconstruites seulement si un Dockerfile/compose a changé)</td><td><span class="verdict vert">vert</span></td><td></td><td>0 s</td><td></td></tr><tr><td colspan="5" class="meta">inchangée depuis la dernière fumée verte (d7d0236), non reconstruite</td></tr>
+<tr><td>Sim headless, 4 conteneurs : domaine 43, colcon ×4, nœuds attendus</td><td><span class="verdict vert">vert</span></td><td></td><td>25 s</td><td><a href="journaux/2026-11-07-2330/demarrage.log">journal</a></td></tr><tr><td colspan="5" class="meta">conteneur dadou-sim-container, domaine 43, monde chantiers, headless</td></tr>
 <tr><td>Sonde du facteur temps réel (20 s)</td><td><span class="verdict vert">vert</span></td><td>0.986</td><td>21 s</td><td><a href="journaux/2026-11-07-2330/rtf.log">journal</a></td></tr><tr><td colspan="5" class="meta">seuil 0.8</td></tr>
 <tr><td>validate-namespace.sh</td><td><span class="verdict vert">vert</span></td><td>5 / 5 OK, 0 KO</td><td>43 s</td><td><a href="journaux/2026-11-07-2330/namespace.log">journal</a></td></tr>
 <tr><td>validate-catalogue.sh</td><td><span class="verdict vert">vert</span></td><td>4 / 4 OK, 0 KO</td><td>25 s</td><td><a href="journaux/2026-11-07-2330/catalogue.log">journal</a></td></tr>
 <tr><td>Animation « parle » (animation_state &quot;&quot; → &quot;parle&quot; → &quot;&quot;)</td><td><span class="verdict vert">vert</span></td><td>3 / 3 OK, 0 KO</td><td>6 s</td><td><a href="journaux/2026-11-07-2330/parle.log">journal</a></td></tr><tr><td colspan="5" class="meta">ETATS=[&quot;&quot;, &quot;parle&quot;, &quot;&quot;]</td></tr>
 <tr><td>validate-data-edit.sh (édition à travers le robot, L1d)</td><td><span class="verdict non_lance">non lancée</span></td><td></td><td></td><td></td></tr>
-<tr><td>Chaîne roues + régisseur + regard, puis validate-rehearsal-chantiers.sh (V-R3)</td><td><span class="verdict vert">vert</span></td><td>21 / 21 OK, 0 KO</td><td>15 min 33 s</td><td><a href="journaux/2026-11-07-2330/chantiers.log">journal</a></td></tr>
+<tr><td>validate-machines.sh (les machines de la sim, vues depuis le monde, L2b)</td><td><span class="verdict non_lance">non lancée</span></td><td></td><td></td><td></td></tr>
+<tr><td>Régisseur + regard (chaîne roues du bringup), puis validate-rehearsal-chantiers.sh (V-R3)</td><td><span class="verdict vert">vert</span></td><td>21 / 21 OK, 0 KO</td><td>15 min 33 s</td><td><a href="journaux/2026-11-07-2330/chantiers.log">journal</a></td></tr>
 <tr><td>Sim relancée, validate-jeu-a1.sh (A1)</td><td><span class="verdict vert">vert</span></td><td>14 / 14 OK, 0 KO</td><td>15 min 10 s</td><td><a href="journaux/2026-11-07-2330/a1.log">journal</a></td></tr>
 </table>
 
