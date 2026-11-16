@@ -165,7 +165,8 @@ def test_mouvement_apprend_la_cle_aller_voir():
 def test_ligne_d_objets_texte_de_la_spec():
     assert personas.objects_prompt([("anneaux", "bagues géantes"), ("flaque", "")]) == (
         "Objets que tu peux aller voir : anneaux (bagues géantes), flaque. "
-        "Tu ne peux faire le tour d'aucun objet.")
+        "Tu ne peux faire le tour d'aucun objet : si on te le demande, dis en personnage que c'est "
+        "impossible, n'annonce jamais ce tour et n'ajoute pas la clé.")
 
 
 def test_ligne_d_objets_dit_les_tours_possibles():
@@ -174,7 +175,10 @@ def test_ligne_d_objets_dit_les_tours_possibles():
     assert personas.objects_prompt([("anneaux", ""), ("elephant", "statue"), ("poubelle_tri", "")],
                                    ["anneaux", "poubelle_tri"]) == (
         "Objets que tu peux aller voir : anneaux, elephant (statue), poubelle_tri. "
-        "Objets dont tu peux faire le tour : anneaux, poubelle_tri.")
+        "Objets dont tu peux faire le tour : anneaux, poubelle_tri. "
+        # 16/11 (épreuve CONV) : les objets SANS tour sont nommés, avec la conduite à tenir.
+        "Tu ne peux PAS faire le tour de : elephant (eau, mur ou obstacle tout près) : si on te le "
+        "demande, dis en personnage que c'est impossible, n'annonce jamais ce tour et n'ajoute pas la clé.")
 
 
 def test_ligne_des_tours_plafonnee_sans_couper_un_nom():
@@ -182,9 +186,12 @@ def test_ligne_des_tours_plafonnee_sans_couper_un_nom():
     ligne = personas.objects_prompt([("a", "")], tours)
     phrase = ligne.split(". ", 1)[1]
     # Plafond GRAVÉ : 600 caractères ; 36 (préfixe) + n × 7 + (n-1) × 2 + 1 ≤ 600 -> n = 62 > 40 : tout passe.
-    assert phrase.count("objet") == 40 and phrase.endswith("objet39.")
+    assert phrase.count("objet") == 40 and phrase.endswith("objet39. Tu ne peux PAS faire le tour de : a"
+                                                           " (eau, mur ou obstacle tout près) : si on te le demande,"
+                                                           " dis en personnage que c'est impossible, n'annonce jamais"
+                                                           " ce tour et n'ajoute pas la clé.")
     longs = [f"{'n' * 38}{i:02d}" for i in range(40)]
-    phrase = personas.objects_prompt([("a", "")], longs).split(". ", 1)[1]
+    phrase = personas.objects_prompt([("a", "")], longs).split(". ", 1)[1].split(" Tu ne peux PAS", 1)[0]
     # 36 + n × 40 + (n-1) × 2 + 1 ≤ 600 -> n = 13, noms ENTIERS.
     assert len(phrase) <= 600 and phrase.count("n" * 38) == 13 and phrase.endswith("12.")
 
@@ -192,7 +199,8 @@ def test_ligne_des_tours_plafonnee_sans_couper_un_nom():
 def test_ligne_d_objets_desc_egale_au_nom_omise():
     # Le régisseur met desc = nom par défaut : « flaque (flaque) » n'apprend rien.
     assert personas.objects_prompt([("Flaque", "flaque")]) == (
-        "Objets que tu peux aller voir : Flaque. Tu ne peux faire le tour d'aucun objet.")
+        "Objets que tu peux aller voir : Flaque. Tu ne peux faire le tour d'aucun objet : si on te le "
+        "demande, dis en personnage que c'est impossible, n'annonce jamais ce tour et n'ajoute pas la clé.")
 
 
 def test_ligne_d_objets_vide_sans_objet():

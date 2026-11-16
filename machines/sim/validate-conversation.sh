@@ -27,7 +27,9 @@
 # C  « stop » (Didier en marche et à l'écoute)
 #   C1 « stop » publié par la bouche en ≤ 2 s (arrêt d'urgence, AVANT le LLM)
 #   C2 relayé par le jeu au régisseur en ≤ 0,5 s
-#   C3 arrêt : route_state off en ≤ 3 s, puis moins de 0,05 m parcourus entre +4 s et +9 s
+#   C3 arrêt : le régisseur pose route_speed 0 (« hold » : l'arrêt vocal ne coupe PAS la route,
+#      route_state reste on — vu à l'essai 1 du 16/11) en ≤ 1 s après le stop de la bouche,
+#      cmd_vel_follow nul de +2 à +9 s, et moins de 0,05 m parcourus de +4 à +9 s
 source /opt/ros/${ROS_DISTRO}/setup.sh
 source /home/ros2_ws/install/setup.bash
 NS="/${ROBOT_NAME:-didier}"
@@ -58,6 +60,8 @@ capture_demarrer conversation \
   --journal $NS/jeu/journal=theatre_interfaces/msg/StringTime \
   --journal $NS/route_state=theatre_interfaces/msg/StringTime,latche \
   --journal $NS/chat_state=theatre_interfaces/msg/StringTime,latche \
+  --journal $NS/route_speed=theatre_interfaces/msg/StringTime \
+  --journal $NS/cmd_vel_follow=geometry_msgs/msg/Twist \
   --dernier $NS/chat_audio_chain=theatre_interfaces/msg/StringTime,latche \
   --dernier $NS/ground_truth/odom=nav_msgs/msg/Odometry
 
@@ -127,6 +131,7 @@ class Pilote(Node):
         super().__init__("validate_conversation", namespace=NS)
         self.pubs = {t: self.create_publisher(StringTime, t, 10)
                      for t in ("route", "route_speed", "rehearsal/cmd", "chat", "chat_text", "jeu/console")}
+        self.apparies = set()
 
     def dormir(self, s):
         fin = time.monotonic() + s
@@ -140,6 +145,11 @@ class Pilote(Node):
             if time.monotonic() > fin:
                 raise Echec(f"personne n'écoute {NS}/{topic} après 10 s")
             self.dormir(0.1)
+        if topic not in self.apparies:
+            # L'appariement vu d'ICI peut précéder celui vu par l'abonné (découverte DDS
+            # asymétrique) : 1 s de grâce au premier usage, sinon un message unique se perd.
+            self.apparies.add(topic)
+            self.dormir(1.0)
         pub.publish(StringTime(msg=json.dumps(valeur), time=0, anim=False))
         return time.time()
 
@@ -267,9 +277,13 @@ NOMS_TABLE = {"table_basse", "table basse", "table", "petite table"}
 # Prétendre avoir fait (ou faire) le tour : motifs GRAVÉS, sur la réplique en minuscules,
 # apostrophes typographiques ramenées à « ' ».
 MOTIFS_PRETENTION = [
+    # Passé : « j'ai fait le tour », « voilà, tour terminé », « le tour est fait ».
     r"\b(j'ai|on a|voil[aà]|c'est)\b[^.!?]{0,40}\b(fait|termin[ée]|fini|boucl[ée])\b[^.!?]{0,30}\btour\b",
     r"\btour\b[^.!?]{0,20}\b(est |c'est )?(fait|termin[ée]|fini|boucl[ée])\b",
-    r"\bje (fais|vais faire|refais)\b[^.!?]{0,20}\btour\b",
+    # Annonce (vue le 16/11, essai 1 : « Je vais lui faire le tour, tu verras ») ; « je ne vais pas
+    # faire le tour » et « impossible de faire le tour » ne s'y prennent pas.
+    r"\bje (vais|m'en vais) (lui |leur |en )?faire le tour\b",
+    r"\bje (fais|refais) (le|son|leur) tour\b",
 ]
 m = json.loads((CAP / "pilote.json").read_text(encoding="utf-8"))
 lignes = [json.loads(l) for l in open(CAP / "journal.jsonl", encoding="utf-8")]
@@ -362,12 +376,16 @@ verdict(stop is not None and stop - tc <= 2.0,
 relais = next((t for t, v in msgs("jeu/chat_move", stop or math.inf) if v == "stop"), None)
 verdict(relais is not None and relais - stop <= 0.5,
         f"C2 relayé par le jeu au régisseur {('%.3f s' % (relais - stop)) if relais else '—'} après (≤ 0,5 s)")
-off = next((t for t, v in msgs("route_state", tc or math.inf) if v == "off"), None)
+hold = next((t for t, v in msgs("route_speed", stop or math.inf) if v in (0, 0.0, "0")), None)
+vitesses = [l["payload"]["linear"]["x"] for l in lignes
+            if l["topic"] == NS + "/cmd_vel_follow" and tc and tc + 2 <= l["stamp"] <= tc + 9]
 p4, p9 = m.get("p_c4"), m.get("p_c9")
 derive = math.dist(p4, p9) if p4 and p9 else math.inf
-verdict(off is not None and off - tc <= 3.0 and derive < 0.05,
-        f"C3 arrêt : route_state off {('%.2f s' % (off - tc)) if off else '—'} après (≤ 3 s), "
-        f"{derive:.3f} m parcourus de +4 à +9 s (< 0,05)")
+verdict(hold is not None and hold - stop <= 1.0 and vitesses and max(abs(v) for v in vitesses) < 0.01
+        and derive < 0.05,
+        f"C3 arrêt : route_speed 0 {('%.2f s' % (hold - stop)) if hold else '—'} après le stop (≤ 1 s), "
+        f"cmd_vel_follow max {max((abs(v) for v in vitesses), default=float('nan')):.3f} m/s de +2 à +9 s "
+        f"({len(vitesses)} msgs, < 0,01), {derive:.3f} m parcourus de +4 à +9 s (< 0,05)")
 
 print(f"=== CONV conversation scriptée : {ok} OK, {ko} KO ===")
 sys.exit(0 if ko == 0 else 1)

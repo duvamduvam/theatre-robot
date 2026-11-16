@@ -171,20 +171,42 @@ OBJECTS_PROMPT_MAX_CHARS = 1200
 # sans cette ligne, le LLM proposait le tour d'objets collés à la Loire, que le
 # régisseur refuse (« no_tour »). Phrase EXACTE gravée ; plafond séparé.
 TOURS_PREFIX = "Objets dont tu peux faire le tour : "
-TOURS_NONE = "Tu ne peux faire le tour d'aucun objet."
+# 16/11 (épreuve CONV de la fumée, banc 10/10) : avec la seule liste des tours possibles, Haiku
+# (réflexion coupée) annonçait quand même « je fais le tour de l'éléphant » et émettait la clé
+# — la garde de conversation empêchait le geste, pas la promesse dite à voix haute. Nommer AUSSI
+# les objets SANS tour, avec la conduite à tenir : 0 promesse sur 10 au même banc.
+TOURS_REFUS = (" : si on te le demande, dis en personnage que c'est impossible, n'annonce "
+               "jamais ce tour et n'ajoute pas la clé.")
+TOURS_IMPOSSIBLE_PREFIX = "Tu ne peux PAS faire le tour de : "
+TOURS_IMPOSSIBLE_RAISON = " (eau, mur ou obstacle tout près)"
+TOURS_NONE = "Tu ne peux faire le tour d'aucun objet" + TOURS_REFUS
 TOURS_PROMPT_MAX_CHARS = 600
 
 
-def _tours_sentence(tours) -> str:
-    """Noms dont on peut faire le tour -> phrase (TOURS_NONE si aucun) ;
-    noms lâchés ENTIERS au-delà de TOURS_PROMPT_MAX_CHARS (comme les objets)."""
-    line, count = TOURS_PREFIX, 0
-    for name in tours:
+def _names_line(prefix: str, names) -> tuple:
+    """(ligne, nombre) : `prefix` + noms séparés par des virgules, noms lâchés ENTIERS
+    au-delà de TOURS_PROMPT_MAX_CHARS (comme les objets)."""
+    line, count = prefix, 0
+    for name in names:
         candidate = line + (", " if count else "") + name
         if len(candidate) + 1 > TOURS_PROMPT_MAX_CHARS:
             break
         line, count = candidate, count + 1
-    return line + "." if count else TOURS_NONE
+    return line, count
+
+
+def _tours_sentence(tours, names=()) -> str:
+    """Noms dont on peut faire le tour -> phrase (TOURS_NONE si aucun), suivie des objets
+    `names` qui n'en ont PAS (TOURS_IMPOSSIBLE_PREFIX … TOURS_REFUS)."""
+    line, count = _names_line(TOURS_PREFIX, tours)
+    if not count:
+        return TOURS_NONE
+    sentence = line + "."
+    sans = [n for n in names if n not in set(tours)]
+    impossible, n_sans = _names_line(TOURS_IMPOSSIBLE_PREFIX, sans)
+    if n_sans:
+        sentence += " " + impossible + TOURS_IMPOSSIBLE_RAISON + TOURS_REFUS
+    return sentence
 
 
 # Objets PROCHES (15/11 21:29, jeu/objets_proches) : distance et côté depuis la
@@ -226,7 +248,7 @@ def objects_prompt(objects, tours=()) -> str:
             break
         line = candidate
         count += 1
-    return line + ". " + _tours_sentence(tours) if count else ""
+    return line + ". " + _tours_sentence(tours, [n for n, _d in objects][:count]) if count else ""
 
 
 # Demande de réflexion (lot P4 du metteur en scène intérieur, 23/10 — texte
