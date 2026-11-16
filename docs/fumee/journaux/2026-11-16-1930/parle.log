@@ -1,4 +1,0 @@
-ABONNES=["animations_node"] apparies=1
-ENVOIS=1
-ETATS=["", "parle", ""]
-PARLE 3 OK

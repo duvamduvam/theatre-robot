@@ -69,7 +69,7 @@ COPY entree.sh /home/ros2_ws/entree.sh
 COPY --from=data json/ /home/ros2_ws/json/
 COPY --from=data json/ /home/ros2_ws/src/robot/json/
 # log/ : logging_conf.py (bibliothèque du cœur) écrit sur ce chemin exact ; le dossier doit exister
-# avant le premier dictConfig. Monté par le compose (machines/sim/workspace/log), partagé avec `robot`.
+# avant le premier dictConfig. Monté par le compose ($DIDIER_SIM_JOURNAUX/log, hors dépôt), partagé avec `robot`.
 RUN mkdir -p /home/ros2_ws/log
 
 ENTRYPOINT ["/bin/bash", "/home/ros2_ws/entree.sh"]

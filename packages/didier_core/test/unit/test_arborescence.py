@@ -826,7 +826,9 @@ def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
 
 # Écrits en dur. Ce que la sim prend de l'ancienne conf/ du robot (machines/sim/, à plat), le banc
 # x86 du robot et celui de la vision.
-SIM_A_PLAT = ["coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
+SIM_A_PLAT = [# 16/11 (lot fiabilité des épreuves) : l'enregistreur des mesures et sa bibliothèque bash.
+              "capture_topics.py", "captures.sh",
+              "coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
               "docker-compose.yml", "fumee.sh",
               "fumee_page.py", "installer-fumee.sh", "pub.sh", "rejouer-modifiees.sh",
               # 15/11 (567382b) : séance « Chantiers » en une commande.
@@ -1192,8 +1194,11 @@ def test_un_dockerfile_par_machine_qui_ne_copie_que_des_contextes_nommes():
         # Rien du contexte principal (le dossier docker/) : chaque copie vient d'un contexte nommé.
         assert copies and all(l.startswith("COPY --from=") for l in copies), machine
         assert sorted({l.split()[1].removeprefix("--from=") for l in copies}) == contextes, machine
-        # Exactement une copie par contexte nommé.
-        assert len(copies) == len(contextes) + (1 if machine == "robot" else 0), machine  # data : json/ + medias/
+        # Exactement une copie par contexte nommé ; robot : data en deux (json/ + medias/) et conf en
+        # deux (ses deux listes de dépendances d'abord, pour le cache apt/pip — 16/11 — puis le tout).
+        assert len(copies) == len(contextes) + (2 if machine == "robot" else 0), machine
+        if machine == "robot":
+            assert copies[0] == "COPY --from=conf packages-docker.txt requirements.txt /home/ros2_ws/src/robot/conf/"
         # Le contexte nommé de chaque package = sa liste dans machine.yml.
         assert sorted(_machine(machine)["packages"] + ["conf"] + (["data"] if machine == "robot" else [])) == contextes
         for paquet in _machine(machine)["packages"]:

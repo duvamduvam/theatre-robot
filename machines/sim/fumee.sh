@@ -52,13 +52,20 @@
 #
 # Variables (toutes facultatives) :
 #   FUMEE_DEPOT        checkout de main à tester (défaut : le dépôt de David)
-#   FUMEE_SORTIE       dossier des pages (défaut : $FUMEE_DEPOT/docs/fumee)
+#   FUMEE_SORTIE       dossier des pages VERSIONNÉES : HTML, index, historique.jsonl
+#                      (défaut : $FUMEE_DEPOT/docs/fumee)
+#   FUMEE_BRUT         journaux BRUTS, LOCAUX (défaut : ~/tmp/didier-fumee) — jamais dans git
+#                      ni sur Nextcloud (décision du 16/11) ; vert purgé à 30 j, rouge gardé
+#                      tant que son dossier n'a pas le marqueur TRAITE
+#   DIDIER_SIM_JOURNAUX journaux de la sim, montés par le compose (défaut :
+#                      ~/tmp/didier-sim) — créé ici avant le démarrage
 #   FUMEE_COMMIT       1 (défaut) = commit de docs/fumee ; 0 = pas de commit (essais)
 #                      — le commit n'a de toute façon lieu que si FUMEE_SORTIE est le défaut
 #   FUMEE_RTF_MIN      seuil du facteur temps réel (défaut 0,8) ; tout autre = « essai provoqué »
 #   FUMEE_CHARGE_MAX   load average 1 min au-dessus duquel --si-due reporte
 #                      (défaut : nb de cœurs × 0,5 — le RTF reste le vrai juge)
 #   FUMEE_ETAT         journal + verrou (défaut ~/.local/state/didier-fumee)
+#   FUMEE_VERROU_ATTENTE  secondes qu'une fumée forcée attend le verrou avant de refuser (défaut 60)
 #   FUMEE_DRY_POWEROFF 1 = --et-dodo n'éteint pas, il l'affiche
 #   FUMEE_DODO_DELAI   secondes entre la fin et le poweroff (défaut 20)
 #   FUMEE_COEURS       CPU RÉSERVÉS à la sim pendant la fumée (défaut 8-15 = 4 cœurs rapides
@@ -85,6 +92,10 @@ SORTIE="${FUMEE_SORTIE:-$SORTIE_DEFAUT}"
 RTF_MIN="${FUMEE_RTF_MIN:-$RTF_MIN_DEFAUT}"
 ETAT="${FUMEE_ETAT:-$HOME/.local/state/didier-fumee}"
 JOURNAL="$ETAT/journal.log"
+BRUT="${FUMEE_BRUT:-$HOME/tmp/didier-fumee}"
+# Journaux de la sim HORS du dépôt et de Nextcloud (16/11) : MÊME expression que le compose
+# (gravé par test_compose_sim.py) ; créés ici par l'utilisateur (sinon Docker les crée root).
+JOURNAUX_SIM="${DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier-sim}"
 # L2b : la sim multi-conteneurs (projet compose didier-sim). Un service = un conteneur = une image
 # locale, jamais poussée.
 DOCKER_DIR="$DEPOT/machines/sim"
@@ -137,8 +148,15 @@ if ! flock -n 9; then
     dit "une fumée est en cours, j'attends sa fin (90 min max) avant d'éteindre"
     flock -w 5400 9 || { dit "la fumée en cours n'a pas fini en 90 min : je n'éteins PAS"; exit 2; }
     SAUTER_FUMEE=1
+  elif [ "$MODE" = force ]; then
+    # Fumée lancée à la main ou ENCHAÎNÉE après une autre (16/11) : un verrou en cours de
+    # libération se libère en quelques secondes — on l'attend 60 s, puis on REFUSE en le disant
+    # (code 2). Avant : sortie muette en 0, la seconde de deux fumées enchaînées « passait » sans
+    # rien faire (verrou gardé ≤ 15 s par le `sleep` de la boucle des cœurs, corrigé plus bas).
+    flock -w "${FUMEE_VERROU_ATTENTE:-60}" 9 || { dit "REFUS : une autre fumée tient le verrou ($ETAT/verrou) depuis plus de ${FUMEE_VERROU_ATTENTE:-60} s"
+                       journal "refus : verrou tenu par une autre fumée (mode $MODE)"; exit 2; }
   else
-    exit 0   # silence : la minuterie ou la main a déjà la place
+    exit 0   # minuterie : silence, la place est prise (le prochain passage réessaiera)
   fi
 fi
 
@@ -273,8 +291,8 @@ fi
 ENGAGEE=1
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/didier-fumee.XXXXXX")"
 ID="$(date +%Y-%m-%d-%H%M)"
-[ ! -e "$SORTIE/journaux/$ID" ] || ID="$(date +%Y-%m-%d-%H%M%S)"
-JDIR="$SORTIE/journaux/$ID"
+[ ! -e "$BRUT/$ID" ] || ID="$(date +%Y-%m-%d-%H%M%S)"
+JDIR="$BRUT/$ID"
 JSONL="$TMP/epreuves.jsonl"
 mkdir -p "$JDIR"
 ESSAI=0
@@ -337,7 +355,8 @@ recolter() { # recolter <nom> : copie hors conteneurs AVANT leur arrêt (les jou
   docker cp "$(conteneur_de monde):/home/ros2_ws/log" "$d/ros2_ws-log" >/dev/null 2>&1 || true
   docker cp "$(conteneur_de vision):/home/ros2_ws/log" "$d/vision-log" >/dev/null 2>&1 || true
   docker cp "$(conteneur_de telecommande):/home/ros2_ws/log" "$d/telecommande-log" >/dev/null 2>&1 || true
-  docker exec "$(conteneur_de monde)" bash -c 'cd /tmp && tar -cf - vr3-capture vja1 validate-*.log 2>/dev/null' \
+  # Les captures des épreuves sont sous log/ (copié ci-dessus, et en entier par copier_captures).
+  docker exec "$(conteneur_de monde)" bash -c 'cd /tmp && tar -cf - validate-*.log 2>/dev/null' \
     | tar -xf - -C "$d/tmp" 2>/dev/null || true
   # Page légère : tout fichier > 1 Mo est réduit à ses 3000 dernières lignes.
   find "$d" -type f -size +1M | while read -r gros; do
@@ -373,14 +392,24 @@ epingler_sim() { # la sim sur les cœurs réservés, et le reste du PC poussé a
   dit "$(python3 "$COEURS_PY" reserver --coeurs "$COEURS" --etat "$ETAT/coeurs.json" "${sims[@]}" 2>&1 || true)"
   # Les processus lancés PENDANT la fumée (un nouvel onglet, un build) héritent de leur parent,
   # déjà poussé ; ceux qui naîtraient ailleurs sont rattrapés par cette passe toutes les 15 s.
+  # `9>&-` : la boucle et ses fils (sleep, python) ne gardent PAS le descripteur du verrou —
+  # sinon le `sleep 15` orphelin du kill le tenait encore jusqu'à 15 s après la fin (16/11 : la
+  # seconde de deux fumées enchaînées sortait sans rien faire).
   ( while sleep 15; do
       python3 "$COEURS_PY" maintenir --coeurs "$COEURS" --etat "$ETAT/coeurs.json" "${sims[@]}" >/dev/null 2>&1 || true
-    done ) &
+    done ) 9>&- &
   MAINTIEN_PID=$!
 }
 
 liberer_coeurs() { # idempotent : rend affinités et cpusets d'origine (aussi sous trap EXIT)
-  [ -n "$MAINTIEN_PID" ] && kill "$MAINTIEN_PID" 2>/dev/null
+  if [ -n "$MAINTIEN_PID" ]; then
+    # La boucle PUIS ses fils, par PID (relevés avant : orphelins, ils ne seraient plus ses fils).
+    # Un `maintenir` survivant repousserait les processus de David APRÈS la libération.
+    local enfants; enfants="$(pgrep -P "$MAINTIEN_PID" 2>/dev/null || true)"
+    kill "$MAINTIEN_PID" 2>/dev/null || true
+    [ -z "$enfants" ] || kill $enfants 2>/dev/null || true
+    wait "$MAINTIEN_PID" 2>/dev/null || true
+  fi
   MAINTIEN_PID=""
   [ -f "$ETAT/coeurs.json" ] || return 0
   dit "$(python3 "$COEURS_PY" liberer --etat "$ETAT/coeurs.json" 2>&1 || true)"
@@ -415,7 +444,8 @@ demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis a
   SIM_A_NOUS=1
   # Le domaine n'est PAS passé ici : le compose pose ROS_DOMAIN_ID=43 en littéral et ne le lit
   # jamais dans l'environnement de l'appelant ; on le revérifie dans chaque conteneur ci-dessous.
-  (cd "$DOCKER_DIR" && env ROBOT_NAME=didier HEADLESS=true WORLD=chantiers \
+  mkdir -p "$JOURNAUX_SIM"/log "$JOURNAUX_SIM"/log-vision "$JOURNAUX_SIM"/log-telecommande
+  (cd "$DOCKER_DIR" && env ROBOT_NAME=didier HEADLESS=true WORLD=chantiers DIDIER_SIM_JOURNAUX="$JOURNAUX_SIM" \
       REHEARSAL=true FACE=true WEB_DRIVE=false DATA_EDIT=true \
       docker compose -f "$COMPOSE" up -d) >>"$TMP/demarrage.log" 2>&1 || return 1
   epingler_sim
@@ -471,15 +501,29 @@ rechauffer_cli() {
   sleep 5
 }
 
+copier_captures() { # copier_captures <id> <dossier dans monde> -> $JDIR/captures-<id>/ (gros fichiers gzippés)
+  local d="$JDIR/captures-$1"
+  docker exec "$(conteneur_de monde)" test -d "$2" 2>/dev/null || return 0
+  docker cp "$(conteneur_de monde):$2" "$d" >/dev/null 2>&1 || { NOTES+=("captures de $1 non copiées ($2)"); return 0; }
+  find "$d" -type f -size +64k \( -name '*.jsonl' -o -name '*.json' \) -exec gzip -9 {} + 2>/dev/null || true
+}
+
 lancer_validation() { # lancer_validation <id> <script> <attendu> <motif de la ligne finale> <délai s>
   local id=$1 script=$2 attendu=$3 motif=$4 delai=$5 log="$TMP/$1.log" t0=$SECONDS rc=0 ligne ok ko detail=""
   dit "épreuve $id : $script (attendu $attendu OK, ≤ $((delai / 60)) min)"
-  timeout -k 15 "$((delai + 60))" docker exec "$(conteneur_de monde)" timeout -k 10 "$delai" bash "/home/ros2_ws/$script" >"$log" 2>&1 || rc=$?
+  # Captures de l'épreuve (captures.sh, A1) dans un dossier à elle sous log/, copiées ensuite dans
+  # les journaux de la fumée : un rouge reste diagnosticable après coup (lot fiabilité, 16/11).
+  local cap="/home/ros2_ws/log/captures/fumee-$ID-$id"
+  timeout -k 15 "$((delai + 60))" docker exec -e CAPTURE_DIR="$cap" "$(conteneur_de monde)" \
+    timeout -k 10 "$delai" bash "/home/ros2_ws/$script" >"$log" 2>&1 || rc=$?
+  copier_captures "$id" "$cap"
   ligne="$(grep -E "$motif" "$log" | tail -1 || true)"
   ok="$(sed -nE 's/.* ([0-9]+) OK, ([0-9]+) KO.*/\1/p' <<<"$ligne")"
   ko="$(sed -nE 's/.* ([0-9]+) OK, ([0-9]+) KO.*/\2/p' <<<"$ligne")"
   local statut=""
-  if [ -z "$ok" ]; then
+  if [ -z "$ok" ] && grep -qi "mesure invalide" "$log"; then
+    ok=0; ko=0; statut=rouge; detail="MESURE INVALIDE (code $rc) : l'enregistreur des captures est mort pendant l'épreuve — défaut du banc, pas de Didier ; voir captures-$id/"
+  elif [ -z "$ok" ]; then
     ok=0; ko=0; statut=rouge; detail="aucun compteur lu en fin de script (code $rc) : précondition, délai dépassé ou crash — voir le journal"
   elif [ "$rc" != 0 ] && [ "$ok" = "$attendu" ] && [ "$ko" = 0 ]; then
     statut=rouge; detail="compteur conforme mais code de retour $rc"
@@ -696,7 +740,7 @@ commit_pages() {
   for _ in 1 2 3; do
     if git -C "$DEPOT" add -- docs/fumee \
        && git -C "$DEPOT" commit -q -m "Fumée nocturne $ID : $VERDICT sur $SHA (RTF ${RTF:-n/a})" \
-            -m "Page docs/fumee/$PAGE, journaux dans docs/fumee/journaux/$ID/. Commit automatique de fumee.sh (lot F), docs/fumee seulement." \
+            -m "Page docs/fumee/$PAGE et une ligne de docs/fumee/historique.jsonl ; journaux bruts LOCAUX ($ID, hors git). Commit automatique de fumee.sh (lot F), docs/fumee seulement." \
             -- docs/fumee; then
       journal "page $PAGE commitée dans $BRANCHE"; return 0
     fi
@@ -724,17 +768,19 @@ terminer() {
       [ -f "$f" ] || continue
       tail -n 2000 "$f" >"$JDIR/$(basename "$f")"
     done
-    [ "$(du -sk "$JDIR" | cut -f1)" -le 8192 ] || NOTES+=("journaux volumineux : $(du -sh "$JDIR" | cut -f1)")
     local args=() n
     for n in "${NOTES[@]}"; do args+=(--note "$n"); done
     PAGE="$(python3 "$PAGE_PY" finaliser --jsonl "$JSONL" --sortie "$SORTIE" --id "$ID" \
+      --brut "$BRUT" --brut-affiche "${BRUT/#$HOME/\~}" \
       --meta "sha=$SHA" --meta "sha_complet=$SHA_COMPLET" --meta "sale=$SALE" --meta "branche=$BRANCHE" \
       --meta "mode=$MODE" --meta "raison=$RAISON" --meta "debut=$DEBUT_ISO" --meta "fin=$(date -Iseconds)" \
       --meta "duree_s=$((SECONDS - DEBUT_S))" --meta "rtf=${RTF}" --meta "rtf_min=$RTF_MIN" \
       --meta "charge_1min=$CHARGE" --meta "nb_coeurs=$NB_COEURS" --meta "essai=$ESSAI" \
       --meta "image_reconstruite=$IMAGE_RECONSTRUITE" --meta "coeurs_reserves=${COEURS:-aucun}" "${args[@]}")"
     VERDICT="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["verdict"])' "$JDIR/resultat.json")"
-    dit "fumée $VERDICT — page $SORTIE/$PAGE"
+    dit "fumée $VERDICT — page $SORTIE/$PAGE, brut $JDIR"
+    # Purge du brut LOCAL : vertes de plus de 30 jours ; un rouge reste tant qu'il n'est pas TRAITE.
+    python3 "$PAGE_PY" purger --brut "$BRUT" | while read -r l; do journal "$l"; done
     journal "fin fumée $ID : $VERDICT, page $PAGE, RTF ${RTF:-n/a}, $((SECONDS - DEBUT_S)) s"
     commit_pages
     command -v notify-send >/dev/null && [ "$MODE" = si-due ] \
@@ -743,9 +789,9 @@ terminer() {
   fi
   arreter_sim   # idempotent ; couvre le cas « reporté » après démarrage de la sim (RTF trop bas)
   liberer_coeurs
-  # Reporté : pas de page, donc pas de dossier de journaux résiduel dans le dépôt.
+  # Reporté : pas de page, donc pas de dossier de journaux résiduel.
   [ "$ENGAGEE" = 1 ] || [ -z "$JDIR" ] || rm -rf "$JDIR"
-  [ "$ENGAGEE" = 1 ] || rmdir "$SORTIE/journaux" "$SORTIE" 2>/dev/null
+  [ "$ENGAGEE" = 1 ] || rmdir "$SORTIE" 2>/dev/null
   [ -z "$TMP" ] || rm -rf "$TMP"
   exit "$rc"
 }

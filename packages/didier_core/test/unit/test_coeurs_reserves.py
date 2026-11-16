@@ -174,3 +174,37 @@ def test_fumee_rend_les_coeurs_dans_terminer():
     # L'épinglage passe par demarrer_sim : chaque sim (chantiers puis A1) est épinglée.
     demarrer = sh[sh.index("\ndemarrer_sim() {"):sh.index("\nrechauffer_cli() {")]
     assert "epingler_sim" in demarrer
+
+
+@pytest.mark.skipif(len(os.sched_getaffinity(0)) < 4, reason="il faut au moins 4 CPU")
+def test_chaque_fil_d_un_processus_est_deplace_puis_rendu(tmp_path):
+    """Défaut du 15/11 (RTF 0,69-0,73 sous charge) : sched_setaffinity(pid) ne déplace que le fil
+    PRINCIPAL. Un processus jetable à 3 fils (principal + 2) : les 3 partent, les 3 reviennent."""
+    cpus = sorted(os.sched_getaffinity(0))
+    reserves = {cpus[1], cpus[2]}
+    etat = tmp_path / "coeurs.json"
+    jetable = subprocess.Popen([sys.executable, "-c",
+                                "import threading, time\n"
+                                "for _ in range(2): threading.Thread(target=time.sleep, args=(60,), daemon=True).start()\n"
+                                "print('ok', flush=True); time.sleep(60)"], stdout=subprocess.PIPE, text=True)
+    try:
+        assert jetable.stdout.readline() == "ok\n"
+        fils = cr.taches(jetable.pid)
+        assert len(fils) == 3 and jetable.pid in fils
+        avant = {t: os.sched_getaffinity(t) for t in fils}
+        assert cr.deplacer(reserves, etat, "sim", pids=fils, avec_conteneurs=False) == (3, 0)
+        for t in fils:
+            assert os.sched_getaffinity(t) == avant[t] - reserves, t
+        assert sorted(json.loads(etat.read_text())["processus"]) == sorted(str(t) for t in fils)
+        assert cr.liberer(etat, pids=fils) == (3, 0)
+        for t in fils:
+            assert os.sched_getaffinity(t) == avant[t], t
+    finally:
+        jetable.kill()
+
+
+def test_taches_d_un_processus_mort_est_vide():
+    mort = subprocess.Popen([sys.executable, "-c", "pass"])
+    mort.wait()
+    assert cr.taches(mort.pid) == []
+    assert os.getpid() in cr.taches(os.getpid())

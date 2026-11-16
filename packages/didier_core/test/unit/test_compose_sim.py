@@ -55,7 +55,13 @@ def _env(service):
 
 
 def _cibles(service):
-    return {v.split(":")[1]: v.split(":")[0] for v in service.get("volumes", [])}
+    """cible -> source ; la source peut contenir des « : » (défaut ${A:-…}, 16/11)."""
+    cibles = {}
+    for v in service.get("volumes", []):
+        v = v[:-3] if v.endswith((":ro", ":rw")) else v
+        source, cible = v.rsplit(":", 1)
+        cibles[cible] = source
+    return cibles
 
 
 def _machine(nom):
@@ -117,10 +123,18 @@ def test_espace_de_processus_partage_avec_monde_en_sim_seulement():
 
 def test_journaux_partages_par_monde_et_robot_et_colcon_par_service():
     services = _services()
-    assert _cibles(services["monde"])["/home/ros2_ws/log"] == "./workspace/log"
-    assert _cibles(services["robot"])["/home/ros2_ws/log"] == "./workspace/log"
-    assert _cibles(services["vision"])["/home/ros2_ws/log"] == "./workspace/log-vision"
-    assert _cibles(services["telecommande"])["/home/ros2_ws/log"] == "./workspace/log-telecommande"
+    # 16/11 (décision de David) : journaux HORS du dépôt et de Nextcloud, UNE variable.
+    J = "${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}"
+    assert _cibles(services["monde"])["/home/ros2_ws/log"] == J + "/log"
+    assert _cibles(services["robot"])["/home/ros2_ws/log"] == J + "/log"
+    assert _cibles(services["vision"])["/home/ros2_ws/log"] == J + "/log-vision"
+    assert _cibles(services["telecommande"])["/home/ros2_ws/log"] == J + "/log-telecommande"
+    assert not [v for s in services.values() for v in s.get("volumes", []) if "workspace" in v]
+    # Même défaut dans les scripts qui créent le dossier avant `up` (sinon Docker le crée root).
+    defaut = 'DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier-sim}"'
+    for script in ("fumee.sh", "seance-chantiers.sh"):
+        src = (SIM / script).read_text(encoding="utf-8")
+        assert defaut in src and "mkdir -p" in src, script
     for nom, s in services.items():
         assert _env(s)["COLCON_LOG_PATH"] == f"/home/ros2_ws/log/colcon-{nom}", nom
         # build/ et install/ jamais persistés (colcon à chaque up).

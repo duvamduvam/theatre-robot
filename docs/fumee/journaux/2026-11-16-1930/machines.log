@@ -1,8 +1,0 @@
-=== machines de la sim sous /didier/ 18:35:40 ===
-  27 nœuds vus en 5 s
-  ✅ M1 robot : 17 nœuds attendus (machines/robot/machine.yml)
-  ✅ M2 vision : 1 nœud(s) attendu(s) (machines/vision/machine.yml)
-  ✅ M3 télécommande : /didier/controller_node présent
-  ✅ M4 /didier/vision/status : 3 message(s) en 15 s (≥ 2)
-  ✅ M6 /didier/animation : éditeurs ['/didier/controller_node', '/didier/web_bridge_node'] (attendu : /didier/controller_node)
-=== validate-machines : 5 OK, 0 KO 18:36:01 ===

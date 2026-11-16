@@ -13,6 +13,7 @@ import pathlib
 import re
 import shutil
 import subprocess
+import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -274,9 +275,15 @@ def test_rouges_sur_code_compte_par_sha_de_code(depot):
 
 
 def _ecrire_resultat(depot, ident, res):
-    d = depot / "docs" / "fumee" / "journaux" / ident
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "resultat.json").write_text(json.dumps(res), encoding="utf-8")
+    """Une fumée passée = une ligne de docs/fumee/historique.jsonl (16/11 : plus de journaux/)."""
+    fp.ajouter_historique(depot / "docs" / "fumee", dict(res, id=ident))
+
+
+def _reecrire_fin_du_vert(depot, fin):
+    """La verte du banc, relue dans l'historique, réécrite avec une autre fin (la dernière ligne
+    d'un id gagne)."""
+    res = next(r for r in fp.lire_resultats(depot / "docs" / "fumee") if r["verdict"] == "vert")
+    fp.ajouter_historique(depot / "docs" / "fumee", dict(res, fin=fin))
 
 
 def _due(depot, maintenant):
@@ -352,7 +359,9 @@ def test_page_verte_porte_sha_rtf_et_compteurs():
     assert "<strong>0.97</strong> (seuil 0.8)" in page
     assert "21 / 21 OK, 0 KO" in page and "14 / 14 OK, 0 KO" in page and "5 / 5 OK, 0 KO" in page
     assert "Toutes les épreuves sont vertes, aux valeurs gravées." in page
-    assert 'href="journaux/2026-11-07-2130/namespace.log"' in page
+    # 16/11 : plus de lien vers des journaux versionnés — le nom du fichier et le dossier LOCAL.
+    assert "<code>namespace.log</code>" in page and 'href="journaux/' not in page
+    assert "<code>~/tmp/didier-fumee/2026-11-07-2130/</code>" in page
     assert "9 min 45 s" in page
     assert "non lancée" not in page
 
@@ -377,7 +386,7 @@ def test_page_n_injecte_pas_de_html_et_signale_essai_et_arbre_sale():
 
 
 def test_finaliser_ecrit_resultat_page_et_sommaire(tmp_path):
-    sortie, jsonl = tmp_path / "docs-fumee", tmp_path / "epreuves.jsonl"
+    sortie, jsonl, brut = tmp_path / "docs-fumee", tmp_path / "epreuves.jsonl", tmp_path / "brut"
     for args in (["image", "--statut", "vert"], ["demarrage", "--statut", "vert"],
                  ["rtf", "--statut", "rouge", "--obtenu", "0.49", "--duree", "22"],
                  ["namespace", "--ok", "5", "--attendu", "5", "--ko", "0", "--duree", "60", "--journal", "namespace.log"]):
@@ -385,6 +394,7 @@ def test_finaliser_ecrit_resultat_page_et_sommaire(tmp_path):
 
     def finaliser(id_fumee, fin):
         return fp.main(["finaliser", "--jsonl", str(jsonl), "--sortie", str(sortie), "--id", id_fumee,
+                        "--brut", str(brut), "--brut-affiche", "~/brut",
                         "--meta", "sha=9c937d0", "--meta", "sha_complet=" + "9" * 40, "--meta", "sale=0",
                         "--meta", "branche=main", "--meta", "mode=force", "--meta", "raison=essai",
                         "--meta", "debut=2026-11-07T21:30:00+01:00", "--meta", "fin=" + fin,
@@ -393,17 +403,23 @@ def test_finaliser_ecrit_resultat_page_et_sommaire(tmp_path):
                         "--meta", "image_reconstruite=0", "--note", "une note"])
 
     assert finaliser("2026-11-07-2130", "2026-11-07T21:32:00+01:00") == 0
-    res = json.loads((sortie / "journaux" / "2026-11-07-2130" / "resultat.json").read_text(encoding="utf-8"))
+    res = json.loads((brut / "2026-11-07-2130" / "resultat.json").read_text(encoding="utf-8"))
     assert res["verdict"] == "rouge" and res["bloquant"] == "rtf"
     assert res["page"] == "2026-11-07.html" and res["rtf"] == 0.49 and res["duree_s"] == 120
     assert res["sale"] is False and res["notes"] == ["une note"]
     assert (sortie / "2026-11-07.html").exists()
     # Une 2e fumée le même jour ne doit pas écraser la page de la première.
     assert finaliser("2026-11-07-2300", "2026-11-07T23:02:00+01:00") == 0
-    res2 = json.loads((sortie / "journaux" / "2026-11-07-2300" / "resultat.json").read_text(encoding="utf-8"))
+    res2 = json.loads((brut / "2026-11-07-2300" / "resultat.json").read_text(encoding="utf-8"))
     assert res2["page"] == "2026-11-07-2.html"
     index = (sortie / "index.html").read_text(encoding="utf-8")
     assert index.index("2026-11-07-2.html") < index.index('href="2026-11-07.html"')     # la plus récente en tête
+    # Dans la sortie VERSIONNÉE : pages, index, historique — aucun journal brut.
+    assert sorted(p.name for p in sortie.iterdir()) == ["2026-11-07-2.html", "2026-11-07.html",
+                                                        "historique.jsonl", "index.html"]
+    lignes = (sortie / "historique.jsonl").read_text(encoding="utf-8").splitlines()
+    assert [json.loads(l)["id"] for l in lignes] == ["2026-11-07-2130", "2026-11-07-2300"]
+    assert "<code>~/brut/2026-11-07-2130/</code>" in (sortie / "2026-11-07.html").read_text(encoding="utf-8")
 
 
 # --- fumee.sh lui-même : contrat gravé et garde-fous ----------------------------------
@@ -467,9 +483,7 @@ def banc(tmp_path):
     sha = _commit(depot, "packages/code.txt", "code 1")
     res = vert(sha[:7])
     res.update(sha_complet=sha, fin=datetime.now().astimezone().isoformat(), id="2026-11-07-2130")
-    dossier = depot / "docs" / "fumee" / "journaux" / "2026-11-07-2130"
-    dossier.mkdir(parents=True)
-    (dossier / "resultat.json").write_text(json.dumps(res), encoding="utf-8")
+    fp.ajouter_historique(depot / "docs" / "fumee", res)
     bin_ = tmp_path / "bin"
     bin_.mkdir()
     faux = bin_ / "docker"
@@ -515,7 +529,7 @@ def test_si_due_apres_un_commit_mais_pc_charge_reporte_sans_lancer_la_sim(banc):
     assert "reporté : charge trop haute" in _journal(tmp)
     appels = (tmp / "appels.txt").read_text(encoding="utf-8")
     assert "compose" not in appels and "rm" not in appels.split()      # aucune sim lancée ni retirée
-    assert not (depot / "docs" / "fumee" / "journaux" / "2026-11-07-2130" / "x").exists()
+    assert not (depot / "docs" / "fumee" / "journaux").exists()          # rien de brut dans le dépôt
 
 
 @pytest.mark.parametrize("maintenant, reporte", [
@@ -545,10 +559,7 @@ def test_si_due_ne_demarre_pas_dans_une_plage_sans_commit(banc, maintenant, repo
 def test_rappel_apres_deux_jours_de_report_une_fois_par_demi_journee(banc):
     """Due depuis > 2 jours et toujours reportée : notification + ligne RAPPEL, pas de harcèlement."""
     depot, env, tmp = banc
-    f = next((depot / "docs" / "fumee" / "journaux").glob("*/resultat.json"))
-    res = json.loads(f.read_text(encoding="utf-8"))
-    res["fin"] = (datetime.now().astimezone() - timedelta(days=10)).isoformat()    # due depuis 3 jours
-    f.write_text(json.dumps(res), encoding="utf-8")
+    _reecrire_fin_du_vert(depot, (datetime.now().astimezone() - timedelta(days=10)).isoformat())   # due depuis 3 jours
     env = dict(env, FUMEE_CHARGE_MAX="-1")
     for _ in range(2):
         assert subprocess.run([str(FUMEE_SH), "--si-due"], env=env, capture_output=True, text=True,
@@ -570,11 +581,8 @@ def test_pas_de_rappel_tant_que_la_fumee_est_due_depuis_moins_de_deux_jours(banc
 
 def _bloquer(depot, jours_vert):
     """Verte il y a `jours_vert` jours, puis un commit de code et DEUX rouges sur lui."""
-    f = next((depot / "docs" / "fumee" / "journaux").glob("*/resultat.json"))
-    res = json.loads(f.read_text(encoding="utf-8"))
     ici = datetime.now().astimezone()
-    res["fin"] = (ici - timedelta(days=jours_vert)).isoformat()
-    f.write_text(json.dumps(res), encoding="utf-8")
+    _reecrire_fin_du_vert(depot, (ici - timedelta(days=jours_vert)).isoformat())
     b = _commit(depot, "packages/code.txt", "code 2")
     for i, h in enumerate((2, 1)):
         _ecrire_resultat(depot, "2026-11-09-23{}0".format(i), _res(b, "rouge", (ici - timedelta(hours=h)).isoformat()))
@@ -716,3 +724,127 @@ def test_dodo_sans_terminal_n_appelle_jamais_systemctl(tmp_path):
 def test_dodo_a_blanc_n_appelle_pas_systemctl(tmp_path):
     p, appels = _lancer_dodo(tmp_path, dry=True)
     assert "DRY-RUN" in p.stdout and appels == ""
+
+
+def test_la_boucle_des_coeurs_ne_garde_pas_le_verrou_et_meurt_avec_ses_fils():
+    """Défaut du 15/11 : le `sleep 15` orphelin de la boucle de maintien gardait le descripteur 9
+    (verrou) jusqu'à 15 s après la fin ; la seconde de deux fumées enchaînées sortait sans rien
+    faire. Un `maintenir` survivant repousserait aussi les processus APRÈS la libération."""
+    sh = _lire_sh()
+    epingler = sh[sh.index("\nepingler_sim() {"):sh.index("\nliberer_coeurs() {")]
+    assert "    done ) 9>&- &\n" in epingler
+    liberer = sh[sh.index("\nliberer_coeurs() {"):sh.index("\nnoeuds_attendus_vus() {")]
+    assert 'enfants="$(pgrep -P "$MAINTIEN_PID"' in liberer
+    assert liberer.index('kill "$MAINTIEN_PID"') < liberer.index("kill $enfants")
+    assert liberer.index("kill $enfants") < liberer.index('"$COEURS_PY" liberer')
+    assert "pkill -f" not in sh
+
+
+def test_fumee_forcee_refuse_en_le_disant_si_le_verrou_est_tenu(banc):
+    """Mode forcé : plus de sortie MUETTE en 0 quand une autre fumée tient le verrou."""
+    depot, env, tmp = banc
+    (tmp / "etat").mkdir(exist_ok=True)
+    tenant = subprocess.Popen(["flock", str(tmp / "etat" / "verrou"), "sleep", "30"])
+    try:
+        for _ in range(50):
+            if subprocess.run(["flock", "-n", str(tmp / "etat" / "verrou"), "true"]).returncode != 0:
+                break
+            time.sleep(0.1)
+        r = _lancer(dict(env, FUMEE_VERROU_ATTENTE="1"))
+        assert r.returncode == 2
+        assert "REFUS : une autre fumée tient le verrou" in r.stdout
+        assert "refus : verrou tenu par une autre fumée (mode force)" in _journal(tmp)
+        assert (tmp / "appels.txt").read_text(encoding="utf-8") == ""     # docker jamais appelé
+        # La minuterie, elle, reste silencieuse (le prochain passage réessaiera).
+        r = _lancer(env, "--si-due")
+        assert r.returncode == 0 and r.stdout == ""
+    finally:
+        tenant.kill()
+        tenant.wait()
+
+
+# --- Historique permanent et brut local (décision de David, 16/11) --------------------------
+
+def test_ligne_historique_format_grave():
+    """Une ligne par fumée, champs dans cet ordre, scores de TOUTES les épreuves (ordre canonique)."""
+    epreuves = [{"id": "image", "statut": "vert"}, {"id": "demarrage", "statut": "vert"},
+                {"id": "rtf", "statut": "vert", "obtenu": "0.998"},
+                {"id": "namespace", "statut": "vert", "ok": 5, "attendu": 5, "ko": 0},
+                {"id": "catalogue", "statut": "vert", "ok": 4, "attendu": 4, "ko": 0},
+                {"id": "parle", "statut": "vert", "ok": 3, "attendu": 3, "ko": 0},
+                {"id": "edition", "statut": "vert", "ok": 13, "attendu": 13, "ko": 0},
+                {"id": "machines", "statut": "vert", "ok": 5, "attendu": 5, "ko": 0},
+                {"id": "chantiers", "statut": "rouge", "ok": 20, "attendu": 21, "ko": 1}]
+    res = resultat(epreuves, verdict="rouge", bloquant="chantiers", rtf=0.998, notes=["pas dans l'historique"])
+    assert fp.ligne_historique(res) == (
+        '{"id": "2026-11-07-2130", "debut": "2026-11-07T21:30:00+01:00", "fin": "2026-11-07T22:10:00+01:00", '
+        '"sha": "9c937d0", "sha_complet": "9c937d0000000000000000000000000000000000", "branche": "main", '
+        '"mode": "force", "essai": false, "verdict": "rouge", "bloquant": "chantiers", "rtf": 0.998, '
+        '"duree_s": 2400, "page": "2026-11-07.html", "epreuves": {"image": "vert", "demarrage": "vert", '
+        '"rtf": "vert 0.998", "namespace": "vert 5/5", "catalogue": "vert 4/4", "parle": "vert 3/3", '
+        '"edition": "vert 13/13", "machines": "vert 5/5", "chantiers": "rouge 20/21 1KO", "a1": "non_lance"}}\n')
+
+
+def test_lire_resultats_lit_l_historique_derniere_ligne_gagnante(tmp_path):
+    h = tmp_path / "historique.jsonl"
+    h.write_text('{"id": "b", "fin": "2026-11-08T10:00:00+01:00", "verdict": "rouge"}\n'
+                 "pas du json\n"
+                 '{"id": "a", "fin": "2026-11-07T10:00:00+01:00", "verdict": "vert"}\n'
+                 '{"id": "b", "fin": "2026-11-08T10:00:00+01:00", "verdict": "vert"}\n', encoding="utf-8")
+    assert [(r["id"], r["verdict"]) for r in fp.lire_resultats(tmp_path)] == [("a", "vert"), ("b", "vert")]
+    assert fp.lire_resultats(tmp_path / "absent") == []
+
+
+@pytest.mark.parametrize("verdict, jours, traite, purge", [
+    ("vert", 31, False, True),      # vert de plus de 30 jours : purgé
+    ("vert", 29, False, False),     # vert récent : gardé
+    ("rouge", 400, False, False),   # rouge : JAMAIS purgé automatiquement…
+    ("rouge", 31, True, True),      # … sauf marqué TRAITE et plus de 30 jours
+    ("rouge", 10, True, False),     # TRAITE mais récent : gardé
+])
+def test_regle_de_purge_gravee(verdict, jours, traite, purge):
+    res = {"verdict": verdict, "fin": (MAINTENANT - timedelta(days=jours)).isoformat()}
+    assert fp.a_purger(res, traite, MAINTENANT) is purge
+
+
+def test_purger_le_brut_local(tmp_path):
+    brut = tmp_path / "brut"
+    for ident, verdict, jours, traite in [("vieux-vert", "vert", 40, False), ("vert-recent", "vert", 3, False),
+                                          ("vieux-rouge", "rouge", 90, False), ("rouge-traite", "rouge", 40, True)]:
+        d = brut / ident
+        d.mkdir(parents=True)
+        (d / "resultat.json").write_text(json.dumps(
+            {"verdict": verdict, "fin": (MAINTENANT - timedelta(days=jours)).isoformat()}), encoding="utf-8")
+        (d / "chantiers.log").write_text("x", encoding="utf-8")
+        if traite:
+            (d / "TRAITE").write_text("conclusion : docs/incidents/…\n", encoding="utf-8")
+    (brut / "sans-resultat").mkdir()                         # interrompue avant finaliser : gardée
+    assert fp.main(["purger", "--brut", str(brut), "--maintenant", MAINTENANT.isoformat()]) == 0
+    assert sorted(p.name for p in brut.iterdir()) == ["sans-resultat", "vert-recent", "vieux-rouge"]
+
+
+def test_amorcer_l_historique_depuis_les_anciens_journaux(tmp_path):
+    anciens, sortie = tmp_path / "journaux", tmp_path / "docs-fumee"
+    for ident, fin, verdict in [("2026-11-08-0100", "2026-11-08T01:40:00+01:00", "rouge"),
+                                ("2026-11-07-2130", "2026-11-07T22:10:00+01:00", "vert")]:
+        (anciens / ident).mkdir(parents=True)
+        (anciens / ident / "resultat.json").write_text(json.dumps(
+            resultat([{"id": "image", "statut": verdict}], verdict=verdict, id=ident, fin=fin)), encoding="utf-8")
+    assert fp.main(["amorcer", "--sortie", str(sortie), "--depuis", str(anciens)]) == 0
+    assert fp.main(["amorcer", "--sortie", str(sortie), "--depuis", str(anciens)]) == 0     # idempotent
+    lignes = [json.loads(l) for l in (sortie / "historique.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [l["id"] for l in lignes] == ["2026-11-07-2130", "2026-11-08-0100"]               # par fin
+    assert (sortie / "index.html").exists()
+
+
+def test_fumee_sh_brut_local_purge_et_sim_hors_depot():
+    sh = _lire_sh()
+    assert 'BRUT="${FUMEE_BRUT:-$HOME/tmp/didier-fumee}"' in sh and 'JDIR="$BRUT/$ID"' in sh
+    assert '"$PAGE_PY" purger --brut "$BRUT"' in sh
+    assert '"$SORTIE/journaux' not in sh
+    assert 'DIDIER_SIM_JOURNAUX="$JOURNAUX_SIM"' in sh
+
+
+def test_le_depot_ignore_les_journaux_bruts():
+    ignores = (SCRIPTS.parents[1] / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "docs/fumee/journaux/" in ignores

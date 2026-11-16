@@ -21,8 +21,13 @@ source /home/ros2_ws/install/setup.bash
 # robot/tests/unit/test_namespace_contract.py.
 NS="/${ROBOT_NAME:-didier}"
 JDIR=/home/ros2_ws/log/rehearsal
-# num <topic préfixé $NS/…> <champ>
-num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo $1 --once --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
+# MESURES (lot fiabilité des épreuves, 16/11) : lectures par un enregistreur rclpy PRÊT avant
+# l'épreuve (captures.sh -> capture_topics.py), plus par la CLI `ros2 topic echo` (découverte
+# lente, best-effort, pertes sous charge). Captures conservées sous log/captures/.
+source /home/ros2_ws/captures.sh
+# num <topic préfixé $NS/…, enregistré en --dernier> <champ> : première valeur reçue APRÈS
+# l'appel, 12 s au plus (budget des 3 essais CLI d'avant), sinon NaN.
+num() { local v; v=$(capture_lire "$1" "$2" 12 | grep -E -m1 '^-?[0-9]'); echo "${v:-NaN}"; }
 # P <topic RELATIF au robot (route, rehearsal/cmd…)> <msg> : préfixé ici.
 P() { timeout 15 ros2 topic pub $NS/$1 theatre_interfaces/msg/StringTime "{msg: \"$2\"}" -1 >/dev/null 2>&1; }
 ok=0; ko=0
@@ -34,6 +39,7 @@ for proc in face_sim route_driver fault_relay director twist_deadman; do
 done
 verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  ❌ $2"; ko=$((ko+1)); fi; }
 J() { ls -t $JDIR/*_demo.jsonl 2>/dev/null | head -1; }
+capture_demarrer vr2 --dernier $NS/cmd_vel_follow=geometry_msgs/msg/Twist
 has() { grep -q "\"type\": \"$1\"" "$(J)" 2>/dev/null; }
 hasid() { grep "\"type\": \"$1\"" "$(J)" 2>/dev/null | grep -q "\"id\": \"$2\""; }
 
@@ -67,5 +73,7 @@ echo "  ids sans start+stop :${manq:- aucun}"
 verdict "$([ -z "$manq" ] && echo 1 || echo 0)" "chaque panne a fault_start et fault_stop"
 verdict "$(has fault_error && echo 0 || echo 1)" "aucun fault_error"
 echo "  journal : $(J)"
+capture_arreter || { echo "=== V-R2 : mesure invalide (enregistreur mort), aucun verdict $(date +%T) ==="; exit 2; }
+echo "  captures : $CAP"
 echo "=== V-R2 : $ok OK, $ko KO $(date +%T) ==="
 [ "$ko" = 0 ]

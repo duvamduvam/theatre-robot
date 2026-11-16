@@ -22,9 +22,11 @@
 # Processus (décision 10) : robot, vision et télécommande partagent l'espace de processus de
 # `monde` (`pid: "service:monde"`), pour que les épreuves (lancées dans `monde`) gardent leurs
 # pgrep/pkill. Échafaudage de TEST : absent des compose ARM (gravé).
-# Journaux (décision 11) : workspace/log partagé par monde et robot (robot.log, rehearsal/, jeu/,
+# Journaux (décision 11) : log/ partagé par monde et robot (robot.log, rehearsal/, jeu/,
 # tickets/ au même endroit pour les épreuves) ; build/ et install/ NON persistés (colcon à chaque
-# `up`). Doc : machines/sim/README.md, docs/operations.md.
+# `up`). Depuis le 16/11 HORS du dépôt et de Nextcloud : $DIDIER_SIM_JOURNAUX, défaut
+# ~/tmp/didier-sim/{log,log-vision,log-telecommande} (fumee.sh et
+# seance-chantiers.sh le créent ; à la main : mkdir -p avant `up`, sinon Docker le crée root). Doc : machines/sim/README.md, docs/operations.md.
 name: didier-sim
 
 services:
@@ -72,7 +74,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
       - /dev/dri:/dev/dri
-      - ./workspace/log:/home/ros2_ws/log
+      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}/log:/home/ros2_ws/log
       - ./monde/entree.sh:/home/ros2_ws/entree.sh:ro
       # Sources montées par-dessus la copie de l'image (itération sans rebuild) : SES packages.
       - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
@@ -92,6 +94,10 @@ services:
       - ./validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
       - ./validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
       - ./validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
+      # Leurs mesures (lot fiabilité, 16/11) : enregistreur rclpy et sa bibliothèque bash ; les
+      # captures vont sous log/captures/ ($DIDIER_SIM_JOURNAUX/log/captures/ du PC), elles survivent.
+      - ./capture_topics.py:/home/ros2_ws/capture_topics.py:ro
+      - ./captures.sh:/home/ros2_ws/captures.sh:ro
       # La conf des machines, en lecture seule : validate-machines lit les noeuds_attendus.
       - ..:/home/ros2_ws/machines:ro
       # Données du dépôt aux chemins que lisent les nœuds de sim (leds_sim_node : /home/ros2_ws/json)
@@ -157,7 +163,7 @@ services:
       - ../../data/json:/home/ros2_ws/src/robot/json
       - ../../data/medias:/home/ros2_ws/src/robot/medias
       - ${DIDIER_MEDIAS_PRIVES:-${HOME}/Nextcloud/dev/didier/medias-prives}/audios:/home/ros2_ws/src/robot/medias/audios:ro
-      - ./workspace/log:/home/ros2_ws/log
+      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}/log:/home/ros2_ws/log
       # Sources : la liste `packages` de machines/robot/machine.yml, ni plus ni moins (gravé).
       - ../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
@@ -201,7 +207,7 @@ services:
       # Le script de démarrage du Pi seul (pas toute la conf : elle porterait un éventuel secret
       # local, gitignoré, de machines/vision/).
       - ../vision/scripts:/home/ros2_ws/src/vision/conf/scripts:ro
-      - ./workspace/log-vision:/home/ros2_ws/log
+      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}/log-vision:/home/ros2_ws/log
       # Sources : la liste `packages` de machines/vision/machine.yml (gravé).
       - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
@@ -233,7 +239,7 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
-      - ./workspace/log-telecommande:/home/ros2_ws/log
+      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}/log-telecommande:/home/ros2_ws/log
       - ../../legacy/dadou_control_ros/conf:/home/ros2_ws/src/controller/conf
       - ../../legacy/dadou_control_ros/controller:/home/ros2_ws/src/controller/controller
       - ../../legacy/dadou_control_ros/json:/home/ros2_ws/src/controller/json

@@ -4,10 +4,17 @@
 Appelé par fumee.sh ; testé sur l'hôte (packages/didier_core/test/unit/test_fumee.py). Aucune
 dépendance : le script tourne sous une minuterie systemd, sans venv.
 
-La vérité d'une fumée est son `resultat.json` (jamais le HTML, qui n'est qu'un
-rendu régénérable : `pages`). Une fumée = un dossier
-`<sortie>/journaux/<id>/` contenant `resultat.json` + les journaux copiés hors
-conteneur ; `<id>` = AAAA-MM-JJ-HHMM (heure locale du début).
+Deux endroits depuis le 16/11 (décision de David : les journaux bruts n'ont rien à faire ni
+sur GitHub ni sur Nextcloud) :
+  - `<sortie>` (docs/fumee/, VERSIONNÉ) : les pages HTML, `index.html` et **`historique.jsonl`**,
+    une ligne par fumée, gardée pour toujours — c'est lui que lisent la décision « due ? », le
+    « dernier vert » et le sommaire, et lui qui montre les tendances (épreuve instable, sim qui
+    ralentit). Format d'une ligne : `ligne_historique` (gravé par test_fumee.py).
+  - `<brut>` (LOCAL, défaut ~/tmp/didier-fumee/) : un dossier `<id>/` par
+    fumée, `resultat.json` complet + journaux et captures copiés hors conteneur ;
+    `<id>` = AAAA-MM-JJ-HHMM (heure locale du début). Purge (`purger`, à la fin de chaque
+    fumée) : VERT au-delà de 30 jours ; un ROUGE n'est JAMAIS purgé tant que son dossier ne
+    porte pas le marqueur `TRAITE` (la conclusion du rouge va dans docs/incidents/).
 
 Format de `resultat.json` (version 1) :
     id          str   AAAA-MM-JJ-HHMM
@@ -36,11 +43,12 @@ Format de `resultat.json` (version 1) :
     bloquant    id de la première épreuve rouge, ou null
     page        nom du fichier HTML (relatif à <sortie>)
 
-Sous-commandes : due, dernier-vert, epreuve, finaliser, pages (voir --help).
+Sous-commandes : due, dernier-vert, epreuve, finaliser, pages, purger, amorcer (voir --help).
 """
 import argparse
 import html
 import json
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta
@@ -85,22 +93,67 @@ EPREUVES = [
     ("a1", "Sim relancée, validate-jeu-a1.sh (A1)"),
 ]
 NOMS = dict(EPREUVES)
+HISTORIQUE = "historique.jsonl"
+PURGE_JOURS = 30       # brut d'une fumée VERTE (ou d'un rouge marqué TRAITE) gardé 30 jours
+MARQUEUR_TRAITE = "TRAITE"
+# Champs d'une ligne d'historique, dans cet ordre (gravé) : de quoi décider « due ? » (sha_complet,
+# verdict, essai, fin), retrouver la page, et suivre les tendances (score de chaque épreuve, RTF).
+CHAMPS_HISTORIQUE = ("id", "debut", "fin", "sha", "sha_complet", "branche", "mode", "essai",
+                     "verdict", "bloquant", "rtf", "duree_s", "page", "epreuves")
 
 
 # --------------------------------------------------------------------------
 # Lecture des résultats et décision « due ? »
 # --------------------------------------------------------------------------
 
+def score(e: dict) -> str:
+    """Score d'UNE épreuve, en clair : « vert 21/21 », « rouge 20/21 1KO », « vert 0.998 »,
+    « vert », « non_lance »."""
+    texte = e.get("statut", "non_lance")
+    if e.get("attendu") is not None:
+        texte += " {}/{}".format(e.get("ok", 0), e["attendu"])
+        if e.get("ko"):
+            texte += " {}KO".format(e["ko"])
+    elif e.get("obtenu") is not None:
+        texte += " {}".format(e["obtenu"])
+    return texte
+
+
+def ligne_historique(res: dict) -> str:
+    """La ligne d'historique d'une fumée (JSON compact, champs dans l'ordre de CHAMPS_HISTORIQUE,
+    épreuves dans l'ordre canonique, toujours complètes)."""
+    ligne = {cle: res.get(cle) for cle in CHAMPS_HISTORIQUE if cle != "epreuves"}
+    ligne["essai"] = bool(res.get("essai"))
+    epreuves = res.get("epreuves", [])
+    # Une ligne déjà résumée (relue dans l'historique) garde ses scores tels quels.
+    ligne["epreuves"] = dict(epreuves) if isinstance(epreuves, dict) else \
+        {e["id"]: score(e) for e in completer_epreuves(epreuves)}
+    return json.dumps(ligne, ensure_ascii=False) + "\n"
+
+
 def lire_resultats(sortie: Path) -> list:
-    """Tous les resultat.json de <sortie>/journaux/*/, du plus ancien au plus récent."""
-    resultats = []
-    for fichier in sorted((sortie / "journaux").glob("*/resultat.json")):
+    """Les lignes de <sortie>/historique.jsonl, du plus ancien au plus récent (par « fin »). Une
+    ligne illisible est ignorée (elle ne doit pas empêcher les fumées suivantes) ; un même id
+    écrit deux fois : la dernière ligne gagne."""
+    par_id = {}
+    try:
+        lignes = (sortie / HISTORIQUE).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        lignes = []
+    for texte in lignes:
         try:
-            resultats.append(json.loads(fichier.read_text(encoding="utf-8")))
-        except (OSError, ValueError):
-            continue  # un JSON illisible ne doit pas empêcher les fumées suivantes
-    resultats.sort(key=lambda r: r.get("fin", ""))
-    return resultats
+            r = json.loads(texte)
+        except ValueError:
+            continue
+        if isinstance(r, dict) and r.get("id"):
+            par_id[r["id"]] = r
+    return sorted(par_id.values(), key=lambda r: r.get("fin") or "")
+
+
+def ajouter_historique(sortie: Path, res: dict) -> None:
+    sortie.mkdir(parents=True, exist_ok=True)
+    with open(sortie / HISTORIQUE, "a", encoding="utf-8") as f:
+        f.write(ligne_historique(res))
 
 
 def dernier_vert(resultats: list):
@@ -303,9 +356,7 @@ def rendre_page(res: dict) -> str:
             compteur = "{} / {} OK, {} KO".format(e.get("ok", 0), e["attendu"], e.get("ko", 0))
         elif e.get("obtenu") is not None:
             compteur = str(e["obtenu"])
-        journal = ""
-        if e.get("journal"):
-            journal = '<a href="journaux/{}/{}">journal</a>'.format(_e(res["id"]), _e(e["journal"]))
+        journal = "<code>{}</code>".format(_e(e["journal"])) if e.get("journal") else ""
         lignes.append(
             "<tr><td>{nom}</td><td>{pastille}</td><td>{compteur}</td><td>{duree}</td><td>{journal}</td></tr>"
             "{detail}".format(
@@ -338,8 +389,10 @@ image sim reconstruite : {image}</p>
 </table>
 {notes}
 <h2>Journaux</h2>
-<p>Copiés hors du conteneur AVANT son arrêt : <a href="journaux/{id}/">dossier {id}</a>
- · <a href="journaux/{id}/resultat.json">resultat.json</a> (la vérité, cette page n'en est que le rendu).</p>
+<p>Bruts, sur le PC de la fumée seulement (ni dans git ni sur Nextcloud) : <code>{brut}/{id}/</code>
+(<code>resultat.json</code>, journaux, captures). Vert : purgé après {purge} jours ; rouge : gardé
+tant que le dossier ne porte pas le marqueur <code>TRAITE</code>. Résumé permanent :
+<code>historique.jsonl</code>.</p>
 
 <footer>Généré par <code>machines/sim/fumee.sh</code> (lot F, zéro token) · <a href="index.html">toutes les fumées</a></footer>""".format(
         debut=_e(_debut_lisible(res)), sha=_e(res.get("sha")), branche=_e(res.get("branche")),
@@ -348,7 +401,8 @@ image sim reconstruite : {image}</p>
         essai=essai, verdict=_e(verdict), pastille=_pastille(verdict), phrase=_e(phrase),
         rtf=_e(rtf), rtf_min=_e(res.get("rtf_min")), charge=_e(res.get("charge_1min")),
         coeurs=_e(res.get("nb_coeurs")), image="oui" if res.get("image_reconstruite") else "non",
-        lignes="\n".join(lignes), notes=notes, id=_e(res["id"]))
+        lignes="\n".join(lignes), notes=notes, id=_e(res["id"]),
+        brut=_e(res.get("brut") or "~/tmp/didier-fumee"), purge=PURGE_JOURS)
     return _squelette("Fumée Didier — {} — {}".format(_debut_lisible(res), verdict), corps)
 
 
@@ -375,13 +429,47 @@ def rendre_index(resultats: list) -> str:
     return _squelette("Fumée nocturne Didier — sommaire", corps)
 
 
-def ecrire_pages(sortie: Path) -> None:
-    """Régénère toutes les pages et le sommaire depuis les resultat.json."""
+def ecrire_pages(sortie: Path, brut: Path | None = None) -> None:
+    """Régénère le sommaire (depuis l'historique) et les pages dont le resultat.json complet est
+    encore dans le brut local (les autres pages, versionnées, restent telles quelles)."""
     resultats = lire_resultats(sortie)
-    for r in resultats:
-        if r.get("page"):
-            (sortie / r["page"]).write_text(rendre_page(r), encoding="utf-8")
+    if brut is not None:
+        for r in resultats:
+            complet = brut / r["id"] / "resultat.json"
+            if r.get("page") and complet.exists():
+                (sortie / r["page"]).write_text(
+                    rendre_page(json.loads(complet.read_text(encoding="utf-8"))), encoding="utf-8")
     (sortie / "index.html").write_text(rendre_index(resultats), encoding="utf-8")
+
+
+def a_purger(res, traite: bool, maintenant, jours=PURGE_JOURS) -> bool:
+    """Le brut d'une fumée part-il ? VERT au-delà de `jours` ; ROUGE (ou tout ce qui n'est pas
+    vert, illisible compris) seulement s'il est marqué TRAITE et au-delà de `jours`."""
+    if not res or not res.get("fin"):
+        return False
+    try:
+        age = maintenant - datetime.fromisoformat(res["fin"])
+    except ValueError:
+        return False
+    if age <= timedelta(days=jours):
+        return False
+    return res.get("verdict") == "vert" or traite
+
+
+def purger(brut: Path, maintenant, jours=PURGE_JOURS) -> list:
+    """Applique a_purger à chaque <brut>/<id>/ ; rend les id supprimés."""
+    partis = []
+    if not brut.is_dir():
+        return partis
+    for dossier in sorted(p for p in brut.iterdir() if p.is_dir()):
+        try:
+            res = json.loads((dossier / "resultat.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue   # sans resultat.json lisible : on ne sait pas, on garde
+        if a_purger(res, (dossier / MARQUEUR_TRAITE).exists(), maintenant, jours):
+            shutil.rmtree(dossier)
+            partis.append(dossier.name)
+    return partis
 
 
 def nom_de_page(sortie: Path, id_fumee: str) -> str:
@@ -471,16 +559,47 @@ def cmd_finaliser(args) -> int:
     res["epreuves"] = epreuves
     res["verdict"], res["bloquant"] = verdict_global(epreuves)
     res["page"] = nom_de_page(sortie, args.id)
-    dossier = sortie / "journaux" / args.id
+    brut = Path(args.brut)
+    res["brut"] = args.brut_affiche or str(brut)
+    dossier = brut / args.id
     dossier.mkdir(parents=True, exist_ok=True)
     (dossier / "resultat.json").write_text(json.dumps(res, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    ajouter_historique(sortie, res)
+    (sortie / res["page"]).write_text(rendre_page(res), encoding="utf-8")
     ecrire_pages(sortie)
     print(res["page"])
     return 0
 
 
 def cmd_pages(args) -> int:
-    ecrire_pages(Path(args.sortie))
+    ecrire_pages(Path(args.sortie), Path(args.brut) if args.brut else None)
+    return 0
+
+
+def cmd_purger(args) -> int:
+    for ident in purger(Path(args.brut), _maintenant(args.maintenant), args.jours):
+        print("purgé : {}".format(ident))
+    return 0
+
+
+def cmd_amorcer(args) -> int:
+    """Amorce historique.jsonl depuis d'anciens <dossier>/*/resultat.json (journaux versionnés
+    jusqu'au 16/11) ; un id déjà présent n'est pas réécrit."""
+    sortie = Path(args.sortie)
+    connus = {r["id"] for r in lire_resultats(sortie)}
+    anciens = []
+    for f in Path(args.depuis).glob("*/resultat.json"):
+        try:
+            anciens.append(json.loads(f.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+    n = 0
+    for res in sorted(anciens, key=lambda r: r.get("fin") or ""):
+        if res.get("id") and res["id"] not in connus:
+            ajouter_historique(sortie, res)
+            n += 1
+    ecrire_pages(sortie)
+    print("{} fumée(s) ajoutée(s) à l'historique".format(n))
     return 0
 
 
@@ -511,12 +630,24 @@ def construire_parseur() -> argparse.ArgumentParser:
     s.add_argument("--jsonl", required=True)
     s.add_argument("--sortie", required=True)
     s.add_argument("--id", required=True)
+    s.add_argument("--brut", required=True, help="dossier LOCAL des journaux bruts (<brut>/<id>/)")
+    s.add_argument("--brut-affiche", help="ce chemin, tel qu'affiché sur la page (~ au lieu du HOME)")
     s.add_argument("--meta", action="append", help="clé=valeur (sha, mode, rtf…)")
     s.add_argument("--note", action="append")
     s.set_defaults(fn=cmd_finaliser)
-    s = sub.add_parser("pages", help="régénère toutes les pages")
+    s = sub.add_parser("pages", help="régénère le sommaire (et les pages encore dans le brut)")
     s.add_argument("--sortie", required=True)
+    s.add_argument("--brut")
     s.set_defaults(fn=cmd_pages)
+    s = sub.add_parser("purger", help="supprime le brut des vertes > 30 j (rouges : seulement si TRAITE)")
+    s.add_argument("--brut", required=True)
+    s.add_argument("--jours", type=int, default=PURGE_JOURS)
+    s.add_argument("--maintenant", help="ISO 8601 (tests)")
+    s.set_defaults(fn=cmd_purger)
+    s = sub.add_parser("amorcer", help="amorce historique.jsonl depuis d'anciens resultat.json")
+    s.add_argument("--sortie", required=True)
+    s.add_argument("--depuis", required=True)
+    s.set_defaults(fn=cmd_amorcer)
     return p
 
 
