@@ -88,14 +88,10 @@ Cerveau perceptif du robot de théâtre Didier, sur Pi 5 « vision » (alias ssh
 Le MÊME code (image bâtie du Dockerfile-arm, base multi-arch) tourne sur le
 PC de dev : webcam + Scarlett réelles, corps simulé dans Gazebo
 (`ROS_DOMAIN_ID=43`). Mode d'emploi : dadou_robot_ros `docs/operations.md`
-§Banc PC. Depuis `machines/sim/banc-vision/` :
+§Banc PC. Depuis L2b (16/11), depuis `machines/sim/` :
 
 ```bash
-./build-x86.sh                                        # 1re fois (long) — PAS compose build :
-                                                      # le symlink dadou_utils_ros casse le
-                                                      # contexte (« too many links »), le script
-                                                      # streame un tar déréférencé
-CHAT=true docker compose -f docker-compose-x86.yml up -d
+CHAT=true docker compose -f docker-compose.yml -f docker-compose.banc.yml up -d
 ```
 
 Les alias ALSA `casque_mic`/`mixette` sont fournis au conteneur par
