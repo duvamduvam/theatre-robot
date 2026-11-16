@@ -34,7 +34,10 @@
 #   n'est pas fiable) -> validate-namespace -> validate-catalogue -> animation parle
 #   -> validate-data-edit (L1d) -> validate-machines (L2b)
 #   -> régisseur (monde) + regard (robot), validate-rehearsal-chantiers (V-R3)
-#   -> sim relancée, validate-jeu-a1 (A1).        ≈ 45-50 min.
+#   -> sim relancée, validate-jeu-a1 (A1)
+#   -> sim relancée AVEC LA TÊTE (surcouche docker-compose.tete.yml : chat_node, clé Anthropic),
+#      validate-conversation (CONV, 16/11) — FACULTATIVE : sans clé, « non lancée », jamais rouge.
+#                                                 ≈ 55-60 min.
 #
 # Garde-fous :
 #   - domaine ROS 43 : en littéral dans le compose, revérifié dans CHACUN des quatre conteneurs
@@ -82,6 +85,7 @@ ATTENDU_EDITION=13      # validate-data-edit.sh (L1d : épreuves 1 à 12, 13 = p
 ATTENDU_MACHINES=5      # validate-machines.sh (L2b : M1-M4, M6 ; 10 en L2c)
 ATTENDU_CHANTIERS=21    # validate-rehearsal-chantiers.sh (V-R3)
 ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
+ATTENDU_CONVERSATION=13 # validate-conversation.sh (CONV : P1, T0, A1-A3, B1-B5, C1-C3)
 RTF_MIN_DEFAUT=0.8
 
 ICI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -100,6 +104,14 @@ JOURNAUX_SIM="${DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier-sim}"
 # locale, jamais poussée.
 DOCKER_DIR="$DEPOT/machines/sim"
 COMPOSE=docker-compose.yml
+# Surcouche de la tête (épreuve CONV seulement, 16/11) : monte les deux secrets de la tête en
+# lecture seule. Posée par phase_conversation, vide sinon (la base ne monte AUCUN secret).
+COMPOSE_TETE=docker-compose.tete.yml
+SURCOUCHES=()
+# Les deux fichiers que la surcouche monte (source unique, hors dépôt) ; leur PRÉSENCE seule est
+# testée (grep -q, aucune valeur lue ni affichée).
+SECRET_OPENROUTER="$HOME/.config/didier/vision-conf-secret"
+SECRET_ANTHROPIC="$HOME/.config/didier/secrets.env"
 SERVICES=(monde robot vision telecommande)
 CONTENEURS=(didier-sim-monde didier-sim-robot didier-sim-vision didier-sim-telecommande)
 IMAGES=(didier-sim/monde:local didier-sim/robot:local didier-sim/vision:local didier-sim/telecommande:local)
@@ -370,7 +382,7 @@ recolter() { # recolter <nom> : copie hors conteneurs AVANT leur arrêt (les jou
 arreter_sim() {
   [ "$SIM_A_NOUS" = 1 ] || return 0
   dit "arrêt de la sim"
-  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" down -t 20) >/dev/null 2>&1 || true
+  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" "${SURCOUCHES[@]}" down -t 20) >/dev/null 2>&1 || true
   local c
   for c in "${CONTENEURS[@]}"; do   # seulement les nôtres : SIM_A_NOUS=1
     docker rm -f "$c" >/dev/null 2>&1 || true
@@ -447,7 +459,7 @@ demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis a
   mkdir -p "$JOURNAUX_SIM"/log "$JOURNAUX_SIM"/log-vision "$JOURNAUX_SIM"/log-telecommande
   (cd "$DOCKER_DIR" && env ROBOT_NAME=didier HEADLESS=true WORLD=chantiers DIDIER_SIM_JOURNAUX="$JOURNAUX_SIM" \
       REHEARSAL=true FACE=true WEB_DRIVE=false DATA_EDIT=true \
-      docker compose -f "$COMPOSE" up -d) >>"$TMP/demarrage.log" 2>&1 || return 1
+      docker compose -f "$COMPOSE" "${SURCOUCHES[@]}" up -d) >>"$TMP/demarrage.log" 2>&1 || return 1
   epingler_sim
   local c s domaine
   for c in "${CONTENEURS[@]}"; do
@@ -728,6 +740,34 @@ phase_a1() {
   lancer_validation a1 validate-jeu-a1.sh "$ATTENDU_A1" '=== A1' 1500
 }
 
+phase_conversation() {
+  # CONV (16/11) : la tête tourne SEULEMENT pour cette épreuve — sim relancée avec la surcouche
+  # docker-compose.tete.yml (chat_node sans micro ni son, clé Anthropic). Coût ≈ 0,003 $ (Haiku).
+  # FACULTATIVE : sans clé Anthropic (ou sans le secret OpenRouter, exigé par chat_node au
+  # démarrage), elle n'est pas lancée et ne rougit JAMAIS la fumée.
+  recolter a1; arreter_sim
+  PHASE_COURANTE=conversation
+  if ! grep -q '^ANTHROPIC_API_KEY=.' "$SECRET_ANTHROPIC" 2>/dev/null || [ ! -f "$SECRET_OPENROUTER" ]; then
+    epreuve conversation --statut non_lance --facultative --duree 0 \
+      --detail "non lancée (pas de clé) : ANTHROPIC_API_KEY absente de ${SECRET_ANTHROPIC/#$HOME/\~} ou ${SECRET_OPENROUTER/#$HOME/\~} manquant"
+    return 0
+  fi
+  SURCOUCHES=(-f "$COMPOSE_TETE")
+  local t0=$SECONDS
+  if ! demarrer_sim; then
+    epreuve conversation --statut rouge --detail "la sim relancée avec la tête n'a pas démarré (voir demarrage.log)" --duree "$((SECONDS - t0))" --journal demarrage.log
+    return 1
+  fi
+  lancer_corps jeu-a1 'jeu:=true' || { epreuve conversation --statut rouge --detail "chaîne roues absente, ou régisseur jeu (monde) / regard (robot) non démarrés"; return 1; }
+  lancer_validation conversation validate-conversation.sh "$ATTENDU_CONVERSATION" '=== CONV' 600
+  local rc=$? bascules
+  # Bascules de secours Anthropic -> OpenRouter pendant l'épreuve (journal de chat_node) : dites
+  # sur la page, sans rien changer au verdict (la parole ne s'est pas bloquée).
+  bascules="$(docker logs "$(conteneur_de vision)" 2>&1 | grep -c 'bascule de secours' || true)"
+  [ "${bascules:-0}" = 0 ] || NOTES+=("conversation : $bascules bascule(s) de secours Anthropic → OpenRouter (journal de chat_node)")
+  return "$rc"
+}
+
 # ---------------------------------------------------------------------------------
 # Fin : journaux, page, commit, arrêt de la sim (idempotent, aussi sous trap EXIT)
 # ---------------------------------------------------------------------------------
@@ -829,6 +869,7 @@ deroule() {
   phase_machines || return 0
   phase_chantiers || return 0
   phase_a1 || return 0
+  phase_conversation || return 0
 }
 
 if [ "$SAUTER_FUMEE" = 1 ]; then

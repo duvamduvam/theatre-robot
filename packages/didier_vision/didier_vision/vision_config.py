@@ -28,6 +28,16 @@ DATA_DIR_DEFAUT = "/home/ros2_ws/src/vision/"
 DATA_DIR = os.path.join(os.environ.get(DATA_DIR_ENV) or DATA_DIR_DEFAUT, "")
 SECRET_FILE = os.path.join(DATA_DIR, "conf", "secret")
 
+# Clé de l'API Anthropic (16/11, décision de David : la tête parle à Anthropic en direct,
+# OpenRouter en secours). Source UNIQUE sur le PC : ~/.config/didier/secrets.env (variable
+# ANTHROPIC_API_KEY, hors dépôt) — poussée sur le Pi vision par le rôle Ansible `secrets` HORS
+# de ros2_ws (jamais dans un contexte de build ni dans le rsync) et montée en lecture seule dans
+# le conteneur à ce chemin (compose ARM, surcouches tête et banc de la sim). Fichier absent ou
+# sans la variable = pas de clé : la tête reste chez OpenRouter (comportement d'avant).
+ANTHROPIC_SECRETS_ENV = "DIDIER_SECRETS_ENV"
+ANTHROPIC_SECRETS_FILE_DEFAUT = "/run/secrets/didier.env"
+ANTHROPIC_KEY_NAME = "ANTHROPIC_API_KEY"
+
 
 # Variable d'environnement du BANC PC (docker-compose-x86.yml) : facteur VAD
 # (seuil = plancher de bruit × facteur). POURQUOI (22/10) : le micro d'un
@@ -118,6 +128,10 @@ _WHISPER_MODELS = ("tiny", "base", "small", "medium")
 # FERMÉE : un nom libre partirait tel quel chez OpenRouter et un nom faux
 # rendrait Didier muet en pleine séance. Absente = défaut de config (Haiku).
 LLM_MODEL_ENV = "CHAT_LLM_MODEL"
+# Fournisseur LLM (16/11) : auto (défaut : Anthropic si la clé est là, sinon OpenRouter),
+# anthropic, openrouter. Liste fermée, lue au démarrage du chat et de la réflexion.
+LLM_PROVIDER_ENV = "CHAT_LLM_FOURNISSEUR"
+_LLM_PROVIDERS = ("auto", "anthropic", "openrouter")
 _LLM_MODELS = ("anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5",
                "openai/gpt-6.1-sol")
 # Réglage de réflexion PAR MODÈLE (01/11) : Sonnet 5.5 REFUSE la réflexion
@@ -150,6 +164,18 @@ def llm_model_from_env(environ=os.environ):
         return None
     if raw not in _LLM_MODELS:
         raise ValueError(f"{LLM_MODEL_ENV}={raw!r} : attendu {' / '.join(_LLM_MODELS)}")
+    return raw
+
+
+def llm_provider_from_env(environ=os.environ):
+    """Réglage du fournisseur LLM : None si CHAT_LLM_FOURNISSEUR est absente/vide
+    (garder config["chat_llm_provider"]), sinon la valeur de la liste fermée ;
+    ValueError sinon (échec de démarrage explicite, comme CHAT_LLM_MODEL)."""
+    raw = environ.get(LLM_PROVIDER_ENV, "").strip().lower()
+    if not raw:
+        return None
+    if raw not in _LLM_PROVIDERS:
+        raise ValueError(f"{LLM_PROVIDER_ENV}={raw!r} : attendu {' / '.join(_LLM_PROVIDERS)}")
     return raw
 
 
@@ -221,7 +247,8 @@ def camera_is_partner_from_env(environ, partner):
 
 def chat_env_overrides(environ=os.environ):
     """Surcharges du BANC lues dans l'environnement (CHAT_VAD_FACTOR,
-    CHAT_WHISPER_MODEL, CHAT_PARTENAIRE, CHAT_MOUVEMENT, CHAT_REFLEXION, CHAT_LLM_MODEL) -> (dict à fusionner
+    CHAT_WHISPER_MODEL, CHAT_PARTENAIRE, CHAT_MOUVEMENT, CHAT_REFLEXION, CHAT_LLM_MODEL,
+    CHAT_LLM_FOURNISSEUR) -> (dict à fusionner
     dans `config`, warnings à journaliser).
 
     POURQUOI pas à l'import (revue adversariale I1, 22/10) : une valeur
@@ -244,6 +271,9 @@ def chat_env_overrides(environ=os.environ):
     if llm_model is not None:
         overrides["chat_llm_model"] = llm_model
         overrides.update(_LLM_MODEL_OVERRIDES.get(llm_model, {}))
+    llm_provider = llm_provider_from_env(environ)
+    if llm_provider is not None:
+        overrides["chat_llm_provider"] = llm_provider
     warnings = []
     move = move_enabled_from_env(environ)
     domain = environ.get("ROS_DOMAIN_ID", "").strip()
@@ -288,6 +318,45 @@ def load_secrets(path):
             key, _, value = line.partition("=")
             secrets[key.strip()] = value.strip()
     return secrets
+
+
+def anthropic_secrets_file(environ=os.environ):
+    """Chemin du fichier secrets.env lu dans le conteneur (DIDIER_SECRETS_ENV, sinon le défaut)."""
+    return environ.get(ANTHROPIC_SECRETS_ENV) or ANTHROPIC_SECRETS_FILE_DEFAUT
+
+
+def anthropic_api_key(environ=os.environ) -> str:
+    """Clé ANTHROPIC_API_KEY de secrets.env (format shell : `CLE=valeur`, `export`
+    toléré, guillemets simples ou doubles retirés). Lève KeyError (message SANS la
+    valeur) si le fichier ou la variable manque, ou si elle est vide. SÉCURITÉ : la
+    valeur ne sort d'ici que vers le client HTTP — jamais dans un log ni une erreur."""
+    path = anthropic_secrets_file(environ)
+    if not os.path.isfile(path):
+        raise KeyError(f"{ANTHROPIC_KEY_NAME} : fichier {path} absent")
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("export "):
+                line = line[len("export "):].lstrip()
+            key, egal, value = line.partition("=")
+            if not egal or key.strip() != ANTHROPIC_KEY_NAME:
+                continue
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+                value = value[1:-1]
+            if value:
+                return value
+            break
+    raise KeyError(f"{ANTHROPIC_KEY_NAME} absente ou vide dans {path}")
+
+
+def anthropic_key_present(environ=os.environ) -> bool:
+    """Vrai si anthropic_api_key() trouverait une clé (sans jamais la rendre)."""
+    try:
+        anthropic_api_key(environ)
+    except KeyError:
+        return False
+    return True
 
 
 def get_secret(key):
@@ -335,6 +404,13 @@ config = {
     # ~7× moindre, persona mieux tenue (reprend le lore du socle).
     "chat_llm_model": "anthropic/claude-haiku-5.5",
     "chat_llm_base_url": "https://openrouter.ai/api/v1",
+    # Fournisseur (16/11, décision de David) : "auto" = API Anthropic EN DIRECT si la clé
+    # ANTHROPIC_API_KEY est montée (anthropic_api_key ci-dessus) et que le modèle est un Claude
+    # (didier_vision/ai/llm_providers.py, ANTHROPIC_MODEL_IDS : claude-haiku-5-5…), OpenRouter
+    # en SECOURS automatique (réseau, délai, 429, 5xx, clé ou crédit refusés) ; sans clé,
+    # OpenRouter seul comme avant. "anthropic" / "openrouter" forcent (CHAT_LLM_FOURNISSEUR).
+    # Vaut aussi pour la réflexion (reflection_node). Le STT Voxtral reste chez OpenRouter.
+    "chat_llm_provider": "auto",
     # ⚠️ RÉFLEXION COUPÉE, OBLIGATOIRE à partir de Haiku 5.5 : la réflexion
     # adaptative y est active par défaut et ses tokens comptent dans
     # max_tokens — au banc, 4 réponses sur 4 VIDES (200 tokens de réflexion,

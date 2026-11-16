@@ -37,7 +37,7 @@ from theatre_interfaces.msg import StringTime
 from theatre_contrats import topics
 from sensor_msgs.msg import CompressedImage
 
-from didier_vision.ai import reflection, reflection_contract as contract
+from didier_vision.ai import llm_providers, reflection, reflection_contract as contract
 from didier_vision.ai.mission import MissionState
 from didier_vision.ai.reflection_policy import DeepRequests, Flights, ReflectionScheduler, SpontaneousPolicy
 from didier_vision.ai.situation import (SituationBoard, decode_poi_event, decode_speed,
@@ -45,7 +45,8 @@ from didier_vision.ai.situation import (SituationBoard, decode_poi_event, decode
 from didier_vision.ai.stage import decode_text_payload
 from didier_vision.tracking.camera_source import (
     SOURCE_WEBCAM, camera_is_partner_effective, decode_camera_source)
-from didier_vision.vision_config import camera_is_partner_from_env, chat_env_overrides, config
+from didier_vision.vision_config import (anthropic_key_present, camera_is_partner_from_env,
+                                         chat_env_overrides, config)
 
 # Topics consommés. Les noms `chat_*`, `rehearsal/poi_event`, `route_state`,
 # `route_speed`, `/vision/person_box` et la vidéo sont des CONTRATS d'autres
@@ -128,10 +129,18 @@ class ReflectionNode(Node):
         self._flights = Flights()
         self._last_published = None    # (texte, heure) du dernier tableau publié
 
+        # Fournisseur (16/11) : même réglage que la bouche (chat_llm_provider,
+        # CHAT_LLM_FOURNISSEUR) ; anthropic demandé sans clé = échec explicite.
+        try:
+            provider = llm_providers.resolve_provider(
+                config["chat_llm_provider"], config["reflection_model"], anthropic_key_present())
+        except llm_providers.ProviderConfigError as exc:
+            self.get_logger().error(f"Fournisseur LLM : {exc}")
+            raise ReflectionStartupError("fournisseur LLM impossible") from exc
         self._reflector = reflection.Reflector(
             model=config["reflection_model"], base_url=config["chat_llm_base_url"],
             extra_body=config["reflection_extra_body"],
-            max_tokens=config["reflection_max_tokens"])
+            max_tokens=config["reflection_max_tokens"], provider=provider)
         # 2 fils : une demande profonde part pendant un ordinaire en vol (01/11).
         self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="reflection")
 
@@ -162,7 +171,9 @@ class ReflectionNode(Node):
         self.get_logger().info(
             f"reflection prêt : destination={self._destination!r}, partenaire={self._partner!r}, "
             f"caméra=partenaire:{self._camera_is_partner}, "
-            f"modèle={config['reflection_model']}, images={config['reflection_use_image']}")
+            f"modèle={config['reflection_model']}, fournisseur={provider}"
+            f"{' (secours OpenRouter)' if provider == llm_providers.PROVIDER_ANTHROPIC else ''}, "
+            f"images={config['reflection_use_image']}")
 
     # -- abonnements (rapides : aucun appel réseau) ---------------------------
 

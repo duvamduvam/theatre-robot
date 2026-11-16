@@ -18,6 +18,12 @@ package, non installé : /home/ros2_ws/src/didier_vision/tools/) :
     cd /home/ros2_ws/src/didier_vision && python3 tools/banc_bouche.py --objects /tmp/banc_objects.json --runs 2 \
         --out /tmp/banc_bouche.json [--models a,b,c]
 Coût : ~14 scénarios × runs × modèles appels courts (quelques centimes).
+
+Fournisseur (16/11) : --fournisseur openrouter (défaut, comme avant) ou anthropic (API
+Anthropic en direct pour les modèles Claude, OpenRouter en secours ; clé lue dans
+DIDIER_SECRETS_ENV, défaut /run/secrets/didier.env) — même code que chat_node. Hors
+conteneur (aucun import rclpy) : DIDIER_VISION_DATA_DIR doit désigner un dossier dont
+conf/secret porte openrouter_key.
 """
 from __future__ import annotations
 
@@ -27,11 +33,15 @@ import re
 import statistics
 import time
 
-from didier_vision.ai import llm_stream, personas
+from didier_vision.ai import llm_providers, llm_stream, personas
 from didier_vision.ai.conversation import LOOK_WORDS, TURN_WORDS, _gesture_number
 from didier_vision.ai.emotion_parser import extract_emotion_json
 from didier_vision.ai.llm_stream import StreamingBrain
-from didier_vision.nodes.chat_node import LLM_API_KEY_NAME
+
+# Même nom de clé que chat_node.LLM_API_KEY_NAME (sans importer le node : rclpy).
+LLM_API_KEY_NAME = "openrouter_key"
+# Fournisseur des tours (--fournisseur) : openrouter = le chemin d'avant.
+FOURNISSEUR = llm_providers.PROVIDER_OPENROUTER
 
 BASE_URL = "https://openrouter.ai/api/v1"
 MAX_TOKENS = 600  # large : on mesure aussi qui déborde, pas qui est coupé
@@ -168,7 +178,9 @@ def _brain(model, extra_body, objects):
         model=model, base_url=BASE_URL, api_key_name=LLM_API_KEY_NAME,
         system_prompt=personas.compose_system_prompt("bougon", "David", move=True),
         max_tokens=MAX_TOKENS, extra_body=extra_body,
-        situation_suffix=_SUFFIX)
+        situation_suffix=_SUFFIX,
+        provider=(FOURNISSEUR if model in llm_providers.ANTHROPIC_MODEL_IDS
+                  else llm_providers.PROVIDER_OPENROUTER))
     brain.set_objects_prompt(personas.objects_prompt(objects))
     return brain
 
@@ -219,10 +231,16 @@ def main():
     ap.add_argument("--runs", type=int, default=2)
     ap.add_argument("--out", default="/tmp/banc_bouche.json")
     ap.add_argument("--models", default=",".join(CANDIDATES))
+    ap.add_argument("--fournisseur", choices=(llm_providers.PROVIDER_OPENROUTER,
+                                               llm_providers.PROVIDER_ANTHROPIC),
+                    default=llm_providers.PROVIDER_OPENROUTER,
+                    help="anthropic = API Anthropic en direct pour les modèles Claude")
     ap.add_argument("--image", help="JPEG : passe aux questions sur image (IMAGE_SCENARIOS)")
     ap.add_argument("--suite", action="store_true",
                     help="conversation CONTINUE (historique gardé) : mesure des tics répétés")
     args = ap.parse_args()
+    global FOURNISSEUR
+    FOURNISSEUR = args.fournisseur
     if args.suite:
         return _main_suite(args)
     if args.image:
@@ -248,7 +266,7 @@ def main():
         ok = [r for r in rows if "erreur" not in r]
         if ok:
             ttfts = [r["ttft"] for r in ok if r["ttft"] is not None]
-            print(f"{model:32s} réglage={json.dumps(setting)} "
+            print(f"{model:32s} [{FOURNISSEUR}] réglage={json.dumps(setting)} "
                   f"1er mot méd={statistics.median(ttfts):.2f}s max={max(ttfts):.2f}s "
                   f"geste={sum(r['geste_ok'] for r in ok)}/{len(ok)} "
                   f"json={sum(r['json_ok'] for r in ok)}/{len(ok)} "

@@ -8,8 +8,11 @@ POURQUOI (cf. dadou_robot_ros/docs/etude-niveaux-reflexion.md) : la parole
       (Haiku réflexion coupée) réagit à la dernière phrase ; ce module tient
       le fil de l'histoire, avec réflexion, à côté et sans jamais la retarder.
 POURQUOI client_factory / import différé / secret paresseux : même patron que
-      didier_vision.ai.llm_stream.StreamingBrain (openai n'est pas dans
-      requirements-test.txt ; les tests fournissent un faux client).
+      didier_vision.ai.llm_stream.StreamingBrain (les tests fournissent de faux
+      clients, aucun réseau).
+FOURNISSEUR (16/11) : comme la bouche — API Anthropic en direct si `provider`
+      vaut "anthropic", OpenRouter en secours (didier_vision.ai.llm_providers) ;
+      l'image jointe (data-URL) est traduite en bloc image base64.
 PIÈGE max_tokens : la réflexion du modèle compte dans max_tokens ; un budget
       trop juste donne une réponse VIDE (panne « Didier muet » du 22/10) —
       d'où le warning explicite sur contenu vide.
@@ -22,7 +25,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
-from didier_vision.vision_config import get_secret
+from didier_vision.ai import llm_providers
+from didier_vision.vision_config import anthropic_api_key, get_secret
 
 logger = logging.getLogger(__name__)
 
@@ -224,51 +228,54 @@ class Reflector:
 
     def __init__(self, model: str, base_url: str, extra_body: Optional[dict],
                  max_tokens: int, api_key_name: str = "openrouter_key",
-                 client_factory=None):
+                 client_factory=None, provider: str = llm_providers.PROVIDER_OPENROUTER,
+                 anthropic_client_factory=None, anthropic_key_loader=anthropic_api_key):
+        """`provider` : DÉJÀ résolu par l'appelant (llm_providers.resolve_provider) ;
+        un modèle non Claude (réflexion profonde surchargée) reste chez OpenRouter."""
         self._model = model
         self._base_url = base_url
         self._extra_body = extra_body
         self._max_tokens = max_tokens
         self._api_key_name = api_key_name
         self._client_factory = client_factory
-        self._client = None  # créé PARESSEUSEMENT, cf. _get_client
+        self._provider = provider
+        self._anthropic_client_factory = anthropic_client_factory
+        self._anthropic_key_loader = anthropic_key_loader
+        # Une chaîne de fournisseurs par (modèle, réglage de réflexion), construite au
+        # premier besoin (réflexion ordinaire Haiku, profonde Sonnet).
+        self._chains: dict = {}
+        # Fournisseur qui a servi le DERNIER appel (journal).
+        self.last_provider: Optional[str] = None
 
-    def _get_client(self):
-        if self._client is not None:
-            return self._client
-        if self._client_factory is not None:
-            self._client = self._client_factory()
-        else:
-            from openai import OpenAI  # import différé, cf. docstring de module
-
-            self._client = OpenAI(base_url=self._base_url, timeout=REQUEST_TIMEOUT_S,
-                                  max_retries=MAX_RETRIES,
-                                  api_key=get_secret(self._api_key_name))
-        return self._client
+    def _backends(self, model: str, extra_body: Optional[dict]) -> list:
+        key = (model, json.dumps(extra_body, sort_keys=True))
+        if key not in self._chains:
+            provider = (self._provider if model in llm_providers.ANTHROPIC_MODEL_IDS
+                        else llm_providers.PROVIDER_OPENROUTER)
+            self._chains[key] = llm_providers.build_backends(
+                provider, model, base_url=self._base_url, extra_body=extra_body,
+                openrouter_key_loader=lambda: get_secret(self._api_key_name),
+                anthropic_key_loader=self._anthropic_key_loader, timeout_s=REQUEST_TIMEOUT_S,
+                openrouter_timeout_s=REQUEST_TIMEOUT_S, openrouter_max_retries=MAX_RETRIES,
+                anthropic_client_factory=self._anthropic_client_factory,
+                openrouter_client_factory=self._client_factory)
+        return self._chains[key]
 
     def reflect(self, messages: list, model: Optional[str] = None,
                 extra_body: Optional[dict] = None) -> Optional[ReflectionResult]:
         """`model`/`extra_body` surchargent les défauts (réflexion profonde).
         Rend None si le contenu est vide ou illisible (warning loggué) ;
-        les erreurs réseau/API se propagent (l'appelant les logge)."""
-        client = self._get_client()
-        request = dict(model=model or self._model, messages=messages,
-                       max_tokens=self._max_tokens)
+        les erreurs réseau/API se propagent (l'appelant les logge) — après la
+        bascule de secours si elle s'applique."""
+        model = model or self._model
         body = extra_body if extra_body is not None else self._extra_body
-        if body:
-            request["extra_body"] = body
-        response = client.chat.completions.create(**request)
-
-        choices = getattr(response, "choices", None)
-        content, finish_reason = "", None
-        if choices:
-            content = choices[0].message.content or ""
-            finish_reason = getattr(choices[0], "finish_reason", None)
+        content, finish_reason, self.last_provider = llm_providers.complete_with_fallback(
+            self._backends(model, body), messages, self._max_tokens)
         if not content.strip():
             logger.warning(
-                "réflexion : réponse LLM vide (modèle=%r, finish_reason=%r) — budget "
-                "max_tokens=%d épuisé par la réflexion ?",
-                request["model"], finish_reason, self._max_tokens)
+                "réflexion : réponse LLM vide (modèle=%r, fournisseur=%r, finish_reason=%r) — "
+                "budget max_tokens=%d épuisé par la réflexion ?",
+                model, self.last_provider, finish_reason, self._max_tokens)
             return None
         result = parse_reflection(content)
         if result is None:

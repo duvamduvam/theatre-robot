@@ -829,11 +829,15 @@ def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
 SIM_A_PLAT = [# 16/11 (lot fiabilité des épreuves) : l'enregistreur des mesures et sa bibliothèque bash.
               "capture_topics.py", "captures.sh",
               "coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
+              # 16/11 : surcouche « tête » de l'épreuve de conversation (seule, avec le banc, à monter
+              # des secrets).
+              "docker-compose.tete.yml",
               "docker-compose.yml", "fumee.sh",
               "fumee_page.py", "installer-fumee.sh", "pub.sh", "rejouer-modifiees.sh",
               # 15/11 (567382b) : séance « Chantiers » en une commande.
               "seance-chantiers.sh",
-              "validate-catalogue.sh", "validate-data-edit.sh", "validate-jeu-a1.sh", "validate-machines.sh",
+              "validate-catalogue.sh", "validate-conversation.sh", "validate-data-edit.sh",
+              "validate-jeu-a1.sh", "validate-machines.sh",
               "validate-namespace.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
               "validate-rehearsal-route.sh"]
 # L2b : le conteneur `monde` (Dockerfile + entrée) et l'entrée du conteneur `robot` de la sim.
@@ -1044,7 +1048,11 @@ def test_les_requirements_de_test_sont_a_la_racine_et_dans_la_vision():
     assert actifs == ["pytest", "filetype", "colorlog", "psutil", "xacro", "imageio", "py_trees==2.6.0",
                       "aiohttp", "Pillow"]
     vision = (PACKAGES / "didier_vision" / "requirements-test.txt").read_text(encoding="utf-8").splitlines()
-    assert [ligne for ligne in vision if ligne and not ligne.startswith("#")] == ["pytest", "sqlobject", "numpy<2"]
+    assert [ligne for ligne in vision if ligne and not ligne.startswith("#")] == [
+        "pytest", "sqlobject", "numpy<2", "anthropic>=2.9,<3"]
+    # Même borne que l'image de la vision (16/11 : SDK Anthropic de la tête).
+    image = (MACHINES / "vision" / "requirements.txt").read_text(encoding="utf-8").splitlines()
+    assert "anthropic>=2.9,<3" in image and "openai>=1.50.0" in image
 
 
 # --- L1d-4 : les deux gardes du déploiement, le rapatriement, le drapeau DATA_EDIT ------------
@@ -1274,12 +1282,36 @@ def test_le_role_conteneur_refuse_une_image_qui_contient_un_secret_de_l_hote():
     assert noms.index("Recreate the project container") < noms.index(controle["name"]) < noms.index(echec["name"])
     assert controle["loop"] == "{{ secrets_hote | default([]) }}"
     assert "--entrypoint test" in controle["ansible.builtin.shell"]
-    assert controle["ansible.builtin.shell"].endswith('! -e "/home/{{ item.dest }}"')
+    assert controle["ansible.builtin.shell"].endswith(
+        '! -e "{{ item.image | default(\'/home/\' ~ item.dest) }}"')
     assert controle["check_mode"] is False and controle["failed_when"] is False
     assert echec["when"] == "item.rc != 0"
     # Le chemin contrôlé est bien celui où le Dockerfile copie la conf de la vision.
     assert "/home/" + _machine("vision")["secrets_hote"][0]["dest"] == "/home/ros2_ws/src/vision/conf/secret"
     assert "/home/ros2_ws/src/vision/conf/" in _copies("vision")[0]
+    # secrets.env (16/11) : contrôlé là où le compose ARM le MONTE (pas sous /home : il est hors ros2_ws).
+    assert _machine("vision")["secrets_hote"][1]["image"] == "/run/secrets/didier.env"
+
+
+def test_la_cle_anthropic_de_la_tete_reste_hors_du_build_et_du_rsync():
+    """16/11 : la clé Anthropic (ANTHROPIC_API_KEY de ~/.config/didier/secrets.env, source unique)
+    arrive sur le Pi vision par le rôle secrets HORS de ros2_ws — donc hors de tout contexte de build
+    et du rsync —, montée en LECTURE SEULE là où vision_config la lit ; son modèle versionné n'a
+    qu'une valeur factice."""
+    entree = _machine("vision")["secrets_hote"][1]
+    assert entree == {"source": "secrets.env", "dest": ".config/didier/secrets.env",
+                      "modele": "{{ machines_dir }}/vision/secrets.env.example",
+                      "image": "/run/secrets/didier.env"}
+    assert not entree["dest"].startswith("ros2_ws")
+    volumes = _service(MACHINES / "vision/docker/arm/docker-compose-arm.yml")["volumes"]
+    assert "../../../../../../.config/didier/secrets.env:/run/secrets/didier.env:ro" in volumes
+    # Le chemin relatif part de src/vision/conf/docker/arm/ et remonte au HOME (6 niveaux).
+    assert "../../../../../build:/home/ros2_ws/build" in volumes
+    modele = (MACHINES / "vision" / "secrets.env.example").read_text(encoding="utf-8").splitlines()
+    assert [l for l in modele if l and not l.startswith("#")] == ["ANTHROPIC_API_KEY=sk-ant-VOTRE_CLE_ICI"]
+    # Le code lit ce chemin par défaut (pas d'import : vision_config vit dans un autre venv).
+    config = (PACKAGES / "didier_vision" / "didier_vision" / "vision_config.py").read_text(encoding="utf-8")
+    assert 'ANTHROPIC_SECRETS_FILE_DEFAUT = "/run/secrets/didier.env"' in config
 
 
 def test_docker_et_les_fichiers_docker_morts_sont_supprimes():

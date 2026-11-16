@@ -66,4 +66,9 @@ services:
       # (rôle config-hote ; alias par NOM de carte, indépendants de l'ordre USB)
       # — montage read-only, jamais écrit depuis le conteneur.
       - /etc/asound.conf:/etc/asound.conf:ro
+      # Clé de l'API Anthropic (16/11) : ~/.config/didier/secrets.env du Pi (rôle secrets, HORS de
+      # ros2_ws, donc hors de tout contexte de build), en lecture seule là où vision_config la lit
+      # (/run/secrets/didier.env). Chemin RELATIF (compose lancé sous sudo : pas de ${HOME}) :
+      # arm/ -> docker/ -> conf/ -> vision/ -> src/ -> ros2_ws/ -> ~.
+      - ../../../../../../.config/didier/secrets.env:/run/secrets/didier.env:ro
     privileged: true

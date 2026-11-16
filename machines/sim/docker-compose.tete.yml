@@ -1,0 +1,24 @@
+# Surcouche « TÊTE » de la sim (16/11) : la conversation de Didier SANS micro ni son, pour
+# l'épreuve de conversation scriptée de la fumée (validate-conversation.sh) — le texte arrive par
+# `chat_text` (le clavier de la page scène), la réplique part dans le vide (aplay sans carte : la
+# lecture échoue sans arrêter le tour). Coût : quelques appels Haiku par épreuve.
+#   docker compose -f docker-compose.yml -f docker-compose.tete.yml up -d
+# Seule surcouche de la sim, avec le banc, qui monte des secrets (la base n'en monte AUCUN, gravé
+# par test_compose_sim.py) — en lecture seule, depuis la source unique ~/.config/didier/ :
+#   - vision-conf-secret (openrouter_key : secours du LLM et STT ; chat_node l'exige au démarrage) ;
+#   - secrets.env (ANTHROPIC_API_KEY : le fournisseur direct), là où vision_config la lit.
+# ⚠️ Les deux fichiers doivent EXISTER sur le PC (sinon Docker créerait des dossiers root à leur
+# place) : fumee.sh ne lance cette surcouche qu'après les avoir trouvés (épreuve « non lancée »).
+services:
+  vision:
+    environment:
+      - CHAT=true
+      # Mouvement à la voix : les ordres de la bouche partent au régisseur (domaine 43 seulement).
+      - CHAT_MOUVEMENT=true
+      # Metteur en scène intérieur coupé : un appel LLM de plus par événement, inutile ici.
+      - CHAT_REFLEXION=false
+      # Fournisseur : défaut de la tête (Anthropic si la clé est montée, OpenRouter en secours).
+      - CHAT_LLM_FOURNISSEUR=${CHAT_LLM_FOURNISSEUR:-auto}
+    volumes:
+      - ${HOME}/.config/didier/vision-conf-secret:/home/ros2_ws/src/vision/conf/secret:ro
+      - ${HOME}/.config/didier/secrets.env:/run/secrets/didier.env:ro

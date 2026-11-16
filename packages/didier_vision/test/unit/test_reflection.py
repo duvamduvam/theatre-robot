@@ -271,7 +271,9 @@ def test_client_par_defaut_borne_timeout_et_nouvelles_tentatives(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "openai", types.SimpleNamespace(OpenAI=_FakeOpenAI))
     monkeypatch.setattr(reflection, "get_secret", lambda name: "cle-" + name)
-    Reflector("m", "https://x", None, 100)._get_client()
+    # Chaîne OpenRouter seule (fournisseur par défaut du Reflector) : son unique client.
+    (backend,) = Reflector("m", "https://x", None, 100)._backends("m", None)
+    backend._get_client()
     assert received == {"base_url": "https://x", "timeout": 40.0, "max_retries": 1,
                         "api_key": "cle-openrouter_key"}
 

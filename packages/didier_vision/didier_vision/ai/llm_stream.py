@@ -1,4 +1,5 @@
-"""Cerveau conversationnel streamé — appel LLM (via OpenRouter) + historique.
+"""Cerveau conversationnel streamé — appel LLM (Anthropic direct, OpenRouter en
+secours) + historique.
 
 QUOI : contrairement à didier_vision.ai.interactions (GPT-4o, réponse complète
       d'un coup, TTS déclenché APRÈS la réponse entière), ce module streame
@@ -6,28 +7,39 @@ QUOI : contrairement à didier_vision.ai.interactions (GPT-4o, réponse complèt
       conversation de faire parler le TTS dès la première phrase complète
       reçue, sans attendre la fin de la génération (cf. didier_vision.ai.
       stream_parser).
-POURQUOI OpenRouter plutôt que l'API OpenAI directe : base_url configurable
-      (client OpenAI officiel, compatible — OpenRouter expose une API Chat
-      Completions compatible OpenAI) permet de choisir le modèle par sa
-      chaîne complète (ex: "anthropic/claude-haiku-5.5", cf.
-      vision_config.py) sans changer de client SDK.
-POURQUOI l'import openai est DIFFÉRÉ (dans _get_client, pas en tête de
-      module) : même raison que didier_vision.ai.tts_piper/stt — openai N'EST PAS
-      dans requirements-test.txt (cf. tts.py/interactions.py existants, déjà
-      logés hors CI pour la même raison), un import en tête de module
-      casserait la collecte pytest en CI.
-POURQUOI client_factory injectable : permet aux tests de fournir un faux
-      client (deltas scriptés) SANS jamais importer openai ni appeler
-      get_secret — le constructeur reste utilisable sans conf/secret sur la
-      machine tant qu'un client_factory est fourni (chargement du secret
-      PARESSEUX, seulement si le vrai client OpenAI doit être construit).
+FOURNISSEUR (16/11, décision de David) : `provider` vaut "anthropic" (API
+      Anthropic en direct, OpenRouter en SECOURS automatique avant le premier
+      mot) ou "openrouter" (le chemin d'avant, client OpenAI officiel pointé
+      sur OpenRouter par base_url). Le choix est fait par l'appelant
+      (llm_providers.resolve_provider) ; la mécanique vit dans
+      didier_vision.ai.llm_providers. Le modèle reste désigné par sa chaîne
+      OpenRouter (ex. "anthropic/claude-haiku-5.5", cf. vision_config.py).
+POURQUOI les imports openai/anthropic sont DIFFÉRÉS (dans llm_providers, au
+      premier appel réel) : ni l'un ni l'autre ne doit casser la collecte
+      pytest d'un module qui ne s'en sert pas, et les tests fournissent des
+      faux clients.
+POURQUOI client_factory / anthropic_client_factory injectables : permettent
+      aux tests de fournir de faux clients (deltas scriptés) SANS réseau ni
+      secret — le constructeur reste utilisable sans conf/secret sur la
+      machine (chargement des clés PARESSEUX, seulement si un vrai client doit
+      être construit).
 """
 from __future__ import annotations
 
+import logging
 from typing import Iterator, Optional
 
+from didier_vision.ai import llm_providers
 from didier_vision.db.chat_db import ChatDB
-from didier_vision.vision_config import get_secret
+from didier_vision.vision_config import anthropic_api_key, get_secret
+
+logger = logging.getLogger(__name__)
+
+# Délai de l'appel Anthropic de la bouche (s) : au-delà, bascule de secours sur
+# OpenRouter. Lecture : le délai court entre deux octets reçus, pas la réplique
+# entière ; 15 s couvrent largement le premier mot mesuré (< 1,5 s) sans laisser
+# Didier muet une demi-minute si l'API se fige.
+ANTHROPIC_TIMEOUT_S = 15.0
 
 # Préfixe de la consigne de mise en scène (topic `chat_instruction`, lot R3,
 # cf. didier_vision.ai.stage) — texte fixé par la spec (dadou_robot_ros/docs/
@@ -62,11 +74,19 @@ class StreamingBrain:
     def __init__(self, model: str, base_url: str, api_key_name: str = "openrouter_key",
                  system_prompt: str = "", history_limit: int = 12, max_tokens: int = 200,
                  extra_body: Optional[dict] = None, client_factory=None,
-                 situation_suffix: str = ""):
+                 situation_suffix: str = "", provider: str = llm_providers.PROVIDER_OPENROUTER,
+                 anthropic_client_factory=None, anthropic_key_loader=anthropic_api_key):
         """`extra_body` : champs propres au fournisseur ajoutés tels quels au
-        corps de la requête (SDK OpenAI, extra_body) — sert à couper la
-        réflexion de Haiku 5.5 côté OpenRouter (cf. config["chat_llm_extra_body"]
-        pour le pourquoi chiffré). None = requête Chat Completions standard.
+        corps de la requête OpenRouter (SDK OpenAI, extra_body) — sert à couper
+        la réflexion de Haiku 5.5 (cf. config["chat_llm_extra_body"] pour le
+        pourquoi chiffré) ; traduit pour l'API Anthropic par
+        llm_providers.anthropic_thinking_options. None = requête standard.
+
+        `provider` : "anthropic" (Anthropic puis OpenRouter en secours) ou
+        "openrouter" (seul) — DÉJÀ résolu par l'appelant
+        (llm_providers.resolve_provider). `client_factory` fabrique le client
+        OpenRouter, `anthropic_client_factory` le client Anthropic (tests) ;
+        `anthropic_key_loader` lit la clé au premier vrai appel seulement.
 
         `situation_suffix` : texte ajouté à la FIN du message system de
         situation, donc SEULEMENT quand un tableau frais est fourni
@@ -76,23 +96,31 @@ class StreamingBrain:
         même « je reprends la parole quand j'ai la réponse » et ne revenait
         jamais. Le tableau frais (< SITUATION_TTL_S) est la preuve de vie."""
         self._model = model
-        self._base_url = base_url
-        self._api_key_name = api_key_name
         self._system_prompt = system_prompt
         self._history_limit = history_limit
         self._max_tokens = max_tokens
-        self._extra_body = extra_body
         self._situation_suffix = situation_suffix
         # Vocabulaire d'objets (lot M1, cf. set_objects_prompt) : "" = rien.
         self._objects_prompt = ""
-        self._client_factory = client_factory
-        self._client = None  # créé PARESSEUSEMENT, cf. _get_client
+        # Fournisseur qui a servi le DERNIER tour (journal, épreuve de la fumée).
+        self.last_provider: Optional[str] = None
+        self._backends = llm_providers.build_backends(
+            provider, model, base_url=base_url, extra_body=extra_body,
+            openrouter_key_loader=lambda: get_secret(api_key_name),
+            anthropic_key_loader=anthropic_key_loader, timeout_s=ANTHROPIC_TIMEOUT_S,
+            anthropic_client_factory=anthropic_client_factory,
+            openrouter_client_factory=client_factory)
 
         # Une session ChatDB par instance de StreamingBrain — même pattern
         # que didier_vision.ai.interactions.AInteractions (ChatDB.create({}) au
         # constructeur, historique accumulé au fil des tours via
         # add_user_text/add_assistant_text).
         self._history_entry = ChatDB.create({})
+
+    @property
+    def providers(self) -> tuple:
+        """(fournisseur, modèle) de la chaîne, dans l'ordre d'essai (journal de démarrage)."""
+        return tuple((b.name, b.model) for b in self._backends)
 
     def reconfigure(self, system_prompt: str) -> None:
         """Change le system prompt ET ouvre une nouvelle session ChatDB —
@@ -126,23 +154,6 @@ class StreamingBrain:
         GIL ; un tour en cours lit l'ancienne ou la nouvelle, jamais un mélange."""
         self._objects_prompt = text
 
-    def _get_client(self):
-        """Construit le client OpenAI (SDK officiel, pointé vers OpenRouter
-        via base_url) au premier besoin réel — jamais au constructeur, pour
-        que StreamingBrain reste instanciable sans conf/secret quand un
-        client_factory est fourni (tests)."""
-        if self._client is not None:
-            return self._client
-
-        if self._client_factory is not None:
-            self._client = self._client_factory()
-        else:
-            from openai import OpenAI  # import différé, cf. docstring de module
-
-            api_key = get_secret(self._api_key_name)
-            self._client = OpenAI(base_url=self._base_url, api_key=api_key)
-        return self._client
-
     def stream_reply(self, user_text: str, extra_system: Optional[str] = None,
                      situation: Optional[str] = None,
                      direction: Optional[str] = None) -> Iterator[str]:
@@ -169,8 +180,6 @@ class StreamingBrain:
         SITUATION_PREFIX / DIRECTION_PREFIX), jamais historisés (un tableau
         périmé qui survivrait dans l'historique ferait parler Didier d'une
         scène finie)."""
-        client = self._get_client()
-
         self._history_entry.add_user_text(user_text)
 
         # history_limit : ne renvoyer que les N derniers messages au LLM —
@@ -193,27 +202,15 @@ class StreamingBrain:
             messages.append({"role": "system", "content": DIRECTION_PREFIX + direction})
         messages += history
 
-        request = dict(model=self._model, messages=messages,
-                       max_tokens=self._max_tokens, stream=True)
-        if self._extra_body:
-            request["extra_body"] = self._extra_body
-        stream = client.chat.completions.create(**request)
-
+        used: list = []
         full_text = ""
-        finish_reason = None
-        for chunk in stream:
-            if not chunk.choices:
-                # Chunk sans choix (ex. chunk final d'usage d'OpenRouter) :
-                # rien à lire, et choices[0] lèverait IndexError.
-                continue
-            finish_reason = getattr(chunk.choices[0], "finish_reason", None) or finish_reason
-            delta = chunk.choices[0].delta.content
-            if not delta:
-                # Un chunk de streaming peut ne porter aucun texte (métadonnées
-                # de fin, chunk de rôle...) — rien à yield ni à accumuler.
-                continue
+        for delta in llm_providers.stream_with_fallback(
+                self._backends, messages, self._max_tokens, used=used):
             full_text += delta
             yield delta
+        served = used[0] if used else None
+        self.last_provider = served.name if served else None
+        finish_reason = getattr(served, "last_stop_reason", None)
 
         if not full_text:
             # Réponse VIDE : sans ce garde-fou, Didier se tait sans une ligne
@@ -222,7 +219,8 @@ class StreamingBrain:
             # Lever fait logger le tour comme abandonné par ConversationEngine,
             # et n'historise pas une réplique vide.
             raise EmptyReplyError(
-                f"réponse LLM vide (modèle={self._model!r}, finish_reason={finish_reason!r}) "
+                f"réponse LLM vide (modèle={self._model!r}, fournisseur={self.last_provider!r}, "
+                f"finish_reason={finish_reason!r}) "
                 "— budget max_tokens épuisé par la réflexion ? cf. chat_llm_extra_body")
 
         # add_assistant_text (PAS add_system_text, bug corrigé le 2026-09-13) :
