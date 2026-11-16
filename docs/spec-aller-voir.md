@@ -265,10 +265,21 @@ comme go ; stop/off/cancel → cancel ; un nouvel ordre remplace l'ancien.
    DRIVE : à l'entrée, il pivote d'abord). Angle balayé INTÉGRÉ
    (Σ dir·wrap(Δθ), jamais négatif compté) ; ≥ 2π → FACE (vers C) → ARRIVED.
 3. SÉCURITÉ (en plus de toutes celles du DRIVE) : |d − r| > TOUR_MAX_DEV_M
-   (1,0) pendant ORBIT → abandon `off_track` ; délai = GOTO_TIMEOUT_S +
-   2πr / TOUR_MIN_MS (0,1) ; distance parcourue ≤ 1,5 × (|pose − E| + 2πr),
-   plancher min_travel_m ; calage, odom périmée, pose NaN, fader 0, cancel :
-   inchangés (zéro franc).
+   (1,0) pendant ORBIT → abandon `off_track` ; distance parcourue ≤ 1,5 ×
+   (|pose − E| + 2πr), plancher min_travel_m ; calage, odom périmée, pose NaN,
+   fader 0, cancel : inchangés (zéro franc).
+   DÉLAIS — deux budgets depuis le 16/11 (décision de David), abandon
+   `timeout` dans les deux cas, zéro franc :
+   - approche = max(GOTO_TIMEOUT_S, |pose − E| / TOUR_MIN_MS), compté depuis
+     l'ordre (avant la première pose : GOTO_TIMEOUT_S) ;
+   - orbite = GOTO_TIMEOUT_S + 2πr / TOUR_MIN_MS, compté depuis l'ENTRÉE sur
+     le cercle (FACE final compris) ; déjà sur le cercle : depuis l'ordre.
+   Avant, un seul délai (GOTO_TIMEOUT_S + 2πr / 0,1) courait depuis l'ordre :
+   le 15/11, le tour du banc (approche ~20 m au curseur, ~108 s) a abandonné
+   à mi-orbite. L'approche n'est pas bornée à 60 s comme un aller voir : elle
+   aurait abandonné aussi (≈ 108 s). NB : un aller voir de ~20 m au même
+   curseur dépasserait aussi ses 60 s (non changé). route_driver compte en
+   temps MURAL : sous un facteur temps réel < 1, tout dure plus longtemps.
 4. Tests purs : tour complet simulé (intégrateur cinématique) dans les deux
    sens, arrêt face au centre ; cancel immédiat ; fader 0 ; off_track
    (pose téléportée) ; calage ; timeout ; NaN ; bornes parse_order ;

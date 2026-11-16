@@ -228,8 +228,10 @@ laborieux »). Même canal que M1/M2.
   "orbit_r", "orbit_dir": 1|-1}` -> approche du point du cercle le plus proche
   (ALIGN/DRIVE), ORBIT (croisière 0,35 m/s, correction radiale, angle balayé
   intégré), FACE vers le centre. Abandons : `off_track` (|d − r| > 1 m),
-  délai 60 s + 2πr / 0,1, distance ≤ 1,5 × (approche + 2πr), calage, fader 0,
-  cancel. Le même tour (même sens) redemandé est ignoré.
+  délais (16/11) : approche max(60 s, |pose − E| / 0,1) depuis l'ordre, puis
+  orbite 60 s + 2πr / 0,1 depuis l'ENTRÉE sur le cercle ; distance ≤ 1,5 ×
+  (approche + 2πr), calage, fader 0, cancel. Le même tour (même sens)
+  redemandé est ignoré.
 
 Tests : `test_goto_tour.py`, `test_tours.py`, `test_director_tour.py`,
 `test_route_driver_tour.py`.

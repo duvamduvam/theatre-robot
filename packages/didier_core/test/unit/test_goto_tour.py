@@ -19,6 +19,10 @@ Passe de mutation du lot M3 (chaque ligne doit rougir) :
     test_correction_radiale_vers_le_centre_deux_sens, test_tour_complet_integre[droite]
   - anticipation v/r retirée -> test_orbite_tangente_anticipation
   - délai 2πr / 0,1 retiré -> test_delai_approche_plus_un_tour
+Délais comptés en deux budgets (David, 16/11) :
+  - orbite comptée depuis l'ordre (ancien compteur) -> test_banc_15_11_approche_108_s_puis_tour_boucle
+  - budget d'approche non borné -> test_approche_infinie_abandon_par_delai_d_approche
+  - budget d'orbite non borné -> test_orbite_bloquee_abandon_par_delai_d_orbite
 """
 import math
 
@@ -96,8 +100,10 @@ def test_point_d_entree_le_plus_proche_et_bornes():
     g = _m(POUBELLE, (20.0, 0.0, 0.0))
     assert _r(g.tick(10, 1.0))[2] == ALIGN
     assert tuple(round(v, 6) for v in g.stop_point) == (25.013514, 1.718919)
-    # Délai : 60 + 2π × 2,1 / 0,1 = 191,946891 s.
-    assert round(g.config.timeout_s, 6) == 191.946891
+    # Délais (16/11) : approche max(60, 5,3 / 0,1 = 53) = 60 s depuis l'ordre ;
+    # orbite 60 + 2π × 2,1 / 0,1 = 191,946891 s depuis l'ENTRÉE sur le cercle.
+    assert round(g.approach_timeout_s, 6) == 60.0
+    assert round(g.orbit_timeout_s, 6) == 191.946891
 
 
 def test_au_centre_entree_droit_devant():
@@ -255,7 +261,9 @@ def test_calage_en_orbite_abandon():
 
 def test_delai_approche_plus_un_tour():
     # r = 2 : 60 + 2π × 2 / 0,1 = 185,663706 s. Fader bas (0,05 m/s < seuil de calage).
+    # Déjà sur le cercle : le budget de l'orbite part de l'ORDRE (inchangé au 16/11).
     g = _m(GAUCHE, _sur_le_cercle(0.0, 1))
+    assert g.tick(10, 0.1).phase == ORBIT
     g.update_pose(*_sur_le_cercle(0.0, 1), 185600)
     assert g.tick(185663, 0.1).reason == "ok"
     assert _r(g.tick(185664, 0.1)) == (0.0, 0.0, ABORTED, "timeout")
@@ -340,3 +348,61 @@ def test_tour_complet_sens_de_rotation():
             theta_cumul += math.atan2(math.sin(math.atan2(y, x) - th0), math.cos(math.atan2(y, x) - th0))
             g.update_pose(x, y, yaw, 100 * k + 5)
         assert direction * theta_cumul > 0.5                # parti dans le bon sens
+
+
+# --- Délais en deux budgets (décision de David, 16/11) ------------------------------
+# Cas réel du 15/11 21:29 : tour du banc depuis x = 14, approche ~20 m au curseur
+# (~0,19 m/s, ~108 s) ; l'ancien compteur unique (191,9 s depuis l'ordre)
+# abandonnait à mi-orbite.
+
+BANC = OrbitOrder("tour de banc", 36.2, 2.496, 2.1, 1)
+# Facteur du curseur : 0,36 × 0,5 m/s = 0,18 m/s en croisière — l'intégrateur
+# entre alors sur le cercle à 111,2 s (≈ les ~108 s de la séance) et parcourt
+# 33,33 m (33,87 m en séance).
+CURSEUR = 0.36
+
+
+def test_banc_15_11_approche_108_s_puis_tour_boucle():
+    g, t, (x, y, yaw), phases, max_lin, max_ang, max_dev = _integrer(BANC, (14.0, 0.0, 0.0), speed=CURSEUR)
+    assert (g.phase, g.reason) == (ARRIVED, "arrived")
+    assert phases == [ALIGN, DRIVE, ORBIT, FACE, ARRIVED]
+    assert g.swept >= 2 * math.pi
+    # Budgets GRAVÉS : approche max(60, (√(22,2² + 2,496²) − 2,1 = 20,23988) / 0,1) ;
+    # orbite 60 + 2π × 2,1 / 0,1 = 191,946891 s.
+    assert round(g.approach_timeout_s, 3) == 202.399
+    assert round(g.orbit_timeout_s, 6) == 191.946891
+    # Bouclé à 196,8 s : l'ancien compteur unique (191,9 s depuis l'ordre) aurait abandonné.
+    assert (t, round(g.travelled, 2)) == (196800, 33.33)
+    # Vitesses inchangées : jamais au-dessus du curseur ni des pivots.
+    assert max_lin <= 0.18 + 1e-9 and max_ang <= 0.6
+
+
+def test_approche_infinie_abandon_par_delai_d_approche():
+    # Didier n'avance jamais (fader bas, sous le seuil de calage) : abandon au
+    # budget d'approche, 202,398750 s après l'ordre, zéro franc.
+    g = GotoManeuver(BANC, 0)
+    g.update_pose(14.0, 0.0, 0.0, 0)
+    assert g.tick(100, 0.1).phase in (ALIGN, DRIVE)
+    for t in range(200, 202300, 100):
+        g.update_pose(14.0, 0.0, 0.0, t)
+        assert g.tick(t, 0.1).reason == "ok"
+    g.update_pose(14.0, 0.0, 0.0, 202398)
+    assert g.tick(202398, 0.1).reason == "ok"
+    g.update_pose(14.0, 0.0, 0.0, 202399)
+    assert _r(g.tick(202399, 0.1)) == (0.0, 0.0, ABORTED, "timeout")
+
+
+def test_orbite_bloquee_abandon_par_delai_d_orbite():
+    # Entrée sur le cercle à t = 50 s (après une approche), puis plus rien ne
+    # tourne : abandon 191,946891 s après l'ENTRÉE, pas après l'ordre.
+    g = GotoManeuver(GAUCHE, 0)
+    g.update_pose(5.0, 0.0, math.pi, 0)
+    assert g.tick(100, 0.1).phase == DRIVE          # face à E (2 ; 0) : pas de pivot
+    entree = _sur_le_cercle(0.0, 1)
+    g.update_pose(entree[0], entree[1], math.pi, 50000)   # arrivé en E à 50 s
+    assert g.tick(50000, 0.1).phase == ORBIT
+    assert g.orbit_timeout_s == pytest.approx(185.663706, abs=1e-6)
+    g.update_pose(entree[0], entree[1], math.pi, 235663)
+    assert g.tick(235663, 0.1).reason == "ok"
+    g.update_pose(entree[0], entree[1], math.pi, 235664)
+    assert _r(g.tick(235664, 0.1)) == (0.0, 0.0, ABORTED, "timeout")
