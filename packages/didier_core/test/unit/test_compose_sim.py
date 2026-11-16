@@ -124,14 +124,14 @@ def test_espace_de_processus_partage_avec_monde_en_sim_seulement():
 def test_journaux_partages_par_monde_et_robot_et_colcon_par_service():
     services = _services()
     # 16/11 (décision de David) : journaux HORS du dépôt et de Nextcloud, UNE variable.
-    J = "${DIDIER_SIM_JOURNAUX:-${XDG_STATE_HOME:-${HOME}/.local/state}/didier-sim}"
+    J = "${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}"
     assert _cibles(services["monde"])["/home/ros2_ws/log"] == J + "/log"
     assert _cibles(services["robot"])["/home/ros2_ws/log"] == J + "/log"
     assert _cibles(services["vision"])["/home/ros2_ws/log"] == J + "/log-vision"
     assert _cibles(services["telecommande"])["/home/ros2_ws/log"] == J + "/log-telecommande"
     assert not [v for s in services.values() for v in s.get("volumes", []) if "workspace" in v]
     # Même défaut dans les scripts qui créent le dossier avant `up` (sinon Docker le crée root).
-    defaut = 'DIDIER_SIM_JOURNAUX:-${XDG_STATE_HOME:-$HOME/.local/state}/didier-sim}"'
+    defaut = 'DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier-sim}"'
     for script in ("fumee.sh", "seance-chantiers.sh"):
         src = (SIM / script).read_text(encoding="utf-8")
         assert defaut in src and "mkdir -p" in src, script

@@ -32,9 +32,9 @@ machines/robot/DEPLOY_SHA
 machines/sim/banc-robot/workspace/
 machines/sim/banc-vision/workspace/
 # L2b : journaux de la sim multi-conteneurs — HORS du dépôt depuis le 16/11 ($DIDIER_SIM_JOURNAUX,
-# ~/.local/state/didier-sim) ; l'ancien dossier reste ignoré au cas où un vieux checkout le recrée.
+# ~/tmp/didier-sim) ; l'ancien dossier reste ignoré au cas où un vieux checkout le recrée.
 machines/sim/workspace/
-# Fumée : journaux BRUTS locaux depuis le 16/11 (~/.local/state/didier-fumee/journaux) ; dans git
+# Fumée : journaux BRUTS locaux depuis le 16/11 (~/tmp/didier-fumee) ; dans git
 # seulement les pages, l'index et historique.jsonl.
 docs/fumee/journaux/
 

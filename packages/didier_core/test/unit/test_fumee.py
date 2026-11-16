@@ -361,7 +361,7 @@ def test_page_verte_porte_sha_rtf_et_compteurs():
     assert "Toutes les épreuves sont vertes, aux valeurs gravées." in page
     # 16/11 : plus de lien vers des journaux versionnés — le nom du fichier et le dossier LOCAL.
     assert "<code>namespace.log</code>" in page and 'href="journaux/' not in page
-    assert "<code>~/.local/state/didier-fumee/journaux/2026-11-07-2130/</code>" in page
+    assert "<code>~/tmp/didier-fumee/2026-11-07-2130/</code>" in page
     assert "9 min 45 s" in page
     assert "non lancée" not in page
 
@@ -839,7 +839,7 @@ def test_amorcer_l_historique_depuis_les_anciens_journaux(tmp_path):
 
 def test_fumee_sh_brut_local_purge_et_sim_hors_depot():
     sh = _lire_sh()
-    assert 'BRUT="${FUMEE_BRUT:-$ETAT/journaux}"' in sh and 'JDIR="$BRUT/$ID"' in sh
+    assert 'BRUT="${FUMEE_BRUT:-$HOME/tmp/didier-fumee}"' in sh and 'JDIR="$BRUT/$ID"' in sh
     assert '"$PAGE_PY" purger --brut "$BRUT"' in sh
     assert '"$SORTIE/journaux' not in sh
     assert 'DIDIER_SIM_JOURNAUX="$JOURNAUX_SIM"' in sh

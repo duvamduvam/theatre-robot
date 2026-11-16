@@ -10,7 +10,7 @@ sur GitHub ni sur Nextcloud) :
     une ligne par fumée, gardée pour toujours — c'est lui que lisent la décision « due ? », le
     « dernier vert » et le sommaire, et lui qui montre les tendances (épreuve instable, sim qui
     ralentit). Format d'une ligne : `ligne_historique` (gravé par test_fumee.py).
-  - `<brut>` (LOCAL, défaut ~/.local/state/didier-fumee/journaux/) : un dossier `<id>/` par
+  - `<brut>` (LOCAL, défaut ~/tmp/didier-fumee/) : un dossier `<id>/` par
     fumée, `resultat.json` complet + journaux et captures copiés hors conteneur ;
     `<id>` = AAAA-MM-JJ-HHMM (heure locale du début). Purge (`purger`, à la fin de chaque
     fumée) : VERT au-delà de 30 jours ; un ROUGE n'est JAMAIS purgé tant que son dossier ne
@@ -402,7 +402,7 @@ tant que le dossier ne porte pas le marqueur <code>TRAITE</code>. Résumé perma
         rtf=_e(rtf), rtf_min=_e(res.get("rtf_min")), charge=_e(res.get("charge_1min")),
         coeurs=_e(res.get("nb_coeurs")), image="oui" if res.get("image_reconstruite") else "non",
         lignes="\n".join(lignes), notes=notes, id=_e(res["id"]),
-        brut=_e(res.get("brut") or "~/.local/state/didier-fumee/journaux"), purge=PURGE_JOURS)
+        brut=_e(res.get("brut") or "~/tmp/didier-fumee"), purge=PURGE_JOURS)
     return _squelette("Fumée Didier — {} — {}".format(_debut_lisible(res), verdict), corps)
 
 

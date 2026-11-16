@@ -54,11 +54,11 @@
 #   FUMEE_DEPOT        checkout de main à tester (défaut : le dépôt de David)
 #   FUMEE_SORTIE       dossier des pages VERSIONNÉES : HTML, index, historique.jsonl
 #                      (défaut : $FUMEE_DEPOT/docs/fumee)
-#   FUMEE_BRUT         journaux BRUTS, LOCAUX (défaut : $FUMEE_ETAT/journaux) — jamais dans git
+#   FUMEE_BRUT         journaux BRUTS, LOCAUX (défaut : ~/tmp/didier-fumee) — jamais dans git
 #                      ni sur Nextcloud (décision du 16/11) ; vert purgé à 30 j, rouge gardé
 #                      tant que son dossier n'a pas le marqueur TRAITE
 #   DIDIER_SIM_JOURNAUX journaux de la sim, montés par le compose (défaut :
-#                      ${XDG_STATE_HOME:-~/.local/state}/didier-sim) — créé ici avant le démarrage
+#                      ~/tmp/didier-sim) — créé ici avant le démarrage
 #   FUMEE_COMMIT       1 (défaut) = commit de docs/fumee ; 0 = pas de commit (essais)
 #                      — le commit n'a de toute façon lieu que si FUMEE_SORTIE est le défaut
 #   FUMEE_RTF_MIN      seuil du facteur temps réel (défaut 0,8) ; tout autre = « essai provoqué »
@@ -92,10 +92,10 @@ SORTIE="${FUMEE_SORTIE:-$SORTIE_DEFAUT}"
 RTF_MIN="${FUMEE_RTF_MIN:-$RTF_MIN_DEFAUT}"
 ETAT="${FUMEE_ETAT:-$HOME/.local/state/didier-fumee}"
 JOURNAL="$ETAT/journal.log"
-BRUT="${FUMEE_BRUT:-$ETAT/journaux}"
+BRUT="${FUMEE_BRUT:-$HOME/tmp/didier-fumee}"
 # Journaux de la sim HORS du dépôt et de Nextcloud (16/11) : MÊME expression que le compose
 # (gravé par test_compose_sim.py) ; créés ici par l'utilisateur (sinon Docker les crée root).
-JOURNAUX_SIM="${DIDIER_SIM_JOURNAUX:-${XDG_STATE_HOME:-$HOME/.local/state}/didier-sim}"
+JOURNAUX_SIM="${DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier-sim}"
 # L2b : la sim multi-conteneurs (projet compose didier-sim). Un service = un conteneur = une image
 # locale, jamais poussée.
 DOCKER_DIR="$DEPOT/machines/sim"
