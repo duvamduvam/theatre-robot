@@ -418,6 +418,15 @@ Aucun chemin roues ni sécurité : topics en lecture seule, nœuds SIM-ONLY, pag
   `ecart-pi.sh` vert ×2 ; sur le Pi, vérifié que `web_bridge` ne s'abonne à AUCUN `sim/etat/*`
   (domaine 42) et que `person_tracker` reste sur la webcam.
 
+- **Ajout du 17/11 (David OK) — rendu LED fidèle, pixel par pixel** : en sim, le ruban NeoPixel
+  est remplacé par un ruban VIRTUEL de même interface (tampon de pixels en mémoire), pour que le
+  MÊME code d'animation Adafruit que le vrai robot tourne sans approximation (aujourd'hui
+  `leds_sim_node` ne colore le ruban que d'une couleur à la fois). Le ruban virtuel publie ses
+  images (≈ 20 Hz, topic SIM-ONLY) ; rendu LED par LED dans le navigateur (panneau « Matériel
+  simulé » de la page scène, réutilisable par l'éditeur en pistes), JAMAIS dans Gazebo (coût de
+  rendu → RTF). Épreuve de fumée : chaque séquence jouée, quelques images comparées à des valeurs
+  gravées. Inclut la panne de l'aperçu du visage (port 8766 muet le 15/11). ≈ +3-4 h.
+
 ### L2d — CI : images + fumée courte (Sonnet)
 
 - Décisions 9 (`xvfb`), 22. `fumee-courte.sh` d'abord rejoué vert sur le PC en `ECRAN=xvfb`
