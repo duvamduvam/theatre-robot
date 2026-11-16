@@ -66,8 +66,18 @@ FAIRE LE TOUR (lot M3, spec §8.4) — OrbitOrder, même machine, une phase de p
   FACE         pivot face au CENTRE, la vitesse linéaire de l'orbite retombe
                par la rampe (pas de pilage à 0,35 m/s) -> ARRIVED.
   Sûreté en plus : |d − r| > TOUR_MAX_DEV_M en ORBIT -> abandon « off_track » ;
-  délai = timeout_s + 2πr / TOUR_MIN_MS ; distance parcourue ≤
-  GOTO_MAX_TRAVEL_FACTOR × (|pose − E| + 2πr), plancher min_travel_m.
+  distance parcourue ≤ GOTO_MAX_TRAVEL_FACTOR × (|pose − E| + 2πr), plancher
+  min_travel_m.
+  DÉLAIS (décision de David du 16/11, après le tour du banc du 15/11 : ~108 s
+  d'approche au curseur avaient mangé le budget, abandon « timeout » à
+  mi-orbite) — DEUX budgets, raison « timeout » pour les deux :
+    approche = max(timeout_s, |pose − E| / TOUR_MIN_MS), compté depuis l'ordre
+               (avant la première pose : timeout_s, comme un aller voir) ;
+    orbite   = timeout_s + 2πr / TOUR_MIN_MS, compté depuis l'ENTRÉE sur le
+               cercle (DRIVE -> ORBIT), FACE final compris ; déjà sur le
+               cercle à la première pose : depuis l'ordre (inchangé).
+  Seule la façon de compter le temps change : vitesses, rampes, arrêt (zéro
+  franc terminal) et autres bornes sont ceux d'avant.
 """
 from __future__ import annotations
 
@@ -296,9 +306,12 @@ class GotoManeuver:
             timeout_s = min(timeout_s, TURN_TIMEOUT_S)
         elif isinstance(order, ForwardOrder):
             timeout_s = min(timeout_s, FORWARD_TIMEOUT_BASE_S + FORWARD_TIMEOUT_PER_M_S * order.metres)
-        elif isinstance(order, OrbitOrder):
-            # Spec §8.4 : délai de l'approche + un tour à la vitesse plancher.
-            timeout_s = timeout_s + 2.0 * math.pi * order.radius / TOUR_MIN_MS
+        # Tour : deux budgets (cf. docstring de module, DÉLAIS) ; timeout_s
+        # reste celui de l'approche avant la première pose.
+        self._approach_timeout_s = timeout_s
+        self._orbit_timeout_s = (timeout_s + 2.0 * math.pi * order.radius / TOUR_MIN_MS
+                                 if isinstance(order, OrbitOrder) else None)
+        self._orbit_start_ms: Optional[int] = None
         # Plafonds absolus AU CONSTRUCTEUR (même garantie que RouteFollower) :
         # un paramètre trop grand ne peut pas les franchir.
         self.config = GotoConfig(
@@ -346,6 +359,16 @@ class GotoManeuver:
     @property
     def travelled(self) -> float:
         return self._travelled
+
+    @property
+    def approach_timeout_s(self) -> float:
+        """Tour : budget de l'approche (s), fixé à la première pose."""
+        return self._approach_timeout_s
+
+    @property
+    def orbit_timeout_s(self) -> Optional[float]:
+        """Tour : budget de l'orbite (s), compté depuis l'entrée sur le cercle."""
+        return self._orbit_timeout_s
 
     @property
     def swept(self) -> float:
@@ -430,10 +453,14 @@ class GotoManeuver:
                 ux, uy = (x - o.cx) / d, (y - o.cy) / d
             self._stop = (o.cx + o.radius * ux, o.cy + o.radius * uy)   # E
             approach = math.hypot(self._stop[0] - x, self._stop[1] - y)
+            # Budget de l'approche : la distance à la vitesse plancher, jamais
+            # sous celui d'un aller voir (cf. docstring de module, DÉLAIS).
+            self._approach_timeout_s = max(c.timeout_s, approach / TOUR_MIN_MS)
             if approach < c.arrive_tol_m:
                 # Déjà sur le cercle : viser E à quelques cm donnerait un cap au
                 # bruit près (ALIGN pivoterait au hasard) — l'orbite pivote seule.
                 self._phase = ORBIT
+                self._orbit_start_ms = self._start_ms   # pas d'approche : budget depuis l'ordre
             self._travel_max = max(c.max_travel_factor * (approach + 2.0 * math.pi * o.radius),
                                    c.min_travel_m)
             self._travelled = self._swept = 0.0
@@ -458,7 +485,7 @@ class GotoManeuver:
         if self.finished:
             return self._zero(self._reason)
         c = self.config
-        if now_ms - self._start_ms > c.timeout_s * 1000.0:
+        if self._timed_out(now_ms):
             self._end(ABORTED, "timeout")
             return self._zero("timeout")
         if self._pose is None or self._pose_ms is None:
@@ -502,7 +529,9 @@ class GotoManeuver:
                     # E atteint : l'orbite commence ICI (angle balayé compté
                     # à partir de cette pose) ; v ≤ approach_gain × arrive_tol,
                     # la rampe le ramène à 0 pendant le pivot d'entrée.
+                    # Le budget de l'orbite part d'ici (cf. DÉLAIS).
                     self._phase = ORBIT
+                    self._orbit_start_ms = int(now_ms)
                 else:
                     self._phase = FACE
                     self._lin = 0.0   # depuis ≤ approach_gain × arrive_tol : arrêt doux
@@ -541,6 +570,15 @@ class GotoManeuver:
             self._end(ABORTED, "stalled")
             return self._zero("stalled")
         return out
+
+    def _timed_out(self, now_ms: int) -> bool:
+        """Délai dépassé ? Tour : budget de l'orbite dès l'entrée sur le
+        cercle, celui de l'approche avant ; autres ordres : timeout_s."""
+        if self._orbit_timeout_s is None:
+            return now_ms - self._start_ms > self.config.timeout_s * 1000.0
+        if self._orbit_start_ms is not None:
+            return now_ms - self._orbit_start_ms > self._orbit_timeout_s * 1000.0
+        return now_ms - self._start_ms > self._approach_timeout_s * 1000.0
 
     def _forward(self, now_ms: int, factor: float) -> GotoOutput:
         """Ligne droite (DRIVE seul) : cap initial TENU, arrivée à la projection."""

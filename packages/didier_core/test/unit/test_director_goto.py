@@ -9,8 +9,8 @@ Mutations du lot M1 (doivent rougir) :
 """
 import json
 
-from didier_rehearsal.director import (GotoPolicy, VoiceMove, decide_goto, goto_order, objects_payload,
-                                      resolve_object)
+from didier_rehearsal.director import (GotoPolicy, VoiceMove, decide_goto, goto_order, move_reply,
+                                      objects_payload, resolve_object)
 from didier_rehearsal.route import Poi
 
 ANNEAUX = Poi("anneaux", 78.42, 4.19, 2.5, desc="bagues géantes",
@@ -21,10 +21,28 @@ POIS = (TABLE, ANNEAUX)
 
 def test_objets_payload_ordre_itineraire_desc_ou_nom():
     # x, y (ancre du POI) : ajoutés au lot A1 (sélecteur de jeu, regard vers l'objet).
+    # tour (15/11) : False sans tours fournis.
     assert json.loads(objects_payload(POIS)) == [
-        {"name": "table_basse", "desc": "table_basse", "x": 17.8, "y": 1.4},
-        {"name": "anneaux", "desc": "bagues géantes", "x": 78.42, "y": 4.19}]
+        {"name": "table_basse", "desc": "table_basse", "x": 17.8, "y": 1.4, "tour": False},
+        {"name": "anneaux", "desc": "bagues géantes", "x": 78.42, "y": 4.19, "tour": False}]
     assert objects_payload(()) == "[]"
+
+
+def test_objets_payload_marque_les_objets_qui_ont_un_tour():
+    # 15/11 : le chat doit savoir quels objets acceptent « faire le tour ».
+    assert [(o["name"], o["tour"]) for o in json.loads(objects_payload(POIS, {"anneaux": object()}))] == [
+        ("table_basse", False), ("anneaux", True)]
+
+
+def test_move_reply_payload_grave():
+    assert json.loads(move_reply({"cmd": "tour_de", "objet": "éléphant", "sens": "gauche"}, "no_tour")) == {
+        "demande": {"cmd": "tour_de", "objet": "éléphant", "sens": "gauche"}, "effect": "no_tour",
+        "reason": None, "name": None, "source": "director"}
+    assert move_reply({"cmd": "avancer", "metres": -1}, "invalid", "recul") == (
+        '{"demande": {"cmd": "avancer", "metres": -1}, "effect": "invalid", "reason": "recul", '
+        '"name": null, "source": "director"}')
+    assert json.loads(move_reply({"cmd": "tour_de", "objet": "banc"}, "accepted", name="tour de banc"))["name"] == (
+        "tour de banc")
 
 
 def test_resolution_normalisee():

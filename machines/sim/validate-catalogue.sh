@@ -35,8 +35,16 @@ lire() { # lire <topic> -> JSON du champ msg sur stdout
 }
 
 echo "=== catalogue attendu sous $NS/ $(date +%T) ==="
-ros2 node list --no-daemon --spin-time 3 2>/dev/null | grep -qx "$NS/catalogue_node" \
-  || { echo "PRÉCONDITION : $NS/catalogue_node absent (sim démarrée ?)"; exit 2; }
+# Précondition, découverte ≥ 5 s et jusqu'à 4 essais (même motif que validate-data-edit.sh). Mesuré
+# le 15/11 sur la sim multi-conteneurs (6 démarrages × 5 lectures) : --spin-time 3 ne voyait que
+# 10 à 25 des 25 nœuds et ratait catalogue_node 4 fois sur 30 (deux fumées rouges à 0/4, nœud
+# vivant) ; --spin-time 6 : 25/25, 12 fois sur 12.
+present=0
+for essai in 1 2 3 4; do
+  ros2 node list --no-daemon --spin-time 5 2>/dev/null | grep -qx "$NS/catalogue_node" && { present=1; break; }
+  sleep 2
+done
+[ "$present" = 1 ] || { echo "PRÉCONDITION : $NS/catalogue_node absent (sim démarrée ?)"; exit 2; }
 rm -rf "$TMP_DIR"  # résidu d'une passe interrompue (kill -9)
 
 cat=$(lire $NS/catalogue)

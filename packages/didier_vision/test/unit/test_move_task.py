@@ -188,3 +188,185 @@ def test_close_sans_tache_silencieux(caplog):
     with caplog.at_level("INFO", logger="didier_vision.ai.move_task"):
         assert MoveTask().close("stop") is False
     assert caplog.records == []
+
+
+# --- Geste refusé ou sans réponse (15/11, séance « fais le tour de l'éléphant ») ---
+# Le régisseur refusait (no_tour) ou le sélecteur ne transmettait pas : la tâche
+# restait ouverte et Didier affirmait le tour. Textes GRAVÉS en dur.
+
+ELEPHANT = {"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}
+DEMANDE_ELEPHANT = "fais le tour de l'éléphant"
+ECHEC_NO_TOUR = (
+    "Ton geste « faire le tour de elephant » n'a PAS eu lieu : impossible d'en faire le tour, il n'y a "
+    "pas la place tout autour (eau, mur ou obstacle). Tu n'as pas bougé. Ta tâche, demandée par David : "
+    "« fais le tour de l'éléphant ». Dis-le en personnage, en une phrase : ne prétends JAMAIS l'avoir "
+    "fait. Ne redemande pas ce geste-là ; si un autre geste sert la tâche, fais-le, sinon dis que tu ne "
+    "peux pas, SANS clé de geste.")
+
+
+def _reponse(effect, reason=None, demande=ELEPHANT, source="director"):
+    return {"demande": demande, "effect": effect, "reason": reason, "source": source}
+
+
+def _tache_elephant(now=T0):
+    task = MoveTask()
+    task.gesture_emitted(DEMANDE_ELEPHANT, False, now, gesture=dict(ELEPHANT))
+    return task
+
+
+def test_refus_no_tour_direction_d_echec_gravee():
+    task = _tache_elephant()
+    assert task.on_reply(_reponse("no_tour"), T0 + 0.1) == ECHEC_NO_TOUR
+    assert task.pop_continuation() == ECHEC_NO_TOUR
+    # La tâche CONTINUE honnêtement (un autre geste peut la servir) : ouverte,
+    # plus de geste en vol (une 2e réponse ne redit rien).
+    assert task.is_open() and task.steps == 1
+    assert task.on_reply(_reponse("no_tour"), T0 + 0.2) is None
+
+
+def test_acceptation_puis_arrivee_inchangee():
+    task = _tache_elephant()
+    acceptee = dict(_reponse("accepted"), name="tour de elephant")    # nom de l'ORDRE parti
+    assert task.on_reply(acceptee, T0 + 0.1) is None
+    assert task.check_ack(T0 + 60.0) is None                  # accepté : seule l'issue le finit
+    assert task.on_result(_arrive("tour de elephant", 9.4), T0 + 60.0) == (
+        "Ton geste « tour de elephant » est terminé (9.4 m parcourus). Ta tâche, demandée par David : "
+        "« fais le tour de l'éléphant ». Si elle n'est pas finie, dis où tu en es en quelques mots et fais "
+        "le geste suivant ; si elle est finie, dis-le en une phrase, SANS clé de geste.")
+
+
+@pytest.mark.parametrize("reponse,raison", [
+    (_reponse("unknown"), "cet objet n'est pas dans ta liste, tu ne le trouves pas"),
+    (_reponse("too_far"), "c'est trop loin d'ici"),
+    (_reponse("no_pose"), "tu ne sais pas où tu es en ce moment"),
+    (_reponse("route_off_by_david"), "David a coupé ta route, tu ne bouges pas sans lui"),
+    (_reponse("invalid", "recul"), "tu ne sais pas reculer"),
+    (_reponse("invalid", "hors_bornes"), "c'est plus que ce que ton corps sait faire en un geste"),
+    (_reponse("invalid", "sens"), "le sens du tour était incompréhensible"),
+    (_reponse("invalid", "nouveau"), "ta demande de geste était incompréhensible"),
+    (_reponse("dropped", "trop_tot", source="jeu"), "tu viens déjà de te déplacer, pas tout de suite"),
+    (_reponse("dropped", "arrete", source="jeu"), "tu es arrêté jusqu'à ce qu'on te dise de repartir"),
+    (_reponse("dropped", "fatigue", source="jeu"), "tu es trop fatigué pour te déplacer maintenant"),
+    (_reponse("dropped", "degrade", source="jeu"), "ton corps ne répond qu'à « stop » et « go » en ce moment"),
+    (_reponse("dropped", "lune", source="jeu"), "le geste n'a pas pu se faire"),
+    (_reponse("no_reply", source="jeu"), "personne n'a donné suite"),
+    (_reponse("inconnu_demain"), "le geste n'a pas pu se faire"),          # défaut SÛR : un échec
+    (_reponse(["hostile"], {"x": 1}), "le geste n'a pas pu se faire"),
+])
+def test_raisons_en_clair_gravees(reponse, raison):
+    texte = _tache_elephant().on_reply(reponse, T0 + 0.1)
+    assert texte.startswith(f"Ton geste « faire le tour de elephant » n'a PAS eu lieu : {raison}. "
+                            "Tu n'as pas bougé.")
+
+
+def test_reponse_d_un_autre_geste_ignoree():
+    task = _tache_elephant()
+    autre = {"cmd": "aller_voir", "objet": "flaque"}            # sélecteur ou console
+    assert task.on_reply(_reponse("no_tour", demande=autre), T0 + 0.1) is None
+    assert task.on_reply("illisible", T0 + 0.1) is None
+    assert task.pop_continuation() is None
+
+
+def test_sans_reponse_echec_a_8_s_exactement():
+    assert move_task_module.ACK_TIMEOUT_S == 8.0
+    task = _tache_elephant()
+    assert task.check_ack(T0 + 7.9) is None
+    texte = task.check_ack(T0 + 8.0)
+    assert texte.startswith("Ton geste « faire le tour de elephant » n'a PAS eu lieu : personne n'a "
+                            "donné suite. Tu n'as pas bougé.")
+    assert task.check_ack(T0 + 20.0) is None                   # dit une seule fois
+
+
+def test_reponse_arrivee_avant_la_notation_du_geste():
+    """Le régisseur répond en quelques ms : la réponse peut devancer
+    gesture_emitted (même thread de conversation que la publication)."""
+    task = MoveTask()
+    assert task.on_reply(_reponse("no_tour"), T0) is None
+    task.gesture_emitted(DEMANDE_ELEPHANT, False, T0 + 0.05, gesture=dict(ELEPHANT))
+    assert task.pop_continuation() == ECHEC_NO_TOUR
+
+
+def test_reponse_precoce_perimee_ou_autre_ignoree():
+    assert move_task_module.EARLY_REPLY_S == 2.0
+    task = MoveTask()
+    task.on_reply(_reponse("no_tour"), T0)
+    task.gesture_emitted(DEMANDE_ELEPHANT, False, T0 + 2.5, gesture=dict(ELEPHANT))
+    assert task.pop_continuation() is None
+    task = MoveTask()
+    task.on_reply(_reponse("no_tour", demande={"cmd": "avancer", "metres": 1}), T0)
+    task.gesture_emitted(DEMANDE_ELEPHANT, False, T0 + 0.1, gesture=dict(ELEPHANT))
+    assert task.pop_continuation() is None
+
+
+def test_refus_budget_epuise_dit_l_echec_et_ferme():
+    task = _tache_elephant()
+    acceptee = dict(_reponse("accepted"), name="tour de poubelle_tri")
+    for k in range(2, move_task_module.TASK_MAX_STEPS + 1):     # gestes 2..8, tous arrivés
+        task.on_reply(acceptee, T0 + k)
+        assert task.on_result(_arrive(), T0 + k) is not None
+        task.pop_continuation()
+        task.gesture_emitted(DEMANDE_ELEPHANT, True, T0 + k, gesture=dict(ELEPHANT))
+    assert task.steps == 8
+    assert task.on_reply(_reponse("no_tour"), T0 + 9.0) == (
+        "Ton geste « faire le tour de elephant » n'a PAS eu lieu : impossible d'en faire le tour, il n'y a "
+        "pas la place tout autour (eau, mur ou obstacle). Tu n'as pas bougé. Ta tâche, demandée par David : "
+        "« fais le tour de l'éléphant », s'arrête là. Dis-le en personnage, en une phrase : ne prétends "
+        "JAMAIS l'avoir fait, et SANS clé de geste.")
+    assert not task.is_open()
+    assert task.pop_continuation() is not None                 # l'échec est QUAND MÊME servi
+
+
+def test_close_oublie_le_geste_en_vol():
+    task = _tache_elephant()
+    task.close("stop")
+    assert task.on_reply(_reponse("no_tour"), T0 + 0.1) is None
+    assert task.check_ack(T0 + 30.0) is None
+    assert task.pop_continuation() is None
+
+
+# --- Séance du 15/11 21:21 : l'arrivée d'un ANCIEN geste n'est jamais la fin du nouveau ---
+
+AV_ELEPHANT = {"cmd": "aller_voir", "objet": "elephant"}
+ARRIVEE_ANCIEN = {"name": "elephant", "result": "arrived", "reason": "arrived", "travelled": 3.17}
+
+
+def test_seance_2121_arrivee_de_l_ancien_aller_voir_jamais_terminee_pour_le_tour():
+    """EXACTEMENT la séquence : aller_voir elephant accepté et en route ->
+    David demande le tour (tour humain) -> tour_de émis -> l'ancien aller_voir
+    arrive (« elephant », 3,17 m) -> le sélecteur répond « pas_retenu ».
+    Avant : « Ton geste « elephant » est terminé (3.17 m parcourus) »."""
+    task = MoveTask()
+    task.gesture_emitted("va voir l'éléphant", False, T0, gesture=dict(AV_ELEPHANT))
+    task.on_reply(_reponse("accepted", demande=AV_ELEPHANT) | {"name": "elephant"}, T0 + 0.01)
+    task.close("tour humain")                                       # 21:21:16
+    task.gesture_emitted(DEMANDE_ELEPHANT, False, T0 + 21.0, gesture=dict(ELEPHANT))   # 21:21:17
+    assert task.on_result(ARRIVEE_ANCIEN, T0 + 23.0) is None        # 21:21:19 : pas la sienne
+    assert task.pop_continuation() is None
+    texte = task.on_reply(_reponse("dropped", "pas_retenu", source="jeu"), T0 + 24.0)   # 21:21:20
+    assert texte == (
+        "Ton geste « faire le tour de elephant » n'a PAS eu lieu : ton corps ne t'a pas suivi. Tu n'as pas "
+        "bougé. Ta tâche, demandée par David : « fais le tour de l'éléphant ». Dis-le en personnage, en une "
+        "phrase : ne prétends JAMAIS l'avoir fait. Ne redemande pas ce geste-là ; si un autre geste sert la "
+        "tâche, fais-le, sinon dis que tu ne peux pas, SANS clé de geste.")
+    assert task.pop_continuation() == texte and "terminé" not in texte
+
+
+def test_issue_d_un_autre_nom_ignoree_apres_acceptation():
+    task = _tache_elephant()
+    task.on_reply(dict(_reponse("accepted"), name="tour de elephant"), T0 + 0.1)
+    assert task.on_result(ARRIVEE_ANCIEN, T0 + 5.0) is None             # « elephant » ≠ « tour de elephant »
+    assert task.on_result(_arrive("tour de elephant", 9.4), T0 + 30.0).startswith(
+        "Ton geste « tour de elephant » est terminé (9.4 m parcourus).")
+
+
+def test_trop_loin_dit_la_distance():
+    # Scène du 15/11 21:29 : « tour du banc » à 22,2 m refusé par le sélecteur.
+    banc = {"cmd": "tour_de", "objet": "banc", "sens": "gauche"}
+    task = MoveTask()
+    task.gesture_emitted("fais le tour du banc", False, T0, gesture=dict(banc))
+    texte = task.on_reply({"demande": banc, "effect": "dropped", "reason": "trop_loin", "distance_m": 22.2,
+                           "source": "jeu"}, T0 + 0.1)
+    assert texte.startswith("Ton geste « faire le tour de banc » n'a PAS eu lieu : il est à 22 m d'ici, bien "
+                            "plus loin, ce n'est pas ce que tu vois autour de toi. Tu n'as pas bougé.")
+    sans = _tache_elephant().on_reply(_reponse("dropped", "trop_loin", source="jeu"), T0 + 0.1)
+    assert sans.startswith("Ton geste « faire le tour de elephant » n'a PAS eu lieu : c'est trop loin d'ici.")

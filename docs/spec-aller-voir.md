@@ -27,12 +27,15 @@ par POI : `desc` (≤ 6 mots, ce qu'on VOIT) et `alias` (liste de mots que
 David peut dire). Absent → `desc` = nom, `alias` = [].
 Lot A1 (02/11) : chaque objet porte aussi `x`, `y` (ancre du POI, m) pour
 que le sélecteur de jeu (`didier_jeu`, SIM-ONLY) oriente le regard vers
-l'objet d'une lubie ; champs additifs, chat_node ne lit que `name`/`desc`.
+l'objet d'une lubie ; champs additifs.
+15/11 : chaque objet porte aussi `"tour": true|false` (l'objet a un tour dans
+le fichier généré, §8.1) ; chat_node lit `name`, `desc` et `tour`.
 
 chat_node (vision), seulement si le mouvement à la voix est branché : ajoute
 au prompt de marche la liste « Objets que tu peux aller voir : anneaux
-(bagues géantes), flaque (…), … » — remplacée à chaque nouveau message, la
-session LLM n'est PAS réinitialisée.
+(bagues géantes), flaque (…), … », suivie de « Objets dont tu peux faire le
+tour : … » (ou « Tu ne peux faire le tour d'aucun objet. ») — remplacée à
+chaque nouveau message, la session LLM n'est PAS réinitialisée.
 
 ### 2.2 Intention — `rehearsal/chat_move` (chat_node → régisseur), étendu
 
@@ -238,7 +241,9 @@ de COLLISION du monde Gazebo :
   [TOUR_MIN_RADIUS_M ; TOUR_MAX_RADIUS_M], dir ∈ {1, −1}, finis.
 - Côté bouche : clé `"faire_le_tour": "<nom de la liste>"` (+ clé optionnelle
   `"sens": "gauche"|"droite"`), préséance stop > aller_voir > faire_le_tour >
-  tourner > avancer > go ; jamais en tour spontané.
+  tourner > avancer > go ; jamais en tour spontané. Depuis le 15/11, le nom
+  doit venir de la liste « Objets dont tu peux faire le tour » (§2.1) ; pour
+  un autre objet, le prompt dit de jouer l'impossibilité, sans la clé.
 
 ### 8.3 Arbitrage (régisseur) — comme aller_voir
 
@@ -260,10 +265,21 @@ comme go ; stop/off/cancel → cancel ; un nouvel ordre remplace l'ancien.
    DRIVE : à l'entrée, il pivote d'abord). Angle balayé INTÉGRÉ
    (Σ dir·wrap(Δθ), jamais négatif compté) ; ≥ 2π → FACE (vers C) → ARRIVED.
 3. SÉCURITÉ (en plus de toutes celles du DRIVE) : |d − r| > TOUR_MAX_DEV_M
-   (1,0) pendant ORBIT → abandon `off_track` ; délai = GOTO_TIMEOUT_S +
-   2πr / TOUR_MIN_MS (0,1) ; distance parcourue ≤ 1,5 × (|pose − E| + 2πr),
-   plancher min_travel_m ; calage, odom périmée, pose NaN, fader 0, cancel :
-   inchangés (zéro franc).
+   (1,0) pendant ORBIT → abandon `off_track` ; distance parcourue ≤ 1,5 ×
+   (|pose − E| + 2πr), plancher min_travel_m ; calage, odom périmée, pose NaN,
+   fader 0, cancel : inchangés (zéro franc).
+   DÉLAIS — deux budgets depuis le 16/11 (décision de David), abandon
+   `timeout` dans les deux cas, zéro franc :
+   - approche = max(GOTO_TIMEOUT_S, |pose − E| / TOUR_MIN_MS), compté depuis
+     l'ordre (avant la première pose : GOTO_TIMEOUT_S) ;
+   - orbite = GOTO_TIMEOUT_S + 2πr / TOUR_MIN_MS, compté depuis l'ENTRÉE sur
+     le cercle (FACE final compris) ; déjà sur le cercle : depuis l'ordre.
+   Avant, un seul délai (GOTO_TIMEOUT_S + 2πr / 0,1) courait depuis l'ordre :
+   le 15/11, le tour du banc (approche ~20 m au curseur, ~108 s) a abandonné
+   à mi-orbite. L'approche n'est pas bornée à 60 s comme un aller voir : elle
+   aurait abandonné aussi (≈ 108 s). NB : un aller voir de ~20 m au même
+   curseur dépasserait aussi ses 60 s (non changé). route_driver compte en
+   temps MURAL : sous un facteur temps réel < 1, tout dure plus longtemps.
 4. Tests purs : tour complet simulé (intégrateur cinématique) dans les deux
    sens, arrêt face au centre ; cancel immédiat ; fader 0 ; off_track
    (pose téléportée) ; calage ; timeout ; NaN ; bornes parse_order ;
@@ -358,3 +374,71 @@ moteur : continuation servie avant un prompt spontané, gestes émis en
 continuation, JAMAIS en spontané, garde armée, priorité du texte tapé.
 Mutation : budget, défaut sûr des raisons, spontaneous=False réservé à la
 continuation.
+
+### 9.6 Geste refusé ou sans réponse — il ne ment jamais sur ce qu'il a fait (15/11)
+
+Séance du 15/11 : « fais le tour de l'éléphant » ; l'éléphant n'a pas de tour
+(côté Loire), le régisseur refusait `no_tour` sans que le chat le sache — ou
+le sélecteur de jeu ne transmettait même pas (offre morte en silence, bloquée
+par l'arrêt de Didier de 120 s). La tâche restait ouverte, la réflexion
+imaginait le tour fini et Didier disait « j'ai fait le tour de l'éléphant »
+sans avoir bougé.
+
+- **Contrat** `rehearsal/chat_move_reply` (`didier_rehearsal/contracts.py`
+  `CHAT_MOVE_REPLY_TOPIC`, VOLATILE) : `{"demande": <dict de chat_move tel
+  que reçu>, "effect", "reason", "source"}`.
+  - Régisseur (`source: "director"`) : UNE réponse par geste arbitré
+    (aller_voir, tour_de, tourner, avancer ; jamais go/stop), `effect` =
+    celui du journal, `reason` = sous-raison d'`invalid`.
+  - Sélecteur de jeu (`source: "jeu"`, `jeu:=true`) : demande de la bouche
+    NON transmise (`dropped` + code `arrete`, `sans_superviseur`, `fatigue`,
+    `ignore`, `trop_tot`, `pas_retenu`, `degrade`), ou transmise et régisseur
+    muet 3 s (`no_reply`). Un déplacement refusé ou sans suite n'a pas eu
+    lieu : réfractaires et fatigue rendus.
+- **Chat** (`MoveTask.on_reply`, appariement par ÉGALITÉ de `demande` avec le
+  geste émis ; une réponse qui devance la notation du geste est gardée 2 s) :
+  `accepted` → le geste est accusé, seule `route_goto_result` le finit ;
+  tout autre effet → direction d'ÉCHEC rangée dans l'emplacement de
+  continuation (texte gravé) : « Ton geste « faire le tour de elephant » n'a
+  PAS eu lieu : impossible d'en faire le tour, il n'y a pas la place tout
+  autour (eau, mur ou obstacle). Tu n'as pas bougé. Ta tâche, demandée par
+  David : « … ». Dis-le en personnage, en une phrase : ne prétends JAMAIS
+  l'avoir fait. Ne redemande pas ce geste-là ; si un autre geste sert la
+  tâche, fais-le, sinon dis que tu ne peux pas, SANS clé de geste. » La tâche
+  reste ouverte (budget inchangé) ; une réplique sans geste la ferme.
+  Budget épuisé : la tâche se ferme mais l'échec est QUAND MÊME dit, et la
+  réplique ne peut plus émettre de geste. Raison inconnue → « le geste n'a pas
+  pu se faire » (défaut sûr : un échec).
+- **Borne** : ni accepté ni refusé en `ACK_TIMEOUT_S` = 8 s (le sélecteur
+  répond au plus tard vers 6 s) → même échec, « personne n'a donné suite »
+  (`MoveTask.check_ack`, timer de chat_node à 0,5 s).
+- **Prompt** : « Quand on te dit qu'un geste n'a PAS eu lieu, tu n'as pas
+  bougé : dis-le en personnage, ne prétends jamais l'avoir fait. »
+- **Séance du 15/11 21:21** (Didier disait ENCORE « j'ai fait le tour ») :
+  l'« aller voir l'éléphant » roulait encore quand David a demandé le tour.
+  Haiku a demandé le tour malgré la liste. L'arrivée de l'ancien aller_voir
+  (`name` « elephant ») a été prise pour la fin du tour. Le sélecteur avait
+  jeté le tour (même clé `bouche:elephant` que l'action en cours, « autre
+  chose l'a emporté »), et ce refus est arrivé trop tard. Trois corrections :
+  1. **Garde déterministe** (chat, `ConversationEngine.set_gesture_vocabulary`) :
+     un `faire_le_tour` dont l'objet (normalisé comme au régisseur) n'est pas
+     dans les tours possibles, ou un `aller_voir` hors des objets, n'est
+     JAMAIS publié. Il devient tout de suite une fin ÉCHOUÉE (`no_tour` si
+     l'objet est connu, `unknown` sinon). Les alias ne passent donc plus : le
+     prompt exige le nom exact. Sans vocabulaire reçu, le régisseur juge.
+  2. **Corrélation** : la réponse `accepted` porte `name`, le nom de l'ordre
+     (celui que `route_goto_result` renverra : « tour de elephant » ≠
+     « elephant »). Un geste n'est fini que par l'issue de CET ordre ; toute
+     autre issue est ignorée et journalisée (chat `MoveTask.on_result`,
+     sélecteur `issue_ignoree`). La réponse part AVANT l'ordre.
+  3. **Nouvelle demande pendant un geste** : la clé d'hystérésis d'une
+     demande de la bouche est la demande entière. Une nouvelle demande
+     interrompt donc l'ancienne (offre 0,9 = seuil de rupture) et part au
+     régisseur, qui répond. S'il la refuse, c'est l'échec de la NOUVELLE
+     demande qui est dit.
+- **Tests** : `didier_core/test/unit/test_director_*.py` (réponse publiée,
+  `tour` du vocabulaire), `didier_jeu/test/test_reponse_bouche.py` (séance
+  rejouée, codes, réfractaires rendus, `no_reply` à 4,4 s), `didier_vision`
+  `test_move_task.py` (textes, 8 s, réponse précoce, budget),
+  `test_conversation.py`, `test_stage.py`, `test_personas.py`. Mutations
+  vérifiées.

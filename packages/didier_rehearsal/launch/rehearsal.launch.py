@@ -13,8 +13,8 @@ Topologie : route_driver publie `cmd_vel_follow_raw` (remap) -> fault_relay
 (director) ne publie jamais de Twist : il parle aux relais, aux processus de la
 liste blanche, à route/route_speed, et journalise.
 
-Prérequis dans le conteneur sim : sim.launch.py world:=rue ET la chaîne roues
-(drive.launch.py use_sim_time:=true) — ce launch ne les lance PAS (aucun
+Prérequis (sim multi-conteneurs, L2b) : le conteneur monde lancé avec WORLD=rue ET la chaîne
+roues (vrai bringup du conteneur robot, use_sim_time) — ce launch ne les lance PAS (aucun
 mouvement automatique au démarrage). Le suivi de personne doit rester OFF
 (même créneau prio 20 du mux).
 

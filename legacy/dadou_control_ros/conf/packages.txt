@@ -13,7 +13,9 @@ pkg-config
 python3-pygame
 python3-numpy
 python3-pil
-python3-pil            # duplicate kept intentionally for legacy scripts that catenate the file
+# duplicate kept intentionally for legacy scripts that catenate the file (L2b : commentaire sur sa
+# propre ligne — le grep du Dockerfile x86 ne filtre que les lignes de commentaire entières)
+python3-pil
 python3-pil.imagetk
 python3-tk
 

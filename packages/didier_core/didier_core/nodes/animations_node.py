@@ -44,7 +44,8 @@ class AnimationsNode(Node):
         self.animations_manager = AnimationManager(config, robot_json_manager)
 
         # Lot L1d-2, barrière de jeu (décision 7 ter) : une piste roues non validée en sim n'est
-        # pas jouée. Paramètre vrai par défaut ; mis à faux par sim.launch.py SEUL, et ignoré
+        # pas jouée. Paramètre vrai par défaut ; mis à faux par la seule entrée sim (argument
+        # exiger_validation_roues de robot_app.launch.py, machines/sim/robot/entree.sh), et ignoré
         # hors domaine 43 (refus loggué) : il faut bien jouer en sim ce qu'on vient y valider.
         self.declare_parameter("exiger_validation_roues", True)
         demande = self.get_parameter("exiger_validation_roues").value

@@ -32,6 +32,9 @@ David, pas de pose), même acceptation (VoiceMove.accept_goto, GotoPolicy).
 « Faire le tour » (lot M3, spec §8.3) : decide_tour — objet résolu comme
 « aller voir », refus « no_tour » s'il n'a pas de tour (fichier généré),
 mêmes refus ensuite, distance jugée au CENTRE du tour ; même acceptation.
+Réponse au geste (15/11, contracts.CHAT_MOVE_REPLY_TOPIC) : move_reply
+construit le payload que le node publie pour CHAQUE geste arbitré — le chat
+sait enfin qu'un refus a eu lieu (sinon Didier affirmait le geste).
 """
 from __future__ import annotations
 
@@ -689,15 +692,30 @@ class VoiceMove:
 
 # --- « Aller voir » (lot M1, spec-aller-voir.md) -------------------------------------
 
-def objects_payload(pois) -> str:
+def objects_payload(pois, tours=()) -> str:
     """Payload LATCHÉ de rehearsal/objects (spec §2.1) : JSON liste
-    [{"name", "desc", "x", "y"}] dans l'ordre de l'itinéraire, desc = nom si
-    absente. Les alias n'y sont PAS : ils servent à la résolution ici, pas au
-    prompt. x, y (m, repère du monde = ANCRE du POI, pas le centre de l'objet)
-    ajoutés au lot A1 (02/11) pour que le sélecteur de jeu oriente le regard
-    vers l'objet d'une lubie (SIM-ONLY) : champs ADDITIFS, chat_node ne lit
-    que name/desc (didier_vision/ai/stage.decode_objects_payload) et les ignore."""
-    return json.dumps([{"name": p.name, "desc": p.shown_desc, "x": p.x, "y": p.y} for p in pois])
+    [{"name", "desc", "x", "y", "tour"}] dans l'ordre de l'itinéraire, desc =
+    nom si absente. Les alias n'y sont PAS : ils servent à la résolution ici,
+    pas au prompt. x, y (m, repère du monde = ANCRE du POI, pas le centre de
+    l'objet) ajoutés au lot A1 (02/11) pour que le sélecteur de jeu oriente le
+    regard vers l'objet d'une lubie (SIM-ONLY). `tour` (15/11) : True si le
+    POI a un tour dans `tours` (noms -> Tour, fichier généré) — chat_node le
+    dit au LLM, qui ne propose plus un tour que le régisseur refuserait
+    (« no_tour » : Didier annonçait le tour de l'éléphant, collé à la Loire).
+    Champs ADDITIFS : chat_node lit name/desc/tour (didier_vision/ai/stage)."""
+    return json.dumps([{"name": p.name, "desc": p.shown_desc, "x": p.x, "y": p.y, "tour": p.name in tours}
+                       for p in pois])
+
+
+def move_reply(demande, effect: str, reason: str | None = None, name: str | None = None) -> str:
+    """Payload de rehearsal/chat_move_reply (contracts.CHAT_MOVE_REPLY_TOPIC)
+    pour un geste arbitré ICI : la demande TELLE QUE REÇUE (le chat apparie par
+    égalité avec ce qu'il a émis), l'effet du journal, la sous-raison, et
+    `name` = nom de l'ORDRE parti sur route_goto quand il est accepté (celui que
+    route_goto_result renverra : « tour de elephant » ≠ « elephant ») — le chat
+    et le sélecteur n'attribuent à une demande que l'issue de SON ordre."""
+    return json.dumps({"demande": demande, "effect": effect, "reason": reason, "name": name,
+                       "source": "director"}, ensure_ascii=False)
 
 
 def resolve_object(text, pois) -> Poi | None:

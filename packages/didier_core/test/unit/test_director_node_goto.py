@@ -45,14 +45,20 @@ def _ordres(noeud):
     return [json.loads(m) for m in _publie(noeud, "route_goto")]
 
 
+def _reponses(noeud):
+    """Réponses au geste (rehearsal/chat_move_reply, 15/11)."""
+    return [json.loads(m) for m in _publie(noeud, "rehearsal/chat_move_reply")]
+
+
 def test_vocabulaire_latche_au_demarrage(regisseur, monkeypatch, tmp_path):
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
     qos = n.qos_publieurs["rehearsal/objects"]
     assert (qos.depth, qos.durability) == (1, "TRANSIENT_LOCAL")
     assert [json.loads(m) for m in _publie(n, "rehearsal/objects")] == [
         # x, y (ancre du POI) : ajoutés au lot A1 (sélecteur de jeu, regard vers l'objet).
-        [{"name": "banc", "desc": "banc", "x": 5.0, "y": 0.0},
-         {"name": "flaque", "desc": "flaque", "x": 12.0, "y": 0.0}]]
+        # tour (15/11) : aucun fichier de tours dans ce banc -> False partout.
+        [{"name": "banc", "desc": "banc", "x": 5.0, "y": 0.0, "tour": False},
+         {"name": "flaque", "desc": "flaque", "x": 12.0, "y": 0.0, "tour": False}]]
 
 
 def test_accepte_hors_seance_et_ordonne(regisseur, monkeypatch, tmp_path):
@@ -71,6 +77,25 @@ def test_refus_inconnu_rien_ne_part(regisseur, monkeypatch, tmp_path):
     _aller_voir(n, "pigeon")
     assert _aller_voirs(n) == [{"objet": "pigeon", "effect": "unknown"}]
     assert _ordres(n) == []
+    # Le refus revient au chat (15/11) : sans lui, Didier affirmait le geste.
+    assert _reponses(n) == [{"demande": {"cmd": "aller_voir", "objet": "pigeon"}, "effect": "unknown",
+                             "reason": None, "name": None, "source": "director"}]
+
+
+def test_reponse_acceptee_publiee(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _odom(n, 1.0, 0.0)
+    _aller_voir(n, "Le Banc")
+    assert _reponses(n) == [{"demande": {"cmd": "aller_voir", "objet": "Le Banc"}, "effect": "accepted",
+                             "reason": None, "name": "banc", "source": "director"}]
+    assert n.qos_publieurs["rehearsal/chat_move_reply"] == 10          # VOLATILE : jamais rejouée
+
+
+def test_go_stop_sans_reponse_au_geste(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _voix(n, "go")
+    _voix(n, "stop")
+    assert _reponses(n) == []                       # go/stop ne sont pas des gestes
 
 
 def test_refus_route_off_par_david_rien_ne_part(regisseur, monkeypatch, tmp_path):

@@ -35,7 +35,8 @@ ou une relecture adverse avant le terrain = Fable.
   lib, télécommande) et `packages/didier_vision/.venv`. Tests du cœur :
   `cd packages/didier_core && ../../.venv/bin/python -m pytest -q -o addopts=` (les six suites :
   `docs/operations.md`, CI `.github/workflows/tests.yml`) ;
-  sim : `machines/sim/banc-robot` (depuis L1e-4c, 11/11). Vision = `packages/didier_vision` depuis L1e-3d
+  sim : `machines/sim/docker-compose.yml` (L2b, 16/11 : 4 conteneurs `didier-sim-monde|robot|vision|telecommande`,
+  épreuves dans `didier-sim-monde` ; séance complète : `machines/sim/seance-chantiers.sh`, `--stop`). Vision = `packages/didier_vision` depuis L1e-3d
   (08/11 ; `DIDIER_VISION_DATA_DIR` ; tests : `cd packages/didier_vision &&
   .venv/bin/python -m pytest -q -o addopts=`).
   Télécommande : encore sous `legacy/`.

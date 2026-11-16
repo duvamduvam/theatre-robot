@@ -8,6 +8,7 @@ la fonction testée ne teste rien) — bornes à la seconde près, tirages seed�
 (plafond 60 s, péremption 120 s, phantom ponctuel) est retiré.
 """
 import json
+import pathlib
 import random
 
 import pytest
@@ -321,6 +322,25 @@ def test_objets_elements_invalides_sautes_desc_absente_vide():
     assert stage.decode_objects_payload(raw) == [("grue", ""), ("titan", "")]
 
 
+def test_tours_champ_tour_true_seulement():
+    # 15/11 : défaut SÛR — absent, false, "true" (chaîne), 1 = pas de tour.
+    raw = ('[{"name": " anneaux ", "tour": true}, {"name": "elephant", "tour": false}, '
+           '{"name": "grue_jaune"}, {"name": "flaque", "tour": "true"}, {"name": "banc", "tour": 1}, '
+           '{"desc": "sans nom", "tour": true}, 42, {"name": "poubelle_tri", "desc": "bacs", "tour": true}]')
+    assert stage.decode_tours_payload(raw) == ["anneaux", "poubelle_tri"]
+
+
+@pytest.mark.parametrize("raw", ["", "pas du json", '{"name": "a", "tour": true}', None])
+def test_tours_payload_illisible_vide(raw):
+    assert stage.decode_tours_payload(raw) == []
+
+
+def test_tours_meme_plafond_que_les_objets():
+    raw = json.dumps([{"name": f"o{i}", "tour": True} for i in range(60)])
+    tours = stage.decode_tours_payload(raw)
+    assert len(tours) == 40 and tours[-1] == "o39"
+
+
 def test_objets_liste_vide_valable():
     assert stage.decode_objects_payload("[]") == []
 
@@ -341,3 +361,31 @@ def test_objets_bornes_longueurs_et_nombre():
     assert len(objets) == 40
     assert objets[0] == ("n" * 40, "d" * 60)
     assert objets[-1] == ("o38", "")
+
+
+def test_normalisation_identique_au_regisseur():
+    # Exemples GRAVÉS de didier_rehearsal.route.normalize_name (docstring + articles).
+    assert stage.normalize_object_name("Les Anneaux !") == "anneaux"
+    assert stage.normalize_object_name("table_basse") == "table basse"
+    assert stage.normalize_object_name("l'eau") == "eau"
+    assert stage.normalize_object_name("L'Éléphant") == "elephant"
+    assert stage.normalize_object_name(12) == ""
+    route = (pathlib.Path(__file__).resolve().parents[3] / "didier_rehearsal" / "didier_rehearsal"
+             / "route.py").read_text(encoding="utf-8")
+    assert ('_ARTICLES = frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "au", '
+            '"aux"))') in route
+    assert stage.OBJECT_ARTICLES == frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d",
+                                               "au", "aux"))
+
+
+def test_objets_proches_decodes_tolerant():
+    raw = json.dumps([{"name": "carrousel", "distance_m": 2.2, "cote": "droite"},
+                      {"name": "table_basse", "distance_m": 4.0, "cote": "devant"},
+                      {"name": "x", "distance_m": -1, "cote": "devant"}, {"name": "y", "distance_m": 1, "cote": "haut"},
+                      {"name": "z", "distance_m": True, "cote": "devant"}, 42,
+                      {"name": "elephant", "distance_m": 5.6, "cote": "derriere"}]
+                     + [{"name": f"o{i}", "distance_m": 9.0, "cote": "gauche"} for i in range(10)])
+    assert stage.decode_near_payload(raw) == [("carrousel", 2.2, "droite"), ("table_basse", 4.0, "devant"),
+                                              ("elephant", 5.6, "derriere"), ("o0", 9.0, "gauche"),
+                                              ("o1", 9.0, "gauche"), ("o2", 9.0, "gauche")]
+    assert stage.decode_near_payload("pas du json") == [] and stage.decode_near_payload('{"a": 1}') == []

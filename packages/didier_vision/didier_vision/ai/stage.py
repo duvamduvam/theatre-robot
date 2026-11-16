@@ -44,6 +44,7 @@ from __future__ import annotations
 import json
 import random
 import threading
+import unicodedata
 from collections import deque
 from typing import Optional, Sequence, Tuple
 
@@ -402,6 +403,87 @@ def decode_objects_payload(raw) -> list:
     if value and not objects:
         raise ValueError(f"objets : aucun élément valable (\"name\" manquant) : {raw!r}")
     return objects
+
+
+# Articles de tête retirés par normalize_object_name — MÊME liste que le
+# régisseur (didier_rehearsal/route.py _ARTICLES, gravée des deux côtés par
+# test_stage.py) : la garde du chat et la résolution du régisseur doivent
+# trouver le même objet.
+OBJECT_ARTICLES = frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "au", "aux"))
+
+
+def normalize_object_name(text) -> str:
+    """Clé de correspondance d'un nom d'objet, IDENTIQUE à
+    didier_rehearsal.route.normalize_name (minuscules, sans accents,
+    ponctuation et `_` en espaces, articles de tête retirés) ; non-chaîne -> ""."""
+    if not isinstance(text, str):
+        return ""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    plain = "".join(c for c in decomposed if not unicodedata.combining(c))
+    words = "".join(c if c.isalnum() else " " for c in plain).split()
+    while words and words[0] in OBJECT_ARTICLES:
+        words.pop(0)
+    return " ".join(words)
+
+
+def decode_tours_payload(raw) -> list:
+    """MÊME payload que decode_objects_payload (15/11) -> noms des objets dont
+    le régisseur sait faire le tour (`"tour": true`), dans l'ordre reçu, mêmes
+    rognage, troncature et plafond (OBJECTS_MAX éléments VALABLES lus). Défaut
+    SÛR : champ absent ou autre que true = pas de tour (on ne propose jamais un
+    tour que le régisseur refuserait). Payload illisible -> [] (le décodage
+    des objets, appelé d'abord, a déjà levé)."""
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(value, list):
+        return []
+    tours, seen = [], 0
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        if item.get("tour") is True:
+            tours.append(name.strip()[:OBJECT_NAME_MAX_CHARS])
+        seen += 1
+        if seen == OBJECTS_MAX:
+            break
+    return tours
+
+
+# Objets PROCHES (jeu/objets_proches, sélecteur de jeu, 15/11 21:29) : bornes.
+NEAR_MAX = 6
+NEAR_SIDES = ("devant", "gauche", "droite", "derriere")
+
+
+def decode_near_payload(raw) -> list:
+    """Payload de jeu/objets_proches -> [(name, distance_m, cote)] dans l'ordre
+    reçu (trié par distance côté producteur), au plus NEAR_MAX. TOLÉRANT
+    élément par élément (nom chaîne non vide, distance nombre fini >= 0, côté
+    connu) ; illisible -> [] (pas de ligne : mieux vaut rien qu'un faux voisin)."""
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(value, list):
+        return []
+    out = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        name, dist, side = item.get("name"), item.get("distance_m"), item.get("cote")
+        if not isinstance(name, str) or not name.strip() or side not in NEAR_SIDES:
+            continue
+        if isinstance(dist, bool) or not isinstance(dist, (int, float)) or not dist == dist \
+                or dist < 0 or dist == float("inf"):
+            continue
+        out.append((name.strip()[:OBJECT_NAME_MAX_CHARS], float(dist), side))
+        if len(out) == NEAR_MAX:
+            break
+    return out
 
 
 def encode_transcript(role: str, text: str, t_ms: int) -> str:

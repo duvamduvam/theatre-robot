@@ -50,6 +50,12 @@ class Pulsions:
         if deplacement:
             self.fatigue = _borne(self.fatigue + self.fatigue_par_deplacement)
 
+    def sur_deplacement_refuse(self) -> None:
+        """Le régisseur a refusé (ou ignoré) le déplacement choisi : Didier n'a
+        pas bougé, la fatigue que sur_action lui avait comptée est rendue
+        (l'ennui reste à 0 : il a quand même voulu agir)."""
+        self.fatigue = _borne(self.fatigue - self.fatigue_par_deplacement)
+
     def sur_piste_nee(self) -> None:
         self.curiosite = _borne(self.curiosite_saut)
 

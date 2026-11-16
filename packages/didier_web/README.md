@@ -25,8 +25,8 @@ Deux topics StringTime **latchés** (`qos.latched()` des deux côtés), noms dan
   absent (sim). Lu une fois au démarrage.
 
 Paramètres : `json_dir` (`/home/ros2_ws/json`), `deploy_sha_file` (`""` = `dev`),
-`refresh_period_s` (`2.0`). Lancé par `robot_app.launch.py` (robot) et
-`sim.launch.py` (sim), sous le namespace `/<ROBOT_NAME>/`.
+`refresh_period_s` (`2.0`). Lancé par `robot_app.launch.py` (robot, et conteneur robot de la sim
+depuis L2b), sous le namespace `/<ROBOT_NAME>/`.
 
 Le pont web lit `deploy_sha` (`TOPICS_LECTURE`) pour le badge version ; il ne lit
 PAS `catalogue` (la page garde `/api/catalog`).
@@ -46,7 +46,7 @@ the robot ».
 
 Paramètres : `data_dir` (`/home/ros2_ws/src/robot`, enfants `json/` et `medias/` — même chemin
 en sim et sur le Pi), `enabled` (`false`). Lancé TOUJOURS par `robot_app.launch.py` (variable
-`DATA_EDIT`) et `sim.launch.py` (argument `data_edit`, variable `DATA_EDIT` du compose sim) :
+`DATA_EDIT`, la même sur le Pi et dans le conteneur robot de la sim) :
 désactivé, il répond `edition_desactivee` à chaque demande. **Sur le vrai robot, l'activer est
 une décision de David** (spec L1d, décision 10). Au démarrage, il vide ses temporaires
 (`json/backup/.tmp/`, `medias/.tmp/`).
@@ -67,7 +67,7 @@ L'observateur de la porte sim : il regarde ce qui se joue (`animation_state` lat
 aux demandes de validation des roues (`validation_sim_demande`). Verdicts sur `validation_sim`.
 Critères et codes : `docs/interfaces.md` § « Sim gate ». Mince : la logique est dans
 `validation_sim.Observateur` (pure, horloge injectée), qui **refuse de se construire hors domaine
-43** — le registre ne s'écrit qu'en sim. Lancé par `sim.launch.py` seul, jamais sur le robot.
+43** — le registre ne s'écrit qu'en sim. Lancé par `complement_sim.launch.py` seul (conteneur robot de la sim), jamais sur le robot.
 
 Paramètres : `data_dir` (`/home/ros2_ws/src/robot`), `journal` (`/home/ros2_ws/log/robot.log`,
 le `LOGGING_FILE_NAME` de `didier_core`, égalité gravée). Écriture atomique (temporaire sous

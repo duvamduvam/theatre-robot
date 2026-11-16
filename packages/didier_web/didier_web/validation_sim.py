@@ -40,7 +40,8 @@ ATTENTE_ARRET_ROUES_MS = 1_000
 TENUE_MAX_MS = 10_000  # expression et lumière : min(duration, 10 s)
 
 # Nœuds dont l'absence en fin de jeu empêche le tampon (s'ils étaient là au départ).
-NOEUDS_SURVEILLES = ("animation_node", "face_sim_node", "leds_sim_node", "servos_sim_node",
+# L2b : `animations_node` = le nom donné par robot_app.launch.py (le vrai bringup tourne en sim).
+NOEUDS_SURVEILLES = ("animations_node", "face_sim_node", "leds_sim_node", "servos_sim_node",
                      "catalogue_node", "data_edit_node", "twist_deadman", "twist_mux", "wheels_bridge")
 NOEUD_VISAGE = "face_sim_node"
 NOEUD_LUMIERES = "leds_sim_node"

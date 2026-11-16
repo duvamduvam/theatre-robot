@@ -10,10 +10,15 @@ Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
         rehearsal/chat_move (la BOUCHE : ses demandes deviennent des intentions,
         son « stop » est relayé sans arbitrage), jeu/console (page scène),
         chat_situation, chat_transcript (parole entendue), mission_state (latché), route_state et route_state_cause (latchés),
-        route_goto_result, animation_state (latché), rehearsal/objects (latché),
+        route_goto_result, rehearsal/chat_move_reply (réponse du régisseur à un
+        geste ; les nôtres y reviennent aussi, filtrées par `source`),
+        animation_state (latché), rehearsal/objects (latché),
         /ground_truth/odom (SIM-ONLY : orienter le regard d'une lubie vers
         l'objet ; A2 le remplacera par la perception).
 Écrit : jeu/chat_move (-> régisseur, remappé par rehearsal.launch.py jeu:=true),
+        rehearsal/chat_move_reply (-> chat_node : demande de geste de la bouche
+        non transmise ou restée sans réponse, 15/11), jeu/objets_proches (1 Hz,
+        les 6 objets les plus proches avec distance et côté, contexte du chat),
         animation (nom de séquence), look (« regarder », gaze_follower),
         jeu/intention (latché, republié toutes les 0,5 s), jeu/journal (+ JSONL).
 
@@ -30,7 +35,7 @@ import os
 import time
 
 # Garde-fou AVANT tout import rclpy à effet : check_domain est pur.
-from didier_rehearsal.contracts import (CHAT_MOVE_TOPIC, OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
+from didier_rehearsal.contracts import (CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC,
                                        check_domain)
 from theatre_contrats import stringtime, topics
@@ -52,6 +57,9 @@ MISSION_STATE_TOPIC = "mission_state"
 # {"role": "david"|"didier", "text", "t_ms"} ; rôle david = parole entendue.
 # Littéral gravé avec CHAT_TRANSCRIPT_TOPIC de chat_node (test_contrat_node.py).
 TRANSCRIPT_TOPIC = "chat_transcript"
+# Objets proches (distance + côté) pour le contexte du chat (15/11 21:29),
+# littéral gravé avec chat_node (JEU_OBJETS_PROCHES_TOPIC), VOLATILE, 1 Hz.
+OBJETS_PROCHES_PERIODE_S = 1.0
 # Republication de l'intention latchée (porte T6 : jamais muette plus de 1 s).
 # 0,5 s et pas 1 s : le tick (0,1 s) ferait des écarts de 1,0 à 1,1 s, plus le
 # transport DDS — la porte se mesure côté abonné.
@@ -107,6 +115,8 @@ def main(args=None):
                 demarrage = None
 
             self.pub_move = self.create_publisher(StringTime, topics.JEU_CHAT_MOVE, 10)
+            self.pub_reply = self.create_publisher(StringTime, CHAT_MOVE_REPLY_TOPIC, 10)
+            self.pub_proches = self.create_publisher(StringTime, topics.JEU_OBJETS_PROCHES, 10)
             self.pub_anim = self.create_publisher(StringTime, topics.ANIMATION, 10)
             self.pub_look = self.create_publisher(StringTime, LOOK_TOPIC, 10)
             self.pub_intention = self.create_publisher(StringTime, topics.JEU_INTENTION, qos.latched())
@@ -128,12 +138,14 @@ def main(args=None):
             self.create_subscription(StringTime, ROUTE_STATE_CAUSE_TOPIC, self._json(self.sel.sur_route_cause),
                                      qos.latched())
             self.create_subscription(StringTime, ROUTE_GOTO_RESULT_TOPIC, self._json(self.sel.sur_goto_result), 10)
+            self.create_subscription(StringTime, CHAT_MOVE_REPLY_TOPIC, self._json(self.sel.sur_move_reply), 10)
             self.create_subscription(StringTime, topics.ANIMATION_STATE, self._json(self.sel.sur_animation_state),
                                      qos.latched())
             self.create_subscription(StringTime, OBJECTS_TOPIC, self._on_objects, qos.latched())
             self.create_subscription(Odometry, ODOM_TOPIC, self._on_odom, 10)
             self._t_intention = 0.0
             self.create_timer(tick_s, self._tick)
+            self.create_timer(OBJETS_PROCHES_PERIODE_S, self._publier_proches)
             self._vider()
 
         # --- entrées ------------------------------------------------------
@@ -196,11 +208,23 @@ def main(args=None):
                 self.sel.sorties.append(("intention", self.sel.intention(now)))
             self._vider()
 
+        def _publier_proches(self):
+            """Objets proches -> jeu/objets_proches (rien sans pose ni objets ;
+            mode dégradé : RelaisSeul n'a pas cette méthode)."""
+            calcul = getattr(self.sel, "objets_proches", None)
+            proches = calcul() if calcul is not None else []
+            if proches:
+                self.pub_proches.publish(StringTime(msg=json.dumps(proches, ensure_ascii=False),
+                                                    time=0, anim=False))
+
         def _vider(self):
             for sortie in self.sel.vider_sorties():
                 kind = sortie[0]
                 if kind == "chat_move":
                     self.pub_move.publish(StringTime(msg=json.dumps(sortie[1]), time=0, anim=False))
+                elif kind == "chat_move_reply":
+                    self.pub_reply.publish(StringTime(msg=json.dumps(sortie[1], ensure_ascii=False),
+                                                      time=0, anim=False))
                 elif kind == "animation":
                     self.pub_anim.publish(StringTime(msg=json.dumps(sortie[1]), time=0, anim=False))
                 elif kind == "look":

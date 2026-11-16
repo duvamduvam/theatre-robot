@@ -3434,6 +3434,9 @@ def test_tour_humain_avec_geste_ouvre_la_tache(timeline):
         _cleanup_beeps(engine)
     assert ordres == [TOUR_GAUCHE]
     assert task.is_open() and task.steps == 1
+    # 15/11 21:21 : seule l'issue de l'ordre ACCEPTÉ (nommé) finit le geste.
+    task.on_reply({"demande": TOUR_GAUCHE, "effect": "accepted", "reason": None,
+                   "name": "tour de poubelle_tri", "source": "director"}, time.monotonic())
     assert task.on_result(FIN_DU_TOUR, time.monotonic()) == CONTINUATION
 
 
@@ -3648,3 +3651,132 @@ def test_continuation_garde_armee_stop_crie_arrete_et_ferme(timeline):
     assert guard_vad.adopted == [7.5]            # garde armée (seuil repris)
     assert "player_interrupt" in _tags(timeline)
     assert not task.is_open()
+
+
+# --------------------------------------------------------------------------
+# Geste refusé (15/11, séance « fais le tour de l'éléphant ») : le moteur
+# signale à MoveTask le geste LUI-MÊME (appariement de la réponse du
+# régisseur) ; une continuation dont la tâche est déjà close ne bouge pas.
+# --------------------------------------------------------------------------
+
+TOUR_ELEPHANT = {"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}
+
+
+def test_geste_emis_apparie_au_refus_du_regisseur(timeline):
+    stage = StageState()
+    stage.push_text("fais le tour de l'éléphant")
+    task = MoveTask()
+    ordres = []
+    engine, _brain = _make_stage_engine(
+        timeline, stage, on_move=ordres.append, move_task=task,
+        brain_deltas=['Je file ! {"emotion": "happy", "faire_le_tour": "elephant"}'])
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == [TOUR_ELEPHANT]
+    refus = {"demande": TOUR_ELEPHANT, "effect": "no_tour", "reason": None, "source": "director"}
+    assert task.on_reply(refus, time.monotonic()).startswith(
+        "Ton geste « faire le tour de elephant » n'a PAS eu lieu : impossible d'en faire le tour")
+
+
+def test_continuation_d_une_tache_close_ne_bouge_pas(timeline, clock, caplog):
+    # Budget épuisé sur un refus : MoveTask ferme la tâche MAIS sert l'échec ;
+    # la réplique qui le dit ne doit rien enchaîner.
+    task = MoveTask()
+    task.gesture_emitted(TACHE, False, clock.t, gesture=dict(TOUR_ELEPHANT))
+    acceptee = {"demande": TOUR_ELEPHANT, "effect": "accepted", "reason": None,
+                "name": "tour de poubelle_tri", "source": "director"}
+    for k in range(2, 9):
+        task.on_reply(acceptee, clock.t)
+        assert task.on_result(FIN_DU_TOUR, clock.t) is not None
+        task.pop_continuation()
+        task.gesture_emitted(TACHE, True, clock.t, gesture=dict(TOUR_ELEPHANT))
+    refus = {"demande": TOUR_ELEPHANT, "effect": "no_tour", "reason": None, "source": "director"}
+    assert task.on_reply(refus, clock.t) is not None and not task.is_open()
+    engine, brain, ordres = _tache_engine(
+        timeline, clock, task, deltas=['Je réessaie. {"emotion": "sad", "avancer": 2}'])
+    try:
+        with caplog.at_level("WARNING", logger="didier_vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert brain.calls[0]["direction"].endswith("ne prétends JAMAIS l'avoir fait, et SANS clé de geste.")
+    assert ordres == []
+    assert "Clé \"avancer\" : 2 ignoré : la tâche est close (budget épuisé)." in [
+        r.message for r in caplog.records]
+
+
+# --------------------------------------------------------------------------
+# Séance du 15/11 21:21 : GARDE DÉTERMINISTE — un tour hors de la liste des
+# tours possibles (ou un aller_voir hors des objets) n'est JAMAIS publié ; il
+# devient tout de suite une fin de geste ÉCHOUÉE. Et l'arrivée de l'ancien
+# aller_voir ne termine jamais le tour.
+# --------------------------------------------------------------------------
+
+AV_ELEPHANT = {"cmd": "aller_voir", "objet": "elephant"}
+
+
+def _tour_humain(timeline, texte, delta, task, vocab=(["elephant", "poubelle_tri"], ["poubelle_tri"])):
+    stage = StageState()
+    stage.push_text(texte)
+    ordres = []
+    engine, _brain = _make_stage_engine(timeline, stage, on_move=ordres.append, move_task=task,
+                                        brain_deltas=[delta])
+    if vocab is not None:
+        engine.set_gesture_vocabulary(*vocab)
+    try:
+        assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    return ordres
+
+
+def test_seance_2121_tour_hors_liste_jamais_publie_et_jamais_termine(timeline, caplog):
+    task = MoveTask()
+    # 21:20:56 : aller_voir elephant parti et accepté (ordre « elephant »).
+    task.gesture_emitted("va voir l'éléphant", False, time.monotonic(), gesture=dict(AV_ELEPHANT))
+    task.on_reply({"demande": AV_ELEPHANT, "effect": "accepted", "reason": None, "name": "elephant",
+                   "source": "director"}, time.monotonic())
+    # 21:21:16 : « Peux-tu faire le tour de l'éléphant ? » — Haiku demande le tour quand même.
+    with caplog.at_level("WARNING", logger="didier_vision.ai.conversation"):
+        ordres = _tour_humain(timeline, "Peux-tu faire le tour de l'éléphant ?",
+                              'Bien sûr ! {"emotion": "happy", "faire_le_tour": "elephant"}', task)
+    assert ordres == []                                         # JAMAIS publié
+    assert "Clé \"faire_le_tour\" : 'elephant' non publié : no_tour (hors du vocabulaire du régisseur)." in [
+        r.message for r in caplog.records]
+    # 21:21:19 : l'ancien aller_voir arrive — ce n'est pas la fin du tour.
+    assert task.on_result({"name": "elephant", "result": "arrived", "reason": "arrived", "travelled": 3.17},
+                          time.monotonic()) is None
+    direction = task.pop_continuation()
+    assert direction == (
+        "Ton geste « faire le tour de elephant » n'a PAS eu lieu : impossible d'en faire le tour, il n'y a "
+        "pas la place tout autour (eau, mur ou obstacle). Tu n'as pas bougé. Ta tâche, demandée par David : "
+        "« Peux-tu faire le tour de l'éléphant ? ». Dis-le en personnage, en une phrase : ne prétends JAMAIS "
+        "l'avoir fait. Ne redemande pas ce geste-là ; si un autre geste sert la tâche, fais-le, sinon dis que "
+        "tu ne peux pas, SANS clé de geste.")
+    assert "terminé" not in direction and task.is_open()
+
+
+def test_aller_voir_hors_des_objets_jamais_publie(timeline):
+    task = MoveTask()
+    ordres = _tour_humain(timeline, "va voir le pigeon", 'J\'y vais. {"emotion": "happy", "aller_voir": "pigeon"}',
+                          task)
+    assert ordres == []
+    assert task.pop_continuation().startswith(
+        "Ton geste « aller voir pigeon » n'a PAS eu lieu : cet objet n'est pas dans ta liste, tu ne le trouves pas.")
+
+
+def test_tour_de_la_liste_publie_nom_normalise(timeline):
+    task = MoveTask()
+    ordres = _tour_humain(timeline, "fais le tour des poubelles",
+                          'Allons-y. {"emotion": "happy", "faire_le_tour": "la Poubelle_Tri"}', task)
+    assert ordres == [{"cmd": "tour_de", "objet": "la Poubelle_Tri", "sens": "gauche"}]
+    assert task.pop_continuation() is None
+
+
+def test_sans_vocabulaire_le_regisseur_juge(timeline):
+    task = MoveTask()
+    ordres = _tour_humain(timeline, "fais le tour de l'éléphant",
+                          'Hop. {"emotion": "happy", "faire_le_tour": "elephant"}', task, vocab=None)
+    assert ordres == [{"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}]

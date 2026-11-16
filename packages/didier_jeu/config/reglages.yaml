@@ -84,7 +84,22 @@ reprise:
   # (chat_transcript, rôle david) remet le compteur à zéro : jamais de « go »
   # tant que la scène parle (décision de David, 02/11). Sauf stop/ignore de la
   # console ; jamais de « go » automatique après un stop/off de David (31/10).
+  # Vaut pour SES arrêts hors geste demandé (lubie, approche de lui-même).
   delai_s: 90.0
+  # Après un GESTE demandé par la bouche (aller voir, tour, pivot, avancer),
+  # fini OU échoué, plus aucun geste ne roulant : il rejoint sa route tout
+  # seul après ce délai (David, 15/11 : « la route doit se remettre toute
+  # seule »). La parole ne remet PAS ce compteur à zéro (il écoute en marche,
+  # décision du 08/11). Annulé par un nouveau geste, un stop, une Route OFF de David.
+  apres_geste_s: 10.0
+
+geste:
+  # Un « aller voir » / « faire le tour » demandé par le CHAT au-delà de cette
+  # distance (m, pose -> ancre de l'objet) est refusé honnêtement, sans partir
+  # (15/11 21:29 : tour du banc accepté à 22 m, Didier a roulé le long de la
+  # route — le LLM confondait ce qu'il voyait avec la liste). Les ordres de la
+  # console (va_la) n'y sont pas soumis ; le régisseur garde sa borne de 40 m.
+  distance_max_chat_m: 10.0
 
 superviseur:
   # « suppose » (A1 sim, défaut) : présence supposée. « exigeant » : sans

@@ -76,6 +76,11 @@ par director.decide_tour sur les tours du fichier FRÈRE de l'itinéraire
 « no_tour »), journalisé `tour_de` (effect accepted | unknown | no_tour |
 invalid | route_off_by_david | no_pose | too_far), accepté EXACTEMENT comme
 « aller voir » (la lubie de l'objet tourné est sautée pendant le tour).
+RÉPONSE AU GESTE (15/11) : chaque aller_voir / tourner / avancer / tour_de
+arbitré publie sur rehearsal/chat_move_reply {demande, effect, reason,
+source "director"} (contracts.CHAT_MOVE_REPLY_TOPIC) — sans elle, un refus
+restait muet pour le chat et Didier affirmait le geste. Le vocabulaire
+d'objets porte `tour` (True si l'objet a un tour).
 Les éléments `t: poi` partent sur l'« enter » du POI (rehearsal/poi_event) ;
 un « enter » hors séance (avant START, après la fin) est journalisé
 `poi_enter_ignored` et PAS mémorisé : START doit précéder `route on`.
@@ -111,7 +116,7 @@ from theatre_contrats import stringtime
 
 from didier_core.diagnostic.journal import JournalWriter, make_event
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
-                                       CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
+                                       CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC,
                                        OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
                                        RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL,
@@ -120,7 +125,7 @@ from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD,
 from didier_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
                                       decide_forward, decide_goto, decide_tour, decide_turn, fader_moved,
                                       goto_order,
-                                      messages, objects_payload,
+                                      messages, move_reply, objects_payload,
                                       route_cmd_kind, speed_factor, speed_in_effect)
 from didier_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from didier_rehearsal.rehearsal_state import rehearsal_state
@@ -231,6 +236,10 @@ class DirectorNode(Node):
         # Ordres de manœuvre à route_driver. VOLATILE (un vieil ordre ne doit
         # pas rejouer) ; jamais de Twist ici.
         self.pub_goto = self.create_publisher(StringTime, ROUTE_GOTO_TOPIC, 10)
+        # Réponse à CHAQUE geste arbitré (accepté ou refusé, 15/11) : le chat
+        # dit le refus en personnage au lieu d'affirmer un geste qui n'a pas eu
+        # lieu ; le sélecteur de jeu clôt son engagement. VOLATILE.
+        self.pub_reply = self.create_publisher(StringTime, CHAT_MOVE_REPLY_TOPIC, 10)
         # Vocabulaire d'objets pour chat_node : LATCHÉ (chat_node relancé après
         # nous le reçoit quand même).
         self.pub_objects = self.create_publisher(
@@ -280,7 +289,7 @@ class DirectorNode(Node):
                                f"{len(self.scenario.faults)} pannes ({len(self.scenario.undrawn)} écartées "
                                f"au tirage), journal {self.journal_path}")
         self._publish_state()   # état initial (« attente ») latché dès le démarrage
-        self.pub_objects.publish(StringTime(msg=objects_payload(self._pois), time=0, anim=False))
+        self.pub_objects.publish(StringTime(msg=objects_payload(self._pois, self._tours), time=0, anim=False))
         if bool(self.get_parameter("autostart").value):
             self._start()
 
@@ -443,7 +452,7 @@ class DirectorNode(Node):
             raw = msg.msg.strip()
             cmd = stringtime.decode_or_raw(raw, CHAT_MOVE_TOPIC)
             if isinstance(cmd, dict) and cmd.get("cmd") == CHAT_MOVE_GOTO_CMD:
-                self._aller_voir(cmd.get("objet"))
+                self._aller_voir(cmd)
             elif isinstance(cmd, dict) and cmd.get("cmd") in (CHAT_MOVE_TURN_CMD, CHAT_MOVE_FORWARD_CMD):
                 self._geste(cmd)
             elif isinstance(cmd, dict) and cmd.get("cmd") == CHAT_MOVE_TOUR_CMD:
@@ -532,9 +541,19 @@ class DirectorNode(Node):
         return self.goto_policy.off_by_david(self.reenable.latched_state, self.reenable.cause,
                                              self.reenable.off_by_cmd)
 
-    def _aller_voir(self, objet):
+    def _reply(self, intent: dict, effect: str, reason=None, name=None):
+        """Réponse au geste (contracts.CHAT_MOVE_REPLY_TOPIC), APRÈS le journal :
+        une publication en échec ne doit ni taire le journal ni empêcher la
+        manœuvre acceptée (le chat borne lui-même une réponse manquante)."""
+        try:
+            self.pub_reply.publish(StringTime(msg=move_reply(intent, effect, reason, name), time=0, anim=False))
+        except Exception as e:   # noqa: BLE001 — jamais fatal (cf. docstring)
+            self.get_logger().error(f"chat_move_reply : {e!r}")
+
+    def _aller_voir(self, intent: dict):
         """« Aller voir » (lot M1) : arbitré, journalisé `aller_voir`, puis
         exécuté — arrêt vocal levé / lubie fermée, ordre sur route_goto."""
+        objet = intent.get("objet")
         now = time.monotonic()
         decision = decide_goto(objet, pois=self._pois, pose=self._fresh_pose(now),
                                off_by_david=self._off_by_david())
@@ -544,6 +563,8 @@ class DirectorNode(Node):
         if decision.distance is not None:
             payload["distance"] = round(decision.distance, 2)
         self.log("aller_voir", payload)
+        self._reply(intent, decision.effect,
+                    name=decision.poi.name if decision.effect == "accepted" else None)
         if decision.effect != "accepted":
             return
         self._accept_maneuver(decision.poi.name, goto_order(decision.poi), "aller_voir", now)
@@ -565,6 +586,8 @@ class DirectorNode(Node):
         if decision.name is not None:
             payload["name"] = decision.name
         self.log(kind, payload)
+        self._reply(intent, decision.effect, decision.reason,
+                    name=decision.name if decision.effect == "accepted" else None)
         if decision.effect == "accepted":
             self._accept_maneuver(decision.name, decision.order, kind, now)
 
@@ -584,6 +607,8 @@ class DirectorNode(Node):
         if decision.distance is not None:
             payload["distance"] = round(decision.distance, 2)
         self.log(CHAT_MOVE_TOUR_CMD, payload)
+        self._reply(intent, decision.effect, decision.reason,
+                    name=decision.name if decision.effect == "accepted" else None)
         if decision.effect == "accepted":
             self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TOUR_CMD, now,
                                   target=decision.poi.name)

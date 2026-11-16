@@ -33,10 +33,16 @@ def generate_launch_description():
         name="ai_node"
     )
 
+    # Barrière de jeu (L1d-2) : une piste roues non validée en sim n'est pas jouée. L2b (décision
+    # de David du 15/11) : argument `exiger_validation_roues`, VRAI par défaut (le robot n'en passe
+    # aucun) ; seule l'entrée du conteneur robot de la SIM (machines/sim/robot/entree.sh) le met à
+    # faux — et animations_node l'ignore hors domaine 43 (exiger_validation_roues() du cœur).
     animations_server_node = Node(
         package="didier_core",
         executable="animations_node",
-        name="animations_node"
+        name="animations_node",
+        parameters=[{"exiger_validation_roues": ParameterValue(
+            LaunchConfiguration("exiger_validation_roues"), value_type=bool)}],
     )
 
     audio_server_node = Node(
@@ -151,7 +157,8 @@ def generate_launch_description():
 
     # Pont web (didier_web) : supervision + contenus + panneau technique depuis
     # un navigateur -- http://192.168.1.2:8765, badge rouge ROBOT RÉEL (domain 42).
-    # SÉCURITÉ : drive_enabled n'est PAS passé -> false (défaut du node), le
+    # SÉCURITÉ : drive_enabled = argument web_drive, false par défaut (aucun
+    # argument sur le robot), le
     # publisher cmd_vel_web n'existe donc pas : le pilotage web reste SIM-ONLY
     # tant que test scénique au sol + protocole caméra ne sont pas faits
     # (docs/etude-interface-web.md §6). Retour vidéo (2026-07-11) : le flux
@@ -159,7 +166,13 @@ def generate_launch_description():
     # (JPEG ~5 i/s, la webcam lui appartient en exclusif, cf. dadou_vision_ros)
     # -> camera_compressed=True, les octets sont servis TELS QUELS en MJPEG
     # (zéro ré-encodage sur le Pi robot). json_dir = structure assemblée par
-    # Ansible (json/ à plat dans src/robot/, cf. docker-compose-sim.yml).
+    # Ansible (json/ à plat dans src/robot/, mêmes montages dans machines/sim/docker-compose.yml).
+    #
+    # L2b (spec L2, décision 15) : sept arguments, lus par CE nœud seul, dont les défauts sont
+    # EXACTEMENT les valeurs d'avant (robot : aucun argument passé, rien ne change). Seul le
+    # compose de la SIM en passe (machines/sim/robot/entree.sh) ; aucun machine.yml ni compose
+    # ARM ne les cite (gravé par test_robot_app_sim.py). `value_type` explicite partout : une
+    # LaunchConfiguration est une chaîne, et un topic vide ne doit pas être lu comme du YAML.
     web_bridge_node = Node(
         package="didier_web",
         executable="web_bridge",
@@ -169,10 +182,17 @@ def generate_launch_description():
         # défaut = src/robot, comme l'écrivain.
         parameters=[{
             "json_dir": "/home/ros2_ws/src/robot/json",
-            "camera_topic": "camera/image_raw/compressed",
-            "camera_compressed": True,
+            "camera_topic": ParameterValue(LaunchConfiguration("camera_topic"), value_type=str),
+            "camera_compressed": ParameterValue(LaunchConfiguration("camera_compressed"), value_type=bool),
             "data_edit_enabled": ParameterValue(
                 EnvironmentVariable("DATA_EDIT", default_value="false"), value_type=bool),
+            "web_port": ParameterValue(LaunchConfiguration("web_port"), value_type=int),
+            # SÉCURITÉ : drive_enabled et rehearsal_enabled restent faux sur le robot (défauts) ;
+            # le nœud ignore de toute façon rehearsal_enabled hors du domaine 43.
+            "drive_enabled": ParameterValue(LaunchConfiguration("web_drive"), value_type=bool),
+            "rehearsal_enabled": ParameterValue(LaunchConfiguration("rehearsal"), value_type=bool),
+            "perception_topic": ParameterValue(LaunchConfiguration("perception_topic"), value_type=str),
+            "exterior_topic": ParameterValue(LaunchConfiguration("exterior_topic"), value_type=str),
         }],
     )
 
@@ -238,5 +258,27 @@ def generate_launch_description():
                               default_value=EnvironmentVariable("ROBOT_NAME", default_value="didier"),
                               description="Nom du robot = namespace ABSOLU de tous les nœuds"
                                           " (défaut : variable ROBOT_NAME, sinon didier)"),
+        # L2b (décision 15) : les sept arguments du pont web, défauts = valeurs d'avant L2.
+        # `use_sim_time` n'est PAS déclaré ici : passé à `ros2 launch`, il atteint
+        # drive.launch.py, qui le déclare (fait 12 de la spec) — la chaîne roues est intouchée.
+        DeclareLaunchArgument("web_port", default_value="8765",
+                              description="Port HTTP/WebSocket du pont web"),
+        DeclareLaunchArgument("web_drive", default_value="false",
+                              description="SÉCURITÉ (SIM-ONLY) : pilotage roues du pont web ; faux sur le robot"),
+        DeclareLaunchArgument("rehearsal", default_value="false",
+                              description="SÉCURITÉ (SIM-ONLY) : boutons de répétition de la page scène ;"
+                                          " ignoré hors domaine 43"),
+        DeclareLaunchArgument("camera_topic", default_value="camera/image_raw/compressed",
+                              description="Flux vidéo de la page (robot : JPEG du Pi vision)"),
+        DeclareLaunchArgument("camera_compressed", default_value="true",
+                              description="true = camera_topic est un CompressedImage servi tel quel"),
+        DeclareLaunchArgument("perception_topic", default_value="",
+                              description="Ce que voit person_tracker (vide = panneau absent)"),
+        DeclareLaunchArgument("exterior_topic", default_value="",
+                              description="Caméra de poursuite de la sim (vide = panneau absent)"),
+        # L2b (décision de David du 15/11) : seul argument hors pont web, lu par animations_node.
+        DeclareLaunchArgument("exiger_validation_roues", default_value="true",
+                              description="SÉCURITÉ : barrière roues (piste non validée en sim = non jouée) ;"
+                                          " vrai sur le robot ; faux accepté en domaine 43 seulement"),
         GroupAction([PushRosNamespace(["/", LaunchConfiguration("robot_name")]), *group]),
     ])

@@ -27,6 +27,28 @@ PIÈGE (défaut SÛR) : seule une issue CONNUE poursuit la tâche (arrivée, ou
        abandon par une borne de manœuvre listée dans CONTINUE_REASONS) ; toute
        autre raison (cancel, stop, route on/off, raison inventée demain côté
        robot) FERME la tâche — ce qu'on ne connaît pas arrête Didier.
+GESTE REFUSÉ (15/11, séance : « fais le tour de l'éléphant », refusé faute
+       de tour ; la tâche restait ouverte, la réflexion imaginait le tour
+       fini et Didier affirmait « j'ai fait le tour de l'éléphant » sans avoir
+       bougé) : le régisseur — ou le sélecteur de jeu qui ne transmet pas —
+       répond à CHAQUE geste (rehearsal/chat_move_reply, `on_reply`, appariée
+       par égalité avec le geste émis). Un refus devient une fin de geste
+       ÉCHOUÉE : direction « n'a PAS eu lieu : <raison en clair> », servie
+       comme une continuation — Didier le dit en personnage, ne le prétend
+       jamais fait, et la tâche continue honnêtement (autre geste) ou se
+       ferme (réplique sans geste). Pas de réponse en ACK_TIMEOUT_S
+       (`check_ack`, appelé par le timer de chat_node) : même chose, raison
+       « personne n'a donné suite ». Une réponse ARRIVÉE AVANT que la
+       conversation ait noté son geste (le régisseur répond en quelques ms)
+       est gardée EARLY_REPLY_S et appliquée à la notation.
+CORRÉLATION (15/11 21:21, séance : « aller voir l'éléphant » roulait encore
+       quand David a demandé le tour ; l'ARRIVÉE de l'ancien aller_voir a été
+       prise pour la fin du tour -> « Ton geste « elephant » est terminé » ->
+       « j'ai fait le tour ») : un geste noté AVEC son dict n'est fini que par
+       l'issue de SON ordre — le `name` que le régisseur a rendu en l'acceptant
+       (« tour de elephant » ≠ « elephant »). Pas encore accepté, ou autre nom :
+       issue ignorée (journalisée). La réponse d'acceptation part AVANT
+       l'ordre (director_node._reply puis _accept_maneuver).
 """
 from __future__ import annotations
 
@@ -62,6 +84,90 @@ CONTINUE_REASONS = {
 _TASK_TAIL = ("Ta tâche, demandée par David : « {request} ». Si elle n'est pas finie, "
               "dis où tu en es en quelques mots et fais le geste suivant ; si elle est "
               "finie, dis-le en une phrase, SANS clé de geste.")
+
+# Geste REFUSÉ ou resté sans réponse (15/11, spec §9.6) — textes gravés dans
+# les tests. Délai au-delà duquel un geste ni accepté ni refusé est déclaré
+# sans suite : le sélecteur de jeu répond au plus tard ~6 s après la demande
+# (TTL de l'offre 3 s, ou décision + deplacement_accuse 3 s), le régisseur en
+# quelques ms. Réponse arrivée avant la notation du geste : gardée 2 s.
+ACK_TIMEOUT_S = 8.0
+EARLY_REPLY_S = 2.0
+ACCEPTED = "accepted"
+# Raisons EN CLAIR pour le LLM (2e personne : c'est Didier qui le dira).
+# Clés : effect du régisseur (contracts.CHAT_MOVE_REPLY_TOPIC) ; ("invalid",
+# sous-raison) ; codes du sélecteur de jeu (CHAT_MOVE_REPLY_JEU_REASONS) ;
+# "no_reply" (jeu) et NO_ANSWER (ce module). Inconnu -> REFUSAL_DEFAULT.
+NO_ANSWER = "sans_reponse"
+REFUSAL_REASONS = {
+    "unknown": "cet objet n'est pas dans ta liste, tu ne le trouves pas",
+    "no_tour": "impossible d'en faire le tour, il n'y a pas la place tout autour (eau, mur ou obstacle)",
+    "too_far": "c'est trop loin d'ici",
+    "no_pose": "tu ne sais pas où tu es en ce moment",
+    "route_off_by_david": "David a coupé ta route, tu ne bouges pas sans lui",
+    ("invalid", "recul"): "tu ne sais pas reculer",
+    ("invalid", "hors_bornes"): "c'est plus que ce que ton corps sait faire en un geste",
+    ("invalid", "sens"): "le sens du tour était incompréhensible",
+    "invalid": "ta demande de geste était incompréhensible",
+    "arrete": "tu es arrêté jusqu'à ce qu'on te dise de repartir",
+    "sans_superviseur": "personne ne te surveille, tu ne te déplaces pas seul",
+    "fatigue": "tu es trop fatigué pour te déplacer maintenant",
+    "trop_tot": "tu viens déjà de te déplacer, pas tout de suite",
+    "ignore": "on t'a dit de laisser ça de côté",
+    "pas_retenu": "ton corps ne t'a pas suivi",
+    "degrade": "ton corps ne répond qu'à « stop » et « go » en ce moment",
+    "no_reply": "personne n'a donné suite",
+    NO_ANSWER: "personne n'a donné suite",
+}
+REFUSAL_DEFAULT = "le geste n'a pas pu se faire"
+_REFUSED_TAIL = ("Ta tâche, demandée par David : « {request} ». Dis-le en personnage, en une "
+                 "phrase : ne prétends JAMAIS l'avoir fait. Ne redemande pas ce geste-là ; si un "
+                 "autre geste sert la tâche, fais-le, sinon dis que tu ne peux pas, SANS clé de geste.")
+_REFUSED_FINAL_TAIL = ("Ta tâche, demandée par David : « {request} », s'arrête là. Dis-le en "
+                       "personnage, en une phrase : ne prétends JAMAIS l'avoir fait, et SANS clé de geste.")
+
+
+def refusal_reason(payload) -> str:
+    """Réponse de refus (rehearsal/chat_move_reply) -> raison en clair.
+    Défaut SÛR : une raison inconnue reste un ÉCHEC (REFUSAL_DEFAULT)."""
+    effect = payload.get("effect") if isinstance(payload, dict) else None
+    reason = payload.get("reason") if isinstance(payload, dict) else None
+    if effect == "dropped" and reason == "trop_loin":
+        dist = payload.get("distance_m")
+        if isinstance(dist, (int, float)) and not isinstance(dist, bool) and 0 <= dist < 1e6:
+            return (f"il est à {round(dist):d} m d'ici, bien plus loin, ce n'est pas ce que tu vois "
+                    "autour de toi")
+        return REFUSAL_REASONS["too_far"]
+    if effect == "dropped":
+        return REFUSAL_REASONS.get(reason, REFUSAL_DEFAULT) if isinstance(reason, str) else REFUSAL_DEFAULT
+    for key in ((effect, reason), effect):
+        try:
+            if key in REFUSAL_REASONS:
+                return REFUSAL_REASONS[key]
+        except TypeError:   # clé non hachable (payload hostile)
+            break
+    return REFUSAL_DEFAULT
+
+
+def gesture_label(gesture) -> str:
+    """Geste émis (dict du contrat chat_move) -> libellé court pour le LLM."""
+    if not isinstance(gesture, dict):
+        return "?"
+    cmd = gesture.get("cmd")
+    if cmd == "aller_voir":
+        return f"aller voir {gesture.get('objet')}"
+    if cmd == "tour_de":
+        return f"faire le tour de {gesture.get('objet')}"
+    if cmd == "tourner":
+        return f"tourner de {gesture.get('angle_deg')}°"
+    if cmd == "avancer":
+        return f"avancer de {gesture.get('metres')} m"
+    return str(cmd)
+
+
+def refused_text(gesture, reason_text: str, request: str, final: bool) -> str:
+    """Direction d'un geste ÉCHOUÉ (texte EXACT gravé dans les tests)."""
+    head = f"Ton geste « {gesture_label(gesture)} » n'a PAS eu lieu : {reason_text}. Tu n'as pas bougé."
+    return head + " " + (_REFUSED_FINAL_TAIL if final else _REFUSED_TAIL).format(request=request)
 
 
 def _format_travelled(raw) -> str:
@@ -101,6 +207,15 @@ class MoveTask:
         # Emplacement de continuation (spec §9.2) : UN seul, la plus récente
         # remplace ; vidé par close().
         self._continuation: Optional[str] = None
+        # Geste en vol (dict du contrat, apparié aux réponses), quand il est
+        # parti, et s'il a été ACCEPTÉ (alors seule route_goto_result le finit).
+        self._gesture: Optional[dict] = None
+        self._emitted_at = 0.0
+        self._acked = False
+        # `name` de l'ordre accepté (route_goto_result de CE geste seulement).
+        self._expected_name: Optional[str] = None
+        # Réponse arrivée avant la notation de son geste : (payload, instant).
+        self._early: Optional[tuple] = None
 
     @property
     def steps(self) -> int:
@@ -112,7 +227,8 @@ class MoveTask:
         with self._lock:
             return self._request is not None
 
-    def gesture_emitted(self, request: str, continuation: bool, now: float) -> None:
+    def gesture_emitted(self, request: str, continuation: bool, now: float,
+                        gesture: Optional[dict] = None) -> None:
         """Une réplique NON spontanée vient d'émettre un geste de corps
         (aller_voir, tour_de, tourner, avancer — pas go/stop). Tour humain :
         NOUVELLE tâche (steps = 1). Tour de continuation : même tâche,
@@ -133,6 +249,12 @@ class MoveTask:
                 self._continuation = None
                 logger.info("Tâche ouverte : %r (geste 1/%d).", request, TASK_MAX_STEPS)
             self._awaiting = True
+            self._gesture, self._emitted_at, self._acked = gesture, now, False
+            self._expected_name = None
+            early, self._early = self._early, None
+            if (early is not None and gesture is not None and now - early[1] <= EARLY_REPLY_S
+                    and early[0].get("demande") == gesture):
+                self._apply_reply_locked(early[0], now)
 
     def close(self, reason: str) -> bool:
         """Ferme la tâche en cours (et vide l'emplacement de continuation).
@@ -150,6 +272,7 @@ class MoveTask:
         self._steps = 0
         self._awaiting = False
         self._continuation = None
+        self._gesture = None
         return had_task
 
     def on_result(self, payload, now: float) -> Optional[str]:
@@ -164,6 +287,13 @@ class MoveTask:
                 return None
             if not isinstance(payload, dict):
                 self._close_locked("résultat illisible")
+                return None
+            if self._gesture is not None and (not self._acked
+                                              or payload.get("name") != self._expected_name):
+                # Issue d'un AUTRE ordre (antérieur, ou du sélecteur) : pas celle
+                # du geste de la tâche (cf. docstring CORRÉLATION).
+                logger.info("Tâche : issue de %r ignorée (attendu %r).",
+                            payload.get("name"), self._expected_name)
                 return None
             reason = payload.get("reason")
             if reason == SUPERSEDED_REASON:
@@ -181,6 +311,52 @@ class MoveTask:
                                      payload.get("travelled"), self._request)
             self._continuation = text
             return text
+
+    def on_reply(self, payload, now: float) -> Optional[str]:
+        """Réponse au geste (rehearsal/chat_move_reply {demande, effect,
+        reason, source}). -> direction d'échec (aussi RANGÉE) ou None.
+        Appariée par ÉGALITÉ de `demande` avec le geste en vol ; sans geste
+        en vol, gardée EARLY_REPLY_S (elle a pu devancer la notation)."""
+        if not isinstance(payload, dict):
+            return None
+        with self._lock:
+            if self._request is None or not self._awaiting or self._gesture is None:
+                self._early = (payload, now)
+                return None
+            if payload.get("demande") != self._gesture:
+                return None   # le geste d'un autre (sélecteur, console) ou un ancien
+            return self._apply_reply_locked(payload, now)
+
+    def check_ack(self, now: float) -> Optional[str]:
+        """Borne de l'absence de réponse (timer de chat_node) : un geste ni
+        accepté ni refusé depuis ACK_TIMEOUT_S = échoué (« personne n'a donné
+        suite »). -> direction d'échec ou None."""
+        with self._lock:
+            if (self._request is None or not self._awaiting or self._gesture is None
+                    or self._acked or now - self._emitted_at < ACK_TIMEOUT_S):
+                return None
+            return self._apply_reply_locked({"effect": NO_ANSWER}, now)
+
+    def _apply_reply_locked(self, payload: dict, now: float) -> Optional[str]:
+        if payload.get("effect") == ACCEPTED:
+            self._acked = True
+            name = payload.get("name")
+            self._expected_name = name if isinstance(name, str) else None
+            return None
+        reason = refusal_reason(payload)
+        gesture, request = self._gesture, self._request
+        final = self._steps >= TASK_MAX_STEPS or now - self._opened_at >= TASK_MAX_S
+        logger.info("Tâche : geste %r refusé (%s)%s.", gesture, reason, ", budget épuisé" if final else "")
+        if final:
+            # Budget épuisé : la tâche se ferme, mais l'échec est QUAND MÊME dit
+            # (jamais de silence qui laisserait croire au geste) — la réplique
+            # n'enchaîne rien (conversation : geste refusé sans tâche ouverte).
+            self._close_locked("budget")
+        self._awaiting = False
+        self._gesture = None
+        text = refused_text(gesture, reason, request, final)
+        self._continuation = text
+        return text
 
     def pop_continuation(self) -> Optional[str]:
         """Consomme la continuation en attente, ou None (thread de conversation)."""

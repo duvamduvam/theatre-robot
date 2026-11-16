@@ -16,7 +16,8 @@ Les processus root hors conteneur restent où ils sont (rares, peu chargés) —
 soit. `liberer` le relit et rend tout, y compris après une fumée tuée (relancer `liberer` à la
 main suffit). Un PID n'est restauré que si son heure de démarrage n'a pas changé (PID réutilisé).
 
-Sous-commandes : reserver | maintenir | liberer  (--coeurs 8-15 --etat <fichier> --sim <conteneur>)
+Sous-commandes : reserver | maintenir | liberer  (--coeurs 8-15 --etat <fichier> --sim <conteneur>…)
+`--sim` est répétable (L2b) : la sim multi-conteneurs en compte quatre, aucun n'est poussé ailleurs.
 """
 from __future__ import annotations
 
@@ -26,6 +27,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
+# Les conteneurs de la sim multi-conteneurs (L2b), jamais poussés hors des cœurs réservés.
+CONTENEURS_SIM = ("didier-sim-monde", "didier-sim-robot", "didier-sim-vision", "didier-sim-telecommande")
 
 
 # --- Logique pure (testée) ------------------------------------------------------------------
@@ -94,10 +98,12 @@ def _docker(*args) -> str:
     return subprocess.run(["docker", *args], capture_output=True, text=True, check=True).stdout
 
 
-def _conteneurs(sauf: str):
+def _conteneurs(sauf):
+    """Les conteneurs vivants, sauf ceux de la sim (`sauf` : un nom ou une collection de noms)."""
+    exclus = {sauf} if isinstance(sauf, str) else set(sauf)
     for ligne in _docker("ps", "--format", "{{.ID}} {{.Names}}").splitlines():
         ident, nom = ligne.split(" ", 1)
-        if nom != sauf:
+        if nom not in exclus:
             yield ident, nom
 
 
@@ -118,7 +124,7 @@ def _ecrire_etat(fichier: Path, etat: dict) -> None:
     provisoire.replace(fichier)
 
 
-def deplacer(reserves: set[int], fichier: Path, sim: str, pids=None,
+def deplacer(reserves: set[int], fichier: Path, sim, pids=None,
              avec_conteneurs: bool = True) -> tuple[int, int]:
     """Une passe : pousse hors des réservés ce qui n'y a pas encore été poussé. Idempotent —
     `reserver` et `maintenir` sont la même passe. L'origine est notée AVANT le déplacement.
@@ -217,8 +223,12 @@ def main(argv=None) -> int:
     p.add_argument("--coeurs", default="8-15")
     p.add_argument("--etat", type=Path,
                    default=Path.home() / ".local/state/didier-fumee/coeurs.json")
-    p.add_argument("--sim", default="dadou-sim-container")
+    # Répétable (L2b) : un --sim par conteneur de la sim ; sans --sim, les quatre de la sim
+    # multi-conteneurs (machines/sim/docker-compose.yml).
+    p.add_argument("--sim", action="append", default=None)
     a = p.parse_args(argv)
+    if a.sim is None:
+        a.sim = list(CONTENEURS_SIM)
     if a.commande == "liberer":
         n_proc, n_cont = liberer(a.etat)
         print(f"cœurs rendus : {n_proc} processus, {n_cont} conteneurs restaurés")

@@ -140,6 +140,37 @@ ROUTE_GOTO_CANCEL = "cancel"
 # le DÉTAIL (timeout, max_travel, stalled, cancelled…) pour le journal ; la
 # source de vérité de l'état reste route_state (latché).
 ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
+# RÉPONSE à un geste demandé (15/11, défaut vu en séance : « fais le tour de
+# l'éléphant » refusé sans tour, Didier affirmait l'avoir fait) : StringTime
+# JSON {"demande": <le dict de chat_move tel que reçu>, "effect": …,
+# "reason": <sous-raison | null>, "name": <nom de l'ordre accepté | null>,
+# "source": "director" | "jeu"}, VOLATILE. `name` (régisseur, accepted) = le
+# `name` que route_goto_result renverra : seule l'issue de CET ordre finit la
+# demande (séance du 15/11 21:21 : l'arrivée d'un ancien « aller voir
+# elephant » était prise pour la fin du « tour de elephant »).
+#  - source "director" : UNE réponse par geste arbitré (aller_voir, tour_de,
+#    tourner, avancer ; jamais go/stop), effect = celui du journal
+#    (accepted | unknown | no_tour | invalid | route_off_by_david | no_pose |
+#    too_far), reason = sous-raison d'invalid (illisible, hors_bornes, recul, sens) ;
+#  - source "jeu" (sélecteur didier_jeu, jeu:=true) : la demande de la bouche
+#    n'a PAS été transmise (effect "dropped", reason = CHAT_MOVE_REPLY_JEU_REASONS)
+#    ou le régisseur s'est tu (effect "no_reply").
+# Consommateurs : chat_node (didier_vision.ai.move_task : un refus devient une
+# fin de geste ÉCHOUÉE, dite en personnage) et le sélecteur (fin d'engagement).
+# Le chat apparie par ÉGALITÉ de `demande` avec le geste qu'il a émis (le
+# sélecteur relaie la demande de la bouche telle quelle). Nom gravé des deux
+# côtés (CHAT_MOVE_REPLY_TOPIC de chat_node).
+CHAT_MOVE_REPLY_TOPIC = "rehearsal/chat_move_reply"
+CHAT_MOVE_REPLY_ACCEPTED = "accepted"
+CHAT_MOVE_REPLY_DROPPED = "dropped"
+CHAT_MOVE_REPLY_NO_REPLY = "no_reply"
+# Raisons d'un « dropped » du sélecteur (codes gravés des deux côtés : le chat
+# les traduit en clair, didier_vision.ai.move_task.REFUSAL_REASONS).
+# « trop_loin » (15/11 21:29) : aller_voir / tour_de de la bouche au-delà de
+# geste.distance_max_chat_m (réglage du sélecteur) ; la réponse porte alors
+# "distance_m" (ancre de l'objet, m, 0,1) pour que Didier dise où il est.
+CHAT_MOVE_REPLY_JEU_REASONS = ("arrete", "sans_superviseur", "fatigue", "trop_tot", "ignore",
+                               "pas_retenu", "degrade", "trop_loin")
 # Distance de jeu : Didier s'arrête à ce rayon de l'objet (m).
 GOTO_STANDOFF_M = 1.5
 # Plancher du standoff accepté par route_driver (revue M1) : en dessous, les

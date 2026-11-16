@@ -117,6 +117,12 @@ POURQUOI CHAT_MOVE_TOPIC (lot I1 « mouvement à la voix », 2026-10-22, spec
        Lot M4 (01/11, spec §9, tâche en cours) : abonnement
        ROUTE_GOTO_RESULT_TOPIC (même condition) -> didier_vision.ai.move_task : la
        fin d'un geste redonne la main à Didier, qui enchaîne le suivant.
+       15/11 (séance : « j'ai fait le tour de l'éléphant » sans avoir bougé) :
+       abonnement CHAT_MOVE_REPLY_TOPIC (même condition) — un geste refusé
+       (régisseur ou sélecteur de jeu) ou resté sans réponse
+       (MoveTask.check_ack, timer MOVE_ACK_PERIOD_S) devient une fin de geste
+       ÉCHOUÉE, dite en personnage ; les objets dont on peut faire le tour
+       (champ `tour` de REHEARSAL_OBJECTS_TOPIC) sont dits au LLM.
 POURQUOI les topics du METTEUR EN SCÈNE INTÉRIEUR (lot P, 2026-10-23, spec
        fermée dadou_robot_ros/docs/spec-metteur-en-scene.md) : la parole
        relit le tableau de situation (SITUATION_TOPIC) à chaque tour, sert
@@ -305,6 +311,25 @@ LOOK_TOPIC = "look"
 # cours (didier_vision.ai.move_task). QoS VOLATILE (comme côté robot) : une vieille
 # issue rejouée relancerait une tâche hors de propos.
 ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
+
+# Réponse à un geste demandé (15/11) : StringTime JSON {"demande", "effect",
+# "reason", "source"} publié par le régisseur (chaque geste arbitré) et par le
+# sélecteur de jeu (demande non transmise / régisseur muet) — contrat
+# didier_rehearsal/contracts.py CHAT_MOVE_REPLY_TOPIC. Écouté SEULEMENT si le
+# mouvement à la voix est branché : un refus devient une fin de geste ÉCHOUÉE
+# (didier_vision.ai.move_task.MoveTask.on_reply). VOLATILE (une vieille
+# réponse rejouée ferait dire un échec hors de propos).
+CHAT_MOVE_REPLY_TOPIC = "rehearsal/chat_move_reply"
+# Objets PROCHES (15/11 21:29) : StringTime JSON [{"name", "distance_m",
+# "cote"}] publié à 1 Hz par le sélecteur de jeu — contrat
+# theatre_contrats.topics.JEU_OBJETS_PROCHES (gravé des deux côtés). Écouté
+# SEULEMENT si le mouvement à la voix est branché ; la ligne « Autour de toi en
+# ce moment » s'ajoute aux objets, et tombe si le flux se tait NEAR_TTL_S.
+JEU_OBJETS_PROCHES_TOPIC = "jeu/objets_proches"
+NEAR_TTL_S = 3.0
+# Période du contrôle « geste resté sans réponse » (MoveTask.check_ack, borne
+# ACK_TIMEOUT_S) : 0,5 s suffit, la borne est de plusieurs secondes.
+MOVE_ACK_PERIOD_S = 0.5
 
 
 # --- Serveur de diagnostic web (vumètre + latences, cf. docstring de module
@@ -969,15 +994,25 @@ class ChatNode(Node):
         # Vocabulaire d'objets (cf. REHEARSAL_OBJECTS_TOPIC) : rien n'est
         # écouté sans mouvement à la voix — le prompt ne propose alors aucun
         # objet (et MOVE_TEMPLATE n'est pas dans le system prompt non plus).
+        # Ligne d'objets (rehearsal/objects) et objets proches (jeu/objets_proches) :
+        # composées ensemble par _refresh_objects_prompt (thread rclpy seul).
+        self._objects_line = ""
+        self._near_line, self._near_at = "", None
         if config["chat_move_enabled"]:
             self.create_subscription(
                 StringTime, REHEARSAL_OBJECTS_TOPIC, self._on_objects,
                 QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+            self.create_subscription(StringTime, JEU_OBJETS_PROCHES_TOPIC, self._on_near, 10)
+            self.create_timer(1.0, self._expire_near)
         # Issue des gestes (cf. ROUTE_GOTO_RESULT_TOPIC) : même condition, via
         # la tâche (créée seulement si le mouvement à la voix l'est).
         if self._move_task is not None:
             self.create_subscription(
                 StringTime, ROUTE_GOTO_RESULT_TOPIC, self._on_goto_result, 10)
+            # Réponse au geste (cf. CHAT_MOVE_REPLY_TOPIC) + borne du silence.
+            self.create_subscription(
+                StringTime, CHAT_MOVE_REPLY_TOPIC, self._on_move_reply, 10)
+            self.create_timer(MOVE_ACK_PERIOD_S, self._check_move_ack)
         # Metteur en scène intérieur (cf. docstring de module) : rien n'est
         # écouté si la réflexion est désactivée — StageState reste vide,
         # aucun tableau ni tour spontané ne peut atteindre la parole.
@@ -1227,10 +1262,16 @@ class ChatNode(Node):
         except ValueError as exc:
             self.get_logger().warning(f"{REHEARSAL_OBJECTS_TOPIC} refusé : {exc}")
             return
-        self._brain.set_objects_prompt(personas.objects_prompt(objects))
+        # Même payload : les objets dont on peut faire le tour (champ `tour`).
+        tours = stage.decode_tours_payload(ros_msg.msg)
+        self._objects_line = personas.objects_prompt(objects, tours)
+        self._refresh_objects_prompt()
+        # Garde déterministe des gestes (15/11 21:21) : hors vocabulaire, jamais publié.
+        self._engine.set_gesture_vocabulary([name for name, _desc in objects], tours)
         self.get_logger().info(
             f"objets à aller voir : {len(objects)} reçus "
-            f"({', '.join(name for name, _desc in objects)})")
+            f"({', '.join(name for name, _desc in objects)}) ; tour possible : "
+            f"{', '.join(tours) or 'aucun'}")
 
     def _on_goto_result(self, ros_msg):
         """Issue d'un geste (cf. ROUTE_GOTO_RESULT_TOPIC) : JSON illisible =
@@ -1247,6 +1288,42 @@ class ChatNode(Node):
         if self._move_task.on_result(payload, time.monotonic()) is not None:
             self.get_logger().info(
                 f"tâche : continuation (geste {self._move_task.steps}/{TASK_MAX_STEPS})")
+
+    def _refresh_objects_prompt(self):
+        """Objets + objets proches -> cerveau (sans reconfigure : spec §2.1)."""
+        line = " ".join(part for part in (self._objects_line, self._near_line) if part)
+        self._brain.set_objects_prompt(line)
+
+    def _on_near(self, ros_msg):
+        """Objets proches (cf. JEU_OBJETS_PROCHES_TOPIC) : illisible = pas de ligne."""
+        self._near_line = personas.near_prompt(stage.decode_near_payload(ros_msg.msg))
+        self._near_at = time.monotonic()
+        self._refresh_objects_prompt()
+
+    def _expire_near(self):
+        """Flux muet depuis NEAR_TTL_S : la ligne tombe (jamais un voisin périmé)."""
+        if self._near_line and (self._near_at is None or time.monotonic() - self._near_at > NEAR_TTL_S):
+            self._near_line = ""
+            self._refresh_objects_prompt()
+
+    def _on_move_reply(self, ros_msg):
+        """Réponse au geste (cf. CHAT_MOVE_REPLY_TOPIC) : JSON illisible =
+        warning, ignoré ; sinon MoveTask.on_reply (direction d'échec rangée
+        dans SON emplacement, servie par le moteur pendant l'écoute — jamais
+        de mic.stop() depuis ce thread, même règle que _on_goto_result)."""
+        try:
+            payload = stringtime.loads(ros_msg.msg)
+        except (ValueError, TypeError):
+            self.get_logger().warning(f"{CHAT_MOVE_REPLY_TOPIC} illisible : {ros_msg.msg!r}")
+            return
+        if self._move_task.on_reply(payload, time.monotonic()) is not None:
+            self.get_logger().info(f"tâche : geste refusé ({payload.get('effect')}"
+                                   f"/{payload.get('reason')}, {payload.get('source')})")
+
+    def _check_move_ack(self):
+        """Borne du geste resté sans réponse (MoveTask.check_ack)."""
+        if self._move_task.check_ack(time.monotonic()) is not None:
+            self.get_logger().warning("tâche : geste resté sans réponse, dit comme échoué")
 
     def _on_situation(self, ros_msg):
         """Tableau de situation (reflection_contract.SITUATION_TOPIC) : rangé

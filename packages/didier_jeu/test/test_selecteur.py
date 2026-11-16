@@ -9,7 +9,10 @@ import pytest
 from conftest import fabriquer
 
 OBJETS = [{"name": "anneaux", "desc": "bagues", "x": 10.0, "y": 10.0},
-          {"name": "flaque", "desc": "eau", "x": 30.0, "y": 0.0}]
+          {"name": "flaque", "desc": "eau", "x": 30.0, "y": 0.0},
+          # 15/11 : un objet à moins de geste.distance_max_chat_m (10 m) de la
+          # pose d'origine, pour les demandes de la bouche (flaque à 30 m : refusée).
+          {"name": "banc", "desc": "banc", "x": 5.0, "y": 0.0}]
 
 
 def jouer(sel, t0, t1, evenements=None, continu=None, dt=0.1):
@@ -425,8 +428,8 @@ def test_reviens_envoie_go():
 def test_bouche_aller_voir_devient_une_intention_ponderee():
     out = jouer(fabriquer(), 0.0, 2.0, [(0.0, marche),
                                         (0.5, lambda s, t: s.sur_chat_move_bouche({"cmd": "aller_voir",
-                                                                                  "objet": "flaque"}, t))])
-    assert moves(out) == [(0.8, {"cmd": "aller_voir", "objet": "flaque"})]
+                                                                                  "objet": "banc"}, t))])
+    assert moves(out) == [(0.8, {"cmd": "aller_voir", "objet": "banc"})]
     assert journal(out, "decision")[0][1]["action"] == "bouche"
 
 
@@ -605,7 +608,7 @@ def _bouche_puis_lubie(**surcharges):
     sel = fabriquer(surcharges, pools={})
     return jouer_avec_regisseur(sel, 60.0, [
         (0.0, marche),
-        (1.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "aller_voir", "objet": "flaque"}, t)),
+        (1.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "aller_voir", "objet": "banc"}, t)),
         # David relance (go console) : la reprise armée tombe, seul le réfractaire commun reste.
         (20.0, lambda s, t: s.sur_console({"cmd": "go"}, t)),
         (20.5, lambda s, t: s.sur_route_state("on", t)),
@@ -614,17 +617,32 @@ def _bouche_puis_lubie(**surcharges):
     ])
 
 
-def test_demande_de_la_bouche_compte_comme_arret_de_didier():
+def test_demande_de_la_bouche_n_est_pas_un_arret_de_didier():
+    """DÉCISION DE DAVID (15/11) : une demande de geste de la bouche vient d'un
+    humain — ni bloquée par l'arrêt de Didier de 120 s, ni comptée comme tel
+    (comme un ordre de la console). Avant : ni la lubie à 30 s ni l'avancer à
+    45 s ne partaient. Mutation (ARRET_DIDIER remis dans CATEGORIES["bouche"]) :
+    rouge."""
     out = _bouche_puis_lubie()
-    arrets = journal(out, "arret_didier")
-    assert [(t, p["kind"]) for t, p in arrets] == [(1.3, "bouche")]
-    assert "lubie" not in [a for _, a, _ in decisions(out)]               # < 120 s après
-    assert [m for _, m in moves(out)] == [{"cmd": "aller_voir", "objet": "flaque"}, "go"]
+    assert [(t, p["kind"]) for t, p in journal(out, "arret_didier")] == [(33.3, "lubie")]
+    assert decisions(out) == [(1.3, "bouche", "banc"), (30.3, "lubie", "anneaux"),
+                              (45.3, "bouche", "avancer")]
+    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "banc"}), (20.0, "go"), (33.3, "stop"),
+                          (45.3, {"cmd": "avancer", "metres": 1.0})]
 
 
-def test_mutation_refractaire_commun_des_arrets():
-    out = _bouche_puis_lubie(**{"refractaire_s.arret_didier": 0.0})
-    assert [p["kind"] for _, p in journal(out, "arret_didier")] == ["bouche", "lubie", "bouche"]
+def test_tache_va_voir_l_elephant_puis_tour_du_banc_10_s_apres():
+    """Décision de David (15/11) : les deux gestes d'une tâche partent au régisseur."""
+    sel = fabriquer(pools={})
+    out = jouer_avec_regisseur(sel, 20.0, [
+        (0.0, marche),
+        (1.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "aller_voir", "objet": "elephant"}, t)),
+        (11.0, lambda s, t: s.sur_chat_move_bouche({"cmd": "tour_de", "objet": "banc", "sens": "gauche"}, t)),
+    ])
+    # 11,6 s : fin du réfractaire « deplacement » (10 s après 1,3) + hystérésis 0,3 s.
+    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "elephant"}),
+                          (11.6, {"cmd": "tour_de", "objet": "banc", "sens": "gauche"})]
+    assert journal(out, "refus") == []
 
 
 def test_lubie_note_si_le_regard_est_parti():

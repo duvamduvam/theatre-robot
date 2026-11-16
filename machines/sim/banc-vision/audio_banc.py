@@ -6,7 +6,7 @@
     python3 machines/sim/banc-vision/audio_banc.py choisir defaut # suivre les réglages son d'Ubuntu
     python3 machines/sim/banc-vision/audio_banc.py choisir M50 --gain 0.3 --sans-redemarrer
 
-POURQUOI : la tête de Didier (chat_node, conteneur dadou-vision-x86) lit son micro
+POURQUOI : la tête de Didier (chat_node, conteneur didier-sim-vision) lit son micro
 et parle par deux alias ALSA, `casque_mic` et `mixette`, définis dans
 asound-pc.conf (monté sur /etc/asound.conf du conteneur). Jusqu'au 31/10 ils
 visaient le M50 par une adresse MAC ÉCRITE EN DUR : un autre casque, ou le M50
@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 
 CONF = Path(__file__).with_name("asound-pc.conf")
-CONTAINER = "dadou-vision-x86-container"
+CONTAINER = "didier-sim-vision"   # L2b : service vision de machines/sim/docker-compose.yml
 DEFAULT_IN, DEFAULT_OUT = "@DEFAULT_SOURCE@", "@DEFAULT_SINK@"
 
 # Blocs d'asound-pc.conf dont on réécrit la ligne `device` (contrat du fichier).

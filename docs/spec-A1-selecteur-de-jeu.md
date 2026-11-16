@@ -107,6 +107,7 @@ Règles gravées en tests (chiffres dans `reglages.yaml`, défauts = étude §4.
 | `jeu/console` | page scène → sélecteur | StringTime JSON `{"cmd": "va_la"\|"joue_avec"\|"ignore"\|"reviens"\|"plus_lent"\|"stop"\|"go", "cible": "<piste ou objet>"?, "presence": true}` ; la page renvoie `presence` à 2 Hz tant qu'elle est ouverte (battement) |
 | `jeu/intention` | sélecteur → page scène, télécommande (demain) | **latché**, JSON `{"action": "...", "cible": "...", "pourquoi": "offre:personne_proche 0.8 + curiosite 0.6", "t_ms": ..., "fin_prevue_ms": ...}` ; `{"action": "rien"}` au repos |
 | `jeu/chat_move` | sélecteur → régisseur | **même payload** que `rehearsal/chat_move` aujourd'hui (le régisseur ne change pas) |
+| `rehearsal/chat_move_reply` | sélecteur → chat_node | ajout du 15/11 (spec-aller-voir §9.6) : demande de geste de la bouche non transmise (`dropped` + code) ou régisseur muet (`no_reply`) ; le sélecteur lit aussi les réponses du régisseur (fin d'engagement, réfractaires rendus sur refus) |
 | `jeu/journal` | sélecteur → fichier JSONL (+ topic volatile pour la page) | une ligne par décision : offres vivantes, pulsions, scores des 3 meilleurs, choix, raison, et chaque refus |
 | entrées lues | `vision/person_box` (scriptée en A1), `rehearsal/poi_event`, `rehearsal/chat_move` (bouche), `chat_situation`, `mission_state`, `route_state`, `route_goto_result`, `animation_state` | existants |
 
@@ -128,7 +129,7 @@ qui passe vite à t=300 s ; silence ensuite) ; route ON ; 15 minutes.
 | # | Épreuve | Seuil |
 |---|---|---|
 | T1 | zéro oscillation | aucun couple de décisions différentes à < 2 s d'intervalle (journal) |
-| T2 | fréquences | aucune initiative spontanée à < 8 s de la précédente ; ≤ 1 arrêt de Didier par 120 s ; chaque arrêt précédé d'une intention publiée ≥ 3 s avant le `stop` |
+| T2 | fréquences | aucune initiative spontanée à < 8 s de la précédente ; ≤ 1 arrêt de Didier par 120 s (lubie, approche de lui-même ; pas une demande de geste de la bouche depuis le 15/11, §9) ; chaque arrêt précédé d'une intention publiée ≥ 3 s avant le `stop` |
 | T3 | réaction | pour chaque naissance de piste : une décision en ≤ 1 s (journal) |
 | T4 | console | `ignore` pendant une approche → aucune action vers cette piste pendant 30 s ; `va_la` → `aller_voir` accepté par le régisseur (`route_goto_result`) ; `stop` → Didier s'arrête en < 1 s et aucune initiative de déplacement jusqu'au `go` |
 | T5 | arrêt vocal | `rehearsal/chat_move: "stop"` depuis la bouche → relayé en < 200 ms, sans passer par le score (journal : `relais_stop`) |
@@ -176,3 +177,21 @@ séquences, garde-fou 43 effectif, aucun Twist), **pas montrable comme porte pas
 - Durcissements : « un arrêt par 2 min » couvre tout arrêt causé par Didier ; « réclamé ET
   amorcé » exige le regard parti ; épreuves sans fenêtres accommodantes ; `pourquoi` écrit
   pour un humain.
+- **Décision de David (15/11), révise le point 11** : une demande de GESTE de la bouche
+  (aller voir, faire le tour, tourner, avancer) n'est **plus** un arrêt de Didier, ni bloquée
+  par lui. Elle vient toujours d'un humain : un tour spontané ne bouge jamais Didier (B1). Elle
+  est donc traitée comme un ordre de la console. Sans cela, une tâche (« va voir l'éléphant,
+  puis fais le tour du banc ») ne pouvait pas enchaîner deux gestes à moins de 2 min (vu en
+  séance le 15/11). Restent : la fatigue et le réfractaire « deplacement » de 10 s ; un
+  déplacement refusé ne compte pas (spec-aller-voir §9.6). Test :
+  `test_tache_va_voir_l_elephant_puis_tour_du_banc_10_s_apres`.
+- **Décision de David (15/11 21:35), reprise après un geste** : une demande de geste de
+  la bouche finie OU échouée -> Didier rejoint sa route après `reprise.apres_geste_s` =
+  10 s, la parole ne remettant PAS ce compteur à zéro (il écoute en marche, 08/11).
+  Elle est annulée par un nouveau geste, un stop ou une Route OFF de David ; le `go`
+  de la bouche est relayé sans score. Les 90 s de silence restent pour les arrêts de
+  Didier (lubie, approche). Tests : `test_reprise_geste.py`.
+- **15/11 21:29, distances** : objets proches publiés pour le chat (`jeu/objets_proches`) ;
+  geste de la bouche au-delà de `geste.distance_max_chat_m` (10 m) refusé, distance
+  dite. Tests : `test_proximite.py` (scène réelle x ≈ 14 : banc à 22,2 m refusé,
+  table_basse à 4 m acceptée).

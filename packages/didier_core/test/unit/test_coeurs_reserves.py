@@ -132,6 +132,33 @@ def test_liberer_sans_etat_ne_fait_rien(tmp_path):
     assert cr.liberer(tmp_path / "absent.json") == (0, 0)
 
 
+def test_les_conteneurs_de_la_sim_ne_sont_jamais_pousses_ailleurs(tmp_path, monkeypatch):
+    """L2b : `--sim` répétable — les quatre conteneurs de la sim gardent les cœurs réservés, un
+    nom ou une collection de noms ; un homonyme partiel n'est pas la sim."""
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    (bin_ / "docker").write_text('#!/bin/sh\n[ "$1" = ps ] && printf "a1 didier-sim-monde\\nb2 didier-sim-robot\\n'
+                                 'c3 didier-sim-monde-2\\nd4 orgaia\\n"\nexit 0\n')
+    (bin_ / "docker").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_}:{os.environ['PATH']}")
+    assert list(cr._conteneurs(sauf=["didier-sim-monde", "didier-sim-robot"])) == [
+        ("c3", "didier-sim-monde-2"), ("d4", "orgaia")]
+    assert list(cr._conteneurs(sauf="didier-sim-monde")) == [
+        ("b2", "didier-sim-robot"), ("c3", "didier-sim-monde-2"), ("d4", "orgaia")]
+    assert cr.CONTENEURS_SIM == ("didier-sim-monde", "didier-sim-robot", "didier-sim-vision",
+                                 "didier-sim-telecommande")
+
+
+def test_sim_repetable_en_ligne_de_commande(tmp_path, monkeypatch):
+    vus = []
+    monkeypatch.setattr(cr, "deplacer", lambda reserves, etat, sim: vus.append(sim) or (0, 0))
+    assert cr.main(["maintenir", "--coeurs", "1", "--etat", str(tmp_path / "e.json"),
+                    "--sim", "didier-sim-monde", "--sim", "didier-sim-robot"]) == 0
+    assert cr.main(["maintenir", "--coeurs", "1", "--etat", str(tmp_path / "e.json")]) == 0
+    assert vus == [["didier-sim-monde", "didier-sim-robot"],
+                   ["didier-sim-monde", "didier-sim-robot", "didier-sim-vision", "didier-sim-telecommande"]]
+
+
 def test_refuse_de_reserver_tous_les_cpu(tmp_path, faux_docker):
     n = os.cpu_count()
     assert cr.main(["reserver", "--coeurs", f"0-{n - 1}", "--etat", str(tmp_path / "e.json")]) == 2

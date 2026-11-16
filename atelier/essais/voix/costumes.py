@@ -10,10 +10,10 @@ POURQUOI : étude répétition simulée §10 (palette du 07/10, jamais codée) +
        dans vision/audio/effects.py : ce banc ne touche pas à la prod.
 
 Exécution : dans le conteneur vision PC (piper + modèle + effects.py y sont) :
-    docker cp costumes.py dadou-vision-x86-container:/tmp/
-    docker exec dadou-vision-x86-container bash -c \
+    docker cp costumes.py didier-sim-vision:/tmp/
+    docker exec didier-sim-vision bash -c \
       'cd /tmp && PYTHONPATH=/home/ros2_ws/src/vision python3 costumes.py'
-    docker cp dadou-vision-x86-container:/tmp/costumes sorties/
+    docker cp didier-sim-vision:/tmp/costumes sorties/
 
 Pièges :
 - Les décalages de hauteur sont faits par RÉÉCHANTILLONNAGE : hauteur et débit

@@ -105,7 +105,7 @@ def test_un_compteur_n_est_vert_qu_a_la_valeur_gravee(ok, attendu, ko, statut):
 
 def test_ordre_canonique_des_epreuves():
     assert [i for i, _ in fp.EPREUVES] == [
-        "image", "demarrage", "rtf", "namespace", "catalogue", "parle", "edition", "chantiers", "a1"]
+        "image", "demarrage", "rtf", "namespace", "catalogue", "parle", "edition", "machines", "chantiers", "a1"]
 
 
 def test_verdict_global_premier_rouge_bloque():
@@ -120,8 +120,8 @@ def test_completer_marque_non_lancees_les_suivantes():
     complet = fp.completer_epreuves([{"id": "image", "statut": "vert"}, {"id": "rtf", "statut": "rouge"}])
     assert [(e["id"], e["statut"]) for e in complet] == [
         ("image", "vert"), ("demarrage", "non_lance"), ("rtf", "rouge"), ("namespace", "non_lance"),
-        ("catalogue", "non_lance"), ("parle", "non_lance"), ("edition", "non_lance"), ("chantiers", "non_lance"),
-        ("a1", "non_lance")]
+        ("catalogue", "non_lance"), ("parle", "non_lance"), ("edition", "non_lance"), ("machines", "non_lance"),
+        ("chantiers", "non_lance"), ("a1", "non_lance")]
 
 
 # --- git : les commits de docs/fumee ne rendent pas une fumée due ------------------
@@ -342,6 +342,7 @@ def test_page_verte_porte_sha_rtf_et_compteurs():
             {"id": "catalogue", "statut": "vert", "ok": 4, "attendu": 4, "ko": 0},
             {"id": "parle", "statut": "vert", "ok": 3, "attendu": 3, "ko": 0},
             {"id": "edition", "statut": "vert", "ok": 12, "attendu": 12, "ko": 0},
+            {"id": "machines", "statut": "vert", "ok": 5, "attendu": 5, "ko": 0},
             {"id": "chantiers", "statut": "vert", "ok": 21, "attendu": 21, "ko": 0, "duree_s": 585},
             {"id": "a1", "statut": "vert", "ok": 14, "attendu": 14, "ko": 0}]
     page = fp.rendre_page(resultat(tout))
@@ -361,7 +362,7 @@ def test_page_rouge_dit_ou_et_ce_qui_n_a_pas_ete_lance():
                 {"id": "rtf", "statut": "rouge", "obtenu": "0.49", "detail": "RTF 0.49 < 0.8"}]
     page = fp.rendre_page(resultat(epreuves, verdict="rouge", bloquant="rtf", rtf=0.49))
     assert "ROUGE à l&#x27;épreuve « Sonde du facteur temps réel (20 s) » : les suivantes n&#x27;ont pas été lancées." in page
-    assert page.count("non lancée") == 6   # namespace, catalogue, parle, edition (L1d), chantiers, a1
+    assert page.count("non lancée") == 7   # namespace, catalogue, parle, edition (L1d), machines (L2b), chantiers, a1
     assert "RTF 0.49 &lt; 0.8" in page                      # échappé
 
 
@@ -415,7 +416,8 @@ def test_valeurs_attendues_gravees_en_tete_du_script():
     src = _lire_sh()
     gravees = dict(re.findall(r"^(ATTENDU_[A-Z0-9]+)=(\d+)", src, re.M))
     assert gravees == {"ATTENDU_NAMESPACE": "5", "ATTENDU_CATALOGUE": "4", "ATTENDU_PARLE": "3",
-                       "ATTENDU_EDITION": "13", "ATTENDU_CHANTIERS": "21", "ATTENDU_A1": "14"}
+                       "ATTENDU_EDITION": "13", "ATTENDU_MACHINES": "5", "ATTENDU_CHANTIERS": "21",
+                       "ATTENDU_A1": "14"}
     assert re.search(r"^RTF_MIN_DEFAUT=0\.8$", src, re.M)
 
 
@@ -428,6 +430,9 @@ def test_les_compteurs_gravees_sont_ceux_des_scripts_de_verification():
     # validate-data-edit.sh : épreuves numérotées « verdict(…, "N. … ») » dans son python.
     edition = (SCRIPTS / "validate-data-edit.sh").read_text(encoding="utf-8")
     assert re.findall(r'"(\d+)\. \S', edition) == [str(n) for n in range(1, 14)]
+    # validate-machines.sh (L2b) : M1-M4 et M6, un verdict() chacun.
+    machines = (SCRIPTS / "validate-machines.sh").read_text(encoding="utf-8")
+    assert re.findall(r'^verdict\([^,]+, "(M\d)', machines, re.M) == ["M1", "M2", "M3", "M4", "M6"]
 
 
 def test_garde_fous_presents_dans_le_script():
@@ -602,17 +607,57 @@ def test_si_due_bloquee_recente_est_silencieuse(banc):
 def test_si_due_ne_touche_jamais_a_la_sim_de_quelqu_un(banc):
     depot, env, tmp = banc
     _commit(depot, "packages/code.txt", "code 2")
-    env = dict(env, FAUX_DOCKER_PS="dadou-sim-container\n")
+    env = dict(env, FAUX_DOCKER_PS="didier-sim-monde\n")
     p = _lancer(env, "--si-due")
     assert p.returncode == 0
-    assert "reporté : conteneur dadou-sim-container déjà présent" in _journal(tmp)
+    assert "reporté : conteneur didier-sim-monde déjà présent" in _journal(tmp)
     appels = (tmp / "appels.txt").read_text(encoding="utf-8").splitlines()
     assert not [a for a in appels if a.startswith(("rm", "compose", "stop", "kill", "exec"))]
 
 
+@pytest.mark.parametrize("conteneur", ["didier-sim-monde", "didier-sim-robot", "didier-sim-vision",
+                                       "didier-sim-telecommande"])
+def test_si_due_ne_touche_a_aucun_des_quatre_conteneurs_de_la_sim(banc, conteneur):
+    """L2b : chacun des quatre conteneurs de la sim multi-conteneurs, vivant, fait reporter."""
+    depot, env, tmp = banc
+    _commit(depot, "packages/code.txt", "code 2")
+    env = dict(env, FAUX_DOCKER_PS=f"autre-chose\n{conteneur}\n")
+    p = _lancer(env, "--si-due")
+    assert p.returncode == 0
+    assert f"reporté : conteneur {conteneur} déjà présent (running), pas touché" in _journal(tmp)
+    appels = (tmp / "appels.txt").read_text(encoding="utf-8").splitlines()
+    assert not [a for a in appels if a.startswith(("rm", "compose", "stop", "kill", "exec", "update"))]
+
+
+def test_un_homonyme_partiel_n_est_pas_la_sim(banc):
+    """Le nom doit être EXACT : un conteneur « didier-sim-monde-2 » n'est pas la sim. La fumée est
+    due (commit) ; elle passe le contrôle des conteneurs puis reporte sur la charge (seuil 0)."""
+    depot, env, tmp = banc
+    _commit(depot, "packages/code.txt", "code 2")
+    env = dict(env, FAUX_DOCKER_PS="didier-sim-monde-2\nxdidier-sim-robot\n", FUMEE_CHARGE_MAX="0")
+    p = _lancer(env, "--si-due")
+    assert p.returncode == 0
+    assert "déjà présent" not in _journal(tmp)
+    assert "reporté : charge trop haute" in _journal(tmp)
+
+
+def test_les_conteneurs_de_la_fumee_sont_ceux_du_compose():
+    import yaml
+    src = _lire_sh()
+    compose = yaml.safe_load((SCRIPTS / "docker-compose.yml").read_text(encoding="utf-8"))["services"]
+    assert "CONTENEURS=(didier-sim-monde didier-sim-robot didier-sim-vision didier-sim-telecommande)" in src
+    assert "SERVICES=(monde robot vision telecommande)" in src
+    assert [compose[s]["container_name"] for s in ("monde", "robot", "vision", "telecommande")] == [
+        "didier-sim-monde", "didier-sim-robot", "didier-sim-vision", "didier-sim-telecommande"]
+    assert "IMAGES=(didier-sim/monde:local didier-sim/robot:local didier-sim/vision:local didier-sim/telecommande:local)" in src
+    assert "DELAI_DEMARRAGE=600" in src
+    # La chaîne roues tourne dans le bringup du robot : la fumée ne la lance plus.
+    assert "drive.launch.py" not in "\n".join(l for l in src.splitlines() if not l.lstrip().startswith("#"))
+
+
 def test_et_dodo_refuse_et_n_eteint_pas_si_une_sim_existe(banc):
     _, env, tmp = banc
-    env = dict(env, FAUX_DOCKER_PS="dadou-sim-container\n")
+    env = dict(env, FAUX_DOCKER_PS="didier-sim-robot\n")
     p = _lancer(env, "--et-dodo")
     assert p.returncode == 2
     assert "REFUS" in p.stdout

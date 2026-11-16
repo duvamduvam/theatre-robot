@@ -2,7 +2,7 @@
 # L1d — preuve REJOUABLE de l'édition des données à travers le robot, en simulation (spec
 # theatre-robot/docs/spec-L1-contrats-donnees.md, « L1d », décision 15, épreuves 1 à 13), DANS le
 # conteneur sim (domaine 43) démarré avec
-# DATA_EDIT=true ANIMATIONS=true FACE=true.
+# DATA_EDIT=true FACE=true (L2b : machines/sim/docker-compose.yml, épreuve lancée dans monde).
 #   1. création d'une séquence -> ok, fichier présent, nom au catalogue en <= 5 s ;
 #   2. retouche (neck à 0.37) -> ok, octets exacts, sauvegarde, 2 lignes au journal ;
 #   3. jouée : animation_state porte le nom ET neck reçoit 0.37 (rechargement prouvé) ;
@@ -52,13 +52,14 @@ echo "=== édition à travers le robot sous $NS/ $(date +%T) ==="
 for essai in 1 2 3 4; do
   noeuds=$(ros2 node list --no-daemon --spin-time 5 2>/dev/null)
   manque=""
-  # animations_node se nomme « animation_node » (ANIMATION + "_node") : nom historique.
-  for n in data_edit_node animation_node face_sim_node catalogue_node validation_sim_node; do
+  # L2b : le nom du VRAI bringup (robot_app.launch.py, name="animations_node") fait foi ; l'ancienne
+  # sim lançait le nœud sans name= (« animation_node », ANIMATION + "_node").
+  for n in data_edit_node animations_node face_sim_node catalogue_node validation_sim_node; do
     grep -qx "$NS/$n" <<<"$noeuds" || manque="$manque $NS/$n"
   done
   [ -z "$manque" ] && break; sleep 2
 done
-[ -z "$manque" ] || { echo "PRÉCONDITION :$manque absent(s) (sim lancée avec DATA_EDIT=true ANIMATIONS=true FACE=true ?)"; exit 2; }
+[ -z "$manque" ] || { echo "PRÉCONDITION :$manque absent(s) (sim lancée avec DATA_EDIT=true FACE=true ?)"; exit 2; }
 lance "/twist_deadman( |$)" drive ros2 launch didier_drive drive.launch.py use_sim_time:=true
 sleep 5
 
@@ -141,6 +142,14 @@ def tourner(secondes, condition=lambda: False):
     return condition()
 
 tourner(10, lambda: pub_edit.get_subscription_count() > 0 and catalogue)
+# L2b (15/11) : `animation` a plusieurs abonnés répartis sur les conteneurs ; publier avant que
+# animations_node soit apparié perdait la commande (fumée du 15/11 13:38 : épreuve 3 à
+# animation_state [''], le robot n'a rien reçu). On attend qu'il soit dans le graphe ET que tous
+# les abonnés vus soient appariés — précondition seulement, rien de ce qui est mesuré ne change.
+def abonnes_animation():
+    return [i.node_name for i in node.get_subscriptions_info_by_topic(NS + "/animation")]
+tourner(20, lambda: "animations_node" in abonnes_animation()
+        and pub_anim.get_subscription_count() >= len(abonnes_animation()))
 compteur = [0]
 def envoyer(kind, mode, name, content, brut=None, **autres):
     compteur[0] += 1

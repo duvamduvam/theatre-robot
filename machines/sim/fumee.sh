@@ -23,18 +23,25 @@
 # rien sur ce code tant qu'aucun commit de code n'arrive (« bloquée » ; le rappel > 2 jours
 # reste). La décision lit les resultat.json (fumee_page.py), jamais le HTML.
 #
+# Sim multi-conteneurs depuis L2b (spec L2, décision 20) : machines/sim/docker-compose.yml, quatre
+# conteneurs (monde, robot, vision, telecommande). Les épreuves tournent dans `monde`, qui partage
+# son espace de processus avec les trois autres ; le robot y lance son VRAI bringup (chaîne roues
+# comprise, elle tourne dès le démarrage).
+#
 # Ordre (décision 3), arrêt au PREMIER rouge bloquant (les suivantes : « non lancée ») :
-#   image (reconstruite seulement si machines/sim/banc-robot a changé depuis la dernière verte)
-#   -> sim headless + colcon -> sonde RTF 20 s (rouge si < 0,8 : le reste n'est pas fiable)
-#   -> validate-namespace -> validate-catalogue -> animation parle -> validate-data-edit (L1d)
-#   -> chaîne roues + régisseur + regard, validate-rehearsal-chantiers (V-R3)
-#   -> sim relancée, validate-jeu-a1 (A1).        ≈ 40 min.
+#   images (reconstruites seulement si un chemin de CHEMINS_IMAGES a changé depuis la dernière verte)
+#   -> sim headless + colcon ×4 + nœuds attendus -> sonde RTF 20 s (rouge si < 0,8 : le reste
+#   n'est pas fiable) -> validate-namespace -> validate-catalogue -> animation parle
+#   -> validate-data-edit (L1d) -> validate-machines (L2b)
+#   -> régisseur (monde) + regard (robot), validate-rehearsal-chantiers (V-R3)
+#   -> sim relancée, validate-jeu-a1 (A1).        ≈ 45-50 min.
 #
 # Garde-fous :
-#   - domaine ROS 43 FORCÉ et revérifié dans le conteneur (42 = vrai robot, jamais) ;
-#   - un conteneur dadou-sim-container déjà présent = la sim de quelqu'un : on reporte (ou
-#     on refuse en forcé), on ne la tue JAMAIS ; la sim lancée ici est arrêtée quoi qu'il
-#     arrive (trap EXIT), après copie des journaux ;
+#   - domaine ROS 43 : en littéral dans le compose, revérifié dans CHACUN des quatre conteneurs
+#     (42 = vrai robot, jamais) ;
+#   - un conteneur de la sim déjà présent (l'un des quatre) = la
+#     sim de quelqu'un : on reporte (ou on refuse en forcé), on ne la tue JAMAIS ; la sim lancée
+#     ici est arrêtée quoi qu'il arrive (trap EXIT), après copie des journaux ;
 #   - verrou flock : jamais deux fumées en même temps ;
 #   - l'arbre de travail du dépôt n'est jamais modifié hors docs/fumee/ (le seul commit
 #     est `git commit -- docs/fumee`, sans -a ni add .). Arbre sale : on teste quand même,
@@ -65,6 +72,7 @@ ATTENDU_NAMESPACE=5     # validate-namespace.sh : sentinelles, topics, nœuds, t
 ATTENDU_CATALOGUE=4     # validate-catalogue.sh : 6 familles, sha dev, ajout, suppression
 ATTENDU_PARLE=3         # états vus dans l'ordre : "" -> "parle" -> ""
 ATTENDU_EDITION=13      # validate-data-edit.sh (L1d : épreuves 1 à 12, 13 = porte sim depuis L1d-2)
+ATTENDU_MACHINES=5      # validate-machines.sh (L2b : M1-M4, M6 ; 10 en L2c)
 ATTENDU_CHANTIERS=21    # validate-rehearsal-chantiers.sh (V-R3)
 ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
 RTF_MIN_DEFAUT=0.8
@@ -77,11 +85,22 @@ SORTIE="${FUMEE_SORTIE:-$SORTIE_DEFAUT}"
 RTF_MIN="${FUMEE_RTF_MIN:-$RTF_MIN_DEFAUT}"
 ETAT="${FUMEE_ETAT:-$HOME/.local/state/didier-fumee}"
 JOURNAL="$ETAT/journal.log"
-# L1e-4c (11/11) : le banc de la sim vit dans machines/sim/banc-robot/ (ex conf/docker/sim du robot).
-DOCKER_DIR="$DEPOT/machines/sim/banc-robot"
-CONTENEUR=dadou-sim-container
-IMAGE=dadouuu/dadou-sim-x86:latest
-CHEMIN_DOCKER_SIM="machines/sim/banc-robot"   # relatif au dépôt (git diff)
+# L2b : la sim multi-conteneurs (projet compose didier-sim). Un service = un conteneur = une image
+# locale, jamais poussée.
+DOCKER_DIR="$DEPOT/machines/sim"
+COMPOSE=docker-compose.yml
+SERVICES=(monde robot vision telecommande)
+CONTENEURS=(didier-sim-monde didier-sim-robot didier-sim-vision didier-sim-telecommande)
+IMAGES=(didier-sim/monde:local didier-sim/robot:local didier-sim/vision:local didier-sim/telecommande:local)
+# Chemins (relatifs au dépôt, git diff) dont un changement depuis la dernière verte reconstruit les
+# images (décision 20) : la sim, les Dockerfiles et listes de paquets du robot et de la vision, la
+# conf de la télécommande legacy (son Dockerfile y vit).
+CHEMINS_IMAGES=(machines/sim machines/robot/docker machines/vision/docker
+                machines/robot/packages-docker.txt machines/robot/requirements.txt
+                machines/vision/packages-docker.txt machines/vision/requirements.txt
+                legacy/dadou_control_ros/conf)
+# Démarrage (décision 20) : colcon ×4 + nœuds attendus du robot et de la vision, 600 s au plus.
+DELAI_DEMARRAGE=600
 NB_COEURS="$(nproc)"
 # Cœurs réservés (08/11) : sous un pic de charge le RTF tombait à 0,76 ; sim seule sur 4 cœurs
 # rapides réservés = 0,987 (mesuré). Pendant la fumée SEULEMENT : tout est rendu à la fin.
@@ -200,27 +219,27 @@ else
 fi
 
 # --- Un conteneur sim déjà là est celui de quelqu'un : jamais touché --------------
-if [ -n "$(docker ps -a --filter "name=^${CONTENEUR}\$" --format '{{.Names}}')" ]; then
-  ETAT_C="$(docker inspect -f '{{.State.Status}}' "$CONTENEUR" 2>/dev/null || echo inconnu)"
+# Les quatre de la sim multi-conteneurs. Liste lue une fois, sans --filter (un nom exact par ligne).
+EXISTANTS="$(docker ps -a --format '{{.Names}}' 2>/dev/null || true)"
+for nom_c in "${CONTENEURS[@]}"; do
+  grep -qx -- "$nom_c" <<<"$EXISTANTS" || continue
+  ETAT_C="$(docker inspect -f '{{.State.Status}}' "$nom_c" 2>/dev/null || echo inconnu)"
   # Un conteneur ARRÊTÉ (exited/dead/created) ne fait tourner la sim de personne : c'est un reste
   # (vécu le 08/11 : PC éteint au bouton à 02:32 pendant une fumée → conteneur exited, et la
   # minuterie a reporté toute la matinée). On le retire (docker rm SANS -f : refuse s'il tourne)
   # et on continue. Seul un conteneur vivant (running/paused/restarting) reste intouchable.
   case "$ETAT_C" in
     exited|dead|created)
-      if docker rm "$CONTENEUR" >/dev/null 2>&1; then
-        journal "reste retiré : conteneur $CONTENEUR arrêté ($ETAT_C)"
-        ETAT_C=retire
+      if docker rm "$nom_c" >/dev/null 2>&1; then
+        journal "reste retiré : conteneur $nom_c arrêté ($ETAT_C)"
+        continue
       fi ;;
   esac
-fi
-if [ "${ETAT_C:-}" != retire ] && [ -n "$(docker ps -a --filter "name=^${CONTENEUR}\$" --format '{{.Names}}')" ]; then
-  ETAT_C="$(docker inspect -f '{{.State.Status}}' "$CONTENEUR" 2>/dev/null || echo inconnu)"
-  if [ "$MODE" = si-due ]; then reporter "conteneur $CONTENEUR déjà présent ($ETAT_C), pas touché"; fi
-  journal "refus : conteneur $CONTENEUR déjà présent ($ETAT_C)"
-  dit "REFUS : le conteneur $CONTENEUR existe déjà ($ETAT_C). C'est une sim à toi : arrête-la toi-même (docker rm -f $CONTENEUR) puis relance. Je ne la touche pas."
+  if [ "$MODE" = si-due ]; then reporter "conteneur $nom_c déjà présent ($ETAT_C), pas touché"; fi
+  journal "refus : conteneur $nom_c déjà présent ($ETAT_C)"
+  dit "REFUS : le conteneur $nom_c existe déjà ($ETAT_C). C'est une sim à toi : arrête-la toi-même (cd machines/sim && docker compose down) puis relance. Je ne la touche pas."
   exit 2
-fi
+done
 
 if [ "$MODE" = si-due ]; then
   # Une fumée sur autre chose que main ne dirait rien de main (et la décision « due ? »
@@ -289,27 +308,36 @@ fi
 # ---------------------------------------------------------------------------------
 epreuve() { python3 "$PAGE_PY" epreuve --jsonl "$JSONL" --id "$@"; }
 
-# Commande dans le conteneur, avec l'environnement ROS (le $ROS_DISTRO s'évalue DANS le conteneur).
-ros_dans() { docker exec "$CONTENEUR" bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && '"$1"; }
-ros_detache() { docker exec -d "$CONTENEUR" bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && '"$1"; }
-python_ros() { docker exec -i "$CONTENEUR" bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && python3 -'; }
+# Commande dans le conteneur d'un SERVICE (monde, robot, vision, telecommande), avec l'environnement
+# ROS (le $ROS_DISTRO s'évalue DANS le conteneur). Les épreuves et les sondes tournent dans `monde`.
+conteneur_de() { echo "didier-sim-$1"; }
+ros_dans() { docker exec "$(conteneur_de "$1")" bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && '"$2"; }
+ros_detache() { docker exec -d "$(conteneur_de "$1")" bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && '"$2"; }
+python_ros() { docker exec -i "$(conteneur_de monde)" bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && python3 -'; }
 
 attendre_processus() { # attendre_processus <motif> <présent|absent> <secondes>
+  # pgrep depuis `monde` : robot, vision et télécommande partagent son espace de processus.
   local motif=$1 voulu=$2 delai=$3 t0=$SECONDS present
   while [ $((SECONDS - t0)) -lt "$delai" ]; do
-    if docker exec "$CONTENEUR" pgrep -f "$motif" >/dev/null 2>&1; then present=présent; else present=absent; fi
+    if docker exec "$(conteneur_de monde)" pgrep -f "$motif" >/dev/null 2>&1; then present=présent; else present=absent; fi
     [ "$present" = "$voulu" ] && return 0
     sleep 2
   done
   return 1
 }
 
-recolter() { # recolter <nom> : copie hors conteneur AVANT son arrêt (les journaux meurent avec lui)
-  docker ps --format '{{.Names}}' | grep -qx "$CONTENEUR" || return 0
-  local d="$TMP/recolte-$1"; mkdir -p "$d/tmp"
-  docker logs "$CONTENEUR" >"$d/sim-docker.log" 2>&1 || true
-  docker cp "$CONTENEUR:/home/ros2_ws/log" "$d/ros2_ws-log" >/dev/null 2>&1 || true
-  docker exec "$CONTENEUR" bash -c 'cd /tmp && tar -cf - vr3-capture vja1 validate-*.log 2>/dev/null' \
+recolter() { # recolter <nom> : copie hors conteneurs AVANT leur arrêt (les journaux meurent avec eux)
+  docker ps --format '{{.Names}}' | grep -qx "$(conteneur_de monde)" || return 0
+  local d="$TMP/recolte-$1" s; mkdir -p "$d/tmp"
+  for s in "${SERVICES[@]}"; do
+    docker logs "$(conteneur_de "$s")" >"$d/$s-docker.log" 2>&1 || true
+  done
+  # log/ est partagé par monde et robot (robot.log, rehearsal/, jeu/, tickets/) ; vision et
+  # télécommande ont le leur.
+  docker cp "$(conteneur_de monde):/home/ros2_ws/log" "$d/ros2_ws-log" >/dev/null 2>&1 || true
+  docker cp "$(conteneur_de vision):/home/ros2_ws/log" "$d/vision-log" >/dev/null 2>&1 || true
+  docker cp "$(conteneur_de telecommande):/home/ros2_ws/log" "$d/telecommande-log" >/dev/null 2>&1 || true
+  docker exec "$(conteneur_de monde)" bash -c 'cd /tmp && tar -cf - vr3-capture vja1 validate-*.log 2>/dev/null' \
     | tar -xf - -C "$d/tmp" 2>/dev/null || true
   # Page légère : tout fichier > 1 Mo est réduit à ses 3000 dernières lignes.
   find "$d" -type f -size +1M | while read -r gros; do
@@ -323,23 +351,30 @@ recolter() { # recolter <nom> : copie hors conteneur AVANT son arrêt (les journ
 arreter_sim() {
   [ "$SIM_A_NOUS" = 1 ] || return 0
   dit "arrêt de la sim"
-  (cd "$DOCKER_DIR" && docker compose -f docker-compose-sim.yml down -t 20) >/dev/null 2>&1 || true
-  docker rm -f "$CONTENEUR" >/dev/null 2>&1 || true   # seulement le nôtre : SIM_A_NOUS=1
+  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" down -t 20) >/dev/null 2>&1 || true
+  local c
+  for c in "${CONTENEURS[@]}"; do   # seulement les nôtres : SIM_A_NOUS=1
+    docker rm -f "$c" >/dev/null 2>&1 || true
+  done
   SIM_A_NOUS=0
 }
 
 epingler_sim() { # la sim sur les cœurs réservés, et le reste du PC poussé ailleurs (une fois)
   [ -n "$COEURS" ] || return 0
-  docker update --cpuset-cpus "$COEURS" "$CONTENEUR" >/dev/null 2>&1 \
-    || { NOTES+=("cœurs réservés : épinglage de la sim sur $COEURS refusé par docker"); return 0; }
+  local c sims=()
+  for c in "${CONTENEURS[@]}"; do
+    docker update --cpuset-cpus "$COEURS" "$c" >/dev/null 2>&1 \
+      || { NOTES+=("cœurs réservés : épinglage de $c sur $COEURS refusé par docker"); return 0; }
+    sims+=(--sim "$c")
+  done
   [ -z "$MAINTIEN_PID" ] || return 0
   # Reliquat d'une fumée tuée (état encore présent) : on rend d'abord, on réserve ensuite.
   python3 "$COEURS_PY" liberer --etat "$ETAT/coeurs.json" >/dev/null 2>&1 || true
-  dit "$(python3 "$COEURS_PY" reserver --coeurs "$COEURS" --etat "$ETAT/coeurs.json" --sim "$CONTENEUR" 2>&1 || true)"
+  dit "$(python3 "$COEURS_PY" reserver --coeurs "$COEURS" --etat "$ETAT/coeurs.json" "${sims[@]}" 2>&1 || true)"
   # Les processus lancés PENDANT la fumée (un nouvel onglet, un build) héritent de leur parent,
   # déjà poussé ; ceux qui naîtraient ailleurs sont rattrapés par cette passe toutes les 15 s.
   ( while sleep 15; do
-      python3 "$COEURS_PY" maintenir --coeurs "$COEURS" --etat "$ETAT/coeurs.json" --sim "$CONTENEUR" >/dev/null 2>&1 || true
+      python3 "$COEURS_PY" maintenir --coeurs "$COEURS" --etat "$ETAT/coeurs.json" "${sims[@]}" >/dev/null 2>&1 || true
     done ) &
   MAINTIEN_PID=$!
 }
@@ -351,40 +386,78 @@ liberer_coeurs() { # idempotent : rend affinités et cpusets d'origine (aussi so
   dit "$(python3 "$COEURS_PY" liberer --etat "$ETAT/coeurs.json" 2>&1 || true)"
 }
 
-demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis attend colcon + bridge
-  dit "démarrage de la sim (headless, domaine 43, colcon ≈ 1 min)"
-  # SIM_A_NOUS avant le `up` : même un échec en cours de route laisse un conteneur À NOUS,
+noeuds_attendus_vus() { # 0 si les noeuds_attendus des machine.yml robot ET vision sont vus depuis monde
+  python_ros <<'PY' >>"$TMP/demarrage.log" 2>&1
+# Nœuds attendus lus dans les machine.yml (montés en lecture seule dans monde), graphe vu en rclpy
+# (la CLI ros2 perd des messages sur ce PC) ; ≥ 5 s de découverte (3 s comptent trop peu, L2a).
+import sys, time
+import rclpy, yaml
+voulus = set()
+for m in ("robot", "vision"):
+    with open("/home/ros2_ws/machines/%s/machine.yml" % m, encoding="utf-8") as f:
+        voulus |= set(yaml.safe_load(f)["noeuds_attendus"])
+rclpy.init()
+n = rclpy.create_node("fumee_noeuds")
+debut = time.monotonic()
+while time.monotonic() - debut < 8:
+    rclpy.spin_once(n, timeout_sec=0.2)
+vus = {(ns.rstrip("/") + "/" + nom) for nom, ns in n.get_node_names_and_namespaces()}
+manque = sorted(voulus - vus)
+print("nœuds attendus : %d/%d%s" % (len(voulus) - len(manque), len(voulus), (" — manquent : " + " ".join(manque)) if manque else ""))
+sys.exit(1 if manque else 0)
+PY
+}
+
+demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis attend colcon ×4, pont, nœuds
+  dit "démarrage de la sim (4 conteneurs, headless, domaine 43, colcon ×4 ≈ 2-4 min)"
+  # SIM_A_NOUS avant le `up` : même un échec en cours de route laisse des conteneurs À NOUS,
   # que terminer() doit retirer (on a vérifié plus haut qu'aucun conteneur homonyme n'existait).
   SIM_A_NOUS=1
-  # ROS_DOMAIN_ID forcé ICI : le compose le lirait dans l'environnement de l'appelant.
-  (cd "$DOCKER_DIR" && env ROS_DOMAIN_ID=43 ROBOT_NAME=didier HEADLESS=true WORLD=chantiers \
-      REHEARSAL=true FACE=true WEB=true ANIMATIONS=true WEB_DRIVE=false DATA_EDIT=true \
-      docker compose -f docker-compose-sim.yml up -d) >>"$TMP/demarrage.log" 2>&1 || return 1
+  # Le domaine n'est PAS passé ici : le compose pose ROS_DOMAIN_ID=43 en littéral et ne le lit
+  # jamais dans l'environnement de l'appelant ; on le revérifie dans chaque conteneur ci-dessous.
+  (cd "$DOCKER_DIR" && env ROBOT_NAME=didier HEADLESS=true WORLD=chantiers \
+      REHEARSAL=true FACE=true WEB_DRIVE=false DATA_EDIT=true \
+      docker compose -f "$COMPOSE" up -d) >>"$TMP/demarrage.log" 2>&1 || return 1
   epingler_sim
-  local domaine; domaine="$(docker exec "$CONTENEUR" printenv ROS_DOMAIN_ID 2>/dev/null || echo ?)"
-  if [ "$domaine" != 43 ]; then echo "ROS_DOMAIN_ID=$domaine dans le conteneur : REFUS (43 exigé)" >>"$TMP/demarrage.log"; return 1; fi
-  # Prêt = colcon fini sans échec ET le bridge gz lancé (dernier maillon de sim.launch.py).
-  local t0=$SECONDS
-  while [ $((SECONDS - t0)) -lt 360 ]; do
-    if docker logs "$CONTENEUR" 2>&1 | grep -qE 'Failed +<<<|packages? failed'; then
-      echo "colcon build a échoué" >>"$TMP/demarrage.log"; docker logs "$CONTENEUR" >>"$TMP/demarrage.log" 2>&1; return 1
-    fi
-    if docker exec "$CONTENEUR" pgrep -f parameter_bridge >/dev/null 2>&1; then
+  local c s domaine
+  for c in "${CONTENEURS[@]}"; do
+    domaine="$(docker exec "$c" printenv ROS_DOMAIN_ID 2>/dev/null || echo ?)"
+    if [ "$domaine" != 43 ]; then echo "ROS_DOMAIN_ID=$domaine dans $c : REFUS (ROS_DOMAIN_ID=43 exigé)" >>"$TMP/demarrage.log"; return 1; fi
+  done
+  echo "domaine 43 lu dans les ${#CONTENEURS[@]} conteneurs" >>"$TMP/demarrage.log"
+  # Prêt = colcon fini sans échec dans les 4, le pont gz lancé, Gazebo vivant, puis les nœuds
+  # attendus du robot et de la vision vus depuis monde.
+  local t0=$SECONDS colcon_ok pont=0
+  while [ $((SECONDS - t0)) -lt "$DELAI_DEMARRAGE" ]; do
+    colcon_ok=0
+    for s in "${SERVICES[@]}"; do
+      c="$(conteneur_de "$s")"
+      docker ps --format '{{.Names}}' | grep -qx "$c" || { echo "le conteneur $c s'est arrêté" >>"$TMP/demarrage.log"; docker logs "$c" 2>&1 | tail -40 >>"$TMP/demarrage.log"; return 1; }
+      if docker logs "$c" 2>&1 | grep -qE 'Failed +<<<|packages? failed'; then
+        echo "colcon build a échoué dans $c" >>"$TMP/demarrage.log"; docker logs "$c" >>"$TMP/demarrage.log" 2>&1; return 1
+      fi
+      docker logs "$c" 2>&1 | grep -qE 'Summary: [0-9]+ packages? finished' && colcon_ok=$((colcon_ok + 1))
+    done
+    if [ "$pont" = 0 ] && docker exec "$(conteneur_de monde)" pgrep -f parameter_bridge >/dev/null 2>&1; then
       sleep 15   # laisse le monde se charger avant de mesurer quoi que ce soit
-      # Le bridge vit sans Gazebo : sans ce contrôle, un moteur de rendu mort (autorité X,
+      # Le pont vit sans Gazebo : sans ce contrôle, un moteur de rendu mort (autorité X,
       # GPU) ne se verrait qu'au RTF, sous une cause trompeuse.
-      if ! docker exec "$CONTENEUR" pgrep -f "gz sim" >/dev/null 2>&1; then
-        { echo "Gazebo (gz sim) est mort au démarrage — extrait du journal du conteneur :"
-          docker logs "$CONTENEUR" 2>&1 | grep -E "process has died|Segmentation|Authorization required|Unable to create the rendering" | tail -5 | cut -c1-300
+      if ! docker exec "$(conteneur_de monde)" pgrep -f "gz sim" >/dev/null 2>&1; then
+        { echo "Gazebo (gz sim) est mort au démarrage — extrait du journal de monde :"
+          docker logs "$(conteneur_de monde)" 2>&1 | grep -E "process has died|Segmentation|Authorization required|Unable to create the rendering" | tail -5 | cut -c1-300
         } >>"$TMP/demarrage.log"
         return 1
       fi
+      pont=1
+      echo "pont gz et Gazebo vivants après $((SECONDS - t0)) s" >>"$TMP/demarrage.log"
+    fi
+    if [ "$pont" = 1 ] && [ "$colcon_ok" = "${#SERVICES[@]}" ] && noeuds_attendus_vus; then
+      echo "colcon fini dans les ${#SERVICES[@]} conteneurs, nœuds attendus vus après $((SECONDS - t0)) s" >>"$TMP/demarrage.log"
       return 0
     fi
-    docker ps --format '{{.Names}}' | grep -qx "$CONTENEUR" || { echo "le conteneur s'est arrêté" >>"$TMP/demarrage.log"; return 1; }
-    sleep 3
+    sleep 5
   done
-  echo "bridge gz absent après 360 s" >>"$TMP/demarrage.log"; return 1
+  echo "sim incomplète après $DELAI_DEMARRAGE s (pont gz : $pont, colcon fini : ${colcon_ok:-0}/${#SERVICES[@]})" >>"$TMP/demarrage.log"; return 1
 }
 
 rechauffer_cli() {
@@ -394,14 +467,14 @@ rechauffer_cli() {
   # reproduit : même script relancé aussitôt = 5/5). On réchauffe donc le démon et on
   # lui laisse le temps de découvrir le graphe AVANT l'épreuve. (Défaut de ce script de
   # vérification, déclaré au rapport du lot F ; ici on ne touche pas aux scripts de test.)
-  ros_dans 'ros2 daemon start >/dev/null 2>&1; ros2 node list --spin-time 8 >/dev/null 2>&1' || true
+  ros_dans monde 'ros2 daemon start >/dev/null 2>&1; ros2 node list --spin-time 8 >/dev/null 2>&1' || true
   sleep 5
 }
 
 lancer_validation() { # lancer_validation <id> <script> <attendu> <motif de la ligne finale> <délai s>
   local id=$1 script=$2 attendu=$3 motif=$4 delai=$5 log="$TMP/$1.log" t0=$SECONDS rc=0 ligne ok ko detail=""
   dit "épreuve $id : $script (attendu $attendu OK, ≤ $((delai / 60)) min)"
-  timeout -k 15 "$((delai + 60))" docker exec "$CONTENEUR" timeout -k 10 "$delai" bash "/home/ros2_ws/$script" >"$log" 2>&1 || rc=$?
+  timeout -k 15 "$((delai + 60))" docker exec "$(conteneur_de monde)" timeout -k 10 "$delai" bash "/home/ros2_ws/$script" >"$log" 2>&1 || rc=$?
   ligne="$(grep -E "$motif" "$log" | tail -1 || true)"
   ok="$(sed -nE 's/.* ([0-9]+) OK, ([0-9]+) KO.*/\1/p' <<<"$ligne")"
   ko="$(sed -nE 's/.* ([0-9]+) OK, ([0-9]+) KO.*/\2/p' <<<"$ligne")"
@@ -416,12 +489,15 @@ lancer_validation() { # lancer_validation <id> <script> <attendu> <motif de la l
   [ "$ok" = "$attendu" ] && [ "$ko" = 0 ] && [ "$rc" = 0 ]
 }
 
-lancer_corps() { # lancer_corps <scénario chantiers|jeu-a1> <jeu:=true|''> : chaîne roues + régisseur + regard
+lancer_corps() { # lancer_corps <scénario chantiers|jeu-a1> <jeu:=true|''> : régisseur + regard
+  # L2b : la chaîne roues n'est plus lancée ici — elle fait partie du vrai bringup du conteneur
+  # robot (robot_app.launch.py use_sim_time:=true) et tourne dès le démarrage. La répétition vit
+  # dans monde, le regard (didier_core) dans robot.
   local scenario=$1 jeu=$2
   attendre_processus "lib/didier_rehearsal/director" absent 30 || true
-  ros_detache 'ros2 launch didier_drive drive.launch.py use_sim_time:=true'
-  ros_detache "ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=$scenario $jeu"
-  ros_detache 'ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
+  attendre_processus "/twist_deadman( |$)" présent 30 || return 1
+  ros_detache monde "ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=$scenario $jeu"
+  ros_detache robot 'ros2 run didier_core gaze_follower --ros-args -r __ns:=/didier'
   attendre_processus "lib/didier_rehearsal/director" présent 60 || return 1
   attendre_processus "gaze_follower" présent 60 || return 1
   sleep 20   # les nœuds finissent de s'apparier avant que le script de vérification ne les sonde
@@ -475,11 +551,27 @@ def lu(m):
 qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL, reliability=ReliabilityPolicy.RELIABLE)
 n.create_subscription(StringTime, NS + '/animation_state', lu, qos)
 pub = n.create_publisher(StringTime, NS + '/animation', 10)
+# L2b : `animation` a plusieurs abonnés (animations_node, web_bridge_node) dans des conteneurs
+# distincts ; « au moins un apparié » ne disait plus qu'animations_node l'était (vu le 14/11 :
+# ETATS=[""], rien reçu au journal du robot). On attend qu'il soit dans le graphe ET que tous
+# les abonnés vus soient appariés ; puis, comme pour toute commande idempotente (operations.md,
+# piège de la CLI), on vérifie PAR L'EFFET : sans « parle » en 5 s, on renvoie (3 envois au plus).
+def abonnes():
+    return [i.node_name for i in n.get_subscriptions_info_by_topic(NS + '/animation')]
 limite = time.monotonic() + 40
-while time.monotonic() < limite and (not etats or pub.get_subscription_count() < 1):
+while time.monotonic() < limite and (not etats or 'animations_node' not in abonnes()
+                                     or pub.get_subscription_count() < len(abonnes())):
     rclpy.spin_once(n, timeout_sec=0.2)
+print('ABONNES=%s apparies=%d' % (json.dumps(sorted(abonnes())), pub.get_subscription_count()))
 m = StringTime(); m.msg = json.dumps('parle'); m.time = 3000; m.anim = False
-pub.publish(m)
+for envoi in range(1, 4):
+    pub.publish(m)
+    fin_envoi = time.monotonic() + 5
+    while time.monotonic() < fin_envoi and 'parle' not in etats:
+        rclpy.spin_once(n, timeout_sec=0.2)
+    if 'parle' in etats:
+        break
+print('ENVOIS=%d' % envoi)
 limite = time.monotonic() + 20
 while time.monotonic() < limite and not (len(etats) >= 3 and etats[-1] == ''):
     rclpy.spin_once(n, timeout_sec=0.2)
@@ -496,20 +588,23 @@ PY
 # Phases (retour 1 = rouge bloquant : les suivantes ne sont pas lancées)
 # ---------------------------------------------------------------------------------
 phase_image() {
-  local t0=$SECONDS raison="" ref
+  local t0=$SECONDS raison="" ref image
   ref="$(python3 "$PAGE_PY" dernier-vert --sortie "$SORTIE")"
-  if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then raison="image absente"
+  for image in "${IMAGES[@]}"; do
+    docker image inspect "$image" >/dev/null 2>&1 || { raison="image $image absente"; break; }
+  done
+  if [ -n "$raison" ]; then :
   elif [ -z "$ref" ]; then raison="aucune fumée verte de référence"
   elif ! git -C "$DEPOT" cat-file -e "$ref^{commit}" 2>/dev/null; then raison="sha de référence $ref inconnu"
-  elif ! git -C "$DEPOT" diff --quiet "$ref" -- "$CHEMIN_DOCKER_SIM"; then raison="Dockerfile/compose sim modifié depuis ${ref:0:7}"
+  elif ! git -C "$DEPOT" diff --quiet "$ref" -- "${CHEMINS_IMAGES[@]}"; then raison="sim, Dockerfile ou liste de paquets modifiés depuis ${ref:0:7}"
   fi
   if [ -z "$raison" ]; then
-    epreuve image --statut vert --detail "inchangée depuis la dernière fumée verte (${ref:0:7}), non reconstruite" --duree 0
+    epreuve image --statut vert --detail "inchangées depuis la dernière fumée verte (${ref:0:7}), non reconstruites" --duree 0
     return 0
   fi
-  dit "reconstruction de l'image sim ($raison, 3-5 min)"
+  dit "reconstruction des ${#IMAGES[@]} images de la sim ($raison, cache : 1-5 min ; à froid ≈ 15 min)"
   IMAGE_RECONSTRUITE=1
-  if (cd "$DOCKER_DIR" && docker compose -f docker-compose-sim.yml build) >"$TMP/image.log" 2>&1; then
+  if (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build) >"$TMP/image.log" 2>&1; then
     epreuve image --statut vert --detail "reconstruite : $raison" --duree "$((SECONDS - t0))" --journal image.log
   else
     epreuve image --statut rouge --detail "la reconstruction a échoué ($raison)" --duree "$((SECONDS - t0))" --journal image.log
@@ -520,10 +615,10 @@ phase_image() {
 phase_demarrage() {
   local t0=$SECONDS
   if demarrer_sim; then
-    epreuve demarrage --statut vert --detail "conteneur $CONTENEUR, domaine 43, monde chantiers, headless" \
+    epreuve demarrage --statut vert --detail "${#CONTENEURS[@]} conteneurs, domaine 43 dans chacun, colcon ×${#SERVICES[@]}, nœuds attendus, monde chantiers, headless" \
       --duree "$((SECONDS - t0))" --journal demarrage.log
   else
-    epreuve demarrage --statut rouge --detail "la sim n'a pas démarré proprement (colcon, conteneur ou bridge)" \
+    epreuve demarrage --statut rouge --detail "la sim n'a pas démarré proprement (domaine, colcon, conteneur, pont gz ou nœuds attendus)" \
       --duree "$((SECONDS - t0))" --journal demarrage.log
     return 1
   fi
@@ -542,14 +637,15 @@ phase_rtf() {
     # Mode minuterie : un PC occupé n'est pas une panne -> reporté, aucune page.
     if [ "$MODE" = si-due ]; then reporter "RTF $RTF < $RTF_MIN (PC trop occupé pour une fumée fiable)"; fi
     local cause="RTF $RTF < $RTF_MIN : les épreuves suivantes ne seraient pas fiables, elles ne sont pas lancées"
-    grep -q 'messages=0' "$TMP/rtf.log" && cause="aucun message sur /clock en 120 s : Gazebo ne publie rien (voir sim-docker.log dans le .tar.gz)"
+    grep -q 'messages=0' "$TMP/rtf.log" && cause="aucun message sur /clock en 120 s : Gazebo ne publie rien (voir monde-docker.log dans le .tar.gz)"
     epreuve rtf --statut rouge --obtenu "$RTF" --detail "$cause" --duree "$((SECONDS - t0))" --journal rtf.log
     return 1
   fi
 }
 
 phase_simples() {
-  # À ce stade la sim tourne seule (mais drive/rehearsal/web sont lancés par les scripts eux-mêmes).
+  # À ce stade la sim tourne avec le vrai bringup du robot (chaîne roues et pont web compris) ;
+  # la répétition est lancée par les scripts eux-mêmes s'il la leur faut.
   rechauffer_cli
   lancer_validation namespace validate-namespace.sh "$ATTENDU_NAMESPACE" 'validate-namespace' 300 || return 1
   lancer_validation catalogue validate-catalogue.sh "$ATTENDU_CATALOGUE" 'validate-catalogue' 180 || return 1
@@ -560,14 +656,19 @@ phase_simples() {
   epreuve parle --ok "$ok" --attendu "$ATTENDU_PARLE" --ko "$((ATTENDU_PARLE - ok))" \
     --detail "$(grep '^ETATS=' <<<"$sortie" | tail -1)" --duree "$((SECONDS - t0))" --journal parle.log
   [ "$ok" = "$ATTENDU_PARLE" ] || return 1
-  # Édition à travers le robot (L1d) : lance puis arrête elle-même la chaîne roues (l'épreuve 7
-  # mesure la tenue de cmd_vel) ; restaure ce qu'elle écrit dans data/.
+  # Édition à travers le robot (L1d) : la chaîne roues tourne déjà (l'épreuve 7 mesure la tenue de
+  # cmd_vel) ; restaure ce qu'elle écrit dans data/.
   lancer_validation edition validate-data-edit.sh "$ATTENDU_EDITION" 'validate-data-edit' 300
+}
+
+phase_machines() {
+  # L2b (décision 21) : les machines de la sim sont toutes là et se parlent, vues depuis monde.
+  lancer_validation machines validate-machines.sh "$ATTENDU_MACHINES" 'validate-machines' 180
 }
 
 phase_chantiers() {
   PHASE_COURANTE=chantiers
-  lancer_corps chantiers '' || { epreuve chantiers --statut rouge --detail "chaîne roues / régisseur / regard non démarrés dans le conteneur"; return 1; }
+  lancer_corps chantiers '' || { epreuve chantiers --statut rouge --detail "chaîne roues absente, ou régisseur (monde) / regard (robot) non démarrés"; return 1; }
   lancer_validation chantiers validate-rehearsal-chantiers.sh "$ATTENDU_CHANTIERS" '=== V-R3' 1500
 }
 
@@ -579,7 +680,7 @@ phase_a1() {
     epreuve a1 --statut rouge --detail "la sim relancée n'a pas démarré (voir demarrage.log)" --duree "$((SECONDS - t0))" --journal demarrage.log
     return 1
   fi
-  lancer_corps jeu-a1 'jeu:=true' || { epreuve a1 --statut rouge --detail "chaîne roues / régisseur jeu / regard non démarrés dans le conteneur"; return 1; }
+  lancer_corps jeu-a1 'jeu:=true' || { epreuve a1 --statut rouge --detail "chaîne roues absente, ou régisseur jeu (monde) / regard (robot) non démarrés"; return 1; }
   lancer_validation a1 validate-jeu-a1.sh "$ATTENDU_A1" '=== A1' 1500
 }
 
@@ -679,6 +780,7 @@ deroule() {
   phase_demarrage || return 0
   phase_rtf || return 0
   phase_simples || return 0
+  phase_machines || return 0
   phase_chantiers || return 0
   phase_a1 || return 0
 }

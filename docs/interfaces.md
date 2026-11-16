@@ -64,7 +64,7 @@ Other inputs: `/vision/person` (`PointStamped`, from the vision Pi) feeds
 
 Spec: [`spec-L1-contrats-donnees.md`](spec-L1-contrats-donnees.md) « L1d ». ONE writer,
 `data_edit_node` (`didier_web/data_edit.py`, `traiter()`), launched always by
-`robot_app.launch.py` and `sim.launch.py`, enabled only by `DATA_EDIT=true`.
+`robot_app.launch.py` (robot, and the sim's robot container), enabled only by `DATA_EDIT=true`.
 
 - **Kinds** (`theatre_contrats.donnees.KINDS`) : `sequence` → `json/sequences/<dossier>/<nom>.json`
   (name `<dossier>/<nom>`) ; `expression` / `lumiere` / `brique` → ONE entry of
@@ -115,8 +115,8 @@ Fingerprints : `theatre_contrats.donnees.empreinte_contenu` / `empreinte_roues`.
 - **Barriers** : host test `test_validations_sim.py` (every element stamped, every wheel track
   validated, no orphan) ; `python3 -m theatre_contrats.donnees non-validees <data>` (exit 1 if
   anything waits — read by the Ansible guard, L1d-4) ; on the robot, `animations_node` parameter
-  `exiger_validation_roues` (default true ; set false by `sim.launch.py` only, ignored outside
-  domain 43).
+  `exiger_validation_roues` (default true ; launch argument of `robot_app.launch.py`, set false
+  by the sim's robot-container entry only, `machines/sim/robot/entree.sh` ; ignored outside domain 43).
 
 ## Drive chain (geometry_msgs/Twist — safety path, frozen contract)
 
@@ -156,7 +156,7 @@ source (W1 à venir).
 - **Port** : paramètre ROS `web_port` (défaut `8765` — 8088 évité, c'est le
   défaut Superset et la collision a été vécue sur le PC de dev en réseau
   host ; `WEB_PORT` le surcharge en sim). En sim :
-  `WEB=true docker compose -f docker-compose-sim.yml up -d` puis
+  `cd machines/sim && docker compose up -d` puis
   `http://localhost:8765`.
 - **Endpoints HTTP** : `GET /` (page UI), `GET /static/*` (assets), `GET
   /api/catalog` (catalogue JSON pour les boutons — faces/audios/animations/
@@ -182,7 +182,7 @@ source (W1 à venir).
   vide = désactivé, aucun abonnement) : `GET /perception`, MJPEG LECTURE SEULE
   d'un `CompressedImage` (QoS best effort depth 1), servi par le même code que
   `/video` (404 si désactivé). `hello.perception` l'annonce ; la page `/scene`
-  affiche alors « Ce que Didier voit ». Posé par `sim.launch.py`
+  affiche alors « Ce que Didier voit ». Posé en sim par l'entrée du conteneur robot (`machines/sim/robot/entree.sh`)
   (`camera/image_raw/compressed`, la webcam vue par person_tracker) ; jamais sur
   le vrai robot (`robot_app.launch.py` ne le passe pas). Topic hors whitelist.
 - **WebSocket** : `GET /ws`. Le `msg` publié sur les topics ROS est sérialisé

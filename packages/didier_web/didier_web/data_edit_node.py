@@ -6,7 +6,7 @@ logique est dans data_edit.traiter, pure et testée sans ROS.
 
 Nœud à part (décision 5) : pas dans catalogue_node (lecteur toujours actif, qui ne doit pas
 tomber avec l'écrivain), pas dans le pont web (optionnel). Lancé TOUJOURS par
-robot_app.launch.py et sim.launch.py ; désactivé (`enabled` faux, le défaut), il répond
+robot_app.launch.py (robot, et conteneur robot de la sim) ; désactivé (`enabled` faux, le défaut), il répond
 `edition_desactivee` à chaque demande — un refus visible vaut mieux qu'un silence.
 
 Journal ROS : INFO si ok, WARNING sinon — id, nom, code, JAMAIS le contenu.
