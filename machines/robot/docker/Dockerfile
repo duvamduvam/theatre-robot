@@ -18,6 +18,26 @@ WORKDIR /home/ros2_ws/
 # disposition src/robot/conf/… ; celui du PC : disposition du dépôt). Ce fichier ne sait pas
 # où il est.
 #
+# Dépendances AVANT toute copie (lot fiabilité des épreuves, 16/11 ; même règle que le Dockerfile
+# de `monde` depuis le 14/11) : seules les deux LISTES de la conf entrent d'abord, pour que l'apt
+# et le pip (les couches longues) ne se refassent que si elles changent. Avant, data/ et les
+# sources étaient copiées en tête : une épreuve d'édition (validate-data-edit écrit dans data/)
+# ou un commit de code invalidait tout le cache -> reconstruction longue en pleine fumée.
+# Contenu final de l'image IDENTIQUE (mêmes fichiers aux mêmes chemins, mêmes commandes).
+COPY --from=conf packages-docker.txt requirements.txt /home/ros2_ws/src/robot/conf/
+
+RUN apt-get update && grep -vE '^\s*(#|$)' /home/ros2_ws/src/robot/conf/packages-docker.txt | xargs apt-get install -y
+
+RUN ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
+
+ENV PYTHONPATH "${PYTHONPATH}:/home/ros2_ws"
+
+# Ubuntu 24.04 (Jazzy) : pip refuse d'écrire dans l'environnement système sans ce flag.
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+RUN pip3 install --no-cache-dir --ignore-installed -r /home/ros2_ws/src/robot/conf/requirements.txt
+
 # `conf` = la conf de la machine (machines/robot/ du dépôt, src/robot/conf/ du Pi).
 COPY --from=conf . /home/ros2_ws/src/robot/conf/
 # `data` = les données du robot (L1e-4b) : data/ du dépôt, src/robot/ du Pi (Ansible y copie
@@ -46,18 +66,6 @@ COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
 # didier_core (L1e-3c) : le cœur, ex-package robot (code + package.xml/setup.py), package de
 # packages/ ; plus de setup.py ni de module dans src/robot/.
 COPY --from=didier_core . /home/ros2_ws/src/didier_core
-
-RUN apt-get update && grep -vE '^\s*(#|$)' /home/ros2_ws/src/robot/conf/packages-docker.txt | xargs apt-get install -y
-
-RUN ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata
-
-ENV PYTHONPATH "${PYTHONPATH}:/home/ros2_ws"
-
-# Ubuntu 24.04 (Jazzy) : pip refuse d'écrire dans l'environnement système sans ce flag.
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
-
-RUN pip3 install --no-cache-dir --ignore-installed -r /home/ros2_ws/src/robot/conf/requirements.txt
 
 # Aucun argument passé au script (décision 16) : sur le Pi, le launch tourne sans argument,
 # comme avant L2. Le compose de la SIM (L2b) passera les siens par son propre `entrypoint`.

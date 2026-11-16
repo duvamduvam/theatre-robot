@@ -92,6 +92,10 @@ services:
       - ./validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
       - ./validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
       - ./validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
+      # Leurs mesures (lot fiabilité, 16/11) : enregistreur rclpy et sa bibliothèque bash ; les
+      # captures vont sous log/captures/ (workspace/log/captures/ du PC), elles survivent.
+      - ./capture_topics.py:/home/ros2_ws/capture_topics.py:ro
+      - ./captures.sh:/home/ros2_ws/captures.sh:ro
       # La conf des machines, en lecture seule : validate-machines lit les noeuds_attendus.
       - ..:/home/ros2_ws/machines:ro
       # Données du dépôt aux chemins que lisent les nœuds de sim (leds_sim_node : /home/ros2_ws/json)

@@ -8,7 +8,11 @@ tourner d'autres travaux à côté : la réservation ne vaut QUE pendant la fum�
 
 COMMENT, sans sudo : le cpuset n'est pas délégué au gestionnaire systemd de l'utilisateur
 (user@1000.service n'a que cpu/memory/pids). Deux leviers sans droits :
-  - ses PROPRES processus : os.sched_setaffinity (même uid) ;
+  - ses PROPRES processus : os.sched_setaffinity (même uid), FIL PAR FIL — l'affinité est celle
+    d'un fil (TID), pas d'un processus : sched_setaffinity(pid) ne déplace que le fil principal.
+    Jusqu'au 16/11 seuls les fils principaux partaient ; les autres (navigateur, IDE, modèles
+    locaux, compilations) restaient sur les cœurs réservés — RTF retombé à 0,69-0,73 sous
+    charge le 15/11. Chaque fil de /proc/<pid>/task/ est donc déplacé (et noté) ;
   - les AUTRES conteneurs Docker : `docker update --cpuset-cpus` (groupe docker).
 Les processus root hors conteneur restent où ils sont (rares, peu chargés) — limite assumée.
 
@@ -83,15 +87,25 @@ def _debut_processus(pid: int) -> str | None:
     return stat.rsplit(")", 1)[1].split()[19]
 
 
-def _mes_processus():
+def taches(pid: int) -> list[int]:
+    """Les fils (TID) d'un processus, /proc/<pid>/task/ ; [] s'il est mort entre-temps."""
+    try:
+        return sorted(int(t.name) for t in Path(f"/proc/{pid}/task").iterdir() if t.name.isdigit())
+    except OSError:
+        return []
+
+
+def _mes_taches():
+    """Chaque FIL de chacun de mes processus (cf. COMMENT : l'affinité est par fil)."""
     uid = os.getuid()
     for entree in Path("/proc").iterdir():
         if entree.name.isdigit():
             try:
-                if entree.stat().st_uid == uid:
-                    yield int(entree.name)
+                if entree.stat().st_uid != uid:
+                    continue
             except OSError:
                 continue
+            yield from taches(int(entree.name))
 
 
 def _docker(*args) -> str:
@@ -129,33 +143,40 @@ def deplacer(reserves: set[int], fichier: Path, sim, pids=None,
     """Une passe : pousse hors des réservés ce qui n'y a pas encore été poussé. Idempotent —
     `reserver` et `maintenir` sont la même passe. L'origine est notée AVANT le déplacement.
 
-    `pids` / `avec_conteneurs` : bornes pour les TESTS (un processus jetable, aucun
+    `pids` / `avec_conteneurs` : bornes pour les TESTS (des fils jetables, aucun
     conteneur). Leçon du 08/11 : un test qui laissait la valeur par défaut a déplacé toute la
-    session de David, et une mutation (libération neutralisée) ne l'a jamais rendue."""
+    session de David, et une mutation (libération neutralisée) ne l'a jamais rendue.
+    Les « pids » sont des TID (un par fil) ; la clé « processus » de l'état les garde (format
+    inchangé : un TID se restaure comme un PID). Origines notées en UNE écriture avant tout
+    déplacement (des milliers de fils : une écriture par fil coûterait O(n²))."""
     tous = set(range(os.cpu_count() or 1))
     etat = _lire_etat(fichier)
     etat["reserves"] = ecrire_liste(reserves)
     n_proc = n_cont = 0
-    moi = os.getpid()
-    for pid in (_mes_processus() if pids is None else pids):
-        if pid == moi:
+    moi = set(taches(os.getpid())) or {os.getpid()}
+    a_deplacer = []
+    for tid in (_mes_taches() if pids is None else pids):
+        if tid in moi:
             continue
         try:
-            actuels = os.sched_getaffinity(pid)
+            actuels = os.sched_getaffinity(tid)
         except OSError:
             continue
         cible = hors_reserve(actuels, reserves, tous)
         if cible == actuels:
             continue
-        cle = str(pid)
+        cle = str(tid)
         if cle not in etat["processus"]:
-            etat["processus"][cle] = {"debut": _debut_processus(pid), "cpus": ecrire_liste(actuels)}
-            _ecrire_etat(fichier, etat)
+            etat["processus"][cle] = {"debut": _debut_processus(tid), "cpus": ecrire_liste(actuels)}
+        a_deplacer.append((tid, cible))
+    if a_deplacer:
+        _ecrire_etat(fichier, etat)   # l'origine AVANT le déplacement
+    for tid, cible in a_deplacer:
         try:
-            os.sched_setaffinity(pid, cible)
+            os.sched_setaffinity(tid, cible)
             n_proc += 1
         except OSError:
-            pass  # processus fini entre-temps, ou d'un autre uid (setuid) : on passe
+            pass  # fil fini entre-temps, ou d'un autre uid (setuid) : on passe
     for ident, nom in (_conteneurs(sauf=sim) if avec_conteneurs else ()):
         actuel = _cpuset_conteneur(ident)
         cible = hors_reserve(lire_liste(actuel), reserves, tous)
@@ -198,7 +219,7 @@ def liberer(fichier: Path, pids=None) -> tuple[int, int]:
         except OSError:
             pass
     connus = set(etat.get("processus", {}))
-    for pid in (_mes_processus() if pids is None else pids):
+    for pid in (_mes_taches() if pids is None else pids):
         if str(pid) in connus:
             continue
         try:
@@ -231,7 +252,7 @@ def main(argv=None) -> int:
         a.sim = list(CONTENEURS_SIM)
     if a.commande == "liberer":
         n_proc, n_cont = liberer(a.etat)
-        print(f"cœurs rendus : {n_proc} processus, {n_cont} conteneurs restaurés")
+        print(f"cœurs rendus : {n_proc} fils (threads), {n_cont} conteneurs restaurés")
         return 0
     reserves = lire_liste(a.coeurs)
     if not reserves or not reserves < set(range(os.cpu_count() or 1)):
@@ -239,7 +260,7 @@ def main(argv=None) -> int:
         return 2
     n_proc, n_cont = deplacer(reserves, a.etat, a.sim)
     if a.commande == "reserver":
-        print(f"cœurs {ecrire_liste(reserves)} réservés : {n_proc} processus et {n_cont} "
+        print(f"cœurs {ecrire_liste(reserves)} réservés : {n_proc} fils (threads) et {n_cont} "
               f"conteneurs poussés ailleurs")
     return 0
 

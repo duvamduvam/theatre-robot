@@ -13,6 +13,7 @@ import pathlib
 import re
 import shutil
 import subprocess
+import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -716,3 +717,40 @@ def test_dodo_sans_terminal_n_appelle_jamais_systemctl(tmp_path):
 def test_dodo_a_blanc_n_appelle_pas_systemctl(tmp_path):
     p, appels = _lancer_dodo(tmp_path, dry=True)
     assert "DRY-RUN" in p.stdout and appels == ""
+
+
+def test_la_boucle_des_coeurs_ne_garde_pas_le_verrou_et_meurt_avec_ses_fils():
+    """Défaut du 15/11 : le `sleep 15` orphelin de la boucle de maintien gardait le descripteur 9
+    (verrou) jusqu'à 15 s après la fin ; la seconde de deux fumées enchaînées sortait sans rien
+    faire. Un `maintenir` survivant repousserait aussi les processus APRÈS la libération."""
+    sh = _lire_sh()
+    epingler = sh[sh.index("\nepingler_sim() {"):sh.index("\nliberer_coeurs() {")]
+    assert "    done ) 9>&- &\n" in epingler
+    liberer = sh[sh.index("\nliberer_coeurs() {"):sh.index("\nnoeuds_attendus_vus() {")]
+    assert 'enfants="$(pgrep -P "$MAINTIEN_PID"' in liberer
+    assert liberer.index('kill "$MAINTIEN_PID"') < liberer.index("kill $enfants")
+    assert liberer.index("kill $enfants") < liberer.index('"$COEURS_PY" liberer')
+    assert "pkill -f" not in sh
+
+
+def test_fumee_forcee_refuse_en_le_disant_si_le_verrou_est_tenu(banc):
+    """Mode forcé : plus de sortie MUETTE en 0 quand une autre fumée tient le verrou."""
+    depot, env, tmp = banc
+    (tmp / "etat").mkdir(exist_ok=True)
+    tenant = subprocess.Popen(["flock", str(tmp / "etat" / "verrou"), "sleep", "30"])
+    try:
+        for _ in range(50):
+            if subprocess.run(["flock", "-n", str(tmp / "etat" / "verrou"), "true"]).returncode != 0:
+                break
+            time.sleep(0.1)
+        r = _lancer(dict(env, FUMEE_VERROU_ATTENTE="1"))
+        assert r.returncode == 2
+        assert "REFUS : une autre fumée tient le verrou" in r.stdout
+        assert "refus : verrou tenu par une autre fumée (mode force)" in _journal(tmp)
+        assert (tmp / "appels.txt").read_text(encoding="utf-8") == ""     # docker jamais appelé
+        # La minuterie, elle, reste silencieuse (le prochain passage réessaiera).
+        r = _lancer(env, "--si-due")
+        assert r.returncode == 0 and r.stdout == ""
+    finally:
+        tenant.kill()
+        tenant.wait()

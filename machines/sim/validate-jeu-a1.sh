@@ -40,7 +40,9 @@ source /home/ros2_ws/install/setup.bash
 # /didier/). Le pilote rclpy ci-dessous le reçoit en argument (namespace=NS) :
 # ses noms RELATIFS se résolvent alors comme ceux des nœuds qu'il observe.
 NS="/${ROBOT_NAME:-didier}"
-CAP=/tmp/vja1; rm -rf $CAP; mkdir -p $CAP
+# Capture du pilote : hors /tmp pour SURVIVRE à l'épreuve (lot fiabilité, 16/11) — log/captures/
+# (machines/sim/workspace/log/captures/ du PC), ou $CAPTURE_DIR donné par la fumée.
+CAP="${CAPTURE_DIR:-/home/ros2_ws/log/captures/a1-$(date +%Y%m%d-%H%M%S)}"; rm -rf "$CAP"; mkdir -p "$CAP"
 JDIR=/home/ros2_ws/log/jeu
 RDIR=/home/ros2_ws/log/rehearsal
 DUREE=${DUREE:-900}
@@ -479,6 +481,7 @@ V(trous <= 1.0 and not vides, "T6 jeu/intention jamais muette ni vide plus de 1 
 V(not muettes and len(lignes) > 0, "T6 chaque ligne du topic jeu/journal porte un pourquoi (jamais « absent — bug »)")
 EOF
 grep '^#' $CAP/verdicts.txt | sed 's/^#/ /'
+echo "  captures : $CAP"
 while IFS=$'\t' read -r v txt; do verdict "$v" "$txt"; done < <(grep -v '^#' $CAP/verdicts.txt)
 echo "  journal du jeu : $JJ"
 echo "=== A1 : $ok OK, $ko KO $(date +%T) ==="

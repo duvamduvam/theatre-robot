@@ -577,6 +577,47 @@ tourne la tête (gaze) et pivote/avance (suivi, si activé) ; on parle dans le
 micro → réponse dans les enceintes, gestes « parle » dans Gazebo, didascalies sur
 l'aperçu visage 8766 (`FACE=true`).
 
+## Mesures des épreuves : l'enregistreur rclpy (lot fiabilité des épreuves, 16/11)
+
+**Règle (David, 16/11) : une épreuve rouge veut dire un vrai défaut de Didier, jamais un raté de
+mesure.** Le 15/11, V-R3 a rougi à 20/21 sur « une consigne chat_instruction par lubie démarrée »,
+capture faite par `ros2 topic echo` en arrière-plan (découverte en 2 à 4 s, best-effort par
+défaut, pertes sous charge) et disparue avec `/tmp` : impossible de dire si Didier ou la mesure
+était en tort. Depuis, **aucune épreuve de la sim ne mesure avec la CLI** (gravé par
+`test_capture_topics.py`) :
+
+- `machines/sim/capture_topics.py` : UN enregistreur rclpy par épreuve, monté dans `monde`
+  (`/home/ros2_ws/capture_topics.py`). Type et QoS **explicites** (reliable, KEEP_LAST 1000,
+  `transient_local` seulement pour un topic latché — sinon l'historique d'avant l'épreuve
+  fausserait les comptes). Deux modes : `--journal /t=pkg/msg/T` (chaque message, une ligne JSONL
+  `{"stamp", "topic", "payload"}`, vidée aussitôt) et `--dernier /t=pkg/msg/T[,latche]` (seule la
+  dernière valeur, `dernier/<topic>.json`, pour les lectures ponctuelles : odométrie, vitesse,
+  état). Il écrit **`PRET`** quand chaque abonnement est apparié à au moins un éditeur et à tous
+  ceux du graphe ; sinon **`ECHEC`** (ce qui manque) et l'épreuve sort en **code 2 — banc faux**.
+  SIGTERM/SIGINT (ou mort de l'épreuve) : arrêt propre, **`FIN`** écrit en dernier (tout est sur
+  disque).
+- `machines/sim/captures.sh`, sourcé par les épreuves : `capture_demarrer <épreuve> …` (lance,
+  attend PRÊT — fin de la course au démarrage —, s'ajoute au trap EXIT de l'épreuve sans
+  l'écraser), `capture_lire <topic> <champ> [délai]` (première valeur reçue APRÈS l'appel ;
+  `--tout-age --valeur V` pour un état latché), `capture_extraire <topic> <champ>` (une valeur
+  par ligne, le format de `--field` : les `grep` de comptage de V-R3 sont restés tels quels),
+  `capture_arreter` (code 1 si l'enregistreur était mort : l'épreuve imprime « mesure invalide »
+  et sort en code 2, la fumée l'affiche « MESURE INVALIDE », jamais comme un rouge de Didier).
+- Converties : V-R3 (3 captures + odométrie, `cmd_vel_follow`, `route_state`), V-R2
+  (`cmd_vel_follow`), V-R1 (odométrie, `cmd_vel`), `validate-catalogue` (catalogue et sha latchés :
+  avant, CHAQUE lecture coûtait ≥ 5 s de découverte, plus que le délai de 5 s mesuré). Les
+  verdicts, seuils et budgets d'attente sont inchangés. A1 et `validate-machines` étaient déjà en
+  rclpy. Restent en CLI, hors mesure : les **commandes** (salves idempotentes `ros2 topic pub`,
+  vérifiées par l'effet), `validate-namespace` (`topic info`, graphe via le démon réchauffé), et
+  hors sim `calibre-distance.sh`, `validate-cmdvel-protocol.sh` (robot réel), `collect-incident.sh`.
+
+**Où lire les captures** : sous `/home/ros2_ws/log/captures/<épreuve>-<date>/` dans `monde`, soit
+`machines/sim/workspace/log/captures/` sur le PC (fichiers root : effacer via un conteneur) ; en
+fumée, chaque épreuve a son dossier, **copié dans `docs/fumee/journaux/<id>/captures-<épreuve>/`**
+(`journal.jsonl[.gz]`, `dernier/`, `PRET`, `FIN`, `enregistreur.log` ; pour A1 `capture.json[.gz]`
+et `verdicts.txt`). Relire un compte : `zcat journal.jsonl.gz | python3 -c 'import json,sys;
+[print(json.loads(l)["payload"]["msg"]) for l in sys.stdin if "chat_instruction" in l]'`.
+
 ## V-R3 : pourquoi il a baissé le 06/11, et ce qui l'a rendu fiable (élucidé le 06/11 au soir)
 
 Trois séances à 18-19/21 (avant ET après le déménagement L1e-1) là où le 04/11 donnait 21/21.
@@ -595,7 +636,7 @@ Deux causes distinctes, toutes deux mesurées :
    (premier message en 0,8 s). Et un topic LATCHÉ exige en plus `--qos-reliability reliable` : un
    lecteur best-effort (défaut du CLI avec type) ne reçoit pas l'historique. **Correctif :** type
    sur chaque `echo` de `validate-rehearsal-chantiers.sh` + reliable sur `route_state`.
-   À reporter dans `validate-rehearsal-route.sh` et `-faults.sh` (même `num()`), pas fait.
+   **Remplacé le 16/11** par l'enregistreur rclpy (section précédente), aussi dans V-R1 et V-R2.
 
 Résultat : 21/21 le 06/11 à 23:16 (x final 142,1 m en 575 s, 9 arrêts-lubies sur 9 capturés).
 Rappel : le script EXIGE que rehearsal (scenario chantiers) et gaze_follower soient lancés
@@ -745,7 +786,8 @@ incomplet — alors que les nodes entre eux (régisseur, route_driver, chat_node
 pont web) se parlent sans perte. Règles : commander la séance depuis la **page
 scène** ou la télécommande (publieurs longue durée), pas au CLI ; dans un
 script, envoyer des **salves** (`-t 10 -r 2`) de commandes idempotentes et
-vérifier **par l'effet** (odométrie, journal), jamais par un `echo --once`.
+vérifier **par l'effet** (odométrie, journal), jamais par un `echo --once` —
+les épreuves lisent par l'enregistreur rclpy depuis le 16/11 (§ Mesures des épreuves).
 
 ## Séance A1 — le sélecteur de jeu décide (lot A1, 02/11, SIM-ONLY)
 
@@ -846,8 +888,11 @@ roues n'est plus lancée par la fumée : elle fait partie du bringup du robot. �
 
 **Cœurs réservés (08/11)** : pendant la fumée, la sim (les 4 conteneurs depuis L2b) est seule sur
 les CPU **8-15** (4 cœurs rapides) ; tes processus et tes autres conteneurs sont poussés sur les 28 autres fils, puis tout
-est rendu à la fin (`machines/sim/coeurs_reserves.py`, sans sudo : `sched_setaffinity` sur tes
-processus, `docker update --cpuset-cpus` sur les conteneurs). Mesuré sous un pic artificiel sur
+est rendu à la fin (`machines/sim/coeurs_reserves.py`, sans sudo : `sched_setaffinity` sur
+**chaque fil** de tes processus — depuis le 16/11 : l'affinité est par fil, seul le fil principal
+partait avant, et le RTF était retombé à 0,69-0,73 sous charge le 15/11 —, `docker update
+--cpuset-cpus` sur les conteneurs). La boucle de maintien (toutes les 15 s) ne garde pas le
+verrou de la fumée et meurt avec ses fils avant la libération. Mesuré sous un pic artificiel sur
 les 32 fils : RTF 0,76 sim libre, 0,987 sim sur cœurs réservés. `FUMEE_COEURS=` (vide) la
 désactive. Fumée tuée sans ménage : `python3 machines/sim/coeurs_reserves.py liberer` rend tout.
 Limite : les processus root hors conteneur ne sont pas déplacés.
@@ -875,7 +920,10 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
   d'avant, puisqu'elle commite sa page ; fichier absent = aucune plage ; même fichier lu par une
   garde `pre-commit`/`pre-merge-commit` locale du dépôt, non versionnée). Due depuis plus de 2 jours et
   toujours reportée → `notify-send` + ligne « RAPPEL » au journal (au plus toutes les 12 h).
-- `fumee.sh` : à la main, déroule même si pas due. Le RTF reste juge (rouge si < 0,8).
+- `fumee.sh` : à la main, déroule même si pas due. Le RTF reste juge (rouge si < 0,8). Si une
+  autre fumée tient le verrou, attend 60 s (`FUMEE_VERROU_ATTENTE`) puis **refuse en le disant**
+  (code 2) — avant le 16/11 elle sortait muette en 0, et la seconde de deux fumées enchaînées ne
+  faisait rien (verrou gardé ≤ 15 s par le `sleep` orphelin de la boucle des cœurs, corrigé).
 - `fumee.sh --et-dodo` : fumée forcée **puis `systemctl poweroff`** — à lancer en allant se
   coucher, le PC s'éteint seul ≈ 45 min après, page commitée avant l'extinction. Refuse (code 2,
   n'éteint pas) si une sim existe déjà ; si la minuterie a une fumée en cours, il l'attend (90 min
@@ -892,7 +940,9 @@ durée, RTF, charge, une ligne par épreuve avec son compteur (`21 / 21 OK, 0 KO
 Les journaux sont COPIÉS hors des conteneurs avant leur arrêt : `docs/fumee/journaux/<id>/`
 (`<épreuve>.log`, `conteneur-<phase>.tar.gz` = logs ROS + journaux de séance + sortie des 4
 conteneurs (`<service>-docker.log`),
-les fichiers > 1 Mo réduits à leurs 3000 dernières lignes) et **`resultat.json`**, qui est la vérité
+les fichiers > 1 Mo réduits à leurs 3000 dernières lignes), **`captures-<épreuve>/`** (mesures
+de l'enregistreur, ENTIÈRES, gzippées au-delà de 64 ko — § Mesures des épreuves ; une ligne
+« MESURE INVALIDE » sur la page = l'enregistreur est mort, défaut du banc) et **`resultat.json`**, qui est la vérité
 (la page n'en est que le rendu : `python3 machines/sim/fumee_page.py pages --sortie docs/fumee`
 la régénère). **Avant d'accuser une épreuve rouge, regarder le RTF** : sous 0,8 le régisseur
 (horloge murale) manque l'arrivée. Un arrêt propre (Ctrl-C, SIGTERM) en cours de route laisse une page

@@ -22,18 +22,22 @@ NS="/${ROBOT_NAME:-didier}"
 LOG=${REHEARSAL_LOG:-/tmp/rehearsal.log}
 START=$(grep -c "" "$LOG")   # on ne lit que les lignes écrites après le début de la passe
 J() { tail -n +$((START+1)) "$LOG"; }
-# Lectures ROBUSTES : une lecture unique (echo … --once) peut rendre un avertissement de
-# découverte (« does not appear to be published yet ») ou rien du tout juste
-# après un (re)démarrage — on ne garde qu'un NOMBRE, avec 3 tentatives (vécu
-# le 2026-10-08 : deux faux KO pour un avertissement et une chaîne vide).
-# num <topic préfixé $NS/…> <champ>
-num() { for i in 1 2 3; do v=$(timeout 4 ros2 topic echo $1 --once --field "$2" 2>/dev/null | grep -E -m1 '^-?[0-9]'); [ -n "$v" ] && { echo "$v"; return; }; sleep 1; done; echo "NaN"; }
+# MESURES (lot fiabilité des épreuves, 16/11) : lectures par un enregistreur rclpy PRÊT avant
+# l'épreuve (captures.sh -> capture_topics.py), plus par la CLI `ros2 topic echo` (découverte
+# lente, best-effort, pertes sous charge). Captures conservées sous log/captures/.
+source /home/ros2_ws/captures.sh
+# On ne garde qu'un NOMBRE (vécu le 2026-10-08 avec la CLI : deux faux KO pour un avertissement
+# de découverte et une chaîne vide). num <topic préfixé $NS/…, enregistré en --dernier> <champ> :
+# première valeur reçue APRÈS l'appel, 12 s au plus (budget des 3 essais d'avant), sinon NaN.
+num() { local v; v=$(capture_lire "$1" "$2" 12 | grep -E -m1 '^-?[0-9]'); echo "${v:-NaN}"; }
 X() { num $NS/ground_truth/odom pose.pose.position.x; }
 CMD() { num $NS/cmd_vel linear.x; }
 R() { timeout 15 ros2 topic pub $NS/route theatre_interfaces/msg/StringTime "{msg: \"$1\"}" -1 >/dev/null 2>&1; }
 S() { timeout 15 ros2 topic pub $NS/route_speed theatre_interfaces/msg/StringTime "{msg: \"$1\"}" -1 >/dev/null 2>&1; }
 ok=0; ko=0
 verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  ❌ $2"; ko=$((ko+1)); fi; }
+capture_demarrer vr1 --dernier $NS/ground_truth/odom=nav_msgs/msg/Odometry \
+  --dernier $NS/cmd_vel=geometry_msgs/msg/Twist
 
 echo "=== T1 départ $(date +%T) ==="
 R off; R restart
@@ -63,5 +67,7 @@ R restart; R on; sleep 6; R off; sleep 0.7; c=$(CMD)
 echo "  /cmd_vel linear.x 700 ms après off : $c"
 verdict "$(python3 -c "print(1 if '$c'!='NaN' and abs(float('$c'))<1e-6 else 0)")" "/cmd_vel nul < 700 ms après route off"
 
+capture_arreter || { echo "=== V-R1 : mesure invalide (enregistreur mort), aucun verdict $(date +%T) ==="; exit 2; }
+echo "  captures : $CAP"
 echo "=== V-R1 : $ok OK, $ko KO $(date +%T) ==="
 [ "$ko" = 0 ]

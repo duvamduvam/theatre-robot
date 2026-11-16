@@ -29,6 +29,7 @@ docker compose down
 | `robot/entree.sh` | entrée SIM du conteneur `robot` : garde 43, arguments de la sim, complément sim |
 | `banc-vision/` | `asound-pc.conf` (alias ALSA du banc) et `audio_banc.py` (réglage casque) |
 | `validate-*.sh`, `pub.sh` | épreuves rejouables, montées dans `/home/ros2_ws/` du conteneur `monde` : `docker exec didier-sim-monde bash /home/ros2_ws/<script>` |
+| `capture_topics.py`, `captures.sh` | mesures des épreuves (16/11) : enregistreur rclpy (PRÊT avant l'épreuve, JSONL + dernières valeurs, arrêt propre) et sa bibliothèque bash, montés dans `monde` ; captures sous `workspace/log/captures/` — plus aucune mesure par `ros2 topic echo` (`docs/operations.md` § Mesures des épreuves) |
 | `fumee.sh`, `fumee_page.py`, `coeurs_reserves.py` | fumée nocturne (lot F) : rejoue tout sur main, pages `docs/fumee/` |
 | `didier-fumee.{service,timer}`, `installer-fumee.sh` | minuterie systemd utilisateur ; **relancer `installer-fumee.sh` depuis le checkout de main** après un déménagement |
 | `workspace/` | journaux (gitignoré) : `log/` partagé par `monde` et `robot` (`robot.log`, `rehearsal/`, `jeu/`, `tickets/`), `log-vision/`, `log-telecommande/` |

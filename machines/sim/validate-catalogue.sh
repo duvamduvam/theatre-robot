@@ -24,15 +24,14 @@ ok=0; ko=0
 verdict() { if [ "$1" = 1 ]; then echo "  ✅ $2"; ok=$((ok+1)); else echo "  ❌ $2"; ko=$((ko+1)); fi; }
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-# Dernier message latché d'un topic, champ msg, sans démon (pas de graphe périmé).
-# --field msg d'une chaîne imprime le texte BRUT (pas de YAML) suivi de "---" : on
-# coupe au séparateur. --spin-time : sans démon, la découverte du type du topic a
-# besoin de quelques secondes (sinon « does not appear to be published yet »).
-lire() { # lire <topic> -> JSON du champ msg sur stdout
-  timeout 20 ros2 topic echo $1 --once --no-daemon --spin-time 5 --qos-durability transient_local \
-    --qos-reliability reliable --field msg 2>/dev/null \
-    | python3 -c 'import sys; print(sys.stdin.read().split("\n---")[0].strip())'
-}
+# MESURES (lot fiabilité des épreuves, 16/11) : un enregistreur rclpy (captures.sh ->
+# capture_topics.py) abonné AVANT la première lecture, reliable + transient_local (latché des DEUX
+# côtés), garde la dernière valeur de chaque topic. Avant : une CLI ros2 (echo sans démon,
+# --spin-time 5) par lecture, soit ≥ 5 s de découverte à CHAQUE lecture — plus que le délai de
+# 5 s qu'on mesure. Captures conservées sous log/captures/.
+source /home/ros2_ws/captures.sh
+# lire <topic> [délai s, défaut 0] -> champ msg de la dernière valeur reçue (vide si aucune).
+lire() { capture_lire "$1" msg "${2:-0}" --tout-age; }
 
 echo "=== catalogue attendu sous $NS/ $(date +%T) ==="
 # Précondition, découverte ≥ 5 s et jusqu'à 4 essais (même motif que validate-data-edit.sh). Mesuré
@@ -46,8 +45,11 @@ for essai in 1 2 3 4; do
 done
 [ "$present" = 1 ] || { echo "PRÉCONDITION : $NS/catalogue_node absent (sim démarrée ?)"; exit 2; }
 rm -rf "$TMP_DIR"  # résidu d'une passe interrompue (kill -9)
+capture_demarrer catalogue --dernier $NS/catalogue=theatre_interfaces/msg/StringTime,latche \
+  --dernier $NS/deploy_sha=theatre_interfaces/msg/StringTime,latche
 
-cat=$(lire $NS/catalogue)
+# Premier catalogue : l'historique latché arrive à l'appariement ; 20 s au plus (comme avant).
+cat=$(lire $NS/catalogue 20)
 etat=$(python3 - "$cat" <<'PY'
 import json, sys
 FAMILLES = {"faces", "audios", "animations", "relays", "robot_lights", "visuals"}
@@ -65,7 +67,7 @@ echo "  catalogue : $etat"
 verdict "$([[ "$etat" == ok* ]] && echo 1 || echo 0)" "$NS/catalogue : 6 familles, toutes non vides"
 
 # msg du sha = json.dumps("dev") -> la chaîne "dev" AVEC guillemets : on la décode.
-sha=$(lire $NS/deploy_sha | python3 -c 'import sys, json; print(json.loads(sys.stdin.read()))' 2>/dev/null)
+sha=$(lire $NS/deploy_sha 20 | python3 -c 'import sys, json; print(json.loads(sys.stdin.read()))' 2>/dev/null)
 echo "  deploy_sha : ${sha:-absent}"
 verdict "$([ "$sha" = dev ] && echo 1 || echo 0)" "$NS/deploy_sha = \"dev\" (pas de conf/DEPLOY_SHA en sim)"
 
@@ -87,5 +89,6 @@ attendre présent; verdict "$([ $? = 0 ] && echo 1 || echo 0)" "séquence ajout�
 rm -rf "$TMP_DIR"
 attendre absent; verdict "$([ $? = 0 ] && echo 1 || echo 0)" "séquence supprimée disparue du catalogue en <= ${DELAI} s"
 
+capture_arreter || { echo "=== validate-catalogue : mesure invalide (enregistreur mort), aucun verdict $(date +%T) ==="; exit 2; }
 echo "=== validate-catalogue ($NS) : $ok OK, $ko KO $(date +%T) ==="
 [ "$ko" = 0 ]
