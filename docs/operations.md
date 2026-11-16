@@ -67,7 +67,8 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   `git status` du PC au moment du déploiement pour savoir ce qui tourne. Depuis L1e-4b
   (08/11), seuls les chemins DÉPLOYÉS comptent (`chemins_deployes` de `deploy/vars/main.yml` :
   `packages data machines deploy` depuis L1e-4c) — les journaux
-  non suivis d'une fumée en cours (`docs/fumee/journaux/`) ne salissent plus le sha.
+  non suivis d'une fumée en cours ne salissent plus le sha (et depuis le 16/11 les journaux
+  bruts de fumée ne sont plus du tout dans le dépôt).
   Pas de badge = le robot n'a rien publié (nœud absent, ancien déploiement).
 - Tâche Ansible (rôle `synchronise`, robot seulement) : écrit `conf/DEPLOY_SHA` au rsync,
   jamais exécutée à ce jour (04/11) — le premier déploiement robot doit afficher son sha.
@@ -577,6 +578,19 @@ tourne la tête (gaze) et pivote/avance (suivi, si activé) ; on parle dans le
 micro → réponse dans les enceintes, gestes « parle » dans Gazebo, didascalies sur
 l'aperçu visage 8766 (`FACE=true`).
 
+## Journaux de la sim : hors du dépôt et de Nextcloud (16/11)
+
+Les quatre conteneurs écrivent leurs journaux (`robot.log`, `rehearsal/`, `jeu/`, `tickets/`,
+`captures/`, colcon) dans **`$DIDIER_SIM_JOURNAUX`**, défaut
+**`${XDG_STATE_HOME:-~/.local/state}/didier-sim/`** : `log/` (partagé par `monde` et `robot`),
+`log-vision/`, `log-telecommande/`. Avant, c'était `machines/sim/workspace/` dans le checkout,
+donc synchronisé par Nextcloud (décision de David, 16/11 : pas besoin des journaux ni sur Nextcloud
+ni sur GitHub). UNE variable, le même défaut dans `docker-compose.yml`, `fumee.sh` et
+`seance-chantiers.sh` (gravé par `test_compose_sim.py`) ; ces deux scripts créent le dossier avant
+`up`. **À la main : `mkdir -p ~/.local/state/didier-sim/{log,log-vision,log-telecommande}` avant
+`docker compose up`**, sinon Docker le crée root. Fichiers écrits par les conteneurs = root :
+effacer via un conteneur (`docker run --rm -v ~/.local/state/didier-sim:/j alpine rm -rf /j/log/…`).
+
 ## Mesures des épreuves : l'enregistreur rclpy (lot fiabilité des épreuves, 16/11)
 
 **Règle (David, 16/11) : une épreuve rouge veut dire un vrai défaut de Didier, jamais un raté de
@@ -612,8 +626,9 @@ défaut, pertes sous charge) et disparue avec `/tmp` : impossible de dire si Did
   hors sim `calibre-distance.sh`, `validate-cmdvel-protocol.sh` (robot réel), `collect-incident.sh`.
 
 **Où lire les captures** : sous `/home/ros2_ws/log/captures/<épreuve>-<date>/` dans `monde`, soit
-`machines/sim/workspace/log/captures/` sur le PC (fichiers root : effacer via un conteneur) ; en
-fumée, chaque épreuve a son dossier, **copié dans `docs/fumee/journaux/<id>/captures-<épreuve>/`**
+`~/.local/state/didier-sim/log/captures/` sur le PC (`$DIDIER_SIM_JOURNAUX`, § Journaux de la sim ;
+fichiers root : effacer via un conteneur) ; en fumée, chaque épreuve a son dossier, **copié dans
+le brut LOCAL de la fumée, `~/.local/state/didier-fumee/journaux/<id>/captures-<épreuve>/`**
 (`journal.jsonl[.gz]`, `dernier/`, `PRET`, `FIN`, `enregistreur.log` ; pour A1 `capture.json[.gz]`
 et `verdicts.txt`). Relire un compte : `zcat journal.jsonl.gz | python3 -c 'import json,sys;
 [print(json.loads(l)["payload"]["msg"]) for l in sys.stdin if "chat_instruction" in l]'`.
@@ -760,12 +775,12 @@ n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
 
 **Ticket « Noter un problème » (08/11)** : champ du bandeau de la page scène, utilisable sans
 la main. Le pont écrit un JSON dans `log/tickets/` (texte, heure, topics visibles — jamais
-les topics masqués). En sim, `log/` est monté sur le PC : `machines/sim/workspace/log/`
+les topics masqués). En sim, `log/` est monté sur le PC : `~/.local/state/didier-sim/log/`
 (gitignoré, partagé par `monde` et `robot` depuis L2b), il survit aux recréations des conteneurs. Le ramasseur qui les range avec les
 journaux reste à faire (`docs/seances/2026-11-08-a1-casque.md` #11).
 
 **4. Après** : le journal JSONL de la séance est dans
-`/home/ros2_ws/log/rehearsal/` du conteneur `monde` (`machines/sim/workspace/log/rehearsal/` sur le PC ; ce qui a été tiré, quand) ;
+`/home/ros2_ws/log/rehearsal/` du conteneur `monde` (`~/.local/state/didier-sim/log/rehearsal/` sur le PC ; ce qui a été tiré, quand) ;
 `machines/robot/scripts/rehearsal/carte_seance.py` en fait la carte.
 
 **Vérification technique rejouable** (sans la tête, dans le conteneur `monde`, étapes 1
@@ -937,14 +952,32 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
 **Lire une page** : `docs/fumee/index.html` (la plus récente en tête) → `AAAA-MM-JJ.html` : sha
 testé (`-dirty` = l'arbre de David n'était pas propre, ce qui a été testé n'est pas un commit),
 durée, RTF, charge, une ligne par épreuve avec son compteur (`21 / 21 OK, 0 KO`) et son journal.
-Les journaux sont COPIÉS hors des conteneurs avant leur arrêt : `docs/fumee/journaux/<id>/`
+
+**Ce qui est dans git, ce qui ne l'est pas (décision de David, 16/11 : « je n'ai besoin des
+journaux ni sur Nextcloud ni sur GitHub »).** Dans `docs/fumee/` (versionné) : les pages, `index.html`
+et **`historique.jsonl`**, une ligne par fumée gardée POUR TOUJOURS (id, début, fin, sha testé,
+branche, mode, essai, verdict, épreuve bloquante, RTF, durée, page, et le score de chaque épreuve
+— `"chantiers": "vert 21/21"`, `"rouge 20/21 1KO"`, `"rtf": "vert 0.998"`) : c'est lui que lisent
+la décision « due ? », le « dernier vert » et le sommaire, et lui qui montre les tendances (une
+épreuve instable, une sim qui ralentit). Lire les tendances :
+`python3 -c 'import json; [print(r["id"], r["rtf"], r["epreuves"]["chantiers"]) for r in map(json.loads, open("docs/fumee/historique.jsonl"))]'`.
+Amorcé le 16/11 avec les 32 fumées du 07/11 au 16/11. Les journaux bruts versionnés jusque-là
+ont été retirés (`git rm --cached`, historique NON réécrit : `git show <commit>:docs/fumee/journaux/…`
+les retrouve) ; leurs anciennes pages gardent des liens morts.
+
+**Le brut est LOCAL** (`FUMEE_BRUT`, défaut `~/.local/state/didier-fumee/journaux/<id>/`, jamais
+dans git ni sur Nextcloud). **Purge** à la fin de chaque fumée (`fumee_page.py purger`) : brut d'une
+fumée **verte** supprimé au-delà de **30 jours** ; brut d'une fumée **rouge JAMAIS purgé** tant que
+son dossier ne porte pas le marqueur **`TRAITE`** (`touch ~/.local/state/didier-fumee/journaux/<id>/TRAITE`
+une fois la conclusion écrite dans `docs/incidents/`), puis 30 jours comme une verte.
+Les journaux sont COPIÉS hors des conteneurs avant leur arrêt, dans ce brut
 (`<épreuve>.log`, `conteneur-<phase>.tar.gz` = logs ROS + journaux de séance + sortie des 4
 conteneurs (`<service>-docker.log`),
 les fichiers > 1 Mo réduits à leurs 3000 dernières lignes), **`captures-<épreuve>/`** (mesures
 de l'enregistreur, ENTIÈRES, gzippées au-delà de 64 ko — § Mesures des épreuves ; une ligne
 « MESURE INVALIDE » sur la page = l'enregistreur est mort, défaut du banc) et **`resultat.json`**, qui est la vérité
-(la page n'en est que le rendu : `python3 machines/sim/fumee_page.py pages --sortie docs/fumee`
-la régénère). **Avant d'accuser une épreuve rouge, regarder le RTF** : sous 0,8 le régisseur
+(la page n'en est que le rendu : `python3 machines/sim/fumee_page.py pages --sortie docs/fumee
+--brut ~/.local/state/didier-fumee/journaux` régénère le sommaire et les pages dont le brut existe encore). **Avant d'accuser une épreuve rouge, regarder le RTF** : sous 0,8 le régisseur
 (horloge murale) manque l'arrivée. Un arrêt propre (Ctrl-C, SIGTERM) en cours de route laisse une page
 rouge « interrompue » ; un SIGKILL ou une coupure de courant n'en laisse aucune.
 
@@ -1209,7 +1242,7 @@ outdoors, in summer. Feeds lot V0b of
   `ssh r '~/ros2_ws/src/*/conf/scripts/collect-incident.sh'` → timestamped
   tarball in `~/incidents/` (logs tail, docker logs/inspect, ROS graph,
   temperatures, disk, dmesg). Testable against the sim:
-  `CONTAINER=didier-sim-robot LOG_DIR=machines/sim/workspace/log ./collect-incident.sh`.
+  `CONTAINER=didier-sim-robot LOG_DIR=~/.local/state/didier-sim/log ./collect-incident.sh`.
 - **Investigate**: open a Claude session on the workstation and invoke
   `/diag` (skill in `.claude/skills/diag/` — read-only rules, reading-points
   map, known traps). Feed it the tarball.

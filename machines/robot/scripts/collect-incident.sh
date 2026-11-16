@@ -6,7 +6,7 @@
 # S'exécute sur le HOST du Pi robot, PAS dans le conteneur : c'est voulu — le
 # diagnostic doit fonctionner même quand le conteneur est mort (c'est une des
 # pannes à investiguer). Testable sur le PC de dev contre la simulation avec
-# CONTAINER=didier-sim-robot LOG_DIR=machines/sim/workspace/log.
+# CONTAINER=didier-sim-robot LOG_DIR=~/.local/state/didier-sim/log ($DIDIER_SIM_JOURNAUX/log).
 #
 # Usage : ./collect-incident.sh [répertoire_de_sortie]   (défaut ~/incidents)
 #   CONTAINER  conteneur docker à inspecter (défaut dadou-robot-container)

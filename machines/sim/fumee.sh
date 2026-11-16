@@ -52,7 +52,13 @@
 #
 # Variables (toutes facultatives) :
 #   FUMEE_DEPOT        checkout de main à tester (défaut : le dépôt de David)
-#   FUMEE_SORTIE       dossier des pages (défaut : $FUMEE_DEPOT/docs/fumee)
+#   FUMEE_SORTIE       dossier des pages VERSIONNÉES : HTML, index, historique.jsonl
+#                      (défaut : $FUMEE_DEPOT/docs/fumee)
+#   FUMEE_BRUT         journaux BRUTS, LOCAUX (défaut : $FUMEE_ETAT/journaux) — jamais dans git
+#                      ni sur Nextcloud (décision du 16/11) ; vert purgé à 30 j, rouge gardé
+#                      tant que son dossier n'a pas le marqueur TRAITE
+#   DIDIER_SIM_JOURNAUX journaux de la sim, montés par le compose (défaut :
+#                      ${XDG_STATE_HOME:-~/.local/state}/didier-sim) — créé ici avant le démarrage
 #   FUMEE_COMMIT       1 (défaut) = commit de docs/fumee ; 0 = pas de commit (essais)
 #                      — le commit n'a de toute façon lieu que si FUMEE_SORTIE est le défaut
 #   FUMEE_RTF_MIN      seuil du facteur temps réel (défaut 0,8) ; tout autre = « essai provoqué »
@@ -86,6 +92,10 @@ SORTIE="${FUMEE_SORTIE:-$SORTIE_DEFAUT}"
 RTF_MIN="${FUMEE_RTF_MIN:-$RTF_MIN_DEFAUT}"
 ETAT="${FUMEE_ETAT:-$HOME/.local/state/didier-fumee}"
 JOURNAL="$ETAT/journal.log"
+BRUT="${FUMEE_BRUT:-$ETAT/journaux}"
+# Journaux de la sim HORS du dépôt et de Nextcloud (16/11) : MÊME expression que le compose
+# (gravé par test_compose_sim.py) ; créés ici par l'utilisateur (sinon Docker les crée root).
+JOURNAUX_SIM="${DIDIER_SIM_JOURNAUX:-${XDG_STATE_HOME:-$HOME/.local/state}/didier-sim}"
 # L2b : la sim multi-conteneurs (projet compose didier-sim). Un service = un conteneur = une image
 # locale, jamais poussée.
 DOCKER_DIR="$DEPOT/machines/sim"
@@ -281,8 +291,8 @@ fi
 ENGAGEE=1
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/didier-fumee.XXXXXX")"
 ID="$(date +%Y-%m-%d-%H%M)"
-[ ! -e "$SORTIE/journaux/$ID" ] || ID="$(date +%Y-%m-%d-%H%M%S)"
-JDIR="$SORTIE/journaux/$ID"
+[ ! -e "$BRUT/$ID" ] || ID="$(date +%Y-%m-%d-%H%M%S)"
+JDIR="$BRUT/$ID"
 JSONL="$TMP/epreuves.jsonl"
 mkdir -p "$JDIR"
 ESSAI=0
@@ -434,7 +444,8 @@ demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis a
   SIM_A_NOUS=1
   # Le domaine n'est PAS passé ici : le compose pose ROS_DOMAIN_ID=43 en littéral et ne le lit
   # jamais dans l'environnement de l'appelant ; on le revérifie dans chaque conteneur ci-dessous.
-  (cd "$DOCKER_DIR" && env ROBOT_NAME=didier HEADLESS=true WORLD=chantiers \
+  mkdir -p "$JOURNAUX_SIM"/log "$JOURNAUX_SIM"/log-vision "$JOURNAUX_SIM"/log-telecommande
+  (cd "$DOCKER_DIR" && env ROBOT_NAME=didier HEADLESS=true WORLD=chantiers DIDIER_SIM_JOURNAUX="$JOURNAUX_SIM" \
       REHEARSAL=true FACE=true WEB_DRIVE=false DATA_EDIT=true \
       docker compose -f "$COMPOSE" up -d) >>"$TMP/demarrage.log" 2>&1 || return 1
   epingler_sim
@@ -729,7 +740,7 @@ commit_pages() {
   for _ in 1 2 3; do
     if git -C "$DEPOT" add -- docs/fumee \
        && git -C "$DEPOT" commit -q -m "Fumée nocturne $ID : $VERDICT sur $SHA (RTF ${RTF:-n/a})" \
-            -m "Page docs/fumee/$PAGE, journaux dans docs/fumee/journaux/$ID/. Commit automatique de fumee.sh (lot F), docs/fumee seulement." \
+            -m "Page docs/fumee/$PAGE et une ligne de docs/fumee/historique.jsonl ; journaux bruts LOCAUX ($ID, hors git). Commit automatique de fumee.sh (lot F), docs/fumee seulement." \
             -- docs/fumee; then
       journal "page $PAGE commitée dans $BRANCHE"; return 0
     fi
@@ -757,17 +768,19 @@ terminer() {
       [ -f "$f" ] || continue
       tail -n 2000 "$f" >"$JDIR/$(basename "$f")"
     done
-    [ "$(du -sk "$JDIR" | cut -f1)" -le 8192 ] || NOTES+=("journaux volumineux : $(du -sh "$JDIR" | cut -f1)")
     local args=() n
     for n in "${NOTES[@]}"; do args+=(--note "$n"); done
     PAGE="$(python3 "$PAGE_PY" finaliser --jsonl "$JSONL" --sortie "$SORTIE" --id "$ID" \
+      --brut "$BRUT" --brut-affiche "${BRUT/#$HOME/\~}" \
       --meta "sha=$SHA" --meta "sha_complet=$SHA_COMPLET" --meta "sale=$SALE" --meta "branche=$BRANCHE" \
       --meta "mode=$MODE" --meta "raison=$RAISON" --meta "debut=$DEBUT_ISO" --meta "fin=$(date -Iseconds)" \
       --meta "duree_s=$((SECONDS - DEBUT_S))" --meta "rtf=${RTF}" --meta "rtf_min=$RTF_MIN" \
       --meta "charge_1min=$CHARGE" --meta "nb_coeurs=$NB_COEURS" --meta "essai=$ESSAI" \
       --meta "image_reconstruite=$IMAGE_RECONSTRUITE" --meta "coeurs_reserves=${COEURS:-aucun}" "${args[@]}")"
     VERDICT="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["verdict"])' "$JDIR/resultat.json")"
-    dit "fumée $VERDICT — page $SORTIE/$PAGE"
+    dit "fumée $VERDICT — page $SORTIE/$PAGE, brut $JDIR"
+    # Purge du brut LOCAL : vertes de plus de 30 jours ; un rouge reste tant qu'il n'est pas TRAITE.
+    python3 "$PAGE_PY" purger --brut "$BRUT" | while read -r l; do journal "$l"; done
     journal "fin fumée $ID : $VERDICT, page $PAGE, RTF ${RTF:-n/a}, $((SECONDS - DEBUT_S)) s"
     commit_pages
     command -v notify-send >/dev/null && [ "$MODE" = si-due ] \
@@ -776,9 +789,9 @@ terminer() {
   fi
   arreter_sim   # idempotent ; couvre le cas « reporté » après démarrage de la sim (RTF trop bas)
   liberer_coeurs
-  # Reporté : pas de page, donc pas de dossier de journaux résiduel dans le dépôt.
+  # Reporté : pas de page, donc pas de dossier de journaux résiduel.
   [ "$ENGAGEE" = 1 ] || [ -z "$JDIR" ] || rm -rf "$JDIR"
-  [ "$ENGAGEE" = 1 ] || rmdir "$SORTIE/journaux" "$SORTIE" 2>/dev/null
+  [ "$ENGAGEE" = 1 ] || rmdir "$SORTIE" 2>/dev/null
   [ -z "$TMP" ] || rm -rf "$TMP"
   exit "$rc"
 }
