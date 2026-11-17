@@ -11,6 +11,20 @@ from dadou_utils_ros.utils_static import KEY, KEYS, NAME, LOOP, DURATION, BASE_P
 from didier_core.actions.action import Action
 
 
+def signature_disque(chemin):
+    """(inode, mtime_ns, taille) du fichier, None s'il est illisible. Rechargement déterministe
+    (lot fiab-edition, 18/11) : data_edit_node écrit par os.replace (nouvel inode) AVANT de
+    publier son verdict ; comparer cette signature au moment du JEU garantit que toute commande
+    postérieure au verdict joue la version écrite, quel que soit l'ordre d'arrivée des topics.
+    À prendre AVANT la lecture : un remplacement entre les deux fait relire une fois de trop,
+    jamais une fois de moins."""
+    try:
+        st = os.stat(chemin)
+    except OSError:
+        return None
+    return st.st_ino, st.st_mtime_ns, st.st_size
+
+
 class AbstractJsonActions(Action):
 
     def __init__(self, config, json_manager, json_file=None, action_type=None, sequence_dir=None):
@@ -30,7 +44,13 @@ class AbstractJsonActions(Action):
         self.action_type = action_type
         self.msg_time = 0
 
+    def chemin_json(self):
+        return os.path.join(self.config[JSON_DIRECTORY], self.json_file)
+
     def load_keys_and_names_sequences(self, json_manager):
+        # Sans répertoire JSON configuré (relais en essai unitaire) : pas de signature ; seules les
+        # actions éditables par le robot s'en servent (crochet relire_si_modifie).
+        self.signature_json = signature_disque(self.chemin_json()) if JSON_DIRECTORY in self.config else None
         self.sequences_key, self.sequences_name = self._indexer(json_manager.open_json(self.json_file))
 
     @staticmethod
@@ -49,7 +69,8 @@ class AbstractJsonActions(Action):
         """Lot L1d (rechargement à chaud) : relit self.json_file SUR LE DISQUE après une
         écriture du robot (data_edit_result). Illisible = ERROR, anciennes entrées gardées.
         L'échange des deux index est atomique : une commande en cours garde son entrée."""
-        chemin = os.path.join(self.config[JSON_DIRECTORY], self.json_file)
+        chemin = self.chemin_json()
+        signature = signature_disque(chemin)
         try:
             with open(chemin, encoding="utf-8") as f:
                 sequences = json.load(f)
@@ -58,6 +79,7 @@ class AbstractJsonActions(Action):
             logging.error("rechargement de %s impossible, ancienne version gardée : %s", chemin, e)
             return False
         self.sequences_key, self.sequences_name = index
+        self.signature_json = signature
         logging.info("rechargé : %s (%d entrées)", chemin, len(self.sequences_name))
         return True
 
@@ -65,21 +87,31 @@ class AbstractJsonActions(Action):
         # chemins_sequences : nom nu -> "<dossier>/<nom>" du fichier RETENU (le dernier lu pour
         # un nom donné, comme sequences_name) ; le registre des validations sim est indexé par
         # chemin (lot L1d-2) : la barrière roues doit savoir quel fichier joue.
+        # signatures_sequences : nom nu -> signature_disque du fichier lu (rechargement au jeu).
         self.chemins_sequences = {}
+        self.signatures_sequences = {}
         sequences_files = FilesUtils.get_folder_files(sequence_dir)
         for sequence_file in sequences_files:
+            signature = signature_disque(sequence_file)
             json_sequence = FilesUtils.open_json(sequence_file, 'r')
             json_sequence[NAME] = os.path.basename(sequence_file).replace(".json", "")
             self.sequences_key[json_sequence[KEYS]] = json_sequence
             self.sequences_name[json_sequence[NAME]] = json_sequence
             relatif = os.path.relpath(sequence_file, sequence_dir)[:-len(".json")]
             self.chemins_sequences[json_sequence[NAME]] = relatif.replace(os.sep, "/")
+            self.signatures_sequences[json_sequence[NAME]] = signature
+
+    def relire_si_modifie(self, msg):
+        """Crochet appelé par get_sequence AVANT de résoudre la commande : les actions éditables
+        par le robot (séquences, visage, lumières) relisent ici ce qui a changé sur le disque
+        depuis leur dernière lecture. Par défaut rien (relais & co : pas de rechargement)."""
 
     def get_sequence(self, msg, animation_loop):
 
         if not msg or (KEY not in msg and self.action_type not in msg):
             return
 
+        self.relire_si_modifie(msg)
         sequence = None
         if self.action_type in msg and msg[self.action_type] in self.sequences_name:
             sequence = self.sequences_name[msg[self.action_type]]

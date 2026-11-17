@@ -33,6 +33,8 @@ def manager(tmp_path):
     m.config = dict(config)
     m.config[SEQUENCES_DIRECTORY] = str(racine) + "/"
     m.action_type = ANIMATION
+    m.json_file = None  # comme le vrai AnimationManager (lu par le log « no sequence »)
+    m.current_animation = None
     m.sequences_key, m.sequences_name = {}, {}
     m.load_multi_files_sequences(m.config[SEQUENCES_DIRECTORY])
     m.random_animation_sequence = []
@@ -211,3 +213,156 @@ def test_briques_illisibles_anciennes_gardees(lights):
     (json_dir / "lights_base.json").write_text("{", encoding="utf-8")
     lum.recharger()
     assert lum.lights_base is avant
+
+
+# ================================================================ rechargement AU JEU (fiab-edition)
+# Fumée rouge du 18/11 : le play arrivé 1 ms avant le verdict data_edit_result a joué l'ANCIENNE
+# séquence (neck 0.5 au lieu de 0.37). Ici le verdict n'arrive JAMAIS : seule l'écriture
+# atomique sur le disque (os.replace, comme data_edit_node) doit suffire à jouer la retouche.
+def remplacer(chemin, valeur):
+    tmp = chemin.parent / (chemin.name + ".tmp")
+    tmp.write_text(json.dumps(valeur), encoding="utf-8")
+    os.replace(tmp, chemin)
+
+
+def test_retouche_jouee_sans_verdict(manager):
+    m, racine = manager
+    m.playing = False
+    remplacer(racine / "essai" / "un.json", {"keys": "K1", "duration": 1000, "neck": [[0, 0.37]]})
+    m.update({ANIMATION: "un"})
+    assert m.current_animation == {"keys": "K1", "duration": 1000, "neck": [[0, 0.37]], NAME: "un"}
+    assert m.sequences_key["K1"] is m.current_animation
+    assert m.necks_animation.has_data
+
+
+def test_retouche_jouee_par_touche_sans_verdict(manager):
+    m, racine = manager
+    m.playing = False
+    remplacer(racine / "essai" / "un.json", {"keys": "K1", "duration": 1000, "neck": [[0, 0.37]]})
+    # Commande par TOUCHE (télécommande) : la séquence est retrouvée par sa touche puis relue.
+    assert m.relire_si_modifie({"key": "K1"}) is None
+    assert m.sequences_name["un"]["neck"] == [[0, 0.37]]
+    assert m.sequences_key["K1"] is m.sequences_name["un"]
+
+
+def test_fichier_inchange_pas_relu(manager, monkeypatch):
+    m, _ = manager
+    m.playing = False
+    avant = m.sequences_name["un"]
+    relus = []
+    monkeypatch.setattr(m, "recharger_sequence", lambda nom: relus.append(nom))
+    m.update({ANIMATION: "un"})
+    assert relus == []
+    assert m.current_animation is avant
+
+
+def test_meme_taille_meme_date_nouvel_inode_relu(manager):
+    """os.replace donne un nouvel inode : détecté même à taille et mtime identiques."""
+    m, racine = manager
+    m.playing = False
+    fichier = racine / "essai" / "un.json"
+    st = os.stat(fichier)
+    remplacer(fichier, {"keys": "K1", "duration": 1000, "neck": [[0, 0.9]]})  # même longueur que 0.2
+    assert os.stat(fichier).st_size == st.st_size
+    os.utime(fichier, ns=(st.st_atime_ns, st.st_mtime_ns))
+    m.update({ANIMATION: "un"})
+    assert m.current_animation["neck"] == [[0, 0.9]]
+
+
+def test_creee_jouee_avant_le_catalogue(manager):
+    m, racine = manager
+    m.playing = False
+    remplacer(racine / "essai" / "quatre.json", {"keys": "K4", "duration": 700, "neck": [[0, 0.44]]})
+    m.update({ANIMATION: "quatre"})
+    assert m.current_animation == {"keys": "K4", "duration": 700, "neck": [[0, 0.44]], NAME: "quatre"}
+    assert m.chemins_sequences["quatre"] == "essai/quatre"
+
+
+def test_creee_ambigue_pas_devinee(manager):
+    m, racine = manager
+    m.playing = False
+    (racine / "autre").mkdir()
+    remplacer(racine / "essai" / "cinq.json", {"keys": "K5", "duration": 700})
+    remplacer(racine / "autre" / "cinq.json", {"keys": "K6", "duration": 800})
+    m.update({ANIMATION: "cinq"})
+    assert m.current_animation is None
+    assert "cinq" not in m.sequences_name
+
+
+def test_retouche_illisible_ancienne_jouee(manager):
+    m, racine = manager
+    m.playing = False
+    ancienne = m.sequences_name["un"]
+    (racine / "essai" / "un.json").write_text("{ cassé", encoding="utf-8")
+    m.update({ANIMATION: "un"})
+    assert m.current_animation is ancienne
+    assert m.current_animation["neck"] == [[0, 0.2]]
+
+
+def test_sequence_en_cours_garde_ses_pistes_au_jeu_suivant_seulement(manager):
+    m, racine = manager
+    m.playing = False
+    m.update({ANIMATION: "un"})
+    piste = m.necks_animation
+    remplacer(racine / "essai" / "un.json", {"keys": "K1", "duration": 1000, "neck": [[0, 0.9]]})
+    m.process()  # le tick ne relit rien : seule une COMMANDE relit
+    assert m.necks_animation is piste
+    assert m.current_animation["neck"] == [[0, 0.2]]
+
+
+def test_expression_retouchee_affichee_sans_verdict(face):
+    f, json_dir, _ = face
+    fichier = json_dir / "expressions.json"
+    expressions = json.loads(fichier.read_text(encoding="utf-8"))
+    expressions["colere"]["duration"] = 1234
+    remplacer(fichier, expressions)
+    f.update({FACE: "colere"})
+    assert f.sequences_name["colere"]["duration"] == 1234
+    assert f.current_face == "colere"
+
+
+def test_expression_inchangee_pas_relue(face, monkeypatch):
+    f, _, _ = face
+    relus = []
+    monkeypatch.setattr(f, "recharger", lambda image=None: relus.append(image))
+    f.update({FACE: "colere"})
+    assert relus == []
+
+
+def test_brique_retouchee_relue_sans_verdict(lights):
+    lum, json_dir = lights
+    base = json.loads((json_dir / "lights_base.json").read_text(encoding="utf-8"))
+    base["oulala"] = {"method": "pulse", "color": "BLUE"}
+    remplacer(json_dir / "lights_base.json", base)
+    lum.relire_si_modifie({ROBOT_LIGHTS: "trip"})
+    assert lum.lights_base["oulala"] == {"method": "pulse", "color": (0, 0, 255)}
+
+
+def test_lumiere_creee_relue_sans_verdict(lights):
+    lum, json_dir = lights
+    robot_lights = json.loads((json_dir / "robot_lights.json").read_text(encoding="utf-8"))
+    robot_lights["l1d lumiere"] = {"duration": 3000, "loop": False, "sequences": {"love": 0.5}}
+    remplacer(json_dir / "robot_lights.json", robot_lights)
+    assert lum.get_sequence({ROBOT_LIGHTS: "l1d lumiere"}, False)["sequences"] == {"love": 0.5}
+
+
+def test_actions_sans_crochet_ne_relisent_rien(lights):
+    """Le crochet est opt-in : une action JSON ordinaire (relais & co) ne relit jamais."""
+    from didier_core.files.robot_json_manager import RobotJsonManager
+
+    class Simple(AbstractJsonActions):
+        def update(self, msg):
+            pass
+
+        def process(self):
+            pass
+
+    lum, json_dir = lights
+    simple = Simple(config=lum.config, json_manager=RobotJsonManager(lum.config),
+                    json_file=lum.config[JSON_LIGHTS], action_type=ROBOT_LIGHTS)
+    avant = simple.sequences_name
+    robot_lights = json.loads((json_dir / "robot_lights.json").read_text(encoding="utf-8"))
+    robot_lights["l1d lumiere"] = {"duration": 3000, "loop": False, "sequences": {"love": 0.5}}
+    remplacer(json_dir / "robot_lights.json", robot_lights)
+    assert simple.get_sequence({ROBOT_LIGHTS: "l1d lumiere"}, False) is None
+    assert simple.sequences_name is avant

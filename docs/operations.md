@@ -91,6 +91,15 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   du fichier (séquence, image) ou du JSON canonique de l'entrée. La retouche tombe dans `data/`
   du PC (`git diff` la montre), la sauvegarde dans `data/json/backup/<date>/` (non versionné),
   et le robot la rejoue **sans redémarrage** (rechargement à chaud sur verdict `ok`).
+  **Rechargement déterministe (18/11)** : une commande arrivée APRÈS le verdict `ok` joue toujours
+  la version écrite, même si le verdict n'est pas encore traité par le nœud. Au départ de chaque
+  séquence, expression ou lumière, le robot compare la signature disque du fichier (inode,
+  mtime_ns, taille ; data_edit_node écrit par `os.replace` avant de publier son verdict) à celle
+  de sa dernière lecture, et relit si elle a changé. Une séquence créée mais pas encore au
+  catalogue est trouvée par son nom de fichier (une seule correspondance sous `sequences/`). Les
+  **images** restent relues sur verdict seulement. Pourquoi : fumée du 18/11, épreuve `edition` 3
+  à 12/13 — le play était arrivé 1 ms avant le verdict, et l'ancienne séquence (cou 0,5) avait été
+  jouée ; banc de 100 retouches sur sim épinglée : 5 versions périmées avant, 0 après.
 - **Envoyer une image** : `kind: "image"`, `name: "mouth/<nom>"` ou `"eye/<nom>"`, `content` =
   les octets du PNG en base64 ; le robot juge (24x16 ou 8x8, RVB 8 bits, ≤ 16 384 octets) ; une
   image refusée l'est avec sa raison dans `detail`.

@@ -7,7 +7,7 @@ from didier_core.robot_static import MOUTH_VISUALS_PATH, EYE_VISUALS_PATH, LIGHT
     RIGHT_EYES, LEFT_EYES
 from dadou_utils_ros.utils_static import NAME, DURATION, LOOP, KEY, FACE, DEFAULT, BASE_PATH, \
     JSON_EXPRESSIONS, ANIMATION, STOP
-from didier_core.actions.abstract_json_actions import AbstractJsonActions
+from didier_core.actions.abstract_json_actions import AbstractJsonActions, signature_disque
 from didier_core.sequences.track import Track
 from didier_core.visual.image_mapping import ImageMapping
 from didier_core.visual.visual import Visual
@@ -80,6 +80,14 @@ class Face(AbstractJsonActions):
             return
         self.visuals[visual.name] = visual
         logging.info("image %s rechargée", image)
+
+    def relire_si_modifie(self, msg):
+        """Rechargement déterministe (lot fiab-edition, voir signature_disque) : expressions.json
+        changé sur le disque depuis sa lecture = relu avant de résoudre la commande. Les IMAGES
+        restent relues sur verdict seulement (data_edit_result)."""
+        if signature_disque(self.chemin_json()) != self.signature_json:
+            logging.info("%s modifié sur le disque depuis sa lecture : relu avant d'afficher", self.json_file)
+            self.recharger()
 
     def get_visual(self, name):
         if name in self.visuals.keys():

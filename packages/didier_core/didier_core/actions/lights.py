@@ -7,7 +7,7 @@ from dadou_utils_ros.utils.time_utils import TimeUtils
 from didier_core.robot_static import JSON_COLORS
 from dadou_utils_ros.utils_static import METHOD, DEFAULT, DURATION, SEQUENCES, LOOP, COLOR, \
     NAME, JSON_LIGHTS_BASE, BRIGHTNESS, STOP, JSON_DIRECTORY
-from didier_core.actions.abstract_json_actions import AbstractJsonActions
+from didier_core.actions.abstract_json_actions import AbstractJsonActions, signature_disque
 from didier_core.sequences.track import Track
 from didier_core.visual.lights_animations import LightsAnimations
 
@@ -59,8 +59,15 @@ class Lights(AbstractJsonActions):
         self.animations_methods = LightsAnimations(end - start, self.strip)
         self.update({light_type: DEFAULT})
 
+    def chemin_briques(self):
+        return os.path.join(self.config[JSON_DIRECTORY], self.config[JSON_LIGHTS_BASE])
+
     def load_light_base(self, config, json_manager):
-        lights_base = json_manager.get_json_file(config[JSON_LIGHTS_BASE])
+        # Lu DU DISQUE après la signature (pas le cache du json_manager, lu plus tôt : une
+        # écriture entre les deux serait signée sans être lue, donc jamais relue).
+        self.signature_briques = signature_disque(self.chemin_briques())
+        with open(self.chemin_briques(), encoding="utf-8") as f:
+            lights_base = json.load(f)
         for light_name in lights_base:
             if COLOR in lights_base[light_name]:
                 lights_base[light_name][COLOR] = self.get_color(lights_base[light_name][COLOR])
@@ -72,7 +79,8 @@ class Lights(AbstractJsonActions):
         robot_lights.json et lights_base.json. Illisible = ERROR, ancienne version gardée.
         L'animation en cours n'est pas touchée : la nouvelle version vaut à la commande suivante."""
         self.relire_entrees()
-        chemin = os.path.join(self.config[JSON_DIRECTORY], self.config[JSON_LIGHTS_BASE])
+        chemin = self.chemin_briques()
+        signature = signature_disque(chemin)
         try:
             with open(chemin, encoding="utf-8") as f:
                 lights_base = json.load(f)
@@ -83,7 +91,16 @@ class Lights(AbstractJsonActions):
             logging.error("rechargement de %s impossible, ancienne version gardée : %s", chemin, e)
             return
         self.lights_base = lights_base
+        self.signature_briques = signature
         logging.info("briques rechargées : %s", chemin)
+
+    def relire_si_modifie(self, msg):
+        """Rechargement déterministe (lot fiab-edition, voir signature_disque) : lumières ou
+        briques changées sur le disque depuis leur lecture = relues avant de résoudre la commande."""
+        if (signature_disque(self.chemin_json()) != self.signature_json
+                or signature_disque(self.chemin_briques()) != self.signature_briques):
+            logging.info("lumières ou briques modifiées sur le disque depuis leur lecture : relues avant de jouer")
+            self.recharger()
 
     def update(self, msg):
 
