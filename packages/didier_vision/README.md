@@ -36,8 +36,10 @@ Hors du package, dans le dossier désigné par **`DIDIER_VISION_DATA_DIR`** (lu 
 
 `conf/` (et l'ancien flux vidéo `conf/mediamtx/`) = `machines/vision/` du dépôt depuis L1e-4c (11/11),
 copié par Ansible ; `medias/` et `db/` sont des fichiers d'exécution du Pi (voix téléchargée,
-historique), absents du dépôt. L'outil `tools/banc_bouche.py` (banc des modèles de la bouche) vit
-dans ce package, non installé.
+historique), absents du dépôt. Les outils `tools/banc_bouche.py` (banc des modèles de la bouche) et
+`tools/banc_pointage.py` (17/11 : un modèle de vision sait-il montrer l'objet nommé, et où
+tombe-t-il au sol ? — `docs/etudes/etude-objets-vus-et-carte.md` §4 et §14) vivent dans ce
+package, non installés.
 
 ## Variables d'environnement
 
