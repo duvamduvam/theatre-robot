@@ -14,6 +14,16 @@
 #   fumee.sh            forcé, à la main : déroule même si pas due (le RTF reste juge).
 #   fumee.sh --et-dodo  fumée forcée PUIS extinction du PC (à lancer en allant se coucher).
 #                       Essai à blanc : FUMEE_DRY_POWEROFF=1 remplace le poweroff par un echo.
+#   --forcer-verrou     (avec la fumée forcée ou --et-dodo) passe outre ~/tmp/sim-occupee.
+#
+# Verrou « sim occupée » (18/11) : ~/tmp/sim-occupee (une ligne « <qui> <heure> ») est posé par
+# les agents et par David pendant LEUR sim. Présent et daté de moins de 6 h (mtime du fichier ;
+# le contenu n'a pas de jour et ne sert qu'à l'affichage) : --si-due reporte, la fumée forcée
+# REFUSE (code 2) sauf --forcer-verrou. Plus vieux : ignoré (noté au journal), jamais effacé —
+# ce n'est pas le nôtre. La fumée qui démarre pose « fumee <heure> » si le fichier est absent
+# (une fumée lancée à la main n'est pas didier-fumee.service : sans cela, un agent ne la verrait
+# qu'une fois ses conteneurs nés) et le retire à la fin ; un « fumee … » trouvé au départ est un
+# reste (crash, PC éteint) puisque le flock est à nous : retiré.
 #
 # Une fumée est DUE si un commit touchant un chemin TESTÉ (liste gravée CHEMINS_TESTES en
 # tête de fumee_page.py : packages/, data/, deploy/, machines/ — la doc n'en est pas) est
@@ -69,6 +79,7 @@
 #                      (défaut : nb de cœurs × 0,5 — le RTF reste le vrai juge)
 #   FUMEE_ETAT         journal + verrou (défaut ~/.local/state/didier-fumee)
 #   FUMEE_VERROU_ATTENTE  secondes qu'une fumée forcée attend le verrou avant de refuser (défaut 60)
+#   FUMEE_SIM_OCCUPEE  verrou « sim occupée » des agents et de David (défaut ~/tmp/sim-occupee)
 #   FUMEE_DRY_POWEROFF 1 = --et-dodo n'éteint pas, il l'affiche
 #   FUMEE_DODO_DELAI   secondes entre la fin et le poweroff (défaut 20)
 #   FUMEE_COEURS       CPU RÉSERVÉS à la sim pendant la fumée (défaut 8-15 = 4 cœurs rapides
@@ -87,6 +98,7 @@ ATTENDU_CHANTIERS=21    # validate-rehearsal-chantiers.sh (V-R3)
 ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
 ATTENDU_CONVERSATION=13 # validate-conversation.sh (CONV : P1, T0, A1-A3, B1-B5, C1-C3)
 RTF_MIN_DEFAUT=0.8
+PEREMPTION_SIM_OCCUPEE_S=21600   # 6 h : au-delà, un ~/tmp/sim-occupee oublié ne bloque plus
 
 ICI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PAGE_PY="$ICI/fumee_page.py"
@@ -97,6 +109,8 @@ RTF_MIN="${FUMEE_RTF_MIN:-$RTF_MIN_DEFAUT}"
 ETAT="${FUMEE_ETAT:-$HOME/.local/state/didier-fumee}"
 JOURNAL="$ETAT/journal.log"
 BRUT="${FUMEE_BRUT:-$HOME/tmp/didier-fumee}"
+SIM_OCCUPEE="${FUMEE_SIM_OCCUPEE:-$HOME/tmp/sim-occupee}"
+VERROU_SIM_A_NOUS=0   # 1 si CETTE fumée a posé « fumee <heure> » (seule à pouvoir le retirer)
 # Journaux de la sim HORS du dépôt et de Nextcloud (16/11) : MÊME expression que le compose
 # (gravé par test_compose_sim.py) ; créés ici par l'utilisateur (sinon Docker les crée root).
 JOURNAUX_SIM="${DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier-sim}"
@@ -134,14 +148,20 @@ CHARGE="$(cut -d' ' -f1 /proc/loadavg)"
 CHARGE_MAX="${FUMEE_CHARGE_MAX:-$(awk -v n="$NB_COEURS" 'BEGIN { printf "%.1f", n * 0.5 }')}"
 
 MODE=force
+FORCER_VERROU=0
 for arg in "$@"; do
   case "$arg" in
     --si-due) MODE=si-due ;;
     --et-dodo) MODE=et-dodo ;;
+    --forcer-verrou) FORCER_VERROU=1 ;;
     -h|--aide|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) echo "fumee.sh : argument inconnu « $arg » (--si-due | --et-dodo | --aide)" >&2; exit 2 ;;
+    *) echo "fumee.sh : argument inconnu « $arg » (--si-due | --et-dodo | --forcer-verrou | --aide)" >&2; exit 2 ;;
   esac
 done
+# La minuterie ne passe jamais outre la sim de quelqu'un : la combinaison est une erreur.
+if [ "$MODE" = si-due ] && [ "$FORCER_VERROU" = 1 ]; then
+  echo "fumee.sh : --forcer-verrou ne vaut que pour une fumée lancée à la main, pas avec --si-due" >&2; exit 2
+fi
 
 mkdir -p "$ETAT"
 journal() { # une ligne datée dans ~/.local/state/didier-fumee/journal.log (borné à 2000 lignes)
@@ -248,6 +268,29 @@ else
   RAISON="lancée à la main ($MODE)"
 fi
 
+# --- Verrou « sim occupée » des agents et de David (voir l'en-tête) ----------------
+if [ -f "$SIM_OCCUPEE" ]; then
+  QUI="$(head -n 1 "$SIM_OCCUPEE" 2>/dev/null | tr -cd '[:print:]' | cut -c1-80 || true)"
+  AGE_S=$(( $(date +%s) - $(stat -c %Y "$SIM_OCCUPEE" 2>/dev/null || date +%s) ))
+  if [[ "$QUI" == "fumee "* ]]; then
+    # Le flock est à nous : aucune autre fumée ne tourne, ce « fumee … » est un reste.
+    rm -f -- "$SIM_OCCUPEE"
+    journal "reste retiré : verrou $SIM_OCCUPEE « $QUI » d'une fumée finie (âge ${AGE_S} s)"
+  elif [ "$AGE_S" -ge "$PEREMPTION_SIM_OCCUPEE_S" ]; then
+    journal "verrou $SIM_OCCUPEE « $QUI » PÉRIMÉ (âge ${AGE_S} s ≥ ${PEREMPTION_SIM_OCCUPEE_S} s) : ignoré, pas effacé"
+  elif [ "$MODE" = si-due ]; then
+    reporter "sim réservée par « $QUI » ($SIM_OCCUPEE, âge ${AGE_S} s)"
+  elif [ "$FORCER_VERROU" = 1 ]; then
+    journal "verrou $SIM_OCCUPEE « $QUI » outrepassé (--forcer-verrou, mode $MODE)"
+    dit "verrou « $QUI » outrepassé (--forcer-verrou)"
+    NOTES_VERROU="verrou « sim occupée » de « $QUI » outrepassé (--forcer-verrou)"
+  else
+    journal "refus : sim réservée par « $QUI » ($SIM_OCCUPEE, mode $MODE)"
+    dit "REFUS : la sim est réservée par « $QUI » ($SIM_OCCUPEE, posé il y a $((AGE_S / 60)) min). Attends qu'il le retire, ou relance avec --forcer-verrou si tu sais que cette sim est finie."
+    exit 2
+  fi
+fi
+
 # --- Un conteneur sim déjà là est celui de quelqu'un : jamais touché --------------
 # Les quatre de la sim multi-conteneurs. Liste lue une fois, sans --filter (un nom exact par ligne).
 EXISTANTS="$(docker ps -a --format '{{.Names}}' 2>/dev/null || true)"
@@ -310,6 +353,7 @@ mkdir -p "$JDIR"
 ESSAI=0
 { [ "${FUMEE_ESSAI:-0}" = 1 ] || [ "$RTF_MIN" != "$RTF_MIN_DEFAUT" ]; } && ESSAI=1
 [ "$BRANCHE" = main ] || NOTES+=("le checkout testé est sur la branche $BRANCHE, pas sur main")
+[ -z "${NOTES_VERROU:-}" ] || NOTES+=("$NOTES_VERROU")
 [ "$SALE" = 0 ] || NOTES+=("arbre de travail modifié au départ : le sha porte -dirty, ce qui a été testé n'est pas un commit")
 dit "fumée $ID sur $SHA (branche $BRANCHE), mode $MODE, charge $CHARGE/$CHARGE_MAX"
 journal "début fumée $ID sur $SHA (mode $MODE) — $RAISON"
@@ -859,6 +903,7 @@ terminer() {
   fi
   arreter_sim   # idempotent ; couvre le cas « reporté » après démarrage de la sim (RTF trop bas)
   liberer_coeurs
+  liberer_verrou_sim
   # Reporté : pas de page, donc pas de dossier de journaux résiduel.
   [ "$ENGAGEE" = 1 ] || [ -z "$JDIR" ] || rm -rf "$JDIR"
   [ "$ENGAGEE" = 1 ] || rmdir "$SORTIE" 2>/dev/null
@@ -867,6 +912,22 @@ terminer() {
 }
 trap terminer EXIT
 trap 'exit 143' INT TERM   # le trap EXIT ci-dessus fait le ménage
+
+poser_verrou_sim() { # « fumee <heure> » si le fichier est absent (jamais par-dessus celui d'un autre)
+  [ -e "$SIM_OCCUPEE" ] && return 0
+  mkdir -p "$(dirname "$SIM_OCCUPEE")"
+  # noclobber : si quelqu'un le pose dans la même seconde, le sien gagne et on n'y touche pas.
+  if ( set -C; echo "fumee $(date +%H:%M)" >"$SIM_OCCUPEE" ) 2>/dev/null; then
+    VERROU_SIM_A_NOUS=1
+    VERROU_SIM_CONTENU="$(cat "$SIM_OCCUPEE")"
+  fi
+}
+liberer_verrou_sim() { # idempotent ; ne retire que NOTRE ligne, intacte
+  [ "$VERROU_SIM_A_NOUS" = 1 ] || return 0
+  VERROU_SIM_A_NOUS=0
+  [ "$(cat "$SIM_OCCUPEE" 2>/dev/null)" = "${VERROU_SIM_CONTENU:-}" ] && rm -f -- "$SIM_OCCUPEE"
+  return 0
+}
 
 dodo() {
   local delai="${FUMEE_DODO_DELAI:-20}"
@@ -909,6 +970,7 @@ if [ "$SAUTER_FUMEE" = 1 ]; then
   exit 0
 fi
 
+poser_verrou_sim
 deroule
 
 if [ "$MODE" = et-dodo ]; then

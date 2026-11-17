@@ -1024,12 +1024,23 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
   de 30 min plus tard réessaie. Sont reportés : charge 1 min > nb de cœurs × 0,5 (seuil
   `FUMEE_CHARGE_MAX`, 16 sur ce PC de 32 cœurs ; le RTF reste le vrai juge), RTF < 0,8 après
   démarrage de la sim, **un conteneur de la sim déjà présent** (`didier-sim-*` — la sim de
-  quelqu'un : jamais touchée), checkout qui n'est pas sur la branche `main`, **plage sans commit** (11/11 :
+  quelqu'un : jamais touchée), **le verrou `~/tmp/sim-occupee`** (18/11, ci-dessous), checkout qui
+  n'est pas sur la branche `main`, **plage sans commit** (11/11 :
   fichier LOCAL hors dépôt `~/.config/didier/plages-sans-commit`, une ligne « JOURS DEBUT FIN »,
   jours ISO 1 = lundi, heures pleines, FIN exclue ; la fumée ne démarre ni dedans ni dans l'heure
   d'avant, puisqu'elle commite sa page ; fichier absent = aucune plage ; même fichier lu par une
   garde `pre-commit`/`pre-merge-commit` locale du dépôt, non versionnée). Due depuis plus de 2 jours et
   toujours reportée → `notify-send` + ligne « RAPPEL » au journal (au plus toutes les 12 h).
+- **Verrou « sim occupée » (18/11)** : `~/tmp/sim-occupee` (`FUMEE_SIM_OCCUPEE`), une ligne
+  « <qui> <heure> », posé par les agents et par David pendant LEUR sim. Présent et âgé de moins
+  de **6 h** (date du fichier : le contenu n'a pas de jour) → `--si-due` reporte, la fumée lancée
+  à la main ou `--et-dodo` **refuse** (code 2) sauf `--forcer-verrou` (lève le verrou de fichier
+  seul : un conteneur vivant refuse toujours ; interdit avec `--si-due`). Plus vieux : ignoré,
+  noté au journal, jamais effacé. La fumée qui démarre pose elle-même « fumee <heure> » si le
+  fichier est absent (une fumée lancée à la main n'est pas `didier-fumee.service` : un agent ne la
+  verrait sinon qu'une fois ses conteneurs nés) et le retire à la fin ; un « fumee … » trouvé au
+  départ est le reste d'une fumée tuée (le flock est à nous) : retiré. Un agent qui lance SA
+  fumée retire d'abord son propre verrou (la fumée posera le sien).
 - `fumee.sh` : à la main, déroule même si pas due. Le RTF reste juge (rouge si < 0,8). Si une
   autre fumée tient le verrou, attend 60 s (`FUMEE_VERROU_ATTENTE`) puis **refuse en le disant**
   (code 2) — avant le 16/11 elle sortait muette en 0, et la seconde de deux fumées enchaînées ne
