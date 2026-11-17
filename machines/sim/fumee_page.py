@@ -91,7 +91,11 @@ EPREUVES = [
     ("machines", "validate-machines.sh (les machines de la sim, vues depuis le monde, L2b)"),
     ("chantiers", "Régisseur + regard (chaîne roues du bringup), puis validate-rehearsal-chantiers.sh (V-R3)"),
     ("a1", "Sim relancée, validate-jeu-a1.sh (A1)"),
+    ("conversation", "Sim relancée avec la tête (Claude Haiku, Anthropic direct), validate-conversation.sh (CONV)"),
 ]
+# Épreuves FACULTATIVES (16/11) : « non lancée » faute d'un prérequis hors dépôt (la clé
+# Anthropic de David pour CONV) ne rougit pas la fumée — seul un vrai rouge le fait.
+FACULTATIVES = frozenset({"conversation"})
 NOMS = dict(EPREUVES)
 HISTORIQUE = "historique.jsonl"
 PURGE_JOURS = 30       # brut d'une fumée VERTE (ou d'un rouge marqué TRAITE) gardé 30 jours
@@ -274,8 +278,11 @@ def completer_epreuves(epreuves: list) -> list:
 
 
 def verdict_global(epreuves: list):
-    """(verdict, premier id rouge) ; une épreuve non lancée sans rouge avant = rouge."""
+    """(verdict, premier id rouge) ; une épreuve non lancée sans rouge avant = rouge — sauf une
+    FACULTATIVE déclarée non lancée par la fumée elle-même (`facultative`, ex. pas de clé)."""
     for e in completer_epreuves(epreuves):
+        if e["statut"] == "non_lance" and e.get("facultative") and e["id"] in FACULTATIVES:
+            continue
         if e["statut"] != "vert":
             return "rouge", (e["id"] if e["statut"] == "rouge" else None)
     return "vert", None
@@ -531,6 +538,10 @@ def cmd_epreuve(args) -> int:
                      ("journal", args.journal)):
         if val is not None:
             e[cle] = val
+    if args.facultative:
+        if args.id not in FACULTATIVES:
+            sys.exit(f"epreuve : {args.id!r} n'est pas une épreuve facultative ({sorted(FACULTATIVES)})")
+        e["facultative"] = True
     with open(args.jsonl, "a", encoding="utf-8") as f:
         f.write(json.dumps(e, ensure_ascii=False) + "\n")
     return 0
@@ -625,6 +636,8 @@ def construire_parseur() -> argparse.ArgumentParser:
     s.add_argument("--detail")
     s.add_argument("--duree", type=int)
     s.add_argument("--journal")
+    s.add_argument("--facultative", action="store_true",
+                   help="épreuve de FACULTATIVES non lancée faute de prérequis : ne rougit pas la fumée")
     s.set_defaults(fn=cmd_epreuve)
     s = sub.add_parser("finaliser", help="écrit resultat.json + page + sommaire")
     s.add_argument("--jsonl", required=True)

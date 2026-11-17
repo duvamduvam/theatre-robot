@@ -10,3 +10,7 @@ sqlobject
 # <2 : mediapipe (V1, hors CI) impose déjà numpy<2 en prod, on aligne la CI sur
 # la même contrainte pour ne pas tester un comportement numpy que la prod n'a pas.
 numpy<2
+# SDK Anthropic (16/11) : test_llm_providers.py construit de VRAIES erreurs du SDK (classement
+# des bascules de secours) et un vrai client pointé sur un port local fermé (aucune clé dans
+# les journaux). Même borne que machines/vision/requirements.txt.
+anthropic>=2.9,<3

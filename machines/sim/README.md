@@ -25,10 +25,11 @@ docker compose down
 |---|---|
 | `docker-compose.yml` | les 4 services ; variables : `HEADLESS`, `WORLD`, `WEB_PORT`, `FACE`, `FACE_PORT`, `DATA_EDIT`, et SIM-ONLY `WEB_DRIVE`, `REHEARSAL` |
 | `docker-compose.banc.yml` | surcouche « Didier à l'arrêt » sur le service `vision` : webcam, son, secret de `~/.config/didier/`, variables `CHAT_*` (`docker compose -f docker-compose.yml -f docker-compose.banc.yml up -d`) |
+| `docker-compose.tete.yml` | surcouche « tête » (16/11) sur le service `vision`, pour l'épreuve de conversation : chat sans micro ni son, mouvement à la voix, réflexion coupée, les deux secrets de la tête (`vision-conf-secret`, `secrets.env` → Anthropic en direct) en lecture seule ; la fumée ne la pose qu'après avoir trouvé les deux fichiers (`docker compose -f docker-compose.yml -f docker-compose.tete.yml up -d`) |
 | `monde/` | Dockerfile et entrée du conteneur `monde` (garde 43, colcon de ses packages, `monde.launch.py`) |
 | `robot/entree.sh` | entrée SIM du conteneur `robot` : garde 43, arguments de la sim, complément sim |
 | `banc-vision/` | `asound-pc.conf` (alias ALSA du banc) et `audio_banc.py` (réglage casque) |
-| `validate-*.sh`, `pub.sh` | épreuves rejouables, montées dans `/home/ros2_ws/` du conteneur `monde` : `docker exec didier-sim-monde bash /home/ros2_ws/<script>` |
+| `validate-*.sh`, `pub.sh` | épreuves rejouables, montées dans `/home/ros2_ws/` du conteneur `monde` : `docker exec didier-sim-monde bash /home/ros2_ws/<script>` ; `validate-conversation.sh` (CONV, 16/11) exige la surcouche tête |
 | `capture_topics.py`, `captures.sh` | mesures des épreuves (16/11) : enregistreur rclpy (PRÊT avant l'épreuve, JSONL + dernières valeurs, arrêt propre) et sa bibliothèque bash, montés dans `monde` ; captures sous `$DIDIER_SIM_JOURNAUX/log/captures/` — plus aucune mesure par `ros2 topic echo` (`docs/operations.md` § Mesures des épreuves) |
 | `fumee.sh`, `fumee_page.py`, `coeurs_reserves.py` | fumée nocturne (lot F) : rejoue tout sur main ; pages et `historique.jsonl` dans `docs/fumee/`, journaux bruts LOCAUX (`~/tmp/didier-fumee/`) |
 | `didier-fumee.{service,timer}`, `installer-fumee.sh` | minuterie systemd utilisateur ; **relancer `installer-fumee.sh` depuis le checkout de main** après un déménagement |

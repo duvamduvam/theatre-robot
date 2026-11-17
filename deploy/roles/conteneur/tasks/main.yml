@@ -81,15 +81,16 @@
 # l'image. Les verrous (a) .dockerignore du contexte `conf` et (b) COPY --exclude du Dockerfile
 # l'en tiennent dehors ; ce contrôle permanent le vérifie sur l'image que le compose fait tourner
 # (après le `up`, qui la construit si elle manque) — un BuildKit qui ignorerait (a) et (b) fait
-# échouer le déploiement au lieu de passer inaperçu. Chemin dans l'image = /home/<dest> : le
-# ~/ros2_ws de l'hôte est /home/ros2_ws du conteneur. `--entrypoint test` : rien d'autre ne tourne,
+# échouer le déploiement au lieu de passer inaperçu. Chemin dans l'image = /home/<dest> (le
+# ~/ros2_ws de l'hôte est /home/ros2_ws du conteneur), ou `image` quand le secret est monté
+# ailleurs (secrets.env -> /run/secrets/didier.env, 16/11). `--entrypoint test` : rien d'autre ne tourne,
 # aucun montage. Aussi en --check (lecture seule) : ecart-pi.sh rougit sur une image fautive.
 - name: Check that no host secret is inside the image
   become: yes
   ansible.builtin.shell: >-
     docker run --rm --network none --entrypoint test
     "$(docker compose -f "{{ conteneur_compose }}" config --images | head -1)"
-    ! -e "/home/{{ item.dest }}"
+    ! -e "{{ item.image | default('/home/' ~ item.dest) }}"
   loop: "{{ secrets_hote | default([]) }}"
   register: secret_dans_image
   changed_when: false
@@ -102,11 +103,11 @@
   ansible.builtin.fail:
     msg: >-
       {{ 'SECRET DANS L’IMAGE' if item.rc == 1 else 'Contrôle du secret impossible (rc=' ~ item.rc ~ ')' }} :
-      /home/{{ item.item.dest }} — ne PAS pousser cette image ; verrous du .dockerignore de la
+      {{ item.item.image | default('/home/' ~ item.item.dest) }} — ne PAS pousser cette image ; verrous du .dockerignore de la
       conf et du COPY --exclude du Dockerfile à revoir (docs/ansible-ecarts.md, secret de la vision).
   loop: "{{ secret_dans_image.results | default([]) }}"
   loop_control:
-    label: "{{ item.item.dest }}"
+    label: "{{ item.item.image | default('/home/' ~ item.item.dest) }}"
   when: item.rc != 0
 
 # Les nœuds n'apparaissent qu'après le colcon build du script d'entrée : les voir = build fini

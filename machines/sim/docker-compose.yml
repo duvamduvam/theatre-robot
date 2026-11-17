@@ -94,6 +94,7 @@ services:
       - ./validate-rehearsal-faults.sh:/home/ros2_ws/validate-rehearsal-faults.sh:ro
       - ./validate-rehearsal-chantiers.sh:/home/ros2_ws/validate-rehearsal-chantiers.sh:ro
       - ./validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
+      - ./validate-conversation.sh:/home/ros2_ws/validate-conversation.sh:ro
       # Leurs mesures (lot fiabilité, 16/11) : enregistreur rclpy et sa bibliothèque bash ; les
       # captures vont sous log/captures/ ($DIDIER_SIM_JOURNAUX/log/captures/ du PC), elles survivent.
       - ./capture_topics.py:/home/ros2_ws/capture_topics.py:ro

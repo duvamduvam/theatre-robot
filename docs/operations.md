@@ -334,6 +334,64 @@ Banc PC : `cd machines/sim && docker compose build vision` (le Dockerfile du Pi 
 `machines/vision/docker/Dockerfile`, contextes nommés — L2a) ; depuis L2b la vision du PC est le
 service `vision` de la sim (`build/` et `install/` non persistés : colcon à chaque `up`).
 
+## Fournisseur LLM de la tête : Anthropic en direct, OpenRouter en secours (16/11)
+
+Décision de David (16/11) : la bouche (`chat_node`, `StreamingBrain`) et le metteur en scène
+intérieur (`reflection_node`, `Reflector`) parlent **directement à l'API Anthropic** avec la clé de
+David (crédit prépayé) pour les modèles Claude ; OpenRouter reste le **secours automatique** et le
+fournisseur de ce qu'Anthropic ne fait pas (STT Voxtral, modèles non Claude). Code :
+`packages/didier_vision/didier_vision/ai/llm_providers.py` (SDK officiel `anthropic>=2.9,<3`, dans
+`machines/vision/requirements.txt` et les exigences de test de la vision).
+
+- **Choix** : `vision_config.config["chat_llm_provider"]` = `auto` (défaut) — Anthropic si la clé
+  est montée ET que le modèle est un Claude connu, sinon OpenRouter (comportement d'avant, sans
+  clé rien ne change) ; `anthropic` / `openrouter` forcent. Surcharge par
+  `CHAT_LLM_FOURNISSEUR=auto|anthropic|openrouter` (liste fermée ; `anthropic` sans clé = échec de
+  démarrage explicite). Vaut pour la bouche ET la réflexion.
+- **Modèles** : la config garde les noms OpenRouter ; table `ANTHROPIC_MODEL_IDS` vérifiée dans la
+  doc officielle et par `models.retrieve` le 16/11 : `anthropic/claude-haiku-5.5` →
+  **`claude-haiku-5-5`**, `anthropic/claude-sonnet-5.5` → `claude-sonnet-5-5` (sans suffixe de date).
+- **Réflexion coupée** (panne « Didier muet » du 22/10) : `chat_llm_extra_body`
+  `{"reasoning": {"enabled": false}}` devient `thinking: {"type": "disabled"}` (Haiku 5.5) ou
+  `between_tools` (Sonnet 5.5, qui refuse `disabled`) ; `effort` medium de la réflexion →
+  `thinking adaptive` + `output_config.effort` medium. Un seul réglage, traduit par fournisseur.
+- **Secours** : bascule sur OpenRouter AVANT le premier mot seulement (après, des mots sont déjà
+  partis), sur réseau/délai (15 s pour la bouche, 40 s pour la réflexion, 0 nouvelle tentative
+  côté Anthropic), 429, 5xx, clé refusée (401/403), compte suspendu ou **crédit épuisé** ; une
+  autre 400/404 (requête fausse) remonte. Journal : `LLM anthropic (claude-haiku-5-5) en échec :
+  APIConnectionError — bascule de secours sur openrouter (…)` — classe et code HTTP seulement,
+  jamais le corps ni la clé (test au vrai client, journaux du SDK en débogage compris).
+- **Où on le voit** : ligne `chat démarré (… llm=anthropic:claude-haiku-5-5 puis
+  openrouter:anthropic/claude-haiku-5.5 …)`, page scène (chaîne `chat_audio_chain` :
+  « claude-haiku-5-5 (Anthropic, secours OpenRouter) »), `reflection prêt : … fournisseur=…`.
+- **Clé** : source UNIQUE `~/.config/didier/secrets.env` du PC (`ANTHROPIC_API_KEY=…`, hors
+  dépôt, 600 ; modèle versionné `machines/vision/secrets.env.example`). Le conteneur la lit dans
+  `/run/secrets/didier.env` (`DIDIER_SECRETS_ENV` pour un autre chemin), monté en lecture seule :
+  Pi vision = rôle `secrets` vers `~/.config/didier/secrets.env` (HORS de `ros2_ws` : hors de tout
+  contexte de build et du rsync ; verrou (c) du rôle `conteneur` étendu : le chemin monté est
+  cherché dans l'image) ; sim = surcouches `docker-compose.tete.yml` et `docker-compose.banc.yml`.
+  `openrouter_key` (`conf/secret`) reste exigée au démarrage du chat (secours + STT).
+  ⚠️ Le rôle `secrets` copie le fichier ENTIER : toute clé ajoutée plus tard à
+  `~/.config/didier/secrets.env` partirait aussi sur le Pi vision (au 17/11 il ne porte que
+  `ANTHROPIC_API_KEY`).
+- **Pi vision : PAS ENCORE DÉPLOYÉ (17/11)**. Le déploiement (`deploy-pios.yml -e
+  target_group=vision`, puis `./ecart-pi.sh vision`) doit apporter : (1) le secret
+  `~/.config/didier/secrets.env` (0600, rôle `secrets`, entrée de `machines/vision/machine.yml`) ;
+  (2) l'image vision reconstruite avec `anthropic>=2.9,<3` (`machines/vision/requirements.txt` :
+  le rôle `conteneur` vide build/install quand l'image change) ; (3) le compose ARM qui monte le
+  secret sur `/run/secrets/didier.env` (recréer le conteneur, pas `restart`) ; (4) le verrou (c)
+  étendu (champ `image`), qui doit trouver l'image SANS `/run/secrets/didier.env`. À vérifier
+  ensuite : ligne `chat démarré (… llm=anthropic:claude-haiku-5-5 puis openrouter:…)` dans le
+  journal du conteneur, page scène « Anthropic, secours OpenRouter », `ecart-pi.sh vision` vert.
+- **Latence mesurée** (16/11, `tools/banc_bouche.py --fournisseur openrouter|anthropic`, persona
+  bougon, 15 scénarios × 2, Haiku 5.5, hors conteneur) : premier mot médian **0,62 s** (max 1,74 s)
+  par OpenRouter, **0,53 s** (max 0,59 s) en direct ; mêmes gestes 27/30, JSON 30/30.
+  Hors conteneur : `PYTHONPATH=packages/didier_vision:packages/dadou_utils_ros:packages/theatre_contrats`,
+  `DIDIER_VISION_DATA_DIR` (un dossier dont `conf/secret` porte `openrouter_key`),
+  `DIDIER_SECRETS_ENV=~/.config/didier/secrets.env`.
+- **Coût** : ≈ 3 900 jetons d'entrée par réplique (persona + gestes + objets), soit ≈ 0,0004 $ la
+  réplique au tarif Haiku 5.5 lu le 16/11 (0,10 $ / 0,50 $ par million, entrée / sortie).
+
 ## Le cœur `didier_core` (lot L1e-3c, 07/11)
 
 L'ex-package `robot` est `packages/didier_core/` (code `didier_core/`, tests `test/`) ;
@@ -543,7 +601,7 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   vision depuis L2a, construit en x86 natif ; base multi-arch) ;
   `person_tracker` lit la webcam `/dev/video0`, publie `/didier/vision/person` (gaze)
   et `/didier/vision/person_box` (suivi roues) ; `CHAT=true` lance `chat_node`
-  (micro → whisper → OpenRouter → piper → sortie audio).
+  (micro → whisper → Claude Haiku [Anthropic direct, OpenRouter en secours] → piper → sortie audio).
 - Les alias ALSA `casque_mic`/`mixette` sont fournis par `asound-pc.conf`
   (monté dans le conteneur) : `casque_mic` = ReSpeaker en `hw:Array` (direct,
   sans PipeWire, pour mesurer la même chose que le robot), `mixette` = casque
@@ -556,8 +614,10 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
 - Sans ReSpeaker branché, le micro est « mort » (backoff 5 s en boucle, log
   WARNING) mais le **clavier de la page scène** (`chat_text`) fonctionne quand
   même : c'est le mode de secours pour travailler le texte sans matériel.
-- ⚠️ Clé requise : `openrouter_key` dans `conf/secret` du dépôt vision
-  (déjà en place sur le PC de dev).
+- ⚠️ Clés : `openrouter_key` (`~/.config/didier/vision-conf-secret`, monté en `conf/secret`) est
+  exigée au démarrage du chat ; `ANTHROPIC_API_KEY` (`~/.config/didier/secrets.env`, monté en
+  `/run/secrets/didier.env`) fait parler Didier à Anthropic en direct (§ « Fournisseur LLM de la
+  tête »). Les deux sont déjà en place sur le PC de dev.
 - ⚠️ Bug REPO_ROOT (le même que sur le Pi, cf. CLAUDE.md vision) : en install
   colcon, la config cherche conf/ et medias/ dans site-packages. Contournement
   appliqué au banc le 13/09 — mêmes symlinks que sur le Pi, dans l'install
@@ -883,7 +943,8 @@ il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
 
 Un script shell (`machines/sim/fumee.sh` depuis L1e-4c, zéro token) rejoue sur le **checkout de main** toutes
 les épreuves de la sim et compare chaque compteur à une valeur **gravée en tête du script** :
-namespace 5, catalogue 4, `parle` 3 états, édition 13, machines 5 (L2b), V-R3 21, A1 14. Il **mesure, il ne juge pas** ; un
+namespace 5, catalogue 4, `parle` 3 états, édition 13, machines 5 (L2b), V-R3 21, A1 14, conversation 13
+(16/11). Il **mesure, il ne juge pas** ; un
 agent n'intervient que pour lire une page rouge. Pourquoi : l'environnement bouge sans commit
 (paquets Gazebo, Docker, charge du PC — V-R3 est tombé de 21/21 à 18/21 le 06/11 sans
 régression du code) et chaque lot payait ≈ 1 h d'épreuves.
@@ -898,8 +959,33 @@ domaine 43 lu dans les 4 conteneurs, colcon ×4 sans échec, pont gz, `noeuds_at
 animation `parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) →
 `validate-data-edit.sh` (L1d, 13 épreuves ; sim lancée avec `DATA_EDIT=true`) →
 `validate-machines.sh` (L2b, M1-M4 et M6) → régisseur (`monde`) + regard (`robot`) puis
-`validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh` (A1). La chaîne
-roues n'est plus lancée par la fumée : elle fait partie du bringup du robot. ≈ 45-50 min.
+`validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh` (A1) → sim relancée
+AVEC LA TÊTE, `validate-conversation.sh` (CONV, 16/11, ci-dessous). La chaîne roues n'est plus
+lancée par la fumée : elle fait partie du bringup du robot. ≈ 55-60 min.
+
+**Épreuve de conversation scriptée (CONV, 16/11)** — `machines/sim/validate-conversation.sh`,
+13 contrôles gravés, seule épreuve où la tête tourne : la sim est relancée avec la surcouche
+`docker-compose.tete.yml` (chat_node SANS micro ni son, mouvement à la voix, réflexion coupée, les
+deux secrets de la tête en lecture seule), route Chantiers, scénario `jeu-a1` (calme : ni bug ni
+lubie du régisseur) + sélecteur de jeu. Le texte remplace le micro (`chat_text`, publié UNE fois
+par phrase, abonné apparié), mesures par l'enregistreur rclpy (journal : `rehearsal/chat_move`,
+`jeu/chat_move`, `rehearsal/chat_move_reply`, `route_goto_result`, `chat_transcript`,
+`jeu/journal`, `route_state`, `chat_state`). P1 la chaîne d'écoute dit « Anthropic, secours
+OpenRouter » ; T0 départ ; **A** « Fais le tour de l'éléphant » (pas de tour possible) : Didier
+répond, AUCUN `tour_de` publié, aucune réplique ne prétend l'avoir fait (motifs gravés) ;
+**B** « Va voir la table basse », dite à moins de 9 m de l'objet, en marche depuis ≥ 11 s :
+`aller_voir` table basse ≤ 20 s, accepté par le régisseur ≤ 30 s, arrivée ≤ 90 s, « go » de
+reprise du jeu 9-13 s après l'arrivée (`reprise.apres_geste_s` = 10 s), Didier repart (≥ 0,3 m en
+15 s) ; **C** « Stop. » : stop de la bouche ≤ 2 s (arrêt d'urgence, avant le LLM), relais du jeu
+≤ 0,5 s, `route_speed` 0 ≤ 1 s après le stop de la bouche (l'arrêt vocal est un « hold » du
+régisseur : `route_state` reste on), `cmd_vel_follow` nul de +2 à +9 s et < 0,05 m parcourus de
++4 à +9 s. Coût ≈ 0,0035 $ par fumée
+(6-7 répliques Haiku). **FACULTATIVE** : sans `ANTHROPIC_API_KEY` dans
+`~/.config/didier/secrets.env` (ou sans `vision-conf-secret`), elle est « non lancée (pas de clé) »
+et ne rougit jamais la fumée (`fumee_page.py`, `FACULTATIVES`) ; seul un vrai rouge compte. Les
+bascules de secours vues dans le journal de chat_node sont notées sur la page. À la main (sim
+lancée avec la surcouche, régisseur `jeu-a1` + `jeu:=true` et `gaze_follower` lancés) :
+`docker exec didier-sim-monde bash /home/ros2_ws/validate-conversation.sh`.
 
 **Cœurs réservés (08/11)** : pendant la fumée, la sim (les 4 conteneurs depuis L2b) est seule sur
 les CPU **8-15** (4 cœurs rapides) ; tes processus et tes autres conteneurs sont poussés sur les 28 autres fils, puis tout
@@ -999,6 +1085,18 @@ le robot dans `data/` puis restaure tout (empreinte de `json/` et `medias/visual
   le démon avant l'épreuve (`rechauffer_cli`). Le script de vérification lui-même n'a pas été touché.
 - Une fumée n'a de sens que sur `main` : si le checkout est sur une autre branche, la minuterie
   reporte (une fumée à la main marque la branche sur la page).
+- **Jamais `docker logs … | grep -q` (ni `docker ps … | grep -q`) sous `pipefail`** : grep -q sort
+  au premier motif, l'écrivain meurt de SIGPIPE (141) dès que la sortie dépasse un tampon, la
+  pipeline échoue alors que le motif est là. Vu le 16/11 23:30 : avec la tête, chat_node (micro
+  absent en sim, réessai toutes les 0,5 s) gonfle le journal vision de 350 Ko en 10 min ; le
+  « Summary » colcon n'était plus compté (3/4 pendant 600 s) et CONV tombait rouge sans avoir
+  tourné. Reproduit 0/20 avec le vrai docker logs. `fumee.sh` capture d'abord (`etat_colcon`,
+  `conteneur_vivant`) ; gravé par `test_fumee.py` (faux docker bavard + garde sur tous les scripts
+  sous pipefail de `machines/sim/`).
+- **PC éteint pendant une fumée** (17/11 00:39 : bouton d'alimentation pendant la relance A1) :
+  le démon docker s'arrête, la relance échoue. Depuis le 17/11 la page le dit (note « le PC
+  s'éteignait », lue dans `systemctl is-system-running`) et `demarrage.log` donne l'état du
+  conteneur `monde` au lieu d'un « Gazebo mort » trompeur. Un tel rouge ne dit rien de Didier.
 
 **Minuterie systemd utilisateur** (`machines/sim/`, sans sudo) :
 ```bash

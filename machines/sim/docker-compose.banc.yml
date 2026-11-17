@@ -45,6 +45,9 @@ services:
       # Secret du banc : source unique ~/.config/didier/ (la même que le rôle secrets pose sur le
       # Pi). Sans lui chat_node meurt au démarrage (« Secret manquant »). Lecture seule.
       - ${HOME}/.config/didier/vision-conf-secret:/home/ros2_ws/src/vision/conf/secret:ro
+      # Clé de l'API Anthropic (16/11) : la tête parle à Claude en direct, OpenRouter en secours.
+      # Même source que le rôle secrets sur le Pi, même chemin dans le conteneur.
+      - ${HOME}/.config/didier/secrets.env:/run/secrets/didier.env:ro
       # Alias ALSA casque_mic/mixette du BANC (mêmes noms que sur le Pi 5, pointés sur la carte son
       # du PC) : le code tourne sans changer un seul paramètre. L'hôte n'est pas touché.
       - ./banc-vision/asound-pc.conf:/etc/asound.conf:ro

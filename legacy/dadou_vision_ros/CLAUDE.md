@@ -52,7 +52,11 @@ Cerveau perceptif du robot de théâtre Didier, sur Pi 5 « vision » (alias ssh
 - **V2 parole VALIDÉE en réel (2026-07-11)** : première conversation complète de
   Didier sur le micro de la webcam (alias `casque_mic`→carte U20 dans
   /etc/asound.conf du Pi — le casque Logitech est débranché). Pipeline
-  VAD→whisper base→Haiku (OpenRouter)→piper→mixette. STT = Voxtral via
+  VAD→whisper base→Haiku→piper→mixette ; depuis le 16/11 Haiku passe par l'API
+  Anthropic EN DIRECT (`claude-haiku-5-5`, clé `ANTHROPIC_API_KEY` de
+  `~/.config/didier/secrets.env` montée en `/run/secrets/didier.env`), OpenRouter en
+  secours automatique (`chat_llm_provider` / `CHAT_LLM_FOURNISSEUR`, docs/operations.md
+  § « Fournisseur LLM de la tête »). STT = Voxtral via
   OpenRouter depuis le 2026-10-23 (`chat_stt_backend`, repli automatique sur
   whisper local si le réseau tombe). LLM = Haiku 5.5
   depuis le 2026-10-22, RÉFLEXION COUPÉE obligatoire (`chat_llm_extra_body`,

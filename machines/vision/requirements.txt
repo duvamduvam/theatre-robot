@@ -6,6 +6,12 @@
 # et le client audio streaming actuels.
 openai>=1.50.0
 
+# SDK officiel Anthropic (16/11, décision de David) : la bouche et la réflexion parlent à
+# l'API Anthropic EN DIRECT (didier_vision/ai/llm_providers.py), OpenRouter (client openai
+# ci-dessus) reste le secours et le STT. 2.x : API Messages actuelle (thinking disabled /
+# between_tools, output_config.effort) ; < 3 : pas de saut de version majeure non relu.
+anthropic>=2.9,<3
+
 # Historique de conversation persistant en SQLite (didier_vision/db/chat_db.py)
 sqlobject
 

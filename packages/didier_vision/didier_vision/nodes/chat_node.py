@@ -155,7 +155,7 @@ from theatre_contrats import stringtime
 
 from dadou_utils_ros.utils_static import ANIMATION, ANIMATION_STATE, FACE
 
-from didier_vision.ai import arbitration, personas, reflection_contract, stage
+from didier_vision.ai import arbitration, llm_providers, personas, reflection_contract, stage
 from didier_vision.ai.conversation import ConversationEngine
 from didier_vision.ai.llm_stream import StreamingBrain
 from didier_vision.ai.move_task import TASK_MAX_STEPS, MoveTask
@@ -171,7 +171,7 @@ from didier_vision.audio.playback import AudioPlayer
 from didier_vision.audio.vad import EnergyVad
 from didier_vision.nodes._chat_wiring import (construire_gate, decode_persona_command,
                                        default_chat_parameters, ros_message_to_string_time_kwargs)
-from didier_vision.vision_config import chat_env_overrides, config, get_secret
+from didier_vision.vision_config import anthropic_key_present, chat_env_overrides, config, get_secret
 
 # Durée d'une trame micro (ms) : DOIT être identique côté MicCapture (qui
 # découpe le flux arecord en trames de cette taille) et côté EnergyVad (qui
@@ -774,7 +774,16 @@ class ChatNode(Node):
                 f"stt_backend={stt_backend!r} inconnu : attendu 'openrouter' ou 'local'")
             raise ChatStartupError("stt_backend inconnu")
 
-        # --- Cerveau LLM streamé (OpenRouter) -----------------------------
+        # --- Fournisseur du cerveau (16/11) : API Anthropic en direct si la clé
+        # est montée (OpenRouter en secours), sinon OpenRouter seul -----------
+        try:
+            llm_provider = llm_providers.resolve_provider(
+                config["chat_llm_provider"], llm_model, anthropic_key_present())
+        except llm_providers.ProviderConfigError as exc:
+            self.get_logger().error(f"Fournisseur LLM : {exc}")
+            raise ChatStartupError("fournisseur LLM impossible") from exc
+
+        # --- Cerveau LLM streamé (Anthropic + secours OpenRouter, ou OpenRouter)
         try:
             # system_prompt = contrat technique + socle + personnalité (lot
             # D3, cf. didier_vision.ai.personas — realtime_instructions() seul ne
@@ -791,6 +800,7 @@ class ChatNode(Node):
                 # promettait une réponse qui ne venait jamais).
                 situation_suffix=(personas.REFLECT_TEMPLATE
                                   if config["chat_reflection_enabled"] else ""),
+                provider=llm_provider,
             )
         except Exception as exc:  # noqa: BLE001
             self.get_logger().error(
@@ -880,7 +890,9 @@ class ChatNode(Node):
             mic_device=mic_device, out_device=out_device, asound=asound,
             stt_backend=stt_backend, stt_remote_model=stt_remote_model,
             whisper_model=whisper_model, vad_factor=config["chat_vad"].threshold_factor,
-            llm_model=llm_model)
+            # Page scène : le modèle ET qui le sert (Anthropic direct, secours OpenRouter).
+            llm_model=(f"{brain.providers[0][1]} (Anthropic, secours OpenRouter)"
+                       if llm_provider == llm_providers.PROVIDER_ANTHROPIC else llm_model))
         # Ordre de marche (cf. CHAT_MOVE_TOPIC) : publisher créé SEULEMENT si
         # le mouvement à la voix est activé -- sinon le topic n'existe même
         # pas (rien ne doit fuir hors du banc de répétition). QoS VOLATILE :
@@ -1072,7 +1084,8 @@ class ChatNode(Node):
             self._diag_server.start()
 
         self.get_logger().info(
-            f"chat démarré (llm_model={llm_model}, stt={stt_backend}"
+            f"chat démarré (llm_model={llm_model}, llm="
+            f"{' puis '.join(f'{nom}:{modele}' for nom, modele in brain.providers)}, stt={stt_backend}"
             f"{'/' + stt_remote_model if stt_backend == 'openrouter' else ''}, whisper_model={whisper_model}, "
             f"mic_device={mic_device}, out_device={out_device}, "
             f"persona={persona_name}, partenaire={config['chat_partner']}, "

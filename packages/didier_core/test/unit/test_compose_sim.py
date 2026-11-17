@@ -31,7 +31,8 @@ SERVICES = {
 PACKAGES_MONDE = ["dadou_utils_ros", "didier_core", "didier_description", "didier_jeu", "didier_rehearsal",
                   "didier_sim", "theatre_contrats", "theatre_interfaces"]
 INTERDITS_MONDE = {"didier_core", "didier_drive", "didier_web"}   # aucun de leurs exécutables dans monde
-EPREUVES = ["validate-catalogue.sh", "validate-data-edit.sh", "validate-jeu-a1.sh", "validate-machines.sh",
+EPREUVES = ["validate-catalogue.sh", "validate-conversation.sh", "validate-data-edit.sh", "validate-jeu-a1.sh",
+            "validate-machines.sh",
             "validate-namespace.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
             "validate-rehearsal-route.sh"]
 # Décision 2 : la dernière commande de l'entrée du robot, mot pour mot.
@@ -263,3 +264,34 @@ def test_la_surcouche_banc_ne_touche_que_la_vision():
     assert "/dev:/dev" in v["volumes"]
     assert "ROS_DOMAIN_ID" not in "\n".join(v["environment"])   # le domaine reste celui de la base
     assert _env(v)["CHAT"] == "${CHAT:-false}"
+
+
+TETE = SIM / "docker-compose.tete.yml"
+
+
+def test_la_surcouche_tete_ne_touche_que_la_vision_et_monte_les_deux_secrets_en_lecture_seule():
+    """16/11 : la tête ne tourne en sim que pour l'épreuve CONV — chat sans réflexion, mouvement à
+    la voix, et les DEUX secrets de la tête, source unique ~/.config/didier/, lecture seule."""
+    tete = _compose(TETE)["services"]
+    assert sorted(tete) == ["vision"]
+    v = tete["vision"]
+    assert _env(v) == {"CHAT": "true", "CHAT_MOUVEMENT": "true", "CHAT_REFLEXION": "false",
+                       "CHAT_LLM_FOURNISSEUR": "${CHAT_LLM_FOURNISSEUR:-auto}"}
+    assert v["volumes"] == [
+        "${HOME}/.config/didier/vision-conf-secret:/home/ros2_ws/src/vision/conf/secret:ro",
+        "${HOME}/.config/didier/secrets.env:/run/secrets/didier.env:ro"]
+    # Le banc monte la même clé au même endroit.
+    assert "${HOME}/.config/didier/secrets.env:/run/secrets/didier.env:ro" in _compose(BANC)["services"]["vision"]["volumes"]
+
+
+def test_la_fumee_ne_pose_la_surcouche_tete_qu_apres_avoir_trouve_les_deux_secrets():
+    src = (SIM / "fumee.sh").read_text(encoding="utf-8")
+    phase = src[src.index("phase_conversation() {"):]
+    phase = phase[:phase.index("\n}\n")]
+    garde = phase.index("grep -q '^ANTHROPIC_API_KEY=.' \"$SECRET_ANTHROPIC\"")
+    assert garde < phase.index('[ ! -f "$SECRET_OPENROUTER" ]') < phase.index('SURCOUCHES=(-f "$COMPOSE_TETE")')
+    assert "--statut non_lance --facultative" in phase[:phase.index('SURCOUCHES=(-f "$COMPOSE_TETE")')]
+    assert 'SECRET_ANTHROPIC="$HOME/.config/didier/secrets.env"' in src
+    assert 'COMPOSE_TETE=docker-compose.tete.yml' in src and "SURCOUCHES=()" in src
+    # Aucune lecture qui afficherait la valeur : présence seulement (grep -q).
+    assert "cat \"$SECRET" not in src and "source \"$SECRET" not in src

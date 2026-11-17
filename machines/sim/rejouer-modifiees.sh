@@ -47,7 +47,9 @@ fi
 
 # --- 1. la sim : celle de cet arbre, en domaine 43, ou démarrée ici
 env_de() { docker inspect "$1" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n "s/^$2=//p"; }
-if docker ps --format '{{.Names}}' | grep -qx "$CONTENEUR"; then
+# Jamais `docker ps|logs … | grep -q` sous pipefail (SIGPIPE de l'écrivain = faux négatif, vu
+# dans fumee.sh le 16/11) : la sortie est capturée d'abord.
+if grep -qx -- "$CONTENEUR" <<<"$(docker ps --format '{{.Names}}')"; then
   monte="$(docker inspect "$CONTENEUR" --format '{{range .Mounts}}{{if eq .Destination "/home/ros2_ws/src/robot/json"}}{{.Source}}{{end}}{{end}}')"
   if [ "$monte" != "$DEPOT/data/json" ]; then
     echo "REFUS : la sim qui tourne monte $monte, pas $DEPOT/data/json (autre arbre)."; exit 2
@@ -65,7 +67,7 @@ else
   until docker exec "$CONTENEUR" pgrep -f parameter_bridge >/dev/null 2>&1 \
         && docker exec "$CONTENEUR" pgrep -f "lib/didier_web/validation_sim" >/dev/null 2>&1; do
     for c in "$CONTENEUR" "$ROBOT"; do
-      if docker logs "$c" 2>&1 | grep -qE 'Failed +<<<|packages? failed'; then echo "colcon build a échoué (docker logs $c)"; exit 2; fi
+      if grep -qE 'Failed +<<<|packages? failed' <<<"$(docker logs "$c" 2>&1)"; then echo "colcon build a échoué (docker logs $c)"; exit 2; fi
     done
     [ $((SECONDS - t0)) -lt 360 ] || { echo "sim pas prête après 360 s (docker logs $CONTENEUR / $ROBOT)"; exit 2; }
     sleep 3

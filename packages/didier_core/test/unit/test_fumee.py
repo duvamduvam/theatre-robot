@@ -106,7 +106,37 @@ def test_un_compteur_n_est_vert_qu_a_la_valeur_gravee(ok, attendu, ko, statut):
 
 def test_ordre_canonique_des_epreuves():
     assert [i for i, _ in fp.EPREUVES] == [
-        "image", "demarrage", "rtf", "namespace", "catalogue", "parle", "edition", "machines", "chantiers", "a1"]
+        "image", "demarrage", "rtf", "namespace", "catalogue", "parle", "edition", "machines", "chantiers", "a1",
+        "conversation"]
+
+
+def test_seule_la_conversation_est_facultative():
+    assert fp.FACULTATIVES == frozenset({"conversation"})
+
+
+def test_conversation_non_lancee_faute_de_cle_ne_rougit_pas():
+    """16/11 : sans clé Anthropic, CONV est « non lancée » par la fumée (`facultative`) — vert ;
+    la même non lancée SANS ce drapeau (fumée interrompue avant) reste rouge, et un rouge reste rouge."""
+    avant = [{"id": i, "statut": "vert"} for i, _ in fp.EPREUVES if i != "conversation"]
+    assert fp.verdict_global(avant + [{"id": "conversation", "statut": "non_lance", "facultative": True}]) \
+        == ("vert", None)
+    assert fp.verdict_global(avant) == ("rouge", None)
+    assert fp.verdict_global(avant + [{"id": "conversation", "statut": "rouge", "facultative": True}]) \
+        == ("rouge", "conversation")
+    # Le drapeau ne vaut que pour une épreuve déclarée facultative.
+    assert fp.verdict_global([dict(e, facultative=True) if e["id"] == "a1" else e for e in avant[:-1]]
+                             + [{"id": "a1", "statut": "non_lance", "facultative": True},
+                                {"id": "conversation", "statut": "vert"}]) == ("rouge", None)
+
+
+def test_epreuve_facultative_refusee_hors_liste(tmp_path):
+    jsonl = tmp_path / "e.jsonl"
+    assert fp.main(["epreuve", "--jsonl", str(jsonl), "--id", "conversation", "--statut", "non_lance",
+                    "--facultative", "--detail", "non lancée (pas de clé)"]) == 0
+    assert json.loads(jsonl.read_text()) == {"id": "conversation", "statut": "non_lance",
+                                             "detail": "non lancée (pas de clé)", "facultative": True}
+    with pytest.raises(SystemExit):
+        fp.main(["epreuve", "--jsonl", str(jsonl), "--id", "a1", "--statut", "non_lance", "--facultative"])
 
 
 def test_verdict_global_premier_rouge_bloque():
@@ -122,7 +152,7 @@ def test_completer_marque_non_lancees_les_suivantes():
     assert [(e["id"], e["statut"]) for e in complet] == [
         ("image", "vert"), ("demarrage", "non_lance"), ("rtf", "rouge"), ("namespace", "non_lance"),
         ("catalogue", "non_lance"), ("parle", "non_lance"), ("edition", "non_lance"), ("machines", "non_lance"),
-        ("chantiers", "non_lance"), ("a1", "non_lance")]
+        ("chantiers", "non_lance"), ("a1", "non_lance"), ("conversation", "non_lance")]
 
 
 # --- git : les commits de docs/fumee ne rendent pas une fumée due ------------------
@@ -351,7 +381,8 @@ def test_page_verte_porte_sha_rtf_et_compteurs():
             {"id": "edition", "statut": "vert", "ok": 12, "attendu": 12, "ko": 0},
             {"id": "machines", "statut": "vert", "ok": 5, "attendu": 5, "ko": 0},
             {"id": "chantiers", "statut": "vert", "ok": 21, "attendu": 21, "ko": 0, "duree_s": 585},
-            {"id": "a1", "statut": "vert", "ok": 14, "attendu": 14, "ko": 0}]
+            {"id": "a1", "statut": "vert", "ok": 14, "attendu": 14, "ko": 0},
+            {"id": "conversation", "statut": "vert", "ok": 13, "attendu": 13, "ko": 0}]
     page = fp.rendre_page(resultat(tout))
     assert "<code>9c937d0</code>" in page
     assert "07/11/2026 à 21:30" in page
@@ -371,7 +402,7 @@ def test_page_rouge_dit_ou_et_ce_qui_n_a_pas_ete_lance():
                 {"id": "rtf", "statut": "rouge", "obtenu": "0.49", "detail": "RTF 0.49 < 0.8"}]
     page = fp.rendre_page(resultat(epreuves, verdict="rouge", bloquant="rtf", rtf=0.49))
     assert "ROUGE à l&#x27;épreuve « Sonde du facteur temps réel (20 s) » : les suivantes n&#x27;ont pas été lancées." in page
-    assert page.count("non lancée") == 7   # namespace, catalogue, parle, edition (L1d), machines (L2b), chantiers, a1
+    assert page.count("non lancée") == 8   # namespace, catalogue, parle, edition (L1d), machines (L2b), chantiers, a1, conversation
     assert "RTF 0.49 &lt; 0.8" in page                      # échappé
 
 
@@ -433,7 +464,7 @@ def test_valeurs_attendues_gravees_en_tete_du_script():
     gravees = dict(re.findall(r"^(ATTENDU_[A-Z0-9]+)=(\d+)", src, re.M))
     assert gravees == {"ATTENDU_NAMESPACE": "5", "ATTENDU_CATALOGUE": "4", "ATTENDU_PARLE": "3",
                        "ATTENDU_EDITION": "13", "ATTENDU_MACHINES": "5", "ATTENDU_CHANTIERS": "21",
-                       "ATTENDU_A1": "14"}
+                       "ATTENDU_A1": "14", "ATTENDU_CONVERSATION": "13"}
     assert re.search(r"^RTF_MIN_DEFAUT=0\.8$", src, re.M)
 
 
@@ -449,6 +480,10 @@ def test_les_compteurs_gravees_sont_ceux_des_scripts_de_verification():
     # validate-machines.sh (L2b) : M1-M4 et M6, un verdict() chacun.
     machines = (SCRIPTS / "validate-machines.sh").read_text(encoding="utf-8")
     assert re.findall(r'^verdict\([^,]+, "(M\d)', machines, re.M) == ["M1", "M2", "M3", "M4", "M6"]
+    # validate-conversation.sh (CONV, 16/11) : 13 verdict() étiquetés, dans cet ordre.
+    conv = (SCRIPTS / "validate-conversation.sh").read_text(encoding="utf-8")
+    assert re.findall(r'^verdict\(.*?\n?\s*f?"([PTABC]\d) ', conv, re.M | re.S) == [
+        "P1", "T0", "A1", "A2", "A3", "B1", "B2", "B3", "B4", "B5", "C1", "C2", "C3"]
 
 
 def test_garde_fous_presents_dans_le_script():
@@ -497,7 +532,11 @@ def banc(tmp_path):
     env = dict(os.environ, PATH=str(bin_) + os.pathsep + os.environ["PATH"], FUMEE_DEPOT=str(depot),
                FUMEE_ETAT=str(tmp_path / "etat"), FAUX_DOCKER_APPELS=str(tmp_path / "appels.txt"),
                FAUX_NOTIFS=str(tmp_path / "notifs.txt"), FUMEE_DRY_POWEROFF="1",
-               FUMEE_PLAGES=str(tmp_path / "aucune-plage"))   # jamais le fichier réel du PC
+               FUMEE_PLAGES=str(tmp_path / "aucune-plage"),   # jamais le fichier réel du PC
+               # Jamais le brut réel du PC non plus : sans cette variable, les essais
+               # écrivaient leurs fausses fumées rouges dans ~/tmp/didier-fumee (vu le 17/11 :
+               # quatre « main, démarrage rouge » aux sha inexistants dans le vrai brut).
+               FUMEE_BRUT=str(tmp_path / "brut"))
     (tmp_path / "appels.txt").write_text("", encoding="utf-8")
     return depot, env, tmp_path
 
@@ -782,7 +821,8 @@ def test_ligne_historique_format_grave():
         '"mode": "force", "essai": false, "verdict": "rouge", "bloquant": "chantiers", "rtf": 0.998, '
         '"duree_s": 2400, "page": "2026-11-07.html", "epreuves": {"image": "vert", "demarrage": "vert", '
         '"rtf": "vert 0.998", "namespace": "vert 5/5", "catalogue": "vert 4/4", "parle": "vert 3/3", '
-        '"edition": "vert 13/13", "machines": "vert 5/5", "chantiers": "rouge 20/21 1KO", "a1": "non_lance"}}\n')
+        '"edition": "vert 13/13", "machines": "vert 5/5", "chantiers": "rouge 20/21 1KO", "a1": "non_lance", '
+        '"conversation": "non_lance"}}\n')
 
 
 def test_lire_resultats_lit_l_historique_derniere_ligne_gagnante(tmp_path):
@@ -848,3 +888,64 @@ def test_fumee_sh_brut_local_purge_et_sim_hors_depot():
 def test_le_depot_ignore_les_journaux_bruts():
     ignores = (SCRIPTS.parents[1] / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "docs/fumee/journaux/" in ignores
+
+
+# --- Lecture des journaux docker sans tube sous pipefail (rouge CONV du 16/11 23:30) ----------
+
+def _fonction_sh(nom):
+    m = re.search(r"^%s\(\) \{.*?^\}\n" % re.escape(nom), _lire_sh(), re.M | re.S)
+    assert m, "%s() introuvable dans fumee.sh" % nom
+    return m.group(0)
+
+
+def _faux_docker_bavard(tmp_path, entete):
+    """Faux docker dont `logs` imite un chat_node sans micro : une ligne d'en-tête, puis ≈ 400 Ko."""
+    bin_ = tmp_path / "bin"
+    bin_.mkdir(exist_ok=True)
+    faux = bin_ / "docker"
+    faux.write_text('#!/bin/bash\n[ "$1" = logs ] || exit 0\nprintf "%s\\n" "$FAUX_ENTETE"\n'
+                    'for i in $(seq 4000); do printf "[chat-3] ALSA lib pcm.c:2721: Unknown PCM casque_mic'
+                    ' xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\\n"; done\n', encoding="utf-8")
+    faux.chmod(0o755)
+    return dict(os.environ, PATH=str(bin_) + os.pathsep + os.environ["PATH"], FAUX_ENTETE=entete,
+                TMP=str(tmp_path))
+
+
+def test_le_faux_docker_reproduit_le_defaut_du_tube(tmp_path):
+    """Témoin : l'ANCIEN motif (docker logs | grep -q sous pipefail) rate un Summary pourtant là."""
+    env = _faux_docker_bavard(tmp_path, "Summary: 4 packages finished [10.1s]")
+    p = subprocess.run(["bash", "-c", "set -o pipefail; docker logs c 2>&1 | grep -qE 'Summary: [0-9]+ packages? finished'"
+                        " && echo compte || echo rate"], env=env, capture_output=True, text=True, timeout=30)
+    assert p.stdout.strip() == "rate"
+
+
+@pytest.mark.parametrize("entete, attendu", [
+    ("Summary: 4 packages finished [10.1s]", "fini"),
+    ("Summary: 3 packages finished [9.0s]\n1 package failed: didier_vision", "echec"),
+    ("Failed   <<< didier_vision [2.1s, exited with code 1]", "echec"),
+    ("Starting >>> didier_vision", "en_cours"),
+])
+def test_etat_colcon_juste_meme_avec_un_journal_enorme(tmp_path, entete, attendu):
+    env = _faux_docker_bavard(tmp_path, entete)
+    script = "set -euo pipefail\n" + _fonction_sh("etat_colcon") + 'etat_colcon didier-sim-vision\n'
+    p = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=30)
+    assert p.returncode == 0 and p.stdout.strip() == attendu
+
+
+def test_aucun_tube_docker_vers_grep_q_dans_les_scripts_sous_pipefail():
+    motif = re.compile(r"^(?!\s*#).*docker (?:logs|ps)\b[^\n|]*\|\s*grep -q", re.M)   # hors commentaires
+    fautifs = []
+    for sh in sorted(SCRIPTS.glob("*.sh")):
+        src = sh.read_text(encoding="utf-8")
+        if "pipefail" in src:
+            fautifs += ["%s:%d" % (sh.name, src[:m.start()].count("\n") + 1) for m in motif.finditer(src)]
+    assert fautifs == []
+
+
+def test_extinction_du_pc_notee_par_simple_lecture_de_systemd():
+    """17/11 00:39 : PC éteint au bouton pendant la relance A1, rouge lu « Gazebo mort »."""
+    sh = _lire_sh()
+    corps = sh[sh.index("\nterminer() {"):sh.index("\ntrap terminer EXIT")]
+    assert "systemctl is-system-running" in corps
+    assert re.findall(r"systemctl (\S+)", corps) == ["is-system-running"]    # lecture seule
+    assert "etat_conteneur" in _fonction_sh("demarrer_sim")

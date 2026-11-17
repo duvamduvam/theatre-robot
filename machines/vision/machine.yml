@@ -31,6 +31,15 @@ secrets_hote:
   - source: vision-conf-secret
     dest: ros2_ws/src/vision/conf/secret
     modele: "{{ machines_dir }}/vision/secret.example"
+  # Clé de l'API Anthropic (16/11 : la tête parle à Anthropic en direct, OpenRouter en secours) :
+  # la MÊME source que sur le PC (~/.config/didier/secrets.env, ANTHROPIC_API_KEY). Posée HORS de
+  # ros2_ws : jamais dans un contexte de build ni dans le rsync ; le compose ARM la monte en
+  # lecture seule sur /run/secrets/didier.env (vision_config.ANTHROPIC_SECRETS_FILE_DEFAUT),
+  # chemin que le verrou (c) du rôle conteneur cherche dans l'image (`image`).
+  - source: secrets.env
+    dest: .config/didier/secrets.env
+    modele: "{{ machines_dir }}/vision/secrets.env.example"
+    image: /run/secrets/didier.env
 # Monté par le compose (../../../medias) mais absent du dépôt.
 dossiers_montes:
   - medias
