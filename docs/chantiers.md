@@ -36,6 +36,23 @@ journal de bord illisible).*
 > (⚠️ y lire le piège `fake-hwclock` : sans RTC, `uptime`, `who -b` et `docker ps` se
 > contredisent après une coupure — seul `/proc/uptime` dit vrai).
 
+## Cap du 18/11 au ~18/01 (décidé avec David)
+
+**Deux mois de travail SOLIDE vers un Didier fiable, autonome et jouable, avec entraînement en
+sim pendant ce temps.** Filtre de chaque lot ou étude : rend-il Didier plus fiable, plus autonome
+(moins de bugs et de manipulation à gérer en jeu) ou plus jouable ? Sinon, il attend.
+
+1. **Logiciel (temps d'agent)** : tableau des objets O0-O1 (`etudes/etude-objets-vus-et-carte.md`)
+   → étude improvisation (bugs joués sur le vrai robot, lubies) → L2c (page de contrôle sur
+   laquelle David s'entraîne) ; fumées vertes à chaque fusion.
+2. **Une séance en sim par semaine avec David**, même courte : entraînement de jeu, et c'est là
+   que les vrais défauts apparaissent (séance du 15/11).
+3. **Robot réel, à petits pas et petit budget** : ronflement audio, protocole caméra, mesures
+   électriques — étapes de 30 min au plus, préparées à l'avance.
+
+En attente tant que le cap n'est pas atteint : éditeur en pistes, danse, rendu LED pixel, L2d,
+L2e, études UX autres que la télécommande, lots O2-O4.
+
 ## Vue d'ensemble
 
 | Chantier | Statut | Prochaine action | Verrou / condition |
