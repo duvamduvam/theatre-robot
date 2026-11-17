@@ -345,6 +345,29 @@ ros_dans() { docker exec "$(conteneur_de "$1")" bash -c 'source /opt/ros/$ROS_DI
 ros_detache() { docker exec -d "$(conteneur_de "$1")" bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && '"$2"; }
 python_ros() { docker exec -i "$(conteneur_de monde)" bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && python3 -'; }
 
+# Sous `pipefail`, JAMAIS `docker logs … | grep -q` ni `docker ps … | grep -q` : grep -q sort au
+# premier motif trouvé, l'écrivain meurt de SIGPIPE (141) dès que la sortie dépasse un tampon, et la
+# pipeline ÉCHOUE alors que le motif est là. Vécu le 16/11 23:30 : chat_node (micro absent en sim)
+# gonfle le journal vision (350 Ko en 10 min), son « Summary » n'est plus jamais compté (colcon
+# 3/4 pendant 600 s) et CONV tombe rouge sans avoir tourné ; le même tube masquait un ÉCHEC de
+# colcon. Reproduit : 0/20 avec le vrai docker logs, 20/20 via un fichier. On capture d'abord.
+conteneur_vivant() { # conteneur_vivant <nom> : 0 si ce conteneur EXACT est en marche
+  local noms; noms="$(docker ps --format '{{.Names}}' 2>/dev/null || true)"
+  grep -qx -- "$1" <<<"$noms"
+}
+
+etat_conteneur() { # etat_conteneur <nom> : « exited, code 137, fin … » ou « absent » (diagnostic)
+  docker inspect -f '{{.State.Status}}, code {{.State.ExitCode}}, fin {{.State.FinishedAt}}' "$1" 2>/dev/null || echo absent
+}
+
+etat_colcon() { # etat_colcon <conteneur> -> fini | echec | en_cours ; journal copié dans $TMP/docker-<c>.log
+  local f="$TMP/docker-$1.log"
+  docker logs "$1" >"$f" 2>&1 || true
+  if grep -qE 'Failed +<<<|packages? failed' "$f"; then echo echec
+  elif grep -qE 'Summary: [0-9]+ packages? finished' "$f"; then echo fini
+  else echo en_cours; fi
+}
+
 attendre_processus() { # attendre_processus <motif> <présent|absent> <secondes>
   # pgrep depuis `monde` : robot, vision et télécommande partagent son espace de processus.
   local motif=$1 voulu=$2 delai=$3 t0=$SECONDS present
@@ -357,7 +380,7 @@ attendre_processus() { # attendre_processus <motif> <présent|absent> <secondes>
 }
 
 recolter() { # recolter <nom> : copie hors conteneurs AVANT leur arrêt (les journaux meurent avec eux)
-  docker ps --format '{{.Names}}' | grep -qx "$(conteneur_de monde)" || return 0
+  conteneur_vivant "$(conteneur_de monde)" || { NOTES+=("journaux des conteneurs non récoltés ($1) : monde n'est plus en marche ($(etat_conteneur "$(conteneur_de monde)"))"); return 0; }
   local d="$TMP/recolte-$1" s; mkdir -p "$d/tmp"
   for s in "${SERVICES[@]}"; do
     docker logs "$(conteneur_de "$s")" >"$d/$s-docker.log" 2>&1 || true
@@ -469,23 +492,26 @@ demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis a
   echo "domaine 43 lu dans les ${#CONTENEURS[@]} conteneurs" >>"$TMP/demarrage.log"
   # Prêt = colcon fini sans échec dans les 4, le pont gz lancé, Gazebo vivant, puis les nœuds
   # attendus du robot et de la vision vus depuis monde.
-  local t0=$SECONDS colcon_ok pont=0
+  local t0=$SECONDS colcon_ok pont=0 en_cours etat
   while [ $((SECONDS - t0)) -lt "$DELAI_DEMARRAGE" ]; do
-    colcon_ok=0
+    colcon_ok=0 en_cours=""
     for s in "${SERVICES[@]}"; do
       c="$(conteneur_de "$s")"
-      docker ps --format '{{.Names}}' | grep -qx "$c" || { echo "le conteneur $c s'est arrêté" >>"$TMP/demarrage.log"; docker logs "$c" 2>&1 | tail -40 >>"$TMP/demarrage.log"; return 1; }
-      if docker logs "$c" 2>&1 | grep -qE 'Failed +<<<|packages? failed'; then
-        echo "colcon build a échoué dans $c" >>"$TMP/demarrage.log"; docker logs "$c" >>"$TMP/demarrage.log" 2>&1; return 1
+      conteneur_vivant "$c" || { echo "le conteneur $c s'est arrêté ($(etat_conteneur "$c"))" >>"$TMP/demarrage.log"; docker logs "$c" 2>&1 | tail -40 >>"$TMP/demarrage.log"; return 1; }
+      etat="$(etat_colcon "$c")"
+      if [ "$etat" = echec ]; then
+        echo "colcon build a échoué dans $c" >>"$TMP/demarrage.log"; cat "$TMP/docker-$c.log" >>"$TMP/demarrage.log"; return 1
       fi
-      docker logs "$c" 2>&1 | grep -qE 'Summary: [0-9]+ packages? finished' && colcon_ok=$((colcon_ok + 1))
+      if [ "$etat" = fini ]; then colcon_ok=$((colcon_ok + 1)); else en_cours+=" $s"; fi
     done
     if [ "$pont" = 0 ] && docker exec "$(conteneur_de monde)" pgrep -f parameter_bridge >/dev/null 2>&1; then
       sleep 15   # laisse le monde se charger avant de mesurer quoi que ce soit
       # Le pont vit sans Gazebo : sans ce contrôle, un moteur de rendu mort (autorité X,
       # GPU) ne se verrait qu'au RTF, sous une cause trompeuse.
       if ! docker exec "$(conteneur_de monde)" pgrep -f "gz sim" >/dev/null 2>&1; then
-        { echo "Gazebo (gz sim) est mort au démarrage — extrait du journal de monde :"
+        # L'état du conteneur dit si c'est Gazebo qui est mort ou TOUTE la sim (17/11 00:39 : PC
+        # éteint au bouton pendant la relance A1 — démon docker arrêté, rouge lu « Gazebo mort »).
+        { echo "Gazebo (gz sim) absent au démarrage — conteneur monde : $(etat_conteneur "$(conteneur_de monde)") — extrait de son journal :"
           docker logs "$(conteneur_de monde)" 2>&1 | grep -E "process has died|Segmentation|Authorization required|Unable to create the rendering" | tail -5 | cut -c1-300
         } >>"$TMP/demarrage.log"
         return 1
@@ -499,7 +525,7 @@ demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis a
     fi
     sleep 5
   done
-  echo "sim incomplète après $DELAI_DEMARRAGE s (pont gz : $pont, colcon fini : ${colcon_ok:-0}/${#SERVICES[@]})" >>"$TMP/demarrage.log"; return 1
+  echo "sim incomplète après $DELAI_DEMARRAGE s (pont gz : $pont, colcon fini : ${colcon_ok:-0}/${#SERVICES[@]}${en_cours:+, pas fini :$en_cours})" >>"$TMP/demarrage.log"; return 1
 }
 
 rechauffer_cli() {
@@ -798,6 +824,10 @@ terminer() {
   set +e
   if [ "$ENGAGEE" = 1 ]; then
     recolter "$PHASE_COURANTE"   # AVANT l'arrêt : les journaux meurent avec le conteneur
+    # PC en cours d'extinction (bouton, menu) : lecture SEULE de l'état de systemd. Le 17/11 à
+    # 00:39, David a éteint le PC pendant la relance A1 ; le rouge se lisait « Gazebo mort ».
+    [ "$(systemctl is-system-running 2>/dev/null || true)" != stopping ] \
+      || NOTES+=("le PC s'éteignait à la fin de la fumée (systemd « stopping ») : le rouge de la dernière épreuve vient de l'extinction, pas de Didier")
     arreter_sim
     # L'arbre de travail ne doit pas avoir bougé (hors docs/fumee) — sinon on le dit sur la page.
     local apres; apres="$(git -C "$DEPOT" status --porcelain -- . ':(exclude)docs/fumee')"

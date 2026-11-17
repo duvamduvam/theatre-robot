@@ -371,6 +371,18 @@ fournisseur de ce qu'Anthropic ne fait pas (STT Voxtral, modèles non Claude). C
   contexte de build et du rsync ; verrou (c) du rôle `conteneur` étendu : le chemin monté est
   cherché dans l'image) ; sim = surcouches `docker-compose.tete.yml` et `docker-compose.banc.yml`.
   `openrouter_key` (`conf/secret`) reste exigée au démarrage du chat (secours + STT).
+  ⚠️ Le rôle `secrets` copie le fichier ENTIER : toute clé ajoutée plus tard à
+  `~/.config/didier/secrets.env` partirait aussi sur le Pi vision (au 17/11 il ne porte que
+  `ANTHROPIC_API_KEY`).
+- **Pi vision : PAS ENCORE DÉPLOYÉ (17/11)**. Le déploiement (`deploy-pios.yml -e
+  target_group=vision`, puis `./ecart-pi.sh vision`) doit apporter : (1) le secret
+  `~/.config/didier/secrets.env` (0600, rôle `secrets`, entrée de `machines/vision/machine.yml`) ;
+  (2) l'image vision reconstruite avec `anthropic>=2.9,<3` (`machines/vision/requirements.txt` :
+  le rôle `conteneur` vide build/install quand l'image change) ; (3) le compose ARM qui monte le
+  secret sur `/run/secrets/didier.env` (recréer le conteneur, pas `restart`) ; (4) le verrou (c)
+  étendu (champ `image`), qui doit trouver l'image SANS `/run/secrets/didier.env`. À vérifier
+  ensuite : ligne `chat démarré (… llm=anthropic:claude-haiku-5-5 puis openrouter:…)` dans le
+  journal du conteneur, page scène « Anthropic, secours OpenRouter », `ecart-pi.sh vision` vert.
 - **Latence mesurée** (16/11, `tools/banc_bouche.py --fournisseur openrouter|anthropic`, persona
   bougon, 15 scénarios × 2, Haiku 5.5, hors conteneur) : premier mot médian **0,62 s** (max 1,74 s)
   par OpenRouter, **0,53 s** (max 0,59 s) en direct ; mêmes gestes 27/30, JSON 30/30.
@@ -965,7 +977,9 @@ répond, AUCUN `tour_de` publié, aucune réplique ne prétend l'avoir fait (mot
 `aller_voir` table basse ≤ 20 s, accepté par le régisseur ≤ 30 s, arrivée ≤ 90 s, « go » de
 reprise du jeu 9-13 s après l'arrivée (`reprise.apres_geste_s` = 10 s), Didier repart (≥ 0,3 m en
 15 s) ; **C** « Stop. » : stop de la bouche ≤ 2 s (arrêt d'urgence, avant le LLM), relais du jeu
-≤ 0,5 s, `route_state` off ≤ 3 s puis < 0,05 m parcourus de +4 à +9 s. Coût ≈ 0,0035 $ par fumée
+≤ 0,5 s, `route_speed` 0 ≤ 1 s après le stop de la bouche (l'arrêt vocal est un « hold » du
+régisseur : `route_state` reste on), `cmd_vel_follow` nul de +2 à +9 s et < 0,05 m parcourus de
++4 à +9 s. Coût ≈ 0,0035 $ par fumée
 (6-7 répliques Haiku). **FACULTATIVE** : sans `ANTHROPIC_API_KEY` dans
 `~/.config/didier/secrets.env` (ou sans `vision-conf-secret`), elle est « non lancée (pas de clé) »
 et ne rougit jamais la fumée (`fumee_page.py`, `FACULTATIVES`) ; seul un vrai rouge compte. Les
@@ -1071,6 +1085,18 @@ le robot dans `data/` puis restaure tout (empreinte de `json/` et `medias/visual
   le démon avant l'épreuve (`rechauffer_cli`). Le script de vérification lui-même n'a pas été touché.
 - Une fumée n'a de sens que sur `main` : si le checkout est sur une autre branche, la minuterie
   reporte (une fumée à la main marque la branche sur la page).
+- **Jamais `docker logs … | grep -q` (ni `docker ps … | grep -q`) sous `pipefail`** : grep -q sort
+  au premier motif, l'écrivain meurt de SIGPIPE (141) dès que la sortie dépasse un tampon, la
+  pipeline échoue alors que le motif est là. Vu le 16/11 23:30 : avec la tête, chat_node (micro
+  absent en sim, réessai toutes les 0,5 s) gonfle le journal vision de 350 Ko en 10 min ; le
+  « Summary » colcon n'était plus compté (3/4 pendant 600 s) et CONV tombait rouge sans avoir
+  tourné. Reproduit 0/20 avec le vrai docker logs. `fumee.sh` capture d'abord (`etat_colcon`,
+  `conteneur_vivant`) ; gravé par `test_fumee.py` (faux docker bavard + garde sur tous les scripts
+  sous pipefail de `machines/sim/`).
+- **PC éteint pendant une fumée** (17/11 00:39 : bouton d'alimentation pendant la relance A1) :
+  le démon docker s'arrête, la relance échoue. Depuis le 17/11 la page le dit (note « le PC
+  s'éteignait », lue dans `systemctl is-system-running`) et `demarrage.log` donne l'état du
+  conteneur `monde` au lieu d'un « Gazebo mort » trompeur. Un tel rouge ne dit rien de Didier.
 
 **Minuterie systemd utilisateur** (`machines/sim/`, sans sudo) :
 ```bash

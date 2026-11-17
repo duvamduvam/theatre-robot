@@ -532,7 +532,11 @@ def banc(tmp_path):
     env = dict(os.environ, PATH=str(bin_) + os.pathsep + os.environ["PATH"], FUMEE_DEPOT=str(depot),
                FUMEE_ETAT=str(tmp_path / "etat"), FAUX_DOCKER_APPELS=str(tmp_path / "appels.txt"),
                FAUX_NOTIFS=str(tmp_path / "notifs.txt"), FUMEE_DRY_POWEROFF="1",
-               FUMEE_PLAGES=str(tmp_path / "aucune-plage"))   # jamais le fichier réel du PC
+               FUMEE_PLAGES=str(tmp_path / "aucune-plage"),   # jamais le fichier réel du PC
+               # Jamais le brut réel du PC non plus : sans cette variable, les essais
+               # écrivaient leurs fausses fumées rouges dans ~/tmp/didier-fumee (vu le 17/11 :
+               # quatre « main, démarrage rouge » aux sha inexistants dans le vrai brut).
+               FUMEE_BRUT=str(tmp_path / "brut"))
     (tmp_path / "appels.txt").write_text("", encoding="utf-8")
     return depot, env, tmp_path
 
@@ -884,3 +888,64 @@ def test_fumee_sh_brut_local_purge_et_sim_hors_depot():
 def test_le_depot_ignore_les_journaux_bruts():
     ignores = (SCRIPTS.parents[1] / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "docs/fumee/journaux/" in ignores
+
+
+# --- Lecture des journaux docker sans tube sous pipefail (rouge CONV du 16/11 23:30) ----------
+
+def _fonction_sh(nom):
+    m = re.search(r"^%s\(\) \{.*?^\}\n" % re.escape(nom), _lire_sh(), re.M | re.S)
+    assert m, "%s() introuvable dans fumee.sh" % nom
+    return m.group(0)
+
+
+def _faux_docker_bavard(tmp_path, entete):
+    """Faux docker dont `logs` imite un chat_node sans micro : une ligne d'en-tête, puis ≈ 400 Ko."""
+    bin_ = tmp_path / "bin"
+    bin_.mkdir(exist_ok=True)
+    faux = bin_ / "docker"
+    faux.write_text('#!/bin/bash\n[ "$1" = logs ] || exit 0\nprintf "%s\\n" "$FAUX_ENTETE"\n'
+                    'for i in $(seq 4000); do printf "[chat-3] ALSA lib pcm.c:2721: Unknown PCM casque_mic'
+                    ' xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\\n"; done\n', encoding="utf-8")
+    faux.chmod(0o755)
+    return dict(os.environ, PATH=str(bin_) + os.pathsep + os.environ["PATH"], FAUX_ENTETE=entete,
+                TMP=str(tmp_path))
+
+
+def test_le_faux_docker_reproduit_le_defaut_du_tube(tmp_path):
+    """Témoin : l'ANCIEN motif (docker logs | grep -q sous pipefail) rate un Summary pourtant là."""
+    env = _faux_docker_bavard(tmp_path, "Summary: 4 packages finished [10.1s]")
+    p = subprocess.run(["bash", "-c", "set -o pipefail; docker logs c 2>&1 | grep -qE 'Summary: [0-9]+ packages? finished'"
+                        " && echo compte || echo rate"], env=env, capture_output=True, text=True, timeout=30)
+    assert p.stdout.strip() == "rate"
+
+
+@pytest.mark.parametrize("entete, attendu", [
+    ("Summary: 4 packages finished [10.1s]", "fini"),
+    ("Summary: 3 packages finished [9.0s]\n1 package failed: didier_vision", "echec"),
+    ("Failed   <<< didier_vision [2.1s, exited with code 1]", "echec"),
+    ("Starting >>> didier_vision", "en_cours"),
+])
+def test_etat_colcon_juste_meme_avec_un_journal_enorme(tmp_path, entete, attendu):
+    env = _faux_docker_bavard(tmp_path, entete)
+    script = "set -euo pipefail\n" + _fonction_sh("etat_colcon") + 'etat_colcon didier-sim-vision\n'
+    p = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, timeout=30)
+    assert p.returncode == 0 and p.stdout.strip() == attendu
+
+
+def test_aucun_tube_docker_vers_grep_q_dans_les_scripts_sous_pipefail():
+    motif = re.compile(r"^(?!\s*#).*docker (?:logs|ps)\b[^\n|]*\|\s*grep -q", re.M)   # hors commentaires
+    fautifs = []
+    for sh in sorted(SCRIPTS.glob("*.sh")):
+        src = sh.read_text(encoding="utf-8")
+        if "pipefail" in src:
+            fautifs += ["%s:%d" % (sh.name, src[:m.start()].count("\n") + 1) for m in motif.finditer(src)]
+    assert fautifs == []
+
+
+def test_extinction_du_pc_notee_par_simple_lecture_de_systemd():
+    """17/11 00:39 : PC éteint au bouton pendant la relance A1, rouge lu « Gazebo mort »."""
+    sh = _lire_sh()
+    corps = sh[sh.index("\nterminer() {"):sh.index("\ntrap terminer EXIT")]
+    assert "systemctl is-system-running" in corps
+    assert re.findall(r"systemctl (\S+)", corps) == ["is-system-running"]    # lecture seule
+    assert "etat_conteneur" in _fonction_sh("demarrer_sim")
