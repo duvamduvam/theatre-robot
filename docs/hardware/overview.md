@@ -1127,3 +1127,11 @@ The audio board manages relays to switch audio sources between wireless receiver
 - Verify servo calibration after transport
 - Confirm LED strips are firmly attached and diffused correctly for stage lighting
 - Test emergency stop procedures (describe them in `docs/operations.md`)
+
+## Panne connue — Ethernet du Pi 5 (vision), constatée le 16/11
+
+Le port Ethernet du Pi 5 de la vision est mort : la puce PHY ne répond pas (identifiant lu
+`ffffffff`, pilote « Generic PHY », faux lien 10 Mb/s semi-duplex, aucun paquet reçu). Même câble
+et même prise de box OK avec un Pi 4 ; mise à jour de l'EEPROM et coupure d'alimentation sans
+effet. Le Pi vision tourne en **Wi-Fi** (`wlan0`). Remède prévu : adaptateur USB-Ethernet (USB 3)
+ou garantie.

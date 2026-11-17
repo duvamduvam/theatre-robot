@@ -56,6 +56,16 @@ Pas encore dans le panier : lames ATO 25 A de rechange (optionnel). Cosses : en 
 
 Ajouts du 08/11 dans le même panier : porte-fusible général et quelques fusibles (pris par David, calibre définitif après mesure du courant des roues), RPLIDAR C1 (1005006190309082, 66,39 €), et **un lot de porte-fusibles BLX-A pour CI** (annonce « [30-10PCS] BLX-A », 2,12 €, 250 vendus). ⚠️ La carte Puissance est dessinée pour des **clips Keystone 3512, entraxe 23 mm** (8 empreintes `Fuseholder_Clip-5x20mm_Keystone_3512_Inline_P23`) : le BLX-A n'y tombe pas. Décision à prendre pendant la session de corrections : mesurer l'entraxe des BLX-A reçus et changer l'empreinte si les 8 tiennent sur la carte, sinon acheter 16 clips. SD-150B-12 commandé chez alimentatorishop.com, pas sur AliExpress.
 
+#### Commande AliExpress du 11/11 — ✅ COMMANDÉ (David), relevé le 18/11
+
+| Article | Qté | Prix | Usage |
+|---|---|---|---|
+| Module isolateur I²C bidirectionnel (« Pin not welded », boutique Hgy cinq étoiles) | 3 | 5,69 € pièce, total 23,07 € | carte Sécurité (remplace l'ISO1540 de la commande 2 ? à vérifier contre l'empreinte corrigée le 05/11) |
+
+**État des livraisons au 18/11** : toutes les commandes du 08 et du 11/11 sont « en attente de
+livraison » (page commandes AliExpress de David) ; RPLIDAR C1 annoncé chez le vendeur entre le
+29/11 et le 05/12 pour une commande neuve (date réelle de la commande du 08/11 non lue).
+
 ### Commande 2 — un seul distributeur UE, après V1 et V2 (cartes, modules, alimentation, câble)
 
 | Pièce | Qté | Pourquoi / piège | Prix lu |
