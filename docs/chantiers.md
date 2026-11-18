@@ -1288,6 +1288,14 @@ coup-de-poing) ne bougent pas : la sim ne qualifie rien côté sécurité.
 
 ## Pistes en veille (pas urgentes, pas oubliées)
 
+- **BRAS LONG (~1 m) POUR UN FUTUR ROBOT — veille du 2026-11-18, rien d'acté** :
+  [`veille/brut/2026-11-18-bras-long.md`](veille/brut/2026-11-18-bras-long.md). Achat
+  écarté (Kinova Gen3 Lite 18 720 € TTC, lu le 18/11 ; cobots type Kassow Edge 26-36 kg).
+  Piste : bras **fait maison** carbone, moteurs à l'épaule, ressort de compensation, moteurs
+  sans balais réversibles ; moteurs ≈ 635-960 $ par bras (Damiao, lus le 18/11), reste non
+  chiffré. Limite = couple à l'épaule et sécurité public, pas la batterie. Premier pas :
+  maquette imprimée sans moteur, masses pesées.
+
 - **CAMÉRA DE PROFONDEUR — avis du 2026-11-11, rien d'acté.** Utile pour **mesurer** la
   distance des personnes (aujourd'hui estimée par la hauteur de boîte, fragile en occlusion
   partielle : `etude-suivi-personne.md`), séparer les personnes en foule, et voir **marches
