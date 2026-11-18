@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""Passant simulé (spec A0 §8.4, paquet didier_sim, AUTONOME comme leds/servos_sim_node).
+
+Déplace le modèle `passant` du monde gz `stage` (cylindre statique r 0,20 m, h 1,7 m,
+worlds/stage.sdf) le long d'un segment, à vitesse constante, par le service gz
+/world/stage/set_pose appelé à 20 Hz via les liaisons Python de gz-transport (pas un
+processus `gz service` par pas : 20 lancements par seconde coûteraient plus que la sim).
+
+    sim/passant        (entrée, StringTime) : JSON {"de": [x, y], "a": [x, y], "vitesse": v,
+                       "repere": "didier"|"monde"} — voir didier_sim_lib/passant_logic.py
+    ground_truth/odom  (entrée, Odometry) : pose vraie de Didier, pour le repère "didier"
+    sim/passant_etat   (sortie, StringTime) : JSON {"etat": "en_route"|"arrive"|"refuse",
+                       "position": [x, y] (monde), "motif": "..." si refusé}
+
+Toute la règle vit dans passant_logic (testée) ; ce nœud ne fait que relier. Horloge = celle
+du nœud (use_sim_time). REFUS hors domaine 43 : il ne doit exister qu'en simulation.
+Monde gz visé : `stage` seulement (les autres mondes n'ont pas de passant — demande refusée
+proprement, set_pose échoue et l'état le dit).
+"""
+import json
+import os
+import sys
+
+if os.environ.get("ROS_DOMAIN_ID", "").strip() != "43":
+    sys.exit("passant_sim_node : ROS_DOMAIN_ID=%r, refusé (simulation = 43 seulement)"
+             % os.environ.get("ROS_DOMAIN_ID"))
+
+# Bootstrap d'import : script et didier_sim_lib installés côte à côte dans lib/didier_sim/.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from didier_sim_lib.passant_logic import (  # noqa: E402
+    lacet_depuis_quaternion,
+    lire_demande,
+    position,
+    trajet_monde,
+)
+
+import rclpy  # noqa: E402
+from nav_msgs.msg import Odometry  # noqa: E402
+from rclpy.node import Node  # noqa: E402
+from theatre_interfaces.msg import StringTime  # noqa: E402
+
+from gz.msgs10.boolean_pb2 import Boolean  # noqa: E402
+from gz.msgs10.pose_pb2 import Pose  # noqa: E402
+from gz.transport13 import Node as NoeudGz  # noqa: E402
+
+SERVICE_SET_POSE = "/world/stage/set_pose"
+MODELE = "passant"
+HAUTEUR_CENTRE_M = 0.85      # demi-hauteur du cylindre : il pose sur le sol
+PERIODE_S = 0.05             # 20 Hz
+DELAI_SERVICE_MS = 200
+
+
+class PassantSim(Node):
+    def __init__(self):
+        super().__init__("passant_sim_node")
+        self._gz = NoeudGz()
+        self._pose_robot = None
+        self._trajet = None
+        self._etat = self.create_publisher(StringTime, "sim/passant_etat", 10)
+        self.create_subscription(StringTime, "sim/passant", self._sur_demande, 10)
+        self.create_subscription(Odometry, "ground_truth/odom", self._sur_odom, 10)
+        self.create_timer(PERIODE_S, self._sur_tic)
+
+    def _maintenant(self) -> float:
+        return self.get_clock().now().nanoseconds * 1e-9
+
+    def _publier(self, contenu: dict) -> None:
+        msg = StringTime()
+        msg.msg = json.dumps(contenu)
+        msg.time = self.get_clock().now().nanoseconds // 1_000_000
+        self._etat.publish(msg)
+
+    def _sur_odom(self, m: Odometry) -> None:
+        q = m.pose.pose.orientation
+        self._pose_robot = (m.pose.pose.position.x, m.pose.pose.position.y,
+                            lacet_depuis_quaternion(q.z, q.w))
+
+    def _sur_demande(self, m: StringTime) -> None:
+        try:
+            trajet = trajet_monde(lire_demande(m.msg), self._maintenant(), self._pose_robot)
+        except ValueError as exc:
+            self.get_logger().warning("demande refusée : %s" % exc)
+            self._publier({"etat": "refuse", "motif": str(exc)})
+            return
+        if not self._poser(trajet.de):
+            self._publier({"etat": "refuse", "motif": "set_pose a échoué (monde stage ?)"})
+            return
+        self._trajet = trajet
+        self._publier({"etat": "en_route", "position": list(trajet.de), "a": list(trajet.a),
+                       "vitesse": trajet.vitesse, "duree_s": round(trajet.duree, 3)})
+
+    def _sur_tic(self) -> None:
+        if self._trajet is None:
+            return
+        point, fini = position(self._trajet, self._maintenant())
+        self._poser(point)
+        if fini:
+            self._trajet = None
+            self._publier({"etat": "arrive", "position": [round(point[0], 3), round(point[1], 3)]})
+
+    def _poser(self, point) -> bool:
+        req = Pose()
+        req.name = MODELE
+        req.position.x, req.position.y, req.position.z = point[0], point[1], HAUTEUR_CENTRE_M
+        req.orientation.w = 1.0
+        ok, rep = self._gz.request(SERVICE_SET_POSE, req, Pose, Boolean, DELAI_SERVICE_MS)
+        return bool(ok and rep.data)
+
+
+def main():
+    rclpy.init()
+    noeud = PassantSim()
+    try:
+        rclpy.spin(noeud)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        noeud.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

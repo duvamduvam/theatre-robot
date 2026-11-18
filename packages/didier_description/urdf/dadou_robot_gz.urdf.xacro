@@ -153,6 +153,87 @@
     </sensor>
   </gazebo>
 
+  <!-- ======== Lidar 2D SLAMTEC RPLIDAR C1 (SIM-ONLY ici, spec A0 §8.1) ========
+       Le vrai C1 se monte sur la face AVANT (décision de David du 18/11, spec A0 §13) ;
+       deux hauteurs de plan candidates : 25 cm du sol en bas de caisse (défaut) et 45 cm
+       sur la porte. La pose est un ARGUMENT xacro pour que la sim compare les emplacements
+       (outil didier_corps_sur/tools/couverture_poses.py) ; monde.launch.py la passe.
+       Repère base_link : x devant, z haut, origine au centre de la caisse, SOL À z = −0,23 ;
+       z du capteur = hauteur du plan − 0,23 (0,02 → plan à 0,25 m).
+       Boîte 55 × 55 × 41 mm, 110 g (fiche C1), SANS collision (le capteur ne doit rien
+       heurter en sim, il n'a pas de masse utile). preserveFixedJoint : même piège que
+       camera_link, sans lui laser_frame serait fusionné dans base_link et le capteur perdrait
+       son lien (et son frame_id). -->
+  <xacro:arg name="lidar_x" default="0.33"/>
+  <xacro:arg name="lidar_y" default="0.0"/>
+  <xacro:arg name="lidar_z" default="0.02"/>
+  <xacro:arg name="lidar_lacet" default="0.0"/>
+  <link name="laser_frame">
+    <visual>
+      <geometry><box size="0.055 0.055 0.041"/></geometry>
+      <material name="black"/>
+    </visual>
+    <xacro:box_inertial m="0.11" x="0.055" y="0.055" z="0.041"/>
+  </link>
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser_frame"/>
+    <origin xyz="$(arg lidar_x) $(arg lidar_y) $(arg lidar_z)" rpy="0 0 $(arg lidar_lacet)"/>
+  </joint>
+  <gazebo reference="laser_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+
+  <!-- Capteur gpu_lidar aux caractéristiques du C1 (fiche v1.0, spec A0 §1) : 500 rayons sur
+       360° (pas 0,72° = 2π/500 ; min −π, max = −π + 499 × 2π/500, pour ne pas doubler le rayon
+       de −π/+π), 1 seul plan, 10 Hz, portée 0,05-12 m, résolution 15 mm, bruit gaussien
+       σ = 0,01 m (± 30 mm à 3 σ). Le pilote réel publie `scan` (relatif) en LaserScan : le pont
+       dédié `pont_lidar` (monde.launch.py, PAS gz_bridge.yaml : les épreuves doivent pouvoir figer
+       le lidar seul sans figer /clock) relaie le topic gz /scan. gz_frame_id = laser_frame
+       (frame_id imposé au pilote réel, spec §4.2). Échelon RTF retenu : voir update_rate. -->
+  <gazebo reference="laser_frame">
+    <sensor name="lidar" type="gpu_lidar">
+      <gz_frame_id>laser_frame</gz_frame_id>
+      <topic>scan</topic>
+      <!-- 10 Hz : porte la porte des 200 ms (spec A0 §8.2, ne se baisse pas).
+           ÉCHELON 1 RETENU (500 rayons, 10 Hz), mesuré le 19/11 (sim complète, 4 conteneurs,
+           monde chantiers, sans tête, cœurs 8-15 réservés, sondes de 20 s sur /clock) :
+           avec lidar 0,990 · 0,996 · 0,995 · 1,006 · 0,996 (médiane 0,996) ; sans lidar 0,991
+           (et 0,904-0,912 lors d'un premier passage plus chargé, où l'avec donnait 0,858 et 0,994).
+           Coût du capteur sous le bruit de mesure (~1 %) : RTF ≥ 0,90 et ≥ 0,95 × sans, porte
+           du §8.2 passée au premier échelon. scan : 10,00 Hz en temps simulé, 500 rayons. -->
+      <update_rate>10</update_rate>
+      <always_on>1</always_on>
+      <visualize>false</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>500</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159265</min_angle>
+            <max_angle>3.12902628</max_angle>
+          </horizontal>
+          <vertical>
+            <samples>1</samples>
+            <resolution>1</resolution>
+            <min_angle>0</min_angle>
+            <max_angle>0</max_angle>
+          </vertical>
+        </scan>
+        <range>
+          <min>0.05</min>
+          <max>12.0</max>
+          <resolution>0.015</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
   <!-- Roue folle : elle est modélisée en sphère fixe, elle doit glisser. -->
   <gazebo reference="caster_rear_link">
     <mu1>0.05</mu1>
