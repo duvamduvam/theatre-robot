@@ -229,10 +229,9 @@ services:
         theatre_contrats: ../../packages/theatre_contrats
         dadou_utils_ros: ../../packages/dadou_utils_ros
     environment:
-      # IHM tkinter hors Pi : il lui faut le serveur X de la session (ECRAN=hote).
-      - DISPLAY=${DISPLAY}
-      - QT_X11_NO_MITSHM=1
-      - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
+      # Pas d'interface en sim (18/11, David : « ça ne sert à rien ») : la fenêtre Tk
+      # s'ouvrait sur le bureau à chaque relance. Le nœud et ses éditeurs tournent seuls.
+      - TELECOMMANDE_SANS_IHM=1
       - ROS_DOMAIN_ID=43
       - ROBOT_NAME=${ROBOT_NAME:-didier}
       - COLCON_LOG_PATH=/home/ros2_ws/log/colcon-telecommande
@@ -240,8 +239,6 @@ services:
     ipc: "host"
     pid: "service:monde"
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
       - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}/log-telecommande:/home/ros2_ws/log
       - ../../legacy/dadou_control_ros/conf:/home/ros2_ws/src/controller/conf
       - ../../legacy/dadou_control_ros/controller:/home/ros2_ws/src/controller/controller

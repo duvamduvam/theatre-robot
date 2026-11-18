@@ -12,7 +12,7 @@ littéral dans le compose et revérifié par chaque entrée de conteneur.
 | `monde` | `monde/Dockerfile` (x86 seul) | Gazebo, pont gz, matériel simulé (servos, LED), répétition, sélecteur de jeu, **épreuves** ; `GZ_IP=127.0.0.1` (A1 intermittent, 11/11) |
 | `robot` | `machines/robot/docker/Dockerfile` | le VRAI `robot_app.launch.py` (17 nœuds, chaîne roues en `use_sim_time`) + `complement_sim.launch.py` (`face_sim`, `validation_sim_node`) |
 | `vision` | `machines/vision/docker/Dockerfile` | `vision.launch.py`, `CHAT=false`, aucun secret ; sans webcam `person_tracker` s'arrête (L2c : caméra Gazebo) |
-| `telecommande` | Dockerfile x86 legacy | `controller_node` (IHM tkinter : il lui faut l'écran de la session) |
+| `telecommande` | Dockerfile x86 legacy | `controller_node` **sans interface** (`TELECOMMANDE_SANS_IHM=1`, 18/11) : ses éditeurs de topics tournent, aucune fenêtre sur le bureau |
 
 ```
 cd machines/sim
