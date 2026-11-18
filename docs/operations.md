@@ -1139,6 +1139,12 @@ le robot dans `data/` puis restaure tout (empreinte de `json/` et `medias/visual
   tourné. Reproduit 0/20 avec le vrai docker logs. `fumee.sh` capture d'abord (`etat_colcon`,
   `conteneur_vivant`) ; gravé par `test_fumee.py` (faux docker bavard + garde sur tous les scripts
   sous pipefail de `machines/sim/`).
+- **Panne réseau pendant la reconstruction des images** (18/11 10:36 : DNS de Docker Hub en
+  timeout sur le `FROM ros:jazzy-ros-base`, buildx résolvant les métadonnées même en cache) : la
+  fumée rougissait en 11 s sans rien tester. Depuis le 18/11, un échec dont le journal montre le
+  registre ou le DNS injoignable est rejoué UNE fois après `FUMEE_ATTENTE_RESEAU` (60 s) ; s'il
+  persiste, le rouge porte « PANNE RÉSEAU … pas de Didier ». Un Dockerfile cassé n'est jamais
+  rejoué (`test_fumee.py`, journaux réels gravés).
 - **PC éteint pendant une fumée** (17/11 00:39 : bouton d'alimentation pendant la relance A1) :
   le démon docker s'arrête, la relance échoue. Depuis le 17/11 la page le dit (note « le PC
   s'éteignait », lue dans `systemctl is-system-running`) et `demarrage.log` donne l'état du

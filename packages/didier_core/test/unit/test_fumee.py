@@ -1106,3 +1106,65 @@ def test_le_verrou_est_pose_juste_avant_le_deroule_et_libere_en_fin():
     assert "\nposer_verrou_sim\nderoule\n" in sh
     terminer = sh[sh.index("\nterminer() {"):sh.index("\ntrap terminer EXIT")]
     assert "  liberer_verrou_sim\n" in terminer
+
+
+# --- Panne réseau pendant la reconstruction des images (18/11 10:36) -----------------------
+
+def _fonction_reseau(nom):
+    m = re.search(r"^" + nom + r"\(\) \{[^\n]*\n.*?^\}\n", _lire_sh(), re.M | re.S)
+    assert m, nom + "() introuvable"
+    return m.group(0)
+
+
+JOURNAL_DNS_18_11 = (
+    '#21 ERROR: failed to do request: Head "https://registry-1.docker.io/v2/library/ros/manifests/'
+    'jazzy-ros-base": dial tcp: lookup registry-1.docker.io on 127.0.0.53:53: read udp '
+    '127.0.0.1:59843->127.0.0.53:53: i/o timeout\n'
+    'target monde: failed to solve: ros:jazzy-ros-base: failed to resolve source metadata\n')
+JOURNAL_DOCKERFILE_FAUX = (
+    '#9 [robot 4/9] RUN pip install -r /tmp/requirements.txt\n'
+    '#9 ERROR: process "/bin/sh -c pip install -r /tmp/requirements.txt" did not complete '
+    'successfully: exit code: 1\nfailed to solve: process did not complete successfully\n')
+
+
+@pytest.mark.parametrize("journal, panne", [(JOURNAL_DNS_18_11, True), (JOURNAL_DOCKERFILE_FAUX, False)])
+def test_panne_reseau_distinguee_d_un_dockerfile_casse(tmp_path, journal, panne):
+    log = tmp_path / "image.log"
+    log.write_text(journal, encoding="utf-8")
+    p = subprocess.run(["bash", "-c", _fonction_reseau("panne_reseau_build") + 'panne_reseau_build "$1"', "_", str(log)])
+    assert (p.returncode == 0) is panne
+
+
+def _construire(tmp_path, reponses):
+    """Joue construire_images() avec un faux docker dont chaque appel lit la réponse suivante."""
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    for i, (texte, code) in enumerate(reponses):
+        (tmp_path / f"rep{i}").write_text(texte, encoding="utf-8")
+        (tmp_path / f"code{i}").write_text(str(code), encoding="utf-8")
+    faux = bin_ / "docker"
+    faux.write_text('#!/bin/bash\nn=$(cat "$CPT" 2>/dev/null || echo 0); echo $((n+1)) >"$CPT"\n'
+                    'cat "$REP/rep$n"; exit "$(cat "$REP/code$n")"\n', encoding="utf-8")
+    faux.chmod(0o755)
+    script = ("dit() { :; }\nDOCKER_DIR=\"$REP\"; COMPOSE=x\n" + _fonction_reseau("panne_reseau_build")
+              + _fonction_reseau("construire_images") + "construire_images")
+    env = dict(os.environ, PATH=str(bin_) + os.pathsep + os.environ["PATH"], CPT=str(tmp_path / "cpt"),
+               REP=str(tmp_path), TMP=str(tmp_path), FUMEE_ATTENTE_RESEAU="0")
+    p = subprocess.run(["bash", "-c", script], env=env)
+    appels = int((tmp_path / "cpt").read_text())
+    return p.returncode, appels
+
+
+def test_une_coupure_dns_passagere_ne_rougit_pas(tmp_path):
+    rc, appels = _construire(tmp_path, [(JOURNAL_DNS_18_11, 1), ("Built\n", 0)])
+    assert (rc, appels) == (0, 2)
+
+
+def test_un_dockerfile_casse_n_est_pas_reessaye(tmp_path):
+    rc, appels = _construire(tmp_path, [(JOURNAL_DOCKERFILE_FAUX, 1), ("Built\n", 0)])
+    assert (rc, appels) == (1, 1)
+
+
+def test_une_panne_reseau_qui_dure_reste_un_echec(tmp_path):
+    rc, appels = _construire(tmp_path, [(JOURNAL_DNS_18_11, 1), (JOURNAL_DNS_18_11, 1)])
+    assert (rc, appels) == (1, 2)

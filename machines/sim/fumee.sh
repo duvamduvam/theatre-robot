@@ -730,12 +730,36 @@ phase_image() {
   fi
   dit "reconstruction des ${#IMAGES[@]} images de la sim ($raison, cache : 1-5 min ; à froid ≈ 15 min)"
   IMAGE_RECONSTRUITE=1
-  if (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build) >"$TMP/image.log" 2>&1; then
+  if construire_images; then
     epreuve image --statut vert --detail "reconstruite : $raison" --duree "$((SECONDS - t0))" --journal image.log
+  elif panne_reseau_build "$TMP/image.log"; then
+    # Ni le code ni Didier : le registre (Docker Hub) était injoignable, même après un essai de plus.
+    epreuve image --statut rouge --detail "PANNE RÉSEAU : registre Docker injoignable pendant la reconstruction ($raison) — défaut de l'environnement, pas de Didier ; relancer plus tard" \
+      --duree "$((SECONDS - t0))" --journal image.log
+    return 1
   else
     epreuve image --statut rouge --detail "la reconstruction a échoué ($raison)" --duree "$((SECONDS - t0))" --journal image.log
     return 1
   fi
+}
+
+# panne_reseau_build <journal> : 0 si l'échec du build vient du RÉSEAU (registre ou DNS injoignable),
+# pas du Dockerfile. Vécu le 18/11 10:36 : « lookup registry-1.docker.io … i/o timeout » sur le
+# FROM ros:jazzy-ros-base (buildx résout les métadonnées de l'image de base même en cache) : la
+# fumée rougissait en 11 s sans avoir rien testé.
+panne_reseau_build() {
+  grep -qiE 'lookup [^ ]+ on [^ ]+: .*(i/o timeout|no such host|server misbehaving)|dial tcp: .*(i/o timeout|connection refused|network is unreachable)|TLS handshake timeout|temporary failure in name resolution|failed to do request: (Head|Get) "https://[^"]*(docker\.io|docker\.com)' "$1"
+}
+
+# construire_images : reconstruit ; si l'échec vient du réseau, UN essai de plus après
+# ${FUMEE_ATTENTE_RESEAU:-60} s (une coupure DNS de quelques secondes ne doit pas rougir la fumée).
+construire_images() {
+  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build) >"$TMP/image.log" 2>&1 && return 0
+  panne_reseau_build "$TMP/image.log" || return 1
+  dit "registre Docker injoignable : nouvel essai dans ${FUMEE_ATTENTE_RESEAU:-60} s"
+  sleep "${FUMEE_ATTENTE_RESEAU:-60}"
+  echo "=== nouvel essai après panne réseau ===" >>"$TMP/image.log"
+  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build) >>"$TMP/image.log" 2>&1
 }
 
 phase_demarrage() {
