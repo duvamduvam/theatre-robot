@@ -202,6 +202,8 @@ services:
       - CHAT=false
       # Propose la caméra Gazebo (sensor_msgs/Image) comme source d'images à chaud.
       - VISION_SIM_CAMERA_TOPIC=camera/image_raw
+      # Perception sur la caméra Gazebo dès le démarrage, webcam fermée (18/11, décision de David).
+      - VISION_SOURCE_INITIALE=gazebo
       - COLCON_LOG_PATH=/home/ros2_ws/log/colcon-vision
     network_mode: "host"
     ipc: "host"

@@ -61,10 +61,13 @@ const LIBELLE_ETAT_SEANCE = {
   terminee: "séance : terminée",
 };
 
-// camera_state (latché côté vision) -> libellé du badge.
+// camera_state (latché côté vision) -> libellé du badge, SELON LA SOURCE
+// (camera_source_state) : l'état dit si l'entrée de la perception produit des
+// images. En source Gazebo, la webcam est FERMÉE — afficher « webcam allumée »
+// était faux (18/11) ; « on » Gazebo = des images arrivent vraiment.
 const LIBELLE_ETAT_CAMERA = {
-  on: "webcam allumée",
-  off: "webcam coupée",
+  webcam: { on: "webcam allumée", off: "webcam coupée" },
+  gazebo: { on: "caméra Gazebo : images reçues", off: "caméra Gazebo : aucune image" },
 };
 
 // camera_source_state (latché côté vision) -> mot affiché dans le titre du panneau.
@@ -173,14 +176,16 @@ function afficherEtatScene(msg) {
   afficherEtatRegisseur(valeurTopic(msg.topics, "rehearsal/state"));
 
   const camera = valeurTopic(msg.topics, "camera_state");
-  majBadgeEtat("scene-etat-camera", LIBELLE_ETAT_CAMERA, camera, camera === "on");
+  const source = valeurTopic(msg.topics, "camera_source_state");
+  // Source inconnue : libellés webcam (historique, la vision n'a rien dit d'autre).
+  majBadgeEtat("scene-etat-camera", LIBELLE_ETAT_CAMERA[source] || LIBELLE_ETAT_CAMERA.webcam,
+               camera, camera === "on");
   surlignerGroupe("groupe-camera", camera);
   // Coupée : texte « caméra coupée » par-dessus, au lieu de la dernière image figée.
   // État inconnu (null) : on ne masque rien, la webcam n'a pas dit qu'elle était coupée.
   $("perception-coupee").hidden = camera !== "off";
 
-  afficherSourceCamera(valeurTopic(msg.topics, "camera_source_state"),
-                       valeurTopic(msg.topics, "camera_sources"));
+  afficherSourceCamera(source, valeurTopic(msg.topics, "camera_sources"));
 }
 
 // Source des images de la perception : surbrillance d'après l'état RÉEL, titre du panneau,

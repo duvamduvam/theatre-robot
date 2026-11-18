@@ -37,6 +37,8 @@ from theatre_contrats import topics
 from didier_vision.tracking.detector import MediaPipeDetector, open_camera
 from didier_vision.tracking.camera_source import (
     SOURCE_GAZEBO, SOURCE_WEBCAM, available_sources, decode_camera_source,
+    gazebo_input_alive,
+    initial_source,
     image_to_bgr, resolve_source)
 from didier_vision.tracking.camera_switch import CAMERA_OFF, CAMERA_ON, decode_camera_enable
 from didier_vision.tracking.target_picker import TargetPicker
@@ -123,6 +125,8 @@ class PersonTrackerNode(Node):
         self.declare_parameter("video_fps", VIDEO_FPS_DEFAULT)
         # "" = option Gazebo INDISPONIBLE (cas du robot réel).
         self.declare_parameter("sim_camera_topic", "")
+        # Source de départ : "webcam" (défaut, robot réel) | "gazebo" (sim, 18/11).
+        self.declare_parameter("source_initiale", "webcam")
 
         camera_device = self.get_parameter("camera_device").value
         model_path = self.get_parameter("model_path").value
@@ -156,17 +160,30 @@ class PersonTrackerNode(Node):
             )
             raise PersonTrackerStartupError("échec init MediaPipe") from exc
 
-        try:
-            self._cap = open_camera(
-                camera_device, width=CAPTURE_WIDTH, height=CAPTURE_HEIGHT, fps=CAPTURE_FPS,
-            )
-        except RuntimeError as exc:
-            self.get_logger().error(
-                f"Caméra indisponible ({camera_device}) : {exc} — vérifiez que "
-                "le périphérique existe (v4l2-ctl --list-devices) et que /dev "
-                "est bien monté dans le conteneur."
-            )
-            raise PersonTrackerStartupError("caméra indisponible") from exc
+        # Source de départ (spec L2 décision 14, 18/11) : la webcam n'est ouverte
+        # au démarrage QUE si elle est la source de départ (robot réel : échec =
+        # démarrage refusé, comme avant) ; en source Gazebo elle reste fermée
+        # (LED éteinte, aucun /dev/video0 exigé) et _sync_camera l'ouvrira si on
+        # la choisit sur la page.
+        source_depart, refusee = initial_source(
+            self.get_parameter("source_initiale").value, self._sim_camera_topic)
+        if refusee:
+            self.get_logger().warning(
+                f"source_initiale {self.get_parameter('source_initiale').value!r} refusée "
+                f"(sim_camera_topic={self._sim_camera_topic!r}) : départ sur {source_depart}")
+        self._cap = None
+        if source_depart == SOURCE_WEBCAM:
+            try:
+                self._cap = open_camera(
+                    camera_device, width=CAPTURE_WIDTH, height=CAPTURE_HEIGHT, fps=CAPTURE_FPS,
+                )
+            except RuntimeError as exc:
+                self.get_logger().error(
+                    f"Caméra indisponible ({camera_device}) : {exc} — vérifiez que "
+                    "le périphérique existe (v4l2-ctl --list-devices) et que /dev "
+                    "est bien monté dans le conteneur."
+                )
+                raise PersonTrackerStartupError("caméra indisponible") from exc
 
         self._camera_device = camera_device
         # Coupe-webcam : _camera_wanted est la CONSIGNE (écrite par le callback
@@ -181,11 +198,14 @@ class PersonTrackerNode(Node):
         # callback ne fait que ranger le dernier message, le timer le consomme
         # (conversion + détection dans le MÊME tick que la webcam) puis le met
         # à None : une frame déjà traitée n'est jamais retraitée.
-        self._source_wanted = SOURCE_WEBCAM
-        self._source_active = SOURCE_WEBCAM
+        self._source_wanted = source_depart
+        self._source_active = source_depart
         self._source_state_sent = None
         self._sim_sub = None
         self._sim_msg = None
+        # Heure (monotone) de la dernière image Gazebo reçue : l'état « on » de la
+        # source Gazebo n'est publié que si des images arrivent VRAIMENT.
+        self._sim_last_frame_s = None
         self._last_sim_log_s = 0.0
         self._picker = TargetPicker(ema_alpha=ema_alpha)
         # Noms RELATIFS (theatre_contrats.topics, lot L1a) : sans namespace ils
@@ -212,7 +232,10 @@ class PersonTrackerNode(Node):
         self._camera_state_pub = self.create_publisher(
             StringTime, CAMERA_STATE_TOPIC,
             QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
-        self._publish_camera_state(CAMERA_ON)  # défaut : la capture est ouverte ci-dessus
+        if self._cap is not None:
+            self._publish_camera_state(CAMERA_ON)  # webcam ouverte ci-dessus
+        # Source Gazebo : RIEN publié ici — « on » attend la première image
+        # (_sync_camera), sinon la page annonçait une entrée qui ne produit rien.
 
         # Source d'images : commande volatile, états latchés (même raison).
         latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -222,7 +245,7 @@ class PersonTrackerNode(Node):
         sources_pub = self.create_publisher(StringTime, CAMERA_SOURCES_TOPIC, latched)
         sources_pub.publish(StringTime(
             msg=json.dumps(available_sources(self._sim_camera_topic)), time=0, anim=False))
-        self._publish_source_state(SOURCE_WEBCAM)  # défaut : webcam, ouverte plus haut
+        self._publish_source_state(source_depart)
 
         # Retour vidéo (cf. constantes VIDEO_*) : publisher créé SEULEMENT si
         # video_fps > 0 — même garantie structurelle que drive_enabled côté
@@ -293,6 +316,7 @@ class PersonTrackerNode(Node):
     def _on_sim_image(self, msg) -> None:
         """Range la dernière frame Gazebo (le timer la consomme)."""
         self._sim_msg = msg
+        self._sim_last_frame_s = time.monotonic()
 
     def _publish_source_state(self, source: str) -> None:
         """Publie la source EFFECTIVE, seulement sur changement."""
@@ -312,6 +336,7 @@ class PersonTrackerNode(Node):
             self.destroy_subscription(self._sim_sub)
             self._sim_sub = None
         self._sim_msg = None
+        self._sim_last_frame_s = None
 
     def _publish_camera_state(self, state: str) -> None:
         """Publie l'état EFFECTIF (pas la consigne), seulement sur changement."""
@@ -349,7 +374,11 @@ class PersonTrackerNode(Node):
                 self._sim_sub = self.create_subscription(
                     Image, self._sim_camera_topic, self._on_sim_image,
                     QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT))
-            self._publish_camera_state(CAMERA_ON)
+            # État VRAI : « on » seulement si des images arrivent (sim figée ou
+            # caméra absente du monde = « off »). On continue de lire : la
+            # première image remettra « on ».
+            alive = gazebo_input_alive(self._sim_last_frame_s, time.monotonic())
+            self._publish_camera_state(CAMERA_ON if alive else CAMERA_OFF)
             return True
         if self._cap is None:
             try:
