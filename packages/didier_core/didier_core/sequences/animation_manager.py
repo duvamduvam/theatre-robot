@@ -9,7 +9,7 @@ from didier_core.robot_static import STOP_ANIMATION_KEYS, TYPES, RANDOM_ANIMATIO
 from dadou_utils_ros.utils_static import ANIMATION, AUDIO, AUDIOS, KEY, KEYS, NECK, FACE, FACES, \
     LIGHTS, WHEELS, NAME, DURATION, RANDOM, SEQUENCES_DIRECTORY, LEFT_ARM, RIGHT_ARM, LEFT_EYE, \
     RIGHT_EYE, ROBOT_LIGHTS, TYPE, JSON_DIRECTORY
-from didier_core.actions.abstract_json_actions import AbstractJsonActions
+from didier_core.actions.abstract_json_actions import AbstractJsonActions, signature_disque
 from didier_core.sequences.track import Track
 from didier_core.sequences.random_animation_start import RandomAnimationStart
 from theatre_contrats import donnees
@@ -106,6 +106,7 @@ class AnimationManager(AbstractJsonActions):
         version gardée. La séquence en cours finit sur ses pistes déjà construites
         (Track.emissions au départ) : aucune piste ne change en plein jeu."""
         chemin = os.path.join(self.config[SEQUENCES_DIRECTORY], name + ".json")
+        signature = signature_disque(chemin)
         try:
             with open(chemin, encoding="utf-8") as f:
                 nouvelle = json.load(f)
@@ -121,11 +122,44 @@ class AnimationManager(AbstractJsonActions):
         self.sequences_key[touche] = nouvelle
         self.sequences_name[nom] = nouvelle
         self.chemins_sequences[nom] = name
+        self.signatures_sequences[nom] = signature
         self.relire_registre()  # « le même verdict fait relire le registre » (décision 9)
         self.random_animation_sequence = []
         self.load_random_animation_sequences()
         logging.info("séquence %s rechargée", name)
         return True
+
+    def relire_si_modifie(self, msg):
+        """Rechargement DÉTERMINISTE au départ d'une séquence (fumée rouge du 18/11 : le play
+        arrivé 1 ms avant le verdict data_edit_result a joué l'ancienne version ; deux topics
+        de deux émetteurs n'ont aucun ordre garanti, et l'exécuteur sert `animation` avant
+        `data_edit_result` quand les deux attendent). Le fichier de la séquence demandée est
+        comparé à sa signature de dernière lecture : changé = relu ici, avant de construire les
+        pistes. Une séquence créée mais pas encore au catalogue est cherchée sous sequences/
+        (nom de fichier nu, une seule correspondance). Le verdict reste utile (changement de
+        touche, tirage aléatoire) ; il n'est plus nécessaire pour jouer la bonne version."""
+        nom = msg.get(ANIMATION) if isinstance(msg.get(ANIMATION), str) else None
+        if nom is None and isinstance(msg.get(KEY), str) and msg[KEY] in self.sequences_key:
+            nom = self.sequences_key[msg[KEY]][NAME]
+        if not nom:
+            return
+        relatif = self.chemins_sequences.get(nom) or self._chercher_sequence_creee(nom)
+        if relatif is None:
+            return
+        fichier = os.path.join(self.config[SEQUENCES_DIRECTORY], relatif + ".json")
+        signature = signature_disque(fichier)
+        if signature is None or signature == self.signatures_sequences.get(nom):
+            return
+        logging.info("séquence %s modifiée sur le disque depuis sa lecture : relue avant de jouer", relatif)
+        self.recharger_sequence(relatif)
+
+    def _chercher_sequence_creee(self, nom):
+        """`<dossier>/<nom>` du SEUL fichier sequences/**/<nom>.json, sinon None (absent ou
+        ambigu : on ne devine pas). Seulement pour un nom inconnu : coût nul en jeu courant."""
+        racine = self.config[SEQUENCES_DIRECTORY]
+        trouves = [os.path.relpath(os.path.join(d, nom + ".json"), racine)[:-len(".json")]
+                   for d, _, fichiers in os.walk(racine) if nom + ".json" in fichiers]
+        return trouves[0].replace(os.sep, "/") if len(trouves) == 1 else None
 
     def random(self):
         # Non branché — futur mode autonome : déclenche une animation aléatoire

@@ -12,7 +12,7 @@ littéral dans le compose et revérifié par chaque entrée de conteneur.
 | `monde` | `monde/Dockerfile` (x86 seul) | Gazebo, pont gz, matériel simulé (servos, LED), répétition, sélecteur de jeu, **épreuves** ; `GZ_IP=127.0.0.1` (A1 intermittent, 11/11) |
 | `robot` | `machines/robot/docker/Dockerfile` | le VRAI `robot_app.launch.py` (17 nœuds, chaîne roues en `use_sim_time`) + `complement_sim.launch.py` (`face_sim`, `validation_sim_node`) |
 | `vision` | `machines/vision/docker/Dockerfile` | `vision.launch.py`, `CHAT=false`, aucun secret ; sans webcam `person_tracker` s'arrête (L2c : caméra Gazebo) |
-| `telecommande` | Dockerfile x86 legacy | `controller_node` (IHM tkinter : il lui faut l'écran de la session) |
+| `telecommande` | Dockerfile x86 legacy | `controller_node` **sans interface** (`TELECOMMANDE_SANS_IHM=1`, 18/11) : ses éditeurs de topics tournent, aucune fenêtre sur le bureau |
 
 ```
 cd machines/sim
@@ -27,7 +27,8 @@ docker compose down
 | `docker-compose.banc.yml` | surcouche « Didier à l'arrêt » sur le service `vision` : webcam, son, secret de `~/.config/didier/`, variables `CHAT_*` (`docker compose -f docker-compose.yml -f docker-compose.banc.yml up -d`) |
 | `docker-compose.tete.yml` | surcouche « tête » (16/11) sur le service `vision`, pour l'épreuve de conversation : chat sans micro ni son, mouvement à la voix, réflexion coupée, les deux secrets de la tête (`vision-conf-secret`, `secrets.env` → Anthropic en direct) en lecture seule ; la fumée ne la pose qu'après avoir trouvé les deux fichiers (`docker compose -f docker-compose.yml -f docker-compose.tete.yml up -d`) |
 | `monde/` | Dockerfile et entrée du conteneur `monde` (garde 43, colcon de ses packages, `monde.launch.py`) |
-| `robot/entree.sh` | entrée SIM du conteneur `robot` : garde 43, arguments de la sim, complément sim |
+| `robot/entree.sh` | entrée SIM du conteneur `robot` : garde 43, ménage SHM, arguments de la sim, complément sim |
+| `menage-shm.sh` | ménage de la mémoire partagée Fast DDS (18/11), appelé en tête des entrées de `monde` et `robot` : ports SHM vides de plus d'une minute (un seul bloquait sans fin un nœud du robot à chaque démarrage) puis `fastdds shm clean` (`docs/operations.md` § Mémoire partagée Fast DDS) |
 | `banc-vision/` | `asound-pc.conf` (alias ALSA du banc) et `audio_banc.py` (réglage casque) |
 | `validate-*.sh`, `pub.sh` | épreuves rejouables, montées dans `/home/ros2_ws/` du conteneur `monde` : `docker exec didier-sim-monde bash /home/ros2_ws/<script>` ; `validate-conversation.sh` (CONV, 16/11) exige la surcouche tête |
 | `capture_topics.py`, `captures.sh` | mesures des épreuves (16/11) : enregistreur rclpy (PRÊT avant l'épreuve, JSONL + dernières valeurs, arrêt propre) et sa bibliothèque bash, montés dans `monde` ; captures sous `$DIDIER_SIM_JOURNAUX/log/captures/` — plus aucune mesure par `ros2 topic echo` (`docs/operations.md` § Mesures des épreuves) |

@@ -42,7 +42,13 @@ class Ros2TkinterApp(Node):
         # HDMI, cas du Pi "control" et du PC). Sans DISPLAY => rendu Pillow sur
         # LCD SPI (ancien setup OS Lite sans bureau). Les gants ("gl") gardent
         # leur petite GUI.
-        if "gl" in hostname or not Misc.is_raspberrypi() or os.environ.get('DISPLAY'):
+        # TELECOMMANDE_SANS_IHM=1 (sim, 18/11) : aucune interface, le nœud et ses
+        # éditeurs tournent seuls. Sans ça, chaque relance de la sim ouvrait une
+        # fenêtre Tk sur le bureau de David, qui ne s'en sert pas.
+        if os.environ.get("TELECOMMANDE_SANS_IHM") == "1":
+            logging.info("télécommande sans interface (TELECOMMANDE_SANS_IHM=1)")
+            self.gui = None
+        elif "gl" in hostname or not Misc.is_raspberrypi() or os.environ.get('DISPLAY'):
             logging.info("start small gui (tkinter, DISPLAY={})".format(os.environ.get('DISPLAY')))
             self.gui = SmallGui(self)
         else:
@@ -53,8 +59,8 @@ class Ros2TkinterApp(Node):
         self.timer = self.create_timer(0.1, self.timer_callback)
 
     def timer_callback(self):
-        #pass
-        self.gui.update()
+        if self.gui is not None:
+            self.gui.update()
 
     def publish(self, animations_msg):
         if animations_msg and isinstance(animations_msg, dict):
