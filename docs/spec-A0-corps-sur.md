@@ -697,11 +697,25 @@ nœud maison reste en ligne dans les deux cas. Le verdict et les mesures vont da
 
 ## 13. Questions pour David
 
+**Réponses de David (18/11, soir)** — décisions, ne pas re-trancher :
+
+1. **Emplacement : sur la face AVANT** (la porte/caisse ; la tête est exclue vu la taille du robot).
+   Deux hauteurs candidates : **25 cm, en bas de la caisse** (retenue par défaut : c'est la hauteur
+   de balayage de l'étude, 20-30 cm, qui voit jambes, enfants, chiens, bornes ; fixe, sans
+   charnière) ou **45 cm sur la porte** (repli ; câble par la charnière, repositionnement à la
+   fermeture). A0-2 produit la table de couverture des DEUX poses avant tout perçage. Couverture
+   avant seulement assumée : pas de recul autonome, pivots lents (`angulaire_aveugle_autorise`
+   vrai seulement à la maison, plafond 0,3 rad/s), flancs et dos = zone de David.
+2. **Essai Nav2 (A0-1) : sauté**, sur l'avis de la spec (le nœud maison est nécessaire de toute
+   façon ; moins de maillons sur le chemin des roues). La décision « standards par morceaux » du
+   11/11 reste : on relira le moniteur de collision si le nœud maison grossit.
+3. **A0-2 et A0-3 lancés tout de suite**, avant la livraison du lidar, en parallèle d'O0-O1.
+
 | # | Question | Avis, et ce qui se passe sans réponse |
 |---|---|---|
-| 1 | **Où monte-t-on le C1 ?** Le support dessiné (face avant, bas) ne voit que devant : pas de marche arrière autonome (`moon-walk` joue sans reculer), et les pivots se font flancs et arrière **non vus** — ce n'est pas le « 360° » décidé le 02/11. | **Sim et maison : pose A**, avec `angulaire_aveugle_autorise` vrai et rotation plafonnée (0,3 rad/s au réel) : chez toi il n'y a personne sur les flancs. **Rue : à décider sur la table de couverture d'A0-2** (pose B ou C, ou tu acceptes par écrit que flancs et arrière sont ta zone). Sans réponse : pose A en sim ; le fichier du robot garde `angulaire_aveugle_autorise` **faux**, donc Didier n'y tourne pas seul. |
-| 2 | **Saute-t-on l'essai Nav2 (A0-1) ?** | **Je le sauterais.** Le nœud maison reste en ligne de toute façon (verrous, régions non vues, durée), la partie remplaçable fait une centaine de lignes déjà couvertes par les tests gravés, et le moniteur ajoute trois nœuds *lifecycle* sur le chemin des roues. Sans réponse : l'essai est fait (ta décision du 11/11 tient), 2 h. |
-| 3 | **Lance-t-on A0-2 et A0-3 maintenant, en parallèle d'O0-O1 ?** | **Oui** : le lidar arrive dans deux semaines et tout ce qui précède le banc se fait sans lui. Sans réponse : A0-3 seul démarre (aucun fichier commun, aucune sim), le reste après O1. |
+| 1 | ~~**Où monte-t-on le C1 ?**~~ (répondu ci-dessus) Le support dessiné (face avant, bas) ne voit que devant : pas de marche arrière autonome (`moon-walk` joue sans reculer), et les pivots se font flancs et arrière **non vus** — ce n'est pas le « 360° » décidé le 02/11. | **Sim et maison : pose A**, avec `angulaire_aveugle_autorise` vrai et rotation plafonnée (0,3 rad/s au réel) : chez toi il n'y a personne sur les flancs. **Rue : à décider sur la table de couverture d'A0-2** (pose B ou C, ou tu acceptes par écrit que flancs et arrière sont ta zone). Sans réponse : pose A en sim ; le fichier du robot garde `angulaire_aveugle_autorise` **faux**, donc Didier n'y tourne pas seul. |
+| 2 | ~~**Saute-t-on l'essai Nav2 (A0-1) ?**~~ (répondu ci-dessus) | **Je le sauterais.** Le nœud maison reste en ligne de toute façon (verrous, régions non vues, durée), la partie remplaçable fait une centaine de lignes déjà couvertes par les tests gravés, et le moniteur ajoute trois nœuds *lifecycle* sur le chemin des roues. Sans réponse : l'essai est fait (ta décision du 11/11 tient), 2 h. |
+| 3 | ~~**Lance-t-on A0-2 et A0-3 maintenant ?**~~ (répondu ci-dessus) | **Oui** : le lidar arrive dans deux semaines et tout ce qui précède le banc se fait sans lui. Sans réponse : A0-3 seul démarre (aucun fichier commun, aucune sim), le reste après O1. |
 
 ## 14. Ce que ce lot SUPPRIME
 
