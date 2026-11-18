@@ -1,0 +1,78 @@
+# Corps sûr de Didier — défauts SÛRS du package (spec docs/spec-A0-corps-sur.md §4-§6).
+# Ce fichier est la RÉFÉRENCE du package ; chaque machine a le sien
+# (machines/robot/corps_sur.yaml, machines/sim/robot/corps_sur.yaml), qui ne peut
+# qu'être plus strict que les bornes dures (reglages.py). Toute valeur est gravée
+# dans test/test_reglages.py : changer un chiffre exige de toucher ce test.
+terrain: reel
+
+# Rectangle de la caisse dans base_link (m), défauts URDF « estimés depuis les
+# photos » (§4.1) — 5 cotes à mesurer au mètre ruban (A0-7).
+caisse:
+  x_avant: 0.30
+  x_arriere: -0.57
+  demi_largeur: 0.40
+  x_essieu: 0.10
+  rayon_balayage: 0.65
+
+lidar:
+  # Pose A, face avant en bas de la caisse (décision de David du 18/11, §13 Q1).
+  x: 0.33
+  y: 0.0
+  lacet_rad: 0.0
+  # Plan de balayage à 0,25 m du sol : consigné, n'entre pas dans le calcul (2D).
+  hauteur_plan_m: 0.25
+  # Secteurs du corps vus par le lidar, dans laser_frame (°, sens trigo, de
+  # debut à fin en tournant dans le sens croissant). PROVISOIRE, À MESURER
+  # (tools/mesurer_masques.py, A0-7) : le demi-tour arrière, que le corps
+  # cache depuis la face avant. Prudent : la couverture n'annonce alors que
+  # l'AVANT vu (pas de recul, pas de pivot autonomes).
+  masques_deg:
+    - [90.0, 270.0]
+  # Témoin de vie optique (§4.2) : aucun auto-retour mesuré pour l'instant →
+  # limite écrite ici et en WARN permanent dans diagnostics.
+  temoin:
+    exige: false
+    secteur_deg: null
+    distance_m: null
+    points_min: 0
+
+balayage:
+  portee_min_m: 0.05
+  portee_max_m: 12.0
+  rayons_min: 300
+  age_max_reception_s: 0.25   # à caler au banc (§10.1)
+
+zones:
+  marge_arret_m: 0.60
+  marge_ralenti_m: 1.20
+  facteur_ralenti: 0.5
+  hysteresis_m: 0.05
+  balayages_de_sortie: 3
+
+couverture:
+  part_aveugle_max: 0.10
+  # Pivot avec flancs/arrière non vus : refusé. Le passer à vrai dans le fichier
+  # d'une machine est une décision de David, datée ici en commentaire (§5.2).
+  angulaire_aveugle_autorise: false
+  w_max_aveugle: 0.3          # provisoire (§5.4)
+
+# Plafonds par canal (terrain reel, §5.4) : 0,25 m/s = 25 % de PWM ; PROVISOIRES
+# jusqu'à la calibration PWM (A-préalables).
+canaux:
+  anim:   {v_max: 0.25, w_max: 0.5}
+  follow: {v_max: 0.25, w_max: 0.5}
+  web:    {v_max: 0.25, w_max: 0.5}
+
+capteur:
+  perime_s: 0.30
+  sante_s: 1.0
+
+superviseur:
+  # Défaut SÛR du package (§6) : exigé. Le fichier du robot le met à faux tant que
+  # le battement n'existe pas (§5.4) ; vrai obligatoire avant la rue.
+  exige: true
+  perime_s: 1.0
+
+duree:
+  duree_max_mouvement_s: 4.0  # pas d'odométrie sur le robot (§5.5)
+  pause_s: 1.0

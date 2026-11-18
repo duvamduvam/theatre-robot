@@ -33,6 +33,9 @@ jobs:
           - suite: theatre_contrats
             dir: packages/theatre_contrats
             requirements: requirements-test.txt
+          - suite: didier_corps_sur
+            dir: packages/didier_corps_sur
+            requirements: requirements-test.txt
           - suite: didier_vision
             dir: packages/didier_vision
             requirements: packages/didier_vision/requirements-test.txt

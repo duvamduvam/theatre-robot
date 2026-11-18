@@ -1049,7 +1049,7 @@ def test_les_requirements_de_test_sont_a_la_racine_et_dans_la_vision():
     racine = (MONO / "requirements-test.txt").read_text(encoding="utf-8").splitlines()
     actifs = [ligne for ligne in racine if ligne and not ligne.startswith("#")]
     assert actifs == ["pytest", "filetype", "colorlog", "psutil", "xacro", "imageio", "py_trees==2.6.0",
-                      "aiohttp", "Pillow"]
+                      "aiohttp", "Pillow", "pyyaml"]   # pyyaml : didier_corps_sur.reglages (A0-3, 19/11)
     vision = (PACKAGES / "didier_vision" / "requirements-test.txt").read_text(encoding="utf-8").splitlines()
     assert [ligne for ligne in vision if ligne and not ligne.startswith("#")] == [
         "pytest", "sqlobject", "numpy<2", "anthropic>=2.9,<3"]

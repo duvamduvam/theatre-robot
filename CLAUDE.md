@@ -31,9 +31,9 @@ ou une relecture adverse avant le terrain = Fable.
 - Ouvrir **ce dossier** (`theatre-robot/`) dans IAction / Claude Code — plus jamais les anciens
   `dadou_*_ros`, qui sont des archives (bandeau en tête de leur README).
 - Le cœur du robot est `packages/didier_core` depuis L1e-3c (08/11) ; données dans `data/` (`DIDIER_DATA_DIR`),
-  conf des machines dans `machines/`. Venvs (L1e-4e) : `.venv` à la racine (cœur, contrats, jeu,
+  conf des machines dans `machines/`. Venvs (L1e-4e) : `.venv` à la racine (cœur, contrats, jeu, corps sûr,
   lib, télécommande) et `packages/didier_vision/.venv`. Tests du cœur :
-  `cd packages/didier_core && ../../.venv/bin/python -m pytest -q -o addopts=` (les six suites :
+  `cd packages/didier_core && ../../.venv/bin/python -m pytest -q -o addopts=` (les sept suites, `didier_corps_sur` comprise depuis A0-3 :
   `docs/operations.md`, CI `.github/workflows/tests.yml`) ;
   sim : `machines/sim/docker-compose.yml` (L2b, 16/11 : 4 conteneurs `didier-sim-monde|robot|vision|telecommande`,
   épreuves dans `didier-sim-monde` ; séance complète : `machines/sim/seance-chantiers.sh`, `--stop`). Vision = `packages/didier_vision` depuis L1e-3d
