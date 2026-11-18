@@ -159,6 +159,8 @@ services:
     pid: "service:monde"
     volumes:
       - ./robot/entree.sh:/home/ros2_ws/sim/entree-robot.sh:ro
+      # Ménage des ports SHM Fast DDS morts, appelé par l'entrée avant tout nœud (18/11).
+      - ./menage-shm.sh:/home/ros2_ws/sim/menage-shm.sh:ro
       # La conf de la machine, comme sur le Pi (src/robot/conf/) : script de démarrage, logging.
       - ../robot:/home/ros2_ws/src/robot/conf
       - ../../data/json:/home/ros2_ws/src/robot/json

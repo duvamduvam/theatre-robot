@@ -660,6 +660,32 @@ ni sur GitHub ; `~/tmp` plutôt que `~/.local/state`, précision du même soir).
 `docker compose up`**, sinon Docker le crée root. Fichiers écrits par les conteneurs = root :
 effacer via un conteneur (`docker run --rm -v ~/tmp/didier-sim:/j alpine rm -rf /j/log/…`).
 
+## Mémoire partagée Fast DDS : le ménage au démarrage (18/11)
+
+Toute la sim est en `ipc: host` (décision 8) : les ports et segments SHM de Fast DDS vivent dans
+`/dev/shm` **de l'hôte** et survivent d'une sim à l'autre, jusqu'au redémarrage du PC. Un processus
+tué entre la création de son port d'entrée et son dimensionnement (vécu : `docker compose down` du
+18/11 à 00:50:15) laisse un **port de 0 octet** (`fastrtps_port18175`). boost attend SANS FIN qu'un
+segment existant soit initialisé : tout participant qui tire ce port (identifiant 7 du domaine 43 :
+18150 + 11 + 2×7) reste bloqué dans `rmw_create_node`. Symptôme : la sim « incomplète après
+600 s », **un** nœud du robot manquant, différent à chaque démarrage (fumées 2026-11-18-0051 et
+-0104 : `data_edit_node` puis `audio_node` ; banc : 5 démarrages sur 5). Pile prise au gdb dans le
+conteneur : `rclpy Node()` → `rcl_node_init` → `rmw_create_node` → `create_participant` →
+`SharedMemTransport::CreateInputChannelResource` → `SharedMemGlobal::open_port_internal(18175,
+ReadExclusive)` → boost `managed_open_or_create_impl::priv_open_or_create` → `spin_wait` (5 ms).
+`fastdds shm clean` ne retire PAS ce fichier (il ne sait pas le classer).
+
+Correction : `machines/sim/menage-shm.sh`, en tête des entrées de `monde` et de `robot` (après le
+refus hors 43, avant tout nœud) : retire les `fastrtps_port*` **vides de plus d'une minute** (un
+port vivant est dimensionné dans la microseconde de sa création ; jamais les verrous `*_el`), puis
+`fastdds shm clean` (zombies, sûr en présence de participants vivants). Il écrit son bilan en tête
+du journal du conteneur (`docker logs didier-sim-monde | grep "ménage SHM"`) et ne fait jamais
+échouer le démarrage. Prouvé : poison retiré → 4/4 démarrages, poison reposé exprès → 3/3 (ménage
+qui le retire, ≈ 46 ports zombies par `down` nettoyés au passage). Diagnostic à la main d'un nœud
+qui ne naît pas : `find /dev/shm -maxdepth 1 -name 'fastrtps_port*' ! -name '*_el' -size 0`.
+**Robot réel** : `docker-compose-arm.yml` n'est pas en `ipc: host` (SHM privée au conteneur) ;
+reste à vérifier si elle survit à un `restart` du même conteneur (sinon le risque est nul).
+
 ## Mesures des épreuves : l'enregistreur rclpy (lot fiabilité des épreuves, 16/11)
 
 **Règle (David, 16/11) : une épreuve rouge veut dire un vrai défaut de Didier, jamais un raté de

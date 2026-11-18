@@ -9,6 +9,9 @@ if [ "${ROS_DOMAIN_ID:-}" != 43 ]; then
     exit 2
 fi
 source /opt/ros/${ROS_DISTRO}/setup.sh
+# Ports SHM Fast DDS morts laissés dans /dev/shm de l'hôte (ipc: host) par une sim précédente :
+# AVANT le moindre nœud (18/11, machines/sim/menage-shm.sh, monté avec machines/ en lecture seule).
+bash /home/ros2_ws/machines/sim/menage-shm.sh
 cd /home/ros2_ws/
 
 # build/ et install/ ne sont pas persistés (décision 11) : colcon à chaque `up`, jamais d'install

@@ -17,6 +17,9 @@ if [ "${ROS_DOMAIN_ID:-}" != 43 ]; then
     echo "REFUS : ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-absent}, le robot simulé ne tourne qu'en 43"
     exit 2
 fi
+# Ports SHM Fast DDS morts laissés dans /dev/shm de l'hôte (ipc: host) par une sim précédente :
+# AVANT le moindre nœud, sinon l'un d'eux reste bloqué dans rmw_create_node (18/11, menage-shm.sh).
+bash /home/ros2_ws/sim/menage-shm.sh
 
 (
     # Le bringup n'apparaît qu'après le colcon du script du Pi (≈ 1-2 min) ; 15 min au plus.
