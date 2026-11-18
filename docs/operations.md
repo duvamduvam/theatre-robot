@@ -91,6 +91,15 @@ ansible-playbook -i hosts deploy-pios.yml -e target_group=vision   # puis robot
   du fichier (séquence, image) ou du JSON canonique de l'entrée. La retouche tombe dans `data/`
   du PC (`git diff` la montre), la sauvegarde dans `data/json/backup/<date>/` (non versionné),
   et le robot la rejoue **sans redémarrage** (rechargement à chaud sur verdict `ok`).
+  **Rechargement déterministe (18/11)** : une commande arrivée APRÈS le verdict `ok` joue toujours
+  la version écrite, même si le verdict n'est pas encore traité par le nœud. Au départ de chaque
+  séquence, expression ou lumière, le robot compare la signature disque du fichier (inode,
+  mtime_ns, taille ; data_edit_node écrit par `os.replace` avant de publier son verdict) à celle
+  de sa dernière lecture, et relit si elle a changé. Une séquence créée mais pas encore au
+  catalogue est trouvée par son nom de fichier (une seule correspondance sous `sequences/`). Les
+  **images** restent relues sur verdict seulement. Pourquoi : fumée du 18/11, épreuve `edition` 3
+  à 12/13 — le play était arrivé 1 ms avant le verdict, et l'ancienne séquence (cou 0,5) avait été
+  jouée ; banc de 100 retouches sur sim épinglée : 5 versions périmées avant, 0 après.
 - **Envoyer une image** : `kind: "image"`, `name: "mouth/<nom>"` ou `"eye/<nom>"`, `content` =
   les octets du PNG en base64 ; le robot juge (24x16 ou 8x8, RVB 8 bits, ≤ 16 384 octets) ; une
   image refusée l'est avec sa raison dans `detail`.
@@ -651,6 +660,32 @@ ni sur GitHub ; `~/tmp` plutôt que `~/.local/state`, précision du même soir).
 `docker compose up`**, sinon Docker le crée root. Fichiers écrits par les conteneurs = root :
 effacer via un conteneur (`docker run --rm -v ~/tmp/didier-sim:/j alpine rm -rf /j/log/…`).
 
+## Mémoire partagée Fast DDS : le ménage au démarrage (18/11)
+
+Toute la sim est en `ipc: host` (décision 8) : les ports et segments SHM de Fast DDS vivent dans
+`/dev/shm` **de l'hôte** et survivent d'une sim à l'autre, jusqu'au redémarrage du PC. Un processus
+tué entre la création de son port d'entrée et son dimensionnement (vécu : `docker compose down` du
+18/11 à 00:50:15) laisse un **port de 0 octet** (`fastrtps_port18175`). boost attend SANS FIN qu'un
+segment existant soit initialisé : tout participant qui tire ce port (identifiant 7 du domaine 43 :
+18150 + 11 + 2×7) reste bloqué dans `rmw_create_node`. Symptôme : la sim « incomplète après
+600 s », **un** nœud du robot manquant, différent à chaque démarrage (fumées 2026-11-18-0051 et
+-0104 : `data_edit_node` puis `audio_node` ; banc : 5 démarrages sur 5). Pile prise au gdb dans le
+conteneur : `rclpy Node()` → `rcl_node_init` → `rmw_create_node` → `create_participant` →
+`SharedMemTransport::CreateInputChannelResource` → `SharedMemGlobal::open_port_internal(18175,
+ReadExclusive)` → boost `managed_open_or_create_impl::priv_open_or_create` → `spin_wait` (5 ms).
+`fastdds shm clean` ne retire PAS ce fichier (il ne sait pas le classer).
+
+Correction : `machines/sim/menage-shm.sh`, en tête des entrées de `monde` et de `robot` (après le
+refus hors 43, avant tout nœud) : retire les `fastrtps_port*` **vides de plus d'une minute** (un
+port vivant est dimensionné dans la microseconde de sa création ; jamais les verrous `*_el`), puis
+`fastdds shm clean` (zombies, sûr en présence de participants vivants). Il écrit son bilan en tête
+du journal du conteneur (`docker logs didier-sim-monde | grep "ménage SHM"`) et ne fait jamais
+échouer le démarrage. Prouvé : poison retiré → 4/4 démarrages, poison reposé exprès → 3/3 (ménage
+qui le retire, ≈ 46 ports zombies par `down` nettoyés au passage). Diagnostic à la main d'un nœud
+qui ne naît pas : `find /dev/shm -maxdepth 1 -name 'fastrtps_port*' ! -name '*_el' -size 0`.
+**Robot réel** : `docker-compose-arm.yml` n'est pas en `ipc: host` (SHM privée au conteneur) ;
+reste à vérifier si elle survit à un `restart` du même conteneur (sinon le risque est nul).
+
 ## Mesures des épreuves : l'enregistreur rclpy (lot fiabilité des épreuves, 16/11)
 
 **Règle (David, 16/11) : une épreuve rouge veut dire un vrai défaut de Didier, jamais un raté de
@@ -1015,12 +1050,23 @@ Limite : les processus root hors conteneur ne sont pas déplacés.
   de 30 min plus tard réessaie. Sont reportés : charge 1 min > nb de cœurs × 0,5 (seuil
   `FUMEE_CHARGE_MAX`, 16 sur ce PC de 32 cœurs ; le RTF reste le vrai juge), RTF < 0,8 après
   démarrage de la sim, **un conteneur de la sim déjà présent** (`didier-sim-*` — la sim de
-  quelqu'un : jamais touchée), checkout qui n'est pas sur la branche `main`, **plage sans commit** (11/11 :
+  quelqu'un : jamais touchée), **le verrou `~/tmp/sim-occupee`** (18/11, ci-dessous), checkout qui
+  n'est pas sur la branche `main`, **plage sans commit** (11/11 :
   fichier LOCAL hors dépôt `~/.config/didier/plages-sans-commit`, une ligne « JOURS DEBUT FIN »,
   jours ISO 1 = lundi, heures pleines, FIN exclue ; la fumée ne démarre ni dedans ni dans l'heure
   d'avant, puisqu'elle commite sa page ; fichier absent = aucune plage ; même fichier lu par une
   garde `pre-commit`/`pre-merge-commit` locale du dépôt, non versionnée). Due depuis plus de 2 jours et
   toujours reportée → `notify-send` + ligne « RAPPEL » au journal (au plus toutes les 12 h).
+- **Verrou « sim occupée » (18/11)** : `~/tmp/sim-occupee` (`FUMEE_SIM_OCCUPEE`), une ligne
+  « <qui> <heure> », posé par les agents et par David pendant LEUR sim. Présent et âgé de moins
+  de **6 h** (date du fichier : le contenu n'a pas de jour) → `--si-due` reporte, la fumée lancée
+  à la main ou `--et-dodo` **refuse** (code 2) sauf `--forcer-verrou` (lève le verrou de fichier
+  seul : un conteneur vivant refuse toujours ; interdit avec `--si-due`). Plus vieux : ignoré,
+  noté au journal, jamais effacé. La fumée qui démarre pose elle-même « fumee <heure> » si le
+  fichier est absent (une fumée lancée à la main n'est pas `didier-fumee.service` : un agent ne la
+  verrait sinon qu'une fois ses conteneurs nés) et le retire à la fin ; un « fumee … » trouvé au
+  départ est le reste d'une fumée tuée (le flock est à nous) : retiré. Un agent qui lance SA
+  fumée retire d'abord son propre verrou (la fumée posera le sien).
 - `fumee.sh` : à la main, déroule même si pas due. Le RTF reste juge (rouge si < 0,8). Si une
   autre fumée tient le verrou, attend 60 s (`FUMEE_VERROU_ATTENTE`) puis **refuse en le disant**
   (code 2) — avant le 16/11 elle sortait muette en 0, et la seconde de deux fumées enchaînées ne
@@ -1093,6 +1139,12 @@ le robot dans `data/` puis restaure tout (empreinte de `json/` et `medias/visual
   tourné. Reproduit 0/20 avec le vrai docker logs. `fumee.sh` capture d'abord (`etat_colcon`,
   `conteneur_vivant`) ; gravé par `test_fumee.py` (faux docker bavard + garde sur tous les scripts
   sous pipefail de `machines/sim/`).
+- **Panne réseau pendant la reconstruction des images** (18/11 10:36 : DNS de Docker Hub en
+  timeout sur le `FROM ros:jazzy-ros-base`, buildx résolvant les métadonnées même en cache) : la
+  fumée rougissait en 11 s sans rien tester. Depuis le 18/11, un échec dont le journal montre le
+  registre ou le DNS injoignable est rejoué UNE fois après `FUMEE_ATTENTE_RESEAU` (60 s) ; s'il
+  persiste, le rouge porte « PANNE RÉSEAU … pas de Didier ». Un Dockerfile cassé n'est jamais
+  rejoué (`test_fumee.py`, journaux réels gravés).
 - **PC éteint pendant une fumée** (17/11 00:39 : bouton d'alimentation pendant la relance A1) :
   le démon docker s'arrête, la relance échoue. Depuis le 17/11 la page le dit (note « le PC
   s'éteignait », lue dans `systemctl is-system-running`) et `demarrage.log` donne l'état du

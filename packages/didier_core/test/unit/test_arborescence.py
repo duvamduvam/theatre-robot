@@ -833,7 +833,10 @@ SIM_A_PLAT = [# 16/11 (lot fiabilité des épreuves) : l'enregistreur des mesure
               # des secrets).
               "docker-compose.tete.yml",
               "docker-compose.yml", "fumee.sh",
-              "fumee_page.py", "installer-fumee.sh", "pub.sh", "rejouer-modifiees.sh",
+              "fumee_page.py", "installer-fumee.sh",
+              # 18/11 : ménage des ports SHM Fast DDS morts, appelé par les entrées monde et robot.
+              "menage-shm.sh",
+              "pub.sh", "rejouer-modifiees.sh",
               # 15/11 (567382b) : séance « Chantiers » en une commande.
               "seance-chantiers.sh",
               "validate-catalogue.sh", "validate-conversation.sh", "validate-data-edit.sh",

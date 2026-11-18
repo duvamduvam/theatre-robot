@@ -536,7 +536,10 @@ def banc(tmp_path):
                # Jamais le brut réel du PC non plus : sans cette variable, les essais
                # écrivaient leurs fausses fumées rouges dans ~/tmp/didier-fumee (vu le 17/11 :
                # quatre « main, démarrage rouge » aux sha inexistants dans le vrai brut).
-               FUMEE_BRUT=str(tmp_path / "brut"))
+               FUMEE_BRUT=str(tmp_path / "brut"),
+               # Ni le vrai verrou « sim occupée » (18/11) : posé par un agent pendant SA sim, il
+               # aurait fait reporter ces essais — et un essai ne doit jamais le retirer.
+               FUMEE_SIM_OCCUPEE=str(tmp_path / "sim-occupee"))
     (tmp_path / "appels.txt").write_text("", encoding="utf-8")
     return depot, env, tmp_path
 
@@ -949,3 +952,219 @@ def test_extinction_du_pc_notee_par_simple_lecture_de_systemd():
     assert "systemctl is-system-running" in corps
     assert re.findall(r"systemctl (\S+)", corps) == ["is-system-running"]    # lecture seule
     assert "etat_conteneur" in _fonction_sh("demarrer_sim")
+
+
+# --- Verrou « sim occupée » des agents et de David (18/11) ---------------------------------
+# ~/tmp/sim-occupee (« <qui> <heure> ») : la minuterie l'ignorait et pouvait lancer une fumée
+# par-dessus la sim d'un agent ou une séance de David. Ici : chemin dans tmp_path (banc).
+
+def _poser_verrou(tmp, contenu, age_s=0):
+    v = tmp / "sim-occupee"
+    v.write_text(contenu + "\n", encoding="utf-8")
+    if age_s:
+        t = time.time() - age_s
+        os.utime(v, (t, t))
+    return v
+
+
+def test_peremption_du_verrou_gravee():
+    assert "PEREMPTION_SIM_OCCUPEE_S=21600   # 6 h" in _lire_sh()
+
+
+def test_si_due_reporte_tant_que_la_sim_est_reservee(banc):
+    depot, env, tmp = banc
+    _commit(depot, "packages/code.txt", "code 2")
+    v = _poser_verrou(tmp, "david 21:00", age_s=3600)
+    p = _lancer(env, "--si-due")
+    assert p.returncode == 0
+    assert "reporté : sim réservée par « david 21:00 » (" in _journal(tmp)
+    assert (tmp / "appels.txt").read_text(encoding="utf-8") == ""      # docker jamais appelé
+    assert v.read_text(encoding="utf-8") == "david 21:00\n"             # jamais touché
+
+
+def test_si_due_reporte_encore_juste_avant_six_heures(banc):
+    depot, env, tmp = banc
+    _commit(depot, "packages/code.txt", "code 2")
+    _poser_verrou(tmp, "fiab2 18:00", age_s=6 * 3600 - 120)
+    assert _lancer(env, "--si-due").returncode == 0
+    assert "reporté : sim réservée par « fiab2 18:00 »" in _journal(tmp)
+
+
+def test_si_due_ignore_un_verrou_perime_sans_l_effacer(banc):
+    """Au-delà de 6 h : ignoré (noté), la fumée passe à la garde suivante (charge, seuil -1)."""
+    depot, env, tmp = banc
+    _commit(depot, "packages/code.txt", "code 2")
+    v = _poser_verrou(tmp, "fiab2 08:00", age_s=6 * 3600 + 120)
+    p = _lancer(dict(env, FUMEE_CHARGE_MAX="-1"), "--si-due")
+    assert p.returncode == 0
+    j = _journal(tmp)
+    assert "« fiab2 08:00 » PÉRIMÉ (âge " in j and "≥ 21600 s) : ignoré, pas effacé" in j
+    assert "reporté : charge trop haute" in j
+    assert "sim réservée" not in j
+    assert v.read_text(encoding="utf-8") == "fiab2 08:00\n"
+
+
+def test_si_due_pas_due_reste_muette_meme_avec_un_verrou(banc):
+    _, env, tmp = banc
+    _poser_verrou(tmp, "david 21:00")
+    p = _lancer(env, "--si-due")
+    assert p.returncode == 0 and p.stdout == "" and _journal(tmp) == ""
+
+
+def test_fumee_forcee_refuse_poliment_si_la_sim_est_reservee(banc):
+    _, env, tmp = banc
+    v = _poser_verrou(tmp, "fiab2 00:45")
+    p = _lancer(env)
+    assert p.returncode == 2
+    assert "REFUS : la sim est réservée par « fiab2 00:45 »" in p.stdout
+    assert "--forcer-verrou" in p.stdout
+    assert "refus : sim réservée par « fiab2 00:45 »" in _journal(tmp)
+    assert (tmp / "appels.txt").read_text(encoding="utf-8") == ""
+    assert v.read_text(encoding="utf-8") == "fiab2 00:45\n"
+
+
+def test_et_dodo_refuse_et_n_eteint_pas_si_la_sim_est_reservee(banc):
+    _, env, tmp = banc
+    _poser_verrou(tmp, "david 23:10")
+    p = _lancer(env, "--et-dodo")
+    assert p.returncode == 2
+    assert "REFUS : la sim est réservée par « david 23:10 »" in p.stdout
+    assert "poweroff" not in p.stdout.lower()
+
+
+def test_forcer_verrou_passe_outre_mais_pas_la_sim_vivante(banc):
+    """--forcer-verrou lève le verrou de fichier SEUL : un conteneur vivant refuse toujours."""
+    _, env, tmp = banc
+    v = _poser_verrou(tmp, "fiab2 00:45")
+    p = _lancer(dict(env, FAUX_DOCKER_PS="didier-sim-monde\n"), "--forcer-verrou")
+    assert p.returncode == 2
+    assert "verrou « fiab2 00:45 » outrepassé (--forcer-verrou)" in p.stdout
+    assert "verrou " + str(v) + " « fiab2 00:45 » outrepassé (--forcer-verrou, mode force)" in _journal(tmp)
+    assert "REFUS : le conteneur didier-sim-monde existe déjà" in p.stdout
+    assert v.read_text(encoding="utf-8") == "fiab2 00:45\n"
+
+
+def test_forcer_verrou_refuse_avec_la_minuterie(banc):
+    _, env, _ = banc
+    p = _lancer(env, "--si-due", "--forcer-verrou")
+    assert p.returncode == 2
+    assert "--forcer-verrou ne vaut que pour une fumée lancée à la main" in p.stderr
+
+
+def test_un_verrou_fumee_reste_d_un_crash_est_retire(banc):
+    """« fumee <heure> » au départ : le flock est à nous, c'est le reste d'une fumée finie."""
+    depot, env, tmp = banc
+    _commit(depot, "packages/code.txt", "code 2")
+    v = _poser_verrou(tmp, "fumee 01:30", age_s=600)
+    p = _lancer(dict(env, FUMEE_CHARGE_MAX="-1"), "--si-due")
+    assert p.returncode == 0
+    assert not v.exists()
+    j = _journal(tmp)
+    assert "reste retiré : verrou " + str(v) + " « fumee 01:30 » d'une fumée finie" in j
+    assert "reporté : charge trop haute" in j
+
+
+def _fonctions_verrou():
+    sh = _lire_sh()
+    return sh[sh.index("\nposer_verrou_sim() {"):sh.index("\ndodo() {")]
+
+
+def _bash_verrou(tmp, script):
+    return subprocess.run(["bash", "-c", "set -euo pipefail\nSIM_OCCUPEE=" + str(tmp / "d" / "sim-occupee")
+                           + "\nVERROU_SIM_A_NOUS=0\n" + _fonctions_verrou() + "\n" + script],
+                          capture_output=True, text=True, timeout=10)
+
+
+def test_la_fumee_pose_son_verrou_et_le_retire(tmp_path):
+    p = _bash_verrou(tmp_path, 'poser_verrou_sim; cat "$SIM_OCCUPEE"; liberer_verrou_sim; '
+                               '[ ! -e "$SIM_OCCUPEE" ] && echo retire; liberer_verrou_sim; echo idempotent')
+    assert p.returncode == 0, p.stderr
+    lignes = p.stdout.splitlines()
+    assert re.fullmatch(r"fumee \d\d:\d\d", lignes[0])
+    assert lignes[1:] == ["retire", "idempotent"]
+
+
+def test_la_fumee_ne_pose_rien_par_dessus_un_autre_et_ne_retire_pas_le_sien(tmp_path):
+    (tmp_path / "d").mkdir()
+    v = tmp_path / "d" / "sim-occupee"
+    v.write_text("david 22:00\n", encoding="utf-8")
+    p = _bash_verrou(tmp_path, "poser_verrou_sim; liberer_verrou_sim; echo $VERROU_SIM_A_NOUS")
+    assert p.returncode == 0, p.stderr
+    assert p.stdout == "0\n"
+    assert v.read_text(encoding="utf-8") == "david 22:00\n"
+
+
+def test_la_fumee_ne_retire_pas_un_verrou_remplace_pendant_elle(tmp_path):
+    p = _bash_verrou(tmp_path, 'poser_verrou_sim; echo "fiab2 03:00" >"$SIM_OCCUPEE"; liberer_verrou_sim; '
+                               'cat "$SIM_OCCUPEE"')
+    assert p.returncode == 0, p.stderr
+    assert p.stdout == "fiab2 03:00\n"
+
+
+def test_le_verrou_est_pose_juste_avant_le_deroule_et_libere_en_fin():
+    sh = _lire_sh()
+    assert "\nposer_verrou_sim\nderoule\n" in sh
+    terminer = sh[sh.index("\nterminer() {"):sh.index("\ntrap terminer EXIT")]
+    assert "  liberer_verrou_sim\n" in terminer
+
+
+# --- Panne réseau pendant la reconstruction des images (18/11 10:36) -----------------------
+
+def _fonction_reseau(nom):
+    m = re.search(r"^" + nom + r"\(\) \{[^\n]*\n.*?^\}\n", _lire_sh(), re.M | re.S)
+    assert m, nom + "() introuvable"
+    return m.group(0)
+
+
+JOURNAL_DNS_18_11 = (
+    '#21 ERROR: failed to do request: Head "https://registry-1.docker.io/v2/library/ros/manifests/'
+    'jazzy-ros-base": dial tcp: lookup registry-1.docker.io on 127.0.0.53:53: read udp '
+    '127.0.0.1:59843->127.0.0.53:53: i/o timeout\n'
+    'target monde: failed to solve: ros:jazzy-ros-base: failed to resolve source metadata\n')
+JOURNAL_DOCKERFILE_FAUX = (
+    '#9 [robot 4/9] RUN pip install -r /tmp/requirements.txt\n'
+    '#9 ERROR: process "/bin/sh -c pip install -r /tmp/requirements.txt" did not complete '
+    'successfully: exit code: 1\nfailed to solve: process did not complete successfully\n')
+
+
+@pytest.mark.parametrize("journal, panne", [(JOURNAL_DNS_18_11, True), (JOURNAL_DOCKERFILE_FAUX, False)])
+def test_panne_reseau_distinguee_d_un_dockerfile_casse(tmp_path, journal, panne):
+    log = tmp_path / "image.log"
+    log.write_text(journal, encoding="utf-8")
+    p = subprocess.run(["bash", "-c", _fonction_reseau("panne_reseau_build") + 'panne_reseau_build "$1"', "_", str(log)])
+    assert (p.returncode == 0) is panne
+
+
+def _construire(tmp_path, reponses):
+    """Joue construire_images() avec un faux docker dont chaque appel lit la réponse suivante."""
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    for i, (texte, code) in enumerate(reponses):
+        (tmp_path / f"rep{i}").write_text(texte, encoding="utf-8")
+        (tmp_path / f"code{i}").write_text(str(code), encoding="utf-8")
+    faux = bin_ / "docker"
+    faux.write_text('#!/bin/bash\nn=$(cat "$CPT" 2>/dev/null || echo 0); echo $((n+1)) >"$CPT"\n'
+                    'cat "$REP/rep$n"; exit "$(cat "$REP/code$n")"\n', encoding="utf-8")
+    faux.chmod(0o755)
+    script = ("dit() { :; }\nDOCKER_DIR=\"$REP\"; COMPOSE=x\n" + _fonction_reseau("panne_reseau_build")
+              + _fonction_reseau("construire_images") + "construire_images")
+    env = dict(os.environ, PATH=str(bin_) + os.pathsep + os.environ["PATH"], CPT=str(tmp_path / "cpt"),
+               REP=str(tmp_path), TMP=str(tmp_path), FUMEE_ATTENTE_RESEAU="0")
+    p = subprocess.run(["bash", "-c", script], env=env)
+    appels = int((tmp_path / "cpt").read_text())
+    return p.returncode, appels
+
+
+def test_une_coupure_dns_passagere_ne_rougit_pas(tmp_path):
+    rc, appels = _construire(tmp_path, [(JOURNAL_DNS_18_11, 1), ("Built\n", 0)])
+    assert (rc, appels) == (0, 2)
+
+
+def test_un_dockerfile_casse_n_est_pas_reessaye(tmp_path):
+    rc, appels = _construire(tmp_path, [(JOURNAL_DOCKERFILE_FAUX, 1), ("Built\n", 0)])
+    assert (rc, appels) == (1, 1)
+
+
+def test_une_panne_reseau_qui_dure_reste_un_echec(tmp_path):
+    rc, appels = _construire(tmp_path, [(JOURNAL_DNS_18_11, 1), (JOURNAL_DNS_18_11, 1)])
+    assert (rc, appels) == (1, 2)
