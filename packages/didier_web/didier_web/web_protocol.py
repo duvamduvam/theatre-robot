@@ -70,8 +70,11 @@ WHITELIST_REPETITION = {"route", "route_speed", "rehearsal/cmd", "camera_enable"
 # voit pas le tirage ») : publiables depuis le web (ils restent dans la
 # whitelist), mais leur DERNIÈRE VALEUR n'est jamais diffusée aux clients --
 # `chat_instruction` porte la lubie en cours, `route_speed` trahit « batterie
-# faible » et l'arrêt devant un objet. La page scène ne les lit pas ; la
-# console `/` (tableau État, trames WS brutes) les verrait sans ce filtre.
+# faible » et l'arrêt devant un objet. Le filtre reste valable pour la console
+# `/` (tableau État, trames WS brutes). RE-DÉCISION de David le 18/11 : la page
+# scène, elle, montre désormais les coulisses (panneau « Coulisses » : metteur
+# en scène + régisseur, repliable pour s'entraîner à l'aveugle) -- par les
+# topics de lecture/flux dédiés ci-dessous, pas en levant ce masque.
 TOPICS_MASQUES = frozenset({"chat_instruction", "route_speed"})
 
 
@@ -117,10 +120,14 @@ def effective_whitelist(rehearsal_enabled: bool) -> frozenset:
 # que « va là » propose les objets connus. Lecture seule, comme les autres.
 # deploy_sha (04/11, lot L1c) : version déployée, latchée par catalogue_node -> badge
 # version des deux pages. `catalogue` n'y est PAS : la page garde /api/catalog.
+# mission_state (18/11, panneau « Coulisses ») : la mission du metteur en scène
+# (destination, critères, guides, indication), LATCHÉE par reflection_node.
+# ⚠️ Seuls les topics LATCHÉS vont ici : un abonnement TRANSIENT_LOCAL est
+# incompatible avec un publieur VOLATILE (les topics volatils vont en FLUX).
 TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chain",
                   "rehearsal/state", "camera_state", "camera_source_state",
                   "camera_sources", "jeu/intention", "rehearsal/objects",
-                  "deploy_sha"}
+                  "deploy_sha", "mission_state"}
 
 # Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
 # clients (message "feed"), contrairement à `state` qui ne porte que la
@@ -136,8 +143,14 @@ TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chai
 # l'écrivain des données, de l'observateur de la porte sim et de la barrière de jeu.
 # Un verdict est un ÉVÉNEMENT (corrélé par `id` côté page), jamais un état : un
 # `state` toutes les 2 s en perdrait. Lecture seule comme les autres.
+# Panneau « Coulisses » (18/11), tous VOLATILS donc en flux : chat_situation (le
+# tableau de situation du metteur en scène, republié à 1 Hz par reflection_node,
+# {"text","t_ms"}), chat_prompt (prise de parole spontanée, {"direction",
+# "raison"}) et rehearsal/journal (événements du régisseur, SIM-ONLY, {"type",
+# "payload","t_ms"}). Aucun n'entre dans une WHITELIST : lecture seule.
 TOPICS_FLUX = {"chat_transcript", "chat_hearing", "jeu/journal",
-               "data_edit_result", "validation_sim", "roues_refusees"}
+               "data_edit_result", "validation_sim", "roues_refusees",
+               "chat_situation", "chat_prompt", "rehearsal/journal"}
 
 # Édition des données à travers le robot (lot L1d-3, spec L1 « L1d » décisions 1, 2
 # et 11). Deux types WebSocket, writer seul, publiés chacun par UN publisher dédié
