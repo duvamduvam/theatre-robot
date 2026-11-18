@@ -37,8 +37,10 @@ services:
       - CHAT_REFLEXION=${CHAT_REFLEXION:-true}
       # Modèle LLM de la bouche : vide = défaut de config (liste fermée, vision_config.llm_model_from_env).
       - CHAT_LLM_MODEL=${CHAT_LLM_MODEL:-}
-      # Caméra Gazebo proposée à chaud EN PLUS de la webcam (qui reste la source par défaut).
+      # Caméra Gazebo = source par DÉFAUT (18/11, décision de David) ; la webcam du PC reste
+      # proposée à chaud sur la page scène (bouton « Webcam PC »).
       - VISION_SIM_CAMERA_TOPIC=${VISION_SIM_CAMERA_TOPIC:-camera/image_raw}
+      - VISION_SOURCE_INITIALE=${VISION_SOURCE_INITIALE:-gazebo}
     volumes:
       # La conf complète de la machine (comme sur le Pi) ; le secret est monté par-dessus.
       - ../vision:/home/ros2_ws/src/vision/conf

@@ -47,4 +47,9 @@ SIM_CAMERA_ARG=()
 if [ -n "$(echo "${VISION_SIM_CAMERA_TOPIC:-}" | xargs)" ]; then
     SIM_CAMERA_ARG=("sim_camera_topic:=$(echo "${VISION_SIM_CAMERA_TOPIC}" | xargs)")
 fi
+# VISION_SOURCE_INITIALE (compose de sim SEULEMENT) → source_initiale : « gazebo » =
+# la perception démarre sur la caméra Gazebo, webcam fermée (spec L2 décision 14).
+if [ -n "$(echo "${VISION_SOURCE_INITIALE:-}" | xargs)" ]; then
+    SIM_CAMERA_ARG+=("source_initiale:=$(echo "${VISION_SOURCE_INITIALE}" | xargs)")
+fi
 ros2 launch didier_vision vision.launch.py chat_enabled:=${CHAT:-false} reflection_enabled:=${REFLECTION_ENABLED} "${SIM_CAMERA_ARG[@]}"

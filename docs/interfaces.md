@@ -39,8 +39,9 @@ Invalid payloads are rejected with an explicit ERROR log naming the topic
 | `chat_situation` | `chat_node` (vision) | `{"text": "[Perception] …", "t_ms": …}` | Situation board written by `reflection_node` (the inner stage director, 2026-10-23) : perception, play direction, mission, understanding. Republished every second ; **5 s expiry** on the speech side ; sent as a system message each turn, never stored. Only when `CHAT_REFLEXION` is set. |
 | `chat_prompt` | `chat_node` (vision) | `{"direction": "…", "raison": "…"}` | Spontaneous-turn request from `reflection_node` : single slot, 8 s TTL, served only after 3 s of silent listening, never while someone speaks, during show audio or with chat off. |
 | `chat_reflect` | `reflection_node` (vision) | `{"demande": "…"}` | `"reflechir"` key of Didier's final JSON (complex instruction) → immediate deep reflection (Sonnet 5.5), answer always sent back as `chat_prompt`. |
-| `mission_state` | console (future gauge) | `{"criteres": {…}, "guides": […], "indication": …}` | Latched mission state (I0) : the five criteria, guides, last indication. Written only by `reflection_node`. Never commands the body. |
+| `mission_state` | scene page « Coulisses » (read-only, `TOPICS_LECTURE`, 18/11) | `{"criteres": {…}, "guides": […], "indication": …}` | Latched mission state (I0) : the five criteria, guides, last indication. Written only by `reflection_node`. Never commands the body. |
 | `rehearsal/state` (**SIM-ONLY**) | `director` (didier_rehearsal) | `{"seance": "attente"\|"en_cours"\|"terminee", "arret_vocal": true\|false}` | **Latched** (`TRANSIENT_LOCAL`, depth 1, both sides) state of the rehearsal session for the scene page : published at start-up and at EVERY change (start, end by duration/stop/abort, voice hold set or released by voice/fader/abort/end), never repeated. `arret_vocal` = Didier held by a spoken « stop » (route_speed 0 retained). Carries NO fault/lubie information (the page must not reveal the draw). Read-only for the web bridge (`TOPICS_LECTURE`). |
+| `rehearsal/journal` (**SIM-ONLY**) | `director` (didier_rehearsal) | `{"type": "fault_start", "payload": {…}, "t_ms": <epoch ms>}` | Live copy of EVERY event written to the director's JSONL journal (18/11, « Coulisses » panel of the scene page : David now sees the draw, the panel can be folded to train blind). **Volatile** (depth 10, never latched). A publish error is logged and never kills the director. Read-only for the web bridge (`TOPICS_FLUX`, in no whitelist). |
 | `camera_enable` | web scene page (**SIM-ONLY**, `WHITELIST_REPETITION`) | `"on"`, `"off"` | Switches the perception webcam on/off (consumed on the vision side). Writable from the web only when `rehearsal_enabled`, never on the real robot. |
 | `camera_state` | vision (perception webcam) | `"on"`, `"off"` | **Latched** (`TRANSIENT_LOCAL`) real state of the webcam, answer to `camera_enable`. Read-only for the web bridge (`TOPICS_LECTURE`) ; when `off` the scene page shows « webcam coupée » instead of a frozen image. |
 | `camera_source` | web scene page (**SIM-ONLY**, `WHITELIST_REPETITION`) | `"webcam"`, `"gazebo"` | Selects, live, the image SOURCE of the perception (PC webcam or Gazebo camera ; consumed by `person_tracker` on the vision side). Writable from the web only when `rehearsal_enabled`, never on the real robot. |
@@ -206,7 +207,11 @@ source (W1 à venir).
     Sur le vrai robot : refusés comme un topic inconnu.
   - **masqués** (`TOPICS_MASQUES`) : `chat_instruction` et `route_speed` sont
     publiables mais leur dernière valeur n'apparaît JAMAIS dans `state` (la
-    lubie en cours, la batterie faible = le tirage que David ignore).
+    lubie en cours, la batterie faible = le tirage). Le masque reste valable pour
+    la console `/` ; depuis le 18/11 (re-décision de David) la page scène montre
+    les coulisses par des topics dédiés : `mission_state` (lecture, latché) et,
+    en flux (`TOPICS_FLUX`, volatils), `chat_situation`, `chat_prompt`,
+    `rehearsal/journal`.
   - lecture seule (`TOPICS_LECTURE`, jamais publiables depuis le web) :
     `chat_state`, `persona_state`, `route_state`, `chat_audio_chain`, `rehearsal/state`
     (séance + arrêt vocal, sans info de panne), `camera_state`, `camera_source_state` et `camera_sources`, topics d'ÉTAT latchés publiés par

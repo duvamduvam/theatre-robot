@@ -117,7 +117,7 @@ from theatre_contrats import stringtime
 from didier_core.diagnostic.journal import JournalWriter, make_event
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
                                        CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
-                                       DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC,
+                                       DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC, JOURNAL_TOPIC,
                                        OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
                                        RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_GOTO_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
@@ -135,6 +135,11 @@ from didier_rehearsal.scenario import ScenarioError, load_scenario
 
 def _mono_ms() -> int:
     return int(time.monotonic() * 1000)
+
+
+def _wall_ms() -> int:
+    """Millisecondes MURALES (epoch) : la page scène les compare à son horloge."""
+    return int(time.time() * 1000)
 
 
 class DirectorNode(Node):
@@ -249,6 +254,8 @@ class DirectorNode(Node):
         self.pub_state = self.create_publisher(
             StringTime, REHEARSAL_STATE_TOPIC,
             QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        # Journal en direct pour la page scène (« Coulisses ») : VOLATILE, jamais latché.
+        self.pub_journal = self.create_publisher(StringTime, JOURNAL_TOPIC, 10)
         self._last_state = None   # dernier payload publié : pas de republication identique
         self.create_subscription(StringTime, DIRECTOR_CMD_TOPIC, self._on_cmd, 10)
         self.create_subscription(StringTime, POI_EVENT_TOPIC, self._on_poi_event, 10)
@@ -302,6 +309,13 @@ class DirectorNode(Node):
             # Disque plein, fichier disparu : le journal est perdu, PAS le
             # régisseur (il doit rester vivant pour révoquer ses pannes).
             self.get_logger().error(f"journal inécrivable : {e}")
+        # Même doctrine que l'OSError ci-dessus : le flux en direct est un confort
+        # d'affichage, son échec ne doit JAMAIS tuer le régisseur.
+        try:
+            texte = json.dumps({"type": type_, "payload": payload, "t_ms": _wall_ms()}, ensure_ascii=False)
+            self.pub_journal.publish(StringTime(msg=texte, time=0, anim=False))
+        except Exception as e:
+            self.get_logger().error(f"{JOURNAL_TOPIC} : {e!r}")
 
     # --- commandes ----------------------------------------------------------
     def _on_cmd(self, msg: StringTime):

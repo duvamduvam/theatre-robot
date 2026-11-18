@@ -498,6 +498,45 @@
 .scene-entendu-garde { border-color: var(--scene-garde); }
 .scene-entendu-jete { border-color: var(--scene-jete); opacity: 0.75; }
 
+/* --- Coulisses (18/11) : metteur en scène + régisseur, sous le fil ------------------
+   Ouvert par défaut, hauteur BORNÉE (il défile dans sa boîte) : il ne pousse pas la
+   page et ne couvre jamais STOP (au centre, ou barre fixe en bas sur écran étroit). */
+
+.scene-coulisses { font-size: 0.8rem; }
+.scene-coulisses > summary { cursor: pointer; font-weight: bold; color: var(--texte-doux); }
+.scene-coulisses-corps {
+  max-height: 14rem;
+  overflow-y: auto;
+  color-scheme: dark;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.5rem;
+  background: var(--bg-carte);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+}
+.coulisses-bloc h3 { margin: 0 0 0.2rem; font-size: 0.85rem; }
+.coulisses-situation > div { overflow-wrap: anywhere; margin-bottom: 0.2rem; }
+.coulisses-age { margin: 0.1rem 0 0.3rem; color: var(--texte-doux); }
+.coulisses-prompt { margin: 0 0 0.3rem; overflow-wrap: anywhere; }
+.coulisses-mission > div { overflow-wrap: anywhere; }
+.coulisses-mission-titre { font-weight: bold; }
+/* Le journal défile dans sa propre boîte (le suivi du bas de scene.js lit CET élément). */
+.coulisses-journal { list-style: none; margin: 0; padding: 0; max-height: 9em; overflow-y: auto; color-scheme: dark; }
+/* L'éditeur ouvert prend la place : les coulisses se serrent pour qu'il garde sa hauteur. */
+.scene-conversation:has(#scene-editeur[open]) .scene-coulisses-corps { max-height: 6rem; }
+.coulisses-journal li {
+  padding: 1px 4px;
+  border-left: 3px solid var(--bord);
+  margin-bottom: 1px;
+  overflow-wrap: anywhere;
+}
+/* Les bugs en évidence : bordure orange et gras ; une panne non appliquée en rouge. */
+.coulisses-journal li.coulisses-bug { border-color: var(--scene-jete); font-weight: bold; }
+.coulisses-journal li.coulisses-erreur { border-color: var(--stop); color: #ff8a80; }
+
 /* --- Écran moyen (tablette en paysage, petit portable) ------------------------
    Rail et conversation resserrés pour laisser au centre de quoi voir. */
 @media (min-width: 900px) and (max-width: 1199px) {

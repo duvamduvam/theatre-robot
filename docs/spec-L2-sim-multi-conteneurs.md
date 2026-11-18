@@ -72,7 +72,7 @@ domaine 43 ; CI build + fumée verte.**
     horloge simulée **sans modifier `drive.launch.py` ni la ligne qui l'inclut**.
 13. `web_bridge` : `rehearsal_enabled` est ignoré hors domaine 43 ; `drive_enabled` n'a PAS de
     garde de domaine (c'est un paramètre, `false` par défaut, jamais posé sur le robot).
-14. Vision : source d'images par défaut = webcam ; la caméra Gazebo n'est proposée que si
+14. Vision : source d'images par défaut = webcam (⚠️ 18/11 : en sim, Gazebo par défaut — décision 14 ci-dessous, enfin codée) ; la caméra Gazebo n'est proposée que si
     `VISION_SIM_CAMERA_TOPIC` est posé, et se choisit à chaud (`camera_source`). Sans webcam,
     `person_tracker` s'arrête (machine.yml de la vision).
 15. Télécommande actuelle : nœud `controller_node`, IHM tkinter dès qu'on n'est pas sur un Pi
