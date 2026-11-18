@@ -4,6 +4,7 @@
     python3 machines/sim/banc-vision/audio_banc.py                # état : qui est branché à quoi
     python3 machines/sim/banc-vision/audio_banc.py choisir M50    # casque BT par nom (ou MAC)
     python3 machines/sim/banc-vision/audio_banc.py choisir defaut # suivre les réglages son d'Ubuntu
+    python3 machines/sim/banc-vision/audio_banc.py choisir auto   # le meilleur micro/sortie présents
     python3 machines/sim/banc-vision/audio_banc.py choisir M50 --gain 0.3 --sans-redemarrer
 
 POURQUOI : la tête de Didier (chat_node, conteneur didier-sim-vision) lit son micro
@@ -17,6 +18,13 @@ rend la correspondance VISIBLE et la change en une commande.
 CASQUE+MICRO (HFP — sans lui le micro du casque n'existe pas), réécrit les deux
 lignes `device` d'asound-pc.conf avec les noms PipeWire RÉELS, puis redémarre le
 conteneur vision (la tête rouvre micro et sortie au démarrage).
+`choisir auto` (18/11, lancé par seance-chantiers.sh à chaque séance) : regarde ce qui
+est RÉELLEMENT là et prend le meilleur. Micro : ReSpeaker (le micro du robot) >
+micro d'un casque Bluetooth > micro du PC. Sortie : casque Bluetooth (pas de boucle
+micro <-> haut-parleurs) > haut-parleurs du PC. Les casques appairés mais déconnectés
+sont essayés un par un (quelques secondes chacun). Vécu le 18/11 : le M50 codé en dur
+était éteint, PipeWire est retombé EN SILENCE sur le micro et les haut-parleurs du PC,
+le micro entendait Didier et la transcription traînait — sans que rien ne le dise.
 `choisir defaut` : `@DEFAULT_SOURCE@` / `@DEFAULT_SINK@` — Didier suit ce qui est
 choisi dans Paramètres > Son d'Ubuntu (pratique, mais une séance de mesure peut
 alors changer de micro si quelqu'un branche autre chose).
@@ -27,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -98,6 +107,60 @@ def choisir_profil_hfp(profils: list) -> str | None:
     return None
 
 
+# Micro du robot (ReSpeaker XVF3800, carte ALSA « Array ») tel que PipeWire le nomme.
+_RESPEAKER = re.compile(r"xvf|respeaker|array", re.I)
+
+
+# Crête (|échantillon| max, s16) en dessous de laquelle un micro est MORT : entrée sans
+# rien de branché ou gain à zéro. Mesuré le 18/11 sur ce PC : Scarlett 4i4 sans micro
+# 2, carte USB générique 6, micro interne du PC au calme > 600.
+CRETE_VIVANT = 30
+
+
+def _rang_micro(nom: str) -> int:
+    """Préférence entre micros VIVANTS : ReSpeaker < casque BT < USB externe < interne."""
+    if _RESPEAKER.search(nom):
+        return 0
+    if nom.startswith("bluez_"):
+        return 1
+    if ".usb-" in nom:
+        return 2
+    return 3
+
+
+def plan_auto(casques: list, sources: list, sinks: list, cretes: dict | None = None) -> tuple:
+    """Choix automatique -> (micro, sortie, explication). `casques` = [(mac, nom)]
+    des casques CONNECTÉS ; sources/sinks = noms PipeWire présents ; `cretes` =
+    {source: crête mesurée} (None = pas de mesure, tout micro présent est
+    supposé vivant). Le micro d'un casque n'existe qu'en profil HFP : l'appelant
+    le pose avant (sinon ce casque ne sert que de sortie)."""
+    noms_casques = {mac_cle(m): n for m, n in casques}
+    micros = [s for s in sources if not s.endswith(".monitor")
+              and (cretes is None or cretes.get(s, 0) >= CRETE_VIVANT)]
+    morts = [s for s in sources if not s.endswith(".monitor") and s not in micros]
+    sortie = quoi_sortie = None
+    for mac, nom in casques:
+        snk = trouver_noeud(sinks, mac)
+        if snk:
+            sortie, quoi_sortie = snk, f"casque {nom}"
+            break
+    if sortie is None:
+        sortie, quoi_sortie = DEFAULT_OUT, "sortie son d'Ubuntu"
+    if micros:
+        micro = min(micros, key=_rang_micro)
+        casque = next((n for k, n in noms_casques.items() if k in micro.upper().replace(":", "_")), None)
+        quoi_micro = ["ReSpeaker (micro du robot)", f"micro du casque {casque}",
+                      "micro USB", "micro interne du PC"][_rang_micro(micro)] + f" [{micro}]"
+    else:
+        micro, quoi_micro = DEFAULT_IN, "⚠️ AUCUN micro ne capte — défaut d'Ubuntu, Didier sera sans doute sourd"
+    note = ""
+    if _rang_micro(micro) >= 2 and sortie == DEFAULT_OUT:
+        note = " — ⚠️ micro du PC et sortie hors casque : le micro peut entendre Didier"
+    if morts:
+        note += f" ; micros muets écartés : {', '.join(morts)}"
+    return micro, sortie, f"micro = {quoi_micro} ; sortie = {quoi_sortie}{note}"
+
+
 def resoudre_casque(appaires: list, cible: str) -> tuple | None:
     """(mac, nom) d'après un nom (insensible à la casse, sous-chaîne) ou une MAC."""
     c = cible.strip().lower()
@@ -163,9 +226,68 @@ def etat() -> int:
     return 0 if ok else 1
 
 
+def poser_hfp(mac: str) -> bool:
+    """Passe la carte PipeWire du casque en profil casque+micro. False si absente/sans HFP."""
+    carte = next((c for c in noeuds("cards") if mac_cle(mac) in c.upper().replace(":", "_")), None)
+    if not carte:
+        return False
+    profil = choisir_profil_hfp(re.findall(r"^\t\t([\w-]+):", sh("pactl", "list", "cards"), re.M))
+    if not profil:
+        return False
+    sh("pactl", "set-card-profile", carte, profil)
+    return True
+
+
+def crete(source: str, duree_s: float = 2.0) -> int:
+    """|échantillon| max sur `duree_s` de capture (parecord, s16 mono 16 kHz)."""
+    try:
+        r = subprocess.run(["parecord", "-d", source, "--raw", "--format=s16le", "--rate=16000",
+                            "--channels=1"], capture_output=True, timeout=duree_s + 0.3)
+        brut = r.stdout
+    except subprocess.TimeoutExpired as e:
+        brut = e.stdout or b""
+    brut = brut[19200:]  # 600 ms d'amorçage : parecord rend ~0,5 s de zéros à l'ouverture (18/11)
+    n = len(brut) // 2
+    return max((abs(v) for v in struct.unpack(f"<{n}h", brut[:2 * n])), default=0)
+
+
+def connecter(mac: str, attente_s: float = 8.0) -> bool:
+    try:
+        subprocess.run(["bluetoothctl", "connect", mac], capture_output=True, timeout=attente_s)
+    except subprocess.TimeoutExpired:
+        pass
+    return "Connected: yes" in sh("bluetoothctl", "info", mac)
+
+
+def auto() -> tuple:
+    """Constate ce qui est branché, tente les casques appairés, puis plan_auto."""
+    casques = casques_appaires()
+    connectes = [(m, n) for m, n, co in casques if co]
+    if not connectes:
+        for mac, nom, _ in casques:
+            print(f"essai du casque {nom}…", flush=True)
+            if connecter(mac):
+                connectes = [(mac, nom)]
+                break
+    respeaker = any(_RESPEAKER.search(s) for s in noeuds("sources") if not s.endswith(".monitor"))
+    if not respeaker:
+        # Sans ReSpeaker, le micro vient du casque : profil HFP (sinon le casque reste
+        # en A2DP, meilleure sortie, et le ReSpeaker écoute).
+        for mac, _ in connectes:
+            poser_hfp(mac)
+        if connectes:
+            subprocess.run(["sleep", "2"])   # PipeWire crée les nœuds HFP en différé
+    sources = noeuds("sources")
+    cretes = {s: crete(s) for s in sources if not s.endswith(".monitor")}
+    return plan_auto(connectes, sources, noeuds("sinks"), cretes)
+
+
 def choisir(cible: str, gain: float | None, redemarrer: bool) -> int:
     texte = CONF.read_text(encoding="utf-8")
-    if cible.lower() in ("defaut", "défaut", "default"):
+    if cible.lower() == "auto":
+        micro, sortie, pourquoi = auto()
+        print(f"Choix automatique : {pourquoi}")
+    elif cible.lower() in ("defaut", "défaut", "default"):
         micro, sortie = DEFAULT_IN, DEFAULT_OUT
         print("Didier suivra le micro et la sortie choisis dans les réglages son d'Ubuntu.")
     else:
@@ -206,7 +328,7 @@ def choisir(cible: str, gain: float | None, redemarrer: bool) -> int:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = ap.add_subparsers(dest="cmd")
-    c = sub.add_parser("choisir", help="casque par nom/MAC, ou « defaut »")
+    c = sub.add_parser("choisir", help="casque par nom/MAC, « auto » ou « defaut »")
     c.add_argument("casque")
     c.add_argument("--gain", type=float, default=None,
                    help="atténuation micro ]0,1] (0.15 réglé pour le M50 le 22/10)")

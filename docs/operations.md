@@ -814,12 +814,18 @@ http://didier-sim.local:8765/scene sur tout le réseau. Sans sudo ni avahi-utils
 (D-Bus direct vers le démon avahi). ⚠️ Jamais `didier.local` : c'est le nom du
 VRAI robot (alias publié par le Pi, visé par la télécommande) — le script le refuse.
 
-**Son et micro de Didier** (casque Bluetooth) — voir qui est branché à quoi, et choisir :
+**Son et micro de Didier** — choisis AUTOMATIQUEMENT à chaque `seance-chantiers.sh` (18/11) :
 ```bash
-python3 machines/sim/banc-vision/audio_banc.py               # état
-python3 machines/sim/banc-vision/audio_banc.py choisir M50   # ou un autre casque, ou « defaut »
+python3 machines/sim/banc-vision/audio_banc.py               # état : qui est branché à quoi
+python3 machines/sim/banc-vision/audio_banc.py choisir auto  # ce que fait la séance (~40 s si aucun casque)
+python3 machines/sim/banc-vision/audio_banc.py choisir M50   # forcer un casque, ou « defaut »
 ```
-`choisir` connecte le casque, le met en profil casque+micro, règle la tête et la redémarre.
+`auto` essaie les casques Bluetooth appairés, ÉCOUTE chaque micro 2 s et écarte les muets
+(Scarlett sans micro branché, carte USB vide), puis prend : ReSpeaker > micro du casque > micro
+USB > micro interne du PC ; sortie : casque > sortie son d'Ubuntu. Le choix est affiché, avec
+un ⚠️ si le micro du PC peut entendre Didier. Ensuite il redémarre la tête (`--sans-redemarrer`
+pour l'éviter). Vécu le 18/11 : sans ce choix, le M50 éteint faisait retomber PipeWire EN
+SILENCE sur un micro muet ou sur le micro du PC (transcription lente, tours vides).
 
 **3. La page scène** : http://localhost:8765/scene — un poste de jeu qui tient
 dans l'écran (refonte du 12/11, `docs/spec-refonte-page-scene.md`, captures
