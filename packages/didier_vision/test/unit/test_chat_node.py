@@ -457,7 +457,8 @@ def test_publisher_de_marche_conditionne_et_branche_sur_on_move():
 def test_topic_d_objets_a_la_valeur_du_contrat():
     source = CHAT_NODE_SOURCE.read_text(encoding="utf-8")
     assert "SCENE_OBJETS_TOPIC = topics.SCENE_OBJETS" in source
-    assert "TABLEAU_TTL_S = 3.0" in source
+    # LA péremption du contrat (3 s), commune aux quatre lecteurs (revue O1, 19/11).
+    assert "TABLEAU_TTL_S = tableau_objets.PEREMPTION_S" in source
     # Ni l'ancien vocabulaire brut de la régie, ni l'ancien topic des objets proches (supprimé).
     assert "rehearsal/objects" not in source and "objets_" "proches" not in source
 
@@ -474,6 +475,19 @@ def test_abonnement_objets_conditionne_au_mouvement_et_latche():
             "QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))"
             in ast.unparse(blocs[0]))
     assert "self.create_timer(1.0, self._expire_tableau)" in ast.unparse(blocs[0])
+
+
+def test_jamais_recu_vaut_muet_garde_vide_des_le_demarrage():
+    """Revue O1 (19/11) : « sans tableau, la régie juge » était faux et incohérent — jamais reçu,
+    le geste partait SANS id (refusé « unknown » plus loin) ; muet, il était refusé ici. Désormais
+    la garde est posée sur le tableau VIDE dès que le mouvement à la voix est branché, AVANT
+    l'abonnement : aucun geste vers un objet ne part sans l'id d'un tableau reçu et frais."""
+    init = _chat_node_method(_chat_node_tree(), "__init__")
+    blocs = [node for node in ast.walk(init) if isinstance(node, ast.If)
+             and ast.unparse(node.test) == "config['chat_move_enabled']"]
+    corps = [ast.unparse(n) for n in blocs[0].body]
+    assert corps[0] == "self._engine.set_objets(tableau_objets.VIDE)"
+    assert corps[1].startswith("self.create_subscription(StringTime, SCENE_OBJETS_TOPIC")
 
 
 def test_tableau_decode_refuse_ou_remplace_sans_nouvelle_session():

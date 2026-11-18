@@ -960,7 +960,12 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   objet pas ici ou hors d'atteinte n'est jamais publié, Didier dit où il est (« il est
   à 22 m devant toi »). Chaque geste porte l'`id` de l'objet (`carte/banc`), lu par le
   sélecteur et la régie. La console (« va là ») n'est pas soumise à `atteignable`.
-  Voir le tableau : `ros2 topic echo --qos-durability transient_local /didier/scene/objets
+  Revue O1 (19/11) : Didier s'arrête à une distance qui tient compte de la TAILLE de
+  l'objet (banc 2,1 m du centre, 2,5 m si la taille est inconnue) ; un tableau muet 3 s
+  (ou jamais reçu) vaut tableau vide chez TOUS les lecteurs. Épreuve sim isolée :
+  `docker exec didier-sim-monde bash /home/ros2_ws/validate-objets.sh` (13 verdicts : E1a-e,
+  E2a-e, E4a-c ; régisseur `jeu:=true` et `objets_node` lancés ; aussi phase `objets` de la
+  fumée). Voir le tableau : `ros2 topic echo --qos-durability transient_local /didier/scene/objets
   theatre_interfaces/msg/StringTime --once` (CLI : préfixer, type explicite).
 - **Perception** : en A1, elle est **scriptée**. Une personne se simule à la main :
   `ros2 topic pub -r 16 /didier/vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.3, y: 0.4, z: 0.9}}"`.

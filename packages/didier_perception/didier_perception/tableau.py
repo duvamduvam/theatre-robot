@@ -5,7 +5,9 @@ objet, encodage, résolution d'un nom) est dans theatre_contrats.objets ; ici, c
 l'écrivain calcule et que les lecteurs ne refont jamais :
   - la FUSION des sources : la carte (régie, `rehearsal/objects`) et, à partir d'O2, la caméra
     (un objet vu près d'un objet de carte de nom compatible EST cet objet ; la position de la
-    carte gagne, la caméra apporte « je le vois ») ;
+    carte gagne, la caméra apporte « je le vois ») — « près » : distance au CENTRE de l'objet de
+    carte STRICTEMENT inférieure à max(2·sigma_m, emprise + 1 m), emprise inconnue = 1 m
+    (EMPRISE_FUSION_DEFAUT_M) ; cf. observer ;
   - le NOM UNIQUE à un instant (deux bancs : « banc » le plus proche, « banc 2 ») ;
   - la PÉREMPTION des objets vus (§6.4) : une vieille position est pire qu'aucune ;
   - la géométrie vue de Didier MAINTENANT (distance, azimut, côté, « dans le champ ») ;
@@ -42,8 +44,11 @@ VU_PEREMPTION_S = 120.0
 NOM_APRES_MOUVEMENT_S = 30.0
 # Rapprochement vu ↔ vu (même objet revu) : à moins de max(2·sigma, 1 m).
 MEME_VU_M = 1.0
-# Rayon d'emprise par défaut d'un objet de carte sans géométrie connue (m).
-RAYON_DEFAUT_M = 1.0
+# Rapprochement vu ↔ carte (§6.3) : à moins de max(2·sigma, emprise + FUSION_MARGE_M) du centre ;
+# emprise de l'objet de carte inconnue (POI sans géométrie de collision) -> celle-ci (m). Ne sert
+# QU'À la fusion : la distance d'arrêt d'un « aller voir » a sa propre borne prudente (régie).
+FUSION_MARGE_M = 1.0
+EMPRISE_FUSION_DEFAUT_M = 1.0
 
 
 def sigma_creation(distance_m: float, hauteur_m: float, sigma_inclinaison_deg: float) -> float:
@@ -63,14 +68,15 @@ def azimut_relatif(pose: Pose, x: float, y: float) -> float:
 @dataclass(frozen=True)
 class ObjetCarte:
     """Un objet de la carte (POI de la régie) : `x`, `y` = CENTRE de l'objet quand la
-    géométrie de collision est connue (fichier des tours), sinon l'ancre du POI."""
+    géométrie de collision est connue (fichier des tours), sinon l'ancre du POI ; `emprise_m` =
+    rayon d'emprise au sol autour de ce centre (majorant de la collision), None = inconnue."""
     nom: str
     x: float
     y: float
     desc: str = ""
     alias: Tuple[str, ...] = ()
     tour: bool = False
-    rayon_m: float = RAYON_DEFAUT_M
+    emprise_m: Optional[float] = None
 
     @property
     def id(self) -> str:
@@ -124,18 +130,22 @@ class TableauObjets:
 
     def observer(self, etiquette: str, repere: str, x: float, y: float, sigma_m: float, t: float) -> str:
         """Un objet vu par la caméra (O2), position déjà projetée au sol dans `repere`. Rend
-        l'`id` de l'objet du tableau qu'il crée, confirme ou rejoint (fusion avec la carte)."""
+        l'`id` de l'objet du tableau qu'il crée, confirme ou rejoint. Fusion avec un objet de
+        carte de nom compatible si la distance à son centre est STRICTEMENT inférieure à
+        max(2·sigma_m, emprise + FUSION_MARGE_M) (emprise inconnue : EMPRISE_FUSION_DEFAUT_M)."""
         if repere != "robot":
             for o in self.carte.values():
                 if repere != "monde":
                     break     # la carte est en repère monde : pas de comparaison sans transformée
-                seuil = max(2.0 * sigma_m, o.rayon_m + 1.0)
+                emprise = o.emprise_m if o.emprise_m is not None else EMPRISE_FUSION_DEFAUT_M
+                seuil = max(2.0 * sigma_m, emprise + FUSION_MARGE_M)
                 if _compatible(etiquette, {normaliser_nom(t_) for t_ in (o.nom,) + o.alias}) \
                         and math.hypot(o.x - x, o.y - y) < seuil:
                     self._vu_carte[o.id] = t
                     return o.id
         for v in self.vus.values():
-            if v.repere == repere and v.x is not None and _compatible(etiquette, {normaliser_nom(v.nom)}) \
+            if v.repere == repere and v.x is not None and v.y is not None \
+                    and _compatible(etiquette, {normaliser_nom(v.nom)}) \
                     and math.hypot(v.x - x, v.y - y) < max(2.0 * sigma_m, MEME_VU_M):
                 v.x, v.y, v.sigma_m, v.t_obs, v.t_mouvement = x, y, sigma_m, t, None
                 return v.id
@@ -189,13 +199,14 @@ class TableauObjets:
             bruts.append(dict(id=o.id, nom=o.nom, desc=o.desc, alias=o.alias,
                               sources=("carte", "vu") if age is not None else ("carte",),
                               repere="monde", x=o.x, y=o.y, sigma_m=0.0, distance=d, azimut=a,
-                              en_vue=en_vue, age=age, tour=o.tour))
+                              en_vue=en_vue, age=age, tour=o.tour, emprise=o.emprise_m))
         for v in self.vus.values():
             d, a = self._geometrie(v.repere, v.x, v.y)
             age = max(0.0, t - v.t_obs)
             bruts.append(dict(id=v.id, nom=v.nom, desc="", alias=(), sources=("vu",), repere=v.repere,
                               x=v.x, y=v.y, sigma_m=v.sigma_m, distance=d, azimut=a,
-                              en_vue=age < EN_VUE_VU_S and v.x is not None, age=age, tour=False))
+                              en_vue=age < EN_VUE_VU_S and v.x is not None, age=age, tour=False,
+                              emprise=None))
         bruts.sort(key=lambda b: (b["distance"] if b["distance"] is not None else math.inf, b["id"]))
         noms = _noms_uniques([b["nom"] for b in bruts])
         sortie = []
@@ -207,7 +218,7 @@ class TableauObjets:
             sortie.append(Objet(
                 id=b["id"], nom=nom, desc=b["desc"], alias=tuple(b["alias"]), sources=b["sources"],
                 repere=b["repere"], x=_arrondi(b["x"], 3), y=_arrondi(b["y"], 3),
-                sigma_m=round(b["sigma_m"], 2), azimut_deg=_arrondi(a, 1), distance_m=_arrondi(d, 1),
+                sigma_m=round(b["sigma_m"], 2), emprise_m=_arrondi(b["emprise"], 2), azimut_deg=_arrondi(a, 1), distance_m=_arrondi(d, 1),
                 cote=None if a is None else contrat.cote(a), en_vue=b["en_vue"],
                 vu_il_y_a_s=_arrondi(b["age"], 1), tour=b["tour"], atteignable=atteignable))
         return sortie
@@ -233,7 +244,8 @@ def _noms_uniques(noms: List[str]) -> List[str]:
 def carte_depuis_payload(valeur) -> List[ObjetCarte]:
     """Payload décodé de `rehearsal/objects` (liste, director.objects_payload) -> objets de carte.
     Position : le CENTRE (`cx`, `cy`, géométrie de collision des tours) s'il est donné, sinon
-    l'ancre (`x`, `y`). Un élément illisible est sauté ; ValueError si ce n'est pas une liste."""
+    l'ancre (`x`, `y`) ; `emprise` (m, > 0) = rayon d'emprise autour du centre, absent ou faux =
+    inconnue. Un élément illisible est sauté ; ValueError si ce n'est pas une liste."""
     if not isinstance(valeur, list):
         raise ValueError(f"rehearsal/objects : liste attendue, reçu {valeur!r:.80}")
     sortie, noms = [], set()
@@ -246,15 +258,14 @@ def carte_depuis_payload(valeur) -> List[ObjetCarte]:
             continue
         noms.add(nom)
         alias = d.get("alias")
-        rayon = _fini(d.get("rayon"))
+        emprise = _fini(d.get("emprise"))
         sortie.append(ObjetCarte(
             nom=nom, x=x, y=y, desc=d["desc"].strip() if isinstance(d.get("desc"), str) else "",
             alias=tuple(a for a in alias if isinstance(a, str) and a.strip()) if isinstance(alias, list) else (),
-            tour=d.get("tour") is True, rayon_m=rayon if rayon is not None and rayon > 0 else RAYON_DEFAUT_M))
+            tour=d.get("tour") is True, emprise_m=emprise if emprise is not None and emprise > 0 else None))
     return sortie
 
 
 def _fini(v) -> Optional[float]:
-    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
-        return None
-    return float(v)
+    """Même règle que le décodeur du contrat (jamais d'OverflowError : revue O1, 19/11)."""
+    return contrat.nombre_fini(v)

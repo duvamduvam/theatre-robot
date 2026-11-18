@@ -12,10 +12,13 @@ Mutations (doivent rougir) :
   - « hors_atteinte » et « pas_ici » confondus -> test_poubelle_en_vue_mais_hors_atteinte
   - va_la soumis à atteignable -> test_console_va_la_jamais_bornee_a_10_m
   - regard de lubie sur un azimut recalculé au lieu de celui du tableau -> test_lubie_regarde_l_azimut_du_tableau
+Revue O1 (19/11) — péremption (theatre_contrats.objets.PEREMPTION_S = 3 s) :
+  - tableau() qui rend le dernier reçu sans regarder son âge      -> test_tableau_perime_plus_de_regard_ni_de_va_la
+  - borne > devenue >= (3,0 s pile = encore frais)                 -> test_tableau_frais_jusqu_a_3_s_pile
 """
 from conftest import fabriquer
 
-from theatre_contrats.objets import Objet, Tableau
+from theatre_contrats.objets import VIDE, Objet, Tableau
 
 from test_selecteur import jouer, journal, moves
 
@@ -30,7 +33,7 @@ TABLEAU_X14 = Tableau((TABLE, POUBELLE, BANC))
 
 def scene_x14(s, t):
     s.sur_route_state("on", t)
-    s.sur_tableau(TABLEAU_X14)
+    s.sur_tableau(TABLEAU_X14, t)
 
 
 def reponses(out):
@@ -87,3 +90,32 @@ def test_lubie_regarde_l_azimut_du_tableau():
     out = jouer(fabriquer(), 0.0, 3.0, [(0.0, scene_x14),
                                         (1.0, lambda s, t: s.sur_poi_event({"poi": "table_basse", "event": "enter"}, t))])
     assert [o[2]["angle_deg"] for o in out if o[1] == "look"] == [28.9]
+
+
+# ================================================================ péremption (revue O1, 19/11)
+def test_tableau_perime_plus_de_regard_ni_de_va_la():
+    """L'écrivain se tait après t = 0 : à 5 s, la table basse n'existe plus pour le sélecteur —
+    ni regard figé sur son azimut de 28,9°, ni « va là » vers elle ; l'oubli est journalisé."""
+    evenements = [(0.0, scene_x14),
+                  (5.0, lambda s, t: s.sur_poi_event({"poi": "table_basse", "event": "enter"}, t)),
+                  (6.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "table basse"}, t))]
+    mort = jouer(fabriquer(pools={}), 0.0, 8.0, evenements, ecrivain_vivant=False)
+    assert [o for o in mort if o[1] == "look"] == []
+    assert moves(mort) == []
+    assert [(t, p["pourquoi"]) for t, p in journal(mort, "tableau")] == [
+        (3.1, "tableau des objets muet depuis plus de 3 s : objets oubliés")]
+    # Même scène, écrivain vivant : le regard et l'ordre partent (le test mord sur la péremption).
+    vivant = jouer(fabriquer(pools={}), 0.0, 8.0, evenements)
+    assert [o[2]["angle_deg"] for o in vivant if o[1] == "look"] == [28.9]
+
+
+def test_tableau_frais_jusqu_a_3_s_pile():
+    s = fabriquer(pools={})
+    s.sur_tableau(TABLEAU_X14, 10.0)
+    assert s.tableau(13.0) is TABLEAU_X14
+    assert s.tableau(13.01) is VIDE
+    # Republié : frais de nouveau, et le retour est journalisé.
+    s.sur_tableau(TABLEAU_X14, 14.0)
+    assert s.tableau(14.0) is TABLEAU_X14
+    assert [o[2]["pourquoi"] for o in s.vider_sorties() if o[:2] == ("journal", "tableau")] == [
+        "tableau des objets muet depuis plus de 3 s : objets oubliés", "tableau des objets revenu (3 objet(s))"]

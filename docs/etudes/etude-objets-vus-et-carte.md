@@ -442,8 +442,11 @@ La bouche ne nomme que des noms du tableau, la garde déterministe du chat
 résolu. La régie reçoit un `id` et une position : elle ne cherche plus le nom dans son YAML.
 Bouche, sélecteur et régie parlent donc du même objet par construction, pas par chance.
 
-**Rapprochement vu ↔ carte** (en sim, ou dans un lieu préparé) : un objet vu projeté à moins de
-`max(2·sigma_m, rayon + 1 m)` d'un objet de carte de nom compatible est **le même** : les
+**Rapprochement vu ↔ carte** (en sim, ou dans un lieu préparé) : un objet vu projeté à
+STRICTEMENT moins de `max(2·sigma_m, emprise + 1 m)` du CENTRE d'un objet de carte de nom
+compatible est **le même** — `emprise` = rayon d'emprise au sol de l'objet de carte (majorant
+de sa collision, `emprise_m`), 1 m s'il est inconnu (revue O1 du 19/11 : le code d'O0 prenait le
+rayon de l'ORBITE de tour, ≈ emprise + 1 m, soit un seuil d'environ emprise + 2 m) : les
 sources fusionnent, la position de la carte gagne (elle est exacte), la caméra apporte
 « je le vois ». Sinon c'est un objet nouveau (le sac posé par un passant).
 
@@ -465,8 +468,10 @@ ou `odom` (jamais `robot`) ; `sigma_m` ≤ 1,0 m ; distance ≤ 10 m (la borne p
 désormais à un seul endroit) ; objet de carte, ou vu il y a moins de 10 s.
 
 - **Atteignable** → `aller_voir` comme aujourd'hui : même ordre `route_goto {name, x, y,
-  standoff}`, même `goto.py`, mêmes bornes, même distance d'arrêt de 1,5 m. La seule
-  différence est l'origine du point.
+  standoff}`, même `goto.py`, mêmes bornes. La seule différence est l'origine du point.
+  **Distance d'arrêt** (revue O1 du 19/11) : non plus 1,5 m du centre pour tout objet, mais
+  `max(1,5 ; emprise + 0,5 (Didier) + 0,5 (marge))`, 2,5 m si la taille est inconnue
+  (`director.standoff_pour`, spec-aller-voir §2.3) — 1,5 m du centre du banc le touchait.
 - **Vu mais pas atteignable** (trop loin, trop incertain) → **approche par bonds**, avec les
   gestes qui existent déjà : `tourner` de l'azimut (la mesure fiable), `avancer` d'au plus la
   moitié de la distance estimée et jamais plus de 3 m, puis regarder à nouveau. La tâche en
@@ -560,7 +565,7 @@ rejouée sur des réponses **enregistrées**. Version réelle à la main.
 
 | # | Épreuve | Vert si |
 |---|---|---|
-| 1 | **« montre-moi le banc », il est là** : Didier à (32,5 ; 0), cap 25° ; demande `aller_voir banc` | l'ordre porte l'`id` du banc ; arrêt à 1,5 m ± 0,3 m du centre (36,2 ; 2,5), face à lui (± 10°) |
+| 1 | **« montre-moi le banc », il est là** : Didier à (32,5 ; 0), cap 25° ; demande `aller_voir banc` | l'ordre porte l'`id` du banc ; arrêt à 2,1 m ± 0,3 m du centre (36,2 ; 2,5) et au moins 0,2 m de jeu entre le banc et Didier (contact = rouge ; revue O1 du 19/11, avant : 1,5 m ± 0,3, qui acceptait le contact), face à lui (± 10°) |
 | 2 | **« le banc », il n'est pas là** (la séance du 15/11) : Didier à x = 14 | réponse « connu, pas ici » avec la distance ; **zéro** consigne de roues ; la réplique d'échec est dite |
 | 3 | **carte vidée (la rue en sim)** : mêmes poses, objets venus de la seule caméra | depuis 4,3 m, l'inventaire fait entrer le banc au tableau dans son emprise (à moins de 1,0 m du centre) et la question « pied » le ramène à moins de 0,5 m ; depuis 22 m (la pose du 15/11) il est « vu, pas atteignable » et l'approche part par bonds |
 | 4 | **une seule vérité** : sur une séance de 10 gestes | le nom dit, la cible du sélecteur et la cible de la régie portent le même `id`, dans les trois journaux |

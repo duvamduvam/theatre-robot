@@ -46,9 +46,10 @@ from typing import Dict, List, Tuple
 from theatre_contrats import stringtime
 
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
-                                       FORWARD_MAX_M, FORWARD_MIN_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
+                                       FORWARD_MAX_M, FORWARD_MIN_M, GOTO_DIDIER_RAYON_M, GOTO_EMPRISE_INCONNUE_M,
+                                       GOTO_MARGE_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
                                        ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
-                                       TURN_DEG_COMPAT, TURN_MAX_DEG)
+                                       TOUR_CLEARANCE_M, TURN_DEG_COMPAT, TURN_MAX_DEG)
 from didier_rehearsal.goto import forward_name, tour_name, turn_name
 from didier_rehearsal.route import Tour
 from didier_rehearsal.scenario import Fault, Scenario
@@ -291,7 +292,7 @@ def speed_factor(raw) -> float | None:
         raw = stringtime.decode_or_raw(raw, ROUTE_SPEED_TOPIC)
     try:
         value = float(raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):   # OverflowError : entier JSON géant (revue O1)
         return None
     if not math.isfinite(value):
         return None
@@ -705,15 +706,19 @@ def objects_payload(pois, tours=()) -> str:
     Lot O1 (18/11) : le SEUL lecteur est désormais l'écrivain du tableau des objets
     (didier_perception, carte_depuis_payload), qui reçoit aussi `alias` (la résolution d'un nom
     dit vit dans le tableau, theatre_contrats.objets.resoudre) et, pour un POI qui a un tour,
-    `cx`, `cy`, `rayon` = CENTRE et rayon de la géométrie de collision : l'ancre du banc est à
-    1,1 m de l'objet, « aller voir » doit viser l'objet (étude objets §4.1, épreuve 1)."""
+    `cx`, `cy` = CENTRE de la géométrie de collision (l'ancre du banc est à 1,1 m de l'objet,
+    « aller voir » doit viser l'objet : étude objets §4.1, épreuve 1) et `emprise` = rayon
+    d'emprise au sol autour de ce centre. Le fichier des tours ne garde que le rayon de l'ORBITE,
+    arrondi au 0,1 m SUPÉRIEUR de emprise + TOUR_CLEARANCE_M (tools/compute_tours.py) : orbite −
+    dégagement est donc un MAJORANT de l'emprise (exact à 0,1 m près) — revue O1 du 19/11 : c'est
+    l'emprise, pas l'orbite, qui règle la distance d'arrêt (standoff_pour) et la fusion caméra."""
     out = []
     for p in pois:
         o = {"name": p.name, "desc": p.shown_desc, "alias": list(p.alias), "x": p.x, "y": p.y,
              "tour": p.name in tours}
         tour = tours.get(p.name) if isinstance(tours, dict) else None
         if tour is not None:
-            o.update(cx=tour.x, cy=tour.y, rayon=tour.radius)
+            o.update(cx=tour.x, cy=tour.y, emprise=round(tour.radius - TOUR_CLEARANCE_M, 3))
         out.append(o)
     return json.dumps(out, ensure_ascii=False)
 
@@ -779,10 +784,24 @@ def decide_goto(intent, *, tableau, pose, off_by_david: bool) -> GotoDecision:
     return GotoDecision("accepted", objet, distance)
 
 
-def goto_order(objet, standoff: float = GOTO_STANDOFF_M) -> str:
+def standoff_pour(emprise_m) -> float:
+    """Distance d'arrêt (m, centre de Didier -> CENTRE de l'objet) d'un « aller voir » (revue O1,
+    19/11) : max(GOTO_STANDOFF_M, emprise + GOTO_DIDIER_RAYON_M + GOTO_MARGE_M). Emprise
+    inconnue (None), négative, non finie ou absurde -> GOTO_EMPRISE_INCONNUE_M (borne prudente).
+    Bornée à GOTO_MAX_DISTANCE_M (le plafond de parse_order) : un objet plus gros que ça n'est de
+    toute façon jamais approché (refus « too_far » de la régie au-delà de 40 m)."""
+    emprise = _number(emprise_m)
+    if emprise is None or emprise < 0:
+        emprise = GOTO_EMPRISE_INCONNUE_M
+    return round(min(GOTO_MAX_DISTANCE_M,
+                     max(GOTO_STANDOFF_M, emprise + GOTO_DIDIER_RAYON_M + GOTO_MARGE_M)), 2)
+
+
+def goto_order(objet) -> str:
     """Payload route_goto (spec §2.3) : la position du TABLEAU (centre de l'objet quand la
-    carte le connaît), nommée comme l'objet du tableau."""
-    return json.dumps({"name": objet.nom, "x": objet.x, "y": objet.y, "standoff": standoff})
+    carte le connaît), nommée comme l'objet du tableau, arrêt à standoff_pour(emprise)."""
+    return json.dumps({"name": objet.nom, "x": objet.x, "y": objet.y,
+                       "standoff": standoff_pour(objet.emprise_m)})
 
 
 @dataclass(frozen=True)
@@ -795,10 +814,15 @@ class GestureDecision:
 
 
 def _number(value) -> float | None:
-    """Nombre fini (jamais un booléen), sinon None."""
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+    """Nombre fini (jamais un booléen), sinon None — jamais d'exception : un entier JSON de 400
+    chiffres faisait lever OverflowError à math.isfinite (revue O1, 19/11)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    return float(value)
+    try:
+        value = float(value)
+    except OverflowError:
+        return None
+    return value if math.isfinite(value) else None
 
 
 def _gesture(name: str, order: dict, *, pose_known: bool, off_by_david: bool) -> GestureDecision:

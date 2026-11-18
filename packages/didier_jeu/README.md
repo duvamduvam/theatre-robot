@@ -85,6 +85,9 @@ pas `atteignable` est refusé tout de suite : réponse `dropped` / `pas_ici` (ni
 portée) ou `hors_atteinte` (en vue mais trop loin), avec `distance_m` et `cote`. `va_la`
 résout le nom dans le tableau et l'ordre porte l'`id` ; la console n'est pas soumise à
 `atteignable` (la régie garde ses 40 m). Le regard d'une lubie vise l'azimut du tableau.
+Le tableau est PÉRIMÉ après `theatre_contrats.objets.PEREMPTION_S` (3 s) sans republication
+(`Selecteur.tableau(now)`, revue O1 du 19/11) : ni regard ni « va là » sur une donnée figée ;
+l'oubli et le retour sont journalisés (type `tableau`).
 
 **Réponse à la bouche** (15/11, séance « fais le tour de l'éléphant ») : toute
 demande de GESTE de la bouche a une issue que le chat apprend. Transmise, c'est

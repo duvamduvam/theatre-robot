@@ -292,9 +292,13 @@ CHAT_MOVE_TOPIC = "rehearsal/chat_move"
 # CHAT_MOVE_TOPIC) : il fait la section « ce qui t'entoure » du prompt
 # (personas.entourage_prompt) et la GARDE des gestes (ConversationEngine.set_objets).
 # Flux muet depuis TABLEAU_TTL_S (écrivain mort) : la section tombe et la garde refuse tout
-# geste vers un objet — jamais une position périmée prise pour vraie.
+# geste vers un objet — jamais une position périmée prise pour vraie. JAMAIS REÇU = MUET
+# (revue O1, 19/11) : la garde part sur le tableau VIDE dès le démarrage — aucun geste vers un
+# objet ne quitte la bouche sans l'`id` d'un tableau frais (avant : sans tableau reçu, le geste
+# partait sans id et la régie le refusait « unknown » ; muet, il était refusé ici : deux
+# comportements pour la même ignorance). TTL = LA valeur du contrat, commune aux quatre lecteurs.
 SCENE_OBJETS_TOPIC = topics.SCENE_OBJETS
-TABLEAU_TTL_S = 3.0
+TABLEAU_TTL_S = tableau_objets.PEREMPTION_S
 
 # Regard demandé par Didier (lot M2, dadou_robot_ros/docs/spec-aller-voir.md
 # §7.1) : StringTime, payload json.dumps({"angle_deg": <degrés, + = gauche,
@@ -1007,6 +1011,8 @@ class ChatNode(Node):
         # MOVE_TEMPLATE n'est pas dans le system prompt non plus). Thread rclpy seul.
         self._tableau_at = None
         if config["chat_move_enabled"]:
+            # Jamais reçu = muet (cf. TABLEAU_TTL_S) : garde sur le tableau VIDE d'entrée.
+            self._engine.set_objets(tableau_objets.VIDE)
             self.create_subscription(
                 StringTime, SCENE_OBJETS_TOPIC, self._on_scene_objets,
                 QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
@@ -1270,8 +1276,9 @@ class ChatNode(Node):
         except ValueError as exc:
             self.get_logger().warning(f"{SCENE_OBJETS_TOPIC} refusé : {exc}")
             return
-        if tableau.rejetes:
-            self.get_logger().warning(f"{SCENE_OBJETS_TOPIC} : {tableau.rejetes} objet(s) illisible(s) écarté(s)")
+        alerte = tableau_objets.avertissement(tableau)
+        if alerte:
+            self.get_logger().warning(f"{SCENE_OBJETS_TOPIC} : {alerte}")
         premier = self._tableau_at is None
         self._tableau_at = time.monotonic()
         self._brain.set_objects_prompt(personas.entourage_prompt(tableau))

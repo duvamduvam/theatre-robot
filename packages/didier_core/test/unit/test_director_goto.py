@@ -6,11 +6,18 @@ Mutations du lot M1 (doivent rougir) :
   - off_by_david toujours False -> test_refus_route_off_par_david
   - retirer le refus too_far -> test_refus_trop_loin
   - accept_goto rend la vitesse retenue sans min(…) -> test_accept_goto_jamais_au_dessus_de_la_batterie
+Revue O1 (19/11) — distance d'arrêt selon la TAILLE de l'objet :
+  - standoff fixe 1,5 (taille ignorée)                 -> test_standoff_tient_compte_de_l_emprise
+  - taille inconnue prise pour 0 (pas de borne prudente) -> test_standoff_taille_inconnue_borne_prudente
+  - emprise lue sur le rayon d'ORBITE (2,2) au payload  -> test_objets_payload_marque_les_objets_qui_ont_un_tour
+  - _number sans garde OverflowError                   -> test_avancer_nombre_geant_refuse_sans_exception
 """
 import json
 
-from didier_rehearsal.director import (GotoPolicy, VoiceMove, decide_goto, goto_order, move_reply,
-                                      objects_payload, poi_name_of)
+import pytest
+
+from didier_rehearsal.director import (GotoPolicy, VoiceMove, decide_forward, decide_goto, goto_order, move_reply,
+                                      objects_payload, poi_name_of, standoff_pour)
 from theatre_contrats.objets import Objet, Tableau
 from didier_rehearsal.route import Poi, Tour
 
@@ -34,11 +41,14 @@ def test_objets_payload_ordre_itineraire_desc_ou_nom():
 
 def test_objets_payload_marque_les_objets_qui_ont_un_tour():
     # 15/11 : le chat doit savoir quels objets acceptent « faire le tour ».
-    # O1 (18/11) : + centre et rayon de la géométrie de collision (cible d'« aller voir »).
+    # O1 (18/11) : + centre de la géométrie de collision (cible d'« aller voir »).
+    # Revue O1 (19/11) : + EMPRISE = orbite 2,2 − dégagement 1,0 (majorant de la collision) ; le
+    # rayon d'orbite, lui, ne part plus (il réglait la fusion caméra à tort).
     objets = json.loads(objects_payload(POIS, {"anneaux": Tour(79.0, 6.5, 2.2)}))
     assert [(o["name"], o["tour"]) for o in objets] == [("table_basse", False), ("anneaux", True)]
-    assert "cx" not in objets[0]
-    assert (objets[1]["cx"], objets[1]["cy"], objets[1]["rayon"]) == (79.0, 6.5, 2.2)
+    assert "cx" not in objets[0] and "emprise" not in objets[0]
+    assert (objets[1]["cx"], objets[1]["cy"], objets[1]["emprise"]) == (79.0, 6.5, 1.2)
+    assert "rayon" not in objets[1]
 
 
 def test_move_reply_payload_grave():
@@ -103,8 +113,35 @@ def test_refus_sans_pose():
 
 
 def test_ordre_route_goto_position_du_tableau():
-    # Position du TABLEAU (centre de la table, 2,1) et non l'ancre du POI (1,4).
-    assert json.loads(goto_order(O_TABLE)) == {"name": "table_basse", "x": 17.8, "y": 2.1, "standoff": 1.5}
+    # Position du TABLEAU (centre de la table, 2,1) et non l'ancre du POI (1,4) ; emprise de la
+    # table (orbite 1,7 − 1,0 = 0,7) -> arrêt à 0,7 + 0,5 (Didier) + 0,5 (marge) = 1,7 m du centre.
+    table = Objet(id="carte/table_basse", nom="table_basse", x=17.8, y=2.1, emprise_m=0.7)
+    assert json.loads(goto_order(table)) == {"name": "table_basse", "x": 17.8, "y": 2.1, "standoff": 1.7}
+    # Taille inconnue : borne prudente 1,5 + 0,5 + 0,5 = 2,5 m.
+    assert json.loads(goto_order(O_TABLE))["standoff"] == 2.5
+
+
+@pytest.mark.parametrize("emprise, attendu", [
+    (1.1, 2.1),      # le banc de la revue : 1,5 m du centre le touchait (1,1 + 0,4)
+    (0.7, 1.7),      # table basse
+    (0.5, 1.5),      # orbite au plancher (pigeon, plot) : 0,5 + 1,0 = 1,5, le plancher
+    (0.2, 1.5),      # petit objet : jamais sous GOTO_STANDOFF_M
+    (5.0, 6.0),      # plus grand objet qui a un tour (orbite ≤ 6) : 5,0 + 1,0
+    (100.0, 40.0),   # absurde : borné au plafond de parse_order
+])
+def test_standoff_tient_compte_de_l_emprise(emprise, attendu):
+    assert standoff_pour(emprise) == attendu
+
+
+@pytest.mark.parametrize("emprise", [None, -1.0, float("nan"), float("inf"), "1", True, 10 ** 400])
+def test_standoff_taille_inconnue_borne_prudente(emprise):
+    assert standoff_pour(emprise) == 2.5
+
+
+def test_avancer_nombre_geant_refuse_sans_exception():
+    # Revue O1 (19/11) : math.isfinite(10**400) lève OverflowError — dans le callback du régisseur.
+    d = decide_forward({"cmd": "avancer", "metres": 10 ** 400}, pose_known=True, off_by_david=False)
+    assert (d.effect, d.reason, d.order) == ("invalid", "illisible", None)
 
 
 def test_poi_name_of():

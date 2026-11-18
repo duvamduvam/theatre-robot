@@ -13,7 +13,13 @@ Mutants vérifiés à la main (18/11), chacun fait rougir au moins un test :
   - péremption 120 s supprimée                                -> test_peremption_vu
   - sigma : croissance par mètre supprimée                    -> test_sigma_grandit_et_tombe
   - noms uniques : suffixe donné au plus proche               -> test_noms_uniques_le_plus_proche_garde
-  - fusion vu<->carte : seuil rayon + 1 m remplacé par 1 m    -> test_fusion_vu_carte
+  - fusion vu<->carte : seuil emprise + 1 m remplacé par 1 m  -> test_fusion_vu_carte
+Revue O1 (19/11) :
+  - fusion sur le rayon de l'ORBITE (2,1) au lieu de l'emprise (1,1) -> test_fusion_vu_carte
+  - emprise inconnue : défaut 1 m oublié (seuil = 2·sigma seul)       -> test_fusion_emprise_inconnue_un_metre
+  - emprise lue sur le rayon d'orbite / perdue à la publication       -> test_carte_depuis_payload_centre,
+                                                                         test_emprise_publiee
+  - _fini qui laisse passer l'OverflowError                            -> test_carte_depuis_payload_nombre_geant
 """
 import json
 import math
@@ -78,10 +84,12 @@ def test_seance_15_11_en_vue():
 
 def test_carte_depuis_payload_centre():
     carte = {o.nom: o for o in _carte_chantiers()}
-    assert (carte["banc"].x, carte["banc"].y, carte["banc"].rayon_m, carte["banc"].tour) == (36.2, 2.496, 2.1, True)
-    # Sans tour : l'ancre, rayon par défaut.
-    assert (carte["flaque"].x, carte["flaque"].y, carte["flaque"].rayon_m, carte["flaque"].tour) == (40.8, 0.0, 1.0,
-                                                                                                    False)
+    # Emprise = orbite 2,1 − dégagement 1,0 (majorant de la collision, à 0,1 m près).
+    assert (carte["banc"].x, carte["banc"].y, carte["banc"].emprise_m, carte["banc"].tour) == (36.2, 2.496, 1.1, True)
+    # Sans tour : l'ancre, emprise INCONNUE (jamais un défaut inventé).
+    assert (carte["flaque"].x, carte["flaque"].y, carte["flaque"].emprise_m, carte["flaque"].tour) == (40.8, 0.0, None,
+                                                                                                      False)
+    assert carte["pigeon"].emprise_m == 0.5      # orbite au plancher 1,5 -> emprise ≤ 0,5
     assert carte["carrousel"].alias == ("carrousel", "manège", "chevaux de bois")
     assert carte["banc"].id == "carte/banc"
     assert (carte["pigeon"].x, carte["pigeon"].y) == (31.545, -2.4)    # centre ≠ ancre (31,6 ; -1,4)
@@ -122,16 +130,44 @@ def test_pose_dans_un_autre_repere_ne_compare_pas():
 # ================================================================ objets vus (sources pour O2)
 def test_fusion_vu_carte():
     t = TableauObjets()
-    t.poser_carte([ObjetCarte("banc", 36.2, 2.5, alias=("banc en bois",), rayon_m=2.1)])
+    t.poser_carte([ObjetCarte("banc", 36.2, 2.5, alias=("banc en bois",), emprise_m=1.1)])
     t.poser_pose("monde", 32.5, 0.0, 0.0)
-    # « banc en bois » vu à 2,9 m du centre : dans rayon + 1 m = 3,1 -> c'est le banc de la carte.
-    assert t.observer("Banc en bois", "monde", 36.2, 5.4, 0.3, 10.0) == "carte/banc"
+    # « banc en bois » vu à 2,0 m du centre : sous emprise + 1 m = 2,1 (2·sigma = 0,6) -> c'est
+    # le banc de la carte.
+    assert t.observer("Banc en bois", "monde", 36.2, 4.5, 0.3, 10.0) == "carte/banc"
     o = t.instantane(11.0)[0]
     assert (o.sources, o.x, o.y, o.vu_il_y_a_s, o.en_vue) == (("carte", "vu"), 36.2, 2.5, 1.0, True)
-    # À 3,2 m : un autre objet (le sac posé par un passant… nommé banc).
-    assert t.observer("banc", "monde", 36.2, 5.7, 0.3, 12.0) == "vu/1"
+    # À 2,2 m : un autre objet (le sac posé par un passant… nommé banc).
+    assert t.observer("banc", "monde", 36.2, 4.7, 0.3, 12.0) == "vu/1"
+    # Incertain (sigma 1,5 -> 2·sigma = 3,0 > 2,1) : à 2,9 m, c'est encore le banc.
+    assert t.observer("banc", "monde", 36.2, 5.4, 1.5, 12.0) == "carte/banc"
     # Nom incompatible tout près : un autre objet aussi.
     assert t.observer("vélo orange", "monde", 36.0, 2.5, 0.3, 12.0) == "vu/2"
+
+
+def test_fusion_emprise_inconnue_un_metre():
+    t = TableauObjets()
+    t.poser_carte([ObjetCarte("borne", 10.0, 0.0)])          # emprise inconnue -> 1 m + 1 m = 2 m
+    assert t.observer("borne", "monde", 11.9, 0.0, 0.3, 1.0) == "carte/borne"
+    assert t.observer("borne", "monde", 12.1, 0.0, 0.3, 1.0) == "vu/1"
+
+
+def test_emprise_publiee():
+    t = TableauObjets()
+    t.poser_carte([ObjetCarte("banc", 5.0, 0.0, emprise_m=1.1), ObjetCarte("flaque", 8.0, 0.0)])
+    t.poser_pose("monde", 0.0, 0.0, 0.0)
+    t.observer("sac", "monde", 3.0, 0.0, 0.3, 0.0)
+    assert [(o.id, o.emprise_m) for o in t.instantane(0.0)] == [("vu/1", None), ("carte/banc", 1.1),
+                                                                ("carte/flaque", None)]
+
+
+def test_carte_depuis_payload_nombre_geant():
+    # Revue O1 (19/11) : math.isfinite(10**400) lève OverflowError — jamais ici : élément sauté
+    # (position illisible) ou emprise inconnue, jamais d'exception dans le callback de l'écrivain.
+    carte = carte_depuis_payload([{"name": "a", "x": 10 ** 400, "y": 0.0},
+                                  {"name": "b", "x": 1.0, "y": 2.0, "emprise": 10 ** 400},
+                                  {"name": "c", "x": 1e7, "y": 0.0}])
+    assert [(o.nom, o.x, o.y, o.emprise_m) for o in carte] == [("b", 1.0, 2.0, None)]
 
 
 def test_noms_uniques_le_plus_proche_garde():

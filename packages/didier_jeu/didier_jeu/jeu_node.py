@@ -14,7 +14,8 @@ Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
         geste ; les nôtres y reviennent aussi, filtrées par `source`),
         animation_state (latché), scene/objets (latché, le tableau des objets du
         lot O1 : regard d'une lubie vers l'objet, cible d'un « va là », refus d'un
-        geste de la bouche vers un objet hors d'atteinte — plus de pose ni de carte ici).
+        geste de la bouche vers un objet hors d'atteinte — plus de pose ni de carte ici ;
+        PÉRIMÉ par le sélecteur après theatre_contrats.objets.PEREMPTION_S sans republication).
 Écrit : jeu/chat_move (-> régisseur, remappé par rehearsal.launch.py jeu:=true),
         rehearsal/chat_move_reply (-> chat_node : demande de geste de la bouche
         non transmise ou restée sans réponse, 15/11), animation (nom de séquence), look (« regarder », gaze_follower),
@@ -185,9 +186,14 @@ def main(args=None):
             except ValueError as e:
                 self.get_logger().warning(f"{topics.SCENE_OBJETS} refusé : {e}")
                 return
+            alerte = tableau_objets.avertissement(tableau)
+            if alerte:
+                self.get_logger().warning(f"{topics.SCENE_OBJETS} : {alerte}")
             sur_tableau = getattr(self.sel, "sur_tableau", None)
             if sur_tableau is not None:
-                sur_tableau(tableau)
+                # Horodaté : le sélecteur le PÉRIME après tableau_objets.PEREMPTION_S (revue O1).
+                sur_tableau(tableau, time.monotonic())
+                self._vider()
 
         # --- tick et sorties ----------------------------------------------
         def _tick(self):

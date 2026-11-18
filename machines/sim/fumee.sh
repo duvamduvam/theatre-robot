@@ -97,7 +97,7 @@ ATTENDU_EDITION=13      # validate-data-edit.sh (L1d : épreuves 1 à 12, 13 = p
 ATTENDU_MACHINES=5      # validate-machines.sh (L2b : M1-M4, M6 ; 10 en L2c)
 ATTENDU_CHANTIERS=21    # validate-rehearsal-chantiers.sh (V-R3)
 ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
-ATTENDU_OBJETS=12       # validate-objets.sh (OBJ, lot O1 : E1a-e, E2a-d, E4a-c)
+ATTENDU_OBJETS=13       # validate-objets.sh (OBJ, lot O1 : E1a-e, E2a-e, E4a-c)
 ATTENDU_CONVERSATION=13 # validate-conversation.sh (CONV : P1, T0, A1-A3, B1-B5, C1-C3)
 RTF_MIN_DEFAUT=0.8
 PEREMPTION_SIM_OCCUPEE_S=21600   # 6 h : au-delà, un ~/tmp/sim-occupee oublié ne bloque plus

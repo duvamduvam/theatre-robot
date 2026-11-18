@@ -3812,15 +3812,30 @@ def test_tour_possible_publie_avec_l_id_du_tableau(timeline):
 
 
 def test_tableau_vide_refuse_tout_objet(timeline):
-    # Écrivain muet (TABLEAU_TTL_S de chat_node) : tableau VIDE, jamais une position périmée.
+    # Écrivain muet OU jamais entendu (TABLEAU_TTL_S de chat_node, revue O1 du 19/11 : chat_node
+    # pose VIDE dès le démarrage) : tableau VIDE, jamais une position périmée ni un geste sans id.
     task = MoveTask()
     ordres = _tour_humain(timeline, "va voir les poubelles",
                           'Hop. {"emotion": "happy", "aller_voir": "poubelle_tri"}', task, vocab=Tableau())
     assert ordres == [] and "tu ne connais pas cet objet ici" in task.pop_continuation()
 
 
-def test_sans_tableau_le_regisseur_juge(timeline):
+def test_garde_non_branchee_le_geste_part_sans_id(timeline):
+    # Moteur SANS tableau branché (None : tests, outils — chat_node, lui, branche VIDE d'entrée) :
+    # aucune garde, le geste part tel quel, sans id ; la régie le refuserait « unknown ».
     task = MoveTask()
     ordres = _tour_humain(timeline, "fais le tour de l'éléphant",
                           'Hop. {"emotion": "happy", "faire_le_tour": "elephant"}', task, vocab=None)
     assert ordres == [{"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}]
+
+
+def test_garde_locale_est_celle_du_contrat():
+    """Revue O1 (19/11) : la garde des gestes vit dans theatre_contrats.objets.garde_geste, que
+    l'épreuve sim validate-objets.sh appelle aussi — une SEULE logique, éprouvée en sim. Retirer la
+    délégation (ou réécrire la règle ici) fait rougir ce test."""
+    import inspect
+    import textwrap
+    source = textwrap.dedent(inspect.getsource(ConversationEngine._local_refusal))
+    assert "objets.garde_geste(tableau, intent)" in source
+    code = "\n".join(l for l in source.splitlines() if not l.strip().startswith("#"))
+    assert "resoudre(" not in code and ".atteignable" not in code and "PAS_ICI" not in code

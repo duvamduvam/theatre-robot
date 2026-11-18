@@ -128,7 +128,10 @@ class Selecteur:
         self.sorties: List[tuple] = []
         # Tableau des objets (scene/objets, lot O1, 18/11) : le sélecteur le LIT (distance,
         # côté, azimut, atteignable), il n'en calcule rien — plus de pose ni de carte ici.
-        self.tableau = tableau_objets.VIDE
+        # PÉRIMÉ après tableau_objets.PEREMPTION_S sans republication (revue O1, 19/11 : le
+        # regard d'une lubie restait sur l'azimut d'un tableau figé) : lu via tableau(now).
+        self.tableau_recu = None               # dernier Tableau reçu (peut être périmé)
+        self._tableau_t: Optional[float] = None
         self.route_state: Optional[str] = None
         self.animation_state = ""
         self.joues: Dict[str, float] = {}      # séquence -> dernier t joué (rotation)
@@ -257,7 +260,7 @@ class Selecteur:
         juge (« unknown »). Remplace le refus « > 10 m » du 15/11 (geste.distance_max_chat_m)."""
         if demande.get("cmd") not in ("aller_voir", "tour_de"):
             return False
-        o = self.tableau.par_id(demande.get("id"))
+        o = self.tableau(now).par_id(demande.get("id"))
         if o is None or o.atteignable:
             return False
         code = "hors_atteinte" if o.ici else "pas_ici"
@@ -322,9 +325,23 @@ class Selecteur:
         if isinstance(etat, dict) and isinstance(etat.get("indication"), str):
             self.sur_situation(etat["indication"], now, source="mission_state")
 
-    def sur_tableau(self, tableau) -> None:
-        """scene/objets décodé (theatre_contrats.objets.Tableau)."""
-        self.tableau = tableau
+    def sur_tableau(self, tableau, now: float) -> None:
+        """scene/objets décodé (theatre_contrats.objets.Tableau), reçu à `now`."""
+        if self._tableau_t is None and self.tableau_recu is not None:
+            self._journal("tableau", f"tableau des objets revenu ({len(tableau.objets)} objet(s))")
+        self.tableau_recu = tableau
+        self._tableau_t = now
+
+    def tableau(self, now: float):
+        """Le tableau des objets À LIRE à `now` : le dernier reçu s'il a moins de
+        tableau_objets.PEREMPTION_S (même valeur que la bouche, la réflexion et la régie), sinon
+        le tableau VIDE — aucun objet, aucun azimut : pas de regard ni de « va là » sur une
+        donnée figée. Le passage au périmé est journalisé une fois."""
+        if self._tableau_t is not None and now - self._tableau_t > tableau_objets.PEREMPTION_S:
+            self._tableau_t = None
+            self._journal("tableau", f"tableau des objets muet depuis plus de "
+                          f"{tableau_objets.PEREMPTION_S:g} s : objets oubliés")
+        return self.tableau_recu if self._tableau_t is not None else tableau_objets.VIDE
 
     def sur_route_state(self, etat, now: float) -> None:
         self.route_state = etat
@@ -460,7 +477,7 @@ class Selecteur:
         # Une lubie en attente de son délai de refus : va_la la refuse.
         if self.en_cours is not None and self.en_cours.candidat.action == "lubie" and not self.en_cours.stop_envoye:
             self._annuler(now, "David l'envoie ailleurs")
-        objet = self.tableau.resoudre(cible).objet if cible is not None else None
+        objet = self.tableau(now).resoudre(cible).objet if cible is not None else None
         if objet is not None:
             # Un ordre de DAVID : pas soumis à « atteignable » (il voit ce qu'il désigne) ; la
             # régie garde ses bornes (40 m, route coupée). Cible = le NOM du tableau.
@@ -525,6 +542,7 @@ class Selecteur:
         else:
             self.pulsions.pression_route = 0.0
         self._expirer(now)
+        self.tableau(now)          # péremption du tableau journalisée à l'heure, pas à la 1re lecture
         self._suivre_engagement(now)
         self._reprise_apres_geste(now)
         self.arbre.tick_once()
@@ -895,7 +913,7 @@ class Selecteur:
             return True
         if c.action == "lubie":
             # RÉCLAMÉ (intention publiée par _decider) ET AMORCÉ (regard vers l'objet).
-            objet = self.tableau.resoudre(c.cible).objet
+            objet = self.tableau(now).resoudre(c.cible).objet
             if objet is not None and objet.azimut_deg is not None:
                 angle = objet.azimut_deg
                 hold = r.get("lubie.delai_refus_s") + r.get("durees_s.arret")
@@ -917,7 +935,7 @@ class Selecteur:
                 etapes.append(commande(self.deplacements, "se_tourner_vers", angle_deg=round(angle, 1)))
             etapes.append(commande(self.deplacements, "approcher"))
         elif c.action == "aller_voir":
-            objet = self.tableau.resoudre(c.cible).objet
+            objet = self.tableau(now).resoudre(c.cible).objet
             etapes = [commande(self.deplacements, "aller_voir", objet=c.cible,
                                **({"id": objet.id} if objet is not None else {}))]
         elif c.action == "bouche":

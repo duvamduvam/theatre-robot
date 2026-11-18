@@ -22,7 +22,9 @@ from test.unit.test_director_node import (BATTERIE, LUBIE, _cmd, _creer, _echos,
                                                  _fader, _journal, _poi, _publie, _recevoir, _tick_a,
                                                  _voix, regisseur)  # noqa: F401 (fixture)
 
-ORDRE_BANC = {"name": "banc", "x": 5.0, "y": 0.0, "standoff": 1.5}
+# Banc de ce test sans fichier de tours : taille INCONNUE -> arrêt prudent à 2,5 m du centre
+# (revue O1, 19/11 : director.standoff_pour).
+ORDRE_BANC = {"name": "banc", "x": 5.0, "y": 0.0, "standoff": 2.5}
 
 
 def _odom(noeud, x, y, t=None):
@@ -93,6 +95,26 @@ def test_accepte_hors_seance_et_ordonne(regisseur, monkeypatch, tmp_path):
                                 "distance": 4.0}]
     assert _ordres(n) == [ORDRE_BANC]
     assert "geometry_msgs" not in str(type(n.publishers["route_goto"]))   # jamais de Twist ici
+
+
+def test_tableau_perime_refus_unknown_rien_ne_part(regisseur, monkeypatch, tmp_path):
+    """Revue O1 (19/11) : la régie périme le tableau comme les autres lecteurs (3 s sans
+    republication) — un geste vers un objet d'un tableau figé est refusé « unknown »."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _etat_route(n, "off", cause="boot")
+    n.horloge.t = 1000.0
+    intent = _intention(n, "aller_voir", "banc")          # tableau reçu à 1000,0
+    n.horloge.t = 1003.5
+    _odom(n, 1.0, 0.0)
+    _recevoir(n, "rehearsal/chat_move", json.dumps(intent))
+    assert [p["effect"] for p in _aller_voirs(n)] == ["unknown"] and _ordres(n) == []
+    # Encore frais à 3,0 s pile : accepté.
+    n.horloge.t = 2000.0
+    intent = _intention(n, "aller_voir", "banc")
+    n.horloge.t = 2003.0
+    _odom(n, 1.0, 0.0)
+    _recevoir(n, "rehearsal/chat_move", json.dumps(intent))
+    assert [p["effect"] for p in _aller_voirs(n)] == ["unknown", "accepted"] and _ordres(n) == [ORDRE_BANC]
 
 
 def test_refus_inconnu_rien_ne_part(regisseur, monkeypatch, tmp_path):

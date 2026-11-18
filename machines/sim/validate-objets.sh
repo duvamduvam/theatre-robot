@@ -3,17 +3,24 @@
 # §10, épreuves 1, 2 et 4), DANS le conteneur `monde` : monde `chantiers`, vrai bringup du robot,
 # rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true (régisseur + sélecteur de jeu),
 # objets_node dans le conteneur `vision` (vision.launch.py). ZÉRO jeton : pas de tête ; le pilote
-# joue la BOUCHE en publiant sur rehearsal/chat_move ce que chat_node publierait, nom résolu dans
-# le tableau capturé par LA règle du contrat (theatre_contrats.objets.resoudre). Séance NON
+# joue la BOUCHE en publiant sur rehearsal/chat_move ce que chat_node publierait : le geste passe
+# par LA garde de la bouche, theatre_contrats.objets.garde_geste — le code même qu'appelle
+# chat_node (ConversationEngine._local_refusal), pas une copie (revue O1, 19/11) — sur le tableau
+# capturé ; l'id résolu est joint comme le fait chat_node. Séance NON
 # démarrée, route jamais coupée par commande (cause « boot ») : le régisseur accepte les gestes,
 # et le « go » de reprise du sélecteur est ignoré hors séance — Didier ne repart pas seul.
 #
 # E1 « montre-moi le banc », il est là : Didier à (32,5 ; 0), cap 25° ; aller_voir banc
 #   E1a le tableau dit le banc ICI, atteignable, à 4,5 m (± 0,3)
-#   E1b l'ordre du sélecteur (jeu/chat_move) et la réponse du régisseur portent l'id « carte/banc »,
-#       accepté ; route_goto vise la position du TABLEAU (36,2 ; 2,496), standoff 1,5
+#   E1b la garde de la bouche le laisse passer ; l'ordre du sélecteur (jeu/chat_move) et la réponse
+#       du régisseur portent l'id « carte/banc », accepté ; route_goto vise la position du TABLEAU
+#       (36,2 ; 2,496), standoff 2,1 = emprise du banc 1,1 + Didier 0,5 + marge 0,5 (revue O1)
 #   E1c arrivée (route_goto_result « arrived » du même ordre) en ≤ 60 s
-#   E1d arrêt à 1,5 m ± 0,3 du centre (36,2 ; 2,496)
+#   E1d arrêt à 2,1 m ± 0,3 du centre (36,2 ; 2,496) ET SANS CONTACT : au moins 0,2 m de jeu entre
+#       l'emprise du banc (1,1) et le rayon balayé de Didier (0,5), soit ≥ 1,8 m du centre — à
+#       1,6 m ils se touchent, KO (revue O1 : l'ancienne borne, 1,2 m, acceptait un contact).
+#       Pose FINALE : goto.py ne recule jamais et finit par un pivot sur place (FACE) — le centre
+#       de Didier n'est jamais plus près de l'objet qu'à l'arrêt.
 #   E1e face à lui (± 10°)
 # E2 « le banc », il n'est pas là (la séance du 15/11) : Didier à (14 ; 0), cap 0 ; la demande part
 #    quand même sur rehearsal/chat_move (une bouche dont la garde aurait sauté : on éprouve la
@@ -23,6 +30,9 @@
 #   E2b réponse du sélecteur : dropped / pas_ici, distance_m 22,3 (± 0,3), côté devant, en ≤ 1 s
 #   E2c zéro ordre : rien sur jeu/chat_move ni route_goto pour ce geste
 #   E2d zéro roue : cmd_vel_follow nul et moins de 0,05 m parcourus en 8 s
+#   E2e la GARDE de la bouche (garde_geste, le code de chat_node), sur le tableau de la sim, refuse
+#       « le banc » : dropped / pas_ici, 22,3 m devant — la PREMIÈRE ligne, celle qu'on contourne
+#       ensuite pour éprouver la seconde
 # E4 une seule vérité, 10 gestes (aller_voir et tour_de, noms et alias), Didier replacé à (14 ; 0)
 #    avant chacun, un geste toutes les 12 s (réfractaire « déplacement » du jeu : 10 s)
 #   E4a les 10 gestes acceptés par le régisseur
@@ -151,16 +161,20 @@ class Pilote(Node):
 
 
 def resolu(texte, cmd, sens=None):
-    """Ce que ferait la garde du chat : résoudre dans le tableau, joindre l'id."""
-    r = tableau().resoudre(texte)
+    """LA garde de la bouche (objets.garde_geste, appelée telle quelle par chat_node) sur le
+    tableau capturé ; l'id est joint si elle laisse passer — exactement ce que publie chat_node."""
+    t = tableau()
     intent = {"cmd": cmd, "objet": texte}
     if sens:
         intent["sens"] = sens
-    if r.objet is not None:
-        intent["id"] = r.objet.id
-    o = r.objet
-    return intent, {"statut": r.statut, "id": o and o.id, "distance_m": o and o.distance_m, "cote": o and o.cote,
-                    "en_vue": o and o.en_vue, "atteignable": o and o.atteignable, "tour": o and o.tour}
+    garde = objets.garde_geste(t, intent)
+    o = garde.objet
+    if garde.effect is None:
+        intent["id"] = o.id
+    return intent, {"statut": t.resoudre(texte).statut, "garde": [garde.effect, garde.reason],
+                    "id": o and o.id, "distance_m": o and o.distance_m, "cote": o and o.cote,
+                    "en_vue": o and o.en_vue, "atteignable": o and o.atteignable, "tour": o and o.tour,
+                    "emprise_m": o and o.emprise_m}
 
 
 rclpy.init()
@@ -171,6 +185,8 @@ try:
     n.placer(32.5, 0.0, 25.0)
     intent, vu = resolu("banc", "aller_voir")
     marques["e1_tableau"] = vu
+    if "id" not in intent:
+        raise Echec(f"E1 « banc » : la garde de la bouche le refuse ({vu})")
     marques["e1"] = n.bouche(intent)
     marques["e1_intent"] = intent
     print(f"  {time.strftime('%T')} E1 aller_voir banc publié ({vu})", flush=True)
@@ -196,8 +212,8 @@ try:
     for cmd, texte, sens in GESTES:
         n.placer(14.0, 0.0, 0.0)
         intent, vu = resolu(texte, cmd, sens)
-        if "id" not in intent or not vu["atteignable"] or (cmd == "tour_de" and not vu["tour"]):
-            raise Echec(f"E4 « {texte} » : la bouche ne l'enverrait pas ({vu})")
+        if "id" not in intent:
+            raise Echec(f"E4 « {texte} » : la garde de la bouche le refuse ({vu})")
         t = n.bouche(intent)
         marques["gestes"].append({"t": t, "intent": intent})
         print(f"  {time.strftime('%T')} E4 {cmd} « {texte} » -> {intent['id']}", flush=True)
@@ -222,6 +238,10 @@ from pathlib import Path
 
 CAP, NS, RJ = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
 BANC = (36.2, 2.496)          # centre du banc (chantiers_tours.yaml), position du TABLEAU
+EMPRISE_BANC = 1.1            # orbite 2,1 − dégagement 1,0 (majorant de la collision)
+RAYON_DIDIER = 0.5            # contracts.GOTO_DIDIER_RAYON_M (roulette arrière à 0,45 m)
+STANDOFF_BANC = 2.1           # EMPRISE_BANC + RAYON_DIDIER + GOTO_MARGE_M (0,5), gravé
+JEU_MIN = 0.2                 # jeu minimal Didier ↔ banc à l'arrêt (m)
 m = json.loads((CAP / "pilote.json").read_text(encoding="utf-8"))
 lignes = [json.loads(l) for l in open(CAP / "journal.jsonl", encoding="utf-8")]
 regie = []
@@ -263,17 +283,19 @@ if "echec" in m:
 # --- E1 -------------------------------------------------------------------------------------
 t1, f1 = m.get("e1", math.inf), m.get("e1_fin", math.inf)
 v1 = m.get("e1_tableau") or {}
-verdict(v1.get("statut") == "ici" and v1.get("atteignable") and proche(v1.get("distance_m"), 4.5, 0.3),
+verdict(v1.get("statut") == "ici" and v1.get("atteignable") and proche(v1.get("distance_m"), 4.5, 0.3)
+        and v1.get("emprise_m") == EMPRISE_BANC,
         f"E1a le tableau dit le banc ici et atteignable : {v1}")
 ordre_jeu = next((v for _, v in msgs("jeu/chat_move", t1, f1) if isinstance(v, dict) and v.get("cmd") == "aller_voir"), None)
 rep1 = next((v for _, v in msgs("rehearsal/chat_move_reply", t1, f1)
              if isinstance(v, dict) and v.get("source") == "director"), None)
 goto1 = next((v for _, v in msgs("route_goto", t1, f1) if isinstance(v, dict)), None)
-verdict(ordre_jeu is not None and ordre_jeu.get("id") == "carte/banc" and rep1 is not None
+verdict(v1.get("garde") == [None, None] and ordre_jeu is not None and ordre_jeu.get("id") == "carte/banc"
+        and rep1 is not None
         and rep1.get("effect") == "accepted" and (rep1.get("demande") or {}).get("id") == "carte/banc"
         and goto1 is not None and goto1.get("name") == "banc" and proche(goto1.get("x"), BANC[0], 0.01)
-        and proche(goto1.get("y"), BANC[1], 0.01) and goto1.get("standoff") == 1.5,
-        f"E1b id porté par le sélecteur ({ordre_jeu}) et le régisseur ({rep1 and rep1.get('effect')}), "
+        and proche(goto1.get("y"), BANC[1], 0.01) and goto1.get("standoff") == STANDOFF_BANC,
+        f"E1b garde de la bouche {v1.get('garde')}, id porté par le sélecteur ({ordre_jeu}) et le régisseur ({rep1 and rep1.get('effect')}), "
         f"ordre à la position du tableau ({goto1})")
 arr = next(((t, v) for t, v in msgs("route_goto_result", t1, f1) if isinstance(v, dict) and v.get("name") == "banc"),
            None)
@@ -281,7 +303,10 @@ verdict(arr is not None and arr[1].get("result") == "arrived" and arr[0] - t1 <=
         f"E1c arrivée : {arr and arr[1]} en {('%.1f s' % (arr[0] - t1)) if arr else '—'} (≤ 60 s)")
 p = m.get("e1_pose")
 d = math.dist(p[:2], BANC) if p else math.nan
-verdict(p is not None and 1.2 <= d <= 1.8, f"E1d arrêt à {d:.2f} m du centre du banc (1,5 ± 0,3)")
+jeu = d - (EMPRISE_BANC + RAYON_DIDIER)
+verdict(p is not None and proche(d, STANDOFF_BANC, 0.3) and jeu >= JEU_MIN,
+        f"E1d arrêt à {d:.2f} m du centre du banc ({STANDOFF_BANC:g} ± 0,3), jeu {jeu:.2f} m "
+        f"(≥ {JEU_MIN:g}){' — CONTACT' if jeu <= 0 else ''}")
 ecart = abs((math.degrees(math.atan2(BANC[1] - p[1], BANC[0] - p[0])) - p[2] + 180) % 360 - 180) if p else math.nan
 verdict(p is not None and ecart <= 10.0, f"E1e face au banc : écart de cap {ecart:.1f}° (≤ 10)")
 
@@ -308,6 +333,9 @@ derive = math.dist(p0[:2], p8[:2]) if p0 and p8 else math.inf
 verdict(max(vit, default=0.0) < 0.01 and derive < 0.05,
         f"E2d zéro roue : cmd_vel_follow max {max(vit, default=0.0):.3f} ({len(vit)} msgs, < 0,01), "
         f"{derive:.3f} m parcourus en 8 s (< 0,05)")
+verdict(v2.get("garde") == ["dropped", "pas_ici"] and v2.get("id") == "carte/banc"
+        and proche(v2.get("distance_m"), 22.3, 0.3) and v2.get("cote") == "devant",
+        f"E2e la garde de la bouche (garde_geste, le code de chat_node) refuse « le banc » : {v2.get('garde')}")
 
 # --- E4 -------------------------------------------------------------------------------------
 gestes = m.get("gestes", [])

@@ -700,7 +700,8 @@ class ConversationEngine:
         # spontané : _serve_prompt) et lu par _note_gesture.
         self._move_task = move_task
         # Tableau des objets pour la GARDE des gestes (15/11 21:21 ; tableau depuis le lot
-        # O1, cf. set_objets) : None = jamais reçu, aucune garde (la régie juge).
+        # O1, cf. set_objets) : None = garde NON BRANCHÉE (moteur sans tableau : tests, outils).
+        # chat_node la branche sur le tableau VIDE dès le démarrage (jamais reçu = muet).
         self._tableau = None
         self._turn_request: Optional[str] = None
         self._turn_continuation = False
@@ -984,7 +985,10 @@ class ConversationEngine:
         chat_node depuis le thread rclpy). GARDE DÉTERMINISTE (séance du 15/11 21:21 : Haiku a
         demandé le tour de l'éléphant malgré le prompt ; lot O1 : sur le tableau) : un geste
         vers un objet inconnu, pas ici, hors d'atteinte ou sans tour n'est JAMAIS publié — il
-        devient tout de suite une fin de geste ÉCHOUÉE (MoveTask). None = aucune garde.
+        devient tout de suite une fin de geste ÉCHOUÉE (MoveTask). None = garde non branchée
+        (aucune garde : moteur de test) ; chat_node passe VIDE tant que rien n'est reçu ou que
+        le flux est muet — tout geste vers un objet est alors refusé « unknown »,
+        jamais publié sans id.
         Affectation d'un objet immuable : atomique pour le lecteur."""
         self._tableau = tableau
 
@@ -992,29 +996,21 @@ class ConversationEngine:
         """Réponse de refus (contrat rehearsal/chat_move_reply, source « chat ») si le geste
         vise un objet que le tableau ne permet pas, sinon None — et alors l'`id` de l'objet
         RÉSOLU est joint au geste (la régie et le sélecteur ne connaissent que lui). Règle de
-        résolution UNIQUE : theatre_contrats.objets.resoudre. Sans tableau reçu : None."""
+        résolution UNIQUE : theatre_contrats.objets.resoudre. Garde non branchée : None."""
         tableau = self._tableau
-        cmd = intent.get("cmd")
-        if tableau is None or cmd not in ("aller_voir", "tour_de"):
+        if tableau is None or intent.get("cmd") not in objets.GESTES_VERS_UN_OBJET:
             return None
-        r = tableau.resoudre(intent.get("objet"))
-        o = r.objet
-
-        def refus(effect, reason=None):
-            out = {"demande": intent, "effect": effect, "reason": reason, "name": None, "source": "chat"}
-            if o is not None and o.distance_m is not None:
-                out.update(distance_m=o.distance_m, cote=o.cote)
-            return out
-        if r.statut == objets.INCONNU:
-            return refus("unknown")
-        if r.statut == objets.PAS_ICI:
-            return refus("dropped", "pas_ici")
-        if cmd == "tour_de" and not o.tour:
-            return refus("no_tour")
-        if not o.atteignable:
-            return refus("dropped", "hors_atteinte")
-        intent["id"] = o.id
-        return None
+        # LA garde est dans le contrat (objets.garde_geste) : l'épreuve sim validate-objets.sh
+        # éprouve le même code (revue O1, 19/11 : elle en recopiait la logique).
+        garde = objets.garde_geste(tableau, intent)
+        o = garde.objet
+        if garde.effect is None:
+            intent["id"] = o.id
+            return None
+        out = {"demande": intent, "effect": garde.effect, "reason": garde.reason, "name": None, "source": "chat"}
+        if o is not None and o.distance_m is not None:
+            out.update(distance_m=o.distance_m, cote=o.cote)
+        return out
 
     def _note_gesture(self, intent: dict) -> None:
         """Un geste de corps vient de partir (cf. _notify_move) : noté pour la

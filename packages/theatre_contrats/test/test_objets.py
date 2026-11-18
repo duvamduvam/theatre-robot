@@ -7,6 +7,12 @@ Mutants vérifiés à la main (18/11), chacun fait rougir au moins un test ci-de
   - cote : 45 devenu 30                                           -> test_cote_decoupage
   - _objet : atteignable lu sans exiger de distance               -> test_decoder_atteignable_sans_distance
   - decoder : ids en double acceptés                              -> test_decoder_ecarte_les_illisibles
+Revue O1 (19/11) :
+  - nombre_fini sans garde OverflowError                          -> test_decoder_nombre_geant_jamais_d_exception
+  - borne NOMBRE_MAX retirée                                       -> test_decoder_nombre_geant_jamais_d_exception
+  - nombres absurdes non comptés (rien à journaliser)              -> test_decoder_nombre_geant_jamais_d_exception
+  - emprise négative gardée                                        -> test_decoder_emprise
+  - garde_geste : pas_ici / hors_atteinte confondus, no_tour sauté -> test_garde_geste
 """
 import json
 
@@ -86,11 +92,12 @@ def test_encoder_decoder_aller_retour():
     assert v["pose"] == {"repere": "monde", "x": 14.0, "y": 0.0, "cap_deg": 0.0}
     assert v["objets"][1] == {
         "id": "carte/banc", "nom": "banc", "desc": "banc en bois", "alias": ["banc", "banc en bois"],
-        "sources": ["carte"], "repere": "monde", "x": 36.2, "y": 2.496, "sigma_m": 0.0,
+        "sources": ["carte"], "repere": "monde", "x": 36.2, "y": 2.496, "sigma_m": 0.0, "emprise_m": None,
         "azimut_deg": 6.4, "distance_m": 22.3, "cote": "devant", "en_vue": False, "vu_il_y_a_s": None,
         "tour": True, "atteignable": False}
     t = decoder(raw)
-    assert t.objets == (TABLE, BANC) and t.pose == pose and t.rejetes == 0
+    assert t.objets == (TABLE, BANC) and t.pose == pose and t.rejetes == 0 and t.anomalies == 0
+    assert objets.avertissement(t) is None
     assert t.par_id("carte/banc") is t.objets[1] and t.par_id("x") is None and t.par_id(None) is None
     assert "très" in raw                                   # lisible au journal (ensure_ascii=False)
 
@@ -121,6 +128,56 @@ def test_decoder_atteignable_sans_distance():
     d = {**TABLE.en_dict(), "sigma_m": -1, "en_vue": 1}
     o = decoder(json.dumps({"v": 1, "objets": [d]})).objets[0]
     assert o.sigma_m == float("inf") and o.en_vue is False
+
+
+def test_decoder_nombre_geant_jamais_d_exception():
+    """Revue O1 (19/11) : un entier JSON de 400 chiffres faisait lever OverflowError
+    (math.isfinite) au décodeur — dans le callback de chaque lecteur. Désormais : champ ramené à
+    son défaut SÛR, compté, et la phrase à journaliser est rendue par avertissement()."""
+    geant = "1" + "0" * 400
+    d = {**TABLE.en_dict(), "id": "g"}
+    raw = json.dumps({"v": 1, "t_ms": 5, "pose": {"repere": "monde", "x": 0, "y": 0, "cap_deg": 0},
+                      "objets": [d]})
+    raw = raw.replace('"distance_m": 4.3', '"distance_m": ' + geant).replace('"x": 17.8', '"x": ' + geant)
+    raw = raw.replace('"cap_deg": 0', '"cap_deg": -' + geant).replace('"t_ms": 5', '"t_ms": ' + geant + geant)
+    t = decoder(raw)
+    o = t.objets[0]
+    assert (o.x, o.y, o.distance_m, o.azimut_deg, o.atteignable, o.a_portee) == (None, None, None, None, False, False)
+    assert t.pose is None and t.t_ms == 0
+    assert (t.rejetes, t.anomalies) == (0, 4)     # x, distance_m, cap_deg de la pose, t_ms
+    assert objets.avertissement(t) == "4 nombre(s) absurde(s) ramené(s) à leur défaut sûr"
+    # Au-delà de NOMBRE_MAX (1e6) : absurde aussi ; NaN et infini de même.
+    d = {**TABLE.en_dict(), "sigma_m": 2e6, "vu_il_y_a_s": float("nan"), "y": float("inf")}
+    t = decoder(json.dumps({"v": 1, "objets": [d, 7]}))
+    assert (t.objets[0].sigma_m, t.objets[0].vu_il_y_a_s, t.objets[0].x) == (float("inf"), None, None)
+    assert (t.rejetes, t.anomalies) == (1, 3)
+    assert objets.avertissement(t) == ("1 objet(s) illisible(s) écarté(s) ; "
+                                       "3 nombre(s) absurde(s) ramené(s) à leur défaut sûr")
+    assert objets.nombre_fini(10 ** 400) is None and objets.nombre_fini(1e6) == 1e6
+    assert objets.nombre_fini(-1e6 - 1) is None and objets.nombre_fini(True) is None
+
+
+def test_decoder_emprise():
+    for v, attendu in ((1.1, 1.1), (0, 0.0), (-0.5, None), ("1", None), (None, None)):
+        d = {**TABLE.en_dict(), "emprise_m": v}
+        assert decoder(json.dumps({"v": 1, "objets": [d]})).objets[0].emprise_m == attendu
+
+
+def test_garde_geste():
+    """LA garde de la bouche (chat_node et l'épreuve sim validate-objets.sh) — séance du 15/11."""
+    t = Tableau((TABLE, BANC, MANEGE))
+    g = objets.garde_geste
+    assert g(t, {"cmd": "aller_voir", "objet": "le banc"}) == objets.Garde("dropped", "pas_ici", BANC)
+    assert g(t, {"cmd": "aller_voir", "objet": "girafe"}) == objets.Garde("unknown", None, None)
+    assert g(t, {"cmd": "tour_de", "objet": "manège"}) == objets.Garde("no_tour", None, MANEGE)
+    assert g(t, {"cmd": "aller_voir", "objet": "petite table"}) == objets.Garde(None, None, TABLE)
+    assert g(t, {"cmd": "tour_de", "objet": "table_basse"}) == objets.Garde(None, None, TABLE)
+    loin = Objet(id="vu/1", nom="sac", sources=("vu",), x=1.0, y=1.0, distance_m=4.0, azimut_deg=0.0,
+                 cote="devant", en_vue=True, atteignable=False)
+    assert g(Tableau((loin,)), {"cmd": "aller_voir", "objet": "sac"}) == objets.Garde("dropped", "hors_atteinte", loin)
+    # Les autres commandes passent sans objet ; jamais d'exception sur une demande faussée.
+    assert g(t, {"cmd": "avancer", "metres": 1}) == objets.Garde() == g(t, "aller_voir") == g(t, {})
+    assert g(objets.VIDE, {"cmd": "aller_voir", "objet": "banc"}).effect == "unknown"
 
 
 def test_ou_dit():

@@ -5,6 +5,7 @@ import types
 
 from didier_perception import objets_node
 from didier_rehearsal import contracts
+from theatre_contrats import objets
 
 NODE = pathlib.Path(objets_node.__file__).read_text(encoding="utf-8")
 
@@ -24,3 +25,9 @@ def test_publie_latche_et_jamais_de_twist():
 def test_cap_depuis_quaternion():
     q = types.SimpleNamespace(x=0.0, y=0.0, z=math.sin(math.radians(25) / 2), w=math.cos(math.radians(25) / 2))
     assert abs(math.degrees(objets_node.cap_depuis_quaternion(q)) - 25.0) < 1e-9
+
+
+def test_peremption_des_lecteurs_coherente_avec_l_ecrivain():
+    # Revue O1 (19/11) : les lecteurs périment le tableau après objets.PEREMPTION_S ; l'écrivain
+    # republie toutes les PERIODE_S — il faut TROIS publications manquées pour l'oublier.
+    assert objets.PEREMPTION_S == 3.0 == 3 * objets_node.PERIODE_S

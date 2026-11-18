@@ -82,8 +82,9 @@ PERSON_REAPPEAR_S = 5.0     # absence minimale pour parler de « réapparition �
 IMAGE_MAX_AGE_S = 3.0       # au-delà, la trame est trop vieille pour être jointe
 
 LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
-# Péremption du tableau des objets (même borne que chat_node : objets_node republie à 1 Hz).
-TABLEAU_TTL_S = 3.0
+# Péremption du tableau des objets : LA valeur du contrat (objets_node republie à 1 Hz ; même
+# borne chez la bouche, le sélecteur et la régie — revue O1, 19/11).
+TABLEAU_TTL_S = tableau_objets.PEREMPTION_S
 
 
 class ReflectionStartupError(RuntimeError):
@@ -190,6 +191,9 @@ class ReflectionNode(Node):
         except ValueError as exc:
             self.get_logger().warning(f"{topics.SCENE_OBJETS} refusé : {exc}")
             return
+        alerte = tableau_objets.avertissement(tableau)
+        if alerte:
+            self.get_logger().warning(f"{topics.SCENE_OBJETS} : {alerte}")
         with self._lock:
             self._tableau = (tableau, time.monotonic())
 

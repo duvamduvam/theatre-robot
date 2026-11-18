@@ -222,6 +222,7 @@ class DirectorNode(Node):
         self.goto_policy = GotoPolicy()
         self._pose = None
         self._tableau = None   # theatre_contrats.objets.Tableau (scene/objets), None = jamais reçu
+        self._tableau_at = None   # time.monotonic() de sa réception (péremption, cf. _tableau_frais)
 
         journal_dir = str(self.get_parameter("journal_dir").value)
         os.makedirs(journal_dir, exist_ok=True)
@@ -387,6 +388,19 @@ class DirectorNode(Node):
             self._tableau = tableau_objets.decoder(msg.msg)
         except ValueError as e:
             self.get_logger().warning(f"{topics.SCENE_OBJETS} refusé : {e}")
+            return
+        self._tableau_at = time.monotonic()
+        alerte = tableau_objets.avertissement(self._tableau)
+        if alerte:
+            self.get_logger().warning(f"{topics.SCENE_OBJETS} : {alerte}")
+
+    def _tableau_frais(self, now: float):
+        """Le tableau s'il a moins de tableau_objets.PEREMPTION_S (écrivain vivant), sinon None :
+        un geste vers un objet est alors refusé « unknown » — jamais la position d'un tableau
+        figé (revue O1, 19/11 : même péremption chez les quatre lecteurs)."""
+        if self._tableau_at is None or now - self._tableau_at > tableau_objets.PEREMPTION_S:
+            return None
+        return self._tableau
 
     def _on_odom(self, msg):
         p = msg.pose.pose.position
@@ -572,7 +586,7 @@ class DirectorNode(Node):
         """« Aller voir » (lot M1 ; cible par `id` du tableau depuis O1) : arbitré, journalisé
         `aller_voir`, puis exécuté — arrêt vocal levé / lubie fermée, ordre sur route_goto."""
         now = time.monotonic()
-        decision = decide_goto(intent, tableau=self._tableau, pose=self._fresh_pose(now),
+        decision = decide_goto(intent, tableau=self._tableau_frais(now), pose=self._fresh_pose(now),
                                off_by_david=self._off_by_david())
         # Champs du CONTRAT seulement (le producteur est un LLM).
         payload = {k: intent[k] for k in ("objet", "id") if k in intent}
@@ -615,7 +629,8 @@ class DirectorNode(Node):
         """« Faire le tour » (lot M3) : arbitré, journalisé `tour_de`, accepté
         comme « aller voir » (cible = le POI : sa lubie est sautée)."""
         now = time.monotonic()
-        decision = decide_tour(intent, tableau=self._tableau, tours=self._tours, pose=self._fresh_pose(now),
+        decision = decide_tour(intent, tableau=self._tableau_frais(now), tours=self._tours,
+                               pose=self._fresh_pose(now),
                                off_by_david=self._off_by_david())
         # Champs du CONTRAT seulement (le producteur est un LLM).
         payload = {k: intent[k] for k in ("objet", "id", "sens") if k in intent}

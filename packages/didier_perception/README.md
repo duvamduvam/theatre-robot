@@ -12,13 +12,20 @@ son `id`. Panne d'origine : séance du 15/11, Didier à x = 14 m dit « le banc 
 
 | Module | Rôle |
 |---|---|
-| `tableau.py` | logique PURE de l'écrivain : fusion carte ↔ vu, noms uniques (« banc », « banc 2 »), péremption des objets vus, géométrie vue de Didier (distance, azimut, côté, dans le champ ±30° et à 15 m au plus), règle `atteignable` (repère monde/odom, σ ≤ 1 m, ≤ 10 m, carte ou vu il y a < 10 s) |
+| `tableau.py` | logique PURE de l'écrivain : fusion carte ↔ vu (un objet vu à STRICTEMENT moins de `max(2·σ, emprise + 1 m)` du centre d'un objet de carte de nom compatible EST cet objet ; emprise inconnue = 1 m), noms uniques (« banc », « banc 2 »), péremption des objets vus, géométrie vue de Didier (distance, azimut, côté, dans le champ ±30° et à 15 m au plus), règle `atteignable` (repère monde/odom, σ ≤ 1 m, ≤ 10 m, carte ou vu il y a < 10 s) |
 | `objets_node.py` | entrées/sorties ROS : `rehearsal/objects` (carte, latché) + `ground_truth/odom` (pose, SIM) → `scene/objets` (latché, republié à 1 Hz et à chaque changement de carte) |
 
 Sources aujourd'hui (O1) : la **carte** de la régie (sim, lieu préparé ; position = CENTRE de
-l'objet quand la géométrie de collision est connue, sinon l'ancre du POI) et la **pose vérité
+l'objet quand la géométrie de collision est connue, sinon l'ancre du POI ; `emprise_m` = rayon
+d'emprise au sol, majorant de la collision, inconnu sans tour — c'est lui qui règle la distance
+d'arrêt de la régie, revue O1 du 19/11) et la **pose vérité
 terrain** de Gazebo. En rue (pas de carte, pas de pose), le tableau est vide : la caméra y entre
 au lot O2 (inventaire, désignation recoupée), sans changement de contrat.
+
+**Péremption chez les lecteurs** : `theatre_contrats.objets.PEREMPTION_S` = 3 s, soit trois
+publications manquées de l'écrivain (`PERIODE_S` = 1 s, cohérence gravée par
+`test_objets_node.py`) ; au-delà, chaque lecteur (bouche, réflexion, sélecteur, régie) lit le
+tableau VIDE — jamais une position ni un azimut figés (revue O1 du 19/11).
 
 **Le chemin roues ne passe pas ici** : le tableau fournit une CIBLE ; vitesses, deadman,
 `twist_mux`, arrêt d'urgence et bornes de `goto.py` sont ailleurs et intouchés.

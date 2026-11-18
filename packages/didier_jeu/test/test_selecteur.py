@@ -24,10 +24,18 @@ ELEPHANT_O = Objet(id="carte/elephant", nom="elephant", desc="statue", x=1.0, y=
 TABLEAU = Tableau((ELEPHANT_O, BANC, ANNEAUX, FLAQUE))
 
 
-def jouer(sel, t0, t1, evenements=None, continu=None, dt=0.1):
+def ecrivain(sel, t):
+    """L'écrivain du tableau des objets (didier_perception) republie toutes les secondes : le
+    dernier tableau posé par la scène est re-reçu aux secondes rondes (péremption, revue O1)."""
+    if sel.tableau_recu is not None and abs(t - round(t)) < 1e-6:
+        sel.sur_tableau(sel.tableau_recu, t)
+
+
+def jouer(sel, t0, t1, evenements=None, continu=None, dt=0.1, ecrivain_vivant=True):
     """Ticks de t0 à t1 inclus. evenements : [(t, f(sel, t))] déclenchés juste
     avant le tick de t ; continu : f(sel, t) appelé à chaque tick (boîte de
-    personne à 10 Hz). -> [(t, *sortie)]."""
+    personne à 10 Hz) ; ecrivain_vivant : le tableau des objets est republié à
+    1 Hz (False : l'écrivain se tait après la scène). -> [(t, *sortie)]."""
     evs = sorted(evenements or [], key=lambda e: e[0])
     out = []
     n = int(round((t1 - t0) / dt))
@@ -35,6 +43,8 @@ def jouer(sel, t0, t1, evenements=None, continu=None, dt=0.1):
         t = round(t0 + i * dt, 6)
         while evs and evs[0][0] <= t + 1e-9:
             evs.pop(0)[1](sel, t)
+        if ecrivain_vivant:
+            ecrivain(sel, t)
         if continu is not None:
             continu(sel, t)
         sel.tick(t)
@@ -65,7 +75,7 @@ def boite(debut, fin, azimut=0.3, hauteur=0.4):
 def marche(sel, t):
     """Route en marche, tableau des objets vu de l'origine cap +x."""
     sel.sur_route_state("on", t)
-    sel.sur_tableau(TABLEAU)
+    sel.sur_tableau(TABLEAU, t)
 
 
 # ================================================================== T5 arrêt vocal
@@ -545,6 +555,7 @@ def jouer_avec_regisseur(sel, t1, evenements=(), continu=None):
         for (tt, f) in [x for x in a_faire if x[0] <= t + 1e-9]:
             a_faire.remove((tt, f))
             f(t)
+        ecrivain(sel, t)
         if continu is not None:
             continu(sel, t)
         sel.tick(t)

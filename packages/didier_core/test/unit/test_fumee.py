@@ -466,7 +466,7 @@ def test_valeurs_attendues_gravees_en_tete_du_script():
     gravees = dict(re.findall(r"^(ATTENDU_[A-Z0-9]+)=(\d+)", src, re.M))
     assert gravees == {"ATTENDU_NAMESPACE": "5", "ATTENDU_CATALOGUE": "4", "ATTENDU_PARLE": "3",
                        "ATTENDU_EDITION": "13", "ATTENDU_MACHINES": "5", "ATTENDU_CHANTIERS": "21",
-                       "ATTENDU_A1": "14", "ATTENDU_OBJETS": "12", "ATTENDU_CONVERSATION": "13"}
+                       "ATTENDU_A1": "14", "ATTENDU_OBJETS": "13", "ATTENDU_CONVERSATION": "13"}
     assert re.search(r"^RTF_MIN_DEFAUT=0\.8$", src, re.M)
 
 
@@ -482,10 +482,11 @@ def test_les_compteurs_gravees_sont_ceux_des_scripts_de_verification():
     # validate-machines.sh (L2b) : M1-M4 et M6, un verdict() chacun.
     machines = (SCRIPTS / "validate-machines.sh").read_text(encoding="utf-8")
     assert re.findall(r'^verdict\([^,]+, "(M\d)', machines, re.M) == ["M1", "M2", "M3", "M4", "M6"]
-    # validate-objets.sh (O1) : E1a-e, E2a-d, E4a-c, un verdict() chacun (12).
+    # validate-objets.sh (O1) : E1a-e, E2a-e, E4a-c, un verdict() chacun (13 ; E2e = la garde de
+    # la bouche éprouvée en sim, revue O1 du 19/11).
     objets_ = (SCRIPTS / "validate-objets.sh").read_text(encoding="utf-8")
     assert re.findall(r'f?"(E\d[a-e]) ', objets_) == ["E1a", "E1b", "E1c", "E1d", "E1e", "E2a", "E2b", "E2c",
-                                                      "E2d", "E4a", "E4b", "E4c"]
+                                                      "E2d", "E2e", "E4a", "E4b", "E4c"]
     # validate-conversation.sh (CONV, 16/11) : 13 verdict() étiquetés, dans cet ordre.
     conv = (SCRIPTS / "validate-conversation.sh").read_text(encoding="utf-8")
     assert re.findall(r'^verdict\(.*?\n?\s*f?"([PTABC]\d) ', conv, re.M | re.S) == [
