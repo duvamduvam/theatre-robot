@@ -93,3 +93,33 @@ Piège rencontré : un mutant de même taille (`min` → `max`), restauré dans 
 même seconde, laisse un `.pyc` périmé, car la validation du cache se fait à la
 seconde près et par la taille. Les mutants se jouent donc avec
 `PYTHONDONTWRITEBYTECODE=1`, après avoir purgé `__pycache__`.
+
+## Relecture critique d'A0-3 (19/11) — points ouverts, documentés, pas tranchés
+
+1. **Les coins de la caisse et le rayon de balayage ne disent pas la même chose.** Le
+   rectangle majorant (`x_arriere` −0,57, `demi_largeur` 0,40) a ses coins arrière à
+   hypot(0,10 + 0,57 ; 0,40) = **0,78 m** de l'essieu, alors que `rayon_balayage` vaut **0,65**
+   (bout de la flèche arrière, spec §4.1). Les deux sont cohérents seulement si le corps RÉEL
+   n'occupe pas les coins du rectangle (c'est l'hypothèse de la spec : le rectangle sert aux
+   distances, le rayon au pivot). Si les coins sont pleins, un pivot les fait passer à 0,78 m
+   de l'essieu : l'invariant devient 0,10 + 0,78 − 0,30 = **0,58 > 0,55** et `reglages` refuse
+   la configuration (Didier ne bouge plus seul). Les cinq cotes réelles sont mesurées en
+   **A0-7** ; c'est là que l'on saura si `rayon_balayage` ou le rectangle doit bouger. Rien
+   n'est changé d'ici là.
+2. **Le masque `[90, 270]` est PROVISOIRE.** Il cache le demi-tour arrière du plan du lidar.
+   En sim (pose 25 cm, corps en boîtes), le masque mesuré est `[96.64, -96.64]` : le provisoire
+   le recouvre (6,6° de plus de chaque côté), aucun auto-retour ne tombe hors de lui, et la
+   couverture annonce la même chose (avant vu seulement). Sur le robot réel, rien n'est mesuré :
+   un auto-retour hors de `[90, 270]` (roue, porte, câble) donnerait `retour_dans_caisse` et un
+   ARRET permanent — visible tout de suite, donc sûr, mais à mesurer au banc avec
+   `tools/mesurer_masques.py` (**A0-7**) avant de remplacer la valeur.
+3. **L'analyse de `tools/mesurer_masques.py` n'a pas de tests.** Sa docstring cite
+   `test/test_mesurer_masques.py`, qui n'existe pas ; la fusion circulaire des masques et le
+   choix du témoin ne sont vérifiés que par l'essai en sim du 19/11. À écrire (valeurs gravées)
+   avant l'usage au banc en A0-7.
+4. **Témoin de vie en sim = artefact.** Le lidar simulé renvoie son boîtier et la face de la
+   caisse à exactement 0,05 m (portée minimale) sur tout le secteur masqué ; la règle « à plus de
+   0,05 m » passe pour 0,05000000074 (flottant). L'outil propose donc un témoin couvrant tout le
+   masque, à partir de 0,005 m : il ne doit pas être recopié dans un fichier de configuration.
+   Durcir la règle (strictement au-dessus de `portee_min_m` + une marge) est à décider avec le
+   témoin réel en A0-7.

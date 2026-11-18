@@ -373,6 +373,54 @@ for a 25 cm scan, mount the plate at ~185 mm from the ground.
   height, **feet and steps below the plane stay invisible by construction: that is the bumper's
   job**, not a mounting question.
 
+#### Coverage of the two front mounts, measured in sim (A0-2, 2026-11-19)
+
+David's decision of 2026-11-18 (`docs/spec-A0-corps-sur.md` §13, Q1): the C1 goes on the
+**front face**, at one of two heights — **25 cm, bottom of the box (default)** or **45 cm, on the
+door (fallback: cable through the hinge, re-aimed when the door closes)**. Measured with
+`packages/didier_corps_sur/tools/couverture_poses.py`: simulated C1 (500 rays, 10 Hz), `stage`
+world (bare stage), 100 scans per pose, self-returns turned into masks by `mesurer_masques.py`
+(spec §4.2 rule: any angle with a return inside the box inflated by 5 cm, widened by 2° each
+side), coverage computed by the same code as the node (`couverture.calculer_couverture`, stop band
+= box + 0.6 m, a region is "seen" if at most 10 % of it is blind). Angles in `laser_frame`
+(0° = straight ahead, counter-clockwise); a mask `[a ; −a]` runs from +a through 180° to −a.
+**The URDF dimensions are estimates from photos: this table chooses a mount, it does not drill
+one** — the real masks are measured on the bench (A0-7).
+
+| | **25 cm — bottom of the box (default)** | **45 cm — door (fallback)** |
+|---|---|---|
+| Pose in `base_link` (x ; y ; z), scan plane | 0.33 ; 0 ; 0.02 — 0.25 m | 0.27 ; 0 ; 0.22 — 0.45 m |
+| Masked sector (the body) | **[96.6° ; −96.6°]** = 167° behind | **[108.9° ; −108.9°]** = 142° behind |
+| Free field | 193° | 218° |
+| Blind share of the stop band: front · rear · left flank · right flank | 0 % · 100 % · 94 % · 94 % | 0 % · 100 % · 68 % · 68 % |
+| Regions seen | front only | front only |
+| Autonomous forward | yes | yes |
+| Autonomous reverse | **no** (`recul_aveugle`) | **no** |
+| Autonomous pivot | only where `angulaire_aveugle_autorise` is true (home, 0.3 rad/s) | same |
+| Sees | shins and calves of adults, children's legs, dogs taller than ~25 cm, chair and table legs, bollards, pushchair frames, a wall or a step-up taller than 25 cm | thighs and knees, children from ~3 years (torso or hips), chair seats and backs, bollards, pushchairs, tables lower than 45 cm, café chairs |
+| Misses (below the plane) | anything under 25 cm: feet ahead of the shin, small dogs and cats, kerbs, steps down, cables, bags on the ground, a seated or crawling toddler | **anything under 45 cm**: feet and shins, small and medium dogs, chair and table legs under a seat, low bollards and planters, kerbs, bags, toddlers — the actual danger of a 50 kg robot in a crowd |
+| Misses (above the plane) | table tops, outstretched arms, bicycle handlebars | table tops above 45 cm, outstretched arms, handlebars |
+| Ground seen when tilted down 5° / 2° | at 2.9 m / 7.2 m (outside the 1.2 m slow band) | at 5.1 m / 12.9 m (more tolerant of tilt) |
+
+Reading: **the two heights cover the same regions** — the front only; the box hides the rear
+and nearly all of the flanks at 25 cm, the torso still hides two thirds of the flanks at 45 cm.
+Neither changes the rule of §13 (no autonomous reverse, slow pivots at home only, flanks and back
+= David's zone). What separates them is **what the plane cuts**: 25 cm sits in the 20-30 cm
+window of this page (shins, children, dogs, bollards) ; 45 cm sees over everything low, which is
+precisely what a front gate must catch. 45 cm only wins on tilt tolerance and a fixed, protected
+spot. Hence 25 cm stays the default, as decided.
+
+For the record, the two other poses of the spec (§8.3), same run: **under the box** between the
+wheels (plane at 10 cm) — masks at ±62-118° (the wheels) and ±173-180°, **no region seen**
+(front 19 % blind: the wheels cut into it) ; **top deck** in front of the torso (37 cm) — mask
+[106° ; −106°], front only, like the door.
+
+Sim artefacts to know before reusing these numbers: the simulated body is boxes (no hinge, no
+door edge, no cable); the sim lidar returns its own housing and the box face behind it **at
+exactly the minimum range (0.05 m)** over the whole masked sector, so the "witness" the tool
+proposes from the sim (`secteur_deg` = the whole mask, distance from 0.005 m) is an artefact and
+must not be copied into a configuration file — the real witness is measured on the bench.
+
 **Not before priority 1** (the on-ground scenic test, remote in hand). That test is what will say
 whether the operator-on-deadman is enough for a long while. Buying earlier means designing a
 guardrail for a use nobody has observed yet.
