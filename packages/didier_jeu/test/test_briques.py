@@ -128,15 +128,6 @@ def test_journal_pourquoi_obligatoire(tmp_path):
     assert j.chemin.name.endswith("_jeu.jsonl")
 
 
-def test_angle_vers():
-    import math
-    from didier_jeu.selecteur import angle_vers
-    assert angle_vers((0.0, 0.0, 0.0), (1.0, 1.0)) == pytest.approx(45.0)        # + = gauche
-    assert angle_vers((0.0, 0.0, 0.0), (1.0, -1.0)) == pytest.approx(-45.0)
-    assert angle_vers((0.0, 0.0, math.pi / 2), (-1.0, 0.0)) == pytest.approx(90.0)
-    assert angle_vers((0.0, 0.0, math.pi), (1.0, 0.1)) == pytest.approx(-174.29, abs=0.01)
-
-
 def test_ligne_sans_pourquoi_marquee_et_comptee_jamais_avalee():
     from didier_jeu.journal import POURQUOI_ABSENT, marquer_sans_pourquoi
     c = {"sans_pourquoi": 0}

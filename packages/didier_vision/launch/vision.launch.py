@@ -1,5 +1,6 @@
 """Launch V1/V2 : heartbeat (vision_status) + suivi de personne
-(person_tracker) + conversation temps réel (chat, V2 — OFF par défaut).
+(person_tracker) + tableau des objets (objets_node, didier_perception, lot O1)
++ conversation temps réel (chat, V2 — OFF par défaut).
 
     ros2 launch didier_vision vision.launch.py
     ros2 launch didier_vision vision.launch.py score_threshold:=0.5 ema_alpha:=0.3
@@ -154,6 +155,12 @@ def generate_launch_description():
                 name="chat",
                 condition=IfCondition(chat_enabled),
             ),
+
+            # Tableau des objets (lots O0-O1, 18/11, étude docs/etudes/etude-objets-vus-et-carte.md) :
+            # SEUL écrivain de scene/objets, lu par la bouche, la réflexion, le sélecteur et la
+            # régie. Toujours lancé, comme person_tracker : sans carte ni pose (Pi en rue) il
+            # publie un tableau VIDE, sans réseau ni coût ; la caméra y entrera au lot O2.
+            Node(package="didier_perception", executable="objets_node", name="objets_node"),
 
             # Metteur en scène intérieur (boucle de réflexion, étude dadou_robot_ros
             # docs/etude-niveaux-reflexion.md) : lancé UNIQUEMENT si

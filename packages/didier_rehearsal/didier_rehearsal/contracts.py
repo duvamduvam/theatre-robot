@@ -150,8 +150,8 @@ ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
 # elephant » était prise pour la fin du « tour de elephant »).
 #  - source "director" : UNE réponse par geste arbitré (aller_voir, tour_de,
 #    tourner, avancer ; jamais go/stop), effect = celui du journal
-#    (accepted | unknown | no_tour | invalid | route_off_by_david | no_pose |
-#    too_far), reason = sous-raison d'invalid (illisible, hors_bornes, recul, sens) ;
+#    (accepted | unknown | no_position | no_tour | invalid | route_off_by_david |
+#    no_pose | too_far), reason = sous-raison d'invalid (illisible, hors_bornes, recul, sens) ;
 #  - source "jeu" (sélecteur didier_jeu, jeu:=true) : la demande de la bouche
 #    n'a PAS été transmise (effect "dropped", reason = CHAT_MOVE_REPLY_JEU_REASONS)
 #    ou le régisseur s'est tu (effect "no_reply").
@@ -166,11 +166,14 @@ CHAT_MOVE_REPLY_DROPPED = "dropped"
 CHAT_MOVE_REPLY_NO_REPLY = "no_reply"
 # Raisons d'un « dropped » du sélecteur (codes gravés des deux côtés : le chat
 # les traduit en clair, didier_vision.ai.move_task.REFUSAL_REASONS).
-# « trop_loin » (15/11 21:29) : aller_voir / tour_de de la bouche au-delà de
-# geste.distance_max_chat_m (réglage du sélecteur) ; la réponse porte alors
-# "distance_m" (ancre de l'objet, m, 0,1) pour que Didier dise où il est.
+# « pas_ici » / « hors_atteinte » (lot O1, 18/11 ; remplacent « trop_loin » du 15/11) :
+# aller_voir / tour_de de la bouche vers un objet du tableau des objets qui n'est pas
+# `atteignable` — connu mais ni en vue ni à portée (pas_ici), ou en vue mais trop loin ou
+# trop incertain (hors_atteinte) ; la réponse porte alors "distance_m" (m, 0,1) et "cote"
+# (devant | gauche | droite | derriere) pour que Didier dise où il est. Le chat produit les
+# MÊMES codes quand sa propre garde refuse (source "chat").
 CHAT_MOVE_REPLY_JEU_REASONS = ("arrete", "sans_superviseur", "fatigue", "trop_tot", "ignore",
-                               "pas_retenu", "degrade", "trop_loin")
+                               "pas_retenu", "degrade", "pas_ici", "hors_atteinte")
 # Distance de jeu : Didier s'arrête à ce rayon de l'objet (m).
 GOTO_STANDOFF_M = 1.5
 # Plancher du standoff accepté par route_driver (revue M1) : en dessous, les

@@ -450,14 +450,16 @@ def test_publisher_de_marche_conditionne_et_branche_sur_on_move():
     assert "on_move=self._publish_move if self._move_pub is not None else None" in init_source
 
 
-# --- « Aller voir » (lot M1, 31/10, dadou_robot_ros/docs/spec-aller-voir.md
-# §2.1) : "rehearsal/objects" est gravé côté robot aussi (contracts.py du
-# régisseur). LATCHÉ des deux côtés : publié une seule fois au démarrage du
-# régisseur, un abonné VOLATILE démarré après ne le recevrait jamais.
+# --- Tableau des objets (lot O1, 18/11) : scene/objets, contrat theatre_contrats. LATCHÉ des
+# deux côtés : un abonné VOLATILE démarré après le dernier changement de carte attendrait la
+# republication. Il remplace le vocabulaire brut de la régie et la ligne des objets proches du sélecteur.
 
 def test_topic_d_objets_a_la_valeur_du_contrat():
-    assert (_module_string_constants(_chat_node_tree()).get("REHEARSAL_OBJECTS_TOPIC")
-            == "rehearsal/objects")
+    source = CHAT_NODE_SOURCE.read_text(encoding="utf-8")
+    assert "SCENE_OBJETS_TOPIC = topics.SCENE_OBJETS" in source
+    assert "TABLEAU_TTL_S = 3.0" in source
+    # Ni l'ancien vocabulaire brut de la régie, ni l'ancien topic des objets proches (supprimé).
+    assert "rehearsal/objects" not in source and "objets_" "proches" not in source
 
 
 def test_abonnement_objets_conditionne_au_mouvement_et_latche():
@@ -465,27 +467,32 @@ def test_abonnement_objets_conditionne_au_mouvement_et_latche():
     blocs = [node for node in ast.walk(init) if isinstance(node, ast.If)
              and ast.unparse(node.test) == "config['chat_move_enabled']"]
     assert len(blocs) == 1, "bloc `if config['chat_move_enabled']:` absent ou en double"
-    # 15/11 : objets proches (jeu/objets_proches) sous la MÊME condition.
-    attendu = [("StringTime", "REHEARSAL_OBJECTS_TOPIC", "self._on_objects"),
-               ("StringTime", "JEU_OBJETS_PROCHES_TOPIC", "self._on_near")]
+    attendu = [("StringTime", "SCENE_OBJETS_TOPIC", "self._on_scene_objets")]
     assert _subscriptions(blocs[0]) == attendu
-    attendu = attendu[:1]
-    assert [a for a in _subscriptions(init) if a[1] == "REHEARSAL_OBJECTS_TOPIC"] == attendu
-    assert ("self.create_subscription(StringTime, REHEARSAL_OBJECTS_TOPIC, self._on_objects, "
+    assert [a for a in _subscriptions(init) if a[1] == "SCENE_OBJETS_TOPIC"] == attendu
+    assert ("self.create_subscription(StringTime, SCENE_OBJETS_TOPIC, self._on_scene_objets, "
             "QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))"
             in ast.unparse(blocs[0]))
+    assert "self.create_timer(1.0, self._expire_tableau)" in ast.unparse(blocs[0])
 
 
-def test_on_objects_decode_refuse_ou_remplace_sans_nouvelle_session():
-    calls = _calls_in_method(CHAT_NODE_SOURCE, "_on_objects")
-    assert "stage.decode_objects_payload" in calls
-    assert "personas.objects_prompt" in calls
-    # 15/11 : composé avec les objets proches, puis remis au cerveau.
-    assert "self._refresh_objects_prompt" in calls
-    assert "self._brain.set_objects_prompt" in _calls_in_method(CHAT_NODE_SOURCE, "_refresh_objects_prompt")
+def test_tableau_decode_refuse_ou_remplace_sans_nouvelle_session():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_on_scene_objets")
+    assert "tableau_objets.decoder" in calls
+    assert "personas.entourage_prompt" in calls
+    assert "self._brain.set_objects_prompt" in calls
+    # Garde déterministe des gestes (15/11 21:21), sur le tableau.
+    assert "self._engine.set_objets" in calls
     assert "self.get_logger().warning" in calls
     # La spec l'exige : la session LLM n'est PAS réinitialisée.
     assert "self._brain.reconfigure" not in calls
+
+
+def test_tableau_muet_oublie_et_garde_vide():
+    expire = ast.unparse(_chat_node_method(_chat_node_tree(), "_expire_tableau"))
+    assert "time.monotonic() - self._tableau_at > TABLEAU_TTL_S" in expire
+    assert "self._brain.set_objects_prompt('')" in expire
+    assert "self._engine.set_objets(tableau_objets.VIDE)" in expire
 
 
 # --- « Regarder » (lot M2, 31/10, spec-aller-voir.md §7.1) : "look" est
@@ -657,26 +664,6 @@ def test_topic_reponse_au_geste_contrat_partage():
     contrat = (Path(__file__).resolve().parents[3] / "didier_rehearsal" / "didier_rehearsal"
                / "contracts.py").read_text(encoding="utf-8")
     assert 'CHAT_MOVE_REPLY_TOPIC = "rehearsal/chat_move_reply"' in contrat
-
-
-def test_objets_disent_les_tours_au_cerveau():
-    source = ast.unparse(_chat_node_method(_chat_node_tree(), "_on_objects"))
-    assert "tours = stage.decode_tours_payload(ros_msg.msg)" in source
-    assert "self._objects_line = personas.objects_prompt(objects, tours)" in source
-    # Garde déterministe des gestes (15/11 21:21).
-    assert "self._engine.set_gesture_vocabulary([name for name, _desc in objects], tours)" in source
-
-
-def test_objets_proches_contrat_et_peremption():
-    consts = _module_string_constants(_chat_node_tree())
-    assert consts.get("JEU_OBJETS_PROCHES_TOPIC") == "jeu/objets_proches"
-    contrat = (Path(__file__).resolve().parents[3] / "theatre_contrats" / "theatre_contrats"
-               / "topics.py").read_text(encoding="utf-8")
-    assert "JEU_OBJETS_PROCHES = 'jeu/objets_proches'" in contrat
-    near = ast.unparse(_chat_node_method(_chat_node_tree(), "_on_near"))
-    assert "personas.near_prompt(stage.decode_near_payload(ros_msg.msg))" in near
-    expire = ast.unparse(_chat_node_method(_chat_node_tree(), "_expire_near"))
-    assert "time.monotonic() - self._near_at > NEAR_TTL_S" in expire
 
 
 def test_reponse_au_geste_illisible_ignoree_sinon_move_task():

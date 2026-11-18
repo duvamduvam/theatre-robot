@@ -33,7 +33,7 @@ PACKAGES_MONDE = ["dadou_utils_ros", "didier_core", "didier_description", "didie
 INTERDITS_MONDE = {"didier_core", "didier_drive", "didier_web"}   # aucun de leurs exécutables dans monde
 EPREUVES = ["validate-catalogue.sh", "validate-conversation.sh", "validate-data-edit.sh", "validate-jeu-a1.sh",
             "validate-machines.sh",
-            "validate-namespace.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
+            "validate-namespace.sh", "validate-objets.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
             "validate-rehearsal-route.sh"]
 # Décision 2 : la dernière commande de l'entrée du robot, mot pour mot.
 EXEC_ROBOT = ('exec /bin/bash /home/ros2_ws/src/robot/conf/scripts/launch-ros-in-docker.sh '

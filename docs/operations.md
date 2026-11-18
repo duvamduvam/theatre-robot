@@ -952,11 +952,16 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   David l'annule. « En route » dit par Didier repart tout de suite. Inutile de
   recliquer Route ON, mais la séance doit être **démarrée** (hors séance, le
   régisseur ignore le « go » : `voice_move … hors_seance`).
-- **Distances** (15/11) : le chat reçoit les 6 objets les plus proches avec
-  distance et côté (`jeu/objets_proches`, « Autour de toi en ce moment : … »).
-  Un « aller voir » ou « faire le tour » demandé par le chat au-delà de 10 m
-  (`geste.distance_max_chat_m`) est refusé et Didier le dit (« il est à 22 m
-  d'ici »). La console (« va là ») n'y est pas soumise.
+- **Tableau des objets** (lot O1, 18/11 ; remplace les « distances » du 15/11) :
+  `didier_perception/objets_node` (conteneur `vision`) publie `scene/objets`, la seule
+  vérité sur les objets — distance, côté, « en vue » (champ ±30°, 15 m), `atteignable`
+  (≤ 10 m). La bouche reçoit « ce qui t'entoure » (ce qu'elle voit, ce qui est autour,
+  un résumé de ce qui est plus loin) ; un « aller voir » ou « faire le tour » vers un
+  objet pas ici ou hors d'atteinte n'est jamais publié, Didier dit où il est (« il est
+  à 22 m devant toi »). Chaque geste porte l'`id` de l'objet (`carte/banc`), lu par le
+  sélecteur et la régie. La console (« va là ») n'est pas soumise à `atteignable`.
+  Voir le tableau : `ros2 topic echo --qos-durability transient_local /didier/scene/objets
+  theatre_interfaces/msg/StringTime --once` (CLI : préfixer, type explicite).
 - **Perception** : en A1, elle est **scriptée**. Une personne se simule à la main :
   `ros2 topic pub -r 16 /didier/vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.3, y: 0.4, z: 0.9}}"`.
   On peut aussi brancher la tête vision et sa webcam.

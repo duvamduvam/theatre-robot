@@ -90,12 +90,38 @@ def render_system_prompt(partner: Optional[str], destination: str) -> str:
             .replace("{destination}", destination))
 
 
+# Objets du TABLEAU DES OBJETS (lot O1, 18/11) donnés à la réflexion : les MÊMES noms que la
+# bouche, pour que sa phrase de situation dise « la table_basse » et non « une table » que la
+# bouche rapprocherait au jugé d'un nom de liste (la panne du 15/11). Texte EXACT gravé.
+OBJETS_PREFIXE = "Objets autour de Didier (emploie CES noms ; « en vue » = dans l'image) : "
+OBJETS_LOIN = " Plus loin, hors de vue : "
+OBJETS_ICI_MAX = 8
+OBJETS_LOIN_MAX = 3
+
+
+def objets_ligne(tableau) -> str:
+    """Tableau des objets (theatre_contrats.objets.Tableau) -> une ligne pour la perception,
+    "" sans objet. Ici (en vue ou à portée) d'abord, puis les 3 plus proches au-delà."""
+    if tableau is None or not tableau.objets:
+        return ""
+    ici = [o for o in tableau.objets if o.ici][:OBJETS_ICI_MAX]
+    loin = [o for o in tableau.objets if not o.ici and o.distance_m is not None][:OBJETS_LOIN_MAX]
+
+    def metres(o):
+        return "moins d'un mètre" if o.distance_m < 1.0 else f"{round(o.distance_m):d} m"
+    items = [f"{o.nom} ({'en vue, ' if o.en_vue else ''}{metres(o)})" for o in ici if o.distance_m is not None]
+    texte = OBJETS_PREFIXE + ("; ".join(items) if items else "aucun") + "."
+    if loin:
+        texte += OBJETS_LOIN + "; ".join(f"{o.nom} ({metres(o)})" for o in loin) + "."
+    return texte
+
+
 def build_messages(transcript, perception: str, mission_summary: str,
                    instruction: Optional[str], demande: Optional[str],
                    image_jpeg: Optional[bytes], *, partner: Optional[str],
                    destination: str, persona: Optional[str] = None,
                    camera_is_partner: bool = False,
-                   passing_poi: Optional[str] = None) -> list:
+                   passing_poi: Optional[str] = None, objets: Optional[str] = None) -> list:
     """Messages `system` + `user` de l'appel. `transcript` : liste de
     {"role": "david"|"didier", "text"} (les TRANSCRIPT_MAX_LINES dernières
     sont gardées). Sections titrées ; « Consigne du régisseur » et « Demande
@@ -108,7 +134,8 @@ def build_messages(transcript, perception: str, mission_summary: str,
     déclenché l'appel, Didier en marche, jamais encore commenté — cf.
     SpontaneousPolicy) ajoute sous la perception la consigne de la remarque
     en marche (décision de David du 31/10, étude-interaction §10.2) : une
-    seule phrase courte, arrêt réclamable. Image jointe en data-URL JPEG
+    seule phrase courte, arrêt réclamable. `objets` (objets_ligne, lot O1) : la ligne
+    des objets du tableau, ajoutée sous la perception. Image jointe en data-URL JPEG
     base64."""
     lines = []
     for entry in list(transcript)[-TRANSCRIPT_MAX_LINES:]:
@@ -119,6 +146,8 @@ def build_messages(transcript, perception: str, mission_summary: str,
     if camera_is_partner and partner:
         perception_text += (f"\nToute personne que montre la caméra est {partner}, "
                             "ton partenaire de jeu — pas un passant.")
+    if objets:
+        perception_text += "\n" + objets
     if passing_poi:
         perception_text += (f"\nDidier passe devant : {passing_poi} — s'il en parle, une "
                             "seule phrase courte ; il peut demander à s'arrêter pour le regarder")

@@ -127,3 +127,6 @@ def test_ou_dit():
     assert ou_dit(MANEGE) == "à 2 m sur ta droite"
     assert ou_dit(Objet(id="a", nom="a", distance_m=0.4, cote="gauche")) == "à moins d'un mètre sur ta gauche"
     assert ou_dit(Objet(id="a", nom="a")) == ""
+    assert objets.ou(22.34, "derriere") == "à 22 m derrière toi"
+    assert [objets.ou(*a) for a in ((None, "devant"), (3, "haut"), (True, "devant"), (-1, "devant"),
+                                    (float("nan"), "devant"))] == ["", "", "", "", ""]

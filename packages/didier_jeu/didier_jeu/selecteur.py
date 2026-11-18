@@ -59,14 +59,13 @@ RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.
 SÉCURITÉ : ce module ne produit AUCUN Twist ; ses seuls effets sur les roues
 sont des DEMANDES au régisseur (jeu/chat_move), qui arbitre (spec-aller-voir §3).
 """
-import math
 import re
 import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from didier_jeu import arbre, phrases, proximite
-from didier_rehearsal.route import normalize_name
+from didier_jeu import arbre, phrases
+from theatre_contrats import objets as tableau_objets
 from didier_jeu.phrases import n as num
 from didier_jeu.offres import Offre, Offres
 from didier_jeu.pistes import Pistes
@@ -90,15 +89,6 @@ def normaliser(texte: str) -> str:
     """Minuscules, sans accents (mots-clés du metteur en scène)."""
     sans = unicodedata.normalize("NFD", texte.lower())
     return "".join(c for c in sans if unicodedata.category(c) != "Mn")
-
-
-def angle_vers(pose, cible_xy) -> float:
-    """Angle RELATIF (°, + = gauche, REP 103) de la pose (x, y, cap rad) vers
-    un point du monde, ramené dans [-180, 180]."""
-    x, y, cap = pose
-    absolu = math.atan2(cible_xy[1] - y, cible_xy[0] - x)
-    rel = math.degrees(absolu - cap)
-    return (rel + 180.0) % 360.0 - 180.0
 
 
 @dataclass
@@ -136,8 +126,9 @@ class Selecteur:
                              reglages.get("pistes.confiance_min"))
         self.pulsions = Pulsions(reglages)
         self.sorties: List[tuple] = []
-        self.objets: Dict[str, tuple] = {}     # nom -> (x, y) ; rehearsal/objects
-        self.pose = None                       # (x, y, cap) ; SIM-ONLY (vérité terrain)
+        # Tableau des objets (scene/objets, lot O1, 18/11) : le sélecteur le LIT (distance,
+        # côté, azimut, atteignable), il n'en calcule rien — plus de pose ni de carte ici.
+        self.tableau = tableau_objets.VIDE
         self.route_state: Optional[str] = None
         self.animation_state = ""
         self.joues: Dict[str, float] = {}      # séquence -> dernier t joué (rotation)
@@ -245,7 +236,7 @@ class Selecteur:
             self.reprise_geste = None
             self.relayer_go("bouche", now)
             return
-        if isinstance(valeur, dict) and self._trop_loin(valeur, now):
+        if isinstance(valeur, dict) and self._hors_atteinte(valeur, now):
             return
         if isinstance(valeur, dict) and valeur.get("cmd") in COMMANDES_REGISSEUR:
             cible = valeur.get("objet") or valeur.get("cmd")
@@ -258,30 +249,24 @@ class Selecteur:
             return
         self._journal("refus", f"demande de mouvement incompréhensible ({valeur!r})", source="bouche")
 
-    def _trop_loin(self, demande: dict, now: float) -> bool:
-        """aller_voir / tour_de de la bouche au-delà de geste.distance_max_chat_m
-        (pose connue, objet résolu par son NOM normalisé comme au régisseur) :
-        refusé tout de suite, distance dite au chat (15/11 21:29). Pose
-        inconnue ou objet non résolu : le régisseur juge."""
-        if demande.get("cmd") not in ("aller_voir", "tour_de") or self.pose is None:
+    def _hors_atteinte(self, demande: dict, now: float) -> bool:
+        """aller_voir / tour_de de la bouche vers un objet du tableau (désigné par son `id`) qui
+        n'est pas `atteignable` : refusé tout de suite, distance et côté dits au chat (séance du
+        15/11 21:29). La règle (≤ 10 m, position sûre) est calculée par l'écrivain du tableau,
+        à un seul endroit (lot O1) : ici on LIT le drapeau. Objet absent du tableau : la régie
+        juge (« unknown »). Remplace le refus « > 10 m » du 15/11 (geste.distance_max_chat_m)."""
+        if demande.get("cmd") not in ("aller_voir", "tour_de"):
             return False
-        cle = normalize_name(demande.get("objet"))
-        nom = next((n for n in self.objets if normalize_name(n) == cle), None) if cle else None
-        if nom is None:
+        o = self.tableau.par_id(demande.get("id"))
+        if o is None or o.atteignable:
             return False
-        d = round(proximite.distance(self.pose, self.objets[nom]), 1)
-        seuil = self.r.get("geste.distance_max_chat_m")
-        if d <= seuil:
-            return False
-        self.sorties.append(("chat_move_reply", reponse_bouche(demande, "dropped", "trop_loin", distance_m=d)))
-        texte_d = f"{d:.1f}".replace(".", ",")
-        self._journal("refus", f"il voulait {phrases.demande(demande)}, mais non : « {nom} » est à {texte_d} m "
-                      f"(plus de {seuil:g} m)", source="bouche", demande=demande, code="trop_loin")
+        code = "hors_atteinte" if o.ici else "pas_ici"
+        self.sorties.append(("chat_move_reply", reponse_bouche(demande, "dropped", code, distance_m=o.distance_m,
+                                                               cote=o.cote)))
+        ou = tableau_objets.ou_dit(o) or "on ne sait pas où"
+        self._journal("refus", f"il voulait {phrases.demande(demande)}, mais non : « {o.nom} » est {ou}, "
+                      f"hors d'atteinte", source="bouche", demande=demande, code=code, id=o.id)
         return True
-
-    def objets_proches(self) -> list:
-        """Pour jeu/objets_proches (contexte du chat)."""
-        return proximite.objets_proches(self.pose, self.objets)
 
     def sur_console(self, payload, now: float) -> None:
         if not isinstance(payload, dict):
@@ -337,15 +322,9 @@ class Selecteur:
         if isinstance(etat, dict) and isinstance(etat.get("indication"), str):
             self.sur_situation(etat["indication"], now, source="mission_state")
 
-    def sur_objets(self, objets) -> None:
-        if not isinstance(objets, list):
-            return
-        self.objets = {o["name"]: (float(o["x"]), float(o["y"])) for o in objets
-                       if isinstance(o, dict) and isinstance(o.get("name"), str)
-                       and isinstance(o.get("x"), (int, float)) and isinstance(o.get("y"), (int, float))}
-
-    def sur_pose(self, x: float, y: float, cap: float) -> None:
-        self.pose = (x, y, cap)
+    def sur_tableau(self, tableau) -> None:
+        """scene/objets décodé (theatre_contrats.objets.Tableau)."""
+        self.tableau = tableau
 
     def sur_route_state(self, etat, now: float) -> None:
         self.route_state = etat
@@ -481,8 +460,12 @@ class Selecteur:
         # Une lubie en attente de son délai de refus : va_la la refuse.
         if self.en_cours is not None and self.en_cours.candidat.action == "lubie" and not self.en_cours.stop_envoye:
             self._annuler(now, "David l'envoie ailleurs")
-        if cible in self.objets:
-            self._ordre({"action": "aller_voir", "cible": cible, "cmd": "va_la"}, now, f"David : va voir « {cible} »")
+        objet = self.tableau.resoudre(cible).objet if cible is not None else None
+        if objet is not None:
+            # Un ordre de DAVID : pas soumis à « atteignable » (il voit ce qu'il désigne) ; la
+            # régie garde ses bornes (40 m, route coupée). Cible = le NOM du tableau.
+            self._ordre({"action": "aller_voir", "cible": objet.nom, "cmd": "va_la"}, now,
+                        f"David : va voir « {objet.nom} »")
             return
         piste = self.pistes.courante(now)
         if piste is not None and cible == piste.id:
@@ -912,8 +895,9 @@ class Selecteur:
             return True
         if c.action == "lubie":
             # RÉCLAMÉ (intention publiée par _decider) ET AMORCÉ (regard vers l'objet).
-            if self.pose is not None and c.cible in self.objets:
-                angle = angle_vers(self.pose, self.objets[c.cible])
+            objet = self.tableau.resoudre(c.cible).objet
+            if objet is not None and objet.azimut_deg is not None:
+                angle = objet.azimut_deg
                 hold = r.get("lubie.delai_refus_s") + r.get("durees_s.arret")
                 self.sorties.append(("look", {"angle_deg": round(angle, 1), "hold_ms": int(hold * 1000)}))
                 c.detail["regard"] = True
@@ -933,7 +917,9 @@ class Selecteur:
                 etapes.append(commande(self.deplacements, "se_tourner_vers", angle_deg=round(angle, 1)))
             etapes.append(commande(self.deplacements, "approcher"))
         elif c.action == "aller_voir":
-            etapes = [commande(self.deplacements, "aller_voir", objet=c.cible)]
+            objet = self.tableau.resoudre(c.cible).objet
+            etapes = [commande(self.deplacements, "aller_voir", objet=c.cible,
+                               **({"id": objet.id} if objet is not None else {}))]
         elif c.action == "bouche":
             etapes = [c.detail["demande"]]
         else:

@@ -25,7 +25,7 @@ par des demandes au régisseur (`jeu/chat_move`), qui les arbitre, puis par
 | `jeu/journal` | sélecteur → page (+ fichier) | une ligne JSONL (format boîte noire `robot.diagnostic.journal`) par message |
 | `animation` | sélecteur → animations_node | nom de séquence (JSON chaîne) |
 | `look` | sélecteur → gaze_follower | `{"angle_deg", "hold_ms"}` (« regarder », spec-aller-voir §7.1) |
-| entrées | | `vision/person_box`, `rehearsal/poi_event`, `rehearsal/chat_move` (la bouche), `chat_transcript` (rôle `david` = parole entendue), `chat_situation`, `mission_state`, `route_state`, `route_state_cause`, `route_goto_result`, `rehearsal/chat_move_reply`, `animation_state`, `rehearsal/objects` (avec `x`, `y` depuis A1, `tour` depuis le 15/11), `/ground_truth/odom` |
+| entrées | | `vision/person_box`, `rehearsal/poi_event`, `rehearsal/chat_move` (la bouche), `chat_transcript` (rôle `david` = parole entendue), `chat_situation`, `mission_state`, `route_state`, `route_state_cause`, `route_goto_result`, `rehearsal/chat_move_reply`, `animation_state`, `scene/objets` (le tableau des objets, latché, lot O1 — remplace `rehearsal/objects` et la pose vérité terrain) |
 
 Les noms `jeu/*` sont définis dans `theatre_contrats.topics`. Ceux du régisseur
 viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
@@ -41,7 +41,7 @@ viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
    David. Il n'y a jamais de `go` automatique après un stop de David.
 2. **Superviseur absent** (mode `exigeant` seulement ; le défaut en A1 est `suppose`) :
    aucun déplacement.
-3. **Ordre macro** : `va_la` vise un objet de `rehearsal/objects` (→ `aller_voir`)
+3. **Ordre macro** : `va_la` vise un objet du tableau `scene/objets` (→ `aller_voir` avec son `id`)
    ou une piste (→ `tourner` vers elle, puis `avancer` 1 m). `joue_avec` vise la
    piste regardée, approches répétées permises. `ignore` coupe les offres de
    la cible pendant 30 s et annule une lubie en attente ou une reprise.
@@ -78,11 +78,13 @@ par la bouche (« en route ») est **relayé tout de suite**, comme le stop :
 pondéré, il mourait au réfractaire de 10 s. Les 90 s de silence restent pour
 SES arrêts (lubie, approche).
 
-**Distances** (15/11) : `jeu/objets_proches` (1 Hz) porte les 6 objets les plus
-proches, `[{"name", "distance_m", "cote"}]` (`proximite.py`, pose vérité
-terrain). Un `aller_voir` ou `tour_de` de la bouche au-delà de
-`geste.distance_max_chat_m` (**10 m**) est refusé tout de suite : réponse
-`dropped` / `trop_loin` + `distance_m`. La console n'y est pas soumise.
+**Objets** (lot O1, 18/11 ; remplace les « distances » du 15/11) : le sélecteur LIT le
+tableau des objets `scene/objets` (écrit par `didier_perception`) ; il n'a plus ni pose ni
+carte. Un `aller_voir` ou `tour_de` de la bouche dont l'objet (désigné par son `id`) n'est
+pas `atteignable` est refusé tout de suite : réponse `dropped` / `pas_ici` (ni en vue ni à
+portée) ou `hors_atteinte` (en vue mais trop loin), avec `distance_m` et `cote`. `va_la`
+résout le nom dans le tableau et l'ordre porte l'`id` ; la console n'est pas soumise à
+`atteignable` (la régie garde ses 40 m). Le regard d'une lubie vise l'azimut du tableau.
 
 **Réponse à la bouche** (15/11, séance « fais le tour de l'éléphant ») : toute
 demande de GESTE de la bouche a une issue que le chat apprend. Transmise, c'est

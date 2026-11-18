@@ -16,6 +16,7 @@ services:
         theatre_contrats: ../../../../theatre_contrats
         dadou_utils_ros: ../../../../dadou_utils_ros
         didier_vision: ../../../../didier_vision
+        didier_perception: ../../../../didier_perception
         # L2a : la conf de la machine (machines/vision/ du dépôt), src/vision/conf/ sur le Pi.
         # Son .dockerignore (à sa racine) exclut `secret` (décision 6, verrou (a)).
         conf: ../..
@@ -57,6 +58,8 @@ services:
       # package de packages/, à plat dans src/ comme les autres (rsync ansible, liste `packages`
       # de l'hôte) ; édition à chaud + sentinelle src/didier_vision/change -> colcon build.
       - ../../../../didier_vision:/home/ros2_ws/src/didier_vision
+      # didier_perception (lot O1) : objets_node, lancé par vision.launch.py.
+      - ../../../../didier_perception:/home/ros2_ws/src/didier_perception
       - /dev:/dev
       # Audio (TTS, pas encore utilisé par le heartbeat V0, prêt pour V2).
       - /dev/snd:/dev/snd

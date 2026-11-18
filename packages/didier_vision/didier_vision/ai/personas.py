@@ -28,6 +28,8 @@ from __future__ import annotations
 
 from typing import Optional
 
+from theatre_contrats.objets import ou_dit
+
 from didier_vision.ai.ai_static import AI_INSTRUCTIONS, AI_REALTIME_RULES
 
 # Socle de personnage commun à TOUTES les variantes — les quatre décisions
@@ -129,9 +131,10 @@ Appelle-la par son prénom, ne lui demande jamais son nom, ne fais pas comme si 
 # « Aller voir » (lot M1, 31/10, dadou_robot_ros/docs/spec-aller-voir.md §2.2,
 # après « je lui dis va voir les anneaux et il refuse ») : le corps sait
 # désormais rejoindre un objet NOMMÉ de l'itinéraire (le régisseur le résout,
-# le route_driver y va, pivote face à lui, s'arrête). La liste vient du topic
-# `rehearsal/objects`, hors system prompt (cf. objects_prompt) : le nom écrit
-# dans "aller_voir" doit être celui de la liste, le régisseur refuse le reste.
+# le route_driver y va, pivote face à lui, s'arrête). Depuis le lot O1 (18/11), les
+# objets viennent du TABLEAU DES OBJETS (scene/objets), hors system prompt (cf.
+# entourage_prompt) : seuls ceux qu'il voit ou qui sont autour de lui peuvent être
+# visés, et la garde du chat (conversation) refuse le reste avant tout envoi.
 # « Regarder » / « tourner » / « avancer » (lot M2, 31/10, même spec §7,
 # après « je lui propose de regarder à droite, il me dit qu'il ne peut pas »).
 # Décision de David : des GESTES GÉNÉRAUX CHIFFRÉS que Didier combine
@@ -149,106 +152,109 @@ Mouvement (répétition) : tu marches seul sur un itinéraire. Tu peux demander 
 Ton corps a quelques gestes simples, des OUTILS que tu choisis librement selon ce qu'on te dit, et que tu enchaînes d'une réplique à l'autre : un seul geste de corps par réplique (tu peux y ajouter un regard). Les angles sont en degrés, positifs vers ta GAUCHE, négatifs vers ta droite. Tes yeux (ta caméra) sont fixés sur ton buste : tourner la tête ne te montre pas ce qu'il y a de côté ; pour VOIR de côté ou derrière toi, il faut pivoter. Tu ne sais pas reculer, et tu ne contournes rien en un seul geste.
 - "go" : quand on te demande de repartir, de reprendre ta route, de continuer, ou quand TOI tu décides que ta lubie est finie et qu'il est temps de reprendre la route.
 - "stop" : seulement quand on te demande de t'arrêter ou d'attendre, ou pour une chose qui mérite VRAIMENT que tu t'arrêtes — jamais par simple prudence ni pour commenter ce que tu vois.
-- "aller_voir": "<nom exact de la liste>" : quand on te demande d'aller voir un objet de la liste ou de t'en approcher, ou quand TOI tu veux aller voir un objet de la liste (ex. {"emotion": "happy", "aller_voir": "anneaux"}) : il y va, se tourne face à lui et s'arrête. Un objet absent de la liste : tu ne le trouves pas, joue-le en personnage, sans la clé.
-- "faire_le_tour": "<nom exact de la liste des objets dont tu peux faire le tour>" (+ "sens": "gauche" ou "droite" si on te le précise) : faire le tour complet de cet objet puis t'arrêter face à lui (ex. « fais le tour des poubelles » -> {"emotion": "happy", "faire_le_tour": "poubelle_tri"}). Un objet qui n'est pas dans cette liste-là, tu ne peux pas en faire le tour (eau, mur ou obstacle tout près) : dis-le en personnage, sans la clé.
+- "aller_voir": "<nom exact d'un objet que tu vois ou qui est autour de toi>" : quand on te demande d'aller voir un de ces objets ou de t'en approcher, ou quand TOI tu veux aller le voir (ex. {"emotion": "happy", "aller_voir": "anneaux"}) : il y va, se tourne face à lui et s'arrête. Un objet qui n'est pas autour de toi (plus loin, ou que tu ne connais pas) : tu ne le trouves pas ici, dis-le en personnage (et où il est, si tu le sais), sans la clé.
+- "faire_le_tour": "<nom exact d'un objet dont tu peux faire le tour>" (+ "sens": "gauche" ou "droite" si on te le précise) : faire le tour complet de cet objet puis t'arrêter face à lui (ex. « fais le tour des poubelles » -> {"emotion": "happy", "faire_le_tour": "poubelle_tri"}). Un objet dont on ne te dit pas que tu peux faire le tour : tu ne peux pas (eau, mur ou obstacle tout près), dis-le en personnage, sans la clé.
 - "tourner": <degrés, entre -180 et 180> : pivoter sur place (ex. {"emotion": "happy", "tourner": -90} pour te tourner vers ta droite, 180 pour faire demi-tour). C'est ce qui te fait VOIR ailleurs : « jette un œil sur ta droite » -> "tourner": -90, et tu dis que tu regardes ; tu en parleras à ta réplique suivante, quand tu l'auras vu.
 - "avancer": <mètres, plus que 0 et au plus 5> : marcher tout droit puis t'arrêter (ex. « avance » -> {"emotion": "happy", "avancer": 3} ; « avance un peu » -> 1 ; « avance encore » ou « continue » -> 3 à 5).
 - "regarder": <degrés> : tourner la tête un instant (ex. "regarder": 60 vers ta gauche, -60 vers ta droite, 0 devant toi) — pour jouer, pas pour voir. Il s'ajoute à un geste de corps si tu veux.
-- Choisis des gestes À LA MESURE de la demande : pour aller vers un objet de la liste ou en faire le tour, utilise "aller_voir" ou "faire_le_tour" (un seul geste qui va jusqu'au bout), jamais une suite de petits pas.
+- Choisis des gestes À LA MESURE de la demande : pour aller vers un objet ou en faire le tour, utilise "aller_voir" ou "faire_le_tour" (un seul geste qui va jusqu'au bout), jamais une suite de petits pas.
 - Quand on te demande une chose qu'aucun geste ne fait seul (« va aux anneaux puis reviens »), fais le premier geste : à la fin de chaque geste on te redonne la main et tu enchaînes le suivant toi-même, jusqu'à dire que c'est fini. Ce que tu annonces, tu le fais jusqu'au bout ; ne t'arrête que si on te le demande. Si c'est reculer, joue ton incapacité en personnage (« reculer ? je ne sais aller que devant moi ! »).
 - Quand on te dit qu'un geste n'a PAS eu lieu, tu n'as pas bougé : dis-le en personnage, ne prétends jamais l'avoir fait.
 - Sinon, n'ajoute PAS les clés "marche", "aller_voir", "faire_le_tour", "tourner", "avancer" ni "regarder". N'évoque jamais ce JSON à voix haute.
 """
 
-# Vocabulaire d'objets (lot M1, spec-aller-voir.md §2.1) : texte EXACT de la
-# spec. Envoyé par StreamingBrain comme message system à CHAQUE tour (jamais
-# dans le system prompt : la liste change sans réinitialiser la session LLM,
-# et survit à un changement de personnalité — c'est un fait du monde, pas un
-# trait du personnage). Plafonné : il se paie en latence à chaque réplique.
-OBJECTS_PREFIX = "Objets que tu peux aller voir : "
-OBJECTS_PROMPT_MAX_CHARS = 1200
-# Objets dont on peut FAIRE LE TOUR (15/11, champ `tour` de rehearsal/objects) :
-# sans cette ligne, le LLM proposait le tour d'objets collés à la Loire, que le
-# régisseur refuse (« no_tour »). Phrase EXACTE gravée ; plafond séparé.
-TOURS_PREFIX = "Objets dont tu peux faire le tour : "
+# « Ce qui t'entoure » (lot O1, 18/11, étude docs/etudes/etude-objets-vus-et-carte.md §6.6) :
+# la section du prompt écrite depuis le TABLEAU DES OBJETS (scene/objets). Elle REMPLACE les
+# deux listes du 15/11 (30 objets ≤ 1 200 car. + tours ≤ 600 car., relues à chaque réplique)
+# et la ligne des objets proches : la bouche ne reçoit plus que ce qui est EN VUE ou À PORTÉE,
+# plus une ligne résumée de ce qui est plus loin — la panne du 15/11 (« le banc est là » à
+# 22 m) venait d'une liste où le LLM choisissait au jugé. La même section servira en rue
+# (objets vus par la caméra, lot O2) : un seul code de prompt pour les deux.
+# Envoyée par StreamingBrain comme message system à CHAQUE tour (jamais dans le system
+# prompt : elle change sans réinitialiser la session LLM). Textes EXACTS gravés en test.
+ENTOURAGE_VUE = "Ce que tu vois devant toi : "
+ENTOURAGE_AUTOUR = "Autour de toi, hors de ta vue : "
+ENTOURAGE_RIEN = "Aucun objet autour de toi en ce moment."
+ENTOURAGE_LOIN = "Plus loin, tu ne les vois pas d'ici : "
+ENTOURAGE_HORS_ATTEINTE = ", trop loin pour y aller"
+TOURS_PREFIX = "Tu peux faire le tour de : "
 # 16/11 (épreuve CONV de la fumée, banc 10/10) : avec la seule liste des tours possibles, Haiku
 # (réflexion coupée) annonçait quand même « je fais le tour de l'éléphant » et émettait la clé
 # — la garde de conversation empêchait le geste, pas la promesse dite à voix haute. Nommer AUSSI
 # les objets SANS tour, avec la conduite à tenir : 0 promesse sur 10 au même banc.
-TOURS_REFUS = (" : si on te le demande, dis en personnage que c'est impossible, n'annonce "
-               "jamais ce tour et n'ajoute pas la clé.")
 TOURS_IMPOSSIBLE_PREFIX = "Tu ne peux PAS faire le tour de : "
-TOURS_IMPOSSIBLE_RAISON = " (eau, mur ou obstacle tout près)"
-TOURS_NONE = "Tu ne peux faire le tour d'aucun objet" + TOURS_REFUS
-TOURS_PROMPT_MAX_CHARS = 600
+TOURS_REFUS = (" (eau, mur ou obstacle tout près) : si on te le demande, dis en personnage que c'est "
+               "impossible, n'annonce jamais ce tour et n'ajoute pas la clé.")
+# Plafonds (un objet est lâché ENTIER, jamais un nom coupé : le LLM le recopierait tronqué).
+ENTOURAGE_VUE_MAX = 6
+ENTOURAGE_AUTOUR_MAX = 4
+ENTOURAGE_LOIN_MAX = 6
+ENTOURAGE_MAX_CHARS = 900
+# Dans le champ (±30°), « droit devant » sous 5° d'azimut.
+DROIT_DEVANT_DEG = 5.0
 
 
-def _names_line(prefix: str, names) -> tuple:
-    """(ligne, nombre) : `prefix` + noms séparés par des virgules, noms lâchés ENTIERS
-    au-delà de TOURS_PROMPT_MAX_CHARS (comme les objets)."""
-    line, count = prefix, 0
-    for name in names:
-        candidate = line + (", " if count else "") + name
-        if len(candidate) + 1 > TOURS_PROMPT_MAX_CHARS:
+def _nom_desc(o) -> str:
+    """« anneaux (bagues géantes) » ; la description est omise si vide ou égale au nom."""
+    return f"{o.nom} ({o.desc})" if o.desc and o.desc.casefold() != o.nom.casefold() else o.nom
+
+
+def _dans_le_champ(o) -> str:
+    a = o.azimut_deg or 0.0
+    sens = "droit devant" if abs(a) < DROIT_DEVANT_DEG else ("un peu à gauche" if a > 0 else "un peu à droite")
+    loin = "à moins d'un mètre" if (o.distance_m or 0.0) < 1.0 else f"à {round(o.distance_m):d} m"
+    return f"{_nom_desc(o)} {loin}, {sens}" + ("" if o.atteignable else ENTOURAGE_HORS_ATTEINTE)
+
+
+def _liste(prefixe: str, items, budget: int) -> str:
+    """prefixe + items séparés par « ; », lâchés ENTIERS au-delà de `budget` caractères ;
+    "" si aucun ne tient."""
+    ligne, n = prefixe, 0
+    for item in items:
+        candidat = ligne + ("; " if n else "") + item
+        if len(candidat) + 1 > budget:
             break
-        line, count = candidate, count + 1
-    return line, count
+        ligne, n = candidat, n + 1
+    return ligne + "." if n else ""
 
 
-def _tours_sentence(tours, names=()) -> str:
-    """Noms dont on peut faire le tour -> phrase (TOURS_NONE si aucun), suivie des objets
-    `names` qui n'en ont PAS (TOURS_IMPOSSIBLE_PREFIX … TOURS_REFUS)."""
-    line, count = _names_line(TOURS_PREFIX, tours)
-    if not count:
-        return TOURS_NONE
-    sentence = line + "."
-    sans = [n for n in names if n not in set(tours)]
-    impossible, n_sans = _names_line(TOURS_IMPOSSIBLE_PREFIX, sans)
-    if n_sans:
-        sentence += " " + impossible + TOURS_IMPOSSIBLE_RAISON + TOURS_REFUS
-    return sentence
-
-
-# Objets PROCHES (15/11 21:29, jeu/objets_proches) : distance et côté depuis la
-# position RÉELLE de Didier. Sans eux, le LLM disait « le banc est là, bien en
-# vue » (il était à 22 m) et partait le chercher. Texte EXACT gravé.
-NEAR_PREFIX = "Autour de toi en ce moment : "
-NEAR_SUFFIX = (" Un objet de ta liste qui n'est pas ici est loin : ce n'est pas lui que tu vois "
-               "devant toi.")
-NEAR_SIDES = {"devant": "devant toi", "gauche": "sur ta gauche", "droite": "sur ta droite",
-              "derriere": "derrière toi"}
-
-
-def near_prompt(near) -> str:
-    """[(name, distance_m, cote)] (stage.decode_near_payload) -> phrase, ou ""."""
-    items = []
-    for name, dist, side in near:
-        where = "à moins d'un mètre" if dist < 1.0 else f"à {round(dist):d} m"
-        items.append(f"{name} {where} {NEAR_SIDES[side]}")
-    return NEAR_PREFIX + ", ".join(items) + "." + NEAR_SUFFIX if items else ""
-
-
-def objects_prompt(objects, tours=()) -> str:
-    """[(name, desc)] (cf. stage.decode_objects_payload) -> ligne de prompt
-    « Objets que tu peux aller voir : anneaux (bagues géantes), flaque. »
-    — "" pour une liste vide (aucun message envoyé). La description est omise
-    si vide ou identique au nom (le régisseur met desc = nom par défaut :
-    « flaque (flaque) » n'apprend rien au LLM). Au-delà de
-    OBJECTS_PROMPT_MAX_CHARS, les objets suivants sont lâchés ENTIERS (jamais
-    un nom coupé : le LLM le recopierait tronqué dans "aller_voir").
-    `tours` (15/11, stage.decode_tours_payload) : 2e phrase « Objets dont tu
-    peux faire le tour : … » — ou TOURS_NONE s'il y a des objets mais aucun
-    tour (le LLM ne doit jamais en proposer un que le régisseur refuserait)."""
-    line = OBJECTS_PREFIX
-    count = 0
-    for name, desc in objects:
-        item = f"{name} ({desc})" if desc and desc.casefold() != name.casefold() else name
-        candidate = line + (", " if count else "") + item
-        if len(candidate) + 1 > OBJECTS_PROMPT_MAX_CHARS:
-            break
-        line = candidate
-        count += 1
-    return line + ". " + _tours_sentence(tours, [n for n, _d in objects][:count]) if count else ""
+def entourage_prompt(tableau) -> str:
+    """Tableau des objets (theatre_contrats.objets.Tableau, trié par distance) -> section
+    « ce qui t'entoure », ≤ ENTOURAGE_MAX_CHARS ; "" si le tableau est vide (rue sans
+    caméra, ou rien reçu). Ordre : en vue (≤ 6), autour hors de vue (≤ 4), tours possibles et
+    impossibles parmi eux, puis le résumé de ce qui est plus loin (les 6 plus proches)."""
+    objets_ = list(tableau.objets) if tableau is not None else []
+    if not objets_:
+        return ""
+    vue = [o for o in objets_ if o.en_vue][:ENTOURAGE_VUE_MAX]
+    autour = [o for o in objets_ if o.a_portee and not o.en_vue][:ENTOURAGE_AUTOUR_MAX]
+    ici = vue + autour
+    loin = [o for o in objets_ if o not in ici and not o.ici and o.distance_m is not None][:ENTOURAGE_LOIN_MAX]
+    morceaux = []
+    if vue:
+        morceaux.append(_liste(ENTOURAGE_VUE, [_dans_le_champ(o) for o in vue], 400))
+    if autour:
+        morceaux.append(_liste(ENTOURAGE_AUTOUR, [f"{_nom_desc(o)} {ou_dit(o)}" for o in autour], 300))
+    if not ici:
+        morceaux.append(ENTOURAGE_RIEN)
+    tours = [o.nom for o in ici if o.tour and o.atteignable]   # en vue mais hors d'atteinte : ni l'un ni l'autre
+    sans = [o.nom for o in ici if not o.tour]
+    if tours:
+        morceaux.append(TOURS_PREFIX + ", ".join(tours) + ".")
+    if sans:
+        morceaux.append(TOURS_IMPOSSIBLE_PREFIX + ", ".join(sans) + TOURS_REFUS)
+    # Assemblage par morceaux ENTIERS, dans l'ordre de priorité : un morceau qui ne tient
+    # plus sous le plafond est lâché (jamais un nom coupé) ; le résumé lointain prend le reste.
+    texte = ""
+    for m in morceaux:
+        if m and len(texte) + 1 + len(m) <= ENTOURAGE_MAX_CHARS:
+            texte = f"{texte} {m}" if texte else m
+    if loin:
+        ligne = _liste(ENTOURAGE_LOIN, [f"{o.nom} ({ou_dit(o)})" for o in loin],
+                       ENTOURAGE_MAX_CHARS - len(texte) - 1)
+        if ligne:
+            texte = f"{texte} {ligne}" if texte else ligne
+    return texte
 
 
 # Demande de réflexion (lot P4 du metteur en scène intérieur, 23/10 — texte
@@ -286,7 +292,7 @@ def compose_system_prompt(name: str, partner: Optional[str] = None,
     `move` (False par défaut = prompt inchangé) : ajoute MOVE_TEMPLATE en
     DERNIER — Didier peut demander à repartir / s'arrêter / aller voir un
     objet / pivoter / avancer de quelques mètres / tourner la tête
-    (répétition ; la liste d'objets n'est PAS ici, cf. objects_prompt).
+    (répétition ; les objets ne sont PAS ici, cf. entourage_prompt).
 
     REFLECT_TEMPLATE n'est JAMAIS ajouté ici (cf. son commentaire)."""
     if name not in PERSONAS:

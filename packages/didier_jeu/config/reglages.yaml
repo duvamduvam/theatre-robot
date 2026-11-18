@@ -93,14 +93,6 @@ reprise:
   # décision du 08/11). Annulé par un nouveau geste, un stop, une Route OFF de David.
   apres_geste_s: 10.0
 
-geste:
-  # Un « aller voir » / « faire le tour » demandé par le CHAT au-delà de cette
-  # distance (m, pose -> ancre de l'objet) est refusé honnêtement, sans partir
-  # (15/11 21:29 : tour du banc accepté à 22 m, Didier a roulé le long de la
-  # route — le LLM confondait ce qu'il voyait avec la liste). Les ordres de la
-  # console (va_la) n'y sont pas soumis ; le régisseur garde sa borne de 40 m.
-  distance_max_chat_m: 10.0
-
 superviseur:
   # « suppose » (A1 sim, défaut) : présence supposée. « exigeant » : sans
   # battement jeu/console depuis silence_max_s, aucune initiative de déplacement.

@@ -136,9 +136,16 @@ s'il l'a dépassé), pivote face à lui, s'arrête. SIM-ONLY (vérité terrain).
   YAML par POI : `desc` (≤ 6 mots, ce qu'on voit ; absent = le nom) et `alias`
   (mots de David). Un nom/alias normalisé (minuscules, sans accents ni
   article de tête) ne désigne qu'UN POI : refus au chargement sinon.
+- **Tableau des objets (lot O1, 18/11)** : `rehearsal/objects` porte aussi `alias` et, pour
+  un POI qui a un tour, `cx`, `cy`, `rayon` (centre de collision) ; son lecteur est
+  `didier_perception/objets_node`, qui publie `scene/objets`. La régie s'y abonne : un geste
+  vers un objet le désigne par son **`id`** (`carte/<poi>`), résolu une fois par la bouche ou
+  le sélecteur ; elle vise la position du TABLEAU (le centre de l'objet) et ne résout plus
+  aucun nom. Sans `id` connu : `unknown` ; objet sans position en repère monde : `no_position`.
+  Ses refus propres restent (route coupée par David, pose, 40 m).
 - **Demande** : `rehearsal/chat_move` porte aussi `{"cmd": "aller_voir",
-  "objet": …}`. Arbitrage journalisé `aller_voir` : `accepted` | `unknown` |
-  `route_off_by_david` | `no_pose` (pose vérité terrain > 600 ms) |
+  "objet": …, "id": …}`. Arbitrage journalisé `aller_voir` (avec l'`id`) : `accepted` | `unknown` |
+  `no_position` | `route_off_by_david` | `no_pose` (pose vérité terrain > 600 ms) |
   `too_far` (> 40 m). Accepté en séance comme hors séance ; l'arrêt vocal
   est levé à la vitesse du « go » (jamais au-dessus du fader ni d'une
   batterie), une lubie active est fermée (`closed_by: "voix"`).

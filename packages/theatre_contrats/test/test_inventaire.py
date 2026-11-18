@@ -24,7 +24,6 @@ TOPICS_PERCEPTION = {
 TOPICS_JEU = {
     "JEU_CONSOLE": "jeu/console", "JEU_INTENTION": "jeu/intention",
     "JEU_CHAT_MOVE": "jeu/chat_move", "JEU_JOURNAL": "jeu/journal",
-    "JEU_OBJETS_PROCHES": "jeu/objets_proches",
 }
 # Nouveau au lot O0 (tableau des objets, theatre_contrats/objets.py) : PAS repris de utils_static.
 TOPICS_OBJETS = {"SCENE_OBJETS": "scene/objets"}

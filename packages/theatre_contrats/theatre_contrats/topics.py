@@ -56,10 +56,6 @@ JEU_CHAT_MOVE = 'jeu/chat_move'
 # StringTime volatile : une ligne du journal JSONL du sélecteur par message
 # (format boîte noire, didier_core.diagnostic.journal), pour la page scène.
 JEU_JOURNAL = 'jeu/journal'
-# StringTime volatile, sélecteur -> chat_node, 1 Hz (15/11) : les objets les
-# plus proches de Didier, [{"name", "distance_m", "cote": "devant"|"gauche"|
-# "droite"|"derriere"}] triés par distance (pose vérité terrain, SIM-ONLY).
-JEU_OBJETS_PROCHES = 'jeu/objets_proches'
 
 # ---------------------------------------------------------------- tableau des objets (lot O0)
 # StringTime LATCHÉ (qos.latched() des DEUX côtés), écrit par didier_perception/objets_node

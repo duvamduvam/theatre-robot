@@ -31,17 +31,24 @@ l'objet d'une lubie ; champs additifs.
 15/11 : chaque objet porte aussi `"tour": true|false` (l'objet a un tour dans
 le fichier généré, §8.1) ; chat_node lit `name`, `desc` et `tour`.
 
-chat_node (vision), seulement si le mouvement à la voix est branché : ajoute
-au prompt de marche la liste « Objets que tu peux aller voir : anneaux
-(bagues géantes), flaque (…), … », suivie de « Objets dont tu peux faire le
-tour : … » (ou « Tu ne peux faire le tour d'aucun objet. ») — remplacée à
-chaque nouveau message, la session LLM n'est PAS réinitialisée.
+**Lot O1 (18/11) — le tableau des objets remplace ce vocabulaire côté lecteurs**
+(étude [`etudes/etude-objets-vus-et-carte.md`](etudes/etude-objets-vus-et-carte.md) §6-§7) :
+le SEUL lecteur de `rehearsal/objects` est désormais `didier_perception/objets_node`, qui en
+fait le tableau `scene/objets` (latché ; contrat `theatre_contrats/objets.py`) — avec en plus
+`alias` et, pour un POI qui a un tour, `cx`, `cy`, `rayon` (centre de collision : la position
+d'un objet de carte est son CENTRE, pas l'ancre). chat_node (mouvement à la voix branché) en
+tire la section « ce qui t'entoure » (`personas.entourage_prompt` : ce qu'il voit, ce qui est
+autour, un résumé du lointain, ≤ 900 caractères), qui remplace les deux listes (30 objets,
+tours) et la ligne des objets proches du 15/11. La session LLM n'est PAS réinitialisée.
 
 ### 2.2 Intention — `rehearsal/chat_move` (chat_node → régisseur), étendu
 
 Le payload actuel reste valide (`"go"` / `"stop"`, JSON chaîne). Ajout :
-JSON objet `{"cmd": "aller_voir", "objet": "<texte>"}`. Côté bouche : clé de
-fin de réplique `"aller_voir": "<nom de la liste>"` (même règles que
+JSON objet `{"cmd": "aller_voir", "objet": "<texte>", "id": "<id du tableau>"}` (`id` depuis
+le lot O1 : la garde du chat résout le nom dans le tableau et le joint ; la régie ne cible
+QUE par l'`id`, à la position du tableau — plus de résolution de nom dans son YAML ; sans
+`id` connu : `unknown`). Côté bouche : clé de fin de réplique `"aller_voir": "<nom d'un
+objet vu ou autour>"` (même règles que
 `marche` : normalisée, jamais en tour spontané — un tour spontané ne met
 jamais Didier en mouvement, revue B1 du 23/10). Si la réplique porte à la
 fois `marche` et `aller_voir`, `aller_voir` gagne sauf si `marche` vaut
@@ -420,12 +427,14 @@ sans avoir bougé.
   (`name` « elephant ») a été prise pour la fin du tour. Le sélecteur avait
   jeté le tour (même clé `bouche:elephant` que l'action en cours, « autre
   chose l'a emporté »), et ce refus est arrivé trop tard. Trois corrections :
-  1. **Garde déterministe** (chat, `ConversationEngine.set_gesture_vocabulary`) :
-     un `faire_le_tour` dont l'objet (normalisé comme au régisseur) n'est pas
-     dans les tours possibles, ou un `aller_voir` hors des objets, n'est
-     JAMAIS publié. Il devient tout de suite une fin ÉCHOUÉE (`no_tour` si
-     l'objet est connu, `unknown` sinon). Les alias ne passent donc plus : le
-     prompt exige le nom exact. Sans vocabulaire reçu, le régisseur juge.
+  1. **Garde déterministe** (chat, `ConversationEngine.set_objets` depuis le lot O1 :
+     sur le TABLEAU DES OBJETS, règle unique `theatre_contrats.objets.resoudre`) :
+     un geste vers un objet inconnu (`unknown`), connu mais pas ici (`dropped` /
+     `pas_ici`, avec distance et côté : « il est à 22 m devant toi »), en vue mais
+     hors d'atteinte (`dropped` / `hors_atteinte`), ou un `faire_le_tour` d'un objet
+     sans tour (`no_tour`) n'est JAMAIS publié : fin ÉCHOUÉE tout de suite. Accepté,
+     le geste part avec l'`id` de l'objet résolu (alias compris). Sans tableau reçu,
+     le régisseur juge ; tableau muet 3 s : tableau vide, tout geste vers un objet refusé.
   2. **Corrélation** : la réponse `accepted` porte `name`, le nom de l'ordre
      (celui que `route_goto_result` renverra : « tour de elephant » ≠
      « elephant »). Un geste n'est fini que par l'issue de CET ordre ; toute

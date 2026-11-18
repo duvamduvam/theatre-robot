@@ -272,9 +272,16 @@ COTES_PHRASE = {"devant": "devant toi", "gauche": "sur ta gauche", "droite": "su
                 "derriere": "derrière toi"}
 
 
-def ou_dit(o: Objet) -> str:
-    """« à 22 m devant toi » / « à moins d'un mètre sur ta gauche » ; "" sans distance connue."""
-    if o.distance_m is None or o.cote is None:
+def ou(distance_m, cote_) -> str:
+    """« à 22 m devant toi » / « à moins d'un mètre sur ta gauche » ; "" si la distance ou le
+    côté manque ou est faux (un refus venu du fil : jamais d'exception ici)."""
+    if isinstance(distance_m, bool) or not isinstance(distance_m, (int, float)) \
+            or not 0 <= distance_m < 1e6 or cote_ not in COTES_PHRASE:
         return ""
-    loin = "à moins d'un mètre" if o.distance_m < 1.0 else f"à {round(o.distance_m):d} m"
-    return f"{loin} {COTES_PHRASE[o.cote]}"
+    loin = "à moins d'un mètre" if distance_m < 1.0 else f"à {round(distance_m):d} m"
+    return f"{loin} {COTES_PHRASE[cote_]}"
+
+
+def ou_dit(o: Objet) -> str:
+    """Où est l'objet, vu de Didier, en clair ; "" sans distance connue."""
+    return ou(o.distance_m, o.cote)

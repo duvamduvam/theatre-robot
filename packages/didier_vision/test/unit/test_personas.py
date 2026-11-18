@@ -2,6 +2,8 @@
 chaque variante embarque le contrat TECHNIQUE complet (c'est la contrepartie
 du choix « textes versionnés au repo » : la CI garantit qu'aucune itération
 d'écriture ne casse le pilotage du corps, cf. docstring de didier_vision.ai.personas)."""
+import re
+
 import pytest
 
 from didier_vision.ai import personas
@@ -151,9 +153,12 @@ def test_mouvement_apprend_la_cle_aller_voir():
     template = personas.MOVE_TEMPLATE
     # Textes GRAVÉS (spec §2.2) : la clé, sa valeur, ce que fait le corps,
     # et l'objet absent joué en personnage.
-    assert '"aller_voir": "<nom exact de la liste>"' in template
+    assert '"aller_voir": "<nom exact d\'un objet que tu vois ou qui est autour de toi>"' in template
     assert "il y va, se tourne face à lui et s'arrête" in template
-    assert "Un objet absent de la liste : tu ne le trouves pas" in template
+    # Lot O1 : un objet pas ici est DIT (et où il est), jamais visé.
+    assert ("Un objet qui n'est pas autour de toi (plus loin, ou que tu ne connais pas) : tu ne le trouves "
+            "pas ici, dis-le en personnage (et où il est, si tu le sais), sans la clé.") in template
+    assert "de la liste" not in template
     # Les limites restantes du corps sont toujours dites (réduites au lot M2,
     # spec §7.2 : tourner, demi-tour et avancer sont des gestes du corps)…
     assert "Tu ne sais pas reculer, et tu ne contournes rien en un seul geste." in template
@@ -162,60 +167,66 @@ def test_mouvement_apprend_la_cle_aller_voir():
     assert template.endswith("N'évoque jamais ce JSON à voix haute.\n")
 
 
-def test_ligne_d_objets_texte_de_la_spec():
-    assert personas.objects_prompt([("anneaux", "bagues géantes"), ("flaque", "")]) == (
-        "Objets que tu peux aller voir : anneaux (bagues géantes), flaque. "
-        "Tu ne peux faire le tour d'aucun objet : si on te le demande, dis en personnage que c'est "
-        "impossible, n'annonce jamais ce tour et n'ajoute pas la clé.")
+# --- « Ce qui t'entoure » (lot O1, 18/11) : la section écrite depuis le tableau des objets ---
+from theatre_contrats.objets import Objet, Tableau  # noqa: E402
+
+# La séance du 15/11, Didier à x = 14 cap +x : tableau écrit par didier_perception (valeurs
+# gravées dans packages/didier_perception/test/test_tableau.py).
+TABLE = Objet(id="carte/table_basse", nom="table_basse", desc="table très basse", x=17.8, y=2.1, distance_m=4.3,
+              azimut_deg=28.9, cote="devant", en_vue=True, tour=True, atteignable=True)
+POSTER = Objet(id="carte/poster_bizarre", nom="poster_bizarre", desc="poster_bizarre", x=22.4, y=-2.7,
+               distance_m=8.8, azimut_deg=-17.8, cote="devant", en_vue=True, tour=True, atteignable=True)
+POUBELLE = Objet(id="carte/poubelle_tri", nom="poubelle_tri", x=27.0, y=2.4, distance_m=13.2, azimut_deg=10.5,
+                 cote="devant", en_vue=True, tour=True, atteignable=False)
+CARROUSEL = Objet(id="carte/carrousel", nom="carrousel", desc="manège", x=13.2, y=-2.0, distance_m=2.2,
+                  azimut_deg=-111.8, cote="droite", atteignable=True)
+ELEPHANT = Objet(id="carte/elephant", nom="elephant", x=8.6, y=-1.4, distance_m=5.6, azimut_deg=-165.5,
+                 cote="derriere", atteignable=True)
+NEFS = Objet(id="carte/nefs", nom="nefs", x=4.0, y=2.0, distance_m=10.2, azimut_deg=168.7, cote="derriere")
+BANC = Objet(id="carte/banc", nom="banc", desc="banc en bois", x=36.2, y=2.5, distance_m=22.3, azimut_deg=6.4,
+             cote="devant", tour=True)
+X14 = Tableau((CARROUSEL, TABLE, ELEPHANT, POSTER, NEFS, POUBELLE, BANC))
 
 
-def test_ligne_d_objets_dit_les_tours_possibles():
-    # 15/11 (« fais le tour de l'éléphant », collé à la Loire, refusé) : le LLM
-    # apprend QUELS objets acceptent un tour.
-    assert personas.objects_prompt([("anneaux", ""), ("elephant", "statue"), ("poubelle_tri", "")],
-                                   ["anneaux", "poubelle_tri"]) == (
-        "Objets que tu peux aller voir : anneaux, elephant (statue), poubelle_tri. "
-        "Objets dont tu peux faire le tour : anneaux, poubelle_tri. "
-        # 16/11 (épreuve CONV) : les objets SANS tour sont nommés, avec la conduite à tenir.
-        "Tu ne peux PAS faire le tour de : elephant (eau, mur ou obstacle tout près) : si on te le "
-        "demande, dis en personnage que c'est impossible, n'annonce jamais ce tour et n'ajoute pas la clé.")
+def test_entourage_seance_15_11_texte_grave():
+    assert personas.entourage_prompt(X14) == (
+        "Ce que tu vois devant toi : table_basse (table très basse) à 4 m, un peu à gauche; "
+        "poster_bizarre à 9 m, un peu à droite; poubelle_tri à 13 m, un peu à gauche, trop loin pour y aller. "
+        "Autour de toi, hors de ta vue : carrousel (manège) à 2 m sur ta droite; elephant à 6 m derrière toi. "
+        "Tu peux faire le tour de : table_basse, poster_bizarre. "
+        "Tu ne peux PAS faire le tour de : carrousel, elephant (eau, mur ou obstacle tout près) : si on te le "
+        "demande, dis en personnage que c'est impossible, n'annonce jamais ce tour et n'ajoute pas la clé. "
+        "Plus loin, tu ne les vois pas d'ici : nefs (à 10 m derrière toi); banc (à 22 m devant toi).")
+    # Le banc n'est JAMAIS dit « là » : seulement dans le résumé lointain.
+    assert "banc (banc en bois)" not in personas.entourage_prompt(X14)
 
 
-def test_ligne_des_tours_plafonnee_sans_couper_un_nom():
-    tours = [f"objet{i:02d}" for i in range(40)]
-    ligne = personas.objects_prompt([("a", "")], tours)
-    phrase = ligne.split(". ", 1)[1]
-    # Plafond GRAVÉ : 600 caractères ; 36 (préfixe) + n × 7 + (n-1) × 2 + 1 ≤ 600 -> n = 62 > 40 : tout passe.
-    assert phrase.count("objet") == 40 and phrase.endswith("objet39. Tu ne peux PAS faire le tour de : a"
-                                                           " (eau, mur ou obstacle tout près) : si on te le demande,"
-                                                           " dis en personnage que c'est impossible, n'annonce jamais"
-                                                           " ce tour et n'ajoute pas la clé.")
-    longs = [f"{'n' * 38}{i:02d}" for i in range(40)]
-    phrase = personas.objects_prompt([("a", "")], longs).split(". ", 1)[1].split(" Tu ne peux PAS", 1)[0]
-    # 36 + n × 40 + (n-1) × 2 + 1 ≤ 600 -> n = 13, noms ENTIERS.
-    assert len(phrase) <= 600 and phrase.count("n" * 38) == 13 and phrase.endswith("12.")
+def test_entourage_droit_devant_et_moins_d_un_metre():
+    o = Objet(id="a", nom="plot", distance_m=0.6, azimut_deg=-4.9, cote="devant", en_vue=True, atteignable=True)
+    assert personas.entourage_prompt(Tableau((o,))) == (
+        "Ce que tu vois devant toi : plot à moins d'un mètre, droit devant. "
+        "Tu ne peux PAS faire le tour de : plot" + personas.TOURS_REFUS)
 
 
-def test_ligne_d_objets_desc_egale_au_nom_omise():
-    # Le régisseur met desc = nom par défaut : « flaque (flaque) » n'apprend rien.
-    assert personas.objects_prompt([("Flaque", "flaque")]) == (
-        "Objets que tu peux aller voir : Flaque. Tu ne peux faire le tour d'aucun objet : si on te le "
-        "demande, dis en personnage que c'est impossible, n'annonce jamais ce tour et n'ajoute pas la clé.")
+def test_entourage_vide_ou_rien_autour():
+    assert personas.entourage_prompt(Tableau()) == "" and personas.entourage_prompt(None) == ""
+    assert personas.entourage_prompt(Tableau((BANC,))) == (
+        "Aucun objet autour de toi en ce moment. Plus loin, tu ne les vois pas d'ici : banc (à 22 m devant toi).")
 
 
-def test_ligne_d_objets_vide_sans_objet():
-    assert personas.objects_prompt([]) == ""
-
-
-def test_ligne_d_objets_plafonnee_sans_couper_un_nom():
-    objets = [(f"objet{i:02d}", "d" * 50) for i in range(40)]
-    ligne = personas.objects_prompt(objets)
-    # Plafond GRAVÉ : 1200 caractères, point final compris.
-    objets_seuls = ligne.split(". Tu ne peux faire", 1)[0] + "."
-    assert len(objets_seuls) <= 1200
-    assert objets_seuls.endswith(")."), objets_seuls[-20:]   # dernier objet ENTIER, puis le point
-    # 32 (préfixe) + n × 60 (« objetNN (d×50) ») + (n-1) × 2 + 1 ≤ 1200 -> n = 18.
-    assert objets_seuls.count("objet") == 18
+def test_entourage_plafonne_sans_couper_un_nom():
+    # 40 objets en vue aux noms longs : plafond tenu, chaque nom cité ENTIER.
+    vus = tuple(Objet(id=f"v{i}", nom=f"objet_au_nom_tres_long_numero_{i:02d}", desc="x" * 50,
+                      distance_m=1.0 + i / 10, azimut_deg=0.0, cote="devant", en_vue=True, atteignable=True,
+                      tour=True) for i in range(40))
+    loin = tuple(Objet(id=f"l{i}", nom=f"lointain_{i:02d}", distance_m=30.0 + i, azimut_deg=0.0, cote="devant")
+                 for i in range(20))
+    texte = personas.entourage_prompt(Tableau(vus + loin))
+    assert len(texte) <= personas.ENTOURAGE_MAX_CHARS == 900
+    cites = re.findall(r"objet_au_nom_tres_long_numero_\d*", texte) + re.findall(r"lointain_\d*", texte)
+    assert len(cites) >= 4 and all(re.fullmatch(r"\D+_\d\d", c) for c in cites)
+    assert texte.endswith(".")
+    assert (personas.ENTOURAGE_VUE_MAX, personas.ENTOURAGE_AUTOUR_MAX, personas.ENTOURAGE_LOIN_MAX) == (6, 4, 6)
 
 
 # --- Gestes chiffrés (lot M2, 31/10, spec-aller-voir.md §7) ---
@@ -267,11 +278,11 @@ def test_mouvement_liste_toutes_les_cles_a_ne_pas_ajouter():
 def test_mouvement_apprend_la_cle_faire_le_tour():
     template = personas.MOVE_TEMPLATE
     # 15/11 : seulement les objets de la liste des tours possibles.
-    assert ('- "faire_le_tour": "<nom exact de la liste des objets dont tu peux faire le tour>" '
+    assert ('- "faire_le_tour": "<nom exact d\'un objet dont tu peux faire le tour>" '
             '(+ "sens": "gauche" ou "droite" si on te le précise) : faire le tour complet de cet '
             'objet puis t\'arrêter face à lui') in template
-    assert ("Un objet qui n'est pas dans cette liste-là, tu ne peux pas en faire le tour (eau, mur "
-            "ou obstacle tout près) : dis-le en personnage, sans la clé.") in template
+    assert ("Un objet dont on ne te dit pas que tu peux faire le tour : tu ne peux pas (eau, mur ou "
+            "obstacle tout près), dis-le en personnage, sans la clé.") in template
     assert ("- Quand on te dit qu'un geste n'a PAS eu lieu, tu n'as pas bougé : dis-le en personnage, "
             "ne prétends jamais l'avoir fait.") in template
     assert ('« fais le tour des poubelles » -> {"emotion": "happy", '
@@ -301,8 +312,8 @@ def test_mouvement_gestes_a_la_mesure_de_la_demande():
     # Constat de séance (01/11) : « fais le tour complet » -> avancer 2 m,
     # « avance » -> 1 m. Consignes GRAVÉES.
     template = personas.MOVE_TEMPLATE
-    assert ('Choisis des gestes À LA MESURE de la demande : pour aller vers un objet de la '
-            'liste ou en faire le tour, utilise "aller_voir" ou "faire_le_tour" (un seul '
+    assert ('Choisis des gestes À LA MESURE de la demande : pour aller vers un objet '
+            'ou en faire le tour, utilise "aller_voir" ou "faire_le_tour" (un seul '
             'geste qui va jusqu\'au bout), jamais une suite de petits pas.') in template
     assert ('« avance » -> {"emotion": "happy", "avancer": 3} ; « avance un peu » -> 1 ; '
             '« avance encore » ou « continue » -> 3 à 5') in template
@@ -316,13 +327,3 @@ def test_aucune_expression_toute_faite():
         assert "fétiche" not in prompt.replace("pas de formule fétiche", "")
         assert "bon sang de boulon" not in prompt
         assert "Aucune expression toute faite" in prompt
-
-
-def test_objets_proches_phrase_gravee():
-    # Scène du 15/11 21:29 : Didier vers x ≈ 14 (le banc est à 22 m, absent d'ici).
-    assert personas.near_prompt([("carrousel", 2.2, "droite"), ("table_basse", 4.0, "devant"),
-                                 ("elephant", 5.6, "derriere"), ("nefs", 0.4, "gauche")]) == (
-        "Autour de toi en ce moment : carrousel à 2 m sur ta droite, table_basse à 4 m devant toi, "
-        "elephant à 6 m derrière toi, nefs à moins d'un mètre sur ta gauche. Un objet de ta liste qui "
-        "n'est pas ici est loin : ce n'est pas lui que tu vois devant toi.")
-    assert personas.near_prompt([]) == ""

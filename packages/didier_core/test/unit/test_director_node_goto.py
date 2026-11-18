@@ -16,6 +16,8 @@ import types
 
 import pytest
 
+from theatre_contrats.objets import Objet, Tableau, encoder
+
 from test.unit.test_director_node import (BATTERIE, LUBIE, _cmd, _creer, _echos, _etat_route,
                                                  _fader, _journal, _poi, _publie, _recevoir, _tick_a,
                                                  _voix, regisseur)  # noqa: F401 (fixture)
@@ -31,10 +33,29 @@ def _odom(noeud, x, y, t=None):
     callback(types.SimpleNamespace(pose=types.SimpleNamespace(pose=pose)))
 
 
+def _tableau(noeud):
+    """Le tableau des objets (lot O1) tel que l'écrirait didier_perception pour la carte du
+    régisseur (ids « carte/<poi> », position = ancre ici : aucun fichier de tours), publié."""
+    objets_ = [Objet(id="carte/" + p.name, nom=p.name, alias=tuple(p.alias), x=p.x, y=p.y)
+               for p in noeud._pois]
+    _recevoir(noeud, "scene/objets", encoder(objets_, None, 0))
+    return Tableau(tuple(objets_))
+
+
+def _intention(noeud, cmd, objet, **extra):
+    """Geste vers un objet NOMMÉ, résolu dans le tableau comme le fait la bouche : l'id est
+    joint s'il est trouvé (un nom inconnu part sans id, la régie le refuse « unknown »)."""
+    r = _tableau(noeud).resoudre(objet)
+    intent = {"cmd": cmd, "objet": objet, **extra}
+    if r.objet is not None:
+        intent["id"] = r.objet.id
+    return intent
+
+
 def _aller_voir(noeud, objet, t=None):
     if t is not None:
         noeud.horloge.t = t
-    _recevoir(noeud, "rehearsal/chat_move", json.dumps({"cmd": "aller_voir", "objet": objet}))
+    _recevoir(noeud, "rehearsal/chat_move", json.dumps(_intention(noeud, "aller_voir", objet)))
 
 
 def _aller_voirs(noeud):
@@ -67,7 +88,9 @@ def test_accepte_hors_seance_et_ordonne(regisseur, monkeypatch, tmp_path):
     _etat_route(n, "off", cause="boot")
     _odom(n, 1.0, 0.0)
     _aller_voir(n, "Le Banc")
-    assert _aller_voirs(n) == [{"objet": "Le Banc", "effect": "accepted", "name": "banc", "distance": 4.0}]
+    # O1 : l'id du tableau est journalisé (une seule vérité, épreuve 4 de l'étude objets).
+    assert _aller_voirs(n) == [{"objet": "Le Banc", "id": "carte/banc", "effect": "accepted", "name": "banc",
+                                "distance": 4.0}]
     assert _ordres(n) == [ORDRE_BANC]
     assert "geometry_msgs" not in str(type(n.publishers["route_goto"]))   # jamais de Twist ici
 
@@ -87,7 +110,8 @@ def test_reponse_acceptee_publiee(regisseur, monkeypatch, tmp_path):
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
     _odom(n, 1.0, 0.0)
     _aller_voir(n, "Le Banc")
-    assert _reponses(n) == [{"demande": {"cmd": "aller_voir", "objet": "Le Banc"}, "effect": "accepted",
+    assert _reponses(n) == [{"demande": {"cmd": "aller_voir", "objet": "Le Banc", "id": "carte/banc"},
+                             "effect": "accepted",
                              "reason": None, "name": "banc", "source": "director"}]
     assert n.qos_publieurs["rehearsal/chat_move_reply"] == 10          # VOLATILE : jamais rejouée
 
@@ -104,7 +128,7 @@ def test_refus_route_off_par_david_rien_ne_part(regisseur, monkeypatch, tmp_path
     _odom(n, 1.0, 0.0)
     _etat_route(n, "off", cause="cmd")              # David a coupé (son `off` raté par nous)
     _aller_voir(n, "banc")
-    assert _aller_voirs(n) == [{"objet": "banc", "effect": "route_off_by_david", "name": "banc"}]
+    assert _aller_voirs(n) == [{"objet": "banc", "id": "carte/banc", "effect": "route_off_by_david", "name": "banc"}]
     _recevoir(n, "route", "on"); _etat_route(n, "on")
     _recevoir(n, "route", "off")                    # `off` VU
     _aller_voir(n, "banc")
@@ -116,7 +140,8 @@ def test_refus_trop_loin(regisseur, monkeypatch, tmp_path):
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
     _odom(n, 45.5, 0.0)
     _aller_voir(n, "banc")
-    assert _aller_voirs(n) == [{"objet": "banc", "effect": "too_far", "name": "banc", "distance": 40.5}]
+    assert _aller_voirs(n) == [{"objet": "banc", "id": "carte/banc", "effect": "too_far", "name": "banc",
+                                "distance": 40.5}]
     assert _ordres(n) == []
 
 
@@ -237,7 +262,7 @@ def test_aller_voir_illisible_ne_tue_pas_le_node(regisseur, monkeypatch, tmp_pat
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
     _recevoir(n, "rehearsal/chat_move", json.dumps({"cmd": "aller_voir"}))
     _recevoir(n, "rehearsal/chat_move", json.dumps({"cmd": "danser"}))
-    assert _aller_voirs(n) == [{"objet": None, "effect": "unknown"}]
+    assert _aller_voirs(n) == [{"effect": "unknown"}]
     assert [p for t, p in _journal(n) if t == "voice_move"] == [
         {"cmd": {"cmd": "danser"}, "effect": "ignored", "reason": "invalide"}]
 

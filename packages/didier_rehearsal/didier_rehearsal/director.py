@@ -50,7 +50,7 @@ from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, 
                                        ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
                                        TURN_DEG_COMPAT, TURN_MAX_DEG)
 from didier_rehearsal.goto import forward_name, tour_name, turn_name
-from didier_rehearsal.route import Poi, Tour, normalize_name
+from didier_rehearsal.route import Tour
 from didier_rehearsal.scenario import Fault, Scenario
 
 
@@ -729,49 +729,60 @@ def move_reply(demande, effect: str, reason: str | None = None, name: str | None
                        "source": "director"}, ensure_ascii=False)
 
 
-def resolve_object(text, pois) -> Poi | None:
-    """Texte dit (ou nom renvoyé par la bouche) -> POI, par correspondance
-    NORMALISÉE exacte (normalize_name) sur le nom et les alias. load_route
-    garantit qu'une clé ne désigne qu'un POI. Rien de flou : un objet mal
-    compris est refusé (« unknown »), jamais deviné."""
-    key = normalize_name(text)
-    if not key:
-        return None
-    for p in pois:
-        if key == normalize_name(p.name) or any(key == normalize_name(a) for a in p.alias):
-            return p
-    return None
+# Préfixe des ids d'objets de CARTE dans le tableau des objets (didier_perception :
+# ObjetCarte.id = "carte/<nom du POI>") : la régie relie un id à SON POI (tours, lubie sautée).
+CARTE_ID_PREFIX = "carte/"
+
+
+def poi_name_of(objet) -> str | None:
+    """Nom du POI de la carte derrière un objet du tableau, ou None (objet vu par la caméra)."""
+    id_ = getattr(objet, "id", None)
+    return id_[len(CARTE_ID_PREFIX):] if isinstance(id_, str) and id_.startswith(CARTE_ID_PREFIX) else None
+
+
+def _target(intent, tableau):
+    """Objet du tableau visé par un geste, par son `id` SEULEMENT (lot O1, 18/11 : la régie ne
+    cherche plus de nom dans son YAML — le nom dit a été résolu UNE fois, dans le tableau, par
+    la bouche ou le sélecteur). None : id absent, inconnu, ou tableau pas encore reçu."""
+    id_ = intent.get("id") if isinstance(intent, dict) else None
+    return tableau.par_id(id_) if tableau is not None else None
 
 
 @dataclass(frozen=True)
 class GotoDecision:
-    effect: str                  # "accepted" | "unknown" | "route_off_by_david" | "no_pose" | "too_far"
-    poi: Poi | None = None
+    # "accepted" | "unknown" | "no_position" | "route_off_by_david" | "no_pose" | "too_far"
+    effect: str
+    objet: object | None = None   # theatre_contrats.objets.Objet
     distance: float | None = None
 
 
-def decide_goto(objet, *, pois, pose, off_by_david: bool) -> GotoDecision:
-    """Arbitrage d'un « aller voir » (spec §3), dans cet ordre : objet
-    inconnu -> « unknown » ; route OFF par David -> « route_off_by_david »
-    (jamais de mouvement contre lui) ; pas de pose fraîche -> « no_pose »
-    (on ne sait pas mesurer la distance : refus, jamais deviné) ; distance
-    pose -> objet > GOTO_MAX_DISTANCE_M -> « too_far ». `pose` : (x, y) ou None."""
-    poi = resolve_object(objet, pois)
-    if poi is None:
+def decide_goto(intent, *, tableau, pose, off_by_david: bool) -> GotoDecision:
+    """Arbitrage d'un « aller voir » (spec §3, lot O1), dans cet ordre : objet introuvable
+    dans le tableau par son id -> « unknown » ; sans position en repère monde (la pose de la
+    régie est la vérité terrain) -> « no_position » ; route OFF par David ->
+    « route_off_by_david » (jamais de mouvement contre lui) ; pas de pose fraîche -> « no_pose »
+    (jamais deviné) ; distance pose -> objet > GOTO_MAX_DISTANCE_M -> « too_far » (borne PROPRE
+    de la régie ; « atteignable », la borne de 10 m, est jugée par les lecteurs du tableau).
+    `pose` : (x, y) ou None."""
+    objet = _target(intent, tableau)
+    if objet is None:
         return GotoDecision("unknown")
+    if objet.x is None or objet.repere != "monde":
+        return GotoDecision("no_position", objet)
     if off_by_david:
-        return GotoDecision("route_off_by_david", poi)
+        return GotoDecision("route_off_by_david", objet)
     if pose is None:
-        return GotoDecision("no_pose", poi)
-    distance = math.hypot(poi.x - pose[0], poi.y - pose[1])
+        return GotoDecision("no_pose", objet)
+    distance = math.hypot(objet.x - pose[0], objet.y - pose[1])
     if distance > GOTO_MAX_DISTANCE_M:
-        return GotoDecision("too_far", poi, distance)
-    return GotoDecision("accepted", poi, distance)
+        return GotoDecision("too_far", objet, distance)
+    return GotoDecision("accepted", objet, distance)
 
 
-def goto_order(poi: Poi, standoff: float = GOTO_STANDOFF_M) -> str:
-    """Payload route_goto (spec §2.3), positions de l'itinéraire telles quelles."""
-    return json.dumps({"name": poi.name, "x": poi.x, "y": poi.y, "standoff": standoff})
+def goto_order(objet, standoff: float = GOTO_STANDOFF_M) -> str:
+    """Payload route_goto (spec §2.3) : la position du TABLEAU (centre de l'objet quand la
+    carte le connaît), nommée comme l'objet du tableau."""
+    return json.dumps({"name": objet.nom, "x": objet.x, "y": objet.y, "standoff": standoff})
 
 
 @dataclass(frozen=True)
@@ -840,42 +851,44 @@ def decide_forward(intent: dict, *, pose_known: bool, off_by_david: bool) -> Ges
 class TourDecision:
     # "accepted" | "unknown" | "no_tour" | "invalid" | "route_off_by_david" | "no_pose" | "too_far"
     effect: str
-    poi: Poi | None = None
+    objet: object | None = None   # theatre_contrats.objets.Objet
     reason: str | None = None     # invalid : "sens"
     name: str | None = None       # « tour de <poi> » — MÊME texte que route_driver (goto.tour_name)
     distance: float | None = None  # pose -> CENTRE du tour
     order: str | None = None      # payload route_goto, si accepté
+    poi: str | None = None        # nom du POI tourné (sa lubie est sautée)
 
 
-def decide_tour(intent: dict, *, pois, tours, pose, off_by_david: bool) -> TourDecision:
-    """« Faire le tour de X » (spec §8.2-§8.3), dans cet ordre : objet
-    inconnu -> « unknown » ; connu sans tour (absent du fichier généré) ->
-    « no_tour » ; sens autre que TOUR_SENS -> « invalid » (jamais deviné ;
-    absent = TOUR_SENS_DEFAUT) ; puis comme « aller voir » : route OFF par
-    David, pas de pose fraîche, centre du tour à plus de GOTO_MAX_DISTANCE_M.
-    `tours` : {nom de POI: Tour} ; `pose` : (x, y) ou None.
+def decide_tour(intent: dict, *, tableau, tours, pose, off_by_david: bool) -> TourDecision:
+    """« Faire le tour de X » (spec §8.2-§8.3, lot O1), dans cet ordre : objet introuvable dans
+    le tableau par son id -> « unknown » ; objet sans tour (objet vu, ou POI absent du fichier
+    généré) -> « no_tour » ; sens autre que TOUR_SENS -> « invalid » (jamais deviné ; absent =
+    TOUR_SENS_DEFAUT) ; puis comme « aller voir » : route OFF par David, pas de pose fraîche,
+    centre du tour à plus de GOTO_MAX_DISTANCE_M. `tours` : {nom de POI: Tour} (la géométrie
+    de l'orbite reste à la régie : objets de carte seulement, §6.5) ; `pose` : (x, y) ou None.
     Ordre : {"name", "orbit_x", "orbit_y", "orbit_r", "orbit_dir"}."""
-    poi = resolve_object(intent.get("objet"), pois)
-    if poi is None:
+    objet = _target(intent, tableau)
+    if objet is None:
         return TourDecision("unknown")
-    name = tour_name(poi.name)
-    tour: Tour | None = tours.get(poi.name)
+    poi = poi_name_of(objet)
+    name = tour_name(poi or objet.nom)
+    tour: Tour | None = tours.get(poi) if poi is not None else None
     if tour is None:
-        return TourDecision("no_tour", poi, name=name)
+        return TourDecision("no_tour", objet, name=name, poi=poi)
     sens = intent.get("sens", TOUR_SENS_DEFAUT)
     direction = TOUR_SENS.get(sens.strip().lower()) if isinstance(sens, str) else None
     if direction is None:
-        return TourDecision("invalid", poi, reason="sens", name=name)
+        return TourDecision("invalid", objet, reason="sens", name=name, poi=poi)
     if off_by_david:
-        return TourDecision("route_off_by_david", poi, name=name)
+        return TourDecision("route_off_by_david", objet, name=name, poi=poi)
     if pose is None:
-        return TourDecision("no_pose", poi, name=name)
+        return TourDecision("no_pose", objet, name=name, poi=poi)
     distance = math.hypot(tour.x - pose[0], tour.y - pose[1])
     if distance > GOTO_MAX_DISTANCE_M:
-        return TourDecision("too_far", poi, name=name, distance=distance)
+        return TourDecision("too_far", objet, name=name, distance=distance, poi=poi)
     order = json.dumps({"name": name, "orbit_x": tour.x, "orbit_y": tour.y, "orbit_r": tour.radius,
                         "orbit_dir": direction})
-    return TourDecision("accepted", poi, name=name, distance=distance, order=order)
+    return TourDecision("accepted", objet, name=name, distance=distance, order=order, poi=poi)
 
 
 class GotoPolicy:

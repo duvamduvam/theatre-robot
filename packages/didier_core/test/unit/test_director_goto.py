@@ -2,7 +2,7 @@
 spec-aller-voir.md §2.1, §3) — logique PURE, valeurs GRAVÉES.
 
 Mutations du lot M1 (doivent rougir) :
-  - resolve_object renvoie le premier POI -> test_resolution_normalisee
+  - (O1) cible prise par le nom au lieu de l'id -> test_cible_par_id_seulement
   - off_by_david toujours False -> test_refus_route_off_par_david
   - retirer le refus too_far -> test_refus_trop_loin
   - accept_goto rend la vitesse retenue sans min(…) -> test_accept_goto_jamais_au_dessus_de_la_batterie
@@ -10,7 +10,8 @@ Mutations du lot M1 (doivent rougir) :
 import json
 
 from didier_rehearsal.director import (GotoPolicy, VoiceMove, decide_goto, goto_order, move_reply,
-                                      objects_payload, resolve_object)
+                                      objects_payload, poi_name_of)
+from theatre_contrats.objets import Objet, Tableau
 from didier_rehearsal.route import Poi, Tour
 
 ANNEAUX = Poi("anneaux", 78.42, 4.19, 2.5, desc="bagues géantes",
@@ -51,43 +52,63 @@ def test_move_reply_payload_grave():
         "tour de banc")
 
 
-def test_resolution_normalisee():
-    assert resolve_object("les Anneaux de Buren", POIS) is ANNEAUX
-    assert resolve_object("des bagues", POIS) is ANNEAUX
-    assert resolve_object("la table basse", POIS) is TABLE
-    assert resolve_object("table_basse", POIS) is TABLE
-    assert resolve_object("anneau", POIS) is None          # rien de flou
-    assert resolve_object("", POIS) is None
-    assert resolve_object(None, POIS) is None
+def _tableau(*objets_):
+    return Tableau(tuple(objets_))
+
+
+# Objets du tableau (lot O1) : la régie ne lit QUE l'id et la position.
+O_ANNEAUX = Objet(id="carte/anneaux", nom="anneaux", x=78.42, y=4.19)
+O_TABLE = Objet(id="carte/table_basse", nom="table_basse", x=17.8, y=2.1)
+O_VU_ROBOT = Objet(id="vu/3", nom="vélo", sources=("vu",), repere="robot", x=4.0, y=1.0)
+O_SANS_POSITION = Objet(id="vu/4", nom="sac", sources=("vu",), repere="robot")
+TABLEAU = _tableau(O_TABLE, O_ANNEAUX, O_VU_ROBOT, O_SANS_POSITION)
+
+
+def _goto(id_, pose=(70.0, 0.0), off_by_david=False, tableau=TABLEAU, objet="peu importe"):
+    return decide_goto({"cmd": "aller_voir", "objet": objet, "id": id_}, tableau=tableau, pose=pose,
+                       off_by_david=off_by_david)
+
+
+def test_cible_par_id_seulement():
+    # O1 (18/11) : le nom dit ne compte plus ici, il a été résolu dans le tableau.
+    assert _goto("carte/anneaux", objet="la table").objet is O_ANNEAUX
+    assert _goto(None, objet="anneaux").effect == "unknown"
+    assert _goto("anneaux").effect == "unknown"            # un nom n'est pas un id
+    assert _goto("carte/anneaux", tableau=None).effect == "unknown"   # tableau jamais reçu
+    assert decide_goto("anneaux", tableau=TABLEAU, pose=(70.0, 0.0), off_by_david=False).effect == "unknown"
 
 
 def test_accepte_avec_distance():
-    d = decide_goto("bagues", pois=POIS, pose=(70.0, 0.0), off_by_david=False)
-    assert (d.effect, d.poi, round(d.distance, 3)) == ("accepted", ANNEAUX, 9.405)   # √(8,42² + 4,19²)
+    d = _goto("carte/anneaux")
+    assert (d.effect, d.objet, round(d.distance, 3)) == ("accepted", O_ANNEAUX, 9.405)   # √(8,42² + 4,19²)
 
 
-def test_refus_inconnu():
-    d = decide_goto("pigeon", pois=POIS, pose=(70.0, 0.0), off_by_david=False)
-    assert (d.effect, d.poi) == ("unknown", None)
+def test_refus_sans_position_monde():
+    assert (_goto("vu/3").effect, _goto("vu/4").effect) == ("no_position", "no_position")
 
 
 def test_refus_route_off_par_david():
-    d = decide_goto("anneaux", pois=POIS, pose=(70.0, 0.0), off_by_david=True)
-    assert (d.effect, d.poi) == ("route_off_by_david", ANNEAUX)
+    d = _goto("carte/anneaux", off_by_david=True)
+    assert (d.effect, d.objet) == ("route_off_by_david", O_ANNEAUX)
 
 
 def test_refus_trop_loin():
-    assert decide_goto("anneaux", pois=POIS, pose=(38.42, 4.19), off_by_david=False).effect == "accepted"  # 40 m pile
-    d = decide_goto("anneaux", pois=POIS, pose=(38.4, 4.19), off_by_david=False)
+    assert _goto("carte/anneaux", pose=(38.42, 4.19)).effect == "accepted"  # 40 m pile
+    d = _goto("carte/anneaux", pose=(38.4, 4.19))
     assert (d.effect, round(d.distance, 2)) == ("too_far", 40.02)
 
 
 def test_refus_sans_pose():
-    assert decide_goto("anneaux", pois=POIS, pose=None, off_by_david=False).effect == "no_pose"
+    assert _goto("carte/anneaux", pose=None).effect == "no_pose"
 
 
-def test_ordre_route_goto():
-    assert json.loads(goto_order(ANNEAUX)) == {"name": "anneaux", "x": 78.42, "y": 4.19, "standoff": 1.5}
+def test_ordre_route_goto_position_du_tableau():
+    # Position du TABLEAU (centre de la table, 2,1) et non l'ancre du POI (1,4).
+    assert json.loads(goto_order(O_TABLE)) == {"name": "table_basse", "x": 17.8, "y": 2.1, "standoff": 1.5}
+
+
+def test_poi_name_of():
+    assert (poi_name_of(O_TABLE), poi_name_of(O_VU_ROBOT), poi_name_of(None)) == ("table_basse", None, None)
 
 
 # --- arrêt vocal levé à l'acceptation ---------------------------------------------
