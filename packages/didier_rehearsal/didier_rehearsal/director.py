@@ -702,9 +702,20 @@ def objects_payload(pois, tours=()) -> str:
     POI a un tour dans `tours` (noms -> Tour, fichier généré) — chat_node le
     dit au LLM, qui ne propose plus un tour que le régisseur refuserait
     (« no_tour » : Didier annonçait le tour de l'éléphant, collé à la Loire).
-    Champs ADDITIFS : chat_node lit name/desc/tour (didier_vision/ai/stage)."""
-    return json.dumps([{"name": p.name, "desc": p.shown_desc, "x": p.x, "y": p.y, "tour": p.name in tours}
-                       for p in pois])
+    Lot O1 (18/11) : le SEUL lecteur est désormais l'écrivain du tableau des objets
+    (didier_perception, carte_depuis_payload), qui reçoit aussi `alias` (la résolution d'un nom
+    dit vit dans le tableau, theatre_contrats.objets.resoudre) et, pour un POI qui a un tour,
+    `cx`, `cy`, `rayon` = CENTRE et rayon de la géométrie de collision : l'ancre du banc est à
+    1,1 m de l'objet, « aller voir » doit viser l'objet (étude objets §4.1, épreuve 1)."""
+    out = []
+    for p in pois:
+        o = {"name": p.name, "desc": p.shown_desc, "alias": list(p.alias), "x": p.x, "y": p.y,
+             "tour": p.name in tours}
+        tour = tours.get(p.name) if isinstance(tours, dict) else None
+        if tour is not None:
+            o.update(cx=tour.x, cy=tour.y, rayon=tour.radius)
+        out.append(o)
+    return json.dumps(out, ensure_ascii=False)
 
 
 def move_reply(demande, effect: str, reason: str | None = None, name: str | None = None) -> str:

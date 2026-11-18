@@ -57,8 +57,9 @@ def test_vocabulaire_latche_au_demarrage(regisseur, monkeypatch, tmp_path):
     assert [json.loads(m) for m in _publie(n, "rehearsal/objects")] == [
         # x, y (ancre du POI) : ajoutés au lot A1 (sélecteur de jeu, regard vers l'objet).
         # tour (15/11) : aucun fichier de tours dans ce banc -> False partout.
-        [{"name": "banc", "desc": "banc", "x": 5.0, "y": 0.0, "tour": False},
-         {"name": "flaque", "desc": "flaque", "x": 12.0, "y": 0.0, "tour": False}]]
+        # alias (O1, 18/11) : lus par l'écrivain du tableau des objets.
+        [{"name": "banc", "desc": "banc", "alias": [], "x": 5.0, "y": 0.0, "tour": False},
+         {"name": "flaque", "desc": "flaque", "alias": [], "x": 12.0, "y": 0.0, "tour": False}]]
 
 
 def test_accepte_hors_seance_et_ordonne(regisseur, monkeypatch, tmp_path):

@@ -11,7 +11,7 @@ import json
 
 from didier_rehearsal.director import (GotoPolicy, VoiceMove, decide_goto, goto_order, move_reply,
                                       objects_payload, resolve_object)
-from didier_rehearsal.route import Poi
+from didier_rehearsal.route import Poi, Tour
 
 ANNEAUX = Poi("anneaux", 78.42, 4.19, 2.5, desc="bagues géantes",
               alias=("anneaux", "bagues", "anneaux de buren", "cercles"))
@@ -22,16 +22,22 @@ POIS = (TABLE, ANNEAUX)
 def test_objets_payload_ordre_itineraire_desc_ou_nom():
     # x, y (ancre du POI) : ajoutés au lot A1 (sélecteur de jeu, regard vers l'objet).
     # tour (15/11) : False sans tours fournis.
+    # alias (O1, 18/11) : la résolution d'un nom dit vit dans le tableau des objets.
     assert json.loads(objects_payload(POIS)) == [
-        {"name": "table_basse", "desc": "table_basse", "x": 17.8, "y": 1.4, "tour": False},
-        {"name": "anneaux", "desc": "bagues géantes", "x": 78.42, "y": 4.19, "tour": False}]
+        {"name": "table_basse", "desc": "table_basse", "alias": [], "x": 17.8, "y": 1.4, "tour": False},
+        {"name": "anneaux", "desc": "bagues géantes", "alias": ["anneaux", "bagues", "anneaux de buren", "cercles"],
+         "x": 78.42, "y": 4.19, "tour": False}]
     assert objects_payload(()) == "[]"
+    assert "géantes" in objects_payload(POIS)             # lisible (ensure_ascii=False)
 
 
 def test_objets_payload_marque_les_objets_qui_ont_un_tour():
     # 15/11 : le chat doit savoir quels objets acceptent « faire le tour ».
-    assert [(o["name"], o["tour"]) for o in json.loads(objects_payload(POIS, {"anneaux": object()}))] == [
-        ("table_basse", False), ("anneaux", True)]
+    # O1 (18/11) : + centre et rayon de la géométrie de collision (cible d'« aller voir »).
+    objets = json.loads(objects_payload(POIS, {"anneaux": Tour(79.0, 6.5, 2.2)}))
+    assert [(o["name"], o["tour"]) for o in objets] == [("table_basse", False), ("anneaux", True)]
+    assert "cx" not in objets[0]
+    assert (objets[1]["cx"], objets[1]["cy"], objets[1]["rayon"]) == (79.0, 6.5, 2.2)
 
 
 def test_move_reply_payload_grave():

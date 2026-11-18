@@ -61,6 +61,13 @@ JEU_JOURNAL = 'jeu/journal'
 # "droite"|"derriere"}] triés par distance (pose vérité terrain, SIM-ONLY).
 JEU_OBJETS_PROCHES = 'jeu/objets_proches'
 
+# ---------------------------------------------------------------- tableau des objets (lot O0)
+# StringTime LATCHÉ (qos.latched() des DEUX côtés), écrit par didier_perception/objets_node
+# (SEUL écrivain) : ce que Didier sait des objets en ce moment — forme et encodage dans
+# theatre_contrats/objets.py, étude docs/etudes/etude-objets-vus-et-carte.md §6. Lu par la
+# bouche, la réflexion, le sélecteur de jeu et la régie, qui désignent un objet par son `id`.
+SCENE_OBJETS = 'scene/objets'
+
 # ---------------------------------------------------------------- catalogue + version (lot L1c)
 # StringTime LATCHÉ (qos.latched() des DEUX côtés), publié par catalogue_node
 # (didier_web) : msg = JSON de l'objet des 6 familles {faces, audios, animations,
