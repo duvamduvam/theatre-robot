@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" font-family="system-ui, sans-serif" font-size="13">
+  <!-- Fixation d'un tube carbone sur la sortie d'un moteur d'articulation (principe, pas à l'échelle). -->
+  <defs>
+    <pattern id="hach" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#b8860b" stroke-width="2"/>
+    </pattern>
+    <marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333"/>
+    </marker>
+  </defs>
+  <rect width="900" height="540" fill="#fbfaf7"/>
+  <text x="20" y="30" font-size="18" font-weight="bold">Bras long : fixer le tube carbone sur un moteur (collier fendu)</text>
+  <text x="20" y="50" fill="#5b636b">Principe, pas à l'échelle. Vue de côté en coupe ; à droite en bas, vue en bout du collier.</text>
+
+  <!-- ===== VUE DE CÔTÉ ===== -->
+  <!-- Moteur -->
+  <rect x="40" y="140" width="120" height="160" rx="10" fill="#9aa4ad" stroke="#333"/>
+  <text x="100" y="215" text-anchor="middle" font-weight="bold">Moteur</text>
+  <text x="100" y="233" text-anchor="middle">(ex. DM-J4310)</text>
+  <!-- Bride de sortie -->
+  <rect x="160" y="160" width="20" height="120" fill="#6b7680" stroke="#333"/>
+  <!-- Plaque du collier (PETG) -->
+  <rect x="180" y="155" width="22" height="130" fill="#f2c94c" stroke="#333"/>
+  <!-- Manchon du collier autour du tube -->
+  <rect x="202" y="185" width="128" height="15" fill="#f2c94c" stroke="#333"/>
+  <rect x="202" y="240" width="128" height="15" fill="#f2c94c" stroke="#333"/>
+  <!-- Oreille de serrage (au-dessus du manchon) -->
+  <rect x="262" y="158" width="56" height="27" fill="#f2c94c" stroke="#333"/>
+  <circle cx="290" cy="171" r="7" fill="#555" stroke="#222"/>
+  <!-- Vis plaque -> bride (2) -->
+  <line x1="165" y1="168" x2="202" y2="168" stroke="#222" stroke-width="4"/>
+  <rect x="202" y="162" width="8" height="12" fill="#444"/>
+  <line x1="165" y1="272" x2="202" y2="272" stroke="#222" stroke-width="4"/>
+  <rect x="202" y="266" width="8" height="12" fill="#444"/>
+  <!-- Tube carbone -->
+  <rect x="210" y="200" width="650" height="40" fill="#2b2b2b" stroke="#000"/>
+  <!-- Bouchon intérieur (percé) -->
+  <rect x="212" y="204" width="106" height="32" fill="url(#hach)" stroke="#b8860b"/>
+  <!-- Passage câble / fils -->
+  <line x1="215" y1="220" x2="860" y2="220" stroke="#e0e0e0" stroke-width="2" stroke-dasharray="8 5"/>
+  <!-- Goupille anti-rotation -->
+  <line x1="240" y1="178" x2="240" y2="262" stroke="#c0392b" stroke-width="4"/>
+  <!-- Cote d'emboîtement -->
+  <line x1="210" y1="320" x2="330" y2="320" stroke="#333" marker-start="url(#fl)" marker-end="url(#fl)"/>
+  <text x="270" y="338" text-anchor="middle">emboîtement ≥ 1,5 × Ø tube</text>
+
+  <!-- Étiquettes vue de côté -->
+  <line x1="170" y1="160" x2="150" y2="110" stroke="#333"/>
+  <text x="60" y="104">bride de sortie du moteur</text>
+  <line x1="191" y1="155" x2="215" y2="88" stroke="#333"/>
+  <text x="200" y="82">plaque du collier (PETG, inserts filetés à chaud)</text>
+  <line x1="290" y1="160" x2="420" y2="118" stroke="#333"/>
+  <text x="425" y="122">vis de serrage du collier fendu (M3/M4)</text>
+  <line x1="240" y1="178" x2="420" y2="148" stroke="#c0392b"/>
+  <text x="425" y="152" fill="#c0392b">goupille anti-rotation (petit trou, loin du bout)</text>
+  <line x1="300" y1="230" x2="420" y2="282" stroke="#b8860b"/>
+  <text x="425" y="286" fill="#8a6508">bouchon intérieur : le tube ne s'écrase pas au serrage</text>
+  <line x1="600" y1="220" x2="620" y2="182" stroke="#333"/>
+  <text x="560" y="176">câble Dyneema du coude / fils gainés, DANS le tube</text>
+  <text x="700" y="262" fill="#5b636b">tube carbone (conducteur !)</text>
+
+  <!-- ===== VUE EN BOUT ===== -->
+  <g transform="translate(60,0)">
+    <text x="560" y="372" font-weight="bold">Vue en bout du collier</text>
+    <!-- oreilles -->
+    <rect x="566" y="390" width="24" height="36" fill="#f2c94c" stroke="#333"/>
+    <rect x="600" y="390" width="24" height="36" fill="#f2c94c" stroke="#333"/>
+    <!-- manchon -->
+    <circle cx="595" cy="462" r="48" fill="#f2c94c" stroke="#333"/>
+    <!-- fente -->
+    <rect x="590" y="388" width="10" height="44" fill="#fbfaf7"/>
+    <!-- tube -->
+    <circle cx="595" cy="462" r="33" fill="#2b2b2b"/>
+    <!-- bouchon -->
+    <circle cx="595" cy="462" r="27" fill="url(#hach)" stroke="#b8860b"/>
+    <circle cx="595" cy="462" r="7" fill="#fbfaf7" stroke="#b8860b"/>
+    <!-- vis de serrage traversant les oreilles -->
+    <line x1="552" y1="406" x2="636" y2="406" stroke="#222" stroke-width="4"/>
+    <rect x="544" y="398" width="10" height="16" fill="#444"/>
+    <text x="645" y="410">la vis referme la fente</text>
+    <text x="645" y="466">fente ≈ 1 mm</text>
+    <text x="645" y="484">bouchon percé au centre</text>
+  </g>
+
+  <!-- Encadré conseils -->
+  <rect x="20" y="370" width="450" height="150" fill="#fff" stroke="#e3e0d8"/>
+  <text x="34" y="394" font-weight="bold">À retenir</text>
+  <text x="34" y="416">• Maquette : collier imprimé, démontable, longueur réglable.</text>
+  <text x="34" y="436">• Serrer modérément ; rondelles métal ; le PETG flue.</text>
+  <text x="34" y="456">• Version finale : embout collé époxy (tube poncé,</text>
+  <text x="46" y="474">jeu 0,1-0,2 mm, embout rainuré si imprimé).</text>
+  <text x="34" y="494">• Épaule (la plus chargée) : passer en alu à terme.</text>
+  <text x="34" y="512">• Ébavurer les coupes, gainer tout fil près du carbone.</text>
+</svg>
