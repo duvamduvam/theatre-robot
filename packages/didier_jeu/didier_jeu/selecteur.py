@@ -39,6 +39,14 @@ RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.
   par un nouveau geste, un stop (bouche ou console), une Route OFF de David ;
   le « go » dit par la bouche (« en route ») est relayé tout de suite, comme
   le stop (sans score : sinon il mourait au réfractaire de 10 s) ;
+- « regarde ça » = PAUSE de la bouche (lot « texte raccord », séance du 18/11
+  21:35 : « il y a une lettre sur le banc, tu pourrais regarder » finissait en
+  « aller voir » d'un banc à 20 m, refusé, et le corps continuait sa route) :
+  Didier en marche -> « stop » relayé tout de suite, SANS verrou, puis « go »
+  après reprise.apres_regard_s (6 s ; le regard, 4 s, part de la bouche), par la
+  même reprise que les gestes (mêmes annulations, parole comprise sans effet) ;
+  déjà arrêté (verrou, arrêt de Didier) ou pas en route : rien ne bouge, jamais
+  de « go » qu'il n'aurait pas eu sans elle ;
 - reprise : après un arrêt de DIDIER (lubie, approche), « repartir ? » puis « go » de lui-même
   après reprise.delai_s de SILENCE (décision de David, 02/11 : toute parole
   entendue — chat_transcript rôle david — remet le compteur à zéro ; jamais
@@ -70,7 +78,7 @@ from didier_jeu.phrases import n as num
 from didier_jeu.offres import Offre, Offres
 from didier_jeu.pistes import Pistes
 from didier_jeu.pulsions import Pulsions
-from didier_jeu.relais import GO, STOP, Verrou, reponse_bouche
+from didier_jeu.relais import GO, PAUSE, STOP, Verrou, reponse_bouche
 from didier_jeu.repertoire import COMMANDES_REGISSEUR, commande
 from didier_jeu.scores import ARRET_DIDIER, CATEGORIES, DEPLACEMENTS, RIEN, Candidat, Contexte, classer
 
@@ -238,6 +246,9 @@ class Selecteur:
             # le stop — refusé si David a posé le verrou (relayer_go).
             self.reprise_geste = None
             self.relayer_go("bouche", now)
+            return
+        if valeur == PAUSE:
+            self.pause_regard(now)
             return
         if isinstance(valeur, dict) and self._hors_atteinte(valeur, now):
             return
@@ -443,6 +454,31 @@ class Selecteur:
         self._journal("relais_stop", f"{phrases.qui(source)} « stop » → il s'arrête tout de suite, jusqu'au go",
                       source=source)
         self.pourquoi_courant = f"{phrases.qui(source)} « stop » : arrêté jusqu'au go"
+        self._publier_intention(now)
+
+    def pause_regard(self, now: float) -> None:
+        """« Regarde ça » de la bouche (cf. docstring de module) : en marche, « stop » relayé
+        tout de suite SANS verrou (ce n'est pas un ordre d'arrêt : il repartira seul), puis
+        reprise armée à reprise.apres_regard_s. Le stop de la pause n'est pas un arrêt « de
+        Didier » (réfractaire 120 s) : il vient d'un humain, comme un geste de la bouche."""
+        attente = self.r.get("reprise.apres_regard_s")
+        if self.verrou_stop or self.arret_didier is not None:
+            self._journal("pause_regard", "« regarde » : il est déjà arrêté → il regarde sans repartir "
+                          "de lui-même", arrete=True)
+            return
+        if self.route_state not in ("on", "goto"):
+            self._journal("pause_regard", f"« regarde » : il n'est pas en route ({self.route_state or 'inconnu'})"
+                          " → il regarde sur place", arrete=True)
+            return
+        self.sorties.append(("chat_move", STOP))
+        self.ordre = None
+        e = self.en_cours
+        if e is not None and (e.candidat.deplacement or e.candidat.action == "lubie"):
+            self._annuler(now, "« regarde » : il s'arrête pour regarder")
+        self.reprise_geste = {"t": now, "pourquoi": "regard terminé", "delai": attente, "pause": True}
+        self._journal("pause_regard", f"« regarde » → il s'arrête et regarde, il repartira seul dans "
+                      f"{attente:g} s", arrete=False, delai_s=attente)
+        self.pourquoi_courant = f"il s'arrête pour regarder ; il repart dans {attente:g} s"
         self._publier_intention(now)
 
     def relayer_go(self, source: str, now: float) -> None:
@@ -663,16 +699,21 @@ class Selecteur:
         rep = self.reprise_geste
         if rep is None:
             return
-        if self.route_state in ("on", "goto") or self.verrou_stop:
-            # Déjà en route (geste refusé sans quitter la route), ou arrêt posé
-            # (ceinture : le stop désarme déjà, cf. relayer_stop).
+        pause = bool(rep.get("pause"))
+        if self.verrou_stop or (pause and self.arret_didier is not None) or (
+                self.route_state in ("on", "goto") and not pause):
+            # Déjà en route (geste refusé sans quitter la route), arrêt posé
+            # (ceinture : le stop désarme déjà, cf. relayer_stop) ; pour une
+            # PAUSE, un arrêt de Didier (lubie) qui a pris la main entre-temps.
+            # Une pause garde route_state « on » (le régisseur la tient par
+            # route_speed 0) : ce n'est pas « en route ».
             self.reprise_geste = None
             return
         if (self.en_cours is not None and self.en_cours.candidat.deplacement) or self.bouche_en_attente:
             return                             # un nouveau geste part : il l'emporte
         if self.superviseur_absent():
             return
-        delai = self.r.get("reprise.apres_geste_s")
+        delai = rep.get("delai", self.r.get("reprise.apres_geste_s"))
         if now - rep["t"] < delai - EPS:
             return
         self.reprise_geste = None

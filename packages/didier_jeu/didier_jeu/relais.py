@@ -13,9 +13,12 @@ demande de GESTE de la bouche y est refusée ET le chat le sait (réponse
 « dropped », code « degrade » : Didier ne doit jamais affirmer un geste
 qui n'a pas eu lieu).
 """
-from didier_rehearsal.contracts import CHAT_MOVE_REPLY_JEU_REASONS, CHAT_MOVE_REPLY_NO_REPLY
+from didier_rehearsal.contracts import CHAT_MOVE_PAUSE, CHAT_MOVE_REPLY_JEU_REASONS, CHAT_MOVE_REPLY_NO_REPLY
 
 STOP, GO = "stop", "go"
+# « Regarde ça » de la bouche (lot « texte raccord », 18/11) : arrêt bref puis reprise par le
+# sélecteur ; en mode dégradé, un simple stop (sens sûr : aucune reprise automatique).
+PAUSE = CHAT_MOVE_PAUSE
 
 
 def reponse_bouche(demande, effet: str, code, distance_m=None, cote=None) -> dict:
@@ -71,6 +74,8 @@ class RelaisSeul:
         self.sorties.append(("journal", type_, payload))
 
     def _relayer(self, valeur, source):
+        if valeur == PAUSE:
+            valeur = STOP      # mode dégradé : la pause est un stop, sans reprise
         if valeur == STOP:
             self.verrou.poser(source)
             self.sorties.append(("chat_move", STOP))
