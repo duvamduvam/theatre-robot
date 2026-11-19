@@ -23,9 +23,10 @@ from __future__ import annotations
 
 import math
 import os
-import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
+
+from theatre_contrats.objets import ARTICLES, normaliser_nom
 
 from didier_rehearsal.contracts import (ABS_MAX_ANG, ABS_MAX_LIN, POI_EXIT_FACTOR, TOUR_MAX_RADIUS_M,
                                        TOUR_MIN_RADIUS_M)
@@ -64,25 +65,12 @@ class Poi:
 # chat_node pour CHAQUE objet, trente fois — une phrase longue le noierait.
 DESC_MAX_WORDS = 6
 
-# Articles retirés EN TÊTE par normalize_name (« les anneaux », « la flaque »,
-# « l'eau », « de la flaque ») — jamais au milieu (« anneaux de buren »).
-_ARTICLES = frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "au", "aux"))
-
-
-def normalize_name(text: str) -> str:
-    """Clé de correspondance d'un objet nommé (spec §3) : minuscules, sans
-    accents, ponctuation et `_` en espaces, articles de tête retirés.
-    « Les Anneaux ! » -> "anneaux" ; "table_basse" -> "table basse" ;
-    « l'eau » -> "eau". Non-chaîne -> "" (jamais d'exception : le payload
-    vient d'un LLM)."""
-    if not isinstance(text, str):
-        return ""
-    decomposed = unicodedata.normalize("NFKD", text.lower())
-    plain = "".join(c for c in decomposed if not unicodedata.combining(c))
-    words = "".join(c if c.isalnum() else " " for c in plain).split()
-    while words and words[0] in _ARTICLES:
-        words.pop(0)
-    return " ".join(words)
+# Clé de correspondance d'un objet nommé (spec §3) : minuscules, sans accents, ponctuation et
+# `_` en espaces, articles de tête retirés (« Les Anneaux ! » -> "anneaux"). LA clé du dépôt
+# depuis le lot O0 (18/11) : theatre_contrats.objets.normaliser_nom (ici une copie gravée des
+# deux côtés avec la bouche, avant). Gardée pour le chargement : un mot ne désigne qu'UN POI.
+_ARTICLES = ARTICLES
+normalize_name = normaliser_nom
 
 
 @dataclass(frozen=True)

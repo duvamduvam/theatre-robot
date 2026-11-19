@@ -215,7 +215,9 @@ from typing import Callable, Optional, Union
 from didier_vision.ai import performance
 from didier_vision.ai.emergency import is_emergency_stop, normalized_words, stop_words_in
 from didier_vision.ai.move_task import MoveTask
-from didier_vision.ai.stage import ROLE_DAVID, ROLE_DIDIER, StageState, garble_text, normalize_object_name
+from theatre_contrats import objets
+
+from didier_vision.ai.stage import ROLE_DAVID, ROLE_DIDIER, StageState, garble_text
 from didier_vision.ai.stream_parser import Didascalie, Emotion, Sentence, StreamPerformanceParser
 
 # Logger stdlib (PAS le logger rclpy : ce module reste sans dépendance ROS,
@@ -697,9 +699,10 @@ class ConversationEngine:
         # _apply_fault_and_reply ; continuation : _serve_continuation ;
         # spontané : _serve_prompt) et lu par _note_gesture.
         self._move_task = move_task
-        # Vocabulaire du régisseur pour la GARDE des gestes (15/11 21:21, cf.
-        # set_gesture_vocabulary) : None = inconnu, aucune garde.
-        self._gesture_vocab = None
+        # Tableau des objets pour la GARDE des gestes (15/11 21:21 ; tableau depuis le lot
+        # O1, cf. set_objets) : None = garde NON BRANCHÉE (moteur sans tableau : tests, outils).
+        # chat_node la branche sur le tableau VIDE dès le démarrage (jamais reçu = muet).
+        self._tableau = None
         self._turn_request: Optional[str] = None
         self._turn_continuation = False
         self._turn_gesture = False
@@ -958,14 +961,13 @@ class ConversationEngine:
                 return
             refusal = self._local_refusal(intent)
             if refusal is not None:
-                # Jamais publié (cf. set_gesture_vocabulary) : noté comme geste
-                # de la tâche PUIS refusé — la fin ÉCHOUÉE est dite en personnage.
-                logger.warning("Clé \"%s\" : %r non publié : %s (hors du vocabulaire "
-                               "du régisseur).", key, value, refusal)
+                # Jamais publié (cf. set_objets) : noté comme geste de la tâche PUIS
+                # refusé — la fin ÉCHOUÉE est dite en personnage.
+                logger.warning("Clé \"%s\" : %r non publié : %s (tableau des objets).", key, value,
+                               refusal.get("reason") or refusal["effect"])
                 self._note_gesture(intent)
                 if self._move_task is not None:
-                    self._move_task.on_reply({"demande": intent, "effect": refusal, "reason": None,
-                                              "name": None, "source": "chat"}, time.monotonic())
+                    self._move_task.on_reply(refusal, time.monotonic())
                 return
             if self._emit_start(intent, f"Clé \"{key}\" : {value!r}"):
                 self._note_gesture(intent)
@@ -978,31 +980,37 @@ class ConversationEngine:
             return
         self._emit_start("go", "Clé \"marche\" : go")
 
-    def set_gesture_vocabulary(self, objects, tours) -> None:
-        """Objets connus et objets dont on peut faire le tour (rehearsal/objects,
-        appelé par chat_node depuis le thread rclpy). GARDE DÉTERMINISTE (séance
-        du 15/11 21:21 : Haiku a demandé le tour de l'éléphant malgré le prompt) :
-        un "faire_le_tour" hors des tours, ou un "aller_voir" hors des objets,
-        n'est JAMAIS publié — il devient tout de suite une fin de geste ÉCHOUÉE
-        (MoveTask). Affectation d'un tuple immuable : atomique pour le lecteur."""
-        self._gesture_vocab = (frozenset(normalize_object_name(n) for n in objects),
-                               frozenset(normalize_object_name(n) for n in tours))
+    def set_objets(self, tableau) -> None:
+        """Tableau des objets (theatre_contrats.objets.Tableau, scene/objets ; appelé par
+        chat_node depuis le thread rclpy). GARDE DÉTERMINISTE (séance du 15/11 21:21 : Haiku a
+        demandé le tour de l'éléphant malgré le prompt ; lot O1 : sur le tableau) : un geste
+        vers un objet inconnu, pas ici, hors d'atteinte ou sans tour n'est JAMAIS publié — il
+        devient tout de suite une fin de geste ÉCHOUÉE (MoveTask). None = garde non branchée
+        (aucune garde : moteur de test) ; chat_node passe VIDE tant que rien n'est reçu ou que
+        le flux est muet — tout geste vers un objet est alors refusé « unknown »,
+        jamais publié sans id.
+        Affectation d'un objet immuable : atomique pour le lecteur."""
+        self._tableau = tableau
 
-    def _local_refusal(self, intent: dict) -> Optional[str]:
-        """Effet de refus (contrat du régisseur) si le geste est hors du
-        vocabulaire, sinon None. Sans vocabulaire reçu : None (le régisseur juge)."""
-        vocab = self._gesture_vocab
-        if vocab is None:
+    def _local_refusal(self, intent: dict) -> Optional[dict]:
+        """Réponse de refus (contrat rehearsal/chat_move_reply, source « chat ») si le geste
+        vise un objet que le tableau ne permet pas, sinon None — et alors l'`id` de l'objet
+        RÉSOLU est joint au geste (la régie et le sélecteur ne connaissent que lui). Règle de
+        résolution UNIQUE : theatre_contrats.objets.resoudre. Garde non branchée : None."""
+        tableau = self._tableau
+        if tableau is None or intent.get("cmd") not in objets.GESTES_VERS_UN_OBJET:
             return None
-        objects, tours = vocab
-        key = normalize_object_name(intent.get("objet"))
-        if intent.get("cmd") == "tour_de":
-            if key in tours:
-                return None
-            return "no_tour" if key in objects else "unknown"
-        if intent.get("cmd") == "aller_voir" and key not in objects:
-            return "unknown"
-        return None
+        # LA garde est dans le contrat (objets.garde_geste) : l'épreuve sim validate-objets.sh
+        # éprouve le même code (revue O1, 19/11 : elle en recopiait la logique).
+        garde = objets.garde_geste(tableau, intent)
+        o = garde.objet
+        if garde.effect is None:
+            intent["id"] = o.id
+            return None
+        out = {"demande": intent, "effect": garde.effect, "reason": garde.reason, "name": None, "source": "chat"}
+        if o is not None and o.distance_m is not None:
+            out.update(distance_m=o.distance_m, cote=o.cote)
+        return out
 
     def _note_gesture(self, intent: dict) -> None:
         """Un geste de corps vient de partir (cf. _notify_move) : noté pour la

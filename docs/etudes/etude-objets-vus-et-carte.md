@@ -1,6 +1,10 @@
 # Étude — ce que Didier voit ↔ ce qu'il sait du lieu : une seule vérité sur les objets
 
 *Écrite les 2026-11-17 et 18 (conception Fable), décidée par David le 16/11 après la séance du 15/11.
+**Statut (18/11 au soir) : questions du §13 tranchées par David (Q1, Q3, Q5, Q7, Q8 oui ; Q4 sans
+objet avant O2 ; Q2 modifiée : lidar commandé, essais d'autonomie à la première sortie — rien ici
+n'interdit plus tard « rouler vers un objet vu ») ; lots O0 et O1 faits le 18/11 (branche
+`o0-o1-objets`), voir `docs/chantiers.md`.** Texte d'origine :
 Rien n'est acté : les questions du §13 attendent David. Le banc de mesure du §4 est réel
 (caméra Gazebo du monde `chantiers`, trois modèles via OpenRouter, 744 appels, 1,05 $ dépensés) ; son
 outil est `packages/didier_vision/tools/banc_pointage.py`, ses résultats bruts hors dépôt
@@ -46,7 +50,7 @@ Pi 4, odométrie avant la rue) ne sont pas re-tranchées.
    pas dans la rue. En revanche le détecteur déjà embarqué (EfficientDet, 16 Hz sur le Pi 5)
    connaît 80 classes et on jette tout sauf `person` : c'est un déclencheur gratuit de lubies
    — à mesurer sur de vraies photos avant d'y croire (en sim il ne reconnaît presque rien).
-9. Ce que ça supprime : `jeu/objets_proches`, `proximite.py`, le refus « > 10 m » du
+9. Ce que ça supprime : le topic des objets proches du sélecteur, `proximite.py`, le refus « > 10 m » du
    sélecteur, les deux listes de 30 noms dans le prompt. Les deux gardes saines restent
    (garde déterministe du chat, corrélation des résultats), branchées sur le tableau.
 10. Plan : 5 lots, ≈ 25 h d'agent (Opus), une relecture Fable, 2 × 15 min de David (mire et
@@ -68,7 +72,7 @@ Ce qui s'est passé, composant par composant :
 - la **régie** a résolu le nom `banc` dans son YAML et ordonné le déplacement vers ce point.
 
 Trois acteurs, trois représentations, aucun identifiant commun. Les garde-fous posés les 15
-et 16/11 (liste des tours possibles, `jeu/objets_proches` avec distance et côté, refus au-delà
+et 16/11 (liste des tours possibles, objets proches du sélecteur avec distance et côté, refus au-delà
 de 10 m, garde déterministe du chat, corrélation des résultats par nom d'ordre) ont rendu la
 panne honnête — Didier ne ment plus sur ce qu'il a fait — mais pas impossible : la bouche
 choisit toujours un nom dans une liste en devinant, à partir d'un texte, lequel elle « voit ».
@@ -84,7 +88,7 @@ Et en rue il n'y a ni carte ni régie : la liste n'existera pas. Les lubies sur 
 |---|---|---|---|---|
 | **Régie** (`didier_rehearsal/director`, SIM-ONLY) | 30 POI : ancre (x, y), rayon de déclenchement, `desc`, `alias` ; 13 tours (centre, rayon) calculés sur les collisions du SDF | `config/chantiers.yaml`, `chantiers_tours.yaml` (généré) | statique ; publiée latchée sur `rehearsal/objects` | non (pas de carte) |
 | **Régie** — pose de Didier | (x, y, cap) exacts | `ground_truth/odom` (Gazebo, 2D) | continu | **non** : pas d'odométrie sur le robot (chantier ouvert), encore moins de pose monde |
-| **Sélecteur** (`didier_jeu`, SIM-ONLY) | les 6 objets les plus proches : distance à 0,1 m, côté par quart de tour (devant = ±45°) | pose vérité terrain + ancres de `rehearsal/objects` (`proximite.py`) | 1 Hz, `jeu/objets_proches` | non |
+| **Sélecteur** (`didier_jeu`, SIM-ONLY) | les 6 objets les plus proches : distance à 0,1 m, côté par quart de tour (devant = ±45°) | pose vérité terrain + ancres de `rehearsal/objects` (`proximite.py`) | 1 Hz, le topic des objets proches | non |
 | **Bouche** (`chat_node`, Haiku 5.5 réflexion coupée, **texte seul**) | la liste des 30 noms + `desc` (≤ 1 200 car.), la liste des tours (≤ 600 car.), les 6 proches, le tableau de situation (≤ 700 car.) | topics ci-dessus + `chat_situation` | relus à chaque réplique ; premier mot < 1 s | la liste : non ; le tableau : oui |
 | **Réflexion** (`reflection_node`, Haiku 5.5 effort moyen, **avec image**) | ce que montre l'image, en une phrase libre (`situation`, 25 mots) ; le nom du POI qu'on vient de franchir | trame JPEG 640×480 de moins de 3 s + `rehearsal/poi_event` | sur événement, au moins 4 s entre deux appels, battement à 20 s ; 5,9-6,8 s par appel (banc du 23/10) ; la phrase reste affichée 30 s | oui |
 | **Suivi de personne** (`person_tracker`, MediaPipe EfficientDet-Lite0) | les boîtes des **personnes** (azimut, hauteur) ; les 79 autres classes COCO sont jetées (`detector.py`, filtre `person`) | webcam | 16,7 Hz sur le Pi 5, ≈ 24 % CPU, sans réseau | oui |
@@ -438,8 +442,11 @@ La bouche ne nomme que des noms du tableau, la garde déterministe du chat
 résolu. La régie reçoit un `id` et une position : elle ne cherche plus le nom dans son YAML.
 Bouche, sélecteur et régie parlent donc du même objet par construction, pas par chance.
 
-**Rapprochement vu ↔ carte** (en sim, ou dans un lieu préparé) : un objet vu projeté à moins de
-`max(2·sigma_m, rayon + 1 m)` d'un objet de carte de nom compatible est **le même** : les
+**Rapprochement vu ↔ carte** (en sim, ou dans un lieu préparé) : un objet vu projeté à
+STRICTEMENT moins de `max(2·sigma_m, emprise + 1 m)` du CENTRE d'un objet de carte de nom
+compatible est **le même** — `emprise` = rayon d'emprise au sol de l'objet de carte (majorant
+de sa collision, `emprise_m`), 1 m s'il est inconnu (revue O1 du 19/11 : le code d'O0 prenait le
+rayon de l'ORBITE de tour, ≈ emprise + 1 m, soit un seuil d'environ emprise + 2 m) : les
 sources fusionnent, la position de la carte gagne (elle est exacte), la caméra apporte
 « je le vois ». Sinon c'est un objet nouveau (le sac posé par un passant).
 
@@ -461,8 +468,10 @@ ou `odom` (jamais `robot`) ; `sigma_m` ≤ 1,0 m ; distance ≤ 10 m (la borne p
 désormais à un seul endroit) ; objet de carte, ou vu il y a moins de 10 s.
 
 - **Atteignable** → `aller_voir` comme aujourd'hui : même ordre `route_goto {name, x, y,
-  standoff}`, même `goto.py`, mêmes bornes, même distance d'arrêt de 1,5 m. La seule
-  différence est l'origine du point.
+  standoff}`, même `goto.py`, mêmes bornes. La seule différence est l'origine du point.
+  **Distance d'arrêt** (revue O1 du 19/11) : non plus 1,5 m du centre pour tout objet, mais
+  `max(1,5 ; emprise + 0,5 (Didier) + 0,5 (marge))`, 2,5 m si la taille est inconnue
+  (`director.standoff_pour`, spec-aller-voir §2.3) — 1,5 m du centre du banc le touchait.
 - **Vu mais pas atteignable** (trop loin, trop incertain) → **approche par bonds**, avec les
   gestes qui existent déjà : `tourner` de l'azimut (la mesure fiable), `avancer` d'au plus la
   moitié de la distance estimée et jamais plus de 3 m, puis regarder à nouveau. La tâche en
@@ -496,7 +505,7 @@ second chantier de prompt.
 
 | Rustine du 15-16/11 | Devient |
 |---|---|
-| `jeu/objets_proches` (topic), `didier_jeu/proximite.py`, `stage.decode_near_payload`, `NEAR_*` de `personas.py` | **supprimés** : la distance et le côté sont des champs du tableau |
+| le topic des objets proches du sélecteur, `didier_jeu/proximite.py`, `stage.decode_near_payload`, `NEAR_*` de `personas.py` | **supprimés** : la distance et le côté sont des champs du tableau |
 | Phrase « Un objet de ta liste qui n'est pas ici est loin : ce n'est pas lui que tu vois » | **supprimée** : la bouche ne reçoit plus que ce qui est en vue ou à portée |
 | Refus « > 10 m » du sélecteur (`geste.distance_max_chat_m`, `_trop_loin`) | **supprimé** : c'est la règle `atteignable`, à un seul endroit |
 | Liste des 30 objets (≤ 1 200 car.) et liste des tours (≤ 600 car.) relues à chaque réplique | **remplacées** par les objets en vue et à portée (une demi-douzaine de lignes) : prompt plus court, premier mot plus rapide |
@@ -538,7 +547,7 @@ mètres) ; incliner la webcam ; brancher la désignation par nom sans le recoupe
 | Lot | Contenu | Agent | Durée | Porte de sortie |
 |---|---|---|---|---|
 | **O0 — contrat** | `theatre_contrats` : forme d'un objet, topic `scene/objets`, encodage ; logique PURE du tableau (fusion, nom unique, péremption, `resoudre`, `atteignable`, géométrie « dans le champ »), tests à valeurs gravées + mutation | Opus | 4 h | tests verts ; la séance du 15/11 rejouée en test pur : à x = 14, « banc » → « connu, pas ici, 22 m » |
-| **O1 — la carte dans le tableau** | package `didier_perception`, `objets_node` (sources : `rehearsal/objects` + pose) ; bouche : section « ce qui t'entoure » ; réflexion : mêmes noms ; garde du chat, sélecteur et régie branchés sur le tableau ; suppressions du §7 ; doc et README | Opus | 7 h | épreuves 1, 2 et 4 du §10 vertes ; fumée complète verte ; `git grep objets_proches` vide |
+| **O1 — la carte dans le tableau** | package `didier_perception`, `objets_node` (sources : `rehearsal/objects` + pose) ; bouche : section « ce qui t'entoure » ; réflexion : mêmes noms ; garde du chat, sélecteur et régie branchés sur le tableau ; suppressions du §7 ; doc et README | Opus | 7 h | épreuves 1, 2 et 4 du §10 vertes ; fumée complète verte ; plus aucune trace du topic des objets proches dans le dépôt (`git grep`) |
 | **O2 — la caméra dans le tableau** | en tête, 40 appels : Haiku 5.5 sait-il pointer (§4.6) ? ; module pur de projection (repris du banc, distance jetée à moins de 40 lignes sous l'horizon), client de vision (inventaire, puis « pied » recoupé pour une cible ; un adaptateur de format par modèle), comptage des objets inventés sur réponses enregistrées, paramètres de caméra par machine (`machines/<machine>/`), source caméra Gazebo ; approche par bonds ; relecture adverse avant fusion | Opus + **Fable 1 h** (relecture) | 8 h | épreuves 3 et 5 vertes sur réponses enregistrées ; à la main, en vrai : carte vidée, « va voir le banc » depuis 4,3 m → arrêt à 1,5 m ± 0,5 m du centre (mesuré au banc : 0,24 m d'erreur avec 3.7-flash « pied ») |
 | **O3 — le détecteur embarqué, filtre levé** | mesure d'abord (30 photos de rue à hauteur de buste) ; si la porte passe : classes utiles publiées, source du tableau, offres de lubies | Opus | 1 h de mesure, puis 3 h | **porte : ≥ 70 % des objets nommables retrouvés, ≤ 1 fausse classe pour 10 images** ; sinon abandon écrit |
 | **O4 — la caméra réelle** | mire au sol (4 repères à 2, 4, 6 et 8 m) : hauteur, inclinaison, champ ; les 20 questions du banc refaites sur de vraies photos | Opus + David 2 × 15 min | 2 h | distance projetée à ± 0,3 m à 6 m sur la mire ; tableau du §4 refait en réel |
@@ -556,7 +565,7 @@ rejouée sur des réponses **enregistrées**. Version réelle à la main.
 
 | # | Épreuve | Vert si |
 |---|---|---|
-| 1 | **« montre-moi le banc », il est là** : Didier à (32,5 ; 0), cap 25° ; demande `aller_voir banc` | l'ordre porte l'`id` du banc ; arrêt à 1,5 m ± 0,3 m du centre (36,2 ; 2,5), face à lui (± 10°) |
+| 1 | **« montre-moi le banc », il est là** : Didier à (32,5 ; 0), cap 25° ; demande `aller_voir banc` | l'ordre porte l'`id` du banc ; arrêt à 2,1 m ± 0,3 m du centre (36,2 ; 2,5) et au moins 0,2 m de jeu entre le banc et Didier (contact = rouge ; revue O1 du 19/11, avant : 1,5 m ± 0,3, qui acceptait le contact), face à lui (± 10°) |
 | 2 | **« le banc », il n'est pas là** (la séance du 15/11) : Didier à x = 14 | réponse « connu, pas ici » avec la distance ; **zéro** consigne de roues ; la réplique d'échec est dite |
 | 3 | **carte vidée (la rue en sim)** : mêmes poses, objets venus de la seule caméra | depuis 4,3 m, l'inventaire fait entrer le banc au tableau dans son emprise (à moins de 1,0 m du centre) et la question « pied » le ramène à moins de 0,5 m ; depuis 22 m (la pose du 15/11) il est « vu, pas atteignable » et l'approche part par bonds |
 | 4 | **une seule vérité** : sur une séance de 10 gestes | le nom dit, la cible du sélecteur et la cible de la régie portent le même `id`, dans les trois journaux |

@@ -236,7 +236,8 @@ def test_acceptation_puis_arrivee_inchangee():
 
 
 @pytest.mark.parametrize("reponse,raison", [
-    (_reponse("unknown"), "cet objet n'est pas dans ta liste, tu ne le trouves pas"),
+    (_reponse("unknown"), "tu ne connais pas cet objet ici, tu ne le trouves pas"),
+    (_reponse("no_position"), "tu ne sais pas exactement où il est"),
     (_reponse("too_far"), "c'est trop loin d'ici"),
     (_reponse("no_pose"), "tu ne sais pas où tu es en ce moment"),
     (_reponse("route_off_by_david"), "David a coupé ta route, tu ne bouges pas sans lui"),
@@ -359,14 +360,24 @@ def test_issue_d_un_autre_nom_ignoree_apres_acceptation():
         "Ton geste « tour de elephant » est terminé (9.4 m parcourus).")
 
 
-def test_trop_loin_dit_la_distance():
-    # Scène du 15/11 21:29 : « tour du banc » à 22,2 m refusé par le sélecteur.
-    banc = {"cmd": "tour_de", "objet": "banc", "sens": "gauche"}
+def test_pas_ici_dit_la_distance_et_le_cote():
+    # Scène du 15/11 21:29 (lot O1) : « tour du banc » à 22,3 m devant, refusé (tableau des objets).
+    banc = {"cmd": "tour_de", "objet": "banc", "sens": "gauche", "id": "carte/banc"}
     task = MoveTask()
     task.gesture_emitted("fais le tour du banc", False, T0, gesture=dict(banc))
-    texte = task.on_reply({"demande": banc, "effect": "dropped", "reason": "trop_loin", "distance_m": 22.2,
-                           "source": "jeu"}, T0 + 0.1)
-    assert texte.startswith("Ton geste « faire le tour de banc » n'a PAS eu lieu : il est à 22 m d'ici, bien "
-                            "plus loin, ce n'est pas ce que tu vois autour de toi. Tu n'as pas bougé.")
-    sans = _tache_elephant().on_reply(_reponse("dropped", "trop_loin", source="jeu"), T0 + 0.1)
-    assert sans.startswith("Ton geste « faire le tour de elephant » n'a PAS eu lieu : c'est trop loin d'ici.")
+    texte = task.on_reply({"demande": banc, "effect": "dropped", "reason": "pas_ici", "distance_m": 22.3,
+                           "cote": "devant", "source": "jeu"}, T0 + 0.1)
+    assert texte.startswith("Ton geste « faire le tour de banc » n'a PAS eu lieu : il n'est pas ici : il est à "
+                            "22 m devant toi, tu ne le vois pas d'où tu es. Tu n'as pas bougé.")
+    sans = _tache_elephant().on_reply(_reponse("dropped", "pas_ici", source="jeu"), T0 + 0.1)
+    assert sans.startswith("Ton geste « faire le tour de elephant » n'a PAS eu lieu : il n'est pas ici, tu ne le "
+                           "vois pas d'où tu es.")
+
+
+def test_hors_atteinte_dit_la_distance():
+    texte = _tache_elephant().on_reply(dict(_reponse("dropped", "hors_atteinte", source="chat"), distance_m=13.2,
+                                            cote="devant"), T0 + 0.1)
+    assert texte.startswith("Ton geste « faire le tour de elephant » n'a PAS eu lieu : il est trop loin pour y "
+                            "aller d'un seul geste (à 13 m devant toi).")
+    sans = _tache_elephant().on_reply(dict(_reponse("dropped", "hors_atteinte"), cote="haut"), T0 + 0.1)
+    assert "il est trop loin pour y aller d'un seul geste. Tu n'as pas bougé." in sans

@@ -150,7 +150,7 @@ sélecteur, une action du répertoire à composer par David.
 | # | Question | Décision |
 |---|---|---|
 | 1 | mécanisme de la lubie | naît sur `rehearsal/poi_event` `enter` (offre `objet`, valeur 0,8, TTL 3 s) ; +0,5 par POI entré, −0,05/s, plafond 1 ; Didier « regarde » par le topic `look` (angle) : `rehearsal/objects` porte désormais `x`,`y` (seule retouche du régisseur, additive) et le sélecteur calcule l'angle depuis `/ground_truth/odom` — SIM-ONLY, A2 remplacera par les pistes ; pas de doublon avec le scénario Chantiers → **scénario vide `jeu-a1.yaml`** |
-| 2 | `va_la` vers une piste | objets de `rehearsal/objects` seulement (T4) ; une piste = `tourner` vers son azimut puis `avancer` ≤ 1 m, si superviseur présent et fatigue < 0,8 ; `joue_avec` = la piste regardée |
+| 2 | `va_la` vers une piste | objets du tableau `scene/objets` seulement (T4 ; `rehearsal/objects` avant O1) ; une piste = `tourner` vers son azimut puis `avancer` ≤ 1 m, si superviseur présent et fatigue < 0,8 ; `joue_avec` = la piste regardée |
 | 3 | reprise après un arrêt de Didier | règle du 31/10 gravée : il propose (« repartir ? ») puis envoie `go` lui-même après 90 s, sauf `stop`/`ignore` de la console ; **jamais de `go` automatique après un `stop`/`off` de David** ; le régisseur refusant `go` hors séance, A1 tourne avec un scénario vide (0 bug, 0 lubie) |
 | 4 | répertoire | séquences avec clé `types`, **hors `bugs/` et hors toute séquence à piste `wheels`** (pas de corps sûr en A1 — filtre gravé) ; `deplacements.yaml` = valeurs de départ « composées par David » : approcher (avancer 1 m), se_tourner_vers (tourner), aller_voir, faire_le_tour (tour_de), reculer seulement si le régisseur accepte un `avancer` négatif |
 | 5 | T3 vs engagement | toute naissance de piste → une ligne de décision en ≤ 1 s, qui peut être un **maintien** ; T1 ne compte que les changements d'action |
@@ -191,7 +191,10 @@ séquences, garde-fou 43 effectif, aucun Twist), **pas montrable comme porte pas
   Elle est annulée par un nouveau geste, un stop ou une Route OFF de David ; le `go`
   de la bouche est relayé sans score. Les 90 s de silence restent pour les arrêts de
   Didier (lubie, approche). Tests : `test_reprise_geste.py`.
-- **15/11 21:29, distances** : objets proches publiés pour le chat (`jeu/objets_proches`) ;
-  geste de la bouche au-delà de `geste.distance_max_chat_m` (10 m) refusé, distance
-  dite. Tests : `test_proximite.py` (scène réelle x ≈ 14 : banc à 22,2 m refusé,
-  table_basse à 4 m acceptée).
+- **15/11 21:29, distances** → **lot O1 (18/11), tableau des objets** : le sélecteur ne
+  calcule plus aucune distance ni pose ; il lit `scene/objets` (étude
+  `etudes/etude-objets-vus-et-carte.md`). Geste de la bouche vers un objet non
+  `atteignable` refusé (`dropped` / `pas_ici` ou `hors_atteinte` + `distance_m` + `cote`) ;
+  `va_la` résolu dans le tableau, l'ordre porte l'`id` ; regard d'une lubie = azimut du
+  tableau. Tests : `test_tableau_objets.py` (scène réelle x = 14 : banc à 22,3 m refusé,
+  table_basse à 4,3 m acceptée).

@@ -33,6 +33,8 @@ COPY --from=conf --exclude=secret . /home/ros2_ws/src/vision/conf/
 # setup.py, launch/vision.launch.py), package de packages/ ; plus de setup.py ni de module
 # dans src/vision/.
 COPY --from=didier_vision . /home/ros2_ws/src/didier_vision
+# didier_perception (lot O1, 18/11) : le tableau des objets (objets_node, lancé par vision.launch.py).
+COPY --from=didier_perception . /home/ros2_ws/src/didier_perception
 # Packages communs du mono-dépôt (lot L1a). theatre_contrats est OBLIGATOIRE : le shim
 # dadou_utils_ros/utils_static.py l'importe.
 COPY --from=theatre_interfaces . /home/ros2_ws/src/theatre_interfaces

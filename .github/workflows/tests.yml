@@ -35,6 +35,8 @@ jobs:
             requirements: requirements-test.txt
           - suite: didier_corps_sur
             dir: packages/didier_corps_sur
+          - suite: didier_perception
+            dir: packages/didier_perception
             requirements: requirements-test.txt
           - suite: didier_vision
             dir: packages/didier_vision

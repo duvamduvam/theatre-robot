@@ -170,7 +170,12 @@ def tour_name(poi: str) -> str:
 def _finite(value, where: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise GotoError(f"{where} : nombre attendu, reçu {value!r}")
-    value = float(value)
+    try:
+        value = float(value)
+    except OverflowError:
+        # Entier JSON géant : refus PROPRE (route_driver n'attrape que GotoError — une
+        # OverflowError tuerait son callback ; revue O1, 19/11).
+        raise GotoError(f"{where} : nombre hors bornes (entier géant)") from None
     if not math.isfinite(value):
         raise GotoError(f"{where} : nombre fini attendu, reçu {value!r}")
     return value

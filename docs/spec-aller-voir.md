@@ -12,7 +12,7 @@ robot ni la chaîne roues aval (mux, deadman, wheels).
 ## 1. Ce que voit David
 
 « Va voir les anneaux » → Didier dit qu'il y va → il roule jusqu'à ~1,5 m de
-l'objet (demi-tour s'il l'a dépassé), **pivote face à lui**, s'arrête, le
+l'objet (au moins ; plus loin d'un gros objet, cf. §2.3 — revue O1 du 19/11) (demi-tour s'il l'a dépassé), **pivote face à lui**, s'arrête, le
 commente. « Stop » à tout instant l'arrête. Pour reprendre la route :
 « go »/« on repart » (ou curseur, Route ON) — il rejoint son itinéraire.
 
@@ -31,17 +31,26 @@ l'objet d'une lubie ; champs additifs.
 15/11 : chaque objet porte aussi `"tour": true|false` (l'objet a un tour dans
 le fichier généré, §8.1) ; chat_node lit `name`, `desc` et `tour`.
 
-chat_node (vision), seulement si le mouvement à la voix est branché : ajoute
-au prompt de marche la liste « Objets que tu peux aller voir : anneaux
-(bagues géantes), flaque (…), … », suivie de « Objets dont tu peux faire le
-tour : … » (ou « Tu ne peux faire le tour d'aucun objet. ») — remplacée à
-chaque nouveau message, la session LLM n'est PAS réinitialisée.
+**Lot O1 (18/11) — le tableau des objets remplace ce vocabulaire côté lecteurs**
+(étude [`etudes/etude-objets-vus-et-carte.md`](etudes/etude-objets-vus-et-carte.md) §6-§7) :
+le SEUL lecteur de `rehearsal/objects` est désormais `didier_perception/objets_node`, qui en
+fait le tableau `scene/objets` (latché ; contrat `theatre_contrats/objets.py`) — avec en plus
+`alias` et, pour un POI qui a un tour, `cx`, `cy` (centre de collision : la position d'un
+objet de carte est son CENTRE, pas l'ancre) et `emprise` (rayon d'emprise au sol autour du
+centre = orbite − TOUR_CLEARANCE_M, majorant de la collision ; revue O1 du 19/11 — avant :
+`rayon`, le rayon de l'ORBITE, pris à tort pour la taille de l'objet). chat_node (mouvement à la voix branché) en
+tire la section « ce qui t'entoure » (`personas.entourage_prompt` : ce qu'il voit, ce qui est
+autour, un résumé du lointain, ≤ 900 caractères), qui remplace les deux listes (30 objets,
+tours) et la ligne des objets proches du 15/11. La session LLM n'est PAS réinitialisée.
 
 ### 2.2 Intention — `rehearsal/chat_move` (chat_node → régisseur), étendu
 
 Le payload actuel reste valide (`"go"` / `"stop"`, JSON chaîne). Ajout :
-JSON objet `{"cmd": "aller_voir", "objet": "<texte>"}`. Côté bouche : clé de
-fin de réplique `"aller_voir": "<nom de la liste>"` (même règles que
+JSON objet `{"cmd": "aller_voir", "objet": "<texte>", "id": "<id du tableau>"}` (`id` depuis
+le lot O1 : la garde du chat résout le nom dans le tableau et le joint ; la régie ne cible
+QUE par l'`id`, à la position du tableau — plus de résolution de nom dans son YAML ; sans
+`id` connu : `unknown`). Côté bouche : clé de fin de réplique `"aller_voir": "<nom d'un
+objet vu ou autour>"` (même règles que
 `marche` : normalisée, jamais en tour spontané — un tour spontané ne met
 jamais Didier en mouvement, revue B1 du 23/10). Si la réplique porte à la
 fois `marche` et `aller_voir`, `aller_voir` gagne sauf si `marche` vaut
@@ -49,8 +58,15 @@ fois `marche` et `aller_voir`, `aller_voir` gagne sauf si `marche` vaut
 
 ### 2.3 Ordre de manœuvre — `route_goto` (régisseur → route_driver)
 
-StringTime JSON : `{"name": "anneaux", "x": 78.42, "y": 4.19, "standoff": 1.5}`
-ou `"cancel"`. Le route_driver est le SEUL à produire le Twist (créneau
+StringTime JSON : `{"name": "anneaux", "x": 78.42, "y": 4.19, "standoff": 2.5}`
+ou `"cancel"`. **Standoff = distance du centre de Didier au CENTRE de l'objet** (revue O1 du
+19/11, `director.standoff_pour`) : `max(1,5 ; emprise + 0,5 + 0,5)` — emprise de l'objet
+(champ `emprise_m` du tableau), rayon balayé de Didier (0,5 m : roulette arrière à 0,45 m,
+c'est elle qui frôle quand il pivote face à l'objet), marge 0,5 m (tolérance d'arrivée 0,3 +
+0,2 de jeu) ; **taille inconnue** (POI sans géométrie, objet vu par la caméra) : emprise
+présumée 1,5 m, soit 2,5 m ; borné à 40 m. Avant : 1,5 m du centre pour tout objet — le banc
+(emprise 1,1 m) était touché (1,1 + 0,4). Exemples sur les chantiers : banc 2,1 m, table
+basse 1,7 m, pigeon 1,5 m, anneaux (pas de tour, taille inconnue) 2,5 m. Le route_driver est le SEUL à produire le Twist (créneau
 `cmd_vel_follow`, prio 20) ; le régisseur ne fait qu'ordonner.
 
 ### 2.4 État — `route_state` étendu
@@ -420,12 +436,21 @@ sans avoir bougé.
   (`name` « elephant ») a été prise pour la fin du tour. Le sélecteur avait
   jeté le tour (même clé `bouche:elephant` que l'action en cours, « autre
   chose l'a emporté »), et ce refus est arrivé trop tard. Trois corrections :
-  1. **Garde déterministe** (chat, `ConversationEngine.set_gesture_vocabulary`) :
-     un `faire_le_tour` dont l'objet (normalisé comme au régisseur) n'est pas
-     dans les tours possibles, ou un `aller_voir` hors des objets, n'est
-     JAMAIS publié. Il devient tout de suite une fin ÉCHOUÉE (`no_tour` si
-     l'objet est connu, `unknown` sinon). Les alias ne passent donc plus : le
-     prompt exige le nom exact. Sans vocabulaire reçu, le régisseur juge.
+  1. **Garde déterministe** (chat, `ConversationEngine.set_objets` depuis le lot O1 :
+     sur le TABLEAU DES OBJETS, règle unique `theatre_contrats.objets.resoudre`) :
+     un geste vers un objet inconnu (`unknown`), connu mais pas ici (`dropped` /
+     `pas_ici`, avec distance et côté : « il est à 22 m devant toi »), en vue mais
+     hors d'atteinte (`dropped` / `hors_atteinte`), ou un `faire_le_tour` d'un objet
+     sans tour (`no_tour`) n'est JAMAIS publié : fin ÉCHOUÉE tout de suite. Accepté,
+     le geste part avec l'`id` de l'objet résolu (alias compris). La règle vit dans le
+     contrat (`theatre_contrats.objets.garde_geste`), que l'épreuve sim
+     `validate-objets.sh` appelle aussi (E2e). Tableau jamais reçu OU muet depuis 3 s
+     (`objets.PEREMPTION_S`) : chat_node garde sur le tableau VIDE, tout geste vers un
+     objet est refusé `unknown` sans être publié — aucun geste ne part sans l'`id` d'un
+     tableau frais (revue O1 du 19/11 ; avant, jamais reçu, le geste partait sans `id`
+     et la régie le refusait plus loin). Seconde et troisième lignes : le sélecteur
+     (`pas_ici` / `hors_atteinte` sur son tableau frais) et la régie (`unknown` si l'`id`
+     manque à SON tableau, lui aussi périmé après 3 s).
   2. **Corrélation** : la réponse `accepted` porte `name`, le nom de l'ordre
      (celui que `route_goto_result` renverra : « tour de elephant » ≠
      « elephant »). Un geste n'est fini que par l'issue de CET ordre ; toute

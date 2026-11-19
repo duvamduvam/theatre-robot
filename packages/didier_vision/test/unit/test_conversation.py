@@ -26,6 +26,7 @@ from dadou_utils_ros.utils_static import ANIMATION, FACE
 from didier_vision.ai import conversation as conversation_module
 from didier_vision.ai.conversation import ConversationEngine, has_usable_text
 from didier_vision.ai.move_task import MoveTask
+from theatre_contrats.objets import Objet, Tableau
 from didier_vision.ai.performance import RosMessage
 from didier_vision.ai.stage import StageState
 from didier_vision.audio.vad import VadEvent
@@ -3708,23 +3709,36 @@ def test_continuation_d_une_tache_close_ne_bouge_pas(timeline, clock, caplog):
 
 
 # --------------------------------------------------------------------------
-# Séance du 15/11 21:21 : GARDE DÉTERMINISTE — un tour hors de la liste des
-# tours possibles (ou un aller_voir hors des objets) n'est JAMAIS publié ; il
-# devient tout de suite une fin de geste ÉCHOUÉE. Et l'arrivée de l'ancien
-# aller_voir ne termine jamais le tour.
+# Séance du 15/11 21:21 : GARDE DÉTERMINISTE — un tour impossible (ou un
+# aller_voir vers un objet inconnu, pas ici ou hors d'atteinte) n'est JAMAIS
+# publié ; il devient tout de suite une fin de geste ÉCHOUÉE. Et l'arrivée de
+# l'ancien aller_voir ne termine jamais le tour. Lot O1 (18/11) : la garde lit
+# le TABLEAU DES OBJETS et joint l'id de l'objet résolu au geste publié.
 # --------------------------------------------------------------------------
 
 AV_ELEPHANT = {"cmd": "aller_voir", "objet": "elephant"}
 
 
-def _tour_humain(timeline, texte, delta, task, vocab=(["elephant", "poubelle_tri"], ["poubelle_tri"])):
+# Tableau de la séance du 15/11 vu de x = 14 (valeurs gravées dans didier_perception).
+ELEPHANT_O = Objet(id="carte/elephant", nom="elephant", alias=("éléphant",), distance_m=5.6, azimut_deg=-165.5,
+                   cote="derriere", x=8.6, y=-1.4, atteignable=True)
+POUBELLE_O = Objet(id="carte/poubelle_tri", nom="poubelle_tri", alias=("poubelles",), distance_m=8.0,
+                   azimut_deg=10.0, cote="devant", x=22.0, y=1.4, en_vue=True, tour=True, atteignable=True)
+LOINTAINE_O = Objet(id="carte/poubelle_loin", nom="poubelle_loin", distance_m=13.2, azimut_deg=10.5,
+                    cote="devant", x=27.0, y=2.4, en_vue=True, tour=True, atteignable=False)
+BANC_O = Objet(id="carte/banc", nom="banc", distance_m=22.3, azimut_deg=6.4, cote="devant", x=36.2, y=2.5,
+               tour=True)
+TABLEAU_X14 = Tableau((ELEPHANT_O, POUBELLE_O, LOINTAINE_O, BANC_O))
+
+
+def _tour_humain(timeline, texte, delta, task, vocab=TABLEAU_X14):
     stage = StageState()
     stage.push_text(texte)
     ordres = []
     engine, _brain = _make_stage_engine(timeline, stage, on_move=ordres.append, move_task=task,
                                         brain_deltas=[delta])
     if vocab is not None:
-        engine.set_gesture_vocabulary(*vocab)
+        engine.set_objets(vocab)
     try:
         assert engine.run_once() is True
     finally:
@@ -3743,7 +3757,7 @@ def test_seance_2121_tour_hors_liste_jamais_publie_et_jamais_termine(timeline, c
         ordres = _tour_humain(timeline, "Peux-tu faire le tour de l'éléphant ?",
                               'Bien sûr ! {"emotion": "happy", "faire_le_tour": "elephant"}', task)
     assert ordres == []                                         # JAMAIS publié
-    assert "Clé \"faire_le_tour\" : 'elephant' non publié : no_tour (hors du vocabulaire du régisseur)." in [
+    assert "Clé \"faire_le_tour\" : 'elephant' non publié : no_tour (tableau des objets)." in [
         r.message for r in caplog.records]
     # 21:21:19 : l'ancien aller_voir arrive — ce n'est pas la fin du tour.
     assert task.on_result({"name": "elephant", "result": "arrived", "reason": "arrived", "travelled": 3.17},
@@ -3764,19 +3778,64 @@ def test_aller_voir_hors_des_objets_jamais_publie(timeline):
                           task)
     assert ordres == []
     assert task.pop_continuation().startswith(
-        "Ton geste « aller voir pigeon » n'a PAS eu lieu : cet objet n'est pas dans ta liste, tu ne le trouves pas.")
+        "Ton geste « aller voir pigeon » n'a PAS eu lieu : tu ne connais pas cet objet ici, tu ne le trouves pas.")
 
 
-def test_tour_de_la_liste_publie_nom_normalise(timeline):
+def test_aller_voir_le_banc_a_22_m_jamais_publie_et_dit_ou_il_est(timeline, caplog):
+    # LA panne du 15/11 21:29, rejouée côté bouche : Didier à x = 14, « va voir le banc ».
+    task = MoveTask()
+    with caplog.at_level("WARNING", logger="didier_vision.ai.conversation"):
+        ordres = _tour_humain(timeline, "va voir le banc", 'Le banc ! {"emotion": "happy", "aller_voir": "le banc"}',
+                              task)
+    assert ordres == []
+    assert "Clé \"aller_voir\" : 'le banc' non publié : pas_ici (tableau des objets)." in [
+        r.message for r in caplog.records]
+    assert task.pop_continuation().startswith(
+        "Ton geste « aller voir le banc » n'a PAS eu lieu : il n'est pas ici : il est à 22 m devant toi, tu ne le "
+        "vois pas d'où tu es. Tu n'as pas bougé.")
+
+
+def test_tour_en_vue_mais_hors_atteinte_jamais_publie(timeline):
+    task = MoveTask()
+    ordres = _tour_humain(timeline, "fais le tour de la poubelle là-bas",
+                          'Oui. {"emotion": "happy", "faire_le_tour": "poubelle_loin"}', task)
+    assert ordres == []
+    assert "il est trop loin pour y aller d'un seul geste (à 13 m devant toi)" in task.pop_continuation()
+
+
+def test_tour_possible_publie_avec_l_id_du_tableau(timeline):
     task = MoveTask()
     ordres = _tour_humain(timeline, "fais le tour des poubelles",
-                          'Allons-y. {"emotion": "happy", "faire_le_tour": "la Poubelle_Tri"}', task)
-    assert ordres == [{"cmd": "tour_de", "objet": "la Poubelle_Tri", "sens": "gauche"}]
+                          'Allons-y. {"emotion": "happy", "faire_le_tour": "les poubelles"}', task)
+    assert ordres == [{"cmd": "tour_de", "objet": "les poubelles", "sens": "gauche", "id": "carte/poubelle_tri"}]
     assert task.pop_continuation() is None
 
 
-def test_sans_vocabulaire_le_regisseur_juge(timeline):
+def test_tableau_vide_refuse_tout_objet(timeline):
+    # Écrivain muet OU jamais entendu (TABLEAU_TTL_S de chat_node, revue O1 du 19/11 : chat_node
+    # pose VIDE dès le démarrage) : tableau VIDE, jamais une position périmée ni un geste sans id.
+    task = MoveTask()
+    ordres = _tour_humain(timeline, "va voir les poubelles",
+                          'Hop. {"emotion": "happy", "aller_voir": "poubelle_tri"}', task, vocab=Tableau())
+    assert ordres == [] and "tu ne connais pas cet objet ici" in task.pop_continuation()
+
+
+def test_garde_non_branchee_le_geste_part_sans_id(timeline):
+    # Moteur SANS tableau branché (None : tests, outils — chat_node, lui, branche VIDE d'entrée) :
+    # aucune garde, le geste part tel quel, sans id ; la régie le refuserait « unknown ».
     task = MoveTask()
     ordres = _tour_humain(timeline, "fais le tour de l'éléphant",
                           'Hop. {"emotion": "happy", "faire_le_tour": "elephant"}', task, vocab=None)
     assert ordres == [{"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}]
+
+
+def test_garde_locale_est_celle_du_contrat():
+    """Revue O1 (19/11) : la garde des gestes vit dans theatre_contrats.objets.garde_geste, que
+    l'épreuve sim validate-objets.sh appelle aussi — une SEULE logique, éprouvée en sim. Retirer la
+    délégation (ou réécrire la règle ici) fait rougir ce test."""
+    import inspect
+    import textwrap
+    source = textwrap.dedent(inspect.getsource(ConversationEngine._local_refusal))
+    assert "objets.garde_geste(tableau, intent)" in source
+    code = "\n".join(l for l in source.splitlines() if not l.strip().startswith("#"))
+    assert "resoudre(" not in code and ".atteignable" not in code and "PAS_ICI" not in code

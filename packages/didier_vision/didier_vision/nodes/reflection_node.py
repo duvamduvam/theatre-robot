@@ -34,6 +34,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from theatre_interfaces.msg import StringTime
+from theatre_contrats import objets as tableau_objets
 from theatre_contrats import topics
 from sensor_msgs.msg import CompressedImage
 
@@ -81,6 +82,9 @@ PERSON_REAPPEAR_S = 5.0     # absence minimale pour parler de « réapparition �
 IMAGE_MAX_AGE_S = 3.0       # au-delà, la trame est trop vieille pour être jointe
 
 LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+# Péremption du tableau des objets : LA valeur du contrat (objets_node republie à 1 Hz ; même
+# borne chez la bouche, le sélecteur et la régie — revue O1, 19/11).
+TABLEAU_TTL_S = tableau_objets.PEREMPTION_S
 
 
 class ReflectionStartupError(RuntimeError):
@@ -121,6 +125,7 @@ class ReflectionNode(Node):
         self._persona = None           # inconnue tant que persona_state n'est pas reçu
         self._chat_state = ""          # inconnu tant que chat_node n'a rien publié
         self._image = None             # (octets JPEG, heure d'arrivée)
+        self._tableau = None           # (tableau des objets, heure d'arrivée) — lot O1
         self._last_person_s = None
         self._last_transcript_s = None
         self._last_spontaneous_s = None
@@ -165,6 +170,8 @@ class ReflectionNode(Node):
         self.create_subscription(
             StringTime, CAMERA_SOURCE_STATE_TOPIC, self._on_camera_source_state, LATCHED)
         self.create_subscription(StringTime, contract.REFLECT_TOPIC, self._on_reflect, 10)
+        # Tableau des objets (lot O1) : les MÊMES noms que la bouche ; LATCHÉ des deux côtés.
+        self.create_subscription(StringTime, topics.SCENE_OBJETS, self._on_scene_objets, LATCHED)
 
         self._publish_mission()
         self.create_timer(TICK_PERIOD_S, self._tick)
@@ -176,6 +183,19 @@ class ReflectionNode(Node):
             f"images={config['reflection_use_image']}")
 
     # -- abonnements (rapides : aucun appel réseau) ---------------------------
+
+    def _on_scene_objets(self, msg):
+        """Tableau des objets : illisible -> warning (le précédent est gardé)."""
+        try:
+            tableau = tableau_objets.decoder(msg.msg)
+        except ValueError as exc:
+            self.get_logger().warning(f"{topics.SCENE_OBJETS} refusé : {exc}")
+            return
+        alerte = tableau_objets.avertissement(tableau)
+        if alerte:
+            self.get_logger().warning(f"{topics.SCENE_OBJETS} : {alerte}")
+        with self._lock:
+            self._tableau = (tableau, time.monotonic())
 
     def _on_transcript(self, msg):
         line = decode_transcript_line(msg.msg)
@@ -331,7 +351,13 @@ class ReflectionNode(Node):
         if not job.deep and self._board.moving():
             passing_poi = next(
                 (p for p in reversed(pois) if not self._policy.already_remarked(p)), None)
+        # Tableau des objets FRAIS seulement (objets_node republie à 1 Hz) : jamais une
+        # position périmée dans la perception.
+        objets = ""
+        if self._tableau is not None and now - self._tableau[1] <= TABLEAU_TTL_S:
+            objets = reflection.objets_ligne(self._tableau[0])
         return dict(
+            objets=objets,
             transcript=list(self._transcript), perception=self._board.perception_text(now),
             mission_summary=self._mission.summary(), instruction=self._instruction,
             demande=demande, demande_retry=demande_retry, image=image, used_image=used_image,
@@ -346,7 +372,7 @@ class ReflectionNode(Node):
                 inputs["transcript"], inputs["perception"], inputs["mission_summary"],
                 inputs["instruction"], inputs["demande"], inputs["image"],
                 partner=self._partner, destination=self._destination,
-                persona=inputs["persona"], passing_poi=inputs["passing_poi"],
+                persona=inputs["persona"], passing_poi=inputs["passing_poi"], objets=inputs["objets"],
                 camera_is_partner=camera_is_partner_effective(
                     self._camera_is_partner, self._camera_source))
             if job.deep:

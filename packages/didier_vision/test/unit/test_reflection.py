@@ -292,3 +292,25 @@ def test_messages_camera_partenaire_absente_sinon():
     assert "ton partenaire de jeu" not in _build(camera_is_partner=False)[1]["content"]
     # drapeau actif mais aucun partenaire : pas de ligne bancale
     assert "ton partenaire de jeu" not in _build(camera_is_partner=True, partner=None)[1]["content"]
+
+
+# --- Tableau des objets (lot O1, 18/11) : les MÊMES noms que la bouche ---------------------
+
+def test_objets_ligne_graves_seance_15_11():
+    from theatre_contrats.objets import Objet, Tableau
+    table = Objet(id="carte/table_basse", nom="table_basse", distance_m=4.3, azimut_deg=28.9, cote="devant",
+                  en_vue=True, atteignable=True)
+    carrousel = Objet(id="carte/carrousel", nom="carrousel", distance_m=2.2, azimut_deg=-111.8, cote="droite",
+                      atteignable=True)
+    banc = Objet(id="carte/banc", nom="banc", distance_m=22.3, azimut_deg=6.4, cote="devant")
+    assert reflection.objets_ligne(Tableau((carrousel, table, banc))) == (
+        "Objets autour de Didier (emploie CES noms ; « en vue » = dans l'image) : carrousel (2 m); "
+        "table_basse (en vue, 4 m). Plus loin, hors de vue : banc (22 m).")
+    assert reflection.objets_ligne(Tableau()) == "" and reflection.objets_ligne(None) == ""
+    assert reflection.objets_ligne(Tableau((banc,))).startswith(reflection.OBJETS_PREFIXE + "aucun.")
+
+
+def test_objets_dans_la_perception():
+    content = _build(objets="Objets autour de Didier : x.")[1]["content"]
+    assert "Perception :\nPersonne en vue.\nObjets autour de Didier : x.\n\nMission :" in content
+    assert "Objets autour de Didier" not in _build()[1]["content"]

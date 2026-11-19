@@ -56,10 +56,13 @@ JEU_CHAT_MOVE = 'jeu/chat_move'
 # StringTime volatile : une ligne du journal JSONL du sélecteur par message
 # (format boîte noire, didier_core.diagnostic.journal), pour la page scène.
 JEU_JOURNAL = 'jeu/journal'
-# StringTime volatile, sélecteur -> chat_node, 1 Hz (15/11) : les objets les
-# plus proches de Didier, [{"name", "distance_m", "cote": "devant"|"gauche"|
-# "droite"|"derriere"}] triés par distance (pose vérité terrain, SIM-ONLY).
-JEU_OBJETS_PROCHES = 'jeu/objets_proches'
+
+# ---------------------------------------------------------------- tableau des objets (lot O0)
+# StringTime LATCHÉ (qos.latched() des DEUX côtés), écrit par didier_perception/objets_node
+# (SEUL écrivain) : ce que Didier sait des objets en ce moment — forme et encodage dans
+# theatre_contrats/objets.py, étude docs/etudes/etude-objets-vus-et-carte.md §6. Lu par la
+# bouche, la réflexion, le sélecteur de jeu et la régie, qui désignent un objet par son `id`.
+SCENE_OBJETS = 'scene/objets'
 
 # ---------------------------------------------------------------- catalogue + version (lot L1c)
 # StringTime LATCHÉ (qos.latched() des DEUX côtés), publié par catalogue_node

@@ -841,7 +841,7 @@ SIM_A_PLAT = [# 16/11 (lot fiabilité des épreuves) : l'enregistreur des mesure
               "seance-chantiers.sh",
               "validate-catalogue.sh", "validate-conversation.sh", "validate-data-edit.sh",
               "validate-jeu-a1.sh", "validate-machines.sh",
-              "validate-namespace.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
+              "validate-namespace.sh", "validate-objets.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
               "validate-rehearsal-route.sh"]
 # L2b : le conteneur `monde` (Dockerfile + entrée) et l'entrée du conteneur `robot` de la sim.
 SIM_MONDE = ["Dockerfile", "entree.sh"]
@@ -1176,7 +1176,8 @@ def test_ecart_pi_porte_le_volet_des_editions_non_rapatriees():
 # Contextes nommés du Dockerfile de chaque machine = sa liste `packages` + conf (+ data, robot).
 CONTEXTES_DOCKERFILE = {
     "robot": sorted(HOTE_ROBOT_GRAVE + ["conf", "data"]),
-    "vision": ["conf", "dadou_utils_ros", "didier_vision", "theatre_contrats", "theatre_interfaces"],
+    # Lot O1 (18/11) : + didier_perception (objets_node, lancé par vision.launch.py).
+    "vision": ["conf", "dadou_utils_ros", "didier_perception", "didier_vision", "theatre_contrats", "theatre_interfaces"],
 }
 # Les compose qui construisent chaque Dockerfile ; « fichier#service » = le service d'un compose
 # à plusieurs services (L2b : la sim multi-conteneurs).

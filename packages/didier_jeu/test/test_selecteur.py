@@ -8,17 +8,34 @@ import pytest
 
 from conftest import fabriquer
 
-OBJETS = [{"name": "anneaux", "desc": "bagues", "x": 10.0, "y": 10.0},
-          {"name": "flaque", "desc": "eau", "x": 30.0, "y": 0.0},
-          # 15/11 : un objet à moins de geste.distance_max_chat_m (10 m) de la
-          # pose d'origine, pour les demandes de la bouche (flaque à 30 m : refusée).
-          {"name": "banc", "desc": "banc", "x": 5.0, "y": 0.0}]
+from theatre_contrats.objets import Objet, Tableau
+
+# Le tableau des objets (lot O1) tel que l'écrit didier_perception pour Didier à l'origine,
+# cap +x : distances, azimuts et atteignabilité relevés à la main, GRAVÉS (le sélecteur les lit).
+ANNEAUX = Objet(id="carte/anneaux", nom="anneaux", desc="bagues", x=10.0, y=10.0, distance_m=14.1,
+                azimut_deg=45.0, cote="devant", en_vue=False, atteignable=False)
+FLAQUE = Objet(id="carte/flaque", nom="flaque", desc="eau", x=30.0, y=0.0, distance_m=30.0, azimut_deg=0.0,
+               cote="devant", en_vue=False, atteignable=False)
+# Un objet atteignable (< 10 m), pour les demandes de la bouche.
+BANC = Objet(id="carte/banc", nom="banc", x=5.0, y=0.0, distance_m=5.0, azimut_deg=0.0, cote="devant",
+             en_vue=True, atteignable=True)
+ELEPHANT_O = Objet(id="carte/elephant", nom="elephant", desc="statue", x=1.0, y=2.0, distance_m=2.2,
+                   azimut_deg=63.4, cote="gauche", en_vue=False, atteignable=True)
+TABLEAU = Tableau((ELEPHANT_O, BANC, ANNEAUX, FLAQUE))
 
 
-def jouer(sel, t0, t1, evenements=None, continu=None, dt=0.1):
+def ecrivain(sel, t):
+    """L'écrivain du tableau des objets (didier_perception) republie toutes les secondes : le
+    dernier tableau posé par la scène est re-reçu aux secondes rondes (péremption, revue O1)."""
+    if sel.tableau_recu is not None and abs(t - round(t)) < 1e-6:
+        sel.sur_tableau(sel.tableau_recu, t)
+
+
+def jouer(sel, t0, t1, evenements=None, continu=None, dt=0.1, ecrivain_vivant=True):
     """Ticks de t0 à t1 inclus. evenements : [(t, f(sel, t))] déclenchés juste
     avant le tick de t ; continu : f(sel, t) appelé à chaque tick (boîte de
-    personne à 10 Hz). -> [(t, *sortie)]."""
+    personne à 10 Hz) ; ecrivain_vivant : le tableau des objets est republié à
+    1 Hz (False : l'écrivain se tait après la scène). -> [(t, *sortie)]."""
     evs = sorted(evenements or [], key=lambda e: e[0])
     out = []
     n = int(round((t1 - t0) / dt))
@@ -26,6 +43,8 @@ def jouer(sel, t0, t1, evenements=None, continu=None, dt=0.1):
         t = round(t0 + i * dt, 6)
         while evs and evs[0][0] <= t + 1e-9:
             evs.pop(0)[1](sel, t)
+        if ecrivain_vivant:
+            ecrivain(sel, t)
         if continu is not None:
             continu(sel, t)
         sel.tick(t)
@@ -54,10 +73,9 @@ def boite(debut, fin, azimut=0.3, hauteur=0.4):
 
 
 def marche(sel, t):
-    """Route en marche, objets connus, pose à l'origine cap +x."""
+    """Route en marche, tableau des objets vu de l'origine cap +x."""
     sel.sur_route_state("on", t)
-    sel.sur_objets(OBJETS)
-    sel.sur_pose(0.0, 0.0, 0.0)
+    sel.sur_tableau(TABLEAU, t)
 
 
 # ================================================================== T5 arrêt vocal
@@ -385,7 +403,7 @@ def test_mutation_ignore_s():
 def test_va_la_objet_demande_aller_voir():
     out = jouer(fabriquer(), 0.0, 3.0, [(0.0, marche),
                                         (1.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "anneaux"}, t))])
-    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "anneaux"})]
+    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "anneaux", "id": "carte/anneaux"})]   # id du tableau (O1)
     d = journal(out, "decision")[0][1]
     assert d["considerations"]["console"] == 1.0 and d["branche"] == "ordre_macro"
 
@@ -416,7 +434,7 @@ def test_superviseur_exigeant_absent_aucun_deplacement():
     out2 = jouer(sel2, 0.0, 3.0, [(0.0, marche),
                                   (1.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "anneaux",
                                                                     "presence": True}, t))])
-    assert [m for _, m in moves(out2)] == [{"cmd": "aller_voir", "objet": "anneaux"}]
+    assert [m for _, m in moves(out2)] == [{"cmd": "aller_voir", "objet": "anneaux", "id": "carte/anneaux"}]
 
 
 def test_reviens_envoie_go():
@@ -537,6 +555,7 @@ def jouer_avec_regisseur(sel, t1, evenements=(), continu=None):
         for (tt, f) in [x for x in a_faire if x[0] <= t + 1e-9]:
             a_faire.remove((tt, f))
             f(t)
+        ecrivain(sel, t)
         if continu is not None:
             continu(sel, t)
         sel.tick(t)
@@ -646,6 +665,7 @@ def test_tache_va_voir_l_elephant_puis_tour_du_banc_10_s_apres():
 
 
 def test_lubie_note_si_le_regard_est_parti():
+    # Sans tableau (aucun azimut connu), pas de regard.
     sans_pose = jouer(fabriquer(), 0.0, 6.0, [(0.0, lambda s, t: s.sur_route_state("on", t)), (1.0, _poi("anneaux"))])
     a = journal(sans_pose, "arret_didier")[0][1]
     assert a["regard"] is False and [o for o in sans_pose if o[1] == "look"] == []

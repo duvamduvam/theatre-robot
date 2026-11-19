@@ -51,10 +51,13 @@ lever l'arrêt ; une panne `speed` ne publie rien (journalisée
 lève l'arrêt vocal sans rien publier (et ferme une lubie stop active) ;
 abort / fin de séance aussi (et annulent une salve de relance).
 « ALLER VOIR » (lot M1, spec-aller-voir.md) : au démarrage, le vocabulaire
-d'objets de l'itinéraire part LATCHÉ sur rehearsal/objects ([{name, desc}]).
-Un {"cmd": "aller_voir", "objet": …} sur rehearsal/chat_move est arbitré par
-director.decide_goto et journalisé `aller_voir` (effect accepted | unknown |
-route_off_by_david | no_pose | too_far — la pose vient de /ground_truth/odom,
+d'objets de l'itinéraire part LATCHÉ sur rehearsal/objects (la CARTE : lue par
+didier_perception, qui en fait le tableau des objets scene/objets). Un
+{"cmd": "aller_voir", "objet": …, "id": …} sur rehearsal/chat_move est arbitré par
+director.decide_goto — cible = l'objet du TABLEAU désigné par son `id` (lot O1, 18/11 :
+plus aucune résolution de nom ici), position du tableau — et journalisé `aller_voir`
+(effect accepted | unknown | no_position | route_off_by_david | no_pose | too_far — la
+pose vient de /ground_truth/odom,
 SIM-ONLY). Accepté (en séance ou hors séance) : l'arrêt vocal est levé à la
 vitesse du « go », une lubie active est fermée (closed_by « voix »), puis
 l'ordre part sur route_goto — route_driver seul produit le Twist. « stop »
@@ -112,7 +115,8 @@ from theatre_interfaces.msg import StringTime
 # Codec StringTime commun (lot L1a). `loads` là où le node a SON propre
 # traitement de l'échec (strip du brut, warning + return, KeyError dans le
 # même try) : chaque except est gardé tel quel, le comportement ne bouge pas.
-from theatre_contrats import stringtime
+from theatre_contrats import objets as tableau_objets
+from theatre_contrats import stringtime, topics
 
 from didier_core.diagnostic.journal import JournalWriter, make_event
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
@@ -125,7 +129,7 @@ from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD,
 from didier_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
                                       decide_forward, decide_goto, decide_tour, decide_turn, fader_moved,
                                       goto_order,
-                                      messages, move_reply, objects_payload,
+                                      messages, move_reply, objects_payload, poi_name_of,
                                       route_cmd_kind, speed_factor, speed_in_effect)
 from didier_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from didier_rehearsal.rehearsal_state import rehearsal_state
@@ -222,6 +226,8 @@ class DirectorNode(Node):
         # de distance — refus si plus vieille que le seuil du suivi.
         self.goto_policy = GotoPolicy()
         self._pose = None
+        self._tableau = None   # theatre_contrats.objets.Tableau (scene/objets), None = jamais reçu
+        self._tableau_at = None   # time.monotonic() de sa réception (péremption, cf. _tableau_frais)
 
         journal_dir = str(self.get_parameter("journal_dir").value)
         os.makedirs(journal_dir, exist_ok=True)
@@ -278,6 +284,12 @@ class DirectorNode(Node):
         self.create_subscription(StringTime, CHAT_MOVE_TOPIC, self._on_chat_move, 10)
         # Pose vérité terrain (SIM-ONLY) : seulement pour la borne de distance d'« aller voir ».
         self.create_subscription(Odometry, ODOM_TOPIC, self._on_odom, 10)
+        # Tableau des objets (lot O1, 18/11) : un geste vers un objet le désigne par son `id`,
+        # résolu UNE fois par la bouche ou le sélecteur ; la régie y lit la position. LATCHÉ
+        # des deux côtés (didier_perception/objets_node le publie latché).
+        self.create_subscription(
+            StringTime, topics.SCENE_OBJETS, self._on_scene_objets,
+            QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
         # Issue détaillée d'une manœuvre (raison d'abandon) : journal seulement.
         self.create_subscription(StringTime, ROUTE_GOTO_RESULT_TOPIC, self._on_goto_result, 10)
         self.create_timer(0.2, lambda: self.pub_heartbeat.publish(StringTime(msg="1", time=0, anim=False)))
@@ -383,6 +395,26 @@ class DirectorNode(Node):
             self.log("goto_result", stringtime.loads(msg.msg))
         except (ValueError, TypeError):
             self.get_logger().warning(f"route_goto_result illisible : {msg.msg!r}")
+
+    def _on_scene_objets(self, msg: StringTime):
+        """Tableau des objets : illisible -> warning, le précédent est gardé."""
+        try:
+            self._tableau = tableau_objets.decoder(msg.msg)
+        except ValueError as e:
+            self.get_logger().warning(f"{topics.SCENE_OBJETS} refusé : {e}")
+            return
+        self._tableau_at = time.monotonic()
+        alerte = tableau_objets.avertissement(self._tableau)
+        if alerte:
+            self.get_logger().warning(f"{topics.SCENE_OBJETS} : {alerte}")
+
+    def _tableau_frais(self, now: float):
+        """Le tableau s'il a moins de tableau_objets.PEREMPTION_S (écrivain vivant), sinon None :
+        un geste vers un objet est alors refusé « unknown » — jamais la position d'un tableau
+        figé (revue O1, 19/11 : même péremption chez les quatre lecteurs)."""
+        if self._tableau_at is None or now - self._tableau_at > tableau_objets.PEREMPTION_S:
+            return None
+        return self._tableau
 
     def _on_odom(self, msg):
         p = msg.pose.pose.position
@@ -565,23 +597,25 @@ class DirectorNode(Node):
             self.get_logger().error(f"chat_move_reply : {e!r}")
 
     def _aller_voir(self, intent: dict):
-        """« Aller voir » (lot M1) : arbitré, journalisé `aller_voir`, puis
-        exécuté — arrêt vocal levé / lubie fermée, ordre sur route_goto."""
-        objet = intent.get("objet")
+        """« Aller voir » (lot M1 ; cible par `id` du tableau depuis O1) : arbitré, journalisé
+        `aller_voir`, puis exécuté — arrêt vocal levé / lubie fermée, ordre sur route_goto."""
         now = time.monotonic()
-        decision = decide_goto(objet, pois=self._pois, pose=self._fresh_pose(now),
+        decision = decide_goto(intent, tableau=self._tableau_frais(now), pose=self._fresh_pose(now),
                                off_by_david=self._off_by_david())
-        payload = {"objet": objet, "effect": decision.effect}
-        if decision.poi is not None:
-            payload["name"] = decision.poi.name
+        # Champs du CONTRAT seulement (le producteur est un LLM).
+        payload = {k: intent[k] for k in ("objet", "id") if k in intent}
+        payload["effect"] = decision.effect
+        if decision.objet is not None:
+            payload["name"] = decision.objet.nom
         if decision.distance is not None:
             payload["distance"] = round(decision.distance, 2)
         self.log("aller_voir", payload)
         self._reply(intent, decision.effect,
-                    name=decision.poi.name if decision.effect == "accepted" else None)
+                    name=decision.objet.nom if decision.effect == "accepted" else None)
         if decision.effect != "accepted":
             return
-        self._accept_maneuver(decision.poi.name, goto_order(decision.poi), "aller_voir", now)
+        self._accept_maneuver(decision.objet.nom, goto_order(decision.objet), "aller_voir", now,
+                              target=poi_name_of(decision.objet))
 
     def _geste(self, intent: dict):
         """Gestes chiffrés (lot M2) : « tourner » / « avancer », arbitrés,
@@ -609,10 +643,11 @@ class DirectorNode(Node):
         """« Faire le tour » (lot M3) : arbitré, journalisé `tour_de`, accepté
         comme « aller voir » (cible = le POI : sa lubie est sautée)."""
         now = time.monotonic()
-        decision = decide_tour(intent, pois=self._pois, tours=self._tours, pose=self._fresh_pose(now),
+        decision = decide_tour(intent, tableau=self._tableau_frais(now), tours=self._tours,
+                               pose=self._fresh_pose(now),
                                off_by_david=self._off_by_david())
         # Champs du CONTRAT seulement (le producteur est un LLM).
-        payload = {k: intent[k] for k in ("objet", "sens") if k in intent}
+        payload = {k: intent[k] for k in ("objet", "id", "sens") if k in intent}
         payload["effect"] = decision.effect
         if decision.reason is not None:
             payload["reason"] = decision.reason
@@ -625,7 +660,7 @@ class DirectorNode(Node):
                     name=decision.name if decision.effect == "accepted" else None)
         if decision.effect == "accepted":
             self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TOUR_CMD, now,
-                                  target=decision.poi.name)
+                                  target=decision.poi)
 
     def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None):
         """Manœuvre ACCEPTÉE (aller voir, tourner, avancer, tour) : comme un

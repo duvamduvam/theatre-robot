@@ -88,8 +88,8 @@ dies mid-animation, wheels stop and servos return to rest.
 1618 unit tests on 2026-11-07 (pytest, `packages/didier_core/test/unit`, run from
 `packages/didier_core` with this repo's `.venv`; no hardware — deferred hardware
 imports pattern), run by CI on every push — since 2026-11-11 the single workflow
-`.github/workflows/tests.yml` at the mono-repo root (seven suites since A0-3, 2026-11-18: core, shared lib, game
-selector, contracts, safe body `didier_corps_sur`, vision, legacy remote); between L0 (2026-11-02) and that date the
+`.github/workflows/tests.yml` at the mono-repo root (eight suites: core, shared lib, game
+selector, contracts, perception (object table, O0, 2026-11-18), safe body `didier_corps_sur` (A0-3), vision, legacy remote); between L0 (2026-11-02) and that date the
 per-repo workflows sat under `legacy/` and GitHub ran nothing. Data contracts (expressions,
 lights, sequences, referenced assets) are tested too.
 

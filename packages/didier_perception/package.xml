@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>didier_perception</name>
+  <version>0.1.0</version>
+  <description>Perception de Didier : le tableau des objets (scene/objets, latché), SEUL écrivain de ce que Didier sait des objets ; sources carte (rehearsal/objects) + pose, caméra à partir du lot O2. Aucun Twist.</description>
+  <maintainer email="achats@duvam.net">dadou</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>nav_msgs</depend>
+  <depend>theatre_interfaces</depend>
+  <!-- Contrat commun : forme du tableau (objets.py), topic SCENE_OBJETS, QoS latché. -->
+  <exec_depend>theatre_contrats</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

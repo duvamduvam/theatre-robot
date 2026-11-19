@@ -78,7 +78,7 @@ from theatre_interfaces.msg import StringTime
 
 CAP, NS = Path(sys.argv[1]), sys.argv[2]
 TABLE = (17.8, 1.4)          # ancre du POI table_basse (didier_rehearsal/config/chantiers.yaml)
-DIST_B_M = 9.0               # < geste.distance_max_chat_m (10 m) du sélecteur, marge 1 m
+DIST_B_M = 9.0               # < PORTEE_M (10 m, « atteignable » du tableau des objets), marge 1 m
 EN_MARCHE_S = 11.0           # > refractaire_s.deplacement (10 s) du sélecteur
 TELEPORT = ["timeout", "10", "gz", "service", "-s", "/world/stage/set_pose", "--reqtype", "gz.msgs.Pose",
             "--reptype", "gz.msgs.Boolean", "--timeout", "3000", "--req",

@@ -91,6 +91,7 @@ EPREUVES = [
     ("machines", "validate-machines.sh (les machines de la sim, vues depuis le monde, L2b)"),
     ("chantiers", "Régisseur + regard (chaîne roues du bringup), puis validate-rehearsal-chantiers.sh (V-R3)"),
     ("a1", "Sim relancée, validate-jeu-a1.sh (A1)"),
+    ("objets", "Sim relancée, validate-objets.sh (OBJ : tableau des objets, lot O1)"),
     ("conversation", "Sim relancée avec la tête (Claude Haiku, Anthropic direct), validate-conversation.sh (CONV)"),
 ]
 # Épreuves FACULTATIVES (16/11) : « non lancée » faute d'un prérequis hors dépôt (la clé

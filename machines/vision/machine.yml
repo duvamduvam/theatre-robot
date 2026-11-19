@@ -12,11 +12,14 @@ conf_machine_dir: "{{ machines_dir }}/vision"
 # ce package n'existe pas côté vision). Deviendra un launch file en V1.
 launch_cmd: ros2 run didier_vision vision_status --ros-args -r __ns:=/didier
 # L1e-3d (08/11) : la vision est le package packages/didier_vision ; les 3 communs + lui.
+# Lot O1 (18/11) : + didier_perception (objets_node, lancé par vision.launch.py : sans lui le
+# launch entier échoue sur le Pi).
 packages:
   - theatre_contrats
   - theatre_interfaces
   - dadou_utils_ros
   - didier_vision
+  - didier_perception
 # Sentinelle dans le package (gitignorée), lue par scripts/launch-ros-in-docker.sh.
 sentinelle_build: src/didier_vision/change
 # Alias ALSA par NOM de carte (mixette, casque_mic, webcam_mic), bind-monté en
