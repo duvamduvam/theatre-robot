@@ -1132,9 +1132,13 @@ le robot dans `data/` puis restaure tout (empreinte de `json/` et `medias/visual
   `/clock`). Sous la minuterie, GNOME importe `DISPLAY`/`XAUTHORITY` dans l'environnement
   utilisateur de systemd ; à défaut le script cherche `/run/user/UID/.mutter-Xwaylandauth.*`.
   Session fermée = démarrage rouge, avec la cause dans `demarrage.log`.
-- `validate-namespace.sh` lit `topic info` via le démon ros2, qui naît VIDE sur un conteneur neuf :
-  sans réchauffement il rend 4/5 (bridge « absent ») alors que tout est sain. La fumée réchauffe
-  le démon avant l'épreuve (`rechauffer_cli`). Le script de vérification lui-même n'a pas été touché.
+- **Le démon ros2 ment sur un conteneur neuf** : il naît vide et, sous charge (démarrage du PC,
+  cœurs réservés chauds), sa vue du graphe reste PARTIELLE plusieurs secondes — le 19/11, deux
+  fumées à 07:50 et 07:52 (PC démarré à 07:48) ont rendu namespace 4/5 (« bridge gz namespacé » :
+  0 publisher lu par le démon) alors que le pont était sain ; reproduit au banc 2 fois sur 5 :
+  démon « Unknown topic », `--no-daemon` 1 publisher à la même seconde. Le réchauffement du démon
+  ajouté le 07/11 ne suffisait pas : il est retiré, et TOUTE lecture du graphe des épreuves passe
+  `--no-daemon --spin-time 5`, avec reprises (gravé par `test_fumee.py`).
 - Une fumée n'a de sens que sur `main` : si le checkout est sur une autre branche, la minuterie
   reporte (une fumée à la main marque la branche sur la page).
 - **Jamais `docker logs … | grep -q` (ni `docker ps … | grep -q`) sous `pipefail`** : grep -q sort
