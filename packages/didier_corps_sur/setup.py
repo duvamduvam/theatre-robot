@@ -21,6 +21,6 @@ setup(
     description='Corps sûr de Didier (lot A0) : filtre des entrées autonomes des roues',
     license='MIT',
     tests_require=['pytest'],
-    # Pas encore d'exécutable : le nœud corps_sur arrive au sous-lot A0-4.
-    entry_points={'console_scripts': []},
+    # Le nœud corps_sur (A0-4) : lancé par didier_drive/launch/drive.launch.py, respawn faux.
+    entry_points={'console_scripts': ['corps_sur_node = didier_corps_sur.corps_sur_node:main']},
 )

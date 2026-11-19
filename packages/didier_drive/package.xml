@@ -12,6 +12,8 @@
   <depend>theatre_interfaces</depend>
 
   <exec_depend>twist_mux</exec_depend>
+  <!-- Corps sûr (lot A0-4), lancé par drive.launch.py devant twist_mux. -->
+  <exec_depend>didier_corps_sur</exec_depend>
   <!-- drive.launch.py lit config/twist_mux.yaml lui-même (lot L1b, namespace). -->
   <exec_depend>python3-yaml</exec_depend>
 

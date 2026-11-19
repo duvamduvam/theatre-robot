@@ -162,3 +162,19 @@ def test_gz_lidar_caracteristiques_c1(gz_urdf):
     assert float(s.findtext("lidar/range/resolution")) == 0.015
     assert s.findtext("lidar/noise/type") == "gaussian"
     assert float(s.findtext("lidar/noise/stddev")) == 0.01
+
+
+def test_gz_lidar_pose_egale_a_celle_du_corps_sur_de_la_sim(gz_urdf):
+    """Spec A0 §8.1 : les défauts du xacro gz et la pose lue par le corps sûr de la sim
+    (machines/sim/robot/corps_sur.yaml) sont les mêmes — sinon le filtre placerait les points
+    ailleurs que là où le lidar simulé les voit."""
+    import yaml
+    conf = os.path.join(PACKAGES_DIR, "..", "machines", "sim", "robot", "corps_sur.yaml")
+    with open(conf, encoding="utf-8") as f:
+        lidar = yaml.safe_load(f)["lidar"]
+    joint = next(j for j in gz_urdf.findall("joint") if j.get("name") == "laser_joint")
+    x, y, z = (float(v) for v in joint.find("origin").get("xyz").split())
+    lacet = float(joint.find("origin").get("rpy").split()[2])
+    assert (lidar["x"], lidar["y"], lidar["lacet_rad"]) == (x, y, lacet) == (0.33, 0.0, 0.0)
+    # Plan de balayage : z du lidar + 0,23 (base_link au-dessus du sol) = 0,25 m.
+    assert lidar["hauteur_plan_m"] == round(z + 0.23, 2) == 0.25

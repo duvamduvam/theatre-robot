@@ -13,3 +13,10 @@ if PKG not in sys.path:
     sys.path.insert(0, PKG)
 
 CONFIG_YAML = os.path.join(PKG, "config", "corps_sur.yaml")
+# theatre_contrats (noms de topics du contrat, didier_corps_sur.contrat) : pur, sans ROS.
+CONTRATS = os.path.join(os.path.dirname(os.path.dirname(PKG)), "packages", "theatre_contrats")
+if CONTRATS not in sys.path:
+    sys.path.insert(0, CONTRATS)
+import pathlib  # noqa: E402
+
+MONO = pathlib.Path(PKG).resolve().parents[1]

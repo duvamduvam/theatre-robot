@@ -46,6 +46,9 @@ services:
         didier_sim: ../../packages/didier_sim
         didier_rehearsal: ../../packages/didier_rehearsal
         didier_jeu: ../../packages/didier_jeu
+        # Lot A0-4 : le corps sûr, pour que les épreuves CS le RELANCENT depuis monde (même code,
+        # autre configuration) ; aucun launch de monde ne le démarre.
+        didier_corps_sur: ../../packages/didier_corps_sur
         data: ../../data
     environment:
       - DISPLAY=${DISPLAY}
@@ -89,6 +92,7 @@ services:
       - ../../packages/didier_sim:/home/ros2_ws/src/didier_sim
       - ../../packages/didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
       - ../../packages/didier_jeu:/home/ros2_ws/src/didier_jeu
+      - ../../packages/didier_corps_sur:/home/ros2_ws/src/didier_corps_sur
       # Épreuves : elles tournent ICI (docker exec didier-sim-monde bash /home/ros2_ws/<script>).
       - ./validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro
       - ./validate-catalogue.sh:/home/ros2_ws/validate-catalogue.sh:ro
@@ -100,6 +104,7 @@ services:
       - ./validate-jeu-a1.sh:/home/ros2_ws/validate-jeu-a1.sh:ro
       - ./validate-conversation.sh:/home/ros2_ws/validate-conversation.sh:ro
       - ./validate-objets.sh:/home/ros2_ws/validate-objets.sh:ro
+      - ./validate-corps-sur.sh:/home/ros2_ws/validate-corps-sur.sh:ro
       # Leurs mesures (lot fiabilité, 16/11) : enregistreur rclpy et sa bibliothèque bash ; les
       # captures vont sous log/captures/ ($DIDIER_SIM_JOURNAUX/log/captures/ du PC), elles survivent.
       - ./capture_topics.py:/home/ros2_ws/capture_topics.py:ro
@@ -137,6 +142,7 @@ services:
         didier_rehearsal: ../../packages/didier_rehearsal
         didier_sim: ../../packages/didier_sim
         didier_web: ../../packages/didier_web
+        didier_corps_sur: ../../packages/didier_corps_sur
     # Décision 2 : le VRAI bringup, par le script du Pi, avec les arguments de la sim posés par
     # cette entrée (fichier de la sim) ; plus complement_sim.launch.py (face_sim, validation_sim).
     entrypoint: ["/bin/bash", "/home/ros2_ws/sim/entree-robot.sh"]
@@ -164,6 +170,8 @@ services:
     pid: "service:monde"
     volumes:
       - ./robot/entree.sh:/home/ros2_ws/sim/entree-robot.sh:ro
+      # Configuration du corps sûr pour la SIM (lot A0-4), passée par l'entrée au lancement.
+      - ./robot/corps_sur.yaml:/home/ros2_ws/sim/corps_sur.yaml:ro
       # Ménage des ports SHM Fast DDS morts, appelé par l'entrée avant tout nœud (18/11).
       - ./menage-shm.sh:/home/ros2_ws/sim/menage-shm.sh:ro
       # La conf de la machine, comme sur le Pi (src/robot/conf/) : script de démarrage, logging.
@@ -183,6 +191,7 @@ services:
       - ../../packages/didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
       - ../../packages/didier_sim:/home/ros2_ws/src/didier_sim
       - ../../packages/didier_web:/home/ros2_ws/src/didier_web
+      - ../../packages/didier_corps_sur:/home/ros2_ws/src/didier_corps_sur
 
   vision:
     container_name: didier-sim-vision

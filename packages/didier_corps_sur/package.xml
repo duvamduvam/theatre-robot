@@ -3,13 +3,21 @@
 <package format="3">
   <name>didier_corps_sur</name>
   <version>0.1.0</version>
-  <description>Corps sûr de Didier (lot A0) : filtre déterministe des entrées autonomes des roues (lidar, zones d'arrêt et de ralenti, régions non vues, verrous capteur/superviseur/e_stop, durée bornée). Logique pure en stdlib ; le nœud arrive en A0-4.</description>
+  <description>Corps sûr de Didier (lot A0) : filtre déterministe des entrées autonomes des roues (lidar, zones d'arrêt et de ralenti, régions non vues, verrous capteur/superviseur/e_stop, durée bornée). Logique pure en stdlib ; nœud mince corps_sur_node (A0-4).</description>
   <maintainer email="achats@duvam.net">dadou</maintainer>
   <license>MIT</license>
 
-  <!-- Seule dépendance des modules purs : PyYAML (reglages.py). Les dépendances ROS
-       (rclpy, geometry_msgs, sensor_msgs, theatre_contrats…) entrent avec le nœud, A0-4. -->
+  <!-- Modules purs : PyYAML (reglages.py) et theatre_contrats (noms de topics, contrat.py).
+       Le nœud (A0-4) : rclpy et les messages qu'il lit ou publie. -->
   <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>theatre_contrats</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rosidl_runtime_py</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend>theatre_interfaces</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
 

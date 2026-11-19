@@ -28,10 +28,13 @@ SERVICES = {
                      "legacy/dadou_control_ros/conf/docker/x86/Dockerfile-x86"),
 }
 # Les packages du conteneur `monde` (décision 18 : Dockerfile-sim moins bringup, drive, web).
-PACKAGES_MONDE = ["dadou_utils_ros", "didier_core", "didier_description", "didier_jeu", "didier_rehearsal",
-                  "didier_sim", "theatre_contrats", "theatre_interfaces"]
+# A0-4 (20/11) : + didier_corps_sur, que les épreuves CS relancent depuis monde (aucun launch de
+# monde ne le démarre).
+PACKAGES_MONDE = ["dadou_utils_ros", "didier_core", "didier_corps_sur", "didier_description", "didier_jeu",
+                  "didier_rehearsal", "didier_sim", "theatre_contrats", "theatre_interfaces"]
 INTERDITS_MONDE = {"didier_core", "didier_drive", "didier_web"}   # aucun de leurs exécutables dans monde
-EPREUVES = ["validate-catalogue.sh", "validate-conversation.sh", "validate-data-edit.sh", "validate-jeu-a1.sh",
+EPREUVES = ["validate-catalogue.sh", "validate-conversation.sh", "validate-corps-sur.sh", "validate-data-edit.sh",
+            "validate-jeu-a1.sh",
             "validate-machines.sh",
             "validate-namespace.sh", "validate-objets.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
             "validate-rehearsal-route.sh"]
@@ -40,7 +43,7 @@ EXEC_ROBOT = ('exec /bin/bash /home/ros2_ws/src/robot/conf/scripts/launch-ros-in
               'use_sim_time:=true camera_topic:=camera/image_raw camera_compressed:=false '
               'perception_topic:=camera/image_raw/compressed exterior_topic:=camera_ext/image_raw '
               'web_port:=${WEB_PORT:-8765} web_drive:=${WEB_DRIVE:-false} rehearsal:=${REHEARSAL:-false} '
-              'exiger_validation_roues:=false')
+              'exiger_validation_roues:=false corps_sur_config:=/home/ros2_ws/sim/corps_sur.yaml')
 
 
 def _compose(chemin=COMPOSE):

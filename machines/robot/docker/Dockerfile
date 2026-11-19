@@ -66,6 +66,8 @@ COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
 # didier_core (L1e-3c) : le cœur, ex-package robot (code + package.xml/setup.py), package de
 # packages/ ; plus de setup.py ni de module dans src/robot/.
 COPY --from=didier_core . /home/ros2_ws/src/didier_core
+# Lot A0-4 : le corps sûr, lancé par didier_drive/launch/drive.launch.py devant twist_mux.
+COPY --from=didier_corps_sur . /home/ros2_ws/src/didier_corps_sur
 
 # Aucun argument passé au script (décision 16) : sur le Pi, le launch tourne sans argument,
 # comme avant L2. Le compose de la SIM (L2b) passera les siens par son propre `entrypoint`.

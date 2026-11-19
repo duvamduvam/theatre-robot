@@ -4,6 +4,13 @@ twist_mux:
     # chaîne (bridge, deadman, plugin DiffDrive gz) parle Twist simple.
     # Migration TwistStamped à considérer avec ros2_control (Phase 2).
     use_stamped: false
+    # Lot A0-4 (20/11, spec docs/spec-A0-corps-sur.md §3.1) : les trois entrées AUTONOMES
+    # (web, follow, anim) passent par le CORPS SÛR (didier_corps_sur, nœud corps_sur) AVANT ce
+    # mux ; le mux s'abonne à leurs sorties filtrées `_sur`. Les demandes brutes
+    # (cmd_vel_web, cmd_vel_follow, cmd_vel_anim) n'atteignent plus le mux. Sûr par
+    # construction : corps sûr mort, figé ou pas lancé -> plus rien sur les `_sur`, le mux se
+    # tait, le deadman met zéro en 400 ms. La télécommande (remote) n'y passe PAS (prio 100,
+    # David garde la main même contre un obstacle). Priorités, délais et verrou inchangés.
     topics:
       remote:
         topic: cmd_vel_remote
@@ -15,7 +22,7 @@ twist_mux:
       # drive_enabled est vrai (défaut false). Validé en sim ; usage sur le vrai
       # robot conditionné au protocole caméra (plan §5-6 etude-interface-web.md).
       web:
-        topic: cmd_vel_web
+        topic: cmd_vel_web_sur
         timeout: 0.5
         priority: 50
       # Suivi de personne autonome (person_follower, 2026-07-11) : SOUS la
@@ -27,11 +34,11 @@ twist_mux:
       # SIM-ONLY tant que : test scénique au sol (priorité 1) + protocole
       # caméra roues hors sol (direction_sign) ne sont pas faits.
       follow:
-        topic: cmd_vel_follow
+        topic: cmd_vel_follow_sur
         timeout: 0.5
         priority: 20
       anim:
-        topic: cmd_vel_anim
+        topic: cmd_vel_anim_sur
         timeout: 0.5
         priority: 10
 

@@ -55,5 +55,6 @@ def test_topics_porte_sim_graves():
 def test_nombre_de_topics_grave():
     # 10 organes + 6 StringTime hors organes + 3 perception + 4 jeu (lot A1)
     # + 2 catalogue/version (lot L1c) + 2 édition (lot L1d) + 3 porte sim (lot L1d-2)
-    # + 1 scene/objets (lot O0, 18/11 ; les objets proches du sélecteur du 15/11 sont supprimés en O1).
-    assert len(_noms_de_topics()) == 31
+    # + 1 scene/objets (lot O0, 18/11 ; les objets proches du sélecteur du 15/11 sont supprimés en O1)
+    # + 7 corps sûr (lot A0-4, 20/11 : scan, trois sorties _sur, battement, état, réarmement).
+    assert len(_noms_de_topics()) == 38

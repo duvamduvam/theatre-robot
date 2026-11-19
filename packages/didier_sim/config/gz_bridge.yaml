@@ -126,3 +126,10 @@
   ros_type_name: "geometry_msgs/msg/PoseStamped"
   gz_type_name: "gz.msgs.Pose"
   direction: GZ_TO_ROS
+
+# Même chose pour le PASSANT (A0-4, épreuve CS13 : distance VRAIE passant-caisse).
+- ros_topic_name: "sim/passant_pose"
+  gz_topic_name: "/model/passant/pose"
+  ros_type_name: "geometry_msgs/msg/PoseStamped"
+  gz_type_name: "gz.msgs.Pose"
+  direction: GZ_TO_ROS

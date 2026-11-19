@@ -1,0 +1,80 @@
+# Corps sûr de Didier — configuration du ROBOT RÉEL (spec docs/spec-A0-corps-sur.md §4-§5,
+# colonne « robot »). Copiée par Ansible dans ~/ros2_ws/src/robot/conf/ (conf de la machine) ;
+# lue par défaut par drive.launch.py (/home/ros2_ws/src/robot/conf/corps_sur.yaml).
+# Gravée par packages/didier_corps_sur/test/test_configs_machines.py. Ne peut qu'être PLUS
+# STRICTE que les bornes dures (reglages.py) ; toute valeur provisoire est marquée.
+#
+# ⚠️ Tant que le lidar n'est pas monté, le corps sûr reste en DEMARRAGE « capteur_absent » :
+# AUCUNE source autonome (séquences à piste roues, suivi, route, web) ne fait tourner les roues ;
+# la télécommande conduit comme avant (spec §14).
+terrain: reel
+
+# Rectangle de la caisse : cotes ESTIMÉES depuis les photos (§4.1) — 5 cotes à mesurer au mètre
+# ruban (A0-7) et à reporter ici.
+caisse:
+  x_avant: 0.30
+  x_arriere: -0.57
+  demi_largeur: 0.40
+  x_essieu: 0.10
+  rayon_balayage: 0.65
+
+lidar:
+  # Pose A, face avant en bas de la caisse (décision de David du 18/11, §13 Q1) ; à reprendre au
+  # banc (A0-7 : orientation réelle de laser_frame → lacet_rad).
+  x: 0.33
+  y: 0.0
+  lacet_rad: 0.0
+  hauteur_plan_m: 0.25
+  # PROVISOIRE, À MESURER (tools/mesurer_masques.py, A0-7) : le demi-tour arrière, que le corps
+  # cache depuis la face avant. La couverture n'annonce alors que l'AVANT vu.
+  masques_deg:
+    - [90.0, 270.0]
+  # Témoin de vie optique (§4.2) : aucun auto-retour mesuré → non exigé ; limite écrite ici et
+  # publiée en WARN permanent dans diagnostics.
+  temoin:
+    exige: false
+    secteur_deg: null
+    distance_m: null
+    points_min: 0
+
+balayage:
+  portee_min_m: 0.05
+  portee_max_m: 12.0
+  rayons_min: 300
+  age_max_reception_s: 0.25   # à caler au banc (§10.1)
+
+zones:
+  marge_arret_m: 0.60
+  marge_ralenti_m: 1.20
+  facteur_ralenti: 0.5
+  hysteresis_m: 0.05
+  balayages_de_sortie: 3
+
+couverture:
+  part_aveugle_max: 0.10
+  # FAUX (option la plus sûre, A0-4 du 20/11) : David a dit « vrai seulement à la maison »
+  # (§13, réponse 1), mais ce fichier sert aussi hors de la maison. Le passer à vrai est une
+  # décision de David, datée ici en commentaire (§5.2). Point ouvert du README du package.
+  angulaire_aveugle_autorise: false
+  w_max_aveugle: 0.3          # provisoire (§5.4)
+
+# Plafonds par canal : 0,25 m/s = 25 % de PWM ; PROVISOIRES jusqu'à la calibration PWM
+# (A-préalables). Distance d'arrêt au sol > 0,20 m → on baisse v_max, jamais la marge.
+canaux:
+  anim:   {v_max: 0.25, w_max: 0.5}
+  follow: {v_max: 0.25, w_max: 0.5}
+  web:    {v_max: 0.25, w_max: 0.5}
+
+capteur:
+  perime_s: 0.30
+  sante_s: 1.0
+
+superviseur:
+  # FAUX tant que le battement n'existe pas (§5.4 : maison, non bloquant) ; VRAI OBLIGATOIRE
+  # avant la rue. Limite publiée en WARN permanent dans diagnostics.
+  exige: false
+  perime_s: 1.0
+
+duree:
+  duree_max_mouvement_s: 4.0  # pas d'odométrie sur le robot (§5.5) : moon-walk coupé à 4 s
+  pause_s: 1.0

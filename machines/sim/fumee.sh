@@ -43,12 +43,13 @@
 #   -> sim headless + colcon ×4 + nœuds attendus -> sonde RTF 20 s (rouge si < 0,8 : le reste
 #   n'est pas fiable) -> validate-namespace -> validate-catalogue -> animation parle
 #   -> validate-data-edit (L1d) -> validate-machines (L2b)
-#   -> régisseur (monde) + regard (robot), validate-rehearsal-chantiers (V-R3)
+#   -> sim relancée monde `stage`, validate-corps-sur (CS, lot A0-4 : corps sûr, ≈ 15 min)
+#   -> sim relancée monde `chantiers`, régisseur (monde) + regard (robot), validate-rehearsal-chantiers (V-R3)
 #   -> sim relancée, validate-jeu-a1 (A1)
 #   -> sim relancée, validate-objets (OBJ, lot O1 : tableau des objets, épreuves 1, 2, 4 de l'étude)
 #   -> sim relancée AVEC LA TÊTE (surcouche docker-compose.tete.yml : chat_node, clé Anthropic),
 #      validate-conversation (CONV, 16/11) — FACULTATIVE : sans clé, « non lancée », jamais rouge.
-#                                                 ≈ 55-60 min.
+#                                                 ≈ 75-80 min.
 #
 # Garde-fous :
 #   - domaine ROS 43 : en littéral dans le compose, revérifié dans CHACUN des quatre conteneurs
@@ -95,6 +96,7 @@ ATTENDU_CATALOGUE=4     # validate-catalogue.sh : 6 familles, sha dev, ajout, su
 ATTENDU_PARLE=3         # états vus dans l'ordre : "" -> "parle" -> ""
 ATTENDU_EDITION=13      # validate-data-edit.sh (L1d : épreuves 1 à 12, 13 = porte sim depuis L1d-2)
 ATTENDU_MACHINES=5      # validate-machines.sh (L2b : M1-M4, M6 ; 10 en L2c)
+ATTENDU_CORPS_SUR=25    # validate-corps-sur.sh (CS, lot A0-4 : CS1-CS13, spec A0 §8.5)
 ATTENDU_CHANTIERS=21    # validate-rehearsal-chantiers.sh (V-R3)
 ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
 ATTENDU_OBJETS=13       # validate-objets.sh (OBJ, lot O1 : E1a-e, E2a-e, E4a-c)
@@ -518,15 +520,18 @@ sys.exit(1 if manque else 0)
 PY
 }
 
-demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis attend colcon ×4, pont, nœuds
-  dit "démarrage de la sim (4 conteneurs, headless, domaine 43, colcon ×4 ≈ 2-4 min)"
+# Monde Gazebo de la sim lancée par demarrer_sim : `chantiers` partout, sauf l'épreuve CS du corps
+# sûr (A0-4) qui joue sur `stage` (plateau nu, obstacle et passant scriptés).
+MONDE_SIM=chantiers
+demarrer_sim() { # demarrer_sim : lance la sim headless (monde $MONDE_SIM) puis attend colcon ×4, pont, nœuds
+  dit "démarrage de la sim (4 conteneurs, headless, monde $MONDE_SIM, domaine 43, colcon ×4 ≈ 2-4 min)"
   # SIM_A_NOUS avant le `up` : même un échec en cours de route laisse des conteneurs À NOUS,
   # que terminer() doit retirer (on a vérifié plus haut qu'aucun conteneur homonyme n'existait).
   SIM_A_NOUS=1
   # Le domaine n'est PAS passé ici : le compose pose ROS_DOMAIN_ID=43 en littéral et ne le lit
   # jamais dans l'environnement de l'appelant ; on le revérifie dans chaque conteneur ci-dessous.
   mkdir -p "$JOURNAUX_SIM"/log "$JOURNAUX_SIM"/log-vision "$JOURNAUX_SIM"/log-telecommande
-  (cd "$DOCKER_DIR" && env ROBOT_NAME=didier HEADLESS=true WORLD=chantiers DIDIER_SIM_JOURNAUX="$JOURNAUX_SIM" \
+  (cd "$DOCKER_DIR" && env ROBOT_NAME=didier HEADLESS=true WORLD="$MONDE_SIM" DIDIER_SIM_JOURNAUX="$JOURNAUX_SIM" \
       REHEARSAL=true FACE=true WEB_DRIVE=false DATA_EDIT=true \
       docker compose -f "$COMPOSE" "${SURCOUCHES[@]}" up -d) >>"$TMP/demarrage.log" 2>&1 || return 1
   epingler_sim
@@ -806,8 +811,32 @@ phase_machines() {
   lancer_validation machines validate-machines.sh "$ATTENDU_MACHINES" 'validate-machines' 180
 }
 
+phase_corps_sur() {
+  # CS (lot A0-4, spec docs/spec-A0-corps-sur.md §8.5) : sim NEUVE sur le monde `stage` (plateau nu,
+  # obstacle et passant scriptés) ; l'épreuve relance le nœud corps_sur, fige le lidar, tue le
+  # filtre — rien de cet état ne doit passer à V-R3, qui repart sur une sim neuve (`chantiers`).
+  # Rouge BLOQUANT (spec) : les répétitions ne sont pas lancées sur un corps sûr en défaut.
+  recolter simples; arreter_sim
+  PHASE_COURANTE=corps_sur
+  local t0=$SECONDS
+  MONDE_SIM=stage
+  if ! demarrer_sim; then
+    MONDE_SIM=chantiers
+    epreuve corps_sur --statut rouge --detail "la sim relancée (monde stage) n'a pas démarré (voir demarrage.log)" --duree "$((SECONDS - t0))" --journal demarrage.log
+    return 1
+  fi
+  MONDE_SIM=chantiers
+  lancer_validation corps_sur validate-corps-sur.sh "$ATTENDU_CORPS_SUR" '=== CS' 1800
+}
+
 phase_chantiers() {
+  recolter corps_sur; arreter_sim
   PHASE_COURANTE=chantiers
+  local t0=$SECONDS
+  if ! demarrer_sim; then
+    epreuve chantiers --statut rouge --detail "la sim relancée (monde chantiers) n'a pas démarré (voir demarrage.log)" --duree "$((SECONDS - t0))" --journal demarrage.log
+    return 1
+  fi
   lancer_corps chantiers '' || { epreuve chantiers --statut rouge --detail "chaîne roues absente, ou régisseur (monde) / regard (robot) non démarrés"; return 1; }
   lancer_validation chantiers validate-rehearsal-chantiers.sh "$ATTENDU_CHANTIERS" '=== V-R3' 1500
 }
@@ -986,6 +1015,7 @@ deroule() {
   phase_rtf || return 0
   phase_simples || return 0
   phase_machines || return 0
+  phase_corps_sur || return 0
   phase_chantiers || return 0
   phase_a1 || return 0
   phase_objets || return 0

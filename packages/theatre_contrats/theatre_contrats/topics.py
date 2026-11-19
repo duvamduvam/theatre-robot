@@ -96,3 +96,25 @@ VALIDATION_SIM_DEMANDE = 'validation_sim_demande'
 # Refus de jouer une piste roues non validée, publié par animations_node sur le robot :
 # {name, raison: "non_validee_sim"} ; le reste de la séquence joue.
 ROUES_REFUSEES = 'roues_refusees'
+
+# ---------------------------------------------------------------- corps sûr (lot A0)
+# Spec : docs/spec-A0-corps-sur.md §3.2. Producteur ou consommateur côté robot :
+# packages/didier_corps_sur (corps_sur_node), placé AVANT twist_mux sur les trois entrées
+# autonomes des roues ; la télécommande (cmd_vel_remote) n'y passe pas.
+# sensor_msgs/LaserScan, lidar (pilote réel sllidar_ros2 ou pont Gazebo pont_lidar) -> corps sûr ;
+# le corps sûr s'y abonne en best effort, profondeur 1 (seul le plus récent compte).
+SCAN = 'scan'
+# geometry_msgs/Twist, corps sûr -> twist_mux : les SORTIES filtrées des trois demandes
+# cmd_vel_anim (prio 10), cmd_vel_follow (prio 20), cmd_vel_web (prio 50). Un canal est muet
+# tant que sa demande l'est : jamais de consigne propre, sauf le zéro anticipé (nul).
+CMD_VEL_ANIM_SUR = 'cmd_vel_anim_sur'
+CMD_VEL_FOLLOW_SUR = 'cmd_vel_follow_sur'
+CMD_VEL_WEB_SUR = 'cmd_vel_web_sur'
+# std_msgs/Empty, best effort profondeur 1 : battement du superviseur (CONTRAT posé pour
+# A-préalables : la télécommande le publiera à 5 Hz au moins ; tout message vaut « présent »).
+SUPERVISEUR_BATTEMENT = 'superviseur/battement'
+# StringTime LATCHÉ (qos.latched() des DEUX côtés), JSON publié à chaque changement :
+# {etat, cause, zone, d_min_m, vue, superviseur, temoin, terrain} (spec §5.7).
+CORPS_SUR_ETAT = 'corps_sur/etat'
+# std_msgs/Empty, fiable profondeur 10 : lève un VERROU si sa cause a disparu (spec §5.6).
+CORPS_SUR_REARMER = 'corps_sur/rearmer'
