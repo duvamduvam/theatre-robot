@@ -9,7 +9,7 @@ littéral dans le compose et revérifié par chaque entrée de conteneur.
 
 | Service (conteneur `didier-sim-<service>`) | Image locale | Ce qui y tourne |
 |---|---|---|
-| `monde` | `monde/Dockerfile` (x86 seul) | Gazebo, pont gz, matériel simulé (servos, LED), répétition, sélecteur de jeu, **épreuves** ; `GZ_IP=127.0.0.1` (A1 intermittent, 11/11) |
+| `monde` | `monde/Dockerfile` (x86 seul) | Gazebo, pont gz, matériel simulé (servos, LED), répétition, sélecteur de jeu, **épreuves** ; `GZ_IP=127.0.0.1` (A1 intermittent, 11/11) ; depuis A0-2 (19/11) le **lidar C1 simulé** (`scan`, 10 Hz, 500 rayons, son propre pont `pont_lidar`) et, dans le monde `stage`, l'obstacle (`sim/obstacle_pose`) et le passant (`passant_sim_node`, `sim/passant`) des épreuves du corps sûr |
 | `robot` | `machines/robot/docker/Dockerfile` | le VRAI `robot_app.launch.py` (17 nœuds, chaîne roues en `use_sim_time`) + `complement_sim.launch.py` (`face_sim`, `validation_sim_node`) |
 | `vision` | `machines/vision/docker/Dockerfile` | `vision.launch.py`, `CHAT=false`, aucun secret ; sans webcam `person_tracker` s'arrête (L2c : caméra Gazebo) |
 | `telecommande` | Dockerfile x86 legacy | `controller_node` **sans interface** (`TELECOMMANDE_SANS_IHM=1`, 18/11) : ses éditeurs de topics tournent, aucune fenêtre sur le bureau |
@@ -23,7 +23,7 @@ docker compose down
 
 | Chemin | Rôle |
 |---|---|
-| `docker-compose.yml` | les 4 services ; variables : `HEADLESS`, `WORLD`, `WEB_PORT`, `FACE`, `FACE_PORT`, `DATA_EDIT`, et SIM-ONLY `WEB_DRIVE`, `REHEARSAL` |
+| `docker-compose.yml` | les 4 services ; variables : `HEADLESS`, `WORLD`, `WEB_PORT`, `FACE`, `FACE_PORT`, `DATA_EDIT`, `DIDIER_LIDAR_POSE` (« x y z lacet » du lidar dans `base_link`, vide = face avant à 25 cm ; seul `couverture_poses.py` la change), et SIM-ONLY `WEB_DRIVE`, `REHEARSAL` |
 | `docker-compose.banc.yml` | surcouche « Didier à l'arrêt » sur le service `vision` : webcam, son, secret de `~/.config/didier/`, variables `CHAT_*` (`docker compose -f docker-compose.yml -f docker-compose.banc.yml up -d`) |
 | `docker-compose.tete.yml` | surcouche « tête » (16/11) sur le service `vision`, pour l'épreuve de conversation : chat sans micro ni son, mouvement à la voix, réflexion coupée, les deux secrets de la tête (`vision-conf-secret`, `secrets.env` → Anthropic en direct) en lecture seule ; la fumée ne la pose qu'après avoir trouvé les deux fichiers (`docker compose -f docker-compose.yml -f docker-compose.tete.yml up -d`) |
 | `monde/` | Dockerfile et entrée du conteneur `monde` (garde 43, colcon de ses packages, `monde.launch.py`) |

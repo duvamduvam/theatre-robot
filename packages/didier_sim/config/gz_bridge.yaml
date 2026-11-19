@@ -117,3 +117,12 @@
   ros_type_name: "ros_gz_interfaces/msg/MaterialColor"
   gz_type_name: "gz.msgs.MaterialColor"
   direction: ROS_TO_GZ
+
+# Vérité terrain de l'OBSTACLE des épreuves du corps sûr (spec A0 §8.4-8.5) : système gz
+# PosePublisher du modèle `obstacle` du monde stage (100 Hz, pose du modèle seule, horodatée à
+# l'horloge simulée). Le lidar, lui, a son propre pont (pont_lidar.yaml).
+- ros_topic_name: "sim/obstacle_pose"
+  gz_topic_name: "/model/obstacle/pose"
+  ros_type_name: "geometry_msgs/msg/PoseStamped"
+  gz_type_name: "gz.msgs.Pose"
+  direction: GZ_TO_ROS

@@ -62,6 +62,10 @@ services:
       # salle de répétition, `chantiers` = Nefs à la grue Titan grise). Le NOM interne du monde
       # reste `stage` (contrat du pont LED), seul le fichier change.
       - WORLD=${WORLD:-stage}
+      # Pose du lidar simulé, « x y z lacet » dans base_link (spec A0 §8.3) : vide = défauts du xacro
+      # (face avant, plan à 0,25 m). Seul l'outil de comparaison des emplacements la change
+      # (packages/didier_corps_sur/tools/couverture_poses.py).
+      - DIDIER_LIDAR_POSE=${DIDIER_LIDAR_POSE:-}
       # Transport Gazebo confiné au loopback (11/11, cause d'A1 7/14) : en réseau host, sans
       # GZ_IP, la découverte gz part en multicast sur TOUTES les interfaces du PC ; 6 fois sur 10
       # ground_truth/odom n'était jamais relayé. Gazebo et son pont vivent dans CE conteneur.

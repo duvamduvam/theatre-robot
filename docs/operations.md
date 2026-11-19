@@ -491,7 +491,7 @@ uv venv --python 3.12 packages/didier_vision/.venv && \
   uv pip install --python packages/didier_vision/.venv/bin/python -r packages/didier_vision/requirements-test.txt
 ```
 
-Les sept suites (depuis la racine du dépôt ; `didier_perception` depuis le lot O0 du 18/11 ; `-o addopts=` neutralise le `-q` des `pytest.ini`) :
+Les huit suites (depuis la racine du dépôt ; `didier_perception` depuis le lot O0 et `didier_corps_sur` depuis A0-3, 18-19/11 ; `-o addopts=` neutralise le `-q` des `pytest.ini`) :
 
 ```bash
 R=$PWD
@@ -500,6 +500,7 @@ R=$PWD
 (cd packages/didier_jeu        && $R/.venv/bin/python -m pytest -q -o addopts=)
 (cd packages/theatre_contrats  && $R/.venv/bin/python -m pytest -q -o addopts=)
 (cd packages/didier_perception && $R/.venv/bin/python -m pytest -q -o addopts=)   # tableau des objets (O0)
+(cd packages/didier_corps_sur  && $R/.venv/bin/python -m pytest -q -o addopts=)   # corps sûr (A0), logique pure
 (cd legacy/dadou_control_ros   && $R/.venv/bin/python -m pytest -q -o addopts=)   # télécommande (→ L4)
 (cd packages/didier_vision     && $R/packages/didier_vision/.venv/bin/python -m pytest -q -o addopts=)
 ```
@@ -512,8 +513,8 @@ une page, corriger les liens, pas le test.
 ## CI à la racine — les tests unitaires à chaque poussée (11/11)
 
 `.github/workflows/tests.yml` (racine du mono-dépôt) rejoue sur GitHub, à chaque poussée et
-chaque demande de fusion, sept suites « hôte » : `didier_core`, `dadou_utils_ros`,
-`didier_jeu`, `theatre_contrats`, `didier_perception` (O0, 18/11), `didier_vision`, et la télécommande de
+chaque demande de fusion, huit suites « hôte » : `didier_core`, `dadou_utils_ros`,
+`didier_jeu`, `theatre_contrats`, `didier_perception` (O0, 18/11), `didier_corps_sur` (A0, 19/11), `didier_vision`, et la télécommande de
 `legacy/dadou_control_ros`. Ubuntu 24.04, Python 3.12, aucun ROS (modules factices), `requirements-test.txt` de la racine
 (la vision : celui de son package), la commande de la section précédente : `python -m pytest -q -o addopts=` depuis le dossier de la suite.
 Pas de build colcon ni de sim : la fumée nocturne s'en charge.

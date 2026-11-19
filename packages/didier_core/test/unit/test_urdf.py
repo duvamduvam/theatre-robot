@@ -115,3 +115,50 @@ def test_gz_one_position_controller_per_servo(gz_urdf):
     assert set(controllers) == SERVO_JOINTS
     for name, plugin in controllers.items():
         assert plugin.find("topic").text == "/{}/position".format(name)
+
+
+# ======== Lidar simulé (spec A0 §8.1) : caractéristiques du RPLIDAR C1, GRAVÉES ========
+
+def _capteur_lidar(gz_urdf):
+    capteurs = [s for g in gz_urdf.findall("gazebo") for s in g.findall("sensor")
+                if s.get("type") == "gpu_lidar"]
+    assert len(capteurs) == 1
+    return capteurs[0]
+
+
+def test_gz_lidar_pose_par_defaut_face_avant_plan_a_25_cm(gz_urdf):
+    """Défauts xacro = pose A de la spec (face avant, plan à 0,25 m : sol à z = −0,23)."""
+    joint = next(j for j in gz_urdf.findall("joint") if j.get("name") == "laser_joint")
+    assert joint.find("parent").get("link") == "base_link"
+    assert joint.find("child").get("link") == "laser_frame"
+    xyz = [float(v) for v in joint.find("origin").get("xyz").split()]
+    rpy = [float(v) for v in joint.find("origin").get("rpy").split()]
+    assert xyz == [0.33, 0.0, 0.02]
+    assert rpy == [0.0, 0.0, 0.0]
+    lien = next(l for l in gz_urdf.findall("link") if l.get("name") == "laser_frame")
+    assert lien.find("collision") is None          # sans collision (spec §8.1)
+
+
+def test_gz_lidar_pose_en_arguments():
+    doc = ET.fromstring(xacro.process_file(
+        GZ_XACRO_PATH, mappings={"lidar_x": "0.27", "lidar_z": "0.22", "lidar_lacet": "3.14159"}).toxml())
+    joint = next(j for j in doc.findall("joint") if j.get("name") == "laser_joint")
+    assert joint.find("origin").get("xyz") == "0.27 0.0 0.22"
+    assert joint.find("origin").get("rpy") == "0 0 3.14159"
+
+
+def test_gz_lidar_caracteristiques_c1(gz_urdf):
+    s = _capteur_lidar(gz_urdf)
+    assert s.findtext("topic") == "scan"
+    assert s.findtext("gz_frame_id") == "laser_frame"
+    assert float(s.findtext("update_rate")) == 10.0          # ne se baisse pas (porte des 200 ms)
+    h = s.find("lidar/scan/horizontal")
+    assert int(h.findtext("samples")) == 500
+    assert float(h.findtext("min_angle")) == -3.14159265
+    assert float(h.findtext("max_angle")) == 3.12902628     # −π + 499 × 2π/500 : pas de 0,72°
+    assert int(s.findtext("lidar/scan/vertical/samples")) == 1
+    assert float(s.findtext("lidar/range/min")) == 0.05
+    assert float(s.findtext("lidar/range/max")) == 12.0
+    assert float(s.findtext("lidar/range/resolution")) == 0.015
+    assert s.findtext("lidar/noise/type") == "gaussian"
+    assert float(s.findtext("lidar/noise/stddev")) == 0.01

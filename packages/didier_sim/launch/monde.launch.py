@@ -32,6 +32,23 @@ DOMAINE_SIM = "43"
 # de caisse (0.10), plus 1 cm de marge pour poser le robot sans le coincer.
 SPAWN_Z = "0.24"
 
+# Pose du lidar simulé (spec A0 §8.1, §8.3) : « x y z lacet » dans base_link, lue dans la
+# variable DIDIER_LIDAR_POSE (posée par le compose de la sim, vide = défauts du xacro : face
+# avant, plan à 0,25 m du sol). Sert à comparer les emplacements candidats
+# (didier_corps_sur/tools/couverture_poses.py) sans toucher au fichier.
+POSE_LIDAR_DEFAUT = ("0.33", "0.0", "0.02", "0.0")
+
+
+def _pose_lidar():
+    brut = os.environ.get("DIDIER_LIDAR_POSE", "").split()
+    if not brut:
+        return POSE_LIDAR_DEFAUT
+    if len(brut) != 4:
+        raise RuntimeError("DIDIER_LIDAR_POSE=%r : attendu « x y z lacet » (4 nombres)" % " ".join(brut))
+    for v in brut:
+        float(v)            # refuse tout ce qui n'est pas un nombre AVANT de lancer gz
+    return tuple(brut)
+
 
 def generate_launch_description():
     # Garde 43 AVANT toute action (même règle que machines/sim/monde/entree.sh).
@@ -40,6 +57,7 @@ def generate_launch_description():
         raise RuntimeError("monde.launch.py : ROS_DOMAIN_ID=%r, refusé (simulation = 43 seulement)" % domaine)
 
     headless = LaunchConfiguration("headless")
+    lidar_x, lidar_y, lidar_z, lidar_lacet = _pose_lidar()
 
     # ⚠️ `robot_description` (variable, paramètre de robot_state_publisher, topic du
     # spawn) = nom STANDARD ROS de l'URDF, PAS le package (didier_description depuis
@@ -50,6 +68,7 @@ def generate_launch_description():
             PathJoinSubstitution([
                 FindPackageShare("didier_description"), "urdf", "dadou_robot_gz.urdf.xacro",
             ]),
+            " lidar_x:=", lidar_x, " lidar_y:=", lidar_y, " lidar_z:=", lidar_z, " lidar_lacet:=", lidar_lacet,
         ]),
         value_type=str,
     )
@@ -118,6 +137,32 @@ def generate_launch_description():
                     ]),
                     "use_sim_time": True,
                 }],
+                output="screen",
+            ),
+
+            # Lidar simulé (spec A0 §8.1) : SON PROPRE pont, PAS dans gz_bridge.yaml. Les épreuves
+            # du corps sûr figent ou tuent le lidar seul (SIGSTOP de ce processus) sans figer
+            # /clock, sur lequel vivent le deadman et le chien de garde. Nom de nœud fixe
+            # (`pont_lidar`) : c'est par lui que les épreuves trouvent le processus.
+            Node(
+                package="ros_gz_bridge",
+                executable="parameter_bridge",
+                name="pont_lidar",
+                parameters=[{
+                    "config_file": PathJoinSubstitution([
+                        FindPackageShare("didier_sim"), "config", "pont_lidar.yaml",
+                    ]),
+                    "use_sim_time": True,
+                }],
+                output="screen",
+            ),
+
+            # Passant simulé (spec A0 §8.4) : déplace le cylindre `passant` du monde stage le long
+            # d'un segment demandé sur sim/passant. Refus hors domaine 43 dans le nœud.
+            Node(
+                package="didier_sim",
+                executable="passant_sim_node",
+                parameters=[{"use_sim_time": True}],
                 output="screen",
             ),
 

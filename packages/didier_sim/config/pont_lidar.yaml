@@ -1,0 +1,14 @@
+# Pont ros_gz DÉDIÉ au lidar simulé (spec A0 §8.1) — lancé par monde.launch.py sous le nom de
+# nœud `pont_lidar`, À PART de gz_bridge.yaml : les épreuves du corps sûr figent (SIGSTOP) ou
+# tuent ce processus pour simuler un capteur muet, SANS figer /clock (porté par l'autre pont),
+# sur lequel vivent le deadman et le chien de garde.
+#
+# Côté ROS : nom RELATIF (`scan`), comme le pilote réel sllidar_ros2 ; le pont tourne dans le
+# groupe PushRosNamespace de monde.launch.py → /<ROBOT_NAME>/scan. Côté gz : /scan, fixé par
+# <topic>scan</topic> du capteur dans dadou_robot_gz.urdf.xacro.
+
+- ros_topic_name: "scan"
+  gz_topic_name: "/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS

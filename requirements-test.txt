@@ -13,3 +13,6 @@ py_trees==2.6.0
 # Pont web (didier_web) : sans eux, 29 tests du pont sont sautés en CI (constaté en L1d-3, 13/11).
 aiohttp
 Pillow
+# PyYAML : lu par didier_corps_sur.reglages (lot A0). Déjà tiré par xacro, nommé ici pour ne pas
+# dépendre d une dépendance transitive.
+pyyaml
