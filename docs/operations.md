@@ -959,6 +959,14 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   David l'annule. « En route » dit par Didier repart tout de suite. Inutile de
   recliquer Route ON, mais la séance doit être **démarrée** (hors séance, le
   régisseur ignore le « go » : `voice_move … hors_seance`).
+- **« Regarde ça »** (lot « texte raccord », 18/11) : « regarde », « tu as vu ? »,
+  « il y a une lettre sur le banc, tu pourrais regarder » → Didier s'arrête, tourne
+  la tête, puis **repart seul 6 s plus tard** (`reprise.apres_regard_s`) ; journal
+  du jeu : `pause_regard`, puis « reprise : il rejoint sa route (regard terminé,
+  6 s) ». Il ne part jamais « aller voir » pour un simple « regarde ». Après un
+  geste refusé, sa réplique est contrôlée avant d'être dite (journal du chat :
+  `Réplique contrôlée REJETÉE …` puis la régénérée, ou le repli « Non, je n'ai pas
+  pu : je n'ai pas bougé d'ici. ») et la tâche se ferme `échec : geste refusé`.
 - **Tableau des objets** (lot O1, 18/11 ; remplace les « distances » du 15/11) :
   `didier_perception/objets_node` (conteneur `vision`) publie `scene/objets`, la seule
   vérité sur les objets — distance, côté, « en vue » (champ ±30°, 15 m), `atteignable`
@@ -1017,13 +1025,13 @@ AVEC LA TÊTE, `validate-conversation.sh` (CONV, 16/11, ci-dessous). La chaîne 
 lancée par la fumée : elle fait partie du bringup du robot. ≈ 55-60 min.
 
 **Épreuve de conversation scriptée (CONV, 16/11)** — `machines/sim/validate-conversation.sh`,
-13 contrôles gravés, seule épreuve où la tête tourne : la sim est relancée avec la surcouche
+19 contrôles gravés, seule épreuve où la tête tourne : la sim est relancée avec la surcouche
 `docker-compose.tete.yml` (chat_node SANS micro ni son, mouvement à la voix, réflexion coupée, les
 deux secrets de la tête en lecture seule), route Chantiers, scénario `jeu-a1` (calme : ni bug ni
 lubie du régisseur) + sélecteur de jeu. Le texte remplace le micro (`chat_text`, publié UNE fois
 par phrase, abonné apparié), mesures par l'enregistreur rclpy (journal : `rehearsal/chat_move`,
 `jeu/chat_move`, `rehearsal/chat_move_reply`, `route_goto_result`, `chat_transcript`,
-`jeu/journal`, `route_state`, `chat_state`). P1 la chaîne d'écoute dit « Anthropic, secours
+`jeu/journal`, `route_state`, `chat_state`, `look`). P1 la chaîne d'écoute dit « Anthropic, secours
 OpenRouter » ; T0 départ ; **A** « Fais le tour de l'éléphant » (pas de tour possible) : Didier
 répond, AUCUN `tour_de` publié, aucune réplique ne prétend l'avoir fait (motifs gravés) ;
 **B** « Va voir la table basse », dite à moins de 9 m de l'objet, en marche depuis ≥ 11 s :
@@ -1032,8 +1040,13 @@ reprise du jeu 9-13 s après l'arrivée (`reprise.apres_geste_s` = 10 s), Didier
 15 s) ; **C** « Stop. » : stop de la bouche ≤ 2 s (arrêt d'urgence, avant le LLM), relais du jeu
 ≤ 0,5 s, `route_speed` 0 ≤ 1 s après le stop de la bouche (l'arrêt vocal est un « hold » du
 régisseur : `route_state` reste on), `cmd_vel_follow` nul de +2 à +9 s et < 0,05 m parcourus de
-+4 à +9 s. Coût ≈ 0,0035 $ par fumée
-(6-7 répliques Haiku). **FACULTATIVE** : sans `ANTHROPIC_API_KEY` dans
++4 à +9 s ; **D** (lot « texte raccord », la séance du 18/11 21:35 rejouée) : « go » console,
+Didier en marche, banc à plus de 11 m, « Il y a une lettre sur le banc, tu pourrais regarder ? » :
+Didier répond ≤ 40 s, la bouche demande une `pause` ≤ 20 s et aucun `aller_voir`/`tour_de` n'est
+transmis au régisseur, `stop` du jeu ≤ 0,5 s puis `route_speed` 0 ≤ 1 s, un regard sur `look`,
+« go » de reprise du jeu 5-8 s après la pause (`reprise.apres_regard_s` = 6 s) et ≥ 0,3 m en 10 s,
+aucune réplique ne prétend être allée au banc (ni, après un refus, avoir vu la lettre : motifs
+gravés). Coût ≈ 0,005 $ par fumée (8-10 répliques Haiku). **FACULTATIVE** : sans `ANTHROPIC_API_KEY` dans
 `~/.config/didier/secrets.env` (ou sans `vision-conf-secret`), elle est « non lancée (pas de clé) »
 et ne rougit jamais la fumée (`fumee_page.py`, `FACULTATIVES`) ; seul un vrai rouge compte. Les
 bascules de secours vues dans le journal de chat_node sont notées sur la page. À la main (sim

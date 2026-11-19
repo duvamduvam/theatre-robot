@@ -31,6 +31,18 @@
 #   C3 arrêt : le régisseur pose route_speed 0 (« hold » : l'arrêt vocal ne coupe PAS la route,
 #      route_state reste on — vu à l'essai 1 du 16/11) en ≤ 1 s après le stop de la bouche,
 #      cmd_vel_follow nul de +2 à +9 s, et moins de 0,05 m parcourus de +4 à +9 s
+# D  « Il y a une lettre sur le banc, tu pourrais regarder ? » (lot « texte raccord », séance du
+#    18/11 21:35 rejouée : le banc est à plus de 10 m, la lettre est imaginaire). Après C, « go »
+#    console, Didier en marche depuis ≥ EN_MARCHE_D_S, banc à > DIST_D_MIN_M
+#   D1 Didier répond (≥ 1 réplique sur chat_transcript en ≤ 40 s)
+#   D2 la bouche demande une PAUSE (rehearsal/chat_move "pause") en ≤ 20 s, et AUCUN aller_voir ni
+#      tour_de n'est transmis au régisseur (jeu/chat_move) jusqu'à la fin
+#   D3 arrêt : « stop » relayé par le jeu ≤ 0,5 s après la pause, route_speed 0 ≤ 1 s après
+#   D4 regard : un message sur `look` dans les 1,5 s qui suivent la pause
+#   D5 reprise seule : « go » du jeu 5 à 8 s après la pause (reprise.apres_regard_s = 6 s), journal
+#      du jeu « pause_regard » puis « reprise », et x gagne ≥ 0,3 m dans les 10 s qui suivent
+#   D6 raccord : aucune réplique de D ne prétend être allée au banc ni avoir touché la lettre ; après
+#      un geste REFUSÉ (chat_move_reply non accepté), aucune ne prétend non plus l'avoir vue
 source /opt/ros/${ROS_DISTRO}/setup.sh
 source /home/ros2_ws/install/setup.bash
 NS="/${ROBOT_NAME:-didier}"
@@ -63,6 +75,7 @@ capture_demarrer conversation \
   --journal $NS/chat_state=theatre_interfaces/msg/StringTime,latche \
   --journal $NS/route_speed=theatre_interfaces/msg/StringTime \
   --journal $NS/cmd_vel_follow=geometry_msgs/msg/Twist \
+  --journal $NS/look=theatre_interfaces/msg/StringTime \
   --dernier $NS/chat_audio_chain=theatre_interfaces/msg/StringTime,latche \
   --dernier $NS/ground_truth/odom=nav_msgs/msg/Odometry
 
@@ -79,6 +92,9 @@ from theatre_interfaces.msg import StringTime
 CAP, NS = Path(sys.argv[1]), sys.argv[2]
 TABLE = (17.8, 1.4)          # ancre du POI table_basse (didier_rehearsal/config/chantiers.yaml)
 DIST_B_M = 9.0               # < PORTEE_M (10 m, « atteignable » du tableau des objets), marge 1 m
+BANC = (36.2, 1.4)           # ancre du POI banc (didier_rehearsal/config/chantiers.yaml)
+DIST_D_MIN_M = 11.0          # > PORTEE_M : le banc n'est pas atteignable (la séance du 18/11 : 20 m)
+EN_MARCHE_D_S = 3.0
 EN_MARCHE_S = 11.0           # > refractaire_s.deplacement (10 s) du sélecteur
 TELEPORT = ["timeout", "10", "gz", "service", "-s", "/world/stage/set_pose", "--reqtype", "gz.msgs.Pose",
             "--reptype", "gz.msgs.Boolean", "--timeout", "3000", "--req",
@@ -272,6 +288,41 @@ try:
     marques["p_c4"] = pose()
     n.dormir(5.0)
     marques["p_c9"] = pose()
+
+    # D — « regarde » : la lettre (imaginaire) sur le banc (lointain). C a posé le stop de la
+    # bouche : « go » de David à la console, puis Didier en marche quelques secondes.
+    n.attendre(n.ecoute, 60, "Didier à l'écoute après C")
+    n.console("go")
+    fin, depuis = time.monotonic() + 30.0, None
+    while True:
+        if en_marche(etat("route_state"), etat("route_speed")):
+            depuis = depuis or time.monotonic()
+            if time.monotonic() - depuis >= EN_MARCHE_D_S:
+                break
+        else:
+            depuis = None
+        if time.monotonic() > fin:
+            raise Echec("Didier n'est pas reparti après le « go » console de D")
+        n.dormir(0.2)
+    p = pose()
+    if p is None or math.dist(p, BANC) <= DIST_D_MIN_M:
+        raise Echec(f"banc trop proche pour D ({p}) : il serait atteignable")
+    marques["dist_d"] = round(math.dist(p, BANC), 2)
+    n.dire("d", "Il y a une lettre sur le banc, tu pourrais regarder ?")
+    # La pause (6 s) et sa reprise : la pose est relevée au « go » du jeu puis 10 s après (D5).
+    try:
+        n.attendre(lambda: any(json.loads(l["payload"]["msg"]) == "pause"
+                               for l in journal("rehearsal/chat_move", marques["d"])), 30, "pause de D")
+        tp = next(l["stamp"] for l in journal("rehearsal/chat_move", marques["d"])
+                  if json.loads(l["payload"]["msg"]) == "pause")
+        n.attendre(lambda: any(json.loads(l["payload"]["msg"]) == "go"
+                               for l in journal("jeu/chat_move", tp)), 15, "« go » de reprise de D")
+        marques["x_d_go"] = (pose() or (math.nan,))[0]
+        n.dormir(10.0)
+        marques["x_d_go10"] = (pose() or (math.nan,))[0]
+    except Echec as e:
+        print(f"  ⚠️ pilote D : {e}", flush=True)     # les verdicts D diront lesquels manquent
+    n.attendre(n.ecoute, 40, "fin des répliques de D")
     marques["fin"] = time.time()
 except Echec as e:
     marques["echec"] = str(e)
@@ -291,6 +342,12 @@ from pathlib import Path
 
 CAP, NS = Path(sys.argv[1]), sys.argv[2]
 TABLE = (17.8, 1.4)
+# D6 — être allé au banc, ou avoir touché la lettre : motifs GRAVÉS (réplique en minuscules, sans
+# accents, apostrophes droites). Et après un geste REFUSÉ, l'avoir vue (la séance du 18/11 : « je vois
+# bien une enveloppe posée dessus »). Juge INDÉPENDANT du code de la bouche (didier_vision.ai.raccord).
+MOTIFS_ALLE = [r"\bj'y suis\b", r"\bme (voila|voici)\b", r"\bje suis (arrive|alle|devant|a cote)",
+               r"\bj'ai (ouvert|pris|ramasse|attrape|lu)\b", r"\bje (lis|ouvre|ramasse|decachette)\b"]
+MOTIFS_VU = [r"\bje (la |le |l')?(vois|apercois|distingue)\b", r"\bj'ai (vu|trouve)\b", r"\by a bien\b"]
 NOMS_TABLE = {"table_basse", "table basse", "table", "petite table"}
 # Prétendre avoir fait (ou faire) le tour : motifs GRAVÉS, sur la réplique en minuscules,
 # apostrophes typographiques ramenées à « ' ».
@@ -404,6 +461,51 @@ verdict(hold is not None and hold - stop <= 1.0 and vitesses and max(abs(v) for 
         f"C3 arrêt : route_speed 0 {('%.2f s' % (hold - stop)) if hold else '—'} après le stop (≤ 1 s), "
         f"cmd_vel_follow max {max((abs(v) for v in vitesses), default=float('nan')):.3f} m/s de +2 à +9 s "
         f"({len(vitesses)} msgs, < 0,01), {derive:.3f} m parcourus de +4 à +9 s (< 0,05)")
+
+# --- D -------------------------------------------------------------------------------------
+import unicodedata
+
+
+def plat(s):
+    s = str(s or "").lower().replace("’", "'")
+    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+
+td, fin_d = m.get("d"), m.get("fin") or math.inf
+dits_d = [(t, v.get("text", "")) for t, v in msgs("chat_transcript", td or math.inf, fin_d)
+          if isinstance(v, dict) and v.get("role") == "didier"]
+verdict(td is not None and dits_d and dits_d[0][0] - td <= 40,
+        f"D1 Didier répond à « une lettre sur le banc, tu pourrais regarder » (à {m.get('dist_d')} m du "
+        f"banc, {len(dits_d)} réplique(s))")
+pause = next((t for t, v in msgs("rehearsal/chat_move", td or math.inf, fin_d) if v == "pause"), None)
+partis = [v for t, v in msgs("jeu/chat_move", td or math.inf, fin_d)
+          if isinstance(v, dict) and v.get("cmd") in ("aller_voir", "tour_de")]
+verdict(pause is not None and pause - td <= 20 and not partis,
+        f"D2 la bouche demande une pause {('%.1f s' % (pause - td)) if pause else '—'} après la phrase "
+        f"(≤ 20 s), aucun aller_voir/tour_de transmis au régisseur ({partis or 'aucun'})")
+stop_d = next((t for t, v in msgs("jeu/chat_move", pause or math.inf, fin_d) if v == "stop"), None)
+hold_d = next((t for t, v in msgs("route_speed", stop_d or math.inf, fin_d) if v in (0, 0.0, "0")), None)
+verdict(stop_d is not None and stop_d - pause <= 0.5 and hold_d is not None and hold_d - stop_d <= 1.0,
+        f"D3 arrêt : « stop » du jeu {('%.3f s' % (stop_d - pause)) if stop_d else '—'} après la pause "
+        f"(≤ 0,5 s), route_speed 0 {('%.2f s' % (hold_d - stop_d)) if hold_d else '—'} après (≤ 1 s)")
+regard = [v for t, v in msgs("look", (pause or math.inf) - 0.5, (pause or math.inf) + 1.5)]
+verdict(bool(regard), f"D4 regard : {regard[0] if regard else 'aucun message look'} autour de la pause")
+go_d = next((t for t, v in msgs("jeu/chat_move", stop_d or math.inf, fin_d) if v == "go"), None)
+types_d = [v.get("type") for _, v in msgs("jeu/journal", pause or math.inf, fin_d) if isinstance(v, dict)]
+gain_d = m.get("x_d_go10", math.nan) - m.get("x_d_go", math.nan)
+verdict(go_d is not None and 5.0 <= go_d - pause <= 8.0 and "pause_regard" in types_d and "reprise" in types_d
+        and gain_d >= 0.3,
+        f"D5 reprise seule {('%.1f s' % (go_d - pause)) if go_d else '—'} après la pause (5-8 s ; journal "
+        f"pause_regard {'pause_regard' in types_d}, reprise {'reprise' in types_d}), x gagne {gain_d:.2f} m "
+        f"en 10 s (≥ 0,3)")
+refus_d = next((t for t, v in msgs("rehearsal/chat_move_reply", td or math.inf, fin_d)
+                if isinstance(v, dict) and v.get("effect") != "accepted"), None)
+fautes = [(round(t - td, 1), x) for t, x in dits_d
+          if any(re.search(p, plat(x)) for p in MOTIFS_ALLE)
+          or (refus_d is not None and t > refus_d and any(re.search(p, plat(x)) for p in MOTIFS_VU))]
+verdict(td is not None and dits_d and not fautes,
+        f"D6 raccord : aucune réplique ne prétend être allée au banc{' ni, après le refus, avoir vu' if refus_d else ''}"
+        f" ({fautes or ' / '.join(x for _, x in dits_d)[:200]})")
 
 print(f"=== CONV conversation scriptée : {ok} OK, {ko} KO ===")
 sys.exit(0 if ko == 0 else 1)
