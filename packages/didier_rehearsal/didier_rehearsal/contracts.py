@@ -76,6 +76,12 @@ DIRECTOR_CMD_TOPIC = "rehearsal/cmd"
 # chaque changement et au démarrage. NE PORTE JAMAIS d'info de panne/lubie
 # (David ne voit pas le tirage) : voir rehearsal_state.py.
 REHEARSAL_STATE_TOPIC = "rehearsal/state"
+# JOURNAL EN DIRECT pour la page scène (« Coulisses », décision de David du
+# 18/11 : il voit désormais le tirage). Chaque événement du JSONL est aussi
+# publié ici, VOLATILE (depth 10, jamais latché : un vieil événement ne doit
+# pas rejouer à l'ouverture de la page) : StringTime, payload JSON
+# {"type": str, "payload": dict, "t_ms": int (ms murales)}.
+JOURNAL_TOPIC = "rehearsal/journal"
 HEARTBEAT_TOPIC = "rehearsal/heartbeat"
 HEARTBEAT_TIMEOUT_MS = 1000
 # Ordres aux relais : StringTime JSON {"relay": nom, "op": ..., "params": {...},

@@ -98,3 +98,53 @@ def test_dimensions_incoherentes_refusees():
 ])
 def test_drapeau_partenaire_selon_la_source(base, source, attendu):
     assert camera_is_partner_effective(base, source) is attendu
+
+
+# --- Source de départ (paramètre source_initiale, spec L2 décision 14, 18/11) ---
+
+from didier_vision.tracking.camera_source import (  # noqa: E402
+    GAZEBO_FRAME_TIMEOUT_S, gazebo_input_alive, initial_source)
+
+
+@pytest.mark.parametrize("raw", [None, "", "  "])
+def test_depart_vide_reste_webcam_robot_reel(raw):
+    assert initial_source(raw, "camera/image_raw") == ("webcam", False)
+
+
+def test_depart_gazebo_en_sim():
+    assert initial_source("gazebo", "camera/image_raw") == ("gazebo", False)
+
+
+def test_depart_gazebo_refuse_sans_topic_sim():
+    # Robot réel : jamais de départ sur une caméra qui n'existe pas.
+    assert initial_source("gazebo", "") == ("webcam", True)
+
+
+def test_depart_inconnu_refuse():
+    assert initial_source("lidar", "camera/image_raw") == ("webcam", True)
+
+
+def test_depart_webcam_explicite():
+    assert initial_source("webcam", "camera/image_raw") == ("webcam", False)
+
+
+# --- État vrai de l'entrée Gazebo (18/11 : « on » annoncé sans une image) ---
+
+def test_delai_gazebo_grave():
+    assert GAZEBO_FRAME_TIMEOUT_S == 2.0
+
+
+def test_gazebo_sans_image_est_off():
+    assert gazebo_input_alive(None, 100.0) is False
+
+
+def test_gazebo_image_recente_est_on():
+    assert gazebo_input_alive(98.5, 100.0) is True
+
+
+def test_gazebo_image_a_la_limite_est_on():
+    assert gazebo_input_alive(98.0, 100.0) is True
+
+
+def test_gazebo_image_trop_vieille_est_off():
+    assert gazebo_input_alive(97.9, 100.0) is False

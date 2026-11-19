@@ -62,6 +62,7 @@ def generate_launch_description():
     ema_alpha = LaunchConfiguration("ema_alpha")
     video_fps = LaunchConfiguration("video_fps")
     sim_camera_topic = LaunchConfiguration("sim_camera_topic")
+    source_initiale = LaunchConfiguration("source_initiale")
     chat_enabled = LaunchConfiguration("chat_enabled")
     reflection_enabled = LaunchConfiguration("reflection_enabled")
 
@@ -94,6 +95,12 @@ def generate_launch_description():
                         " source d'images à chaud (topic camera_source). Vide = option"
                         " INDISPONIBLE : défaut du robot réel ; renseigné par le seul banc PC x86"
                         " (VISION_SIM_CAMERA_TOPIC dans docker-compose-x86.yml)",
+        ),
+        DeclareLaunchArgument(
+            "source_initiale", default_value="webcam",
+            description="Source d'images au démarrage : webcam (défaut, robot réel) | gazebo"
+                        " (accepté seulement si sim_camera_topic est posé ; la webcam n'est alors"
+                        " PAS ouverte). VISION_SOURCE_INITIALE dans les compose de sim",
         ),
         DeclareLaunchArgument(
             "chat_enabled", default_value="false",
@@ -137,6 +144,7 @@ def generate_launch_description():
                     # ParameterValue(str) : sans lui, launch_ros relit la chaîne comme du
                     # YAML et une valeur vide (robot réel) deviendrait None -> rejet.
                     "sim_camera_topic": ParameterValue(sim_camera_topic, value_type=str),
+                    "source_initiale": ParameterValue(source_initiale, value_type=str),
                 }],
             ),
 

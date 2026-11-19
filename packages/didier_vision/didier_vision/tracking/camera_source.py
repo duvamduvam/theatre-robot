@@ -39,6 +39,35 @@ def available_sources(sim_camera_topic: str) -> list:
     return sources
 
 
+def initial_source(requested, sim_camera_topic: str) -> tuple:
+    """Source au DÉMARRAGE (paramètre `source_initiale`, spec L2 décision 14,
+    codée le 18/11 sur demande de David : « Gazebo par défaut » en sim).
+    Renvoie (source, refusee) : vide/absent = webcam (robot réel, inchangé) ;
+    « gazebo » seulement si la machine le propose (sim_camera_topic), sinon
+    webcam et refusee=True (le node le dit). Valeur inconnue = webcam, refusee."""
+    if requested is None or not str(requested).strip():
+        return SOURCE_WEBCAM, False
+    source = decode_camera_source(requested)
+    if source is None:
+        return SOURCE_WEBCAM, True
+    adopted = resolve_source(SOURCE_WEBCAM, source, sim_camera_topic)
+    return adopted, adopted != source
+
+
+# Délai sans image Gazebo au-delà duquel la caméra simulée est déclarée « off » :
+# les images arrivent à ~5-30 i/s ; 2 s de silence = sim arrêtée ou figée.
+GAZEBO_FRAME_TIMEOUT_S = 2.0
+
+
+def gazebo_input_alive(last_frame_s: Optional[float], now_s: float,
+                       timeout_s: float = GAZEBO_FRAME_TIMEOUT_S) -> bool:
+    """L'entrée Gazebo produit-elle VRAIMENT des images ? Faux tant qu'aucune
+    n'est arrivée (None) ou si la dernière date de plus de `timeout_s`.
+    POURQUOI (18/11) : l'état publié disait « on » dès l'abonnement, sans une
+    seule image — la page affichait « webcam allumée » sur une entrée muette."""
+    return last_frame_s is not None and now_s - last_frame_s <= timeout_s
+
+
 def resolve_source(current: str, requested: str, sim_camera_topic: str) -> str:
     """Source à adopter : `requested` si disponible, sinon `current` inchangée
     (« gazebo » sans sim_camera_topic = refus, la webcam n'est pas touchée)."""

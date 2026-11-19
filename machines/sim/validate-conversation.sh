@@ -17,7 +17,8 @@
 #   A2 AUCUN ordre tour_de publié (bouche -> jeu, ni jeu -> régisseur) jusqu'à la phrase B
 #   A3 aucune réplique ne prétend l'avoir fait (motifs gravés MOTIFS_PRETENTION)
 # B  « va voir la table basse » (objet à < 10 m : la phrase part quand Didier en est à moins de
-#    DIST_B_M, en marche depuis ≥ 11 s — période réfractaire « déplacement » du jeu = 10 s)
+#    DIST_B_M, en marche depuis ≥ 11 s — période réfractaire « déplacement » du jeu = 10 s ; « en
+#    marche » = route on ET route_speed > 0 : le hold d'une lubie n'en est pas un, fumée du 19/11)
 #   B1 ordre aller_voir publié par la bouche, objet = la table basse, en ≤ 20 s
 #   B2 accepté par le RÉGISSEUR (chat_move_reply source director, effect accepted) en ≤ 30 s
 #   B3 arrivée : route_goto_result « arrived » du même ordre en ≤ 90 s
@@ -126,6 +127,20 @@ def pose():
     return p["x"], p["y"]
 
 
+def en_marche(route_state, route_speed):
+    """Didier ROULE : route « on » ET vitesse de route non nulle. route_state seul ne suffit pas :
+    l'arrêt d'une lubie du sélecteur est un « hold » (route_speed 0, route_state reste on). Fumée
+    du 19/11 08:36 : hold de 98 s compté comme « en marche », phrase B publiée 3 s après le
+    « repartir » du jeu (réfractaire déplacement 10 s) → refusée « trop_tot », B2-C3 en cascade.
+    Vitesse inconnue (jamais publiée) = pas en marche : le pilote la pose lui-même au départ."""
+    if route_state != "on":
+        return False
+    try:
+        return float(route_speed) > 0.0
+    except (TypeError, ValueError):
+        return False
+
+
 class Pilote(Node):
     def __init__(self):
         super().__init__("validate_conversation", namespace=NS)
@@ -184,20 +199,23 @@ class Pilote(Node):
         print(f"  {time.strftime('%T')} « {texte} » publié", flush=True)
 
     def faire_marcher(self, delai=150.0):
-        """Didier en route (route_state on) depuis ≥ EN_MARCHE_S, à < DIST_B_M de la table. Un arrêt
-        du sélecteur (lubie) ou de la bouche est levé à la CONSOLE (« go » de David)."""
+        """Didier EN MARCHE (en_marche : route on ET route_speed > 0) depuis ≥ EN_MARCHE_S, à
+        < DIST_B_M de la table. Un arrêt du sélecteur (lubie : hold, route_speed 0) ou de la route
+        (off) est levé à la CONSOLE (« go » de David) ; le compte des EN_MARCHE_S repart de la
+        reprise effective (un « repartir » du jeu ouvre sa période réfractaire déplacement)."""
         fin, depuis_on, gos = time.monotonic() + delai, None, 0
         hors_route_depuis = None
         while time.monotonic() < fin:
             st, p = etat("route_state"), pose()
-            if st == "on":
+            if en_marche(st, etat("route_speed")):
                 hors_route_depuis = None
                 depuis_on = depuis_on or time.monotonic()
             else:
                 depuis_on = None
                 hors_route_depuis = hors_route_depuis or time.monotonic()
-                if st == "off" and time.monotonic() - hors_route_depuis > 5 and gos < 3:
-                    print(f"  {time.strftime('%T')} Didier arrêté ({st}) : « go » console", flush=True)
+                if st in ("off", "on") and time.monotonic() - hors_route_depuis > 5 and gos < 3:
+                    quoi = st if st == "off" else "on, vitesse 0"
+                    print(f"  {time.strftime('%T')} Didier arrêté ({quoi}) : « go » console", flush=True)
                     self.console("go"); gos += 1; hors_route_depuis = None
             if p is not None and p[0] > TABLE[0]:
                 raise Echec(f"Didier a dépassé la table basse (x = {p[0]:.1f}) avant la phrase B")

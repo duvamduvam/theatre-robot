@@ -64,3 +64,60 @@ def test_resoudre_casque():
     assert ab.resoudre_casque(app, "ac:80:0a:7f:3c:53")[1] == "WH-1000XM4"
     assert ab.resoudre_casque(app, "inconnu") is None
     assert ab.resoudre_casque(app + [("X", "M50 bis")], "m5") is None   # ambigu -> refus
+
+
+# ─── choisir auto (18/11) ─────────────────────────────────────────────────────
+# Noms RÉELS relevés sur le PC du banc le 18/11.
+PC_IN, PC_OUT = "alsa_input.pci-0000_00_1f.3.analog-stereo", "alsa_output.pci-0000_00_1f.3.analog-stereo"
+SCARLETT = "alsa_input.usb-Focusrite_Scarlett_4i4_USB_0000000000000-00.analog-surround-21"
+M50 = ("40:9C:A7:5B:66:D6", "M50")
+M50_IN, M50_OUT = "bluez_input.40:9C:A7:5B:66:D6", "bluez_output.40_9C_A7_5B_66_D6.1"
+RESPEAKER = "alsa_input.usb-Seeed_reSpeaker_XVF3800_4-Mic_Array-00.analog-stereo"
+
+
+def test_auto_cas_du_18_11_scarlett_muette_micro_interne_vivant():
+    micro, sortie, pourquoi = ab.plan_auto([], [PC_IN, SCARLETT, PC_OUT + ".monitor"], [PC_OUT],
+                                           {PC_IN: 8268, SCARLETT: 1})
+    assert (micro, sortie) == (PC_IN, "@DEFAULT_SINK@")
+    assert "le micro peut entendre Didier" in pourquoi
+    assert "micros muets écartés : " + SCARLETT in pourquoi
+
+
+def test_auto_seuil_de_vie_grave():
+    assert ab.CRETE_VIVANT == 30
+    micro, _, _ = ab.plan_auto([], [PC_IN, SCARLETT], [], {PC_IN: 29, SCARLETT: 30})
+    assert micro == SCARLETT
+
+
+def test_auto_aucun_micro_vivant_le_dit():
+    micro, _, pourquoi = ab.plan_auto([], [PC_IN, SCARLETT], [PC_OUT], {PC_IN: 0, SCARLETT: 2})
+    assert micro == "@DEFAULT_SOURCE@"
+    assert "AUCUN micro ne capte" in pourquoi
+
+
+def test_auto_casque_micro_et_sortie():
+    micro, sortie, pourquoi = ab.plan_auto([M50], [PC_IN, M50_IN], [PC_OUT, M50_OUT],
+                                           {PC_IN: 900, M50_IN: 400})
+    assert (micro, sortie) == (M50_IN, M50_OUT)
+    assert pourquoi == f"micro = micro du casque M50 [{M50_IN}] ; sortie = casque M50"
+
+
+def test_auto_respeaker_prime_sur_le_casque():
+    micro, sortie, _ = ab.plan_auto([M50], [PC_IN, M50_IN, RESPEAKER], [PC_OUT, M50_OUT])
+    assert (micro, sortie) == (RESPEAKER, M50_OUT)
+
+
+def test_auto_usb_prime_sur_le_micro_interne():
+    micro, _, _ = ab.plan_auto([], [PC_IN, SCARLETT], [], {PC_IN: 5000, SCARLETT: 300})
+    assert micro == SCARLETT
+
+
+def test_auto_casque_sans_hfp_sert_de_sortie_seulement():
+    micro, sortie, pourquoi = ab.plan_auto([M50], [PC_IN], [PC_OUT, M50_OUT], {PC_IN: 900})
+    assert (micro, sortie) == (PC_IN, M50_OUT)
+    assert "entendre Didier" not in pourquoi
+
+
+def test_auto_ignore_les_monitors():
+    micro, _, _ = ab.plan_auto([], [PC_OUT + ".monitor"], [])
+    assert micro == "@DEFAULT_SOURCE@"
