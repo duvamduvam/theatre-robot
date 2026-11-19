@@ -172,7 +172,7 @@ def test_fumee_rend_les_coeurs_dans_terminer():
     assert "liberer_coeurs" in corps
     assert 'COEURS="${FUMEE_COEURS-8-15}"' in sh
     # L'épinglage passe par demarrer_sim : chaque sim (chantiers puis A1) est épinglée.
-    demarrer = sh[sh.index("\ndemarrer_sim() {"):sh.index("\nrechauffer_cli() {")]
+    demarrer = sh[sh.index("\ndemarrer_sim() {"):sh.index("\ncopier_captures() {")]
     assert "epingler_sim" in demarrer
 
 
