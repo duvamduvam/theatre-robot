@@ -123,3 +123,30 @@ seconde près et par la taille. Les mutants se jouent donc avec
    masque, à partir de 0,005 m : il ne doit pas être recopié dans un fichier de configuration.
    Durcir la règle (strictement au-dessus de `portee_min_m` + une marge) est à décider avec le
    témoin réel en A0-7.
+5. **Un obstacle sur un flanc n'arrête pas l'avance.** Essai en sim du 19/11 (ci-dessous) :
+   cylindre à 0,4 m du flanc droit, masqué, zone LIBRE, `filtrer` laisse passer 0,3 m/s vers
+   l'avant. C'est la conséquence assumée de la décision du 18/11 (flancs et dos = zone de David)
+   et de la règle « refuser le mouvement VERS ce qui n'est pas vu » : une avance droite ne va pas
+   vers le flanc, mais une courbe serrée (v et ω non nuls, tour toléré à la maison) balaie
+   l'avant du flanc sans le voir. À regarder à la relecture adverse (A0-8).
+
+## Premier essai du lidar simulé contre cette logique (19/11, avant le nœud d'A0-4)
+
+Le nœud n'existe pas encore : une sonde (hors dépôt) lisait `/didier/scan` dans le conteneur
+`monde` (monde `stage`, pose 25 cm, masque `[90, 270]`, réglages par défaut) et appliquait
+`lire_balayage` → `Zones.observer` → `filtrer(0,3 ; 0 ; follow)` à chaque balayage, l'obstacle
+étant posé par `set_pose` et sa vraie distance lue à la vérité terrain.
+
+| Obstacle (cylindre r 0,15 m) | Distance vraie à la caisse | `d_min` lidar | Zone | Sortie | Réaction après T0 |
+|---|---|---|---|---|---|
+| devant | 2,00 m | 1,992 | LIBRE | 0,30 | — |
+| devant | 0,90 m | 0,885 | RALENTI | 0,15 | — |
+| devant | 0,50 m | 0,469 | ARRET | 0 | 100 ms (1 balayage) |
+| coin avant gauche | 0,42 m | 0,409 | ARRET | 0 | 50 ms |
+| flanc droit | 0,40 m | — (masqué) | LIBRE | 0,30 | voir point 5 |
+| derrière | 0,50 m | — (masqué) | LIBRE | 0,30 (recul refusé : arrière non vu) | — |
+| retiré | — | — | LIBRE | 0,30 | — |
+
+Passant (cylindre r 0,20 m) en travers à 0,5 m devant la caisse, deux vitesses : `d_min`
+0,484 m ; LIBRE → RALENTI → ARRET → RALENTI → LIBRE ; ARRET pendant 1,80 s à 1,0 m/s et
+1,30 s à 1,5 m/s (géométrie : 1,57 s et 1,05 s, plus la sortie retardée de 3 balayages et 5 cm).
