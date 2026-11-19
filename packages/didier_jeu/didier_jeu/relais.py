@@ -18,16 +18,19 @@ from didier_rehearsal.contracts import CHAT_MOVE_REPLY_JEU_REASONS, CHAT_MOVE_RE
 STOP, GO = "stop", "go"
 
 
-def reponse_bouche(demande, effet: str, code, distance_m=None) -> dict:
+def reponse_bouche(demande, effet: str, code, distance_m=None, cote=None) -> dict:
     """Payload de rehearsal/chat_move_reply émis par le JEU (contracts.
     CHAT_MOVE_REPLY_TOPIC) : la demande de la bouche telle quelle (le chat
     apparie par égalité), « dropped » + code connu, ou « no_reply ».
-    `distance_m` (code « trop_loin ») : ajoutée au payload."""
+    `distance_m`, `cote` (codes « pas_ici » / « hors_atteinte », lu dans le tableau des
+    objets) : ajoutés au payload s'ils sont connus."""
     if effet != CHAT_MOVE_REPLY_NO_REPLY and code not in CHAT_MOVE_REPLY_JEU_REASONS:
         raise ValueError(f"code de refus inconnu : {code!r}")
     out = {"demande": demande, "effect": effet, "reason": code, "source": "jeu"}
     if distance_m is not None:
         out["distance_m"] = distance_m
+    if cote is not None:
+        out["cote"] = cote
     return out
 
 

@@ -101,7 +101,8 @@ POURQUOI CHAT_MOVE_TOPIC (lot I1 « mouvement à la voix », 2026-10-22, spec
        Didier peut demander à repartir / s'arrêter par la clé "marche" de son
        JSON de fin — et, depuis le 31/10 (lot M1, dadou_robot_ros/docs/
        spec-aller-voir.md), aller voir un objet NOMMÉ par la clé "aller_voir"
-       (vocabulaire reçu sur REHEARSAL_OBJECTS_TOPIC, latché). Ce node
+       (objets lus dans le TABLEAU DES OBJETS, SCENE_OBJETS_TOPIC, latché, depuis
+       le lot O1 du 18/11). Ce node
        publie l'intention ("go"/"stop"/aller_voir) et RIEN d'autre --
        jamais route, route_speed ni cmd_vel (cf. CLAUDE.md : la vision ne
        commande jamais les moteurs). Seul consommateur : le régisseur de la
@@ -122,7 +123,7 @@ POURQUOI CHAT_MOVE_TOPIC (lot I1 « mouvement à la voix », 2026-10-22, spec
        (régisseur ou sélecteur de jeu) ou resté sans réponse
        (MoveTask.check_ack, timer MOVE_ACK_PERIOD_S) devient une fin de geste
        ÉCHOUÉE, dite en personnage ; les objets dont on peut faire le tour
-       (champ `tour` de REHEARSAL_OBJECTS_TOPIC) sont dits au LLM.
+       (champ `tour` du tableau des objets) sont dits au LLM.
 POURQUOI les topics du METTEUR EN SCÈNE INTÉRIEUR (lot P, 2026-10-23, spec
        fermée dadou_robot_ros/docs/spec-metteur-en-scene.md) : la parole
        relit le tableau de situation (SITUATION_TOPIC) à chaque tour, sert
@@ -151,7 +152,8 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from theatre_interfaces.msg import StringTime
-from theatre_contrats import stringtime
+from theatre_contrats import objets as tableau_objets
+from theatre_contrats import stringtime, topics
 
 from dadou_utils_ros.utils_static import ANIMATION, ANIMATION_STATE, FACE
 
@@ -282,13 +284,21 @@ ASOUND_CONF = "/etc/asound.conf"
 # effet, personne n'écoute.
 CHAT_MOVE_TOPIC = "rehearsal/chat_move"
 
-# Vocabulaire d'objets « aller voir » (lot M1, dadou_robot_ros/docs/
-# spec-aller-voir.md §2.1) : StringTime LATCHÉ (TRANSIENT_LOCAL depth 1, des
-# DEUX côtés — publié une fois au démarrage du régisseur, un chat_node lancé
-# après doit quand même le recevoir), JSON [{"name", "desc"}, …]. Écouté
-# SEULEMENT si le mouvement à la voix est branché (même condition que
-# CHAT_MOVE_TOPIC). Nom gravé des deux côtés (contracts.py du régisseur).
-REHEARSAL_OBJECTS_TOPIC = "rehearsal/objects"
+# TABLEAU DES OBJETS (lot O1, 18/11 ; étude docs/etudes/etude-objets-vus-et-carte.md §6) :
+# StringTime LATCHÉ (TRANSIENT_LOCAL depth 1, des DEUX côtés), écrit par le SEUL
+# didier_perception/objets_node, republié à 1 Hz ; contrat theatre_contrats.objets. Il
+# remplace le vocabulaire brut de la régie (la carte, que lit désormais objets_node) et la
+# ligne des objets proches du sélecteur (supprimée). Écouté SEULEMENT si le mouvement à la voix est branché (même condition que
+# CHAT_MOVE_TOPIC) : il fait la section « ce qui t'entoure » du prompt
+# (personas.entourage_prompt) et la GARDE des gestes (ConversationEngine.set_objets).
+# Flux muet depuis TABLEAU_TTL_S (écrivain mort) : la section tombe et la garde refuse tout
+# geste vers un objet — jamais une position périmée prise pour vraie. JAMAIS REÇU = MUET
+# (revue O1, 19/11) : la garde part sur le tableau VIDE dès le démarrage — aucun geste vers un
+# objet ne quitte la bouche sans l'`id` d'un tableau frais (avant : sans tableau reçu, le geste
+# partait sans id et la régie le refusait « unknown » ; muet, il était refusé ici : deux
+# comportements pour la même ignorance). TTL = LA valeur du contrat, commune aux quatre lecteurs.
+SCENE_OBJETS_TOPIC = topics.SCENE_OBJETS
+TABLEAU_TTL_S = tableau_objets.PEREMPTION_S
 
 # Regard demandé par Didier (lot M2, dadou_robot_ros/docs/spec-aller-voir.md
 # §7.1) : StringTime, payload json.dumps({"angle_deg": <degrés, + = gauche,
@@ -320,13 +330,6 @@ ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
 # (didier_vision.ai.move_task.MoveTask.on_reply). VOLATILE (une vieille
 # réponse rejouée ferait dire un échec hors de propos).
 CHAT_MOVE_REPLY_TOPIC = "rehearsal/chat_move_reply"
-# Objets PROCHES (15/11 21:29) : StringTime JSON [{"name", "distance_m",
-# "cote"}] publié à 1 Hz par le sélecteur de jeu — contrat
-# theatre_contrats.topics.JEU_OBJETS_PROCHES (gravé des deux côtés). Écouté
-# SEULEMENT si le mouvement à la voix est branché ; la ligne « Autour de toi en
-# ce moment » s'ajoute aux objets, et tombe si le flux se tait NEAR_TTL_S.
-JEU_OBJETS_PROCHES_TOPIC = "jeu/objets_proches"
-NEAR_TTL_S = 3.0
 # Période du contrôle « geste resté sans réponse » (MoveTask.check_ack, borne
 # ACK_TIMEOUT_S) : 0,5 s suffit, la borne est de plusieurs secondes.
 MOVE_ACK_PERIOD_S = 0.5
@@ -1003,19 +1006,17 @@ class ChatNode(Node):
         self.create_subscription(
             StringTime, CHAT_INSTRUCTION_TOPIC, self._on_chat_instruction, 10)
         self.create_subscription(StringTime, CHAT_FAULT_TOPIC, self._on_chat_fault, 10)
-        # Vocabulaire d'objets (cf. REHEARSAL_OBJECTS_TOPIC) : rien n'est
-        # écouté sans mouvement à la voix — le prompt ne propose alors aucun
-        # objet (et MOVE_TEMPLATE n'est pas dans le system prompt non plus).
-        # Ligne d'objets (rehearsal/objects) et objets proches (jeu/objets_proches) :
-        # composées ensemble par _refresh_objects_prompt (thread rclpy seul).
-        self._objects_line = ""
-        self._near_line, self._near_at = "", None
+        # Tableau des objets (cf. SCENE_OBJETS_TOPIC) : rien n'est écouté sans
+        # mouvement à la voix — le prompt ne propose alors aucun objet (et
+        # MOVE_TEMPLATE n'est pas dans le system prompt non plus). Thread rclpy seul.
+        self._tableau_at = None
         if config["chat_move_enabled"]:
+            # Jamais reçu = muet (cf. TABLEAU_TTL_S) : garde sur le tableau VIDE d'entrée.
+            self._engine.set_objets(tableau_objets.VIDE)
             self.create_subscription(
-                StringTime, REHEARSAL_OBJECTS_TOPIC, self._on_objects,
+                StringTime, SCENE_OBJETS_TOPIC, self._on_scene_objets,
                 QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
-            self.create_subscription(StringTime, JEU_OBJETS_PROCHES_TOPIC, self._on_near, 10)
-            self.create_timer(1.0, self._expire_near)
+            self.create_timer(1.0, self._expire_tableau)
         # Issue des gestes (cf. ROUTE_GOTO_RESULT_TOPIC) : même condition, via
         # la tâche (créée seulement si le mouvement à la voix l'est).
         if self._move_task is not None:
@@ -1265,26 +1266,25 @@ class ChatNode(Node):
         self._look_pub.publish(StringTime(msg=json.dumps(payload), time=0, anim=False))
         self.get_logger().info(f"regard publié : {payload}")
 
-    def _on_objects(self, ros_msg):
-        """Vocabulaire d'objets (cf. REHEARSAL_OBJECTS_TOPIC) : décodé par
-        didier_vision.ai.stage (ValueError -> warning, liste précédente GARDÉE), mis
-        en forme par personas.objects_prompt et remis au cerveau — sans
-        reconfigure : la session LLM n'est pas réinitialisée (spec §2.1)."""
+    def _on_scene_objets(self, ros_msg):
+        """Tableau des objets (cf. SCENE_OBJETS_TOPIC) : décodé par theatre_contrats.objets
+        (ValueError -> warning, tableau précédent GARDÉ), mis en forme par
+        personas.entourage_prompt et remis au cerveau — sans reconfigure : la session LLM
+        n'est pas réinitialisée — puis donné à la garde des gestes."""
         try:
-            objects = stage.decode_objects_payload(ros_msg.msg)
+            tableau = tableau_objets.decoder(ros_msg.msg)
         except ValueError as exc:
-            self.get_logger().warning(f"{REHEARSAL_OBJECTS_TOPIC} refusé : {exc}")
+            self.get_logger().warning(f"{SCENE_OBJETS_TOPIC} refusé : {exc}")
             return
-        # Même payload : les objets dont on peut faire le tour (champ `tour`).
-        tours = stage.decode_tours_payload(ros_msg.msg)
-        self._objects_line = personas.objects_prompt(objects, tours)
-        self._refresh_objects_prompt()
-        # Garde déterministe des gestes (15/11 21:21) : hors vocabulaire, jamais publié.
-        self._engine.set_gesture_vocabulary([name for name, _desc in objects], tours)
-        self.get_logger().info(
-            f"objets à aller voir : {len(objects)} reçus "
-            f"({', '.join(name for name, _desc in objects)}) ; tour possible : "
-            f"{', '.join(tours) or 'aucun'}")
+        alerte = tableau_objets.avertissement(tableau)
+        if alerte:
+            self.get_logger().warning(f"{SCENE_OBJETS_TOPIC} : {alerte}")
+        premier = self._tableau_at is None
+        self._tableau_at = time.monotonic()
+        self._brain.set_objects_prompt(personas.entourage_prompt(tableau))
+        self._engine.set_objets(tableau)
+        if premier:
+            self.get_logger().info(f"tableau des objets reçu : {len(tableau.objets)} objet(s)")
 
     def _on_goto_result(self, ros_msg):
         """Issue d'un geste (cf. ROUTE_GOTO_RESULT_TOPIC) : JSON illisible =
@@ -1302,22 +1302,14 @@ class ChatNode(Node):
             self.get_logger().info(
                 f"tâche : continuation (geste {self._move_task.steps}/{TASK_MAX_STEPS})")
 
-    def _refresh_objects_prompt(self):
-        """Objets + objets proches -> cerveau (sans reconfigure : spec §2.1)."""
-        line = " ".join(part for part in (self._objects_line, self._near_line) if part)
-        self._brain.set_objects_prompt(line)
-
-    def _on_near(self, ros_msg):
-        """Objets proches (cf. JEU_OBJETS_PROCHES_TOPIC) : illisible = pas de ligne."""
-        self._near_line = personas.near_prompt(stage.decode_near_payload(ros_msg.msg))
-        self._near_at = time.monotonic()
-        self._refresh_objects_prompt()
-
-    def _expire_near(self):
-        """Flux muet depuis NEAR_TTL_S : la ligne tombe (jamais un voisin périmé)."""
-        if self._near_line and (self._near_at is None or time.monotonic() - self._near_at > NEAR_TTL_S):
-            self._near_line = ""
-            self._refresh_objects_prompt()
+    def _expire_tableau(self):
+        """Flux muet depuis TABLEAU_TTL_S : la section tombe et la garde passe sur un tableau
+        VIDE (tout geste vers un objet refusé « unknown ») — jamais une position périmée."""
+        if self._tableau_at is not None and time.monotonic() - self._tableau_at > TABLEAU_TTL_S:
+            self._tableau_at = None
+            self._brain.set_objects_prompt("")
+            self._engine.set_objets(tableau_objets.VIDE)
+            self.get_logger().warning(f"{SCENE_OBJETS_TOPIC} muet depuis {TABLEAU_TTL_S:g} s : objets oubliés")
 
     def _on_move_reply(self, ros_msg):
         """Réponse au geste (cf. CHAT_MOVE_REPLY_TOPIC) : JSON illisible =

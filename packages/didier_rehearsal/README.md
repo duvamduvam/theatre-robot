@@ -128,21 +128,35 @@ Tests : `test_director.py` (logique pure) et `test_director_node.py` (node), sec
 
 ## Lot M1 — « aller voir » (spec `docs/spec-aller-voir.md`, 31/10)
 
-« Va voir les anneaux » : Didier roule jusqu'à ~1,5 m de l'objet (demi-tour
-s'il l'a dépassé), pivote face à lui, s'arrête. SIM-ONLY (vérité terrain).
+« Va voir les anneaux » : Didier roule jusqu'à ~1,5 m de l'objet — plus loin d'un gros objet,
+voir **Ordre** (demi-tour s'il l'a dépassé), pivote face à lui, s'arrête. SIM-ONLY (vérité terrain).
 
 - **Vocabulaire** : au démarrage, le régisseur publie LATCHÉ
   `rehearsal/objects` = `[{"name", "desc"}]` (ordre de l'itinéraire). Champs
   YAML par POI : `desc` (≤ 6 mots, ce qu'on voit ; absent = le nom) et `alias`
   (mots de David). Un nom/alias normalisé (minuscules, sans accents ni
   article de tête) ne désigne qu'UN POI : refus au chargement sinon.
+- **Tableau des objets (lot O1, 18/11)** : `rehearsal/objects` porte aussi `alias` et, pour
+  un POI qui a un tour, `cx`, `cy` (centre de collision) et `emprise` (orbite − 1 m, majorant de
+  l'emprise au sol ; revue O1 du 19/11, à la place du rayon d'orbite) ; son lecteur est
+  `didier_perception/objets_node`, qui publie `scene/objets`. La régie s'y abonne : un geste
+  vers un objet le désigne par son **`id`** (`carte/<poi>`), résolu une fois par la bouche ou
+  le sélecteur ; elle vise la position du TABLEAU (le centre de l'objet) et ne résout plus
+  aucun nom. Sans `id` connu, ou tableau muet depuis 3 s (`theatre_contrats.objets.PEREMPTION_S`,
+  la péremption commune aux lecteurs) : `unknown` ; objet sans position en repère monde : `no_position`.
+  Ses refus propres restent (route coupée par David, pose, 40 m).
 - **Demande** : `rehearsal/chat_move` porte aussi `{"cmd": "aller_voir",
-  "objet": …}`. Arbitrage journalisé `aller_voir` : `accepted` | `unknown` |
-  `route_off_by_david` | `no_pose` (pose vérité terrain > 600 ms) |
+  "objet": …, "id": …}`. Arbitrage journalisé `aller_voir` (avec l'`id`) : `accepted` | `unknown` |
+  `no_position` | `route_off_by_david` | `no_pose` (pose vérité terrain > 600 ms) |
   `too_far` (> 40 m). Accepté en séance comme hors séance ; l'arrêt vocal
   est levé à la vitesse du « go » (jamais au-dessus du fader ni d'une
   batterie), une lubie active est fermée (`closed_by: "voix"`).
-- **Ordre** : `route_goto` (`{"name","x","y","standoff"}` ou `"cancel"`).
+- **Ordre** : `route_goto` (`{"name","x","y","standoff"}` ou `"cancel"`). **Standoff** (revue O1
+  du 19/11, `director.standoff_pour`) = `max(1,5 ; emprise + 0,5 + 0,5)` du CENTRE de l'objet :
+  emprise (`emprise_m` du tableau), rayon balayé de Didier (`GOTO_DIDIER_RAYON_M`, roulette
+  arrière), marge (`GOTO_MARGE_M` : tolérance d'arrivée 0,3 + 0,2 de jeu) ; taille inconnue :
+  emprise présumée `GOTO_EMPRISE_INCONNUE_M` = 1,5 m, soit 2,5 m ; borné à 40 m. Banc 2,1 m
+  (1,5 m le touchait), table basse 1,7 m.
   `route_driver` reste la SEULE sortie Twist (`cmd_vel_follow`, prio 20) :
   il suspend le suivi et joue `didier_rehearsal/goto.py` (ALIGN -> DRIVE ->
   FACE -> ARRIVED, pivots ≤ 0,6 rad/s, v ≤ fader × la croisière du suivi
@@ -153,8 +167,8 @@ s'il l'a dépassé), pivote face à lui, s'arrête. SIM-ONLY (vérité terrain).
   `route_state` : `on` / `off` / `goto` / `arrived`.
 - **Fader à 0** (manœuvre ET suivi d'itinéraire) : zéro franc, aucun pivot,
   publié à chaque tick (le créneau 20 du mux reste tenu).
-- **Lubie de la cible** : son « enter » arrive pendant l'approche (standoff <
-  rayon) ; pendant la manœuvre et à l'arrivée, le régisseur la SAUTE
+- **Lubie de la cible** : son « enter » arrive pendant l'approche (quand le
+  standoff est sous le rayon du POI) ; pendant la manœuvre et à l'arrivée, le régisseur la SAUTE
   (`lubie_skipped`, `reason: goto_target`) — Didier joue l'objet lui-même.
   Les autres lubies restent possibles.
 - **Arrêt** : « stop » vocal et abort publient `cancel` ; `cancel`,

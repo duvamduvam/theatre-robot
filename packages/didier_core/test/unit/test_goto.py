@@ -54,6 +54,8 @@ def test_parse_order_valide():
     ({"name": "a", "x": 1, "y": 2, "standoff": 0.79}, "entre 0.8 et"),
     ({"name": "a", "x": 1, "y": 2, "standoff": 41}, "standoff"),
     ({"name": "a", "x": 1, "y": 2, "standoff": True}, "standoff"),
+    # Revue O1 (19/11) : entier géant -> GotoError (route_driver n'attrape QUE GotoError).
+    ({"name": "a", "x": 10 ** 400, "y": 2, "standoff": 1.5}, "hors bornes"),
 ])
 def test_parse_order_refuse_explicitement(value, fragment):
     with pytest.raises(GotoError) as exc:

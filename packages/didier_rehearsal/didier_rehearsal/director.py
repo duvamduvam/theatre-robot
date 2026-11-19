@@ -46,11 +46,12 @@ from typing import Dict, List, Tuple
 from theatre_contrats import stringtime
 
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
-                                       FORWARD_MAX_M, FORWARD_MIN_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
+                                       FORWARD_MAX_M, FORWARD_MIN_M, GOTO_DIDIER_RAYON_M, GOTO_EMPRISE_INCONNUE_M,
+                                       GOTO_MARGE_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
                                        ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
-                                       TURN_DEG_COMPAT, TURN_MAX_DEG)
+                                       TOUR_CLEARANCE_M, TURN_DEG_COMPAT, TURN_MAX_DEG)
 from didier_rehearsal.goto import forward_name, tour_name, turn_name
-from didier_rehearsal.route import Poi, Tour, normalize_name
+from didier_rehearsal.route import Tour
 from didier_rehearsal.scenario import Fault, Scenario
 
 
@@ -291,7 +292,7 @@ def speed_factor(raw) -> float | None:
         raw = stringtime.decode_or_raw(raw, ROUTE_SPEED_TOPIC)
     try:
         value = float(raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):   # OverflowError : entier JSON géant (revue O1)
         return None
     if not math.isfinite(value):
         return None
@@ -702,9 +703,24 @@ def objects_payload(pois, tours=()) -> str:
     POI a un tour dans `tours` (noms -> Tour, fichier généré) — chat_node le
     dit au LLM, qui ne propose plus un tour que le régisseur refuserait
     (« no_tour » : Didier annonçait le tour de l'éléphant, collé à la Loire).
-    Champs ADDITIFS : chat_node lit name/desc/tour (didier_vision/ai/stage)."""
-    return json.dumps([{"name": p.name, "desc": p.shown_desc, "x": p.x, "y": p.y, "tour": p.name in tours}
-                       for p in pois])
+    Lot O1 (18/11) : le SEUL lecteur est désormais l'écrivain du tableau des objets
+    (didier_perception, carte_depuis_payload), qui reçoit aussi `alias` (la résolution d'un nom
+    dit vit dans le tableau, theatre_contrats.objets.resoudre) et, pour un POI qui a un tour,
+    `cx`, `cy` = CENTRE de la géométrie de collision (l'ancre du banc est à 1,1 m de l'objet,
+    « aller voir » doit viser l'objet : étude objets §4.1, épreuve 1) et `emprise` = rayon
+    d'emprise au sol autour de ce centre. Le fichier des tours ne garde que le rayon de l'ORBITE,
+    arrondi au 0,1 m SUPÉRIEUR de emprise + TOUR_CLEARANCE_M (tools/compute_tours.py) : orbite −
+    dégagement est donc un MAJORANT de l'emprise (exact à 0,1 m près) — revue O1 du 19/11 : c'est
+    l'emprise, pas l'orbite, qui règle la distance d'arrêt (standoff_pour) et la fusion caméra."""
+    out = []
+    for p in pois:
+        o = {"name": p.name, "desc": p.shown_desc, "alias": list(p.alias), "x": p.x, "y": p.y,
+             "tour": p.name in tours}
+        tour = tours.get(p.name) if isinstance(tours, dict) else None
+        if tour is not None:
+            o.update(cx=tour.x, cy=tour.y, emprise=round(tour.radius - TOUR_CLEARANCE_M, 3))
+        out.append(o)
+    return json.dumps(out, ensure_ascii=False)
 
 
 def move_reply(demande, effect: str, reason: str | None = None, name: str | None = None) -> str:
@@ -718,49 +734,74 @@ def move_reply(demande, effect: str, reason: str | None = None, name: str | None
                        "source": "director"}, ensure_ascii=False)
 
 
-def resolve_object(text, pois) -> Poi | None:
-    """Texte dit (ou nom renvoyé par la bouche) -> POI, par correspondance
-    NORMALISÉE exacte (normalize_name) sur le nom et les alias. load_route
-    garantit qu'une clé ne désigne qu'un POI. Rien de flou : un objet mal
-    compris est refusé (« unknown »), jamais deviné."""
-    key = normalize_name(text)
-    if not key:
-        return None
-    for p in pois:
-        if key == normalize_name(p.name) or any(key == normalize_name(a) for a in p.alias):
-            return p
-    return None
+# Préfixe des ids d'objets de CARTE dans le tableau des objets (didier_perception :
+# ObjetCarte.id = "carte/<nom du POI>") : la régie relie un id à SON POI (tours, lubie sautée).
+CARTE_ID_PREFIX = "carte/"
+
+
+def poi_name_of(objet) -> str | None:
+    """Nom du POI de la carte derrière un objet du tableau, ou None (objet vu par la caméra)."""
+    id_ = getattr(objet, "id", None)
+    return id_[len(CARTE_ID_PREFIX):] if isinstance(id_, str) and id_.startswith(CARTE_ID_PREFIX) else None
+
+
+def _target(intent, tableau):
+    """Objet du tableau visé par un geste, par son `id` SEULEMENT (lot O1, 18/11 : la régie ne
+    cherche plus de nom dans son YAML — le nom dit a été résolu UNE fois, dans le tableau, par
+    la bouche ou le sélecteur). None : id absent, inconnu, ou tableau pas encore reçu."""
+    id_ = intent.get("id") if isinstance(intent, dict) else None
+    return tableau.par_id(id_) if tableau is not None else None
 
 
 @dataclass(frozen=True)
 class GotoDecision:
-    effect: str                  # "accepted" | "unknown" | "route_off_by_david" | "no_pose" | "too_far"
-    poi: Poi | None = None
+    # "accepted" | "unknown" | "no_position" | "route_off_by_david" | "no_pose" | "too_far"
+    effect: str
+    objet: object | None = None   # theatre_contrats.objets.Objet
     distance: float | None = None
 
 
-def decide_goto(objet, *, pois, pose, off_by_david: bool) -> GotoDecision:
-    """Arbitrage d'un « aller voir » (spec §3), dans cet ordre : objet
-    inconnu -> « unknown » ; route OFF par David -> « route_off_by_david »
-    (jamais de mouvement contre lui) ; pas de pose fraîche -> « no_pose »
-    (on ne sait pas mesurer la distance : refus, jamais deviné) ; distance
-    pose -> objet > GOTO_MAX_DISTANCE_M -> « too_far ». `pose` : (x, y) ou None."""
-    poi = resolve_object(objet, pois)
-    if poi is None:
+def decide_goto(intent, *, tableau, pose, off_by_david: bool) -> GotoDecision:
+    """Arbitrage d'un « aller voir » (spec §3, lot O1), dans cet ordre : objet introuvable
+    dans le tableau par son id -> « unknown » ; sans position en repère monde (la pose de la
+    régie est la vérité terrain) -> « no_position » ; route OFF par David ->
+    « route_off_by_david » (jamais de mouvement contre lui) ; pas de pose fraîche -> « no_pose »
+    (jamais deviné) ; distance pose -> objet > GOTO_MAX_DISTANCE_M -> « too_far » (borne PROPRE
+    de la régie ; « atteignable », la borne de 10 m, est jugée par les lecteurs du tableau).
+    `pose` : (x, y) ou None."""
+    objet = _target(intent, tableau)
+    if objet is None:
         return GotoDecision("unknown")
+    if objet.x is None or objet.repere != "monde":
+        return GotoDecision("no_position", objet)
     if off_by_david:
-        return GotoDecision("route_off_by_david", poi)
+        return GotoDecision("route_off_by_david", objet)
     if pose is None:
-        return GotoDecision("no_pose", poi)
-    distance = math.hypot(poi.x - pose[0], poi.y - pose[1])
+        return GotoDecision("no_pose", objet)
+    distance = math.hypot(objet.x - pose[0], objet.y - pose[1])
     if distance > GOTO_MAX_DISTANCE_M:
-        return GotoDecision("too_far", poi, distance)
-    return GotoDecision("accepted", poi, distance)
+        return GotoDecision("too_far", objet, distance)
+    return GotoDecision("accepted", objet, distance)
 
 
-def goto_order(poi: Poi, standoff: float = GOTO_STANDOFF_M) -> str:
-    """Payload route_goto (spec §2.3), positions de l'itinéraire telles quelles."""
-    return json.dumps({"name": poi.name, "x": poi.x, "y": poi.y, "standoff": standoff})
+def standoff_pour(emprise_m) -> float:
+    """Distance d'arrêt (m, centre de Didier -> CENTRE de l'objet) d'un « aller voir » (revue O1,
+    19/11) : max(GOTO_STANDOFF_M, emprise + GOTO_DIDIER_RAYON_M + GOTO_MARGE_M). Emprise
+    inconnue (None), négative, non finie ou absurde -> GOTO_EMPRISE_INCONNUE_M (borne prudente).
+    Bornée à GOTO_MAX_DISTANCE_M (le plafond de parse_order) : un objet plus gros que ça n'est de
+    toute façon jamais approché (refus « too_far » de la régie au-delà de 40 m)."""
+    emprise = _number(emprise_m)
+    if emprise is None or emprise < 0:
+        emprise = GOTO_EMPRISE_INCONNUE_M
+    return round(min(GOTO_MAX_DISTANCE_M,
+                     max(GOTO_STANDOFF_M, emprise + GOTO_DIDIER_RAYON_M + GOTO_MARGE_M)), 2)
+
+
+def goto_order(objet) -> str:
+    """Payload route_goto (spec §2.3) : la position du TABLEAU (centre de l'objet quand la
+    carte le connaît), nommée comme l'objet du tableau, arrêt à standoff_pour(emprise)."""
+    return json.dumps({"name": objet.nom, "x": objet.x, "y": objet.y,
+                       "standoff": standoff_pour(objet.emprise_m)})
 
 
 @dataclass(frozen=True)
@@ -773,10 +814,15 @@ class GestureDecision:
 
 
 def _number(value) -> float | None:
-    """Nombre fini (jamais un booléen), sinon None."""
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+    """Nombre fini (jamais un booléen), sinon None — jamais d'exception : un entier JSON de 400
+    chiffres faisait lever OverflowError à math.isfinite (revue O1, 19/11)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    return float(value)
+    try:
+        value = float(value)
+    except OverflowError:
+        return None
+    return value if math.isfinite(value) else None
 
 
 def _gesture(name: str, order: dict, *, pose_known: bool, off_by_david: bool) -> GestureDecision:
@@ -829,42 +875,44 @@ def decide_forward(intent: dict, *, pose_known: bool, off_by_david: bool) -> Ges
 class TourDecision:
     # "accepted" | "unknown" | "no_tour" | "invalid" | "route_off_by_david" | "no_pose" | "too_far"
     effect: str
-    poi: Poi | None = None
+    objet: object | None = None   # theatre_contrats.objets.Objet
     reason: str | None = None     # invalid : "sens"
     name: str | None = None       # « tour de <poi> » — MÊME texte que route_driver (goto.tour_name)
     distance: float | None = None  # pose -> CENTRE du tour
     order: str | None = None      # payload route_goto, si accepté
+    poi: str | None = None        # nom du POI tourné (sa lubie est sautée)
 
 
-def decide_tour(intent: dict, *, pois, tours, pose, off_by_david: bool) -> TourDecision:
-    """« Faire le tour de X » (spec §8.2-§8.3), dans cet ordre : objet
-    inconnu -> « unknown » ; connu sans tour (absent du fichier généré) ->
-    « no_tour » ; sens autre que TOUR_SENS -> « invalid » (jamais deviné ;
-    absent = TOUR_SENS_DEFAUT) ; puis comme « aller voir » : route OFF par
-    David, pas de pose fraîche, centre du tour à plus de GOTO_MAX_DISTANCE_M.
-    `tours` : {nom de POI: Tour} ; `pose` : (x, y) ou None.
+def decide_tour(intent: dict, *, tableau, tours, pose, off_by_david: bool) -> TourDecision:
+    """« Faire le tour de X » (spec §8.2-§8.3, lot O1), dans cet ordre : objet introuvable dans
+    le tableau par son id -> « unknown » ; objet sans tour (objet vu, ou POI absent du fichier
+    généré) -> « no_tour » ; sens autre que TOUR_SENS -> « invalid » (jamais deviné ; absent =
+    TOUR_SENS_DEFAUT) ; puis comme « aller voir » : route OFF par David, pas de pose fraîche,
+    centre du tour à plus de GOTO_MAX_DISTANCE_M. `tours` : {nom de POI: Tour} (la géométrie
+    de l'orbite reste à la régie : objets de carte seulement, §6.5) ; `pose` : (x, y) ou None.
     Ordre : {"name", "orbit_x", "orbit_y", "orbit_r", "orbit_dir"}."""
-    poi = resolve_object(intent.get("objet"), pois)
-    if poi is None:
+    objet = _target(intent, tableau)
+    if objet is None:
         return TourDecision("unknown")
-    name = tour_name(poi.name)
-    tour: Tour | None = tours.get(poi.name)
+    poi = poi_name_of(objet)
+    name = tour_name(poi or objet.nom)
+    tour: Tour | None = tours.get(poi) if poi is not None else None
     if tour is None:
-        return TourDecision("no_tour", poi, name=name)
+        return TourDecision("no_tour", objet, name=name, poi=poi)
     sens = intent.get("sens", TOUR_SENS_DEFAUT)
     direction = TOUR_SENS.get(sens.strip().lower()) if isinstance(sens, str) else None
     if direction is None:
-        return TourDecision("invalid", poi, reason="sens", name=name)
+        return TourDecision("invalid", objet, reason="sens", name=name, poi=poi)
     if off_by_david:
-        return TourDecision("route_off_by_david", poi, name=name)
+        return TourDecision("route_off_by_david", objet, name=name, poi=poi)
     if pose is None:
-        return TourDecision("no_pose", poi, name=name)
+        return TourDecision("no_pose", objet, name=name, poi=poi)
     distance = math.hypot(tour.x - pose[0], tour.y - pose[1])
     if distance > GOTO_MAX_DISTANCE_M:
-        return TourDecision("too_far", poi, name=name, distance=distance)
+        return TourDecision("too_far", objet, name=name, distance=distance, poi=poi)
     order = json.dumps({"name": name, "orbit_x": tour.x, "orbit_y": tour.y, "orbit_r": tour.radius,
                         "orbit_dir": direction})
-    return TourDecision("accepted", poi, name=name, distance=distance, order=order)
+    return TourDecision("accepted", objet, name=name, distance=distance, order=order, poi=poi)
 
 
 class GotoPolicy:

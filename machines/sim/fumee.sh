@@ -45,6 +45,7 @@
 #   -> validate-data-edit (L1d) -> validate-machines (L2b)
 #   -> régisseur (monde) + regard (robot), validate-rehearsal-chantiers (V-R3)
 #   -> sim relancée, validate-jeu-a1 (A1)
+#   -> sim relancée, validate-objets (OBJ, lot O1 : tableau des objets, épreuves 1, 2, 4 de l'étude)
 #   -> sim relancée AVEC LA TÊTE (surcouche docker-compose.tete.yml : chat_node, clé Anthropic),
 #      validate-conversation (CONV, 16/11) — FACULTATIVE : sans clé, « non lancée », jamais rouge.
 #                                                 ≈ 55-60 min.
@@ -96,6 +97,7 @@ ATTENDU_EDITION=13      # validate-data-edit.sh (L1d : épreuves 1 à 12, 13 = p
 ATTENDU_MACHINES=5      # validate-machines.sh (L2b : M1-M4, M6 ; 10 en L2c)
 ATTENDU_CHANTIERS=21    # validate-rehearsal-chantiers.sh (V-R3)
 ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
+ATTENDU_OBJETS=13       # validate-objets.sh (OBJ, lot O1 : E1a-e, E2a-e, E4a-c)
 ATTENDU_CONVERSATION=13 # validate-conversation.sh (CONV : P1, T0, A1-A3, B1-B5, C1-C3)
 RTF_MIN_DEFAUT=0.8
 PEREMPTION_SIM_OCCUPEE_S=21600   # 6 h : au-delà, un ~/tmp/sim-occupee oublié ne bloque plus
@@ -822,12 +824,26 @@ phase_a1() {
   lancer_validation a1 validate-jeu-a1.sh "$ATTENDU_A1" '=== A1' 1500
 }
 
+phase_objets() {
+  # OBJ (lot O1, 18/11) : sim NEUVE (les téléportations et dix gestes ne doivent ni hériter de
+  # l'état d'A1 ni en laisser à CONV). Zéro jeton : le pilote joue la bouche.
+  recolter a1; arreter_sim
+  PHASE_COURANTE=objets
+  local t0=$SECONDS
+  if ! demarrer_sim; then
+    epreuve objets --statut rouge --detail "la sim relancée n'a pas démarré (voir demarrage.log)" --duree "$((SECONDS - t0))" --journal demarrage.log
+    return 1
+  fi
+  lancer_corps jeu-a1 'jeu:=true' || { epreuve objets --statut rouge --detail "chaîne roues absente, ou régisseur jeu (monde) / regard (robot) non démarrés"; return 1; }
+  lancer_validation objets validate-objets.sh "$ATTENDU_OBJETS" '=== OBJ' 900
+}
+
 phase_conversation() {
   # CONV (16/11) : la tête tourne SEULEMENT pour cette épreuve — sim relancée avec la surcouche
   # docker-compose.tete.yml (chat_node sans micro ni son, clé Anthropic). Coût ≈ 0,003 $ (Haiku).
   # FACULTATIVE : sans clé Anthropic (ou sans le secret OpenRouter, exigé par chat_node au
   # démarrage), elle n'est pas lancée et ne rougit JAMAIS la fumée.
-  recolter a1; arreter_sim
+  recolter objets; arreter_sim
   PHASE_COURANTE=conversation
   if ! grep -q '^ANTHROPIC_API_KEY=.' "$SECRET_ANTHROPIC" 2>/dev/null || [ ! -f "$SECRET_OPENROUTER" ]; then
     epreuve conversation --statut non_lance --facultative --duree 0 \
@@ -972,6 +988,7 @@ deroule() {
   phase_machines || return 0
   phase_chantiers || return 0
   phase_a1 || return 0
+  phase_objets || return 0
   phase_conversation || return 0
 }
 

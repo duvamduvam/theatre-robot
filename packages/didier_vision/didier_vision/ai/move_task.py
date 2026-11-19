@@ -57,6 +57,8 @@ import math
 import threading
 from typing import Optional
 
+from theatre_contrats.objets import ou
+
 logger = logging.getLogger(__name__)
 
 # Budget d'une tâche (spec §9.1, gravés dans les tests) : au plus 8 gestes et
@@ -99,7 +101,8 @@ ACCEPTED = "accepted"
 # "no_reply" (jeu) et NO_ANSWER (ce module). Inconnu -> REFUSAL_DEFAULT.
 NO_ANSWER = "sans_reponse"
 REFUSAL_REASONS = {
-    "unknown": "cet objet n'est pas dans ta liste, tu ne le trouves pas",
+    "unknown": "tu ne connais pas cet objet ici, tu ne le trouves pas",
+    "no_position": "tu ne sais pas exactement où il est",
     "no_tour": "impossible d'en faire le tour, il n'y a pas la place tout autour (eau, mur ou obstacle)",
     "too_far": "c'est trop loin d'ici",
     "no_pose": "tu ne sais pas où tu es en ce moment",
@@ -119,6 +122,14 @@ REFUSAL_REASONS = {
     NO_ANSWER: "personne n'a donné suite",
 }
 REFUSAL_DEFAULT = "le geste n'a pas pu se faire"
+# Codes « dropped » d'un objet du tableau qui n'est pas atteignable (didier_rehearsal.contracts.
+# CHAT_MOVE_REPLY_JEU_REASONS) -> raison en clair, `où` = « à 22 m devant toi » ou "" (inconnu).
+OBJET_HORS_ATTEINTE = {
+    "pas_ici": lambda ou_: (f"il n'est pas ici : il est {ou_}, tu ne le vois pas d'où tu es" if ou_
+                            else "il n'est pas ici, tu ne le vois pas d'où tu es"),
+    "hors_atteinte": lambda ou_: (f"il est trop loin pour y aller d'un seul geste ({ou_})" if ou_
+                                  else "il est trop loin pour y aller d'un seul geste"),
+}
 _REFUSED_TAIL = ("Ta tâche, demandée par David : « {request} ». Dis-le en personnage, en une "
                  "phrase : ne prétends JAMAIS l'avoir fait. Ne redemande pas ce geste-là ; si un "
                  "autre geste sert la tâche, fais-le, sinon dis que tu ne peux pas, SANS clé de geste.")
@@ -131,12 +142,10 @@ def refusal_reason(payload) -> str:
     Défaut SÛR : une raison inconnue reste un ÉCHEC (REFUSAL_DEFAULT)."""
     effect = payload.get("effect") if isinstance(payload, dict) else None
     reason = payload.get("reason") if isinstance(payload, dict) else None
-    if effect == "dropped" and reason == "trop_loin":
-        dist = payload.get("distance_m")
-        if isinstance(dist, (int, float)) and not isinstance(dist, bool) and 0 <= dist < 1e6:
-            return (f"il est à {round(dist):d} m d'ici, bien plus loin, ce n'est pas ce que tu vois "
-                    "autour de toi")
-        return REFUSAL_REASONS["too_far"]
+    if effect == "dropped" and reason in OBJET_HORS_ATTEINTE:
+        # Tableau des objets (lot O1) : refus du sélecteur ou de la garde du chat, avec la distance
+        # et le côté LUS dans le tableau — Didier peut dire où est l'objet, il ne part pas.
+        return OBJET_HORS_ATTEINTE[reason](ou(payload.get("distance_m"), payload.get("cote")))
     if effect == "dropped":
         return REFUSAL_REASONS.get(reason, REFUSAL_DEFAULT) if isinstance(reason, str) else REFUSAL_DEFAULT
     for key in ((effect, reason), effect):

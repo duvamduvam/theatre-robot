@@ -24,8 +24,9 @@ TOPICS_PERCEPTION = {
 TOPICS_JEU = {
     "JEU_CONSOLE": "jeu/console", "JEU_INTENTION": "jeu/intention",
     "JEU_CHAT_MOVE": "jeu/chat_move", "JEU_JOURNAL": "jeu/journal",
-    "JEU_OBJETS_PROCHES": "jeu/objets_proches",
 }
+# Nouveau au lot O0 (tableau des objets, theatre_contrats/objets.py) : PAS repris de utils_static.
+TOPICS_OBJETS = {"SCENE_OBJETS": "scene/objets"}
 # Nouveaux au lot L1c (le robot publie catalogue + sha) : PAS repris de utils_static.
 TOPICS_CATALOGUE = {"CATALOGUE": "catalogue", "DEPLOY_SHA": "deploy_sha"}
 # Nouveaux au lot L1d (édition à travers le robot) : PAS repris de utils_static.
@@ -56,7 +57,8 @@ def test_organes():
 
 def test_topics():
     assert _constantes(topics) == {**ORGANES, **TOPICS_HORS_ORGANES, **TOPICS_PERCEPTION, **TOPICS_JEU,
-                                         **TOPICS_CATALOGUE, **TOPICS_EDITION, **TOPICS_PORTE_SIM}
+                                         **TOPICS_CATALOGUE, **TOPICS_EDITION, **TOPICS_PORTE_SIM,
+                                         **TOPICS_OBJETS}
 
 
 def test_cles():

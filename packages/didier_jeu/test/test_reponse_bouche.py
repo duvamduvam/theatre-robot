@@ -20,7 +20,7 @@ import pytest
 
 from conftest import fabriquer
 
-from test_selecteur import OBJETS, journal, jouer, marche, moves
+from test_selecteur import journal, jouer, marche, moves
 
 GRUE = {"cmd": "tour_de", "objet": "grue_jaune", "sens": "gauche"}
 ELEPHANT = {"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}
@@ -174,11 +174,6 @@ def test_jeu_node_publie_et_ecoute_la_reponse_au_geste():
     assert "self.create_subscription(StringTime, CHAT_MOVE_REPLY_TOPIC, self._json(self.sel.sur_move_reply), 10)" in src
 
 
-def test_objets_sans_effet_sur_la_liste():
-    # Garde du banc : OBJETS de test_selecteur (sans « tour ») restent lisibles.
-    sel = fabriquer(pools={})
-    sel.sur_objets(OBJETS + [{"name": "elephant", "desc": "statue", "x": 1.0, "y": 2.0, "tour": False}])
-    assert sel.objets["elephant"] == (1.0, 2.0)
 
 
 # --- Séance du 15/11 21:21 : nouvelle demande pendant qu'un geste roule ----------------

@@ -2,16 +2,24 @@
 spec-aller-voir.md §2.1, §3) — logique PURE, valeurs GRAVÉES.
 
 Mutations du lot M1 (doivent rougir) :
-  - resolve_object renvoie le premier POI -> test_resolution_normalisee
+  - (O1) cible prise par le nom au lieu de l'id -> test_cible_par_id_seulement
   - off_by_david toujours False -> test_refus_route_off_par_david
   - retirer le refus too_far -> test_refus_trop_loin
   - accept_goto rend la vitesse retenue sans min(…) -> test_accept_goto_jamais_au_dessus_de_la_batterie
+Revue O1 (19/11) — distance d'arrêt selon la TAILLE de l'objet :
+  - standoff fixe 1,5 (taille ignorée)                 -> test_standoff_tient_compte_de_l_emprise
+  - taille inconnue prise pour 0 (pas de borne prudente) -> test_standoff_taille_inconnue_borne_prudente
+  - emprise lue sur le rayon d'ORBITE (2,2) au payload  -> test_objets_payload_marque_les_objets_qui_ont_un_tour
+  - _number sans garde OverflowError                   -> test_avancer_nombre_geant_refuse_sans_exception
 """
 import json
 
-from didier_rehearsal.director import (GotoPolicy, VoiceMove, decide_goto, goto_order, move_reply,
-                                      objects_payload, resolve_object)
-from didier_rehearsal.route import Poi
+import pytest
+
+from didier_rehearsal.director import (GotoPolicy, VoiceMove, decide_forward, decide_goto, goto_order, move_reply,
+                                      objects_payload, poi_name_of, standoff_pour)
+from theatre_contrats.objets import Objet, Tableau
+from didier_rehearsal.route import Poi, Tour
 
 ANNEAUX = Poi("anneaux", 78.42, 4.19, 2.5, desc="bagues géantes",
               alias=("anneaux", "bagues", "anneaux de buren", "cercles"))
@@ -22,16 +30,25 @@ POIS = (TABLE, ANNEAUX)
 def test_objets_payload_ordre_itineraire_desc_ou_nom():
     # x, y (ancre du POI) : ajoutés au lot A1 (sélecteur de jeu, regard vers l'objet).
     # tour (15/11) : False sans tours fournis.
+    # alias (O1, 18/11) : la résolution d'un nom dit vit dans le tableau des objets.
     assert json.loads(objects_payload(POIS)) == [
-        {"name": "table_basse", "desc": "table_basse", "x": 17.8, "y": 1.4, "tour": False},
-        {"name": "anneaux", "desc": "bagues géantes", "x": 78.42, "y": 4.19, "tour": False}]
+        {"name": "table_basse", "desc": "table_basse", "alias": [], "x": 17.8, "y": 1.4, "tour": False},
+        {"name": "anneaux", "desc": "bagues géantes", "alias": ["anneaux", "bagues", "anneaux de buren", "cercles"],
+         "x": 78.42, "y": 4.19, "tour": False}]
     assert objects_payload(()) == "[]"
+    assert "géantes" in objects_payload(POIS)             # lisible (ensure_ascii=False)
 
 
 def test_objets_payload_marque_les_objets_qui_ont_un_tour():
     # 15/11 : le chat doit savoir quels objets acceptent « faire le tour ».
-    assert [(o["name"], o["tour"]) for o in json.loads(objects_payload(POIS, {"anneaux": object()}))] == [
-        ("table_basse", False), ("anneaux", True)]
+    # O1 (18/11) : + centre de la géométrie de collision (cible d'« aller voir »).
+    # Revue O1 (19/11) : + EMPRISE = orbite 2,2 − dégagement 1,0 (majorant de la collision) ; le
+    # rayon d'orbite, lui, ne part plus (il réglait la fusion caméra à tort).
+    objets = json.loads(objects_payload(POIS, {"anneaux": Tour(79.0, 6.5, 2.2)}))
+    assert [(o["name"], o["tour"]) for o in objets] == [("table_basse", False), ("anneaux", True)]
+    assert "cx" not in objets[0] and "emprise" not in objets[0]
+    assert (objets[1]["cx"], objets[1]["cy"], objets[1]["emprise"]) == (79.0, 6.5, 1.2)
+    assert "rayon" not in objets[1]
 
 
 def test_move_reply_payload_grave():
@@ -45,43 +62,90 @@ def test_move_reply_payload_grave():
         "tour de banc")
 
 
-def test_resolution_normalisee():
-    assert resolve_object("les Anneaux de Buren", POIS) is ANNEAUX
-    assert resolve_object("des bagues", POIS) is ANNEAUX
-    assert resolve_object("la table basse", POIS) is TABLE
-    assert resolve_object("table_basse", POIS) is TABLE
-    assert resolve_object("anneau", POIS) is None          # rien de flou
-    assert resolve_object("", POIS) is None
-    assert resolve_object(None, POIS) is None
+def _tableau(*objets_):
+    return Tableau(tuple(objets_))
+
+
+# Objets du tableau (lot O1) : la régie ne lit QUE l'id et la position.
+O_ANNEAUX = Objet(id="carte/anneaux", nom="anneaux", x=78.42, y=4.19)
+O_TABLE = Objet(id="carte/table_basse", nom="table_basse", x=17.8, y=2.1)
+O_VU_ROBOT = Objet(id="vu/3", nom="vélo", sources=("vu",), repere="robot", x=4.0, y=1.0)
+O_SANS_POSITION = Objet(id="vu/4", nom="sac", sources=("vu",), repere="robot")
+TABLEAU = _tableau(O_TABLE, O_ANNEAUX, O_VU_ROBOT, O_SANS_POSITION)
+
+
+def _goto(id_, pose=(70.0, 0.0), off_by_david=False, tableau=TABLEAU, objet="peu importe"):
+    return decide_goto({"cmd": "aller_voir", "objet": objet, "id": id_}, tableau=tableau, pose=pose,
+                       off_by_david=off_by_david)
+
+
+def test_cible_par_id_seulement():
+    # O1 (18/11) : le nom dit ne compte plus ici, il a été résolu dans le tableau.
+    assert _goto("carte/anneaux", objet="la table").objet is O_ANNEAUX
+    assert _goto(None, objet="anneaux").effect == "unknown"
+    assert _goto("anneaux").effect == "unknown"            # un nom n'est pas un id
+    assert _goto("carte/anneaux", tableau=None).effect == "unknown"   # tableau jamais reçu
+    assert decide_goto("anneaux", tableau=TABLEAU, pose=(70.0, 0.0), off_by_david=False).effect == "unknown"
 
 
 def test_accepte_avec_distance():
-    d = decide_goto("bagues", pois=POIS, pose=(70.0, 0.0), off_by_david=False)
-    assert (d.effect, d.poi, round(d.distance, 3)) == ("accepted", ANNEAUX, 9.405)   # √(8,42² + 4,19²)
+    d = _goto("carte/anneaux")
+    assert (d.effect, d.objet, round(d.distance, 3)) == ("accepted", O_ANNEAUX, 9.405)   # √(8,42² + 4,19²)
 
 
-def test_refus_inconnu():
-    d = decide_goto("pigeon", pois=POIS, pose=(70.0, 0.0), off_by_david=False)
-    assert (d.effect, d.poi) == ("unknown", None)
+def test_refus_sans_position_monde():
+    assert (_goto("vu/3").effect, _goto("vu/4").effect) == ("no_position", "no_position")
 
 
 def test_refus_route_off_par_david():
-    d = decide_goto("anneaux", pois=POIS, pose=(70.0, 0.0), off_by_david=True)
-    assert (d.effect, d.poi) == ("route_off_by_david", ANNEAUX)
+    d = _goto("carte/anneaux", off_by_david=True)
+    assert (d.effect, d.objet) == ("route_off_by_david", O_ANNEAUX)
 
 
 def test_refus_trop_loin():
-    assert decide_goto("anneaux", pois=POIS, pose=(38.42, 4.19), off_by_david=False).effect == "accepted"  # 40 m pile
-    d = decide_goto("anneaux", pois=POIS, pose=(38.4, 4.19), off_by_david=False)
+    assert _goto("carte/anneaux", pose=(38.42, 4.19)).effect == "accepted"  # 40 m pile
+    d = _goto("carte/anneaux", pose=(38.4, 4.19))
     assert (d.effect, round(d.distance, 2)) == ("too_far", 40.02)
 
 
 def test_refus_sans_pose():
-    assert decide_goto("anneaux", pois=POIS, pose=None, off_by_david=False).effect == "no_pose"
+    assert _goto("carte/anneaux", pose=None).effect == "no_pose"
 
 
-def test_ordre_route_goto():
-    assert json.loads(goto_order(ANNEAUX)) == {"name": "anneaux", "x": 78.42, "y": 4.19, "standoff": 1.5}
+def test_ordre_route_goto_position_du_tableau():
+    # Position du TABLEAU (centre de la table, 2,1) et non l'ancre du POI (1,4) ; emprise de la
+    # table (orbite 1,7 − 1,0 = 0,7) -> arrêt à 0,7 + 0,5 (Didier) + 0,5 (marge) = 1,7 m du centre.
+    table = Objet(id="carte/table_basse", nom="table_basse", x=17.8, y=2.1, emprise_m=0.7)
+    assert json.loads(goto_order(table)) == {"name": "table_basse", "x": 17.8, "y": 2.1, "standoff": 1.7}
+    # Taille inconnue : borne prudente 1,5 + 0,5 + 0,5 = 2,5 m.
+    assert json.loads(goto_order(O_TABLE))["standoff"] == 2.5
+
+
+@pytest.mark.parametrize("emprise, attendu", [
+    (1.1, 2.1),      # le banc de la revue : 1,5 m du centre le touchait (1,1 + 0,4)
+    (0.7, 1.7),      # table basse
+    (0.5, 1.5),      # orbite au plancher (pigeon, plot) : 0,5 + 1,0 = 1,5, le plancher
+    (0.2, 1.5),      # petit objet : jamais sous GOTO_STANDOFF_M
+    (5.0, 6.0),      # plus grand objet qui a un tour (orbite ≤ 6) : 5,0 + 1,0
+    (100.0, 40.0),   # absurde : borné au plafond de parse_order
+])
+def test_standoff_tient_compte_de_l_emprise(emprise, attendu):
+    assert standoff_pour(emprise) == attendu
+
+
+@pytest.mark.parametrize("emprise", [None, -1.0, float("nan"), float("inf"), "1", True, 10 ** 400])
+def test_standoff_taille_inconnue_borne_prudente(emprise):
+    assert standoff_pour(emprise) == 2.5
+
+
+def test_avancer_nombre_geant_refuse_sans_exception():
+    # Revue O1 (19/11) : math.isfinite(10**400) lève OverflowError — dans le callback du régisseur.
+    d = decide_forward({"cmd": "avancer", "metres": 10 ** 400}, pose_known=True, off_by_david=False)
+    assert (d.effect, d.reason, d.order) == ("invalid", "illisible", None)
+
+
+def test_poi_name_of():
+    assert (poi_name_of(O_TABLE), poi_name_of(O_VU_ROBOT), poi_name_of(None)) == ("table_basse", None, None)
 
 
 # --- arrêt vocal levé à l'acceptation ---------------------------------------------

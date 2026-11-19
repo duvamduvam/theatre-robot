@@ -156,8 +156,8 @@ ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
 # elephant » était prise pour la fin du « tour de elephant »).
 #  - source "director" : UNE réponse par geste arbitré (aller_voir, tour_de,
 #    tourner, avancer ; jamais go/stop), effect = celui du journal
-#    (accepted | unknown | no_tour | invalid | route_off_by_david | no_pose |
-#    too_far), reason = sous-raison d'invalid (illisible, hors_bornes, recul, sens) ;
+#    (accepted | unknown | no_position | no_tour | invalid | route_off_by_david |
+#    no_pose | too_far), reason = sous-raison d'invalid (illisible, hors_bornes, recul, sens) ;
 #  - source "jeu" (sélecteur didier_jeu, jeu:=true) : la demande de la bouche
 #    n'a PAS été transmise (effect "dropped", reason = CHAT_MOVE_REPLY_JEU_REASONS)
 #    ou le régisseur s'est tu (effect "no_reply").
@@ -172,13 +172,28 @@ CHAT_MOVE_REPLY_DROPPED = "dropped"
 CHAT_MOVE_REPLY_NO_REPLY = "no_reply"
 # Raisons d'un « dropped » du sélecteur (codes gravés des deux côtés : le chat
 # les traduit en clair, didier_vision.ai.move_task.REFUSAL_REASONS).
-# « trop_loin » (15/11 21:29) : aller_voir / tour_de de la bouche au-delà de
-# geste.distance_max_chat_m (réglage du sélecteur) ; la réponse porte alors
-# "distance_m" (ancre de l'objet, m, 0,1) pour que Didier dise où il est.
+# « pas_ici » / « hors_atteinte » (lot O1, 18/11 ; remplacent « trop_loin » du 15/11) :
+# aller_voir / tour_de de la bouche vers un objet du tableau des objets qui n'est pas
+# `atteignable` — connu mais ni en vue ni à portée (pas_ici), ou en vue mais trop loin ou
+# trop incertain (hors_atteinte) ; la réponse porte alors "distance_m" (m, 0,1) et "cote"
+# (devant | gauche | droite | derriere) pour que Didier dise où il est. Le chat produit les
+# MÊMES codes quand sa propre garde refuse (source "chat").
 CHAT_MOVE_REPLY_JEU_REASONS = ("arrete", "sans_superviseur", "fatigue", "trop_tot", "ignore",
-                               "pas_retenu", "degrade", "trop_loin")
-# Distance de jeu : Didier s'arrête à ce rayon de l'objet (m).
+                               "pas_retenu", "degrade", "pas_ici", "hors_atteinte")
+# Distance de jeu : Didier s'arrête à ce rayon du CENTRE de l'objet (m) — un PLANCHER : la
+# distance d'arrêt réelle tient compte de la TAILLE de l'objet (director.standoff_pour, revue O1
+# du 19/11 : le banc, 1,1 m d'emprise, était touché à 1,5 m du centre — 1,1 + 0,4 de Didier) :
+#   standoff = max(GOTO_STANDOFF_M, emprise + GOTO_DIDIER_RAYON_M + GOTO_MARGE_M)
 GOTO_STANDOFF_M = 1.5
+# Rayon balayé par Didier autour de son centre (m) : roulette arrière à 0,45 m (dadou_robot.urdf
+# .xacro, caster_offset_x) — c'est elle qui frôle l'objet quand Didier pivote pour lui faire face.
+GOTO_DIDIER_RAYON_M = 0.5
+# Marge entre Didier et l'objet (m) : la tolérance d'arrivée de goto.py (arrive_tol_m 0,3 : il
+# peut s'arrêter 0,3 m AVANT ou APRÈS le point visé) + 0,2 m de jeu réel.
+GOTO_MARGE_M = 0.5
+# Emprise PRÉSUMÉE d'un objet de taille inconnue (m) — borne prudente : POI sans géométrie de
+# collision, objet vu par la caméra (O2). Standoff qui en découle : 1,5 + 0,5 + 0,5 = 2,5 m.
+GOTO_EMPRISE_INCONNUE_M = 1.5
 # Plancher du standoff accepté par route_driver (revue M1) : en dessous, les
 # 50 kg viendraient au contact de l'objet (pas d'évitement, spec §5).
 GOTO_MIN_STANDOFF_M = 0.8

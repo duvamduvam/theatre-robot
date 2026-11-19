@@ -491,7 +491,7 @@ uv venv --python 3.12 packages/didier_vision/.venv && \
   uv pip install --python packages/didier_vision/.venv/bin/python -r packages/didier_vision/requirements-test.txt
 ```
 
-Les six suites (depuis la racine du dépôt ; `-o addopts=` neutralise le `-q` des `pytest.ini`) :
+Les sept suites (depuis la racine du dépôt ; `didier_perception` depuis le lot O0 du 18/11 ; `-o addopts=` neutralise le `-q` des `pytest.ini`) :
 
 ```bash
 R=$PWD
@@ -499,6 +499,7 @@ R=$PWD
 (cd packages/dadou_utils_ros   && $R/.venv/bin/python -m pytest -q -o addopts=)
 (cd packages/didier_jeu        && $R/.venv/bin/python -m pytest -q -o addopts=)
 (cd packages/theatre_contrats  && $R/.venv/bin/python -m pytest -q -o addopts=)
+(cd packages/didier_perception && $R/.venv/bin/python -m pytest -q -o addopts=)   # tableau des objets (O0)
 (cd legacy/dadou_control_ros   && $R/.venv/bin/python -m pytest -q -o addopts=)   # télécommande (→ L4)
 (cd packages/didier_vision     && $R/packages/didier_vision/.venv/bin/python -m pytest -q -o addopts=)
 ```
@@ -511,8 +512,8 @@ une page, corriger les liens, pas le test.
 ## CI à la racine — les tests unitaires à chaque poussée (11/11)
 
 `.github/workflows/tests.yml` (racine du mono-dépôt) rejoue sur GitHub, à chaque poussée et
-chaque demande de fusion, six suites « hôte » : `didier_core`, `dadou_utils_ros`,
-`didier_jeu`, `theatre_contrats`, `didier_vision`, et la télécommande de
+chaque demande de fusion, sept suites « hôte » : `didier_core`, `dadou_utils_ros`,
+`didier_jeu`, `theatre_contrats`, `didier_perception` (O0, 18/11), `didier_vision`, et la télécommande de
 `legacy/dadou_control_ros`. Ubuntu 24.04, Python 3.12, aucun ROS (modules factices), `requirements-test.txt` de la racine
 (la vision : celui de son package), la commande de la section précédente : `python -m pytest -q -o addopts=` depuis le dossier de la suite.
 Pas de build colcon ni de sim : la fumée nocturne s'en charge.
@@ -957,11 +958,21 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   David l'annule. « En route » dit par Didier repart tout de suite. Inutile de
   recliquer Route ON, mais la séance doit être **démarrée** (hors séance, le
   régisseur ignore le « go » : `voice_move … hors_seance`).
-- **Distances** (15/11) : le chat reçoit les 6 objets les plus proches avec
-  distance et côté (`jeu/objets_proches`, « Autour de toi en ce moment : … »).
-  Un « aller voir » ou « faire le tour » demandé par le chat au-delà de 10 m
-  (`geste.distance_max_chat_m`) est refusé et Didier le dit (« il est à 22 m
-  d'ici »). La console (« va là ») n'y est pas soumise.
+- **Tableau des objets** (lot O1, 18/11 ; remplace les « distances » du 15/11) :
+  `didier_perception/objets_node` (conteneur `vision`) publie `scene/objets`, la seule
+  vérité sur les objets — distance, côté, « en vue » (champ ±30°, 15 m), `atteignable`
+  (≤ 10 m). La bouche reçoit « ce qui t'entoure » (ce qu'elle voit, ce qui est autour,
+  un résumé de ce qui est plus loin) ; un « aller voir » ou « faire le tour » vers un
+  objet pas ici ou hors d'atteinte n'est jamais publié, Didier dit où il est (« il est
+  à 22 m devant toi »). Chaque geste porte l'`id` de l'objet (`carte/banc`), lu par le
+  sélecteur et la régie. La console (« va là ») n'est pas soumise à `atteignable`.
+  Revue O1 (19/11) : Didier s'arrête à une distance qui tient compte de la TAILLE de
+  l'objet (banc 2,1 m du centre, 2,5 m si la taille est inconnue) ; un tableau muet 3 s
+  (ou jamais reçu) vaut tableau vide chez TOUS les lecteurs. Épreuve sim isolée :
+  `docker exec didier-sim-monde bash /home/ros2_ws/validate-objets.sh` (13 verdicts : E1a-e,
+  E2a-e, E4a-c ; régisseur `jeu:=true` et `objets_node` lancés ; aussi phase `objets` de la
+  fumée). Voir le tableau : `ros2 topic echo --qos-durability transient_local /didier/scene/objets
+  theatre_interfaces/msg/StringTime --once` (CLI : préfixer, type explicite).
 - **Perception** : en A1, elle est **scriptée**. Une personne se simule à la main :
   `ros2 topic pub -r 16 /didier/vision/person_box geometry_msgs/msg/PointStamped "{point: {x: 0.3, y: 0.4, z: 0.9}}"`.
   On peut aussi brancher la tête vision et sa webcam.

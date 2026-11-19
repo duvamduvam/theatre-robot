@@ -20,7 +20,9 @@ QUOI : StageState porte les trois choses qu'une régie peut imposer à la
        un seul emplacement, périmée en PROMPT_TTL_S) — même verrou, mêmes
        bornes tenues côté consommateur. Depuis le 2026-10-31 (lot M1 « Aller
        voir ») : le décodeur du vocabulaire d'objets (`rehearsal/objects`),
-       sans état ici — la liste formatée vit dans StreamingBrain.
+       sans état ici — la liste formatée vit dans StreamingBrain. Depuis le lot O1
+       (18/11) : plus de décodeur d'objets ici, le tableau des objets (scene/objets) se
+       décode par theatre_contrats.objets.
 POURQUOI un module PUR (aucun rclpy) : même règle que _chat_wiring et
        arbitration — les bornes de sécurité de ce canal (plafond 60 s de la
        panne, péremption 120 s de la consigne, phantom ponctuel) doivent être
@@ -44,9 +46,10 @@ from __future__ import annotations
 import json
 import random
 import threading
-import unicodedata
 from collections import deque
 from typing import Optional, Sequence, Tuple
+
+from theatre_contrats.objets import ARTICLES, normaliser_nom
 
 from didier_vision.ai.reflection_contract import SITUATION_TTL_S
 
@@ -361,129 +364,11 @@ def decode_fault_command(raw) -> Tuple[str, dict, object]:
     return op, params, value.get("until_ms")
 
 
-# Bornes du vocabulaire d'objets (topic `rehearsal/objects`, lot M1 « Aller
-# voir », dadou_robot_ros/docs/spec-aller-voir.md §2.1). Ce texte part au LLM à
-# CHAQUE tour (cf. personas.objects_prompt) : chaque caractère se paie en
-# latence. Le régisseur promet desc ≤ 6 mots ; ces plafonds tiennent même si
-# l'itinéraire grossit ou si un YAML déraille (l'itinéraire « Chantiers »
-# compte une trentaine de POI au 31/10).
-OBJECTS_MAX = 40
-OBJECT_NAME_MAX_CHARS = 40
-OBJECT_DESC_MAX_CHARS = 60
-
-
-def decode_objects_payload(raw) -> list:
-    """Payload de `rehearsal/objects` -> [(name, desc)], dans l'ordre reçu.
-    Contrat (§2.1) : liste JSON [{"name": "anneaux", "desc": "bagues
-    géantes"}, …]. TOLÉRANT élément par élément : un élément sans `name`
-    chaîne non vide est sauté ; `desc` absente ou non chaîne = "" (le prompt
-    n'affiche alors que le nom). Champs rognés puis tronqués, liste tronquée
-    à OBJECTS_MAX. ValueError (le node garde sa liste précédente et loggue)
-    si le payload n'est pas une liste JSON, ou si une liste NON vide ne
-    contient aucun élément valable — un vocabulaire illisible ne doit pas
-    effacer celui qui marchait. [] est valable : plus aucun objet."""
-    try:
-        value = json.loads(raw)
-    except (ValueError, TypeError) as exc:
-        raise ValueError(f"objets illisibles (liste JSON attendue) : {raw!r}") from exc
-    if not isinstance(value, list):
-        raise ValueError(f"objets : liste JSON attendue, reçu {value!r}")
-    objects = []
-    for item in value:
-        if not isinstance(item, dict):
-            continue
-        name = item.get("name")
-        if not isinstance(name, str) or not name.strip():
-            continue
-        desc = item.get("desc")
-        desc = desc.strip() if isinstance(desc, str) else ""
-        objects.append((name.strip()[:OBJECT_NAME_MAX_CHARS], desc[:OBJECT_DESC_MAX_CHARS]))
-        if len(objects) == OBJECTS_MAX:
-            break
-    if value and not objects:
-        raise ValueError(f"objets : aucun élément valable (\"name\" manquant) : {raw!r}")
-    return objects
-
-
-# Articles de tête retirés par normalize_object_name — MÊME liste que le
-# régisseur (didier_rehearsal/route.py _ARTICLES, gravée des deux côtés par
-# test_stage.py) : la garde du chat et la résolution du régisseur doivent
-# trouver le même objet.
-OBJECT_ARTICLES = frozenset(("le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "au", "aux"))
-
-
-def normalize_object_name(text) -> str:
-    """Clé de correspondance d'un nom d'objet, IDENTIQUE à
-    didier_rehearsal.route.normalize_name (minuscules, sans accents,
-    ponctuation et `_` en espaces, articles de tête retirés) ; non-chaîne -> ""."""
-    if not isinstance(text, str):
-        return ""
-    decomposed = unicodedata.normalize("NFKD", text.lower())
-    plain = "".join(c for c in decomposed if not unicodedata.combining(c))
-    words = "".join(c if c.isalnum() else " " for c in plain).split()
-    while words and words[0] in OBJECT_ARTICLES:
-        words.pop(0)
-    return " ".join(words)
-
-
-def decode_tours_payload(raw) -> list:
-    """MÊME payload que decode_objects_payload (15/11) -> noms des objets dont
-    le régisseur sait faire le tour (`"tour": true`), dans l'ordre reçu, mêmes
-    rognage, troncature et plafond (OBJECTS_MAX éléments VALABLES lus). Défaut
-    SÛR : champ absent ou autre que true = pas de tour (on ne propose jamais un
-    tour que le régisseur refuserait). Payload illisible -> [] (le décodage
-    des objets, appelé d'abord, a déjà levé)."""
-    try:
-        value = json.loads(raw)
-    except (ValueError, TypeError):
-        return []
-    if not isinstance(value, list):
-        return []
-    tours, seen = [], 0
-    for item in value:
-        if not isinstance(item, dict):
-            continue
-        name = item.get("name")
-        if not isinstance(name, str) or not name.strip():
-            continue
-        if item.get("tour") is True:
-            tours.append(name.strip()[:OBJECT_NAME_MAX_CHARS])
-        seen += 1
-        if seen == OBJECTS_MAX:
-            break
-    return tours
-
-
-# Objets PROCHES (jeu/objets_proches, sélecteur de jeu, 15/11 21:29) : bornes.
-NEAR_MAX = 6
-NEAR_SIDES = ("devant", "gauche", "droite", "derriere")
-
-
-def decode_near_payload(raw) -> list:
-    """Payload de jeu/objets_proches -> [(name, distance_m, cote)] dans l'ordre
-    reçu (trié par distance côté producteur), au plus NEAR_MAX. TOLÉRANT
-    élément par élément (nom chaîne non vide, distance nombre fini >= 0, côté
-    connu) ; illisible -> [] (pas de ligne : mieux vaut rien qu'un faux voisin)."""
-    try:
-        value = json.loads(raw)
-    except (ValueError, TypeError):
-        return []
-    if not isinstance(value, list):
-        return []
-    out = []
-    for item in value:
-        if not isinstance(item, dict):
-            continue
-        name, dist, side = item.get("name"), item.get("distance_m"), item.get("cote")
-        if not isinstance(name, str) or not name.strip() or side not in NEAR_SIDES:
-            continue
-        if isinstance(dist, bool) or not isinstance(dist, (int, float)) or not dist == dist \
-                or dist < 0 or dist == float("inf"):
-            continue
-        out.append((name.strip()[:OBJECT_NAME_MAX_CHARS], float(dist), side))
-        if len(out) == NEAR_MAX:
-            break
-    return out
+# Clé de correspondance d'un nom d'objet : LA clé du dépôt depuis le lot O0 (18/11),
+# theatre_contrats.objets.normaliser_nom — avant, une copie ici et une dans la régie,
+# « gravées des deux côtés ». Alias gardés pour les appelants du chat.
+OBJECT_ARTICLES = ARTICLES
+normalize_object_name = normaliser_nom
 
 
 def encode_transcript(role: str, text: str, t_ms: int) -> str:

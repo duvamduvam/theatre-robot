@@ -7,6 +7,7 @@ Mutations du lot M3 (doivent rougir) :
   - sens droite = +1 -> test_sens_gauche_droite_et_defaut
   - sens invalide deviné -> test_sens_gauche_droite_et_defaut
   - distance jugée à l'ancre au lieu du centre -> test_trop_loin_juge_au_centre
+  - (O1) tour d'un objet vu accepté -> test_refus_dans_l_ordre
   - refus route_off_by_david retiré -> test_node_refus_route_off_par_david
   - arrêt vocal non levé -> test_node_tour_leve_l_arret_vocal
   - « stop » sans cancel -> test_node_stop_annule_le_tour
@@ -18,19 +19,26 @@ import pytest
 
 from test.unit.test_director_node import (LUBIE, _creer, _echos, _etat_route, _fader, _journal, _poi,
                                                  _publie, _recevoir, _voix, regisseur)  # noqa: F401 (fixture)
-from test.unit.test_director_node_goto import _odom
+from test.unit.test_director_node_goto import _intention, _odom
 from didier_rehearsal.director import decide_tour
-from didier_rehearsal.route import Tour, load_route
+from didier_rehearsal.route import Tour
+from theatre_contrats.objets import Objet, Tableau
 
-POIS = load_route({"name": "r", "waypoints": [[0, 0], [1, 0]],
-                   "pois": [{"name": "poubelle_tri", "x": 27.0, "y": 1.4, "radius": 2.5, "alias": ["poubelles"]},
-                            {"name": "flaque", "x": 10.0, "y": 0.0, "radius": 2.5},
-                            {"name": "loin", "x": 39.0, "y": 0.0, "radius": 2.5}]}).pois
+# Tableau des objets (lot O1) : la régie lit l'id ; la géométrie de l'orbite reste SES tours.
+POUBELLE = Objet(id="carte/poubelle_tri", nom="poubelle_tri", alias=("poubelles",), x=27.0, y=2.4, tour=True)
+FLAQUE = Objet(id="carte/flaque", nom="flaque", x=10.0, y=0.0)
+LOIN = Objet(id="carte/loin", nom="loin", x=45.0, y=0.0, tour=True)
+VU = Objet(id="vu/1", nom="sac", sources=("vu",), x=21.0, y=0.0)
+TABLEAU = Tableau((POUBELLE, FLAQUE, LOIN, VU))
 TOURS = {"poubelle_tri": Tour(27.0, 2.4, 2.1), "loin": Tour(45.0, 0.0, 2.0)}
 
 
 def _d(intent, pose=(20.0, 0.0), off_by_david=False):
-    d = decide_tour(intent, pois=POIS, tours=TOURS, pose=pose, off_by_david=off_by_david)
+    intent = dict(intent)
+    r = TABLEAU.resoudre(intent.get("objet"))
+    if r.objet is not None and "id" not in intent:
+        intent["id"] = r.objet.id
+    d = decide_tour(intent, tableau=TABLEAU, tours=TOURS, pose=pose, off_by_david=off_by_david)
     return d.effect, d.reason, d.name, None if d.order is None else json.loads(d.order)
 
 
@@ -53,16 +61,18 @@ def test_sens_gauche_droite_et_defaut():
 def test_refus_dans_l_ordre():
     assert _d({"objet": "lune"}, off_by_david=True)[0] == "unknown"
     assert _d({"objet": "flaque"}, off_by_david=True)[:3] == ("no_tour", None, "tour de flaque")
+    assert _d({"objet": "sac"})[:3] == ("no_tour", None, "tour de sac")             # objet vu : jamais de tour
     assert _d({"objet": "poubelle_tri", "sens": "haut"}, off_by_david=True)[0] == "invalid"
     assert _d({"objet": "poubelle_tri"}, off_by_david=True, pose=None)[0] == "route_off_by_david"
     assert _d({"objet": "poubelle_tri"}, pose=None)[0] == "no_pose"
     assert _d({"objet": 12})[0] == "unknown"                                          # payload LLM hostile
+    assert _d({"objet": "poubelle_tri", "id": "carte/inconnu"})[0] == "unknown"      # l'id fait foi
 
 
 def test_trop_loin_juge_au_centre():
-    # Ancre de « loin » à 39 m (sous 40), centre du tour à 45 m : refusé.
-    d = decide_tour({"objet": "loin"}, pois=POIS, tours=TOURS, pose=(0.0, 0.0), off_by_david=False)
-    assert (d.effect, d.distance) == ("too_far", 45.0)
+    # Centre du tour à 45 m : refusé (la régie garde sa borne de 40 m).
+    d = decide_tour({"id": "carte/loin"}, tableau=TABLEAU, tours=TOURS, pose=(0.0, 0.0), off_by_david=False)
+    assert (d.effect, d.distance, d.poi) == ("too_far", 45.0, "loin")
 
 
 # --- node --------------------------------------------------------------------------
@@ -78,7 +88,8 @@ TOUR_BANC = "banc: {x: 5.0, y: 0.5, rayon: 2.0}\n"
 def _tour(noeud, intent, t=None):
     if t is not None:
         noeud.horloge.t = t
-    _recevoir(noeud, "rehearsal/chat_move", json.dumps({"cmd": "tour_de", **intent}))
+    intent = dict(intent)
+    _recevoir(noeud, "rehearsal/chat_move", json.dumps(_intention(noeud, "tour_de", intent.pop("objet"), **intent)))
 
 
 def _tours_journal(noeud):
@@ -95,7 +106,7 @@ def test_node_tour_accepte_hors_seance(regisseur, monkeypatch, tmp_path):
     _etat_route(n, "off", cause="boot")
     _odom(n, 1.0, 0.0)
     _tour(n, {"objet": "le banc", "sens": "droite", "bavard": "x"})
-    assert _tours_journal(n) == [{"objet": "le banc", "sens": "droite", "effect": "accepted",
+    assert _tours_journal(n) == [{"objet": "le banc", "id": "carte/banc", "sens": "droite", "effect": "accepted",
                                   "name": "tour de banc", "distance": 4.03}]       # champs du contrat seuls
     assert _ordres(n) == [{"name": "tour de banc", "orbit_x": 5.0, "orbit_y": 0.5, "orbit_r": 2.0,
                            "orbit_dir": -1}]
@@ -107,11 +118,11 @@ def test_node_sans_fichier_de_tours_no_tour(regisseur, monkeypatch, tmp_path):
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])         # pas de route_tours.yaml : pas d'erreur
     _odom(n, 1.0, 0.0)
     _tour(n, {"objet": "banc"})
-    assert _tours_journal(n) == [{"objet": "banc", "effect": "no_tour", "name": "tour de banc"}]
+    assert _tours_journal(n) == [{"objet": "banc", "id": "carte/banc", "effect": "no_tour", "name": "tour de banc"}]
     assert _ordres(n) == []
     # Séance du 15/11 (« fais le tour de l'éléphant ») : le refus revient au chat.
     assert [json.loads(m) for m in _publie(n, "rehearsal/chat_move_reply")] == [
-        {"demande": {"cmd": "tour_de", "objet": "banc"}, "effect": "no_tour", "reason": None, "name": None,
+        {"demande": {"cmd": "tour_de", "objet": "banc", "id": "carte/banc"}, "effect": "no_tour", "reason": None, "name": None,
          "source": "director"}]
 
 
