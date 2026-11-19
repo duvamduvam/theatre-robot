@@ -6,15 +6,18 @@
  * bouton catalogue délégué) vient de commun.js : ici, seulement ce qui est
  * propre à la scène.
  *
- * CE QUE LA PAGE N'AFFICHE JAMAIS : les pannes ni les consignes injectées par le
- * régisseur de la répétition -- David ne voit pas le tirage (étude répétition
- * simulée §13.1). Conséquences de code, à ne pas « améliorer » :
+ * COULISSES VISIBLES depuis le 18/11 (re-décision de David ; l'étude répétition
+ * simulée §13.1 disait « David ne voit pas le tirage ») : le panneau « Coulisses »
+ * montre le metteur en scène (chat_situation, chat_prompt en flux ; mission_state
+ * dans `state`) et, en sim, le journal du régisseur (rehearsal/journal, flux),
+ * pannes et lubies comprises. Repliable, état mémorisé : le replier = s'entraîner
+ * à l'aveugle. Conséquences de code, à ne pas « améliorer » :
  *  - de `state` (toutes les 2 s) on ne lit que chat_state, persona_state,
  *    route_state, chat_audio_chain (branchement du son, 31/10), rehearsal/state
- *    (séance + arrêt vocal, 31/10 : le régisseur n'y met AUCUNE panne) et
- *    camera_state, camera_source_state et camera_sources ; JAMAIS chat_instruction (le régisseur publie sur le même
- *    topic que la consigne posée ici) ni route_speed (une panne « batterie
- *    faible » y passerait) ;
+ *    (séance + arrêt vocal, 31/10 : le régisseur n'y met AUCUNE panne),
+ *    camera_state, camera_source_state, camera_sources et mission_state ; JAMAIS
+ *    chat_instruction ni route_speed (masqués par le pont, TOPICS_MASQUES : les
+ *    coulisses passent par les topics dédiés, pas en levant ce masque) ;
  *  - le curseur de vitesse est une CONSIGNE sans relecture : il ne se recale
  *    pas sur ce que le robot a reçu ;
  *  - le texte soufflé n'est pas affiché à l'envoi : il apparaît dans le fil
@@ -61,10 +64,13 @@ const LIBELLE_ETAT_SEANCE = {
   terminee: "séance : terminée",
 };
 
-// camera_state (latché côté vision) -> libellé du badge.
+// camera_state (latché côté vision) -> libellé du badge, SELON LA SOURCE
+// (camera_source_state) : l'état dit si l'entrée de la perception produit des
+// images. En source Gazebo, la webcam est FERMÉE — afficher « webcam allumée »
+// était faux (18/11) ; « on » Gazebo = des images arrivent vraiment.
 const LIBELLE_ETAT_CAMERA = {
-  on: "webcam allumée",
-  off: "webcam coupée",
+  webcam: { on: "webcam allumée", off: "webcam coupée" },
+  gazebo: { on: "caméra Gazebo : images reçues", off: "caméra Gazebo : aucune image" },
 };
 
 // camera_source_state (latché côté vision) -> mot affiché dans le titre du panneau.
@@ -173,14 +179,16 @@ function afficherEtatScene(msg) {
   afficherEtatRegisseur(valeurTopic(msg.topics, "rehearsal/state"));
 
   const camera = valeurTopic(msg.topics, "camera_state");
-  majBadgeEtat("scene-etat-camera", LIBELLE_ETAT_CAMERA, camera, camera === "on");
+  const source = valeurTopic(msg.topics, "camera_source_state");
+  // Source inconnue : libellés webcam (historique, la vision n'a rien dit d'autre).
+  majBadgeEtat("scene-etat-camera", LIBELLE_ETAT_CAMERA[source] || LIBELLE_ETAT_CAMERA.webcam,
+               camera, camera === "on");
   surlignerGroupe("groupe-camera", camera);
   // Coupée : texte « caméra coupée » par-dessus, au lieu de la dernière image figée.
   // État inconnu (null) : on ne masque rien, la webcam n'a pas dit qu'elle était coupée.
   $("perception-coupee").hidden = camera !== "off";
 
-  afficherSourceCamera(valeurTopic(msg.topics, "camera_source_state"),
-                       valeurTopic(msg.topics, "camera_sources"));
+  afficherSourceCamera(source, valeurTopic(msg.topics, "camera_sources"));
 }
 
 // Source des images de la perception : surbrillance d'après l'état RÉEL, titre du panneau,
@@ -297,6 +305,7 @@ liaison.surEtat = (msg) => {
   afficherEtatScene(msg);
   afficherChaine(valeurTopic(msg.topics, "chat_audio_chain"));
   afficherJeu(msg);
+  afficherMission(msg);
 };
 
 // --- Conversation : flux chat_transcript ------------------------------------------
@@ -343,6 +352,12 @@ liaison.surFeed = (msg) => {
     ajouterEntendu(msg.msg);
   } else if (msg.topic === "jeu/journal") {
     ajouterLigneJeu(msg.msg);
+  } else if (msg.topic === "chat_situation") {
+    afficherSituation(msg.msg);
+  } else if (msg.topic === "chat_prompt") {
+    afficherPrompt(msg.msg);
+  } else if (msg.topic === "rehearsal/journal") {
+    ajouterEvenementRegisseur(msg.msg);
   } else if (msg.topic === "data_edit_result") {
     surVerdictEdition(msg.msg);
   } else if (msg.topic === "validation_sim") {
@@ -639,6 +654,208 @@ function ajouterLigneJeu(ligne) {
   liste.prepend(li);
   while (liste.children.length > JEU_JOURNAL_MAX) {
     liste.lastChild.remove();
+  }
+}
+
+// --- Coulisses (18/11) : metteur en scène + régisseur, LECTURE SEULE -------------------
+// Décision de David du 18/11 : il voit ce que produisent le metteur en scène
+// intérieur (chat_situation, chat_prompt en flux ; mission_state latché dans
+// `state`) et le régisseur de la répétition (rehearsal/journal, SIM-ONLY, flux).
+// Le panneau est ouvert par défaut ; l'état ouvert/fermé est mémorisé : le replier
+// permet de s'entraîner à l'aveugle. Tout passe par textContent (les textes
+// viennent d'un LLM) ; rien ici n'écrit vers le robot.
+
+const CLE_COULISSES_OUVERT = "sceneCoulissesOuvert";
+const COULISSES_JOURNAL_MAX = 30;
+const COULISSES_SILENCE_MS = 5000;   // tableau republié à 1 Hz : au-delà, le metteur en scène est muet
+const COULISSES_COMPACT_MAX = 120;   // longueur d'un payload sans libellé dédié
+// Critères de mission (didier_vision.ai.mission.CRITERIA) -> libellé affiché.
+const LIBELLE_CRITERES = { love: "amour", tenderness: "tendresse", friendship: "amitié",
+                           speed: "vitesse", strong: "force" };
+// texte/changeA : dernier tableau et heure de son dernier CHANGEMENT ; recuA : heure
+// de la dernière réception (même sans changement) ; missionBrut : dernier payload rendu.
+const coulisses = { texte: null, changeA: 0, recuA: 0, missionBrut: null };
+
+function installerCoulisses() {
+  const boite = $("scene-coulisses");
+  if (localStorage.getItem(CLE_COULISSES_OUVERT) === "0") {
+    boite.open = false;
+  }
+  boite.addEventListener("toggle", () => {
+    localStorage.setItem(CLE_COULISSES_OUVERT, boite.open ? "1" : "0");
+  });
+  setInterval(majAgeSituation, 1000);
+}
+
+// « [Titre] contenu » -> <div><strong>[Titre]</strong> contenu</div> ; une ligne sans
+// titre reste du texte simple.
+function ligneSection(ligne) {
+  const div = document.createElement("div");
+  const m = /^(\[[^\]]+\])\s*(.*)$/.exec(ligne);
+  if (m === null) {
+    div.textContent = ligne;
+    return div;
+  }
+  const titre = document.createElement("strong");
+  titre.textContent = m[1];
+  div.append(titre, " " + m[2]);
+  return div;
+}
+
+// Contrat chat_situation : {"text": sections séparées par des retours ligne, "t_ms"}.
+// Republié à 1 Hz sans changement : on ne reconstruit le DOM que si le texte change.
+function afficherSituation(sit) {
+  if (sit === null || typeof sit !== "object" || typeof sit.text !== "string") {
+    logErreur("tableau de situation illisible");
+    return;
+  }
+  const maintenant = Date.now();
+  coulisses.recuA = maintenant;
+  if (sit.text !== coulisses.texte) {
+    coulisses.texte = sit.text;
+    coulisses.changeA = maintenant;
+    const lignes = sit.text.split("\n").filter((l) => l.trim() !== "");
+    const zone = $("coulisses-situation");
+    if (lignes.length === 0) {
+      zone.textContent = "tableau de situation vide";
+    } else {
+      zone.replaceChildren(...lignes.map(ligneSection));
+    }
+  }
+  majAgeSituation();
+}
+
+// L'âge est celui du dernier CHANGEMENT ; si plus rien n'arrive, on le dit (un
+// tableau figé ne doit pas passer pour un tableau frais).
+function majAgeSituation() {
+  if (coulisses.texte === null) {
+    return;
+  }
+  const maintenant = Date.now();
+  let texte = "tableau modifié il y a " + Math.floor((maintenant - coulisses.changeA) / 1000) + " s";
+  if (maintenant - coulisses.recuA > COULISSES_SILENCE_MS) {
+    texte += " — plus de nouvelles du metteur en scène depuis "
+        + Math.floor((maintenant - coulisses.recuA) / 1000) + " s";
+  }
+  $("coulisses-age").textContent = texte;
+}
+
+// Contrat chat_prompt : {"direction", "raison"} (tour spontané). Horodaté à la réception.
+function afficherPrompt(prompt) {
+  if (prompt === null || typeof prompt !== "object" || typeof prompt.direction !== "string") {
+    logErreur("prise de parole spontanée illisible");
+    return;
+  }
+  $("coulisses-prompt").textContent = "prise de parole spontanée à " + new Date().toLocaleTimeString()
+      + " : " + prompt.direction + (prompt.raison ? " — raison : " + prompt.raison : "");
+}
+
+// mission_state (latché, lu dans `state` toutes les 2 s) : {"destination",
+// "criteres": {nom: {"valeur","par","guide"} | null}, "guides": [{"nom",
+// "signalement","guide"}], "indication"} (MissionState.to_dict). Reconstruit
+// seulement si le payload change.
+function afficherMission(msg) {
+  const brut = valeurTopic(msg.topics, "mission_state");
+  if (brut === null || brut === coulisses.missionBrut) {
+    return;
+  }
+  const m = lireJson(brut);
+  if (m === null || typeof m !== "object") {
+    return;
+  }
+  coulisses.missionBrut = brut;
+  const lignes = ["Mission : trouver " + (m.destination || "?")];
+  Object.entries(m.criteres || {}).forEach(([nom, v]) => {
+    const libelle = LIBELLE_CRITERES[nom] || nom;
+    lignes.push(v && typeof v === "object"
+      ? "✔ " + libelle + " : « " + v.valeur + " » (par " + v.par + ", guide n°" + v.guide + ")"
+      : "· " + libelle + " : à trouver");
+  });
+  if (Array.isArray(m.guides) && m.guides.length > 0) {
+    lignes.push("Guides : " + m.guides.map((g) => g.nom + (g.signalement ? " (" + g.signalement + ")" : "")).join(", "));
+  }
+  if (m.indication) {
+    lignes.push("Dernière indication : " + m.indication);
+  }
+  $("coulisses-mission").replaceChildren(...lignes.map((l, i) => {
+    const div = document.createElement("div");
+    div.textContent = l;
+    if (i === 0) {
+      div.className = "coulisses-mission-titre";
+    }
+    return div;
+  }));
+}
+
+function compact(payload) {
+  const texte = JSON.stringify(payload);
+  return texte.length > COULISSES_COMPACT_MAX ? texte.slice(0, COULISSES_COMPACT_MAX) + "…" : texte;
+}
+
+// Types fréquents du journal du régisseur -> phrase française ; les autres : type
+// brut + payload compact. Les champs viennent de director_node.py (log(...)).
+function libelleEvenement(type, p) {
+  const bug = (p.id || "?") + " (" + (p.type || "?") + ")";
+  const avec = (base, suite) => (suite ? base + " — " + suite : base);
+  switch (type) {
+    case "fault_start":
+      return "BUG " + bug + (typeof p.text === "string" ? " : « " + p.text + " »" : "");
+    case "fault_stop":
+      return avec("fin du bug " + bug, p.closed_by ? "fermé par " + p.closed_by : "");
+    case "fault_skip":
+      return "bug " + bug + " sauté";
+    case "fault_error":
+      return avec("ERREUR sur le bug " + bug, p.error);
+    case "poi_enter":
+      return "arrive à « " + p.poi + " »";
+    case "poi_exit":
+      return "quitte « " + p.poi + " »";
+    case "poi_enter_ignored":
+      return avec("arrivée à « " + p.poi + " » ignorée", p.reason);
+    case "lubie_skipped":
+      return avec("lubie sautée à « " + p.poi + " »", p.reason);
+    case "scenario_start":
+      return "scénario « " + p.name + " » démarré (graine " + p.seed + ")";
+    case "scenario_end":
+      return "scénario terminé" + (p.status === undefined ? "" : " : " + compact(p.status));
+    case "scenario_abort":
+      return avec("scénario interrompu", p.cmd);
+    case "voice_move":
+      return avec("à la voix : " + p.cmd + " → " + p.effect, p.reason);
+    case "aller_voir":
+      return avec("aller voir « " + p.objet + " » → " + p.effect, p.reason);
+    case "goto_result":
+      return avec("manœuvre « " + (p.name || "?") + " » : " + p.result, p.reason);
+    default:
+      return type + " " + compact(p);
+  }
+}
+
+// Contrat rehearsal/journal : {"type", "payload", "t_ms"}. Plus récent EN BAS ; on
+// suit le bas seulement si l'on y était (comme le fil de conversation).
+function ajouterEvenementRegisseur(ev) {
+  if (ev === null || typeof ev !== "object" || typeof ev.type !== "string") {
+    logErreur("événement du régisseur illisible");
+    return;
+  }
+  const p = ev.payload !== null && typeof ev.payload === "object" ? ev.payload : {};
+  const heure = new Date(Number.isFinite(ev.t_ms) ? ev.t_ms : Date.now()).toLocaleTimeString();
+  const li = document.createElement("li");
+  // Classes tirées d'une liste fermée, jamais du type reçu.
+  if (ev.type === "fault_start") {
+    li.className = "coulisses-bug";
+  } else if (ev.type === "fault_error") {
+    li.className = "coulisses-erreur";
+  }
+  li.textContent = heure + " · " + libelleEvenement(ev.type, p);
+  const liste = $("coulisses-journal");
+  const alaFin = liste.scrollHeight - liste.scrollTop - liste.clientHeight < FIL_BAS_PX;
+  liste.appendChild(li);
+  while (liste.children.length > COULISSES_JOURNAL_MAX) {
+    liste.firstChild.remove();
+  }
+  if (alaFin) {
+    liste.scrollTop = liste.scrollHeight;
   }
 }
 
@@ -1118,6 +1335,7 @@ construirePersonas();
 installerErreurs();
 installerVues();
 installerEditeur();
+installerCoulisses();
 // Tout est inerte et la répétition masquée jusqu'au premier hello du serveur.
 installerPerception();
 installerExterieur();

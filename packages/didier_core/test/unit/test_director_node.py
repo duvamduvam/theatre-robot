@@ -113,6 +113,10 @@ class _Horloge:
     def monotonic(self):
         return self.t
 
+    def time(self):
+        # Horloge murale (epoch) figée : t_ms de rehearsal/journal est gravé en dur.
+        return 1700000000.5
+
 
 def _module(nom, **attributs):
     module = types.ModuleType(nom)
@@ -829,6 +833,37 @@ def test_abort_pendant_lubie_et_arret_la_lubie_rend_sa_vitesse(regisseur, monkey
     _voix(n, "stop", t=1010.0)
     _cmd(n, "abort")
     assert _publie(n, "route_speed") == ["0", "0", "0.6"]
+
+
+# --- rehearsal/journal : le journal en direct, pour le panneau « Coulisses » (18/11) ---
+
+def test_journal_en_direct_publie_chaque_evenement(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    # VOLATILE depth 10 (qos entier = défaut ROS) : jamais latché, un vieil événement
+    # ne rejoue pas à l'ouverture de la page.
+    assert n.qos_publieurs["rehearsal/journal"] == 10
+    n.log("essai_type", {"a": "é", "b": 1})
+    assert _publie(n, "rehearsal/journal")[-1] == (
+        '{"type": "essai_type", "payload": {"a": "é", "b": 1}, "t_ms": 1700000000500}')
+    # Et le JSONL du débrief reste écrit comme avant.
+    assert _journal(n)[-1] == ("essai_type", {"a": "é", "b": 1})
+    _cmd(n, "start")
+    assert _publie(n, "rehearsal/journal")[-1] == (
+        '{"type": "scenario_start", "payload": {"name": "essai", "seed": 0}, "t_ms": 1700000000500}')
+
+
+def test_journal_en_direct_une_erreur_de_publication_ne_tue_pas_le_regisseur(
+        regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+
+    def casse(_msg):
+        raise RuntimeError("publication impossible")
+    n.pub_journal.publish = casse
+    n.log("essai_type", {"x": 1})                  # ne doit pas lever
+    assert _journal(n)[-1] == ("essai_type", {"x": 1})   # le JSONL est écrit quand même
+    assert ("error", "rehearsal/journal : RuntimeError('publication impossible')") in n.logs.lignes
+    _cmd(n, "start")                               # le régisseur reste vivant
+    assert _publie(n, "rehearsal/state")[-1] == SEANCE_EN_COURS
 
 
 # --- (i) rehearsal/state : séance + arrêt vocal pour la page scène (31/10) ----------

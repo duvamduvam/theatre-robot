@@ -100,8 +100,18 @@ echo "  $NS/twist_mux : locks.e_stop.priority=${prio:-absent}, topics.remote.pri
 verdict "$([ "$prio" = 255 ] && [ "$remote" = 100 ] && echo 1 || echo 0)" "twist_mux a chargé twist_mux.yaml sous namespace (e_stop 255, remote 100)"
 
 # Le bridge relaie sous namespace : gz -> ROS (vérité terrain) et ROS -> gz (cou).
-pub_odom=$(timeout 15 ros2 topic info $NS/ground_truth/odom 2>/dev/null | grep -oE 'Publisher count: [0-9]+' | grep -oE '[0-9]+$')
-sub_cou=$(timeout 15 ros2 topic info $NS/neck/position 2>/dev/null | grep -oE 'Subscription count: [0-9]+' | grep -oE '[0-9]+$')
+# SANS démon et avec reprises, comme les sentinelles plus haut : par le démon, les fumées du
+# 19/11 07:50 et 07:52 (PC démarré à 07:48) ont lu 0 publisher alors que le pont avait créé
+# ground_truth/odom (journal du conteneur monde) et que la même image, 2 min plus tard, lisait 1 :
+# vue partielle du démon, pas du pont (diag 19/11). Chaque lecture découvre le graphe elle-même.
+compte() { # compte <topic> <Publisher|Subscription>
+  timeout 20 ros2 topic info "$1" --no-daemon --spin-time 5 2>/dev/null | grep -oE "$2 count: [0-9]+" | grep -oE '[0-9]+$'
+}
+for essai in 1 2 3 4; do
+  pub_odom=$(compte $NS/ground_truth/odom Publisher); sub_cou=$(compte $NS/neck/position Subscription)
+  [ "${pub_odom:-0}" -ge 1 ] && [ "${sub_cou:-0}" -ge 1 ] && break
+  echo "  bridge pas encore vu (essai $essai) : ${pub_odom:-0} publisher(s), ${sub_cou:-0} abonné(s)"; sleep 3
+done
 echo "  $NS/ground_truth/odom : ${pub_odom:-0} publisher(s) ; $NS/neck/position : ${sub_cou:-0} abonné(s)"
 verdict "$([ "${pub_odom:-0}" -ge 1 ] && [ "${sub_cou:-0}" -ge 1 ] && echo 1 || echo 0)" "bridge gz namespacé (vérité terrain publiée, cou écouté)"
 

@@ -692,6 +692,15 @@ est marqué *(à valider par David)* est de l'écriture, pas de la technique.
 - David **ne voit pas le tirage** : la page n'affiche ni les pannes ni les
   consignes injectées par le régisseur. Seul le journal JSONL les porte,
   à lire après.
+  **18/11 — RE-DÉCISION de David : les coulisses sont VISIBLES, repliables.**
+  Le panneau « Coulisses » de la page scène (sous le fil de conversation,
+  ouvert par défaut, état mémorisé dans le navigateur : le replier = s'entraîner
+  à l'aveugle) montre le tableau de situation, la prise de parole spontanée et
+  la mission du metteur en scène (`chat_situation`, `chat_prompt`,
+  `mission_state`) et, en sim seulement, les 30 derniers événements du
+  régisseur (`rehearsal/journal`, bugs en évidence). `chat_instruction` et
+  `route_speed` restent masqués dans `state` (`TOPICS_MASQUES`) : les coulisses
+  passent par ces topics dédiés, en lecture seule (aucune whitelist).
 
 ### 13.2 Le monde `chantiers` — des Nefs à la Titan grise
 

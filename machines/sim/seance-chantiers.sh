@@ -17,6 +17,12 @@ mkdir -p "$DIDIER_SIM_JOURNAUX"/log "$DIDIER_SIM_JOURNAUX"/log-vision "$DIDIER_S
 
 if [ "${1:-}" = "--stop" ]; then "${COMPOSE[@]}" down; exit 0; fi
 
+# Micro + sortie de la tête choisis d'après ce qui est RÉELLEMENT branché (18/11 : le M50 codé
+# en dur était éteint, PipeWire retombait en silence sur le micro du PC qui entendait Didier).
+# AVANT le compose : la tête ouvre micro et sortie à son démarrage.
+python3 banc-vision/audio_banc.py choisir auto --sans-redemarrer \
+  || echo "⚠️ choix audio automatique en échec : asound-pc.conf inchangé"
+
 "${COMPOSE[@]}" up -d
 ros() { docker exec "$1" bash -c "source /opt/ros/\$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && $2"; }
 

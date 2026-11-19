@@ -8,15 +8,23 @@
   (WebSocket, auth, bandeau, flux MJPEG) vient de commun.js ; ce qui est propre
   à la scène est dans scene.js, ses styles dans scene.css.
 
-  Ce que la page n'affiche JAMAIS : les pannes ni les consignes injectées par le
-  régisseur de la répétition (David ne voit pas le tirage). Elle ne lit donc que
-  chat_state, persona_state, route_state, rehearsal/state (séance + arrêt vocal :
-  deux booléens-ou-presque, aucune panne), camera_state, camera_source_state, camera_sources et le flux chat_transcript.
+  Les coulisses sont VISIBLES depuis le 18/11 (re-décision de David ; l'étude
+  répétition simulée §13.1 disait « David ne voit pas le tirage ») : le panneau
+  « Coulisses » montre le tableau de situation, la prise de parole spontanée et la
+  mission du metteur en scène, et (sim) le journal du régisseur, pannes et lubies
+  comprises. Il est repliable, l'état est mémorisé : le replier = s'entraîner à
+  l'aveugle. Ce qui reste MASQUÉ dans `state` : chat_instruction et route_speed
+  (TOPICS_MASQUES, web_protocol.py) -- les coulisses passent par les topics
+  dédiés chat_situation, chat_prompt, mission_state et rehearsal/journal.
+  La page lit aussi chat_state, persona_state, route_state, rehearsal/state (séance
+  + arrêt vocal), camera_state, camera_source_state, camera_sources et le flux
+  chat_transcript.
 
   Panneau « Jeu » (lot A1) : intention du sélecteur de jeu, ordres macro, jauges,
   20 dernières lignes de son journal « pourquoi ». SIM-ONLY comme la route.
 
-  SÉCURITÉ : les groupes de répétition (route, vitesse, séance, vision, jeu) ne
+  SÉCURITÉ : les groupes de répétition (route, vitesse, séance, vision, jeu, journal
+  du régisseur des Coulisses) ne
   sont affichés que si le serveur l'annonce (hello.rehearsal, SIM-ONLY, domaine
   43) ; le serveur refuse de toute façon ces topics sinon. Aucun accès aux roues
   par cette page.
@@ -296,6 +304,30 @@
         <button type="submit">Poser</button>
         <button id="scene-consigne-lever" type="button">Lever</button>
       </form>
+
+      <!-- « Coulisses » (18/11, décision de David) : ce que produisent le METTEUR EN
+           SCÈNE intérieur (tableau de situation chat_situation, prise de parole
+           spontanée chat_prompt, mission mission_state) et le RÉGISSEUR de la
+           répétition (rehearsal/journal, SIM-ONLY : bloc masqué tant que
+           hello.rehearsal n'est pas vrai). OUVERT par défaut ; son état est mémorisé
+           (localStorage) : le replier = s'entraîner à l'aveugle. Lecture seule : rien
+           ici n'écrit. Hauteur bornée, il ne couvre jamais STOP (centre / barre fixe). -->
+      <details id="scene-coulisses" class="scene-coulisses" open>
+        <summary>Coulisses</summary>
+        <div class="scene-coulisses-corps">
+          <section class="coulisses-bloc">
+            <h3>Metteur en scène</h3>
+            <div id="coulisses-situation" class="coulisses-situation">pas encore de tableau de situation (tête éteinte ?)</div>
+            <p id="coulisses-age" class="coulisses-age"></p>
+            <p id="coulisses-prompt" class="coulisses-prompt">prise de parole spontanée : aucune</p>
+            <div id="coulisses-mission" class="coulisses-mission">mission : inconnue</div>
+          </section>
+          <section class="coulisses-bloc scene-repetition" hidden>
+            <h3>Régisseur</h3>
+            <ol id="coulisses-journal" class="coulisses-journal" aria-live="polite"></ol>
+          </section>
+        </div>
+      </details>
 
       <!-- « Oreille de Didier » (31/10) : le BRANCHEMENT du son (chat_audio_chain,
            latché) et, à chaque tour, ce qu'il a ENTENDU (chat_hearing) — y compris

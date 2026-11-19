@@ -493,6 +493,19 @@ def test_les_compteurs_gravees_sont_ceux_des_scripts_de_verification():
         "P1", "T0", "A1", "A2", "A3", "B1", "B2", "B3", "B4", "B5", "C1", "C2", "C3"]
 
 
+def test_validate_namespace_lit_le_graphe_sans_demon_et_avec_reprises():
+    """Fumées du 19/11 07:50 et 07:52 : « bridge gz namespacé » KO (0 publisher lu PAR LE DÉMON)
+    alors que le pont avait créé ground_truth/odom ; même image verte 2 min plus tard. Toute
+    lecture du graphe du script passe sans démon, et le contrôle du pont a ses reprises."""
+    ns = (SCRIPTS / "validate-namespace.sh").read_text(encoding="utf-8")
+    code = "\n".join(l for l in ns.splitlines() if not l.lstrip().startswith("#"))
+    lectures = re.findall(r"ros2 (?:topic|node|param) (?:list|info|get)[^\n|]*", code)
+    assert len(lectures) == 4                       # topic list, node list, param get, topic info
+    assert all("--no-daemon" in l for l in lectures), lectures
+    pont = code[code.index("compte() {"):code.index('verdict "$([ "${pub_odom')]
+    assert "for essai in 1 2 3 4; do" in pont and "break" in pont
+
+
 def test_garde_fous_presents_dans_le_script():
     src = _lire_sh()
     assert "set -euo pipefail" in src

@@ -574,17 +574,6 @@ demarrer_sim() { # demarrer_sim : lance la sim headless (monde chantiers) puis a
   echo "sim incomplète après $DELAI_DEMARRAGE s (pont gz : $pont, colcon fini : ${colcon_ok:-0}/${#SERVICES[@]}${en_cours:+, pas fini :$en_cours})" >>"$TMP/demarrage.log"; return 1
 }
 
-rechauffer_cli() {
-  # Le démon ros2 du conteneur naît avec un graphe VIDE au tout premier appel de la CLI.
-  # validate-namespace.sh lit `topic info` (via le démon) : sur un conteneur neuf il voit
-  # alors « 0 publisher » et rend 4 OK / 1 KO alors que le bridge est sain (vu le 07/11,
-  # reproduit : même script relancé aussitôt = 5/5). On réchauffe donc le démon et on
-  # lui laisse le temps de découvrir le graphe AVANT l'épreuve. (Défaut de ce script de
-  # vérification, déclaré au rapport du lot F ; ici on ne touche pas aux scripts de test.)
-  ros_dans monde 'ros2 daemon start >/dev/null 2>&1; ros2 node list --spin-time 8 >/dev/null 2>&1' || true
-  sleep 5
-}
-
 copier_captures() { # copier_captures <id> <dossier dans monde> -> $JDIR/captures-<id>/ (gros fichiers gzippés)
   local d="$JDIR/captures-$1"
   docker exec "$(conteneur_de monde)" test -d "$2" 2>/dev/null || return 0
@@ -798,7 +787,6 @@ phase_rtf() {
 phase_simples() {
   # À ce stade la sim tourne avec le vrai bringup du robot (chaîne roues et pont web compris) ;
   # la répétition est lancée par les scripts eux-mêmes s'il la leur faut.
-  rechauffer_cli
   lancer_validation namespace validate-namespace.sh "$ATTENDU_NAMESPACE" 'validate-namespace' 300 || return 1
   lancer_validation catalogue validate-catalogue.sh "$ATTENDU_CATALOGUE" 'validate-catalogue' 180 || return 1
   local t0=$SECONDS sortie ok

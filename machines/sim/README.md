@@ -29,7 +29,7 @@ docker compose down
 | `monde/` | Dockerfile et entrée du conteneur `monde` (garde 43, colcon de ses packages, `monde.launch.py`) |
 | `robot/entree.sh` | entrée SIM du conteneur `robot` : garde 43, ménage SHM, arguments de la sim, complément sim |
 | `menage-shm.sh` | ménage de la mémoire partagée Fast DDS (18/11), appelé en tête des entrées de `monde` et `robot` : ports SHM vides de plus d'une minute (un seul bloquait sans fin un nœud du robot à chaque démarrage) puis `fastdds shm clean` (`docs/operations.md` § Mémoire partagée Fast DDS) |
-| `banc-vision/` | `asound-pc.conf` (alias ALSA du banc) et `audio_banc.py` (réglage casque) |
+| `banc-vision/` | `asound-pc.conf` (alias ALSA du banc) et `audio_banc.py` (choix micro/sortie, automatique à chaque séance) |
 | `validate-*.sh`, `pub.sh` | épreuves rejouables, montées dans `/home/ros2_ws/` du conteneur `monde` : `docker exec didier-sim-monde bash /home/ros2_ws/<script>` ; `validate-conversation.sh` (CONV, 16/11) exige la surcouche tête |
 | `capture_topics.py`, `captures.sh` | mesures des épreuves (16/11) : enregistreur rclpy (PRÊT avant l'épreuve, JSONL + dernières valeurs, arrêt propre) et sa bibliothèque bash, montés dans `monde` ; captures sous `$DIDIER_SIM_JOURNAUX/log/captures/` — plus aucune mesure par `ros2 topic echo` (`docs/operations.md` § Mesures des épreuves) |
 | `fumee.sh`, `fumee_page.py`, `coeurs_reserves.py` | fumée nocturne (lot F) : rejoue tout sur main ; pages et `historique.jsonl` dans `docs/fumee/`, journaux bruts LOCAUX (`~/tmp/didier-fumee/`) |

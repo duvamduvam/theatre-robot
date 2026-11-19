@@ -104,10 +104,15 @@ def test_topics_lecture_jamais_publiables():
     # perception et liste des sources disponibles, latchées côté vision.
     # jeu/intention, rehearsal/objects (02/11, lot A1) : panneau « Jeu » de la page scène.
     # deploy_sha (04/11, lot L1c) : badge version ; `catalogue` n'y entre PAS.
+    # mission_state (18/11, panneau « Coulisses ») : la mission du metteur en scène,
+    # LATCHÉE par reflection_node -- seul un topic latché a sa place ici.
     assert TOPICS_LECTURE == {"chat_state", "persona_state", "route_state", "chat_audio_chain",
                               "rehearsal/state", "camera_state", "camera_source_state",
                               "camera_sources", "jeu/intention", "rehearsal/objects",
-                              "deploy_sha"}
+                              "deploy_sha", "mission_state"}
+    # Les topics VOLATILS du panneau « Coulisses » n'y sont PAS : un abonnement
+    # TRANSIENT_LOCAL est incompatible avec un publieur volatile (ils sont en flux).
+    assert TOPICS_LECTURE.isdisjoint({"chat_situation", "chat_prompt", "rehearsal/journal"})
     assert TOPICS_LECTURE.isdisjoint(WHITELIST)
     assert TOPICS_LECTURE.isdisjoint(WHITELIST_REPETITION)
 
@@ -728,9 +733,32 @@ def test_rehearsal_allowed_seulement_en_simulation(domain_id, attendu):
 def test_topics_flux_graves_et_jamais_publiables():
     # data_edit_result, validation_sim, roues_refusees (L1d-3) : les verdicts sont des
     # événements, corrélés par id côté page.
+    # chat_situation, chat_prompt, rehearsal/journal (18/11, panneau « Coulisses ») :
+    # volatils (republication 1 Hz, tour spontané, événements du régisseur).
     assert TOPICS_FLUX == {"chat_transcript", "chat_hearing", "jeu/journal",
-                           "data_edit_result", "validation_sim", "roues_refusees"}
+                           "data_edit_result", "validation_sim", "roues_refusees",
+                           "chat_situation", "chat_prompt", "rehearsal/journal"}
     assert TOPICS_FLUX.isdisjoint(WHITELIST | WHITELIST_REPETITION | TOPICS_LECTURE)
+    # Lecture seule : aucun des topics des coulisses n'est écrivable, quelle que soit
+    # la whitelist effective (répétition active ou non).
+    for topic in ("chat_situation", "chat_prompt", "rehearsal/journal", "mission_state"):
+        assert topic not in effective_whitelist(True), topic
+        assert topic not in effective_whitelist(False), topic
+
+
+def test_scene_coulisses_ids_graves_et_ouvert_par_defaut():
+    """Panneau « Coulisses » (18/11) : <details> OUVERT par défaut (David veut voir),
+    et bloc du régisseur sous `scene-repetition` + hidden (sim seulement)."""
+    html = _lire("scene.html")
+    assert re.search(r'<details id="scene-coulisses"[^>]*\bopen\b', html)
+    ids = _ids_html("scene.html")
+    assert {"scene-coulisses", "coulisses-situation", "coulisses-age", "coulisses-prompt",
+            "coulisses-mission", "coulisses-journal"} <= ids
+    bloc = re.search(r'<section class="([^"]*)"[^>]*\bhidden\b[^>]*>\s*<h3>Régisseur</h3>', html)
+    assert bloc is not None and "scene-repetition" in bloc.group(1).split()
+    # Le panneau est dans la colonne conversation, APRÈS le fil.
+    colonne = html[html.index('<section class="scene-conversation">'):]
+    assert colonne.index('id="scene-fil"') < colonne.index('id="scene-coulisses"')
 
 
 def test_build_feed_evenement_de_conversation():
@@ -821,9 +849,12 @@ def test_script_de_page_ne_redeclare_rien_de_commun(script):
 
 
 def test_scene_ne_lit_que_les_topics_d_etat_publics():
-    """David ne voit pas le tirage : de `state`, la page scène ne lit QUE ces
-    topics. Jamais chat_instruction (le régisseur y publie ses consignes)
-    ni route_speed (une panne « batterie faible » y passerait).
+    """De `state`, la page scène ne lit QUE ces topics. Jamais chat_instruction
+    (le régisseur y publie ses consignes) ni route_speed (une panne « batterie
+    faible » y passerait) : TOPICS_MASQUES reste en vigueur. Depuis le 18/11 les
+    coulisses sont visibles (re-décision de David), mais par les topics dédiés :
+    mission_state (latché) ici, chat_situation / chat_prompt / rehearsal/journal
+    en flux -- pas en levant le masque.
     chat_audio_chain (31/10) : le branchement du son — public, il ne porte
     aucune panne (micro, moteurs, persona).
     jeu/intention (02/11, lot A1) : ce que le SÉLECTEUR DE JEU a choisi et
@@ -832,8 +863,8 @@ def test_scene_ne_lit_que_les_topics_d_etat_publics():
     vocabulaire d'objets, déjà public (envoyé à la bouche)."""
     lus = re.findall(r'valeurTopic\(msg\.topics, "([^"]+)"\)', _lire("scene.js"))
     assert sorted(lus) == ["camera_source_state", "camera_sources", "camera_state",
-                           "chat_audio_chain", "chat_state", "jeu/intention", "persona_state",
-                           "rehearsal/objects", "rehearsal/state", "route_state"]
+                           "chat_audio_chain", "chat_state", "jeu/intention", "mission_state",
+                           "persona_state", "rehearsal/objects", "rehearsal/state", "route_state"]
     # Et aucun autre accès direct aux topics du message state.
     assert len(re.findall(r"msg\.topics", _lire("scene.js"))) == len(lus)
 

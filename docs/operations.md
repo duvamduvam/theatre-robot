@@ -815,12 +815,18 @@ http://didier-sim.local:8765/scene sur tout le réseau. Sans sudo ni avahi-utils
 (D-Bus direct vers le démon avahi). ⚠️ Jamais `didier.local` : c'est le nom du
 VRAI robot (alias publié par le Pi, visé par la télécommande) — le script le refuse.
 
-**Son et micro de Didier** (casque Bluetooth) — voir qui est branché à quoi, et choisir :
+**Son et micro de Didier** — choisis AUTOMATIQUEMENT à chaque `seance-chantiers.sh` (18/11) :
 ```bash
-python3 machines/sim/banc-vision/audio_banc.py               # état
-python3 machines/sim/banc-vision/audio_banc.py choisir M50   # ou un autre casque, ou « defaut »
+python3 machines/sim/banc-vision/audio_banc.py               # état : qui est branché à quoi
+python3 machines/sim/banc-vision/audio_banc.py choisir auto  # ce que fait la séance (~40 s si aucun casque)
+python3 machines/sim/banc-vision/audio_banc.py choisir M50   # forcer un casque, ou « defaut »
 ```
-`choisir` connecte le casque, le met en profil casque+micro, règle la tête et la redémarre.
+`auto` essaie les casques Bluetooth appairés, ÉCOUTE chaque micro 2 s et écarte les muets
+(Scarlett sans micro branché, carte USB vide), puis prend : ReSpeaker > micro du casque > micro
+USB > micro interne du PC ; sortie : casque > sortie son d'Ubuntu. Le choix est affiché, avec
+un ⚠️ si le micro du PC peut entendre Didier. Ensuite il redémarre la tête (`--sans-redemarrer`
+pour l'éviter). Vécu le 18/11 : sans ce choix, le M50 éteint faisait retomber PipeWire EN
+SILENCE sur un micro muet ou sur le micro du PC (transcription lente, tours vides).
 
 **3. La page scène** : http://localhost:8765/scene — un poste de jeu qui tient
 dans l'écran (refonte du 12/11, `docs/spec-refonte-page-scene.md`, captures
@@ -1137,9 +1143,13 @@ le robot dans `data/` puis restaure tout (empreinte de `json/` et `medias/visual
   `/clock`). Sous la minuterie, GNOME importe `DISPLAY`/`XAUTHORITY` dans l'environnement
   utilisateur de systemd ; à défaut le script cherche `/run/user/UID/.mutter-Xwaylandauth.*`.
   Session fermée = démarrage rouge, avec la cause dans `demarrage.log`.
-- `validate-namespace.sh` lit `topic info` via le démon ros2, qui naît VIDE sur un conteneur neuf :
-  sans réchauffement il rend 4/5 (bridge « absent ») alors que tout est sain. La fumée réchauffe
-  le démon avant l'épreuve (`rechauffer_cli`). Le script de vérification lui-même n'a pas été touché.
+- **Le démon ros2 ment sur un conteneur neuf** : il naît vide et, sous charge (démarrage du PC,
+  cœurs réservés chauds), sa vue du graphe reste PARTIELLE plusieurs secondes — le 19/11, deux
+  fumées à 07:50 et 07:52 (PC démarré à 07:48) ont rendu namespace 4/5 (« bridge gz namespacé » :
+  0 publisher lu par le démon) alors que le pont était sain ; reproduit au banc 2 fois sur 5 :
+  démon « Unknown topic », `--no-daemon` 1 publisher à la même seconde. Le réchauffement du démon
+  ajouté le 07/11 ne suffisait pas : il est retiré, et TOUTE lecture du graphe des épreuves passe
+  `--no-daemon --spin-time 5`, avec reprises (gravé par `test_fumee.py`).
 - Une fumée n'a de sens que sur `main` : si le checkout est sur une autre branche, la minuterie
   reporte (une fumée à la main marque la branche sur la page).
 - **Jamais `docker logs … | grep -q` (ni `docker ps … | grep -q`) sous `pipefail`** : grep -q sort
