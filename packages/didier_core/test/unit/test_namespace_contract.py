@@ -283,3 +283,44 @@ def test_validate_namespace_monte_dans_la_sim():
     # Même liste d'exceptions que ce test (gravée des deux côtés).
     for nom in sorted(EXCEPTIONS_GLOBALES):
         assert nom in script
+
+
+# Sortie RÉELLE de `ros2 node list` à la fumée 2026-11-20-1025 (épreuve namespace rouge 3/5) :
+# l'erreur de Fast DDS arrive sur STDOUT, au milieu des noms. Gravée telle quelle (couleurs comprises).
+_SORTIE_CLI_BRUITEE = (
+    "\x1b[37;1m2026-11-20 09:29:01.258 \x1b[31;1m[\x1b[37;1mRTPS_TRANSPORT_SHM\x1b[31;1m Error] "
+    "\x1b[37mFailed init_port fastrtps_port7015: open_and_lock_file failed\x1b[34;1m -> Function "
+    "\x1b[36mopen_port_internal\x1b[m\n"
+    "/didier/twist_mux\n"
+    "/didier/director\n"
+    "/intrus_hors_namespace\n"
+    "/didier/director\n"
+)
+
+
+def _fonction_du_script(nom):
+    """Définition bash d'une ligne `nom() { … }` de validate-namespace.sh (exécutée telle quelle)."""
+    script = (MACHINES / "sim" / "validate-namespace.sh").read_text(encoding="utf-8")
+    m = re.search(rf"^{nom}\(\) \{{.*\}}$", script, re.M)
+    assert m, f"{nom}() absent de validate-namespace.sh"
+    return m.group(0)
+
+
+def _bash(fonction, entree):
+    import subprocess
+    r = subprocess.run(["bash", "-c", f"{_fonction_du_script(fonction)}\n{fonction}"],
+                       input=entree, capture_output=True, text=True, timeout=10, check=True)
+    return r.stdout.splitlines()
+
+
+def test_noms_ros_ignore_le_bruit_fast_dds_mais_garde_les_intrus():
+    """Le bruit de la CLI n'est ni un topic ni un nœud (sinon intrus fantôme, rouge à tort) ;
+    un VRAI nom hors namespace reste dans la liste (sinon l'épreuve ne verrait plus d'intrus)."""
+    assert _bash("noms_ros", _SORTIE_CLI_BRUITEE) == [
+        "/didier/director", "/didier/twist_mux", "/intrus_hors_namespace"]
+
+
+def test_noms_ros_bruit_cli_affiche_ce_qui_est_ecarte():
+    """Rien n'est caché : ce qui n'est pas un nom ROS sort par bruit_cli (affiché dans le journal)."""
+    bruit = _bash("bruit_cli", _SORTIE_CLI_BRUITEE)
+    assert len(bruit) == 1 and "open_and_lock_file failed" in bruit[0]

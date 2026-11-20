@@ -1164,6 +1164,13 @@ le robot dans `data/` puis restaure tout (empreinte de `json/` et `medias/visual
   démon « Unknown topic », `--no-daemon` 1 publisher à la même seconde. Le réchauffement du démon
   ajouté le 07/11 ne suffisait pas : il est retiré, et TOUTE lecture du graphe des épreuves passe
   `--no-daemon --spin-time 5`, avec reprises (gravé par `test_fumee.py`).
+- **La CLI ros2 écrit les erreurs de Fast DDS sur STDOUT** : le 20/11 (fumée 2026-11-20-1025),
+  `ros2 topic list` et `ros2 node list` ont rendu, au milieu des noms, « [RTPS_TRANSPORT_SHM
+  Error] Failed init_port fastrtps_port7015: open_and_lock_file failed » (port SHM d'un
+  participant mort, sans effet sur le graphe) : namespace 3/5, la ligne lue comme un topic ET un
+  nœud « intrus ». `validate-namespace.sh` ne garde plus que les lignes qui commencent par « / »
+  (`noms_ros`) et affiche le reste comme bruit (`bruit_cli`, ⚠️ dans le journal, jamais compté ;
+  gravé par `test_namespace_contract.py`). Toute nouvelle lecture d'une liste de la CLI fait de même.
 - Une fumée n'a de sens que sur `main` : si le checkout est sur une autre branche, la minuterie
   reporte (une fumée à la main marque la branche sur la page).
 - **Jamais `docker logs … | grep -q` (ni `docker ps … | grep -q`) sous `pipefail`** : grep -q sort

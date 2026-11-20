@@ -62,9 +62,18 @@ SENT_TOPICS="$NS/cmd_vel $NS/cmd_vel_mux $NS/e_stop $NS/route_state $NS/ground_t
 # data_edit_node (L1d) : toujours lancé par robot_app.launch.py (conteneur robot de la sim, L2b).
 SENT_NODES="$NS/twist_mux $NS/twist_deadman $NS/wheels_bridge $NS/director $NS/route_driver $NS/web_bridge_node $NS/data_edit_node"
 pgrep -f "/jeu_node( |$)" >/dev/null && SENT_TOPICS="$SENT_TOPICS $NS/jeu/intention" && SENT_NODES="$SENT_NODES $NS/jeu_node"
+# Noms ROS seuls : la CLI écrit les erreurs de Fast DDS sur STDOUT (fumée 2026-11-20-1025 :
+# « [RTPS_TRANSPORT_SHM Error] Failed init_port fastrtps_port7015: open_and_lock_file failed »,
+# un port SHM d'un participant mort, sans effet sur le graphe) ; lue comme un nom, cette ligne
+# rendait « topics » ET « nœuds » rouges. Tout nom de topic ou de nœud commence par « / » :
+# le reste est du BRUIT, compté à part et affiché (jamais un intrus, jamais caché).
+# Comportement gravé : test_namespace_contract.py (test_noms_ros_*).
+noms_ros() { grep -a '^/' | sort -u; }
+bruit_cli() { grep -av '^/' | grep -a . ; }
 for essai in 1 2 3 4; do
-  topics=$(ros2 topic list --no-daemon --spin-time 5 2>/dev/null | sort -u)
-  nodes=$(ros2 node list --no-daemon --spin-time 5 2>/dev/null | sort -u)
+  brut_t=$(ros2 topic list --no-daemon --spin-time 5 2>/dev/null)
+  brut_n=$(ros2 node list --no-daemon --spin-time 5 2>/dev/null)
+  topics=$(noms_ros <<<"$brut_t"); nodes=$(noms_ros <<<"$brut_n")
   manque=""
   for t in $SENT_TOPICS; do grep -qx "$t" <<<"$topics" || manque="$manque $t"; done
   for n in $SENT_NODES; do grep -qx "$n" <<<"$nodes" || manque="$manque $n"; done
@@ -72,6 +81,8 @@ for essai in 1 2 3 4; do
   echo "  graphe incomplet (essai $essai) :$manque"; sleep 3
 done
 echo "  $(wc -l <<<"$topics") topics, $(wc -l <<<"$nodes") nœuds vus"
+bruit=$( { bruit_cli <<<"$brut_t"; bruit_cli <<<"$brut_n"; } | sort -u)
+[ -n "$bruit" ] && echo "  ⚠️ bruit de la CLI ignoré ($(wc -l <<<"$bruit") ligne(s), pas des noms ROS) : $(head -1 <<<"$bruit" | sed 's/\x1b\[[0-9;]*m//g')"
 verdict "$([ -z "$manque" ] && echo 1 || echo 0)" "sentinelles présentes sous $NS/ (topics + nœuds)${manque:+ — manquent :$manque}"
 
 intrus_t=""
