@@ -214,6 +214,7 @@ from typing import Callable, Optional, Union
 
 from didier_vision.ai import performance
 from didier_vision.ai.emergency import is_emergency_stop, normalized_words, stop_words_in
+from didier_vision.ai import raccord
 from didier_vision.ai.move_task import MoveTask
 from theatre_contrats import objets
 
@@ -324,6 +325,9 @@ FORWARD_MAX_M = 5
 # Durée de tenue du regard (ms) envoyée sur `look` (spec §7.1 ; le
 # consommateur la borne lui-même à 1000-8000 ms).
 LOOK_HOLD_MS = 4000
+# « Regarde ça » (lot « texte raccord », 18/11) : valeur de la clé "marche" ET de l'ordre publié
+# sur chat_move (contrat didier_rehearsal.contracts.CHAT_MOVE_PAUSE, gravé des deux côtés).
+PAUSE_CMD = "pause"
 
 
 def _gesture_number(raw, words=None):
@@ -358,8 +362,12 @@ class TaskContinuation:
     """Quatrième type de retour de _listen_for_utterance (lot M4) : la
     direction de continuation d'une tâche en cours (cf. MoveTask). Distincte
     de SpontaneousPrompt : une continuation PEUT émettre des gestes, un tour
-    spontané jamais (B1) — confondre les deux rouvrirait la faille."""
+    spontané jamais (B1) — confondre les deux rouvrirait la faille.
+    `echec` (lot « texte raccord », 18/11) : la direction annonce un geste
+    ÉCHOUÉ — la réplique est alors contrôlée avant d'être dite
+    (ConversationEngine._controlled_reply)."""
     direction: str
+    echec: bool = False
 
 
 class _ReplyGuard:
@@ -834,7 +842,7 @@ class ConversationEngine:
             logger.warning("Callback on_transcript en échec (ligne %r perdue).", role,
                            exc_info=True)
 
-    def _notify_move(self, params, spontaneous: bool = False) -> None:
+    def _notify_move(self, params, spontaneous: bool = False) -> bool:
         """Clé "marche" du JSON de fin -> `on_move("go"|"stop")` (cf.
         docstring de module MOUVEMENT). Normalisée (str, strip, lower) : le
         LLM écrit parfois "Go" ou "stop ". Toute autre valeur ou type =
@@ -880,15 +888,28 @@ class ConversationEngine:
         par une réplique NON spontanée est signalé à MoveTask (_note_gesture)
         — tour humain = nouvelle tâche, tour de continuation = geste suivant.
         Seul _serve_continuation passe `spontaneous=False` hors tour humain ;
-        un tour spontané du metteur en scène ne bouge toujours JAMAIS."""
+        un tour spontané du metteur en scène ne bouge toujours JAMAIS.
+
+        "marche": "pause" (lot « texte raccord », séance du 18/11 21:35 : « il y
+        a une lettre sur le banc, tu pourrais regarder » finissait en « aller
+        voir » d'un banc à 20 m) : « regarde ça » = s'arrêter, regarder, puis
+        reprendre la route — `on_move("pause")`, que le sélecteur de jeu
+        traduit en stop, puis « go » au bout de reprise.apres_regard_s (le
+        régisseur seul le prend pour un stop). Le regard part avec (clé
+        "regarder", 0 = devant à défaut, cf. _handle_event). Préséance stop >
+        pause > gestes > go : la pause contient un arrêt, elle l'emporte sur
+        toute mise en mouvement. Mêmes règles qu'un go (elle finit par une
+        reprise) : jamais en tour spontané, verrou de la garde. -> True si la
+        pause est partie."""
         if self._on_move is None or not isinstance(params, dict):
-            return
+            return False
         cmd = None
         if "marche" in params:
             raw = params["marche"]
             cmd = raw.strip().lower() if isinstance(raw, str) else None
-            if cmd not in ("go", "stop"):
-                logger.warning("Clé \"marche\" ignorée : %r (attendu \"go\" ou \"stop\").", raw)
+            if cmd not in ("go", "stop", PAUSE_CMD):
+                logger.warning("Clé \"marche\" ignorée : %r (attendu \"go\", \"stop\" ou \"pause\").",
+                               raw)
                 cmd = None
         # Gestes valides, DANS L'ORDRE DE PRÉSÉANCE : (clé, valeur, intention).
         gestures = []
@@ -939,7 +960,16 @@ class ConversationEngine:
                 logger.warning("Clé \"%s\" : %r ignoré : la même réplique "
                                "demande \"stop\" (le stop gagne toujours).", key, value)
             self._emit_move("stop")
-            return
+            return False
+        if cmd == PAUSE_CMD:
+            for key, value, _intent in gestures:
+                logger.warning("Clé \"%s\" : %r ignoré : la même réplique demande \"pause\" "
+                               "(il s'arrête pour regarder, il ne part pas).", key, value)
+            if spontaneous:
+                logger.warning("Clé \"marche\" : pause ignorée : tour spontané "
+                               "(aucun humain ne l'a demandée).")
+                return False
+            return self._emit_start(PAUSE_CMD, "Clé \"marche\" : pause")
         if gestures:
             key, value, intent = gestures[0]
             if cmd == "go":
@@ -950,7 +980,7 @@ class ConversationEngine:
             if spontaneous:
                 logger.warning("Clé \"%s\" : %r ignoré : tour spontané "
                                "(aucun humain ne l'a demandé).", key, value)
-                return
+                return False
             if (self._turn_continuation and self._move_task is not None
                     and not self._move_task.is_open()):
                 # Réplique de continuation dont la tâche est déjà CLOSE (geste
@@ -958,7 +988,7 @@ class ConversationEngine:
                 # rien ne doit plus enchaîner (15/11).
                 logger.warning("Clé \"%s\" : %r ignoré : la tâche est close "
                                "(budget épuisé).", key, value)
-                return
+                return False
             refusal = self._local_refusal(intent)
             if refusal is not None:
                 # Jamais publié (cf. set_objets) : noté comme geste de la tâche PUIS
@@ -968,17 +998,18 @@ class ConversationEngine:
                 self._note_gesture(intent)
                 if self._move_task is not None:
                     self._move_task.on_reply(refusal, time.monotonic())
-                return
+                return False
             if self._emit_start(intent, f"Clé \"{key}\" : {value!r}"):
                 self._note_gesture(intent)
-            return
+            return False
         if cmd != "go":
-            return
+            return False
         if spontaneous:
             logger.warning("Clé \"marche\" : go ignoré : tour spontané "
                            "(aucun humain ne l'a demandé).")
-            return
+            return False
         self._emit_start("go", "Clé \"marche\" : go")
+        return False
 
     def set_objets(self, tableau) -> None:
         """Tableau des objets (theatre_contrats.objets.Tableau, scene/objets ; appelé par
@@ -1074,7 +1105,7 @@ class ConversationEngine:
         except Exception:
             logger.exception("Callback on_move en échec (ordre %r perdu).", cmd)
 
-    def _notify_look(self, params) -> None:
+    def _notify_look(self, params, default_angle=None) -> None:
         """Clé "regarder" du JSON de fin -> `on_look({"angle_deg": a,
         "hold_ms": LOOK_HOLD_MS})` (lot M2, dadou_robot_ros/docs/
         spec-aller-voir.md §7.1). Degrés, + = gauche, 0 = devant, ou un mot
@@ -1084,15 +1115,24 @@ class ConversationEngine:
         yeux, aucun déplacement) : permise en tour spontané, émise en plus
         d'un geste de mouvement, et NI barrière NI verrou de la garde — un
         arrêt vocal n'a pas à figer le regard. Callback qui lève = regard
-        perdu, jamais le tour (même garde que _emit_move)."""
-        if self._on_look is None or not isinstance(params, dict) or "regarder" not in params:
+        perdu, jamais le tour (même garde que _emit_move).
+        `default_angle` (pause « regarde ça ») : regard émis même sans clé
+        "regarder" lisible — s'arrêter pour regarder sans tourner la tête ne
+        se verrait pas."""
+        if self._on_look is None or not isinstance(params, dict):
             return
-        raw = params["regarder"]
-        angle = _gesture_number(raw, LOOK_WORDS)
-        if angle is None:
+        if "regarder" not in params and default_angle is None:
+            return
+        raw = params.get("regarder")
+        angle = _gesture_number(raw, LOOK_WORDS) if "regarder" in params else None
+        if angle is None and "regarder" in params:
             logger.warning("Clé \"regarder\" ignorée : %r (attendu des degrés, "
-                           "+ = gauche, ou \"gauche\"/\"droite\"/\"devant\").", raw)
-            return
+                           "+ = gauche, ou \"gauche\"/\"droite\"/\"devant\")%s.", raw,
+                           "" if default_angle is None else f", regard {default_angle} (pause)")
+        if angle is None:
+            if default_angle is None:
+                return
+            angle = default_angle
         payload = {"angle_deg": angle, "hold_ms": LOOK_HOLD_MS}
         try:
             self._on_look(payload)
@@ -1196,9 +1236,10 @@ class ConversationEngine:
             # Indépendant de `mute` : une panne de voix ne coupe pas les
             # jambes (seule la synthèse est muette, cf. ci-dessus) — ni la
             # tête : la demande de réflexion part aussi.
-            self._notify_move(event.params, spontaneous)
-            # Regard : tête seule, permis en tour spontané (aucun déplacement).
-            self._notify_look(event.params)
+            paused = self._notify_move(event.params, spontaneous)
+            # Regard : tête seule, permis en tour spontané (aucun déplacement) ;
+            # une pause « regarde ça » regarde toujours (devant à défaut).
+            self._notify_look(event.params, default_angle=0 if paused else None)
             self._notify_reflect(event.params)
             return event.params
 
@@ -1233,7 +1274,7 @@ class ConversationEngine:
         if isinstance(speech_bytes, TaskContinuation):
             # Fin d'un geste d'une tâche en cours (cf. _listen_for_utterance,
             # qui a déjà coupé le micro).
-            return self._serve_continuation(speech_bytes.direction)
+            return self._serve_continuation(speech_bytes.direction, echec=speech_bytes.echec)
         if speech_bytes is None:
             if self._enabled is not None and not self._enabled.is_set():
                 # Coupure VOLONTAIRE (toggle chat OFF pendant l'écoute, cf.
@@ -1372,7 +1413,7 @@ class ConversationEngine:
         return self._speak_reply(SPONTANEOUS_USER_TEXT, direction=direction,
                                  mute=(op == "mute"), spontaneous=True)
 
-    def _serve_continuation(self, direction: str) -> bool:
+    def _serve_continuation(self, direction: str, echec: bool = False) -> bool:
         """Tour de CONTINUATION d'une tâche en cours (lot M4, spec-aller-voir.md
         §9.2) : comme _serve_prompt (visage "reflechit", pas de bips, pas de
         ligne "david", panne mute seule) MAIS `spontaneous=False` — les gestes
@@ -1380,25 +1421,83 @@ class ConversationEngine:
         garde) — et écoute garde ARMÉE dès ici comme pour un tour humain
         (« stop » pendant cette réplique doit arrêter). Une réplique sans
         geste de corps = « c'est fini » : la tâche est close (aussi sur panne
-        LLM : sans geste, rien ne doit plus enchaîner — sens sûr)."""
+        LLM : sans geste, rien ne doit plus enchaîner — sens sûr).
+        `echec` (lot « texte raccord », séance du 18/11 21:35) : la direction
+        annonce un geste ÉCHOUÉ — la réplique est CONTRÔLÉE avant d'être dite
+        (_controlled_reply : jamais « je vois bien une enveloppe » après un
+        refus), et la tâche se ferme en ÉCHEC, jamais « fini »
+        (MoveTask.close_without_gesture)."""
         self._turn_request, self._turn_continuation, self._turn_gesture = None, True, False
         self._mic.stop()
         self._publish_all(self._perf.thinking())
         self._set_state("thinking")
         op, _params = (self._stage.fault(time.monotonic()) if self._stage is not None
                        else ("pass", {}))
-        logger.info("Tâche en cours, continuation : %r", direction)
+        logger.info("Tâche en cours, continuation%s : %r", " (geste échoué)" if echec else "",
+                    direction)
         guard = self._start_reply_guard()
         try:
+            replay = (self._controlled_reply(TASK_USER_TEXT, direction, guard) if echec
+                      else None)
             return self._speak_reply(TASK_USER_TEXT, direction=direction,
-                                     mute=(op == "mute"), spontaneous=False)
+                                     mute=(op == "mute"), spontaneous=False, replay=replay)
         except Exception:
             self._stop_reply_guard(guard)
             raise
         finally:
             if not self._turn_gesture and self._move_task is not None:
-                self._move_task.close("fini")
+                self._move_task.close_without_gesture()
             self._turn_continuation = False
+
+    def _controlled_reply(self, text: str, direction: str,
+                          guard: Optional[_ReplyGuard]) -> Optional[str]:
+        """Réplique CONTRÔLÉE après un geste refusé (lot « texte raccord », séance
+        du 18/11 21:35 : « Je vois bien une enveloppe posée dessus » malgré la
+        consigne). Rien n'est dit pendant la génération : la réplique entière est
+        lue, puis jugée par didier_vision.ai.raccord.pretention — prétendre avoir vu,
+        trouvé ou fait la chose (ou l'annoncer) = rejetée, JAMAIS dite ni
+        historisée, et régénérée avec raccord.CORRECTION, au plus
+        raccord.CONTROLE_ESSAIS_MAX essais ; ensuite (ou sur panne LLM, ou sur
+        réplique vide) : raccord.REPLI_REFUS, sans geste. -> le texte brut ACCEPTÉ
+        (rejoué par _speak_reply, qui le dit et l'émet comme un flux), historisé
+        ici (brain.record_exchange) ; None si un arrêt vocal a interrompu
+        l'attente (_speak_reply sort alors sans rien dire). Coût : la latence
+        d'une réplique entière (deux au pire) au lieu du premier mot — accepté,
+        c'est la phrase qui dit un échec."""
+        extrait: Optional[str] = None
+        accepted: Optional[str] = None
+        for essai in range(1, raccord.CONTROLE_ESSAIS_MAX + 1):
+            if guard is not None and guard.interrupted.is_set():
+                return None
+            dir_essai = (direction if extrait is None
+                         else direction + " " + raccord.CORRECTION.format(extrait=extrait))
+            try:
+                raw = "".join(self._brain_deltas(text, dir_essai, historise=False))
+            except Exception:
+                logger.exception("Réplique contrôlée : panne LLM (essai %d) — repli sûr.", essai)
+                break
+            parser = StreamPerformanceParser()
+            events = list(parser.feed(raw)) + list(parser.flush())
+            dit = " ".join(e.text for e in events if isinstance(e, Sentence))
+            if not dit.strip():
+                logger.warning("Réplique contrôlée : rien à dire (essai %d) — repli sûr.", essai)
+                break
+            extrait = raccord.pretention(dit)
+            if extrait is None:
+                accepted = raw
+                break
+            logger.warning("Réplique contrôlée REJETÉE (essai %d/%d) : prétend « %s » : %r",
+                           essai, raccord.CONTROLE_ESSAIS_MAX, extrait, dit)
+        if accepted is None:
+            logger.warning("Réplique contrôlée : repli sûr %r.", raccord.REPLI_REFUS)
+            accepted = raccord.REPLI_REFUS
+        record = getattr(self._brain, "record_exchange", None)
+        if record is not None:
+            try:
+                record(text, accepted)
+            except Exception:
+                logger.exception("Réplique contrôlée : historique non mis à jour.")
+        return accepted
 
     def _reply_with_stage(self, text: str, *, stt_ms: float = 0.0,
                           speech_end_at: Optional[float] = None) -> bool:
@@ -1547,11 +1646,11 @@ class ConversationEngine:
             # et PAS d'écart minimal : c'est la suite de ce que David a demandé.
             if (self._move_task is not None and not in_speech and not show_audio_now
                     and now - listen_started_at >= TASK_MIN_SILENCE_S):
-                continuation = self._move_task.pop_continuation()
-                if continuation is not None:
+                suite = self._move_task.pop_suite()
+                if suite is not None:
                     self._mic.stop()
                     self._vad.reset()
-                    return TaskContinuation(continuation)
+                    return TaskContinuation(suite.texte, suite.echec)
             gap_ok = (self._last_spontaneous_at is None
                       or now - self._last_spontaneous_at >= SPONTANEOUS_MIN_GAP_S)
             if (self._stage is not None and not in_speech and not show_audio_now and gap_ok
@@ -1627,9 +1726,28 @@ class ConversationEngine:
             if event is not None and event.kind == "speech_end":
                 return speech_bytes
 
+    def _brain_deltas(self, text: str, direction: Optional[str], *, historise: bool = True):
+        """Flux du LLM pour `text` (seul point d'appel du brain). Sans régie : appel
+        historique, seule une continuation (lot M4) porte une direction — sans elle
+        le LLM ne saurait ni l'issue du geste ni la tâche. Avec régie : consigne de
+        jeu courante et tableau de situation (None si absents, levés ou périmés, cf.
+        StageState), relus sur le MÊME instant. `historise=False` (réplique
+        contrôlée) : rien n'entre dans l'historique, l'appelant y range ce qui est
+        finalement dit."""
+        kwargs = {} if historise else {"historise": False}
+        if self._stage is None:
+            if direction is None:
+                return self._brain.stream_reply(text, **kwargs)
+            return self._brain.stream_reply(text, direction=direction, **kwargs)
+        now = time.monotonic()
+        return self._brain.stream_reply(
+            text, extra_system=self._stage.instruction(now),
+            situation=self._stage.situation(now), direction=direction, **kwargs)
+
     def _speak_reply(self, text: str, *, stt_ms: float = 0.0, stt_text: str = "",
                       speech_end_at: Optional[float] = None, mute: bool = False,
-                      direction: Optional[str] = None, spontaneous: bool = False) -> bool:
+                      direction: Optional[str] = None, spontaneous: bool = False,
+                      replay: Optional[str] = None) -> bool:
         """Génère et joue la réponse du LLM pour `text` déjà transcrit ;
         retourne True si le tour est allé jusqu'au bout, False sur erreur
         LLM/TTS (log + retour à l'écoute, le spectacle continue).
@@ -1646,7 +1764,10 @@ class ConversationEngine:
         transmise au brain avec le tableau de situation — ignorée sans `stage`.
 
         `spontaneous` : tour spontané (cf. _serve_prompt) — la clé "marche"
-        n'y transmet que "stop" (B1, cf. _notify_move)."""
+        n'y transmet que "stop" (B1, cf. _notify_move).
+
+        `replay` : réplique DÉJÀ générée et contrôlée (_controlled_reply), dite
+        et émise comme un flux d'un seul morceau, sans appel LLM."""
         parser = StreamPerformanceParser()
         emotion_params = None
         # Horodatage de départ pour llm_first_ms/audio_first_ms (relatifs au
@@ -1667,20 +1788,7 @@ class ConversationEngine:
                 guard, stt_ms, stt_text, timing_marks, reply_started_at, speech_end_at)
 
         try:
-            if self._stage is None:
-                # Appel historique ; seule une continuation (lot M4, sans
-                # régie) porte une direction ici — sans elle le LLM ne
-                # saurait ni l'issue du geste ni la tâche.
-                deltas = (self._brain.stream_reply(text) if direction is None
-                          else self._brain.stream_reply(text, direction=direction))
-            else:
-                # Consigne de jeu courante et tableau de situation (None si
-                # absents, levés ou périmés, cf. StageState) relus à CHAQUE
-                # tour, sur le MÊME instant.
-                now = time.monotonic()
-                deltas = self._brain.stream_reply(
-                    text, extra_system=self._stage.instruction(now),
-                    situation=self._stage.situation(now), direction=direction)
+            deltas = iter([replay]) if replay is not None else self._brain_deltas(text, direction)
             # Urgence vérifiée avant CHAQUE événement : le thread de
             # conversation ne peut pas être interrompu en plein appel bloquant
             # (attente du delta LLM suivant, synthèse TTS) — il s'arrête au

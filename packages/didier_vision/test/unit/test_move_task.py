@@ -381,3 +381,47 @@ def test_hors_atteinte_dit_la_distance():
                             "aller d'un seul geste (à 13 m devant toi).")
     sans = _tache_elephant().on_reply(dict(_reponse("dropped", "hors_atteinte"), cote="haut"), T0 + 0.1)
     assert "il est trop loin pour y aller d'un seul geste. Tu n'as pas bougé." in sans
+
+
+# --------------------------------------------------------------------------
+# Lot « texte raccord » (séance du 18/11 21:35) : la continuation dit si le geste a ÉCHOUÉ, et
+# une réplique sans geste ferme la tâche « échec : geste refusé », jamais « fini ».
+# --------------------------------------------------------------------------
+
+AV_BANC = {"cmd": "aller_voir", "objet": "banc"}
+REFUS_BANC = {"demande": AV_BANC, "effect": "dropped", "reason": "pas_ici", "distance_m": 22.3,
+              "cote": "devant", "source": "chat"}
+
+
+def test_refus_suite_en_echec_puis_close_echec():
+    task = MoveTask()
+    task.gesture_emitted("il y a une lettre sur le banc", False, 0.0, gesture=dict(AV_BANC))
+    assert task.on_reply(REFUS_BANC, 0.1) is not None
+    suite = task.pop_suite()
+    assert suite.echec is True and suite.texte.startswith("Ton geste « aller voir banc » n'a PAS eu lieu")
+    assert task.pop_suite() is None
+    assert task.close_without_gesture() == "échec : geste refusé"
+    assert task.last_close == "échec : geste refusé" and not task.is_open()
+    assert task.close_without_gesture() is None                 # plus de tâche
+
+
+def test_arrivee_suite_sans_echec_puis_close_fini():
+    task = MoveTask()
+    task.gesture_emitted("va voir la table", False, 0.0)
+    task.on_result({"name": "table", "result": "arrived", "reason": "arrived", "travelled": 4.0}, 1.0)
+    assert task.pop_suite().echec is False
+    assert task.close_without_gesture() == "fini"
+
+
+def test_geste_reussi_apres_un_echec_efface_l_echec():
+    # Refus, puis un AUTRE geste de la même tâche, accepté et arrivé : la tâche finit « fini ».
+    task = MoveTask()
+    task.gesture_emitted("lettre", False, 0.0, gesture=dict(AV_BANC))
+    task.on_reply(REFUS_BANC, 0.1)
+    task.pop_suite()
+    tourner = {"cmd": "tourner", "angle_deg": 10}
+    task.gesture_emitted("lettre", True, 1.0, gesture=dict(tourner))
+    task.on_reply({"demande": tourner, "effect": "accepted", "name": "tourner 10", "source": "director"}, 1.1)
+    task.on_result({"name": "tourner 10", "result": "arrived", "reason": "arrived", "travelled": 0}, 2.0)
+    assert task.pop_suite().echec is False
+    assert task.close_without_gesture() == "fini"

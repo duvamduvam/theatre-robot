@@ -45,7 +45,7 @@ from typing import Dict, List, Tuple
 
 from theatre_contrats import stringtime
 
-from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
+from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_PAUSE, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
                                        FORWARD_MAX_M, FORWARD_MIN_M, GOTO_DIDIER_RAYON_M, GOTO_EMPRISE_INCONNUE_M,
                                        GOTO_MARGE_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
                                        ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
@@ -566,6 +566,11 @@ class VoiceMove:
         cible `speed`. Le node exécute : close_lubie -> close_active +
         fermeture « voix » (+ `speed` publiée seule si non None) ; hold /
         resume -> route_speed `speed` ; relance -> relaunch_due()."""
+        if cmd == CHAT_MOVE_PAUSE:
+            # « Regarde ça » (lot « texte raccord », 18/11) : sans sélecteur de jeu
+            # (jeu:=false), personne ne relancera la route — c'est un « stop »,
+            # sens sûr, jamais une reprise automatique.
+            cmd = "stop"
         if cmd not in VOICE_COMMANDS:
             return VoiceDecision("ignored", "invalide")
         if (cmd == "go" and self._last is not None and self._last[0] == "go"

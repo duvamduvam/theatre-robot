@@ -314,3 +314,33 @@ def test_objets_dans_la_perception():
     content = _build(objets="Objets autour de Didier : x.")[1]["content"]
     assert "Perception :\nPersonne en vue.\nObjets autour de Didier : x.\n\nMission :" in content
     assert "Objets autour de Didier" not in _build()[1]["content"]
+
+
+# --------------------------------------------------------------------------
+# Lot « texte raccord » (séance du 18/11 21:35 : « cherche la lettre », « lit l'enveloppe ») :
+# une direction qui demande un geste impossible est JETÉE, gardée pour le journal.
+# --------------------------------------------------------------------------
+
+def test_direction_geste_impossible_jetee():
+    from didier_vision.ai.reflection import parse_reflection
+    r = parse_reflection('{"situation": "David parle d\'une lettre sur le banc.", '
+                         '"direction": "Didier cherche la lettre sur le banc.", "parler": true}')
+    assert r.direction is None
+    assert r.direction_rejetee == ("Didier cherche la lettre sur le banc.", "cherche")
+    assert r.situation == "David parle d'une lettre sur le banc." and r.parler is True
+
+
+def test_direction_jouable_gardee():
+    from didier_vision.ai.reflection import parse_reflection
+    r = parse_reflection('{"direction": "Didier s\'émerveille de la lettre et questionne David."}')
+    assert r.direction == "Didier s'émerveille de la lettre et questionne David."
+    assert r.direction_rejetee is None
+
+
+def test_prompt_dit_ce_que_didier_peut_faire():
+    from didier_vision.ai.reflection import REFLECTION_SYSTEM_PROMPT
+    assert ("- Ta direction ne décrit que ce que Didier peut faire de lui-même : parler, regarder, "
+            "saluer, danser ou bouger sur place, s'approcher d'une personne. Jamais chercher, aller "
+            "quelque part, lire, prendre, ouvrir, fouiller ni ramasser : il ne le fera pas, et il dirait "
+            "le faire. Ce dont on lui parle sans qu'il l'ait vu (une lettre, un objet loin), il ne l'a "
+            "pas vu.\n") in REFLECTION_SYSTEM_PROMPT

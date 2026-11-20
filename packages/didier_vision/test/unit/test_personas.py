@@ -327,3 +327,13 @@ def test_aucune_expression_toute_faite():
         assert "fétiche" not in prompt.replace("pas de formule fétiche", "")
         assert "bon sang de boulon" not in prompt
         assert "Aucune expression toute faite" in prompt
+
+
+def test_mouvement_apprend_la_pause_regarde():
+    # Lot « texte raccord » (séance du 18/11 21:35) : « regarde » = s'arrêter et regarder,
+    # jamais « aller_voir ».
+    template = personas.MOVE_TEMPLATE
+    assert '- "pause" : quand on te dit de REGARDER quelque chose' in template
+    assert '{"emotion": "surprise", "marche": "pause", "regarder": 0}' in template
+    assert "Tu n'y vas PAS : regarder n'est pas aller voir." in template
+    assert "(pas pour un simple « regarde » : c'est \"pause\")" in template

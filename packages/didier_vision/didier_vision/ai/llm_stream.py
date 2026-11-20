@@ -156,7 +156,8 @@ class StreamingBrain:
 
     def stream_reply(self, user_text: str, extra_system: Optional[str] = None,
                      situation: Optional[str] = None,
-                     direction: Optional[str] = None) -> Iterator[str]:
+                     direction: Optional[str] = None,
+                     historise: bool = True) -> Iterator[str]:
         """Envoie `user_text` au LLM, streame les deltas de la réponse, et
         met à jour l'historique (ChatDB) : le message utilisateur est ajouté
         AVANT l'appel (il doit faire partie du contexte envoyé), la réponse
@@ -179,14 +180,24 @@ class StreamingBrain:
         messages system ajoutés APRÈS la consigne, dans cet ordre (préfixes
         SITUATION_PREFIX / DIRECTION_PREFIX), jamais historisés (un tableau
         périmé qui survivrait dans l'historique ferait parler Didier d'une
-        scène finie)."""
-        self._history_entry.add_user_text(user_text)
+        scène finie).
+
+        `historise=False` (lot « texte raccord », 18/11 : réplique CONTRÔLÉE
+        après un geste refusé, qui peut être rejetée puis régénérée) : ni
+        `user_text` ni la réponse n'entrent dans ChatDB — `user_text` est
+        envoyé en DERNIER message, comme s'il l'était ; l'appelant range ce qui
+        est finalement dit par record_exchange. Une réplique rejetée ne doit
+        jamais revenir au LLM comme une chose que Didier aurait dite."""
+        if historise:
+            self._history_entry.add_user_text(user_text)
 
         # history_limit : ne renvoyer que les N derniers messages au LLM —
         # limite le coût/latence par requête (l'historique complet croît sans
         # borne sur une longue session, cf. config["chat_*"] pour la valeur
         # par défaut retenue).
         history = self._history_entry.get_history()[-self._history_limit:]
+        if not historise:
+            history = (history + [{"role": "user", "content": user_text}])[-self._history_limit:]
         messages = [{"role": "system", "content": self._system_prompt}]
         # Lu UNE fois (référence locale) : cf. set_objects_prompt.
         objects_prompt = self._objects_prompt
@@ -228,4 +239,12 @@ class StreamingBrain:
         # CONSIGNE et non comme son propre tour — la règle anti-répétition du
         # prompt ne peut alors rien y faire (rien n'est identifié comme parole
         # de l'assistant), cf. post-mortem.
-        self._history_entry.add_assistant_text(full_text)
+        if historise:
+            self._history_entry.add_assistant_text(full_text)
+
+    def record_exchange(self, user_text: str, reply_text: str) -> None:
+        """Range dans l'historique un échange généré HORS historique
+        (stream_reply(historise=False)) : la demande, puis ce que Didier a
+        finalement dit (réplique acceptée ou repli sûr)."""
+        self._history_entry.add_user_text(user_text)
+        self._history_entry.add_assistant_text(reply_text)

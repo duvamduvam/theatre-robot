@@ -525,3 +525,27 @@ def test_objets_vides_aucun_message_et_survivent_au_changement_de_persona(tmp_pa
         {"role": "system", "content": "Tu es un autre Didier."},
         {"role": "system", "content": OBJETS},
     ]
+
+
+# --------------------------------------------------------------------------
+# Lot « texte raccord » (18/11) : réplique CONTRÔLÉE hors historique, puis rangée.
+# --------------------------------------------------------------------------
+
+def test_historise_false_envoie_la_demande_mais_ne_range_rien(tmp_path):
+    _configure_test_db(tmp_path)
+    client = FakeClient(["Je vois bien une enveloppe."])
+    brain = StreamingBrain(model="m", base_url="https://x", system_prompt="sys",
+                           client_factory=lambda: client)
+    list(brain.stream_reply("Avant."))
+    list(brain.stream_reply("(Ton geste est fini.)", direction="Refusé.", historise=False))
+    assert client.completions.last_call["messages"][-1] == {"role": "user",
+                                                            "content": "(Ton geste est fini.)"}
+    assert brain._history_entry.get_history() == [
+        {"role": "user", "content": "Avant."},
+        {"role": "assistant", "content": "Je vois bien une enveloppe."},
+    ]
+    brain.record_exchange("(Ton geste est fini.)", "Non, je n'ai pas pu.")
+    assert brain._history_entry.get_history()[-2:] == [
+        {"role": "user", "content": "(Ton geste est fini.)"},
+        {"role": "assistant", "content": "Non, je n'ai pas pu."},
+    ]

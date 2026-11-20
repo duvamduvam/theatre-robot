@@ -49,12 +49,18 @@ CORRÉLATION (15/11 21:21, séance : « aller voir l'éléphant » roulait encor
        (« tour de elephant » ≠ « elephant »). Pas encore accepté, ou autre nom :
        issue ignorée (journalisée). La réponse d'acceptation part AVANT
        l'ordre (director_node._reply puis _accept_maneuver).
+ÉCHEC (18/11 21:35, séance de la lettre sur le banc : « aller voir banc » refusé, la réplique
+       qui le disait n'avait pas de geste et la tâche se fermait « fini ») : la continuation
+       servie dit si le geste a ÉCHOUÉ (`pop_suite` -> Suite.echec) — la conversation contrôle
+       alors la réplique (didier_vision.ai.raccord) — et une réplique sans geste ferme la tâche
+       par `close_without_gesture`, qui rend « échec » après un geste refusé, « fini » sinon.
 """
 from __future__ import annotations
 
 import logging
 import math
 import threading
+from dataclasses import dataclass
 from typing import Optional
 
 from theatre_contrats.objets import ou
@@ -81,6 +87,20 @@ CONTINUE_REASONS = {
     "max_travel": "trop de chemin parcouru",
     "too_far": "trop loin",
 }
+
+# Raisons de fermeture d'une tâche par une réplique SANS geste (close_without_gesture) : textes
+# EXACTS gravés en test (ils sont dans le journal du chat, relu au débrief).
+CLOSE_DONE = "fini"
+CLOSE_FAILED = "échec : geste refusé"
+
+
+@dataclass(frozen=True)
+class Suite:
+    """Continuation servie à la conversation : la direction, et si elle annonce un geste ÉCHOUÉ
+    (refusé ou resté sans réponse) — la réplique qui suit est alors contrôlée."""
+    texte: str
+    echec: bool
+
 
 # Fin commune du texte de continuation (spec §9.1, texte EXACT).
 _TASK_TAIL = ("Ta tâche, demandée par David : « {request} ». Si elle n'est pas finie, "
@@ -225,6 +245,12 @@ class MoveTask:
         self._expected_name: Optional[str] = None
         # Réponse arrivée avant la notation de son geste : (payload, instant).
         self._early: Optional[tuple] = None
+        # La continuation rangée annonce-t-elle un ÉCHEC ? Et le DERNIER geste de la tâche a-t-il
+        # échoué (fermeture « échec » plutôt que « fini », cf. close_without_gesture) ?
+        self._continuation_failed = False
+        self._last_failed = False
+        # Raison de la dernière fermeture (journal, tests) ; None = aucune encore.
+        self.last_close: Optional[str] = None
 
     @property
     def steps(self) -> int:
@@ -258,6 +284,7 @@ class MoveTask:
                 self._continuation = None
                 logger.info("Tâche ouverte : %r (geste 1/%d).", request, TASK_MAX_STEPS)
             self._awaiting = True
+            self._last_failed = False
             self._gesture, self._emitted_at, self._acked = gesture, now, False
             self._expected_name = None
             early, self._early = self._early, None
@@ -272,15 +299,26 @@ class MoveTask:
         with self._lock:
             return self._close_locked(reason)
 
+    def close_without_gesture(self) -> Optional[str]:
+        """Une réplique de continuation s'est finie SANS geste de corps : la tâche est close —
+        « échec : geste refusé » si son dernier geste a échoué (jamais « fini » : séance du
+        18/11), « fini » sinon. -> la raison, ou None s'il n'y avait plus de tâche."""
+        with self._lock:
+            reason = CLOSE_FAILED if self._last_failed else CLOSE_DONE
+            return reason if self._close_locked(reason) else None
+
     def _close_locked(self, reason: str) -> bool:
         had_task = self._request is not None
         if had_task:
             logger.info("Tâche close (%s) : %r après %d geste(s).",
                         reason, self._request, self._steps)
+            self.last_close = reason
         self._request = None
         self._steps = 0
         self._awaiting = False
         self._continuation = None
+        self._continuation_failed = False
+        self._last_failed = False
         self._gesture = None
         return had_task
 
@@ -318,7 +356,7 @@ class MoveTask:
             self._awaiting = False
             text = continuation_text(payload.get("name"), result, reason,
                                      payload.get("travelled"), self._request)
-            self._continuation = text
+            self._continuation, self._continuation_failed = text, False
             return text
 
     def on_reply(self, payload, now: float) -> Optional[str]:
@@ -363,12 +401,21 @@ class MoveTask:
             self._close_locked("budget")
         self._awaiting = False
         self._gesture = None
-        text = refused_text(gesture, reason, request, final)
-        self._continuation = text
+        if not final:
+            self._last_failed = True
+        text = refused_text(gesture, reason, request or "", final)
+        self._continuation, self._continuation_failed = text, True
         return text
+
+    def pop_suite(self) -> Optional[Suite]:
+        """Consomme la continuation en attente avec son type (échec ou non), ou None — en UNE
+        prise de verrou : une réponse rangée entre deux lectures ne peut pas les désassortir."""
+        with self._lock:
+            text, failed = self._continuation, self._continuation_failed
+            self._continuation, self._continuation_failed = None, False
+            return Suite(text, failed) if text is not None else None
 
     def pop_continuation(self) -> Optional[str]:
         """Consomme la continuation en attente, ou None (thread de conversation)."""
-        with self._lock:
-            text, self._continuation = self._continuation, None
-            return text
+        suite = self.pop_suite()
+        return suite.texte if suite is not None else None

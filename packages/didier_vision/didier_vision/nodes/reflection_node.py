@@ -426,7 +426,9 @@ class ReflectionNode(Node):
             if inputs["persona"] == self._persona:
                 self._board.set_reflection(result.situation, result.direction, now)
             changes = self._mission.apply(result.mission_update)
-            text = result.direction or result.situation
+            # Direction jetée (geste impossible, lot « texte raccord ») : pas de relance sur la
+            # situation à sa place — la scène qu'elle voulait jouer n'est pas jouable.
+            text = None if result.direction_rejetee else (result.direction or result.situation)
             # `text` D'ABORD : allow() consomme l'objet croisé quand il accorde
             # un tour en marche — un résultat sans texte ne doit pas le brûler.
             speak = bool(text) and self._policy.allow(
@@ -435,6 +437,10 @@ class ReflectionNode(Node):
                 moving=self._board.moving(), passing_poi=inputs["passing_poi"])
             if speak:
                 self._last_spontaneous_s = now
+        if result.direction_rejetee:
+            self.get_logger().warning(
+                f"direction jetée : geste impossible « {result.direction_rejetee[1]} » dans "
+                f"{result.direction_rejetee[0]!r}")
         for change in changes:
             self.get_logger().info(f"mission : {change}")
         if changes:

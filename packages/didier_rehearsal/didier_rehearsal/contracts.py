@@ -123,6 +123,13 @@ CHAT_MOVE_FORWARD_CMD = "avancer"
 # laborieux »). {"cmd": "tour_de", "objet": "<texte>", "sens": "gauche"|
 # "droite"} (sens absent = "gauche"). Chaîne gravée des deux côtés.
 CHAT_MOVE_TOUR_CMD = "tour_de"
+# Lot « texte raccord » (18/11, séance de 21:35, « il y a une lettre sur le banc, tu pourrais
+# regarder ») : payload JSON "pause" = « regarde ça » — s'arrêter, regarder (le regard part de la
+# bouche sur `look`), puis reprendre la route. Consommateur : le sélecteur de jeu (jeu:=true), qui
+# relaie « stop » puis « go » au bout de reprise.apres_regard_s ; le régisseur seul (jeu:=false)
+# et le relais dégradé la prennent pour un « stop » (sens sûr, sans reprise). Chaîne gravée des
+# deux côtés (conversation.PAUSE_CMD de chat_node).
+CHAT_MOVE_PAUSE = "pause"
 # Sens du tour -> orbit_dir de route_goto (+1 = trigonométrique, + = gauche
 # comme TURN_DEG_COMPAT : l'objet reste à GAUCHE de Didier). Autre valeur ->
 # refus « invalid » (jamais deviné) ; absent -> TOUR_SENS_DEFAUT.
