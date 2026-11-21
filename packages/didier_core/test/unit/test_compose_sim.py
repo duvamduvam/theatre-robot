@@ -91,6 +91,13 @@ def test_domaine_43_en_litteral_partout_et_jamais_lu_dans_l_environnement():
         assert "ROS_DOMAIN_ID=42" not in f.read_text(encoding="utf-8"), f.name
 
 
+def test_fast_dds_en_udp_seul_dans_les_quatre_services():
+    """21/11 : en mémoire partagée, des abonnés rclpy se figeaient 0,33-0,43 s (le corps sûr se
+    verrouillait) ; en UDP seul, zéro gel sur le même essai. Gravé : aucun service sans."""
+    for nom, s in _services().items():
+        assert _env(s)["FASTDDS_BUILTIN_TRANSPORTS"] == "UDPv4", nom
+
+
 def test_reseau_et_ipc_de_l_hote_partout():
     for nom, s in _services().items():
         assert (s["network_mode"], s["ipc"]) == ("host", "host"), nom

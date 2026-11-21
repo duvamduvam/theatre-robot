@@ -38,6 +38,8 @@ docker compose down
 | `didier-fumee.{service,timer}`, `installer-fumee.sh` | minuterie systemd utilisateur ; **relancer `installer-fumee.sh` depuis le checkout de main** après un déménagement |
 | *(hors dépôt)* `$DIDIER_SIM_JOURNAUX`, défaut `~/tmp/didier-sim/` | journaux de la sim depuis le 16/11 (ni dans git ni sur Nextcloud) : `log/` partagé par `monde` et `robot` (`robot.log`, `rehearsal/`, `jeu/`, `tickets/`, `captures/`), `log-vision/`, `log-telecommande/` ; `fumee.sh` et `seance-chantiers.sh` le créent, à la main : `mkdir -p` avant `up` (sinon Docker le crée root) |
 
+Fast DDS tourne en **UDP seul** dans les quatre services (`FASTDDS_BUILTIN_TRANSPORTS=UDPv4`, 21/11) : en mémoire partagée, des abonnés rclpy se figeaient 0,33 à 0,43 s et le corps sûr se verrouillait (`docs/operations.md` § Fast DDS en UDP seul).
+
 Les épreuves tournent dans `monde`, qui partage son espace de processus avec les trois autres
 (`pid: "service:monde"`, sim seulement) : leurs `pgrep`/`pkill` voient les nœuds du robot.
 

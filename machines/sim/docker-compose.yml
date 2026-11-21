@@ -19,6 +19,12 @@
 # en UDP mais passe les DONNÉES en mémoire partagée entre participants du même hôte : sans
 # `ipc: host`, les topics se voient et aucun message ne traverse (vécu le 13/09). La télécommande
 # physique peut rejoindre la sim en domaine 43.
+# Transport (21/11) : `FASTDDS_BUILTIN_TRANSPORTS=UDPv4` dans les quatre services, donc PLUS de
+# mémoire partagée entre participants. Mesuré : en SHM, un abonné rclpy (la sonde, et le corps sûr)
+# se figeait 0,33 à 0,43 s, une dizaine de fois en 4 min, sur une grille de 3 s (période des
+# annonces de Fast DDS), alors qu'une boucle Python nue dans les mêmes conteneurs n'avait AUCUN
+# réveil en retard de plus de 50 ms. Le corps sûr se verrouillait alors (capteur_perdu) et V-R3
+# tombait. En UDP, même essai : zéro gel. `ipc: host` reste (inoffensif ; l'historique ci-dessus).
 # Processus (décision 10) : robot, vision et télécommande partagent l'espace de processus de
 # `monde` (`pid: "service:monde"`), pour que les épreuves (lancées dans `monde`) gardent leurs
 # pgrep/pkill. Échafaudage de TEST : absent des compose ARM (gravé).
@@ -55,6 +61,8 @@ services:
       - QT_X11_NO_MITSHM=1
       - XAUTHORITY=${XAUTHORITY:-/tmp/.docker.xauth}
       - ROS_DOMAIN_ID=43
+      # Fast DDS en UDP SEUL (21/11) : voir l'en-tête « Transport ».
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
       # Nom du robot = namespace ROS ABSOLU de tous les nœuds (lot L1b) : /didier/… par défaut.
       # Robot, vision et télécommande d'un même Didier DOIVENT avoir le même nom.
       - ROBOT_NAME=${ROBOT_NAME:-didier}
@@ -148,6 +156,8 @@ services:
     entrypoint: ["/bin/bash", "/home/ros2_ws/sim/entree-robot.sh"]
     environment:
       - ROS_DOMAIN_ID=43
+      # Fast DDS en UDP SEUL (21/11) : voir l'en-tête « Transport ».
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
       - ROBOT_NAME=${ROBOT_NAME:-didier}
       # Racine des DONNÉES du cœur (json/, medias/, db/, conf/) : même chemin que sur le Pi.
       - DIDIER_DATA_DIR=/home/ros2_ws/src/robot/
@@ -210,6 +220,8 @@ services:
         didier_perception: ../../packages/didier_perception
     environment:
       - ROS_DOMAIN_ID=43
+      # Fast DDS en UDP SEUL (21/11) : voir l'en-tête « Transport ».
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
       - ROBOT_NAME=${ROBOT_NAME:-didier}
       - DIDIER_VISION_DATA_DIR=/home/ros2_ws/src/vision/
       # Conversation coupée en sim (micro physique + budget LLM) ; AUCUN secret monté ici.
@@ -251,6 +263,8 @@ services:
       # s'ouvrait sur le bureau à chaque relance. Le nœud et ses éditeurs tournent seuls.
       - TELECOMMANDE_SANS_IHM=1
       - ROS_DOMAIN_ID=43
+      # Fast DDS en UDP SEUL (21/11) : voir l'en-tête « Transport ».
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
       - ROBOT_NAME=${ROBOT_NAME:-didier}
       - COLCON_LOG_PATH=/home/ros2_ws/log/colcon-telecommande
     network_mode: "host"

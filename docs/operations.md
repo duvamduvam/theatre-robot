@@ -693,6 +693,23 @@ paraître jusqu'à 5 ms « en avance » sur l'horloge du nœud, ce qui est sans 
 - Mesurer : un abonné rclpy fiable compte `/clock` pendant 20 s ; `top` dans `monde` voit tous
   les conteneurs (espace de processus partagé).
 
+## Fast DDS en UDP seul dans la sim (21/11)
+
+**Le piège.** En mémoire partagée (le transport par défaut de Fast DDS entre participants du même
+hôte), un abonné rclpy se FIGE de 0,33 à 0,43 s, sans perte de message, une dizaine de fois en
+4 min de répétition. Les gels tombent sur une grille de 3 s (période des annonces de Fast DDS). Le
+corps sûr en faisait les frais : `capteur_perdu`, verrou, V-R3 rouge (fumées 2026-11-21-1929 et
+-2042). Ce n'était ni le capteur (aucun trou dans les horodatages gz des scans), ni l'horloge
+(aucun trou dans le temps simulé de `/clock`), ni l'ordonnanceur : une boucle Python nue, sans
+ROS, dans les mêmes conteneurs, n'a eu AUCUN réveil en retard de plus de 50 ms sur 300 s.
+
+**La parade.** `FASTDDS_BUILTIN_TRANSPORTS=UDPv4` dans les quatre services de
+`machines/sim/docker-compose.yml` (gravé par `test_compose_sim.py`). Même essai, même charge :
+zéro gel, aucun verrou. Sim seulement : le Pi n'est pas touché. Sur le robot, la fréquence de ces
+gels est à MESURER en A0-6/A0-7 avant tout roulage autonome (corps sûr et lidar réel).
+Une commande `docker exec … ros2 …` dans un conteneur hérite de l'UDP. Un participant SHM (sans
+la variable) parle encore aux autres, par UDP.
+
 ## Mémoire partagée Fast DDS : le ménage au démarrage (18/11)
 
 Toute la sim est en `ipc: host` (décision 8) : les ports et segments SHM de Fast DDS vivent dans
