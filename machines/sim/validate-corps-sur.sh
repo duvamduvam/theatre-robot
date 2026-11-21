@@ -65,6 +65,8 @@
 #         par la charge du PC) est compté, dit et réarmé, deux au plus par passe, sinon rouge.
 #         Latence, distance et état attendu ne se rejouent jamais. Les attentes partent du premier
 #         /clock (avant lui l'horloge simulée vaut 0).
+#   Horloge (21/11) : /clock avance par pas de 5 ms (relais_horloge, 200 Hz) ; une fenêtre de mesure
+#         se ferme AVANT le changement de source qu'elle précède (CS12c : 0,3-0,9 s).
 #
 # Variables (essais) : CS_SEULEMENT="CS1,CS2" (sous-ensemble ; le compte final n'est alors pas
 # celui de la fumée) ; CS_NOEUD_PYTHONPATH (préfixé au PYTHONPATH du nœud RELANCÉ : contrôle par
@@ -894,7 +896,10 @@ try:
         n.dormir(1.0)
         n.source("cmd_vel_follow", 0.0, 0.0, 20.0)
         n.dormir(1.5)
-        plafond = [v for t, v, _ in n.cmd if t_p + 0.3 <= t <= t_p + 1.0]
+        # Fenêtre fermée 0,1 s AVANT le passage de la source à zéro (t_p + 1,0) : depuis le relais
+        # d'horloge à 200 Hz (21/11), le pilote et la réception du zéro tombent sur le même pas de
+        # 5 ms, et `<= t_p + 1,0` comptait le zéro de fin (fumée 2026-11-21-2019 : [0.0, 0.25]).
+        plafond = [v for t, v, _ in n.cmd if t_p + 0.3 <= t <= t_p + 0.9]
         c0 = len(n.cmd)
         n.source("cmd_vel_follow", 0.2, 0.0, 20.0)
         n.dormir(5.0)
