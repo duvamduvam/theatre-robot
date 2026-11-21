@@ -78,6 +78,13 @@ par la bouche (« en route ») est **relayé tout de suite**, comme le stop :
 pondéré, il mourait au réfractaire de 10 s. Les 90 s de silence restent pour
 SES arrêts (lubie, approche).
 
+**« Regarde ça »** (lot « texte raccord », séance du 18/11 21:35) : la bouche envoie `"pause"`
+sur `rehearsal/chat_move`. Didier en marche : `stop` relayé tout de suite, **sans verrou**, puis
+`go` après `reprise.apres_regard_s` = **6 s** (la même reprise que les gestes, mêmes
+annulations ; journal `pause_regard` puis `reprise`). Déjà arrêté (verrou, arrêt de Didier) ou
+pas en route : rien ne bouge, jamais de `go` qu'il n'aurait pas eu sans elle. Mode dégradé : un
+`stop`. Tests : `test/test_pause_regard.py`.
+
 **Objets** (lot O1, 18/11 ; remplace les « distances » du 15/11) : le sélecteur LIT le
 tableau des objets `scene/objets` (écrit par `didier_perception`) ; il n'a plus ni pose ni
 carte. Un `aller_voir` ou `tour_de` de la bouche dont l'objet (désigné par son `id`) n'est

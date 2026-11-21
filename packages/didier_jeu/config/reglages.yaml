@@ -92,6 +92,10 @@ reprise:
   # seule »). La parole ne remet PAS ce compteur à zéro (il écoute en marche,
   # décision du 08/11). Annulé par un nouveau geste, un stop, une Route OFF de David.
   apres_geste_s: 10.0
+  # « Regarde ça » (lot « texte raccord », 18/11) : la bouche demande une PAUSE (chat_move
+  # "pause") -> il s'arrête, regarde (regard de la bouche, 4 s), puis rejoint sa route tout seul
+  # après ce délai. Mêmes annulations que apres_geste_s ; la parole ne le remet pas à zéro.
+  apres_regard_s: 6.0
 
 superviseur:
   # « suppose » (A1 sim, défaut) : présence supposée. « exigeant » : sans

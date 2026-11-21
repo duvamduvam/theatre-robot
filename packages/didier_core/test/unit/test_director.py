@@ -378,6 +378,15 @@ def test_voix_ordre_invalide_ignore():
     assert v.hold_before is None
 
 
+def test_voix_pause_sans_selecteur_est_un_stop():
+    # « Regarde ça » (lot « texte raccord », 18/11) : jeu:=false, personne ne relancera la route —
+    # la pause est un arrêt vocal, sens sûr ; seul un « go » la lève.
+    v = VoiceMove()
+    assert v.decide("pause", 0.0, **_ctx()) == HOLD
+    assert v.hold_before == 0.7
+    assert v.decide("go", 5.0, **_ctx()) == VoiceDecision("resume", speed=0.7)
+
+
 def test_voix_anti_rebond_2_s_sur_go_seulement():
     v = VoiceMove()
     assert v.decide("stop", 10.0, **_ctx()) == HOLD
