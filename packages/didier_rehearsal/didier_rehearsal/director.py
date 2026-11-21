@@ -789,24 +789,46 @@ def decide_goto(intent, *, tableau, pose, off_by_david: bool) -> GotoDecision:
     return GotoDecision("accepted", objet, distance)
 
 
-def standoff_pour(emprise_m) -> float:
-    """Distance d'arrêt (m, centre de Didier -> CENTRE de l'objet) d'un « aller voir » (revue O1,
-    19/11) : max(GOTO_STANDOFF_M, emprise + GOTO_DIDIER_RAYON_M + GOTO_MARGE_M). Emprise
-    inconnue (None), négative, non finie ou absurde -> GOTO_EMPRISE_INCONNUE_M (borne prudente).
-    Bornée à GOTO_MAX_DISTANCE_M (le plafond de parse_order) : un objet plus gros que ça n'est de
-    toute façon jamais approché (refus « too_far » de la régie au-delà de 40 m)."""
+def garde_corps_sur_m(reglages) -> float:
+    """Ce que l'avant de Didier doit laisser libre devant un objet pour rester HORS de la bande
+    d'arrêt de son corps sûr (A0-4, décision du 22/11) : `caisse.x_avant` (de `base_link` à la
+    face avant du rectangle du corps sûr) + `zones.marge_arret_m` (la bande ARRET), lus dans les
+    réglages du corps sûr (`didier_corps_sur.reglages.Reglages`), jamais recopiés ici.
+
+    Pourquoi : CONV D5 (fumée 2026-11-21-2149). Garé par « va voir la table basse » à 0,55 m de la
+    table, Didier était DANS sa zone ARRET ; le corps sûr met alors tout à zéro, pivot compris, et
+    Didier ne repartait plus seul. Sortir de l'ARRET par recul ou pivot : non (relecture A0-8)."""
+    garde = float(reglages.caisse.x_avant) + float(reglages.zones.marge_arret_m)
+    if not (math.isfinite(garde) and garde > 0):
+        raise ValueError(f"garde du corps sûr non valide : {garde!r}")
+    return garde
+
+
+def standoff_pour(emprise_m, garde_corps_m: float) -> float:
+    """Distance d'arrêt (m, centre de Didier -> CENTRE de l'objet) d'un « aller voir » :
+    max(GOTO_STANDOFF_M,
+        emprise + GOTO_DIDIER_RAYON_M + GOTO_MARGE_M,   # revue O1 (19/11) : la roulette qui pivote
+        emprise + garde_corps_m + GOTO_MARGE_M)         # A0-4 (22/11) : hors de la bande ARRET
+    `garde_corps_m` = garde_corps_sur_m(réglages du corps sûr) ; GOTO_MARGE_M couvre la tolérance
+    d'arrivée de goto.py (0,3) + 0,2 m de jeu. Emprise inconnue (None), négative, non finie ou
+    absurde -> GOTO_EMPRISE_INCONNUE_M (borne prudente). Bornée à GOTO_MAX_DISTANCE_M (le plafond
+    de parse_order) : un objet plus gros que ça n'est de toute façon jamais approché."""
+    garde = _number(garde_corps_m)
+    if garde is None or garde <= 0:
+        raise ValueError(f"standoff_pour : garde du corps sûr manquante ou non valide ({garde_corps_m!r})")
     emprise = _number(emprise_m)
     if emprise is None or emprise < 0:
         emprise = GOTO_EMPRISE_INCONNUE_M
     return round(min(GOTO_MAX_DISTANCE_M,
-                     max(GOTO_STANDOFF_M, emprise + GOTO_DIDIER_RAYON_M + GOTO_MARGE_M)), 2)
+                     max(GOTO_STANDOFF_M, emprise + GOTO_DIDIER_RAYON_M + GOTO_MARGE_M,
+                         emprise + garde + GOTO_MARGE_M)), 2)
 
 
-def goto_order(objet) -> str:
+def goto_order(objet, garde_corps_m: float) -> str:
     """Payload route_goto (spec §2.3) : la position du TABLEAU (centre de l'objet quand la
-    carte le connaît), nommée comme l'objet du tableau, arrêt à standoff_pour(emprise)."""
+    carte le connaît), nommée comme l'objet du tableau, arrêt à standoff_pour(emprise, garde)."""
     return json.dumps({"name": objet.nom, "x": objet.x, "y": objet.y,
-                       "standoff": standoff_pour(objet.emprise_m)})
+                       "standoff": standoff_pour(objet.emprise_m, garde_corps_m)})
 
 
 @dataclass(frozen=True)

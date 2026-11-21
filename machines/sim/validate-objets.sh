@@ -14,9 +14,10 @@
 #   E1a le tableau dit le banc ICI, atteignable, à 4,5 m (± 0,3)
 #   E1b la garde de la bouche le laisse passer ; l'ordre du sélecteur (jeu/chat_move) et la réponse
 #       du régisseur portent l'id « carte/banc », accepté ; route_goto vise la position du TABLEAU
-#       (36,2 ; 2,496), standoff 2,1 = emprise du banc 1,1 + Didier 0,5 + marge 0,5 (revue O1)
+#       (36,2 ; 2,496), standoff 2,5 = emprise du banc 1,1 + garde du corps sûr 0,90 + marge 0,5
+#       (A0-4, 22/11 : hors de la bande ARRET ; revue O1 : 2,1 = 1,1 + Didier 0,5 + 0,5)
 #   E1c arrivée (route_goto_result « arrived » du même ordre) en ≤ 60 s
-#   E1d arrêt à 2,1 m ± 0,3 du centre (36,2 ; 2,496) ET SANS CONTACT : au moins 0,2 m de jeu entre
+#   E1d arrêt à 2,5 m ± 0,3 du centre (36,2 ; 2,496) ET SANS CONTACT : au moins 0,2 m de jeu entre
 #       l'emprise du banc (1,1) et le rayon balayé de Didier (0,5), soit ≥ 1,8 m du centre — à
 #       1,6 m ils se touchent, KO (revue O1 : l'ancienne borne, 1,2 m, acceptait un contact).
 #       Pose FINALE : goto.py ne recule jamais et finit par un pivot sur place (FACE) — le centre
@@ -240,7 +241,9 @@ CAP, NS, RJ = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
 BANC = (36.2, 2.496)          # centre du banc (chantiers_tours.yaml), position du TABLEAU
 EMPRISE_BANC = 1.1            # orbite 2,1 − dégagement 1,0 (majorant de la collision)
 RAYON_DIDIER = 0.5            # contracts.GOTO_DIDIER_RAYON_M (roulette arrière à 0,45 m)
-STANDOFF_BANC = 2.1           # EMPRISE_BANC + RAYON_DIDIER + GOTO_MARGE_M (0,5), gravé
+# A0-4 (22/11) : EMPRISE_BANC + garde du corps sûr (x_avant 0,30 + bande ARRET 0,60, lus par le
+# régisseur dans machines/sim/robot/corps_sur.yaml) + GOTO_MARGE_M (0,5) — gravé ; O1 : 2,1.
+STANDOFF_BANC = 2.5
 JEU_MIN = 0.2                 # jeu minimal Didier ↔ banc à l'arrêt (m)
 m = json.loads((CAP / "pilote.json").read_text(encoding="utf-8"))
 lignes = [json.loads(l) for l in open(CAP / "journal.jsonl", encoding="utf-8")]

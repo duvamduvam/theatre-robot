@@ -16,6 +16,8 @@
   <exec_depend>theatre_contrats</exec_depend>
   <!-- journal JSONL (didier_core.diagnostic.journal, module PUR du paquet didier_core, ex-robot) -->
   <exec_depend>didier_core</exec_depend>
+  <!-- A0-4 : réglages du corps sûr (garde d'« aller voir ») -->
+  <exec_depend>didier_corps_sur</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>python3-pytest</test_depend>

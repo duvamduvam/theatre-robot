@@ -34,6 +34,8 @@ for chemin in (
     os.path.join(PACKAGES, "didier_web"),
     # Salle de répétition (SIM-ONLY) : route.py, contrats ; les nœuds ne sont pas importés.
     os.path.join(PACKAGES, "didier_rehearsal"),
+    # Réglages du corps sûr (A0-4) : le régisseur en lit la garde d'« aller voir ».
+    os.path.join(PACKAGES, "didier_corps_sur"),
     # theatre_contrats : le shim dadou_utils_ros/utils_static.py en ré-exporte le contrat —
     # sans ce chemin, tout import de la lib échoue.
     os.path.join(PACKAGES, "theatre_contrats"),

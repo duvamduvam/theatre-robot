@@ -151,12 +151,16 @@ voir **Ordre** (demi-tour s'il l'a dépassé), pivote face à lui, s'arrête. SI
   `too_far` (> 40 m). Accepté en séance comme hors séance ; l'arrêt vocal
   est levé à la vitesse du « go » (jamais au-dessus du fader ni d'une
   batterie), une lubie active est fermée (`closed_by: "voix"`).
-- **Ordre** : `route_goto` (`{"name","x","y","standoff"}` ou `"cancel"`). **Standoff** (revue O1
-  du 19/11, `director.standoff_pour`) = `max(1,5 ; emprise + 0,5 + 0,5)` du CENTRE de l'objet :
-  emprise (`emprise_m` du tableau), rayon balayé de Didier (`GOTO_DIDIER_RAYON_M`, roulette
-  arrière), marge (`GOTO_MARGE_M` : tolérance d'arrivée 0,3 + 0,2 de jeu) ; taille inconnue :
-  emprise présumée `GOTO_EMPRISE_INCONNUE_M` = 1,5 m, soit 2,5 m ; borné à 40 m. Banc 2,1 m
-  (1,5 m le touchait), table basse 1,7 m.
+- **Ordre** : `route_goto` (`{"name","x","y","standoff"}` ou `"cancel"`). **Standoff**
+  (`director.standoff_pour`) = `max(1,5 ; emprise + 0,5 + 0,5 ; emprise + garde + 0,5)` du CENTRE
+  de l'objet : emprise (`emprise_m` du tableau), rayon balayé de Didier (`GOTO_DIDIER_RAYON_M`,
+  roulette arrière, revue O1), **garde du corps sûr** (A0-4, 22/11 : `caisse.x_avant` +
+  `zones.marge_arret_m`, lus au démarrage dans le fichier du corps sûr de la machine,
+  paramètre `corps_sur_config` du régisseur, 0,30 + 0,60 = 0,90 en sim), marge (`GOTO_MARGE_M` :
+  tolérance d'arrivée 0,3 + 0,2 de jeu). Taille inconnue : emprise présumée
+  `GOTO_EMPRISE_INCONNUE_M` = 1,5 m, soit 2,9 m ; borné à 40 m. Banc 2,5 m, table basse 2,1 m.
+  Garé plus près (1,7 m, CONV D5 du 21/11), Didier était dans sa propre bande ARRET et ne
+  repartait plus. Configuration absente ou refusée : le régisseur ne démarre pas.
   `route_driver` reste la SEULE sortie Twist (`cmd_vel_follow`, prio 20) :
   il suspend le suivi et joue `didier_rehearsal/goto.py` (ALIGN -> DRIVE ->
   FACE -> ARRIVED, pivots ≤ 0,6 rad/s, v ≤ fader × la croisière du suivi

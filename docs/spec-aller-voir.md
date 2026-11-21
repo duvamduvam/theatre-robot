@@ -60,7 +60,10 @@ fois `marche` et `aller_voir`, `aller_voir` gagne sauf si `marche` vaut
 
 StringTime JSON : `{"name": "anneaux", "x": 78.42, "y": 4.19, "standoff": 2.5}`
 ou `"cancel"`. **Standoff = distance du centre de Didier au CENTRE de l'objet** (revue O1 du
-19/11, `director.standoff_pour`) : `max(1,5 ; emprise + 0,5 + 0,5)` — emprise de l'objet
+19/11, `director.standoff_pour`) : `max(1,5 ; emprise + 0,5 + 0,5)` — **depuis A0-4 (22/11)
+`max(1,5 ; emprise + 0,5 + 0,5 ; emprise + garde du corps sûr + 0,5)`, garde = `caisse.x_avant` +
+`zones.marge_arret_m` lus dans les réglages du corps sûr (0,90 en sim) : Didier se gare HORS de sa
+bande ARRET (banc 2,5 m, table 2,1 m, taille inconnue 2,9 m)** — emprise de l'objet
 (champ `emprise_m` du tableau), rayon balayé de Didier (0,5 m : roulette arrière à 0,45 m,
 c'est elle qui frôle quand il pivote face à l'objet), marge 0,5 m (tolérance d'arrivée 0,3 +
 0,2 de jeu) ; **taille inconnue** (POI sans géométrie, objet vu par la caméra) : emprise

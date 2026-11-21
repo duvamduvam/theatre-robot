@@ -241,6 +241,16 @@ max 301 ms ; 20 Hz : max 155 ms, encore sous la porte). Sans mutant, la même pa
    C'est un comportement sûr, mais il contredit le jeu. À trancher (A1/A2, puis relecture A0-8) :
    arrêter `aller_voir` hors de la zone d'arrêt (≥ 0,60 m + marge), ou permettre une sortie de
    l'ARRET (recul, ou pivot qui éloigne, dans les régions vues). Le banc ne le masque pas.
+   **Décidé le 22/11 : le garage.** `aller_voir` s'arrête à emprise + garde du corps sûr
+   (`caisse.x_avant` + `zones.marge_arret_m`, lus dans les réglages, 0,90 en sim) + 0,5 du centre
+   de l'objet (`didier_rehearsal.director.standoff_pour`) : table 2,1 m, banc 2,5 m. **Sortir
+   de l'ARRET par recul ou pivot : NON**, renvoyé à la relecture A0-8 (Fable), avec la règle.
+   **Reste ouvert (22/11) : la reprise.** Garé hors bande, Didier y rentre quand même en
+   repartant. `RouteFollower.rejoin()` vise directement la FIN du segment le plus proche, (20 ; 0),
+   et la diagonale depuis (15,8 ; 1,6) frôle le coin de la table : RALENTI à 1,2 m, ARRET à
+   0,6 m, CONV D3/D5 rouges dans 2 rejeux sur 2. Piste : rejoindre d'abord le point projeté sur
+   le chemin, qui passe à 1,8 m de la table. C'est un choix de conception sur toutes les reprises
+   d'`aller_voir`, à trancher.
 
 ## Relecture critique d'A0-3 (19/11) — points ouverts, documentés, pas tranchés
 
