@@ -199,6 +199,13 @@ max 301 ms ; 20 Hz : max 155 ms, encore sous la porte). Sans mutant, la même pa
    balayage frais montre le monde. Ne pas verrouiller reviendrait à juger la péremption sur
    l'horodatage du balayage plutôt qu'à sa réception, donc à changer la lecture de §5.6. Le code
    n'y touche pas.
+   **Il bloque la fumée** : 2026-11-21-1929, un verrou pendant V-R3 (19:46:51, 5 min après le
+   départ, sans pause thermique) a arrêté Didier jusqu'à la fin de la route (19/21). Les pistes, à
+   trancher : (a) changer la lecture de §5.6 (règle de sécurité, donc David, avec une relecture
+   Fable) ; (b) alléger la sim : `/clock` à ≈ 930 Hz coûte 50 à 80 % d'un cœur à chaque nœud Python
+   (sim seule, aucune règle touchée, mais tout le chronométrage des épreuves en dépend) ; (c) un
+   banc qui réarme aussi PENDANT les épreuves roulantes, avec une borne et dit sur la page (masque
+   davantage).
 3. **Écarts du banc à la spec, écrits dans l'en-tête de `validate-corps-sur.sh`** : CS3 borne
    basse 0,2 s au lieu de 0,3 (trois balayages de sortie à 10 Hz) ; CS5 « ARRIERE vue » joué au
    niveau du moteur (`test_moteur.py`), la pose A ne voyant pas l'arrière ; CS11 à 0,5 s (point 1).
