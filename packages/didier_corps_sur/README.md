@@ -8,11 +8,25 @@ superviseur disparaît ou si `e_stop` tombe. Il refuse tout mouvement vers ce
 que le lidar ne voit pas. La télécommande (`cmd_vel_remote`, prio 100) n'y
 passe pas. Spec FERMÉE : `docs/spec-A0-corps-sur.md`.
 
-**État (A0-3, 18/11)** : la logique PURE et ses tests seulement. Le nœud
-`corps_sur_node.py`, son insertion dans la chaîne, les contrats de topics et
-les épreuves de sim arrivent en A0-4. Le déploiement arrive en A0-6. Aucun
-Pi ne reçoit ce package tant qu'il n'est pas dans une liste `packages:` de
-`machines/<machine>/machine.yml`.
+**État (A0-4, 20/11)** : logique pure (A0-3) + le nœud `corps_sur_node`, EN LIGNE devant
+`twist_mux` (lancé par `didier_drive/launch/drive.launch.py`, `respawn` faux), les contrats de
+topics (`theatre_contrats.topics`) et les 25 épreuves de sim CS1-CS13
+(`machines/sim/validate-corps-sur.sh`, phase `corps_sur` de la fumée, rouge bloquant). Le package
+est dans la liste `packages:` du robot (`machines/robot/machine.yml`) : le PROCHAIN déploiement
+du Pi le portera. Reste à A0-6 : le pilote du lidar dans l'image, `lidar_node` dans
+`robot_app.launch.py`, la règle udev, la preuve à blanc sur le Pi hors robot.
+
+```
+télécommande ─ wheels ─► wheels_bridge ─► cmd_vel_remote ───────────────────── (prio 100) ─┐
+séquences ──────────────────────────────► cmd_vel_anim ───┐                                 ▼
+suivi, route ───────────────────────────► cmd_vel_follow ─┼─► corps_sur ─► cmd_vel_*_sur ─► twist_mux ─► cmd_vel_mux ─► twist_deadman ─► cmd_vel
+pont web ───────────────────────────────► cmd_vel_web ────┘      ▲   (anim 10, follow 20, web 50)      ▲ e_stop (255)
+                       scan, e_stop, superviseur/battement, corps_sur/rearmer ──┘ ─► corps_sur/etat (latché), diagnostics
+```
+
+⚠️ **Sur le robot, tant que le lidar n'est pas monté** : `corps_sur` reste en DEMARRAGE
+« capteur_absent » ; AUCUNE source autonome (séquences à piste roues, suivi, route, web) ne fait
+tourner les roues ; la télécommande conduit comme avant (spec §14).
 
 ## Le contrat des modules (stdlib seule, PyYAML dans `reglages` ; ni rclpy ni numpy)
 
@@ -27,6 +41,29 @@ Toute horloge est passée en argument (secondes, float), comme dans `TwistDeadma
 | `garde` | DEMARRAGE / ARME / VERROU, péremptions, réarmement, durée bornée | `Garde(ParametresGarde(...))` : `balayage_valide(t)`, `battement(t)`, `noter_e_stop(v, t)`, `tic(t)`, `rearmer(t) → (accepté, raison)`, `noter_entree(canal, t, nulle)`, `noter_sortie(canal, t, nulle)`, `pause_duree`, `superviseur_etat(t)`, `etat`, `cause` |
 | `filtre` | transformation d'une consigne (§5.3) | `filtrer(v, w, canal, EtatFiltre(etat, zone, pause_duree, vue), ParametresFiltre(...)) → (v', w', motif)` |
 | `reglages` | YAML + bornes dures | `charger_reglages(chemin, ros_domain_id) → Reglages`, `reglages_depuis(dict, ros_domain_id)` ; refus = `ReglagesError` |
+| `moteur` (A0-4) | le corps sûr ASSEMBLÉ : séquence des appels, zéro anticipé, état, diagnostics | `CorpsSur(reglages)` : `balayage(t, stamp, angle_min, increment, ranges)`, `consigne(canal, t, v, w)`, `e_stop(v, t)`, `battement(t)`, `tic(t)` → `[Sortie(canal, v, w, motif)]` à publier DANS L'ORDRE ; `rearmer(t) → (accepté, raison)` ; `etat(t)`, `etat_json(t)`, `diagnostic(t, duree_rappel_s) → Diagnostic(niveau, message, valeurs)` ; `vue`, `couverture` |
+| `contrat` (A0-4) | noms, types, QoS du nœud (§3.2) | `ENTREES`, `SORTIES`, `SCAN`, `E_STOP`, `BATTEMENT`, `REARMER`, `ETAT`, `DIAGNOSTICS`, `TYPES`, `QOS`, `NOM_NOEUD`, `CONFIG_DEFAUT` |
+
+Le nœud `corps_sur_node` (rclpy) n'a aucune règle : chaque message devient un appel à `CorpsSur`,
+chaque `Sortie` un `Twist` (les quatre composantes non lues restent à zéro). Configuration absente
+ou refusée : message lisible et sortie (code 2), RIEN n'est publié. Exception pendant un rappel :
+zéro sur les trois sorties, puis sortie (code 1). Gravé par `test/test_contrat_node.py` (noms,
+types, QoS, liste des `if` du nœud, insertion dans `drive.launch.py` et `twist_mux.yaml`).
+
+| Topic (relatif, sous `/<ROBOT_NAME>/`) | Type | Sens | QoS |
+|---|---|---|---|
+| `scan` | `sensor_msgs/LaserScan` | entrée | best effort, 1 |
+| `cmd_vel_anim`, `cmd_vel_follow`, `cmd_vel_web` | `geometry_msgs/Twist` | entrée (demandes) | fiable, 1 |
+| `cmd_vel_anim_sur`, `cmd_vel_follow_sur`, `cmd_vel_web_sur` | `geometry_msgs/Twist` | sortie (vers `twist_mux`) | fiable, 10 |
+| `e_stop` | `std_msgs/Bool` | entrée | fiable, 10 |
+| `superviseur/battement` | `std_msgs/Empty` | entrée | best effort, 1 |
+| `corps_sur/rearmer` | `std_msgs/Empty` | entrée | fiable, 10 |
+| `corps_sur/etat` | `theatre_interfaces/StringTime` (JSON §5.7) | sortie, à chaque changement | latché (`qos.latched()`) |
+| `diagnostics` | `diagnostic_msgs/DiagnosticArray` | sortie, 1 Hz | fiable, 10 |
+
+Réarmer à la main (sim) : `ros2 topic pub --once /didier/corps_sur/rearmer std_msgs/msg/Empty "{}"` ;
+lire l'état : `ros2 topic echo --qos-durability transient_local --qos-reliability reliable
+/didier/corps_sur/etat theatre_interfaces/msg/StringTime`.
 
 ### Conventions écrites ici (la spec les laisse ouvertes)
 
@@ -49,8 +86,22 @@ Toute horloge est passée en argument (secondes, float), comme dans `TwistDeadma
   reste ARME.
 - **Filtre** : le tour toléré est plafonné à `min(w_max du canal, w_max_aveugle)`.
   La pause durée met zéro, avec le motif `PAUSE_DUREE`.
+- **Moteur (A0-4)** : le zéro anticipé part au PASSAGE en blocage (état autre que ARME, zone
+  ARRET ou pause de durée), sur chaque canal ayant reçu une demande depuis moins de **1,0 s** —
+  le double du délai du mux (0,5 s) : à la frontière, un zéro de trop ne peut que masquer une
+  source plus basse, jamais la télécommande. Blocage né pendant une demande : les AUTRES canaux
+  actifs reçoivent leur zéro avant la sortie (nulle) de la demande. L'horodatage du balayage
+  précédent ne fait que croître : un `stamp` qui recule invalide les balayages (capteur perdu,
+  verrou). Diagnostics : ERROR en VERROU, WARN en DEMARRAGE et, sur `terrain: reel`, tant que le
+  superviseur ou le témoin ne sont pas exigés.
 
 ## Configuration
+
+Chaque machine a SA configuration, gravée par `test/test_configs_machines.py` :
+`machines/sim/robot/corps_sur.yaml` (colonne « sim » du §5.4 ; refusée hors domaine 43 ;
+`angulaire_aveugle_autorise` vrai, décision du 18/11) et `machines/robot/corps_sur.yaml` (colonne
+« robot » ; `angulaire_aveugle_autorise` FAUX, superviseur non exigé tant que le battement
+n'existe pas, durée bornée 4 s). Le fichier ci-dessous reste la référence du package.
 
 `config/corps_sur.yaml` : défauts SÛRS du package (`terrain: reel`, superviseur
 exigé, angulaire aveugle refusé, pose A face avant 0,33 ; 0, plan à 0,25 m).
@@ -63,7 +114,12 @@ tout comme l'invariant du pivot violé.
 
 ```bash
 cd packages/didier_corps_sur && ../../.venv/bin/python -m pytest -q -o addopts=
+mypy didier_corps_sur            # --strict, configuration dans setup.cfg (ROS ignoré sur le PC)
 ```
+
+Épreuves de sim (25 verdicts, ≈ 15 min, monde `stage`) :
+`docker exec didier-sim-monde bash /home/ros2_ws/validate-corps-sur.sh` (sous-ensemble :
+`-e CS_SEULEMENT=CS2,CS3`). Elles sont dans la fumée (`ATTENDU_CORPS_SUR=25`).
 
 Valeurs **gravées** (table du §6.2) ; pour `couverture`, une seconde méthode
 indépendante (grille en entiers et aires exactes) est citée en tête de
@@ -87,12 +143,66 @@ indépendante (grille en entiers et aires exactes) est citée en tête de
 | 9 | en ARRET, `filtrer` rend l'entrée | `test_filtre::test_arret`, `test_propriete_courbure_1000_tirages` |
 | 10 | le réarmement n'examine plus la cause (`garde`) | `test_garde::test_rearmement_cause_presente_refuse`, `test_rearmement_superviseur_encore_absent_refuse` |
 | 11 | le ralenti ne touche que v (`filtre`) | `test_filtre::test_ralenti_plafonne_puis_divise` (+2) |
-| 12 | (nœud) zéro anticipé supprimé → CS2 > 200 ms à 5 Hz | **reporté à A0-4** (le nœud n'existe pas encore) |
+| 12 | (nœud) zéro anticipé supprimé → CS2 > 200 ms à 5 Hz | `test_moteur::test_zero_anticipe_sur_les_seuls_canaux_actifs` (+9) ; en sim : voir « Mutant 12 en sim » plus bas |
+
+### Mutants du moteur et des configurations (A0-4, 20/11, copie du package, un à la fois)
+
+| Mutant | Test(s) qui tombe(nt) |
+|---|---|
+| fenêtre d'activité = délai du mux (0,5 s au lieu de 1,0) | `test_moteur::test_canal_actif_jusqu_a_une_seconde` (+1) |
+| le blocage ignore la pause de durée | `test_moteur::test_pause_duree_zero_anticipe_aux_autres_canaux` |
+| le blocage ignore la zone ARRET | `test_moteur::test_zero_anticipe_sur_les_seuls_canaux_actifs` (+4) |
+| pas de tic avant de filtrer une demande | `test_moteur::test_le_zero_part_aux_autres_canaux_quand_le_blocage_nait_pendant_une_demande` (+1) |
+| un balayage invalide nourrit le chien de garde | `test_moteur::test_balayage_fige_ne_nourrit_pas_le_capteur` (+2) |
+| le stamp précédent n'est jamais retenu | `test_moteur::test_balayage_fige_ne_nourrit_pas_le_capteur` (+1) |
+| un balayage invalide ne peut plus faire entrer en ARRET | `test_moteur::test_balayage_trop_vieux_ne_nourrit_pas_mais_arrete` (+1) |
+| `e_stop` non transmis à la garde | `test_moteur::test_e_stop_zero_verrou_puis_rearmement_apres_relache` (+1) |
+| entrée ou sortie non notée (durée bornée) | `test_moteur::test_pause_duree_robot` (+1) |
+| dernier refus non mémorisé (diagnostics) | `test_moteur::test_diagnostics_niveaux` (+1) |
+| ERROR en VERROU devenu WARN | `test_moteur::test_diagnostics_niveaux` (+1) |
+| sim : `angulaire_aveugle_autorise` faux | `test_configs_machines::test_sim_gravee` (+2) |
+| robot : superviseur exigé | `test_configs_machines::test_robot_gravee` (+4) |
 
 Piège rencontré : un mutant de même taille (`min` → `max`), restauré dans la
 même seconde, laisse un `.pyc` périmé, car la validation du cache se fait à la
 seconde près et par la taille. Les mutants se jouent donc avec
 `PYTHONDONTWRITEBYTECODE=1`, après avoir purgé `__pycache__`.
+
+### Mutant 12 en sim (20/11)
+
+Copie du package dans le conteneur `monde` (`/tmp/m12`, jamais dans l'arbre), `if bloque and not
+self._bloque:` → `if False:` dans `moteur.py`, nœud relancé par l'épreuve avec
+`CS_NOEUD_PYTHONPATH=/tmp/m12`, `CS_SEULEMENT=CS1,CS2` : **CS2d tombe** (5 Hz : 13/20 sous 200 ms,
+max 301 ms ; 20 Hz : max 155 ms, encore sous la porte). Sans mutant, la même passe donne 20/20 à
+5 Hz, max 133 ms. Le zéro anticipé est donc ce qui tient la porte à 5 Hz, comme la spec l'annonce.
+
+## A0-4 (20/11) — points ouverts de sécurité, tranchés du côté sûr ou laissés à A0-8
+
+1. **`e_stop` coupe en ≈ 0,43 s, pas en 0,1.** Le verrou `e_stop` du mux (255) masque aussi la
+   sortie du corps sûr : son zéro anticipé n'atteint pas `cmd_vel`, et `twist_mux` ne publie
+   AUCUN zéro quand un verrou se pose. Le zéro vient du deadman (400 ms de silence). Mesuré
+   0,43 s (CS11, critère gravé à 0,5 s). Chaîne inchangée par A0 (spec §3.1) : à traiter avec W1
+   (source réelle d'`e_stop`) et à la relecture adverse (A0-8) — par exemple un zéro publié en
+   aval du mux à la pose du verrou. `wheels_node` garde son propre deadman de 400 ms.
+2. **Un nœud figé plus de 0,30 s se verrouille seul** (`capteur_perdu`, réarmement exigé).
+   L'exécuteur de rclpy sert les minuteries AVANT les abonnements : après un gel, le tic voit
+   un dernier balayage vieux de plus de 0,30 s avant de traiter celui qui attend. Sûr (zéro et
+   verrou), mais un verrou de plus à lever. Vu en sim sous charge (environ une fois par quart
+   d'heure, avant que le banc ne le réarme) : `/clock` y arrive à ≈ 930 Hz et coûte 50 à 80 %
+   d'un cœur à CHAQUE nœud Python en `use_sim_time`. Sur le Pi 4 (horloge murale), la fréquence
+   de ces verrous est à mesurer en A0-6/A0-7 ; la borne de 0,30 s ne se relâche pas (spec §5.6).
+3. **Écarts du banc à la spec, écrits dans l'en-tête de `validate-corps-sur.sh`** : CS3 borne
+   basse 0,2 s au lieu de 0,3 (trois balayages de sortie à 10 Hz) ; CS5 « ARRIERE vue » joué au
+   niveau du moteur (`test_moteur.py`), la pose A ne voyant pas l'arrière ; CS11 à 0,5 s (point 1).
+4. **Le banc se protège de lui-même, jamais du nœud** : un essai d'obstacle où Didier n'était pas
+   en marche à T0 VU DU PILOTE (pilote en retard sur ses réceptions) est rejoué deux fois au plus ;
+   un VERROU `capteur_perdu` trouvé en tête d'essai (point 2) est compté, dit au journal et
+   réarmé, deux au plus par passe, sinon la passe est rouge. Latence, distance et état attendu ne
+   se rejouent jamais.
+5. **Hors A0, relevé en route** : `wheels_bridge` publie UNE consigne par clé `wheels` ; le mux ne
+   republie pas ; le deadman met zéro 0,4 s après. Une clé roues de séquence fait donc rouler
+   Didier 0,4 s, pas jusqu'à la clé suivante (vu en CS4b sur `little-move3` : 0,5 m/s puis zéro
+   0,4 s plus tard). Antérieur à A0, côté sûr ; à signaler pour les chorégraphies (danse, M6).
 
 ## Relecture critique d'A0-3 (19/11) — points ouverts, documentés, pas tranchés
 

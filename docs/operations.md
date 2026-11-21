@@ -500,7 +500,7 @@ R=$PWD
 (cd packages/didier_jeu        && $R/.venv/bin/python -m pytest -q -o addopts=)
 (cd packages/theatre_contrats  && $R/.venv/bin/python -m pytest -q -o addopts=)
 (cd packages/didier_perception && $R/.venv/bin/python -m pytest -q -o addopts=)   # tableau des objets (O0)
-(cd packages/didier_corps_sur  && $R/.venv/bin/python -m pytest -q -o addopts=)   # corps sûr (A0), logique pure
+(cd packages/didier_corps_sur  && $R/.venv/bin/python -m pytest -q -o addopts=)   # corps sûr (A0) : logique, moteur, contrat du nœud
 (cd legacy/dadou_control_ros   && $R/.venv/bin/python -m pytest -q -o addopts=)   # télécommande (→ L4)
 (cd packages/didier_vision     && $R/packages/didier_vision/.venv/bin/python -m pytest -q -o addopts=)
 ```
@@ -1000,6 +1000,39 @@ Le script contient sa propre perception scriptée et joue la console et la bouch
 il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
 `jeu:=true` reste vérifiée par `validate-rehearsal-chantiers.sh` (V-R3).
 
+## Corps sûr — le filtre des roues autonomes (lot A0-4, 20/11)
+
+Spec `docs/spec-A0-corps-sur.md` ; package `packages/didier_corps_sur` (son README : contrat,
+conventions, mutants, points ouverts). Le nœud `/didier/corps_sur` est lancé par
+`drive.launch.py` (sans relance) DEVANT `twist_mux` : `cmd_vel_anim`, `cmd_vel_follow` et
+`cmd_vel_web` sont des DEMANDES, le mux lit `cmd_vel_*_sur`. `cmd_vel_remote` n'y passe pas.
+
+- **Configurations** : sim = `machines/sim/robot/corps_sur.yaml` (passée par l'entrée du conteneur
+  `robot`, refusée hors domaine 43) ; robot = `machines/robot/corps_sur.yaml` (défaut du lancement,
+  `src/robot/conf/corps_sur.yaml` sur le Pi). Toute valeur changée = son test gravé
+  (`test_configs_machines.py`) dans le même commit.
+- **Lire l'état** (latché, `--qos-durability transient_local` obligatoire, sinon rien) :
+  `ros2 topic echo --qos-durability transient_local --qos-reliability reliable /didier/corps_sur/etat theatre_interfaces/msg/StringTime`
+  ; diagnostics à 1 Hz sur `/didier/diagnostics` (âge du dernier balayage, rayons, points
+  valides, dernier refus par canal, durée du rappel `scan`).
+- **Réarmer** après un VERROU (capteur perdu, superviseur perdu, `e_stop`) : la cause doit avoir
+  disparu et le lidar être sain depuis 1 s, sinon refus journalisé —
+  `ros2 topic pub --once /didier/corps_sur/rearmer std_msgs/msg/Empty "{}"`. Relâcher `e_stop`
+  rend la télécommande, PAS l'autonomie. (Page scène : A0-5.)
+- **Sur le robot sans lidar** (aujourd'hui) : DEMARRAGE `capteur_absent` permanent, aucune
+  source autonome ne fait tourner les roues ; la télécommande conduit comme avant.
+- **Épreuves CS** (monde `stage` OBLIGATOIRE : obstacle et passant scriptés) :
+  `HEADLESS=true WORLD=stage docker compose up -d` puis
+  `docker exec didier-sim-monde bash /home/ros2_ws/validate-corps-sur.sh` (25 verdicts, ≈ 15 min ;
+  sous-ensemble : `docker exec -e CS_SEULEMENT=CS2,CS3 …`). L'épreuve relance le nœud depuis
+  `monde` (journal : `log/corps-sur-cs.log`), fige `pont_lidar` (SIGSTOP), tue le filtre : en fin
+  d'épreuve la configuration de la sim est remise et vérifiée, mais c'est le nœud relancé par
+  l'épreuve qui tourne — pour retrouver le bringup intact, relancer la sim.
+- **Pièges** : un `ros2 topic pub` sur `cmd_vel_follow` ne fait plus bouger Didier sans lidar
+  sain (sim : `pont_lidar` vivant) ; pour conduire sans filtre, `cmd_vel_remote` (la
+  télécommande). Une pause des conteneurs (garde thermique) fige l'horloge simulée ET le pilote :
+  sans conséquence sur les mesures, mais une fumée rouge après des pauses se RELANCE.
+
 ## Fumée automatique — la sim rejouée toute seule (lot F, 07/11)
 
 Un script shell (`machines/sim/fumee.sh` depuis L1e-4c, zéro token) rejoue sur le **checkout de main** toutes
@@ -1019,10 +1052,12 @@ domaine 43 lu dans les 4 conteneurs, colcon ×4 sans échec, pont gz, `noeuds_at
 < 0,8 : le reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.sh` →
 animation `parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) →
 `validate-data-edit.sh` (L1d, 13 épreuves ; sim lancée avec `DATA_EDIT=true`) →
-`validate-machines.sh` (L2b, M1-M4 et M6) → régisseur (`monde`) + regard (`robot`) puis
+`validate-machines.sh` (L2b, M1-M4 et M6) → **sim relancée sur le monde `stage`,
+`validate-corps-sur.sh` (CS, A0-4, 25 verdicts, rouge BLOQUANT, ≈ 15 min ; section « Corps sûr »)**
+→ sim relancée sur `chantiers`, régisseur (`monde`) + regard (`robot`) puis
 `validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh` (A1) → sim relancée
 AVEC LA TÊTE, `validate-conversation.sh` (CONV, 16/11, ci-dessous). La chaîne roues n'est plus
-lancée par la fumée : elle fait partie du bringup du robot. ≈ 55-60 min.
+lancée par la fumée : elle fait partie du bringup du robot (corps sûr compris). ≈ 75-80 min.
 
 **Épreuve de conversation scriptée (CONV, 16/11)** — `machines/sim/validate-conversation.sh`,
 19 contrôles gravés, seule épreuve où la tête tourne : la sim est relancée avec la surcouche

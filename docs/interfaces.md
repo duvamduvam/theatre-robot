@@ -121,14 +121,37 @@ Fingerprints : `theatre_contrats.donnees.empreinte_contenu` / `empreinte_roues`.
 
 ## Drive chain (geometry_msgs/Twist — safety path, frozen contract)
 
+Since lot A0-4 (20/11, `docs/spec-A0-corps-sur.md` §3) the three AUTONOMOUS inputs are
+**requests**: they go through the safe body (`didier_corps_sur`, node `corps_sur`) BEFORE
+`twist_mux`, which subscribes to their filtered `_sur` outputs. The remote does not.
+
 ```
-wheels (StringTime) -> wheels_bridge -> cmd_vel_anim ┐
-cmd_vel_web (web_bridge_node, SIM-ONLY) -------------┤ twist_mux (remote 100 >
-cmd_vel_remote (teleop/controller) ------------------┤  web 50 > anim 10,
-                                                     ┘  e_stop lock 255)
+wheels (StringTime) -> wheels_bridge -> cmd_vel_anim ──┐
+suivi, route (person_follower, route_driver) -> cmd_vel_follow ─┼─> corps_sur -> cmd_vel_anim_sur (10)
+cmd_vel_web (web_bridge_node, SIM-ONLY) ───────────────┘            cmd_vel_follow_sur (20)
+                 scan, e_stop, superviseur/battement,               cmd_vel_web_sur (50) ─┐
+                 corps_sur/rearmer -> corps_sur -> corps_sur/etat (latched), diagnostics   │
+cmd_vel_remote (teleop/controller, NOT filtered) ─────────────────────────── (100) ─────┤ twist_mux
+                                                                         e_stop lock 255 ┘
         -> cmd_vel_mux -> twist_deadman (zeros at 20 Hz after 400 ms silence)
         -> cmd_vel -> wheels_node (local 400 ms deadman, hard stop on zero twist)
 ```
+
+| Topic (relative) | Type | Dir. (corps_sur) | QoS | Note |
+|---|---|---|---|---|
+| `scan` | `sensor_msgs/LaserScan` | in | best effort, 1 | lidar (sim: `pont_lidar`; robot: `sllidar_ros2`, A0-6) |
+| `cmd_vel_anim`, `cmd_vel_follow`, `cmd_vel_web` | `geometry_msgs/Twist` | in | reliable, 1 | requests; publishers unchanged |
+| `cmd_vel_anim_sur`, `cmd_vel_follow_sur`, `cmd_vel_web_sur` | `geometry_msgs/Twist` | out | reliable, 10 | one output per input, plus the anticipated ZERO (always null) when the body becomes blocked |
+| `e_stop` | `std_msgs/Bool` | in | reliable, 10 | same topic as the mux lock |
+| `superviseur/battement` | `std_msgs/Empty` | in | best effort, 1 | contract for A-préalables: ≥ 5 Hz, any message = present |
+| `corps_sur/rearmer` | `std_msgs/Empty` | in | reliable, 10 | lifts a lock once its cause is gone |
+| `corps_sur/etat` | `theatre_interfaces/StringTime` | out | latched | JSON `{etat, cause, zone, d_min_m, vue, superviseur, temoin, terrain}`, on change |
+| `diagnostics` | `diagnostic_msgs/DiagnosticArray` | out | reliable, 10 | 1 Hz; ERROR in VERROU |
+
+Safe by construction: if `corps_sur` dies, freezes or is not launched, nothing reaches the `_sur`
+topics, the mux falls silent and the deadman stops the wheels within 400 ms. On the robot, until
+the lidar is mounted, `corps_sur` stays in DEMARRAGE `capteur_absent`: sequences play without
+their wheels, the remote drives as before.
 
 `cmd_vel_web` (priority **50**, timeout 0.5 s) is the web drive input, between the
 physical remote (100, always wins) and animations (10). It is published ONLY when
@@ -136,10 +159,10 @@ physical remote (100, always wins) and animations (10). It is published ONLY whe
 real-robot use is gated on the wheels camera protocol). Frozen contract verified
 by `test_twist_mux_contract.py`.
 
-⚠️ The `e_stop` lock is declared in `twist_mux.yaml` but **no node publishes on
-`e_stop` yet** (neither robot nor controller, checked 2026-07-11). The actual
+⚠️ The `e_stop` lock is declared in `twist_mux.yaml` (and read by `corps_sur`, A0-4) but **no node
+publishes on `e_stop` yet** (neither robot nor controller, checked 2026-07-11). The actual
 emergency stop relies on the deadman (silence → zeros). Wiring a real source is
-pending, with the wheels camera protocol.
+pending (W1).
 
 ## API web (W0)
 

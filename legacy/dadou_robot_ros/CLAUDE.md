@@ -31,6 +31,14 @@ FAIT et validé en sim (tout est commité/poussé, CI verte, 123 tests unitaires
   VALEUR de la clé wheels) → `twist_mux` (remote 100 > anim 10, verrou `e_stop` latché,
   `use_stamped: false` obligatoire en Jazzy) → `twist_deadman` (zéros à 20 Hz si silence
   > 400 ms) → `/cmd_vel`.
+- **Corps sûr devant le mux (A0-4, 20/11, `docs/spec-A0-corps-sur.md`)** : les trois entrées
+  AUTONOMES (`cmd_vel_anim`, `cmd_vel_follow`, `cmd_vel_web`) ne vont plus au mux ; le nœud
+  `corps_sur` (`packages/didier_corps_sur`, lancé par `drive.launch.py`, sans relance) les filtre
+  (lidar : zéro à moins de 0,6 m de la caisse, ralenti jusqu'à 1,2 m, verrous capteur, superviseur,
+  `e_stop`, régions non vues, 4 s max sur le robot) et le mux lit `cmd_vel_*_sur`.
+  `cmd_vel_remote` n'y passe PAS (David garde la main). Sans lidar (robot actuel), aucune piste
+  roues de séquence ne fait tourner les roues. Toute bascule sur le vrai robot repasse par le
+  protocole caméra et la relecture adverse (A0-8) avant tout usage roues câblées.
 - **wheels_node bi-mode** : legacy StringTime ou `/cmd_vel` selon le drapeau.
   En mode cmd_vel : deadman local 400 ms conservé (ultime rempart), twist nul → `stop()`
   franc (le plancher MIN_PWM d'`update_cmd(0,0)` ferait ramper les roues), appelé une
