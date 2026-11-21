@@ -234,6 +234,13 @@ max 301 ms ; 20 Hz : max 155 ms, encore sous la porte). Sans mutant, la même pa
    relance), mais il fallait relancer tout le bringup. Le correctif donne un site d'appel par
    sévérité. Il est gravé par `test_contrat_node.py::test_chaque_appel_du_journal_a_une_severite_fixe`,
    et vu en sim : accepté, refusé, accepté, nœud vivant.
+7. **Ouvert le 21/11 : garé dans sa propre zone ARRET, Didier ne repart plus seul.** CONV D5 (fumée
+   2026-11-21-2149) : la phrase B « Va voir la table basse » amène Didier contre la table, et sa
+   caisse s'arrête à 0,55-0,60 m (RALENTI à 1,2 m, ARRET à 0,6 m). En phase D, la route reprend
+   droit devant ; ARRET met tout à zéro, rotation comprise, et x gagne 0,00 m au lieu de 0,3.
+   C'est un comportement sûr, mais il contredit le jeu. À trancher (A1/A2, puis relecture A0-8) :
+   arrêter `aller_voir` hors de la zone d'arrêt (≥ 0,60 m + marge), ou permettre une sortie de
+   l'ARRET (recul, ou pivot qui éloigne, dans les régions vues). Le banc ne le masque pas.
 
 ## Relecture critique d'A0-3 (19/11) — points ouverts, documentés, pas tranchés
 
