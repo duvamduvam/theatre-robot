@@ -829,7 +829,10 @@ def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
 # x86 du robot et celui de la vision.
 SIM_A_PLAT = [# 16/11 (lot fiabilité des épreuves) : l'enregistreur des mesures et sa bibliothèque bash.
               "capture_topics.py", "captures.sh",
-              "coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
+              "coeurs_reserves.py",
+              # 21/11 (A0-4) : contrôle de fumée « corps sûr du bringup armé ».
+              "corps_sur_bringup.py",
+              "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
               # 16/11 : surcouche « tête » de l'épreuve de conversation (seule, avec le banc, à monter
               # des secrets).
               "docker-compose.tete.yml",

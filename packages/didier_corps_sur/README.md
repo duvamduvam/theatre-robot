@@ -191,6 +191,14 @@ max 301 ms ; 20 Hz : max 155 ms, encore sous la porte). Sans mutant, la même pa
    d'heure, avant que le banc ne le réarme) : `/clock` y arrive à ≈ 930 Hz et coûte 50 à 80 %
    d'un cœur à CHAQUE nœud Python en `use_sim_time`. Sur le Pi 4 (horloge murale), la fréquence
    de ces verrous est à mesurer en A0-6/A0-7 ; la borne de 0,30 s ne se relâche pas (spec §5.6).
+   **21/11, mesuré sur le BRINGUP** (SIGSTOP du seul nœud, lidar jamais arrêté) : gel ≤ 0,25 s,
+   0 verrou sur 5 ; gel de 0,4 à 0,6 s, 3 verrous sur 5. C'est ce verrou qui a fait tomber la fumée
+   2026-11-20-1707 (verrou à 17:08:38 pendant validate-namespace, edition n°7 sans `cmd_vel`).
+   **À trancher par David** : un nœud gelé, et non un capteur muet, doit-il verrouiller ? Pendant
+   un gel, le nœud ne publie rien et le deadman coupe en 0,4 s (spec §3.1). Au réveil, le
+   balayage frais montre le monde. Ne pas verrouiller reviendrait à juger la péremption sur
+   l'horodatage du balayage plutôt qu'à sa réception, donc à changer la lecture de §5.6. Le code
+   n'y touche pas.
 3. **Écarts du banc à la spec, écrits dans l'en-tête de `validate-corps-sur.sh`** : CS3 borne
    basse 0,2 s au lieu de 0,3 (trois balayages de sortie à 10 Hz) ; CS5 « ARRIERE vue » joué au
    niveau du moteur (`test_moteur.py`), la pose A ne voyant pas l'arrière ; CS11 à 0,5 s (point 1).
@@ -199,10 +207,22 @@ max 301 ms ; 20 Hz : max 155 ms, encore sous la porte). Sans mutant, la même pa
    un VERROU `capteur_perdu` trouvé en tête d'essai (point 2) est compté, dit au journal et
    réarmé, deux au plus par passe, sinon la passe est rouge. Latence, distance et état attendu ne
    se rejouent jamais.
+   La fumée fait de même pour le corps sûr DU BRINGUP (21/11, `machines/sim/corps_sur_bringup.py`) :
+   ARME exigé avant chaque épreuve qui fait rouler Didier (edition, V-R3, A1, OBJ, CONV), sinon
+   l'épreuve est rouge, avec l'état lu. Seul un VERROU `capteur_perdu` est réarmé, deux fois au
+   plus par épreuve, et chaque réarmement est dit sur la page. Un verrou né PENDANT une épreuve y est
+   aussi dit. Avant cela, l'épreuve CS (qui relance son propre nœud) était seule à éprouver un
+   corps sûr.
 5. **Hors A0, relevé en route** : `wheels_bridge` publie UNE consigne par clé `wheels` ; le mux ne
    republie pas ; le deadman met zéro 0,4 s après. Une clé roues de séquence fait donc rouler
    Didier 0,4 s, pas jusqu'à la clé suivante (vu en CS4b sur `little-move3` : 0,5 m/s puis zéro
    0,4 s plus tard). Antérieur à A0, côté sûr ; à signaler pour les chorégraphies (danse, M6).
+6. **Corrigé le 21/11 : un réarmement REFUSÉ tuait le nœud** s'il suivait un réarmement accepté.
+   rclpy refuse qu'une même ligne journalise tantôt en info, tantôt en warning
+   (`journal = info if accepte else warning`). Le nœud mourait, côté sûr (zéro puis sortie, sans
+   relance), mais il fallait relancer tout le bringup. Le correctif donne un site d'appel par
+   sévérité. Il est gravé par `test_contrat_node.py::test_chaque_appel_du_journal_a_une_severite_fixe`,
+   et vu en sim : accepté, refusé, accepté, nœud vivant.
 
 ## Relecture critique d'A0-3 (19/11) — points ouverts, documentés, pas tranchés
 

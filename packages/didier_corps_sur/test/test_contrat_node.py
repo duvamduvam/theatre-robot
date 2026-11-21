@@ -93,8 +93,26 @@ def test_le_noeud_n_a_aucun_if_de_regle():
     """Les seuls tests du nœud : republier l'état s'il a changé, diagnostics une fois sur 20,
     traduire une QoS, journaliser un réarmement accepté ou refusé, `if __name__`. Une règle de plus ici rougit : elle va dans `moteur`."""
     tests = sorted(ast.unparse(n.test) for n in ast.walk(_arbre()) if isinstance(n, (ast.If, ast.IfExp)))
-    assert tests == ["__name__ == '__main__'", "accepte", "accepte", "q.fiable", "q.latche",
+    assert tests == ["__name__ == '__main__'", "accepte", "q.fiable", "q.latche",
                      "self._tics % contrat.TICS_PAR_DIAGNOSTIC == 0", "texte == self._etat_publie"]
+
+
+def test_chaque_appel_du_journal_a_une_severite_fixe():
+    """rclpy lève ValueError (« Logger severity cannot be changed between calls ») si une même
+    ligne journalise sous deux sévérités. 21/11 en sim : `journal = info if accepte else warning`
+    a tué le nœud au premier réarmement REFUSÉ après un accepté. Gravé : aucune sévérité choisie
+    à l'exécution, et le réarmement a ses deux sites d'appel."""
+    arbre = _arbre()
+    for n in ast.walk(arbre):
+        if isinstance(n, ast.IfExp):
+            for branche in (n.body, n.orelse):
+                assert "get_logger()" not in ast.unparse(branche), ast.unparse(n)
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == "log":
+            raise AssertionError(f"get_logger().log(…, sévérité variable) : {ast.unparse(n)}")
+    rearmer = next(f for f in ast.walk(arbre) if isinstance(f, ast.FunctionDef) and f.name == "_sur_rearmer")
+    appels = [ast.unparse(n.func) for n in ast.walk(rearmer)
+              if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr in ("info", "warning")]
+    assert sorted(appels) == ["self.get_logger().info", "self.get_logger().warning"]
 
 
 def test_aucun_module_pur_n_importe_ros():

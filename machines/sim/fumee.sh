@@ -218,6 +218,7 @@ SIM_A_NOUS=0       # 1 si CE script a lancé le conteneur (donc seul autorisé �
 TERMINE=0
 PHASE_COURANTE=demarrage
 IMAGE_RECONSTRUITE=0
+REARMEMENTS_CS=0   # verrous capteur_perdu spontanés du corps sûr du bringup réarmés, total de la fumée (≤ 2 par épreuve)
 RTF=""
 NOTES=()
 RAISON=""
@@ -625,6 +626,40 @@ lancer_corps() { # lancer_corps <scénario chantiers|jeu-a1> <jeu:=true|''> : r�
   sleep 20   # les nœuds finissent de s'apparier avant que le script de vérification ne les sonde
 }
 
+# --- Le corps sûr DU BRINGUP (A0-4, 21/11) -----------------------------------------------
+# L'épreuve CS relance son propre corps sûr : celui de drive.launch.py (conteneur robot) n'était
+# éprouvé par rien. Fumée 2026-11-20-1707 : verrouillé seul (capteur_perdu, nœud figé par la
+# charge) pendant validate-namespace, il a fait tomber edition n°7 sans que rien ne dise pourquoi.
+# Avant chaque épreuve qui fait rouler Didier : ARME exigé (corps_sur_bringup.py, qui réarme un
+# verrou capteur_perdu spontané, lui seul, au plus 2 fois par épreuve — dit sur la page).
+exiger_corps_sur_arme() { # exiger_corps_sur_arme <épreuve> : 0 si armé, sinon épreuve rouge et 1
+  local sortie ligne n rc=0
+  sortie="$(ros_dans monde "python3 /home/ros2_ws/machines/sim/corps_sur_bringup.py" 2>&1)" || rc=$?
+  printf '[%s] avant %s (code %s)\n%s\n' "$(date +%T)" "$1" "$rc" "$sortie" >>"$TMP/corps-sur-bringup.log"
+  ligne="$(grep '^CORPS_SUR_BRINGUP ' <<<"$sortie" | tail -1 || true)"
+  n="$(sed -nE 's/.* rearmements=([0-9]+) .*/\1/p' <<<"$ligne")"
+  if [ -n "$n" ] && [ "$n" -gt 0 ]; then
+    REARMEMENTS_CS=$((REARMEMENTS_CS + n))
+    NOTES+=("corps sûr du bringup RÉARMÉ $n fois avant $1 : VERROU capteur_perdu spontané (nœud figé par la charge du PC) ; $REARMEMENTS_CS dans la fumée (corps-sur-bringup.log)")
+  fi
+  [ "$rc" = 0 ] && [[ "$ligne" == "CORPS_SUR_BRINGUP arme "* ]] && return 0
+  epreuve "$1" --statut rouge --duree 0 --journal corps-sur-bringup.log \
+    --detail "corps sûr du bringup NON ARMÉ avant l'épreuve (aucune roue ne peut tourner) : ${ligne:-aucune réponse du contrôle, code $rc}"
+  return 1
+}
+
+entrees_verrou() { # entrees_verrou : nombre d'entrées en VERROU du corps sûr du bringup (journal robot)
+  local f="$TMP/robot-etats.log"
+  docker logs "$(conteneur_de robot)" >"$f" 2>&1 || true
+  awk '/didier\.corps_sur\]: état : /{v = ($0 ~ /"etat": "VERROU"/); if (v && !p) n++; p = v} END {print n + 0}' "$f"
+}
+
+noter_verrous_pendant() { # noter_verrous_pendant <épreuve> <entrées avant> : dit un verrou né PENDANT l'épreuve
+  local apres; apres="$(entrees_verrou)"
+  [ "$apres" -le "$2" ] && return 0
+  NOTES+=("$1 : le corps sûr du bringup s'est verrouillé PENDANT l'épreuve ($(grep -o '"etat": "VERROU", "cause": "[a-z_]*"' "$TMP/robot-etats.log" | tail -1)) — un rouge de roues vient alors de lui, voir conteneur-*.tar.gz")
+}
+
 # --- Épreuves écrites en rclpy (la CLI ros2 perd des messages sur ce PC : operations.md) --
 sonde_rtf() {
   python_ros <<'PY'
@@ -790,6 +825,7 @@ phase_rtf() {
 }
 
 phase_simples() {
+  PHASE_COURANTE=simples   # nom de l'archive des journaux en cas de rouge (« demarrage » trompait)
   # À ce stade la sim tourne avec le vrai bringup du robot (chaîne roues et pont web compris) ;
   # la répétition est lancée par les scripts eux-mêmes s'il la leur faut.
   lancer_validation namespace validate-namespace.sh "$ATTENDU_NAMESPACE" 'validate-namespace' 300 || return 1
@@ -802,8 +838,11 @@ phase_simples() {
     --detail "$(grep '^ETATS=' <<<"$sortie" | tail -1)" --duree "$((SECONDS - t0))" --journal parle.log
   [ "$ok" = "$ATTENDU_PARLE" ] || return 1
   # Édition à travers le robot (L1d) : la chaîne roues tourne déjà (l'épreuve 7 mesure la tenue de
-  # cmd_vel) ; restaure ce qu'elle écrit dans data/.
+  # cmd_vel) ; restaure ce qu'elle écrit dans data/. Elle fait rouler Didier : corps sûr armé exigé.
+  exiger_corps_sur_arme edition || return 1
+  local verrous; verrous="$(entrees_verrou)"
   lancer_validation edition validate-data-edit.sh "$ATTENDU_EDITION" 'validate-data-edit' 300
+  local rc=$?; noter_verrous_pendant edition "$verrous"; return "$rc"
 }
 
 phase_machines() {
@@ -838,7 +877,10 @@ phase_chantiers() {
     return 1
   fi
   lancer_corps chantiers '' || { epreuve chantiers --statut rouge --detail "chaîne roues absente, ou régisseur (monde) / regard (robot) non démarrés"; return 1; }
+  exiger_corps_sur_arme chantiers || return 1
+  local verrous; verrous="$(entrees_verrou)"
   lancer_validation chantiers validate-rehearsal-chantiers.sh "$ATTENDU_CHANTIERS" '=== V-R3' 1500
+  local rc=$?; noter_verrous_pendant chantiers "$verrous"; return "$rc"
 }
 
 phase_a1() {
@@ -850,7 +892,10 @@ phase_a1() {
     return 1
   fi
   lancer_corps jeu-a1 'jeu:=true' || { epreuve a1 --statut rouge --detail "chaîne roues absente, ou régisseur jeu (monde) / regard (robot) non démarrés"; return 1; }
+  exiger_corps_sur_arme a1 || return 1
+  local verrous; verrous="$(entrees_verrou)"
   lancer_validation a1 validate-jeu-a1.sh "$ATTENDU_A1" '=== A1' 1500
+  local rc=$?; noter_verrous_pendant a1 "$verrous"; return "$rc"
 }
 
 phase_objets() {
@@ -864,7 +909,10 @@ phase_objets() {
     return 1
   fi
   lancer_corps jeu-a1 'jeu:=true' || { epreuve objets --statut rouge --detail "chaîne roues absente, ou régisseur jeu (monde) / regard (robot) non démarrés"; return 1; }
+  exiger_corps_sur_arme objets || return 1
+  local verrous; verrous="$(entrees_verrou)"
   lancer_validation objets validate-objets.sh "$ATTENDU_OBJETS" '=== OBJ' 900
+  local rc=$?; noter_verrous_pendant objets "$verrous"; return "$rc"
 }
 
 phase_conversation() {
@@ -886,8 +934,11 @@ phase_conversation() {
     return 1
   fi
   lancer_corps jeu-a1 'jeu:=true' || { epreuve conversation --statut rouge --detail "chaîne roues absente, ou régisseur jeu (monde) / regard (robot) non démarrés"; return 1; }
+  exiger_corps_sur_arme conversation || return 1
+  local verrous; verrous="$(entrees_verrou)"
   lancer_validation conversation validate-conversation.sh "$ATTENDU_CONVERSATION" '=== CONV' 600
   local rc=$? bascules
+  noter_verrous_pendant conversation "$verrous"
   # Bascules de secours Anthropic -> OpenRouter pendant l'épreuve (journal de chat_node) : dites
   # sur la page, sans rien changer au verdict (la parole ne s'est pas bloquée).
   bascules="$(docker logs "$(conteneur_de vision)" 2>&1 | grep -c 'bascule de secours' || true)"

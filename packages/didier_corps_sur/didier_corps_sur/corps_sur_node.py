@@ -145,8 +145,13 @@ class CorpsSurNode(Node):
 
     def _sur_rearmer(self, _msg: Any) -> None:
         accepte, raison = self.corps.rearmer(self._maintenant())
-        journal = self.get_logger().info if accepte else self.get_logger().warning
-        journal(f"réarmement {'accepté' if accepte else 'REFUSÉ'} : {raison}")
+        # UN site d'appel par sévérité : rclpy refuse qu'une même ligne journalise tantôt en info,
+        # tantôt en warning (ValueError « Logger severity cannot be changed between calls »). Le
+        # 21/11 en sim, un refus après un réarmement accepté a ainsi TUÉ le nœud (zéro et sortie).
+        if accepte:
+            self.get_logger().info(f"réarmement accepté : {raison}")
+        else:
+            self.get_logger().warning(f"réarmement REFUSÉ : {raison}")
         self._publier_etat()
 
     def _sur_tic(self) -> None:

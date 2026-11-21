@@ -1032,6 +1032,14 @@ conventions, mutants, points ouverts). Le nœud `/didier/corps_sur` est lancé p
   sain (sim : `pont_lidar` vivant) ; pour conduire sans filtre, `cmd_vel_remote` (la
   télécommande). Une pause des conteneurs (garde thermique) fige l'horloge simulée ET le pilote :
   sans conséquence sur les mesures, mais une fumée rouge après des pauses se RELANCE.
+- **Le corps sûr du bringup dans la fumée** (21/11) : avant edition, V-R3, A1, OBJ et CONV,
+  `machines/sim/corps_sur_bringup.py` (lancé dans `monde`) exige ARME sur le terrain `sim`. Il
+  réarme un VERROU `capteur_perdu` spontané (nœud figé par la charge du PC), lui seul, deux fois
+  au plus par épreuve, et le dit sur la page. Tout autre état rend l'épreuve rouge, avec l'état lu
+  (`corps-sur-bringup.log`). Un verrou né pendant l'épreuve est dit sur la page. Le journal
+  complet du conteneur robot d'un rouge est dans `conteneur-<phase>.tar.gz` (`robot-docker.log`).
+  Les `docker-didier-sim-*.log` du brut ne sont que la capture du DÉMARRAGE : ils s'arrêtent dès
+  que colcon a fini.
 
 ## Fumée automatique — la sim rejouée toute seule (lot F, 07/11)
 
