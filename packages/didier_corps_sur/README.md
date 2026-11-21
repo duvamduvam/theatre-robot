@@ -206,6 +206,10 @@ max 301 ms ; 20 Hz : max 155 ms, encore sous la porte). Sans mutant, la même pa
    (sim seule, aucune règle touchée, mais tout le chronométrage des épreuves en dépend) ; (c) un
    banc qui réarme aussi PENDANT les épreuves roulantes, avec une borne et dit sur la page (masque
    davantage).
+   **Tranché le 21/11 : (b).** `/clock` est décimé à 200 Hz par `relais_horloge` (sim seule ;
+   `docs/operations.md` § Horloge simulée). Le corps sûr passe de 62 à 15 % d'un cœur. La règle et
+   son seuil de 0,30 s sont inchangés. (a) reste ouvert pour la relecture adverse A0-8 (Fable) ;
+   (c) est écarté (il masque davantage).
 3. **Écarts du banc à la spec, écrits dans l'en-tête de `validate-corps-sur.sh`** : CS3 borne
    basse 0,2 s au lieu de 0,3 (trois balayages de sortie à 10 Hz) ; CS5 « ARRIERE vue » joué au
    niveau du moteur (`test_moteur.py`), la pose A ne voyant pas l'arrière ; CS11 à 0,5 s (point 1).

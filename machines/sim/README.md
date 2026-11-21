@@ -9,7 +9,7 @@ littéral dans le compose et revérifié par chaque entrée de conteneur.
 
 | Service (conteneur `didier-sim-<service>`) | Image locale | Ce qui y tourne |
 |---|---|---|
-| `monde` | `monde/Dockerfile` (x86 seul) | Gazebo, pont gz, matériel simulé (servos, LED), répétition, sélecteur de jeu, **épreuves** ; `GZ_IP=127.0.0.1` (A1 intermittent, 11/11) ; depuis A0-2 (19/11) le **lidar C1 simulé** (`scan`, 10 Hz, 500 rayons, son propre pont `pont_lidar`) et, dans le monde `stage`, l'obstacle (`sim/obstacle_pose`) et le passant (`passant_sim_node`, `sim/passant`) des épreuves du corps sûr |
+| `monde` | `monde/Dockerfile` (x86 seul) | Gazebo, pont gz, `relais_horloge` (`/clock` décimé à 200 Hz, 21/11 : à pleine fréquence il coûtait 38 à 62 % d'un cœur à chaque nœud Python en `use_sim_time`), matériel simulé (servos, LED), répétition, sélecteur de jeu, **épreuves** ; `GZ_IP=127.0.0.1` (A1 intermittent, 11/11) ; depuis A0-2 (19/11) le **lidar C1 simulé** (`scan`, 10 Hz, 500 rayons, son propre pont `pont_lidar`) et, dans le monde `stage`, l'obstacle (`sim/obstacle_pose`) et le passant (`passant_sim_node`, `sim/passant`) des épreuves du corps sûr |
 | `robot` | `machines/robot/docker/Dockerfile` | le VRAI `robot_app.launch.py` (18 nœuds, chaîne roues en `use_sim_time`, corps sûr `corps_sur` devant `twist_mux` depuis A0-4) + `complement_sim.launch.py` (`face_sim`, `validation_sim_node`) |
 | `vision` | `machines/vision/docker/Dockerfile` | `vision.launch.py`, `CHAT=false`, aucun secret ; sans webcam `person_tracker` s'arrête (L2c : caméra Gazebo) |
 | `telecommande` | Dockerfile x86 legacy | `controller_node` **sans interface** (`TELECOMMANDE_SANS_IHM=1`, 18/11) : ses éditeurs de topics tournent, aucune fenêtre sur le bureau |

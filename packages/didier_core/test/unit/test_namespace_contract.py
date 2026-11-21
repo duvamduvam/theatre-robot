@@ -7,7 +7,7 @@ La preuve en simulation est conf/scripts/validate-namespace.sh.
 
  (a) chaque *.launch.py pousse un namespace ABSOLU (PushRosNamespace(["/", …]))
      tiré de ROBOT_NAME, et aucun Node n'a de namespace= à lui ;
- (b) gz_bridge.yaml : tout ros_topic_name est relatif sauf {/clock, /tf} ;
+ (b) gz_bridge.yaml : tout ros_topic_name est relatif sauf /tf (/clock : relais_horloge, 21/11) ;
  (c) aucun nom de topic absolu dans le code des nœuds (grep de L1a étendu aux
      scripts sans extension de didier_sim et aux constantes ODOM_TOPIC /
      NECK_TOPIC_SIM, gravées relatives) ;
@@ -35,7 +35,7 @@ MACHINES = MONO / "machines"
 # événements de paramètres). Rien d'autre — validate-namespace.sh applique la
 # même liste en sim.
 EXCEPTIONS_GLOBALES = {"/clock", "/tf", "/tf_static", "/rosout", "/parameter_events"}
-BRIDGE_ABSOLUS = {"/clock", "/tf"}
+BRIDGE_ABSOLUS = {"/tf"}   # /clock : relais_horloge depuis le 21/11
 
 # Regex GRAVÉE (spec, décision 7 d) : après le verbe, le topic doit commencer
 # par $ (préfixe $NS) ou / (absolu explicite). Options APRÈS le topic.

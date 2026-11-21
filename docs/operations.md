@@ -662,6 +662,37 @@ ni sur GitHub ; `~/tmp` plutôt que `~/.local/state`, précision du même soir).
 `docker compose up`**, sinon Docker le crée root. Fichiers écrits par les conteneurs = root :
 effacer via un conteneur (`docker run --rm -v ~/tmp/didier-sim:/j alpine rm -rf /j/log/…`).
 
+## Horloge simulée : `/clock` décimé à 200 Hz (21/11)
+
+**Le piège.** Gazebo publie son horloge à CHAQUE pas de physique (1 ms). Le pont ros_gz la relayait
+telle quelle : ≈ 954 Hz mesurés, avec des trous jusqu'à 258 ms vus par un abonné. Chaque nœud
+Python en `use_sim_time` traite chaque message : 38 à 62 % d'un cœur CHACUN (corps_sur 62 %,
+servos_sim 55 %, deadman 38 %), contre ≈ 1 % pour un nœud Python sans horloge simulée. Sous
+charge, un nœud ainsi occupé se fige plus de 0,30 s. Le corps sûr se verrouillait alors seul
+(`capteur_perdu`), et la fumée 2026-11-21-1929 est tombée en V-R3.
+
+**La parade, côté sim seulement** (décision du 21/11 : ni la règle ni son seuil de 0,30 s ne
+bougent). `/clock` n'est plus dans `gz_bridge.yaml`. Le nœud C++ `relais_horloge`
+(`packages/didier_sim/src/relais_horloge.cpp`, lancé par `monde.launch.py`) s'abonne au topic gz
+`/clock` par gz-transport. Il publie `/clock` côté ROS une fois par 5 ms d'horloge SIMULÉE (200 Hz,
+gravé par `test_relais_horloge.py`), au temps exact du pas. La physique reste à 1 ms : la
+diff-drive et les contacts ne changent pas. Mesuré sur une sim chantiers au repos : 199 Hz, pas de
+5,00 ms, aucun trou ; corps_sur 15 %, servos_sim 13 %, deadman 10 % ; le relais 7 %.
+
+**Ce que ça change pour les minuteries** : l'horloge des nœuds ROS avance par pas de 5 ms. Une
+minuterie sur horloge simulée part donc jusqu'à 5 ms en retard. C'est le cas du tic de 50 ms du
+corps sûr, de son chien de garde de 0,30 s, du deadman de 0,40 s et des chronos des épreuves
+(porte de l'étude : 200 ms). Les horodatages des capteurs gz restent exacts : un `scan` peut
+paraître jusqu'à 5 ms « en avance » sur l'horloge du nœud, ce qui est sans effet sur `trop_vieux`.
+
+- Le relais est **facultatif à la construction** : didier_sim se construit aussi dans le
+  conteneur robot et sur le Pi, qui n'ont pas gz-transport. Le CMakeLists le saute alors. Sans le
+  relais, `monde.launch.py` échoue bruyamment.
+- Figé ou mort, le relais arrête l'horloge simulée pour TOUS, comme une pause de Gazebo. Aucun
+  verrou n'en naît. Le SIGSTOP de `pont_lidar` (CS8) ne touche pas `/clock`.
+- Mesurer : un abonné rclpy fiable compte `/clock` pendant 20 s ; `top` dans `monde` voit tous
+  les conteneurs (espace de processus partagé).
+
 ## Mémoire partagée Fast DDS : le ménage au démarrage (18/11)
 
 Toute la sim est en `ipc: host` (décision 8) : les ports et segments SHM de Fast DDS vivent dans

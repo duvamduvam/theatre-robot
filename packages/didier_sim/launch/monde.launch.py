@@ -102,7 +102,7 @@ def generate_launch_description():
 
         # Lot L1b : UN groupe, UN PushRosNamespace absolu (/didier/... par défaut),
         # jamais de namespace= par nœud. Le bridge (gz_bridge.yaml : noms ROS
-        # relatifs sauf /clock et /tf), robot_state_publisher (robot_description,
+        # relatifs sauf /tf ; /clock vient de relais_horloge), robot_state_publisher (robot_description,
         # joint_states) et le spawn (-topic robot_description) sont DANS le groupe :
         # ils se suivent. Les noms côté gz ne changent pas (le monde ignore ROS).
         GroupAction([
@@ -137,6 +137,19 @@ def generate_launch_description():
                     ]),
                     "use_sim_time": True,
                 }],
+                output="screen",
+            ),
+
+            # Horloge simulée vers ROS (21/11) : /clock DÉCIMÉ à 200 Hz d'horloge simulée (pas de
+            # 5 ms ; la physique reste à 1 ms). À pleine fréquence (≈ 954 Hz par le pont), chaque
+            # nœud Python en use_sim_time y laissait 38 à 62 % d'un cœur, et le corps sûr, figé
+            # sous la charge, se verrouillait (fumée 2026-11-21-1929). Ce nœud EST l'horloge :
+            # use_sim_time FAUX. Fréquence gravée par test_relais_horloge.py.
+            Node(
+                package="didier_sim",
+                executable="relais_horloge",
+                name="relais_horloge",
+                parameters=[{"use_sim_time": False, "frequence_hz": 200.0}],
                 output="screen",
             ),
 
