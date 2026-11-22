@@ -549,7 +549,8 @@ def banc(tmp_path):
     _git(depot, "config", "commit.gpgsign", "false")
     sha = _commit(depot, "packages/code.txt", "code 1")
     res = vert(sha[:7])
-    res.update(sha_complet=sha, fin=datetime.now().astimezone().isoformat(), id="2026-11-07-2130")
+    maintenant = datetime.now().astimezone().isoformat()
+    res.update(sha_complet=sha, debut=maintenant, fin=maintenant, id="2026-11-07-2130")
     fp.ajouter_historique(depot / "docs" / "fumee", res)
     bin_ = tmp_path / "bin"
     bin_.mkdir()
@@ -561,7 +562,22 @@ def banc(tmp_path):
     notif = bin_ / "notify-send"       # fausse notification : on lit ce qu'elle aurait affiché
     notif.write_text('#!/bin/bash\necho "$@" >>"$FAUX_NOTIFS"\n', encoding="utf-8")
     notif.chmod(0o755)
+    # Faux powerprofilesctl (22/11) : JAMAIS le vrai profil du PC depuis un essai. Il journalise ses
+    # appels et garde « son » profil dans un fichier ; FAUX_PPC_ECHEC=1 le fait échouer.
+    ppc = bin_ / "powerprofilesctl"
+    ppc.write_text('#!/bin/bash\necho "$@" >>"$FAUX_PPC_APPELS"\n[ "${FAUX_PPC_ECHEC:-0}" = 1 ] && exit 1\n'
+                   'case "$1" in get) cat "$FAUX_PPC_ETAT" ;; set) echo "$2" >"$FAUX_PPC_ETAT" ;; esac\n',
+                   encoding="utf-8")
+    ppc.chmod(0o755)
+    (tmp_path / "ppc-etat").write_text("balanced\n", encoding="utf-8")
+    (tmp_path / "ppc-appels.txt").write_text("", encoding="utf-8")
+    (tmp_path / "secteur").write_text("1\n", encoding="utf-8")
     env = dict(os.environ, PATH=str(bin_) + os.pathsep + os.environ["PATH"], FUMEE_DEPOT=str(depot),
+               FAUX_PPC_APPELS=str(tmp_path / "ppc-appels.txt"), FAUX_PPC_ETAT=str(tmp_path / "ppc-etat"),
+               FUMEE_SECTEUR=str(tmp_path / "secteur"),
+               # Ni les cœurs réels (une fumée forcée qui va jusqu'au démarrage réserverait les CPU du
+               # PC), ni les journaux de sim réels, ni un commit dans le dépôt de test.
+               FUMEE_COEURS="", DIDIER_SIM_JOURNAUX=str(tmp_path / "journaux-sim"), FUMEE_COMMIT="0",
                FUMEE_ETAT=str(tmp_path / "etat"), FAUX_DOCKER_APPELS=str(tmp_path / "appels.txt"),
                FAUX_NOTIFS=str(tmp_path / "notifs.txt"), FUMEE_DRY_POWEROFF="1",
                FUMEE_PLAGES=str(tmp_path / "aucune-plage"),   # jamais le fichier réel du PC
@@ -1137,7 +1153,7 @@ def test_la_fumee_ne_retire_pas_un_verrou_remplace_pendant_elle(tmp_path):
 
 def test_le_verrou_est_pose_juste_avant_le_deroule_et_libere_en_fin():
     sh = _lire_sh()
-    assert "\nposer_verrou_sim\nderoule\n" in sh
+    assert "\nposer_verrou_sim\nbasculer_profil\nderoule\n" in sh
     terminer = sh[sh.index("\nterminer() {"):sh.index("\ntrap terminer EXIT")]
     assert "  liberer_verrou_sim\n" in terminer
 
@@ -1202,3 +1218,115 @@ def test_un_dockerfile_casse_n_est_pas_reessaye(tmp_path):
 def test_une_panne_reseau_qui_dure_reste_un_echec(tmp_path):
     rc, appels = _construire(tmp_path, [(JOURNAL_DNS_18_11, 1), (JOURNAL_DNS_18_11, 1)])
     assert (rc, appels) == (1, 2)
+
+
+# --- Profil d'énergie pendant la fumée (22/11, demande de David) -------------------------------
+# Une fumée FORCÉE avec le faux docker va jusqu'au démarrage, qui rougit aussitôt (le faux docker
+# ne dit pas ROS_DOMAIN_ID=43) : c'est l'issue « rouge » ; le faux powerprofilesctl dit ce qu'elle
+# a fait du profil. Valeurs attendues gravées : appels exacts, profil final.
+
+def _appels_ppc(tmp):
+    return (tmp / "ppc-appels.txt").read_text(encoding="utf-8").splitlines()
+
+
+def _profil(tmp):
+    return (tmp / "ppc-etat").read_text(encoding="utf-8").strip()
+
+
+@pytest.mark.parametrize("origine", ["balanced", "power-saver"])
+def test_fumee_rouge_sur_secteur_bascule_puis_rend_le_profil(banc, origine):
+    _, env, tmp = banc
+    (tmp / "ppc-etat").write_text(origine + "\n", encoding="utf-8")
+    p = _lancer(env)
+    assert p.returncode == 1, p.stdout + p.stderr                # démarrage rouge (faux docker)
+    assert _appels_ppc(tmp) == ["get", "set performance", "set " + origine]
+    assert _profil(tmp) == origine
+    j = _journal(tmp)
+    assert "profil d'énergie : %s -> performance (sur secteur)" % origine in j
+    assert "profil d'énergie rendu : performance -> %s" % origine in j
+    assert j.index("-> performance (sur secteur)") < j.index("rendu : performance -> " + origine)
+
+
+def test_sur_batterie_le_profil_n_est_pas_touche(banc):
+    _, env, tmp = banc
+    (tmp / "secteur").write_text("0\n", encoding="utf-8")
+    p = _lancer(env)
+    assert p.returncode == 1, p.stdout + p.stderr
+    assert _appels_ppc(tmp) == []
+    assert _profil(tmp) == "balanced"
+    assert "pas sur secteur" in _journal(tmp)
+
+
+def test_sans_fichier_secteur_le_profil_n_est_pas_touche(banc):
+    _, env, tmp = banc
+    p = _lancer(dict(env, FUMEE_SECTEUR=str(tmp / "absent")))
+    assert p.returncode == 1 and _appels_ppc(tmp) == []
+    assert "illisible" in _journal(tmp)
+
+
+def test_bascule_desactivee_par_variable(banc):
+    _, env, tmp = banc
+    p = _lancer(dict(env, FUMEE_PROFIL="0"))
+    assert p.returncode == 1 and _appels_ppc(tmp) == []
+    assert "bascule désactivée (FUMEE_PROFIL=0)" in _journal(tmp)
+
+
+def test_deja_en_performance_rien_a_rendre(banc):
+    _, env, tmp = banc
+    (tmp / "ppc-etat").write_text("performance\n", encoding="utf-8")
+    p = _lancer(env)
+    assert p.returncode == 1 and _appels_ppc(tmp) == ["get"]
+    assert _profil(tmp) == "performance"
+
+
+def test_powerprofilesctl_absent_ou_en_echec_ne_fait_jamais_echouer_la_fumee(banc):
+    _, env, tmp = banc
+    p = _lancer(dict(env, FUMEE_POWERPROFILESCTL=str(tmp / "nulle-part")))
+    assert p.returncode == 1 and "RTF" not in p.stderr           # rouge du démarrage, rien d'autre
+    assert "absent, profil inchangé" in _journal(tmp)
+    assert "fumée rouge" in p.stdout
+    p = _lancer(dict(env, FAUX_PPC_ECHEC="1"))
+    assert p.returncode == 1 and "fumée rouge" in p.stdout
+    assert _appels_ppc(tmp) == ["get"]
+    assert "« powerprofilesctl get » a échoué" in _journal(tmp)
+
+
+@pytest.mark.parametrize("signal_", ["SIGTERM", "SIGINT"])
+def test_profil_rendu_sur_signal(banc, signal_):
+    """Ctrl-C (SIGINT au groupe du terminal) ou arrêt de l'unité systemd (SIGTERM à tout le
+    cgroup) pendant la sim : le profil d'origine est rendu par le trap EXIT."""
+    import signal as sig
+    depot, env, tmp = banc
+    (depot / "machines" / "sim").mkdir(parents=True)   # le `cd "$DOCKER_DIR"` du démarrage
+    marque = tmp / "up-lance"
+    # Faux docker dont `compose … up` bloque (la sim « démarre ») : on tue la fumée à ce moment-là.
+    (tmp / "bin" / "docker").write_text(
+        '#!/bin/bash\necho "$@" >>"$FAUX_DOCKER_APPELS"\n'
+        'case " $* " in *" up "*) : >"$MARQUE"; exec sleep 30 ;; esac\n'
+        'if [ "$1" = ps ]; then printf "%s" "${FAUX_DOCKER_PS:-}"; fi\nexit 0\n', encoding="utf-8")
+    proc = subprocess.Popen([str(FUMEE_SH)], env=dict(env, MARQUE=str(marque)), stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, start_new_session=True)
+    try:
+        for _ in range(600):
+            if marque.exists() or proc.poll() is not None:
+                break
+            time.sleep(0.05)
+        assert marque.exists(), "la fumée n'a pas atteint le démarrage de la sim : " + (
+            proc.stdout.read() if proc.poll() is not None else "")
+        assert _profil(tmp) == "performance"
+        os.killpg(proc.pid, getattr(sig, signal_))
+        sortie, _ = proc.communicate(timeout=30)
+    finally:
+        if proc.poll() is None:
+            os.killpg(proc.pid, sig.SIGKILL)
+            proc.wait()
+    assert _appels_ppc(tmp) == ["get", "set performance", "set balanced"], sortie
+    assert _profil(tmp) == "balanced"
+    assert "profil d'énergie rendu : performance -> balanced" in _journal(tmp)
+
+
+def test_le_profil_est_rendu_dans_terminer_et_bascule_avant_le_deroule():
+    sh = _lire_sh()
+    assert "\nposer_verrou_sim\nbasculer_profil\nderoule\n" in sh
+    terminer = sh[sh.index("\nterminer() {"):sh.index("\ntrap terminer EXIT")]
+    assert "  restaurer_profil\n" in terminer
