@@ -106,7 +106,7 @@ def test_un_compteur_n_est_vert_qu_a_la_valeur_gravee(ok, attendu, ko, statut):
 
 def test_ordre_canonique_des_epreuves():
     assert [i for i, _ in fp.EPREUVES] == [
-        "image", "demarrage", "rtf", "namespace", "catalogue", "parle", "edition", "machines", "corps_sur",
+        "image", "demarrage", "rtf", "namespace", "catalogue", "parle", "edition", "machines", "audio", "corps_sur",
         "chantiers", "a1", "objets", "conversation"]
 
 
@@ -152,7 +152,7 @@ def test_completer_marque_non_lancees_les_suivantes():
     assert [(e["id"], e["statut"]) for e in complet] == [
         ("image", "vert"), ("demarrage", "non_lance"), ("rtf", "rouge"), ("namespace", "non_lance"),
         ("catalogue", "non_lance"), ("parle", "non_lance"), ("edition", "non_lance"), ("machines", "non_lance"),
-        ("corps_sur", "non_lance"), ("chantiers", "non_lance"), ("a1", "non_lance"), ("objets", "non_lance"), ("conversation", "non_lance")]
+        ("audio", "non_lance"), ("corps_sur", "non_lance"), ("chantiers", "non_lance"), ("a1", "non_lance"), ("objets", "non_lance"), ("conversation", "non_lance")]
 
 
 # --- git : les commits de docs/fumee ne rendent pas une fumée due ------------------
@@ -380,6 +380,7 @@ def test_page_verte_porte_sha_rtf_et_compteurs():
             {"id": "parle", "statut": "vert", "ok": 3, "attendu": 3, "ko": 0},
             {"id": "edition", "statut": "vert", "ok": 12, "attendu": 12, "ko": 0},
             {"id": "machines", "statut": "vert", "ok": 5, "attendu": 5, "ko": 0},
+            {"id": "audio", "statut": "vert", "ok": 10, "attendu": 10, "ko": 0},
             {"id": "corps_sur", "statut": "vert", "ok": 25, "attendu": 25, "ko": 0},
             {"id": "chantiers", "statut": "vert", "ok": 21, "attendu": 21, "ko": 0, "duree_s": 585},
             {"id": "a1", "statut": "vert", "ok": 14, "attendu": 14, "ko": 0},
@@ -405,8 +406,8 @@ def test_page_rouge_dit_ou_et_ce_qui_n_a_pas_ete_lance():
     page = fp.rendre_page(resultat(epreuves, verdict="rouge", bloquant="rtf", rtf=0.49))
     assert "ROUGE à l&#x27;épreuve « Sonde du facteur temps réel (20 s) » : les suivantes n&#x27;ont pas été lancées." in page
     # namespace, catalogue, parle, edition (L1d), machines (L2b), corps_sur (A0-4), chantiers, a1,
-    # objets (O1), conversation
-    assert page.count("non lancée") == 10
+    # audio (onglet Audio, 22/11), objets (O1), conversation
+    assert page.count("non lancée") == 11
     assert "RTF 0.49 &lt; 0.8" in page                      # échappé
 
 
@@ -467,7 +468,7 @@ def test_valeurs_attendues_gravees_en_tete_du_script():
     src = _lire_sh()
     gravees = dict(re.findall(r"^(ATTENDU_[A-Z0-9_]+)=(\d+)", src, re.M))
     assert gravees == {"ATTENDU_NAMESPACE": "5", "ATTENDU_CATALOGUE": "4", "ATTENDU_PARLE": "3",
-                       "ATTENDU_EDITION": "13", "ATTENDU_MACHINES": "5", "ATTENDU_CORPS_SUR": "25",
+                       "ATTENDU_EDITION": "13", "ATTENDU_MACHINES": "5", "ATTENDU_AUDIO": "10", "ATTENDU_CORPS_SUR": "25",
                        "ATTENDU_CHANTIERS": "21",
                        "ATTENDU_A1": "14", "ATTENDU_OBJETS": "13", "ATTENDU_CONVERSATION": "19"}
     assert re.search(r"^RTF_MIN_DEFAUT=0\.8$", src, re.M)
@@ -495,6 +496,9 @@ def test_les_compteurs_gravees_sont_ceux_des_scripts_de_verification():
     assert re.findall(r'^\s*verdict\(.*?f"(CS\d+[a-d]?) ', cs, re.M | re.S) == [
         "CS1a", "CS1b", "CS1c", "CS2a", "CS2b", "CS2c", "CS2d", "CS3", "CS4a", "CS4b", "CS5", "CS6", "CS7",
         "CS8a", "CS8b", "CS8c", "CS9a", "CS9b", "CS10a", "CS10b", "CS11", "CS12a", "CS12b", "CS12c", "CS13"]
+    # validate-audio.sh (onglet Audio, 22/11) : AU1-AU10, un verdict() chacun.
+    audio_ = (SCRIPTS / "validate-audio.sh").read_text(encoding="utf-8")
+    assert re.findall(r'^\s*verdict\(.*?"(AU\d+) ', audio_, re.M | re.S) == ["AU%d" % n for n in range(1, 11)]
     # validate-conversation.sh (CONV, 16/11) : 13 verdict() étiquetés, dans cet ordre.
     conv = (SCRIPTS / "validate-conversation.sh").read_text(encoding="utf-8")
     assert re.findall(r'^verdict\(.*?\n?\s*f?"([PTABC]\d) ', conv, re.M | re.S) == [
@@ -853,7 +857,7 @@ def test_ligne_historique_format_grave():
         '"mode": "force", "essai": false, "verdict": "rouge", "bloquant": "chantiers", "rtf": 0.998, '
         '"duree_s": 2400, "page": "2026-11-07.html", "epreuves": {"image": "vert", "demarrage": "vert", '
         '"rtf": "vert 0.998", "namespace": "vert 5/5", "catalogue": "vert 4/4", "parle": "vert 3/3", '
-        '"edition": "vert 13/13", "machines": "vert 5/5", "corps_sur": "vert 25/25", '
+        '"edition": "vert 13/13", "machines": "vert 5/5", "audio": "non_lance", "corps_sur": "vert 25/25", '
         '"chantiers": "rouge 20/21 1KO", "a1": "non_lance", '
         '"objets": "non_lance", "conversation": "non_lance"}}\n')
 

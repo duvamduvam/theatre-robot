@@ -843,6 +843,8 @@ SIM_A_PLAT = [# 16/11 (lot fiabilité des épreuves) : l'enregistreur des mesure
               "pub.sh", "rejouer-modifiees.sh",
               # 15/11 (567382b) : séance « Chantiers » en une commande.
               "seance-chantiers.sh",
+              # 22/11 : épreuve AU de l'onglet « Audio » (fausse veille, sans casque).
+              "validate-audio.sh",
               "validate-catalogue.sh", "validate-conversation.sh",
               # 20/11 (A0-4) : épreuves CS du corps sûr.
               "validate-corps-sur.sh", "validate-data-edit.sh",

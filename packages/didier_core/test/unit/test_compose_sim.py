@@ -33,7 +33,7 @@ SERVICES = {
 PACKAGES_MONDE = ["dadou_utils_ros", "didier_core", "didier_corps_sur", "didier_description", "didier_jeu",
                   "didier_rehearsal", "didier_sim", "theatre_contrats", "theatre_interfaces"]
 INTERDITS_MONDE = {"didier_core", "didier_drive", "didier_web"}   # aucun de leurs exécutables dans monde
-EPREUVES = ["validate-catalogue.sh", "validate-conversation.sh", "validate-corps-sur.sh", "validate-data-edit.sh",
+EPREUVES = ["validate-audio.sh", "validate-catalogue.sh", "validate-conversation.sh", "validate-corps-sur.sh", "validate-data-edit.sh",
             "validate-jeu-a1.sh",
             "validate-machines.sh",
             "validate-namespace.sh", "validate-objets.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",

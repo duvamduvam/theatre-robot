@@ -42,7 +42,7 @@
 #   images (reconstruites seulement si un chemin de CHEMINS_IMAGES a changé depuis la dernière verte)
 #   -> sim headless + colcon ×4 + nœuds attendus -> sonde RTF 20 s (rouge si < 0,8 : le reste
 #   n'est pas fiable) -> validate-namespace -> validate-catalogue -> animation parle
-#   -> validate-data-edit (L1d) -> validate-machines (L2b)
+#   -> validate-data-edit (L1d) -> validate-machines (L2b) -> validate-audio (onglet Audio, 22/11)
 #   -> sim relancée monde `stage`, validate-corps-sur (CS, lot A0-4 : corps sûr, ≈ 15 min)
 #   -> sim relancée monde `chantiers`, régisseur (monde) + regard (robot), validate-rehearsal-chantiers (V-R3)
 #   -> sim relancée, validate-jeu-a1 (A1)
@@ -96,6 +96,7 @@ ATTENDU_CATALOGUE=4     # validate-catalogue.sh : 6 familles, sha dev, ajout, su
 ATTENDU_PARLE=3         # états vus dans l'ordre : "" -> "parle" -> ""
 ATTENDU_EDITION=13      # validate-data-edit.sh (L1d : épreuves 1 à 12, 13 = porte sim depuis L1d-2)
 ATTENDU_MACHINES=5      # validate-machines.sh (L2b : M1-M4, M6 ; 10 en L2c)
+ATTENDU_AUDIO=10        # validate-audio.sh (onglet « Audio », 22/11 : AU1-AU10, fausse veille)
 ATTENDU_CORPS_SUR=25    # validate-corps-sur.sh (CS, lot A0-4 : CS1-CS13, spec A0 §8.5)
 ATTENDU_CHANTIERS=21    # validate-rehearsal-chantiers.sh (V-R3)
 ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
@@ -847,7 +848,10 @@ phase_simples() {
 
 phase_machines() {
   # L2b (décision 21) : les machines de la sim sont toutes là et se parlent, vues depuis monde.
-  lancer_validation machines validate-machines.sh "$ATTENDU_MACHINES" 'validate-machines' 180
+  lancer_validation machines validate-machines.sh "$ATTENDU_MACHINES" 'validate-machines' 180 || return 1
+  # Onglet « Audio » de la page scène (22/11) : contrat de /api/audio, page, Tester / Re-détecter,
+  # devant une FAUSSE veille (127.0.0.1:8767) — aucun casque ni son réel.
+  lancer_validation audio validate-audio.sh "$ATTENDU_AUDIO" '=== AUDIO' 180
 }
 
 phase_corps_sur() {
