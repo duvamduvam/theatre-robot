@@ -836,16 +836,26 @@ def test_page_fournit_tous_les_ids_que_ses_scripts_utilisent(page, scripts):
     assert manquants == set(), f"{page} : ids absents du HTML alors que le JS les lit : {sorted(manquants)}"
 
 
-@pytest.mark.parametrize("page,script", [("index.html", "app.js"), ("scene.html", "scene.js")])
-def test_commun_charge_avant_le_script_de_la_page(page, script):
+@pytest.mark.parametrize("page,scripts", [("index.html", ["app.js"]),
+                                          # lumieres.js (lot I0) : dessin pur des bandes LED, avant scene.js.
+                                          ("scene.html", ["lumieres.js", "scene.js"])])
+def test_commun_charge_avant_le_script_de_la_page(page, scripts):
     sources = re.findall(r'<script src="/static/([\w.]+)"', _lire(page))
-    assert sources == ["commun.js", script]
+    assert sources == ["commun.js"] + scripts
 
 
-@pytest.mark.parametrize("script", ["app.js", "scene.js"])
+@pytest.mark.parametrize("script", ["app.js", "scene.js", "lumieres.js"])
 def test_script_de_page_ne_redeclare_rien_de_commun(script):
     doublons = _declarations_globales("commun.js") & _declarations_globales(script)
     assert doublons == set(), f"{script} redéclare des noms de commun.js : {sorted(doublons)}"
+
+
+def test_lumieres_et_scene_ne_se_marchent_pas_dessus():
+    """Trois scripts classiques, une portée globale : un nom déclaré deux fois tue la page.
+    lumieres.js ne déclare que des noms préfixés « lum » / « LUM_ »."""
+    noms = _declarations_globales("lumieres.js")
+    assert noms and all(n.startswith(("lum", "LUM_")) for n in noms), sorted(noms)
+    assert not noms & _declarations_globales("scene.js")
 
 
 def test_scene_ne_lit_que_les_topics_d_etat_publics():

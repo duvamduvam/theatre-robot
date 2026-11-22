@@ -159,6 +159,20 @@
         </label>
       </div>
 
+      <!-- Bugs joués (lot I0, étude improvisation §2) : un bouton par bug ACCEPTÉ par le
+           contrat (GET /api/bugs-joues), qui le joue tout de suite (`animation` <id>) pour le
+           visuel de David ; « Couper » = `animation` false. Pas de sélecteur ici : l'annonce,
+           les réfractaires et le rétablissement viennent au lot I1. Aucun bug n'a de piste
+           roues (refus au chargement) : le groupe vit aussi sur le vrai robot. -->
+      <div id="scene-bugs" class="scene-groupe">
+        <div class="scene-groupe-tete">
+          <h2>Bugs joués</h2>
+          <button id="bugs-couper" type="button" title="arrêter la séquence en cours (animation false)">Couper</button>
+        </div>
+        <span id="groupe-bugs" class="scene-boutons scene-grille2"></span>
+        <p id="bugs-refuses" class="scene-note" hidden></p>
+      </div>
+
       <div class="scene-groupe scene-repetition" hidden>
         <div class="scene-groupe-tete">
           <h2>Séance</h2>
@@ -233,6 +247,14 @@
                    spellcheck="false" autocomplete="off">
             <button type="submit">Charger</button>
           </form>
+          <!-- Bandes LED (lot I0) : ce que le ruban du robot afficherait d'après les
+               `robot_lights` reçus (modèle du pont, message `lumieres` + `state`), une rangée
+               de pixels par bande, dessinée par lumieres.js. Approximation : reconnaître
+               l'animation, pas le pixel près (ruban virtuel fidèle : lot L2c). -->
+          <div id="scene-lumieres" class="scene-lumieres" title="bandes LED : ce que le ruban afficherait">
+            <div id="scene-lumieres-bandes" class="scene-lumieres-bandes"></div>
+            <div id="scene-lumieres-legende" class="scene-lumieres-legende">lumières : pas encore d'état</div>
+          </div>
         </div>
       </div>
 
@@ -399,6 +421,7 @@
   </main>
 
   <script src="/static/commun.js"></script>
+  <script src="/static/lumieres.js"></script>
   <script src="/static/scene.js"></script>
 </body>
 </html>

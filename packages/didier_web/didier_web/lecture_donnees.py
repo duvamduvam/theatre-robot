@@ -5,6 +5,8 @@ un dossier jetable.
 - `lister(data_dir, kind)` : noms triés, chacun avec l'état de la porte sim lu au registre
   (`rejeu` pour séquences, expressions et lumières ; `roues` pour une séquence à piste roues) :
   `a_jour`, `a_faire`, `heritee` (roues seulement), clé absente = sans objet.
+- `bugs_joues(data_dir)` (lot I0) : ce que sert `GET /api/bugs-joues`, les bugs joués acceptés
+  par leur contrat (theatre_contrats.bugs_joues) et les refusés avec leurs raisons.
 - `lire(data_dir, kind, name)` : `{name, content, sha256}` — `sha256` est ce que l'éditeur
   rendra en `base_sha256` (octets du fichier pour séquence et image, JSON canonique de l'entrée
   sinon) ; une image est rendue en base64. None si le nom est hors forme ou absent.
@@ -16,6 +18,7 @@ import base64
 import json
 import os
 
+from theatre_contrats import bugs_joues as contrat_bugs
 from theatre_contrats import donnees
 
 A_JOUR = "a_jour"
@@ -113,3 +116,15 @@ def _lire_json(chemin):
             return json.load(f)
     except (OSError, ValueError):
         return None
+
+
+# ================================================================ bugs joués (lot I0)
+def bugs_joues(data_dir, dossier_audios=None):
+    """{"acceptes": [{id, desc, classe, duree_s, direction, pistes}], "refuses": [{chemin,
+    erreurs}]} : l'inventaire du contrat, mis en forme pour la page (boutons du visuel)."""
+    inventaire = contrat_bugs.lire(data_dir, dossier_audios)
+    return {
+        "acceptes": [{"id": b.id, "desc": b.desc, "classe": b.classe, "duree_s": b.duree_s,
+                      "direction": b.direction, "pistes": list(b.pistes)} for b in inventaire.acceptes],
+        "refuses": [{"chemin": chemin, "erreurs": list(erreurs)} for chemin, erreurs in inventaire.refuses],
+    }

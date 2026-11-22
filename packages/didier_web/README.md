@@ -9,7 +9,8 @@ Package ROS 2 du robot Didier, autonome (aucun import `robot.*` ni `dadou_utils_
 | `catalogue` | `catalogue_node` | **lot L1c** : publie le catalogue du robot et sa version |
 | `data_edit` | `data_edit_node` | **lot L1d** : le SEUL écrivain des données du robot (désactivé par défaut) |
 | `validation_sim` | `validation_sim_node` | **lot L1d-2**, SIM SEULEMENT : l'observateur de la porte sim, qui tamponne `json/validations-sim.json` |
-| — | `lecture_donnees` | **lot L1d-3** : lecture pure des données éditables pour `GET /api/data` (liste + états de la porte sim, contenu + sha) |
+| — | `lecture_donnees` | **lot L1d-3** : lecture pure des données éditables pour `GET /api/data` (liste + états de la porte sim, contenu + sha) ; **lot I0** : `bugs_joues()` pour `GET /api/bugs-joues` |
+| — | `apercu_lumieres` | **lot I0** : modèle pur de ce que le ruban LED afficherait (aperçu des bandes de la page scène) |
 
 ## `catalogue_node` (L1c)
 
@@ -101,3 +102,38 @@ ne fait que relayer, `data_edit_node` juge et écrit.
   venv racine et de la CI : ils y sont IGNORÉS (`importorskip`). Les jouer avec un venv qui les a.
   Mode d'emploi : `docs/operations.md` § « L'éditeur de la page scène » ; protocole :
   `docs/interfaces.md` § « API web ».
+
+## Page scène : bandes LED et bugs joués (lot I0, 22/11)
+
+**Aperçu des bandes LED**, sous le visage (tuile « Visage ») : une rangée de pixels par bande
+(aujourd'hui une : la zone « corps », 160 LED, `apercu_lumieres.BANDES`) et une légende
+« entrée · brique (méthode) ». Ce n'est pas un écho du dernier clic : c'est ce que le ruban
+afficherait d'après TOUS les `robot_lights` reçus (page, séquences, télécommande).
+
+- Pont : `apercu_lumieres.Apercu` (pur, horloge injectée) reprend le comportement du vrai
+  `didier_core.actions.lights.Lights` — départ sur `default`, `stop` → repos (toute entrée
+  marquée `"default"` jouée devient le repos), `{"brightness"}` sans effet sur l'animation, nom
+  inconnu ignoré, `msg.time` borne une entrée non bouclée sans changer le minutage des briques,
+  briques « jusqu'à t × durée » et boucle. Relit `robot_lights.json`, `lights_base.json`,
+  `colors.json` s'ils changent. Diffusion : champ `lumieres` du `state` (2 s) + message
+  `lumieres` au changement de brique (boucle à 10 Hz).
+- Page : `static/lumieres.js` (pur, noms `lum*`) dessine chaque méthode d'après les paramètres
+  de `lights_animations.py` (chase 3/6 au pas de 0,1 s, blink 0,5 s, pulse 1 s, color_cycle
+  magenta/orange/turquoise, rainbow 2 s…) ; `scene.js` peint à ~30 i/s, onglet visible. La
+  luminosité réelle du ruban (0,05) n'est pas appliquée à l'écran.
+- **Approximation assumée** : reconnaître l'animation, pas le pixel près. Le ruban virtuel
+  fidèle (le vrai code Adafruit sur un tampon) reste prévu au lot L2c.
+- Relevé en le faisant : `scan` et `transfer` ne montrent jamais leur arc-en-ciel (brique de
+  durée nulle) ; `trip` reste 10 s sur `sea colorcycle`, identique à `color cycle`.
+
+**Bugs joués** (groupe du rail « Préparer ») : un bouton par bug ACCEPTÉ (`GET /api/bugs-joues`),
+qui publie `animation` <id> ; « Couper » publie `animation` false. Infobulle : ce que le public
+voit, durée, classe, réplique prévue ensuite. Les refusés s'affichent avec leurs raisons. Pas de
+sélecteur ici (annonce, réfractaires, rétablissement : lot I1).
+
+Aperçu du visage (`face_sim`, port 8766) : servi normalement le 22/11 (sim `FACE=true`) ; la panne
+« port 8766 muet » du 15/11 n'a pas été reproduite, son correctif reste au lot L2c.
+
+Tests (hôte) : `packages/didier_core/test/unit/test_apercu_lumieres.py` (modèle sur les vraies
+données, valeurs gravées ; dessin de `lumieres.js` joué par `node` quand il est installé, sinon
+ignoré) et `test_web_protocol.py` (ordre des scripts, noms globaux sans collision).
