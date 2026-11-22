@@ -1,7 +1,7 @@
 {
  "expression": {
   "amour neon": {
-   "rejeu": "7d5a3cc3e4dcf79e98e4b25d94368dbe9e346e98970a08ba2e2576c3f9e040df"
+   "rejeu": "bdeff66c69566d6bd90bb170f223e57d0974ab8905096c359b03a41a0f22d42f"
   },
   "bored": {
    "rejeu": "c064076ee2593ec1f7c7035edbbd2b66b3ccf9671dda1aa2648d129bfb61a2eb"
@@ -40,13 +40,22 @@
    "rejeu": "6df5a7436a8bef8a2e5baf8f22972f14e036ad0ad6cee80515fe0623ca89c072"
   },
   "colere": {
-   "rejeu": "bec678f2bdf213cce369f729b75585bf2acd5f2c4bb231da8b780dc71896c62a"
+   "rejeu": "db68a56bfd7a44cfb261b83e022a94ebb79b9921e3f3863da7ec6dcd8b6b4193"
   },
   "default": {
-   "rejeu": "5c33db2aa287d2efb05c4f8c5ddaaafb63d54bfefef2713d9bbbd66a3472cee2"
+   "rejeu": "298c16200c324c68a41f0e589072647deab0ad98c72b8cac5db7aa2c0e1dedd7"
   },
   "default red": {
    "rejeu": "cf63c3edaa9470659254c4592102fa69aba49eb4b132531fd70714d5601cd5ba"
+  },
+  "dodo": {
+   "rejeu": "ec89391ba0471be5b8198a937387556e8404c5232fd7bb7029106e0d666acbec"
+  },
+  "ecoute": {
+   "rejeu": "93ab9c815a1ba86be4db868efaf06bbe36bad53dbadd7e9c773bbf1c1be15e61"
+  },
+  "emerveille": {
+   "rejeu": "ba943e20e8717f24ca2b25f255cc52989b4309b40aa5f64ca782c46b6eb2d4d4"
   },
   "fuzz": {
    "rejeu": "f1df6ed583101a17a5b141ccbd652afee027f83ac57775a7e4f0d1b9cdda424e"
@@ -58,19 +67,22 @@
    "rejeu": "107899024b4998c87d33ca902a13847c1a8ca389683a1bca535cc5bac8ac6d02"
   },
   "joie": {
-   "rejeu": "8c877ae338e0cd1443eb7f01a9de248790abfa4ff802410167c62734dddf3a19"
+   "rejeu": "0bd0e503d23f02fe5c71dbd2111e691201b69159f2de0bf6fb2d144f6632335e"
   },
   "love": {
    "rejeu": "e6397784c2a2bbc56ec332ea05cd1e777334eab5f4dcf251a40623923a31da6c"
+  },
+  "malice": {
+   "rejeu": "480f6901ab849fc0141f11686ca23e87fe8a2886cd06c8eb915475b07ea288cb"
   },
   "off": {
    "rejeu": "55eb222765cc910507bddfed5fe29e7dd000ae5cf1c6643d4b8f2f4c394419cf"
   },
   "parle": {
-   "rejeu": "785f0c8edc087e48c6d6177263e735ab0d5ddeb39319e5cbab1be3159a04fbc2"
+   "rejeu": "a26e8e56011d7dbd15f2d28e65e27330a6b38c914d84d63b1f6a6af2c1330617"
   },
   "reflechit": {
-   "rejeu": "0a4645500f51d534c16d4ead8d968d4a6df202c6f5c49155d9321f46dc1aaf4e"
+   "rejeu": "a44fe96d5d27b4f28ae1d30d51c86a1e018e48fd2c05a046566e8f7abaae659b"
   },
   "repos braise": {
    "rejeu": "d452581090649404d0fc6b2b7579a906beb991248404bf860cd535b1b40ca2bd"
@@ -79,7 +91,7 @@
    "rejeu": "5e5a3f7beaf8747372de1a3320bcdccaf58a3fa54d3a38283fb1777737fc3b5d"
   },
   "repos neon": {
-   "rejeu": "e02b09d6fbb525ffd1ce09eda295909adba211c2c96077ad7b03426b09424341"
+   "rejeu": "4f3e80f44aecf467f31216c71a8544436546682acbd06620b26e4301e810a5e5"
   },
   "scooby-doo": {
    "rejeu": "cd327135da95b113292107b23c3988a8a1f6880355ad2767266af5ccda9a329f"
@@ -97,10 +109,10 @@
    "rejeu": "e5ec6e38a8ab29165623d58c126288877aa741b7068a56ad0fe062ca155bc67b"
   },
   "surprise": {
-   "rejeu": "5796bbefbc25fad3c77effe9fe0bbdb29f666444f3278f843d005de5d1775ce2"
+   "rejeu": "8ec642381c6fd00891c0e6b2810e012e80977e6db2f53326e3d9de30ea1f1995"
   },
   "tristesse": {
-   "rejeu": "bade912110ed17e8eb08b1972ec27ba4f73e37fab5a29f32c15ff934ba408280"
+   "rejeu": "0450388e01f18e530d49731d87c2b87e8682d6d3157c8fa3079d79c1bf64a027"
   },
   "upgrade": {
    "rejeu": "f60563fd16193f8477c7d12f3fc295d7f9b54d4c45eb48ac1b1feda317f871f1"

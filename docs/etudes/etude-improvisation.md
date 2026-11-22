@@ -87,6 +87,9 @@ David. Classe **M** = cou ou bras : vrai robot après le protocole caméra hors 
 Les deux bugs de la classe M reprennent des pannes réellement vécues (visage figé du 13/07, bras
 muet), comme le demande l'étude répétition : on ne joue que des bugs vrais.
 
+Sous l'échelle du bug joué, les **micro-bugs** du visage (quelques LED, moins de 300 ms) servent
+d'annonce et de retombée : [`etude-visage.md`](etude-visage.md) §11, proposé le 22/11.
+
 ### 2.3 Ce qui manque
 
 - les 8 fichiers de séquence (pistes existantes : `faces`, `audios`, `neck`, `left_arm`,

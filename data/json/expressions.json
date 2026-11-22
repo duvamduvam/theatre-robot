@@ -440,7 +440,7 @@
         ]
     },
     "default": {
-        "duration": 5000,
+        "duration": 6000,
         "loop": true,
         "default": true,
         "keys": [
@@ -450,47 +450,139 @@
         "left_eyes": [
             [
                 0.3,
-                "oeil-gauche.png"
+                "v2-oeil-repos-g.png"
             ],
             [
-                0.35,
-                "oeil-fixe.png"
+                0.31,
+                "v2-oeil-repos-mi-g.png"
+            ],
+            [
+                0.325,
+                "v2-oeil-repos-ferme-g.png"
+            ],
+            [
+                0.34,
+                "v2-oeil-repos-mi-g.png"
+            ],
+            [
+                0.5,
+                "v2-oeil-repos-g.png"
+            ],
+            [
+                0.62,
+                "v2-oeil-repos-g-g.png"
+            ],
+            [
+                0.66,
+                "v2-oeil-repos-g.png"
+            ],
+            [
+                0.78,
+                "v2-oeil-repos-d-g.png"
+            ],
+            [
+                0.86,
+                "v2-oeil-repos-h-g.png"
+            ],
+            [
+                0.93,
+                "v2-oeil-repos-g.png"
+            ],
+            [
+                0.94,
+                "v2-oeil-repos-mi-g.png"
+            ],
+            [
+                0.955,
+                "v2-oeil-repos-ferme-g.png"
+            ],
+            [
+                0.965,
+                "v2-oeil-repos-mi-g.png"
+            ],
+            [
+                0.975,
+                "v2-oeil-repos-g.png"
+            ],
+            [
+                0.985,
+                "v2-oeil-repos-ferme-g.png"
             ],
             [
                 1.0,
-                "oeil-gauche.png"
+                "v2-oeil-repos-mi-g.png"
             ]
         ],
         "right_eyes": [
             [
-                0.8,
-                "oeil-droit.png"
+                0.3,
+                "v2-oeil-repos-d.png"
             ],
             [
-                0.85,
-                "oeil-gauche.png"
+                0.31,
+                "v2-oeil-repos-mi-d.png"
+            ],
+            [
+                0.325,
+                "v2-oeil-repos-ferme-d.png"
+            ],
+            [
+                0.34,
+                "v2-oeil-repos-mi-d.png"
+            ],
+            [
+                0.5,
+                "v2-oeil-repos-d.png"
+            ],
+            [
+                0.62,
+                "v2-oeil-repos-g-d.png"
+            ],
+            [
+                0.66,
+                "v2-oeil-repos-d.png"
+            ],
+            [
+                0.78,
+                "v2-oeil-repos-d-d.png"
+            ],
+            [
+                0.86,
+                "v2-oeil-repos-h-d.png"
+            ],
+            [
+                0.93,
+                "v2-oeil-repos-d.png"
+            ],
+            [
+                0.94,
+                "v2-oeil-repos-mi-d.png"
+            ],
+            [
+                0.955,
+                "v2-oeil-repos-ferme-d.png"
+            ],
+            [
+                0.965,
+                "v2-oeil-repos-mi-d.png"
+            ],
+            [
+                0.975,
+                "v2-oeil-repos-d.png"
+            ],
+            [
+                0.985,
+                "v2-oeil-repos-ferme-d.png"
             ],
             [
                 1.0,
-                "oeil-droit.png"
+                "v2-oeil-repos-mi-d.png"
             ]
         ],
         "mouths": [
             [
-                0.5,
-                "bouche-ferme.png"
-            ],
-            [
-                0.52,
-                "bouche-ferme-gauche.png"
-            ],
-            [
-                0.54,
-                "bouche-ferme-droit.png"
-            ],
-            [
                 1.0,
-                "bouche-ferme.png"
+                "v2-bouche-repos.png"
             ]
         ]
     },
@@ -765,87 +857,139 @@
         "left_eyes": [
             [
                 0.3,
-                "oeil-neon-centre.png"
+                "v2-oeil-repos-g.png"
+            ],
+            [
+                0.31,
+                "v2-oeil-repos-mi-g.png"
+            ],
+            [
+                0.325,
+                "v2-oeil-repos-ferme-g.png"
             ],
             [
                 0.34,
-                "oeil-neon-clign.png"
+                "v2-oeil-repos-mi-g.png"
             ],
             [
-                0.38,
-                "oeil-neon-centre.png"
-            ],
-            [
-                0.55,
-                "oeil-neon-gauche.png"
+                0.5,
+                "v2-oeil-repos-g.png"
             ],
             [
                 0.62,
-                "oeil-neon-centre.png"
+                "v2-oeil-repos-g-g.png"
             ],
             [
-                0.8,
-                "oeil-neon-droit.png"
+                0.66,
+                "v2-oeil-repos-g.png"
             ],
             [
-                0.96,
-                "oeil-neon-centre.png"
+                0.78,
+                "v2-oeil-repos-d-g.png"
+            ],
+            [
+                0.86,
+                "v2-oeil-repos-h-g.png"
+            ],
+            [
+                0.93,
+                "v2-oeil-repos-g.png"
+            ],
+            [
+                0.94,
+                "v2-oeil-repos-mi-g.png"
+            ],
+            [
+                0.955,
+                "v2-oeil-repos-ferme-g.png"
+            ],
+            [
+                0.965,
+                "v2-oeil-repos-mi-g.png"
+            ],
+            [
+                0.975,
+                "v2-oeil-repos-g.png"
+            ],
+            [
+                0.985,
+                "v2-oeil-repos-ferme-g.png"
             ],
             [
                 1.0,
-                "oeil-neon-clign.png"
+                "v2-oeil-repos-mi-g.png"
             ]
         ],
         "right_eyes": [
             [
                 0.3,
-                "oeil-neon-centre.png"
+                "v2-oeil-repos-d.png"
+            ],
+            [
+                0.31,
+                "v2-oeil-repos-mi-d.png"
+            ],
+            [
+                0.325,
+                "v2-oeil-repos-ferme-d.png"
             ],
             [
                 0.34,
-                "oeil-neon-clign.png"
+                "v2-oeil-repos-mi-d.png"
             ],
             [
-                0.38,
-                "oeil-neon-centre.png"
-            ],
-            [
-                0.55,
-                "oeil-neon-gauche.png"
+                0.5,
+                "v2-oeil-repos-d.png"
             ],
             [
                 0.62,
-                "oeil-neon-centre.png"
+                "v2-oeil-repos-g-d.png"
             ],
             [
-                0.8,
-                "oeil-neon-droit.png"
+                0.66,
+                "v2-oeil-repos-d.png"
             ],
             [
-                0.96,
-                "oeil-neon-centre.png"
+                0.78,
+                "v2-oeil-repos-d-d.png"
+            ],
+            [
+                0.86,
+                "v2-oeil-repos-h-d.png"
+            ],
+            [
+                0.93,
+                "v2-oeil-repos-d.png"
+            ],
+            [
+                0.94,
+                "v2-oeil-repos-mi-d.png"
+            ],
+            [
+                0.955,
+                "v2-oeil-repos-ferme-d.png"
+            ],
+            [
+                0.965,
+                "v2-oeil-repos-mi-d.png"
+            ],
+            [
+                0.975,
+                "v2-oeil-repos-d.png"
+            ],
+            [
+                0.985,
+                "v2-oeil-repos-ferme-d.png"
             ],
             [
                 1.0,
-                "oeil-neon-clign.png"
+                "v2-oeil-repos-mi-d.png"
             ]
         ],
         "mouths": [
             [
-                0.45,
-                "sourire-neon1.png"
-            ],
-            [
-                0.55,
-                "sourire-neon2.png"
-            ],
-            [
-                0.9,
-                "sourire-neon1.png"
-            ],
-            [
                 1.0,
-                "sourire-neon-smirk.png"
+                "v2-bouche-repos.png"
             ]
         ]
     },
@@ -976,24 +1120,44 @@
         "keys": [],
         "left_eyes": [
             [
+                0.55,
+                "v2-oeil-joie-g.png"
+            ],
+            [
                 1.0,
-                "oeil-joie.png"
+                "v2-oeil-joie-plus-g.png"
             ]
         ],
         "right_eyes": [
             [
+                0.55,
+                "v2-oeil-joie-d.png"
+            ],
+            [
                 1.0,
-                "oeil-joie.png"
+                "v2-oeil-joie-plus-d.png"
             ]
         ],
         "mouths": [
             [
-                0.55,
-                "joie-sourire.png"
+                0.3,
+                "v2-bouche-joie.png"
+            ],
+            [
+                0.4,
+                "v2-bouche-joie-rire.png"
+            ],
+            [
+                0.5,
+                "v2-bouche-joie.png"
+            ],
+            [
+                0.6,
+                "v2-bouche-joie-rire.png"
             ],
             [
                 1.0,
-                "joie-rire.png"
+                "v2-bouche-joie.png"
             ]
         ]
     },
@@ -1004,48 +1168,32 @@
         "keys": [],
         "left_eyes": [
             [
-                0.45,
-                "oeil-colere-gauche.png"
-            ],
-            [
                 0.5,
-                "oeil-colere-flash.png"
+                "v2-oeil-colere-g.png"
             ],
             [
                 1.0,
-                "oeil-colere-gauche.png"
+                "v2-oeil-colere-plisse-g.png"
             ]
         ],
         "right_eyes": [
             [
-                0.45,
-                "oeil-colere-droit.png"
-            ],
-            [
                 0.5,
-                "oeil-colere-flash.png"
+                "v2-oeil-colere-d.png"
             ],
             [
                 1.0,
-                "oeil-colere-droit.png"
+                "v2-oeil-colere-plisse-d.png"
             ]
         ],
         "mouths": [
             [
-                0.45,
-                "colere-zigzag1.png"
-            ],
-            [
                 0.5,
-                "colere-flash.png"
-            ],
-            [
-                0.95,
-                "colere-zigzag2.png"
+                "v2-bouche-colere.png"
             ],
             [
                 1.0,
-                "colere-flash.png"
+                "v2-bouche-colere-gronde.png"
             ]
         ]
     },
@@ -1057,51 +1205,83 @@
         "left_eyes": [
             [
                 0.4,
-                "oeil-triste.png"
+                "v2-oeil-triste-g.png"
             ],
             [
-                0.55,
-                "oeil-triste-larme1.png"
+                0.44,
+                "v2-oeil-triste-mi-g.png"
             ],
             [
-                0.7,
-                "oeil-triste-larme2.png"
+                0.52,
+                "v2-oeil-triste-ferme-g.png"
             ],
             [
-                0.85,
-                "oeil-triste-larme3.png"
+                0.58,
+                "v2-oeil-triste-mi-g.png"
+            ],
+            [
+                0.75,
+                "v2-oeil-triste-g.png"
+            ],
+            [
+                0.92,
+                "v2-oeil-triste-cote-g.png"
             ],
             [
                 1.0,
-                "oeil-triste.png"
+                "v2-oeil-triste-g.png"
             ]
         ],
         "right_eyes": [
             [
-                0.55,
-                "oeil-triste.png"
+                0.4,
+                "v2-oeil-triste-d.png"
             ],
             [
-                0.7,
-                "oeil-triste-larme1.png"
+                0.44,
+                "v2-oeil-triste-mi-d.png"
             ],
             [
-                0.85,
-                "oeil-triste-larme2.png"
+                0.52,
+                "v2-oeil-triste-ferme-d.png"
+            ],
+            [
+                0.58,
+                "v2-oeil-triste-mi-d.png"
+            ],
+            [
+                0.75,
+                "v2-oeil-triste-d.png"
+            ],
+            [
+                0.92,
+                "v2-oeil-triste-cote-d.png"
             ],
             [
                 1.0,
-                "oeil-triste-larme3.png"
+                "v2-oeil-triste-d.png"
             ]
         ],
         "mouths": [
             [
                 0.6,
-                "triste-arc1.png"
+                "v2-bouche-triste.png"
+            ],
+            [
+                0.68,
+                "v2-bouche-triste-tremble.png"
+            ],
+            [
+                0.76,
+                "v2-bouche-triste.png"
+            ],
+            [
+                0.84,
+                "v2-bouche-triste-tremble.png"
             ],
             [
                 1.0,
-                "triste-arc2.png"
+                "v2-bouche-triste.png"
             ]
         ]
     },
@@ -1112,36 +1292,36 @@
         "keys": [],
         "left_eyes": [
             [
-                0.2,
-                "oeil-surprise1.png"
+                0.12,
+                "v2-oeil-surprise-1-g.png"
             ],
             [
                 1.0,
-                "oeil-surprise2.png"
+                "v2-oeil-surprise-g.png"
             ]
         ],
         "right_eyes": [
             [
-                0.2,
-                "oeil-surprise1.png"
+                0.12,
+                "v2-oeil-surprise-1-d.png"
             ],
             [
                 1.0,
-                "oeil-surprise2.png"
+                "v2-oeil-surprise-d.png"
             ]
         ],
         "mouths": [
             [
-                0.15,
-                "surprise-o1.png"
+                0.1,
+                "v2-bouche-surprise-1.png"
             ],
             [
-                0.3,
-                "surprise-o2.png"
+                0.22,
+                "v2-bouche-surprise-2.png"
             ],
             [
                 1.0,
-                "surprise-o3.png"
+                "v2-bouche-surprise-3.png"
             ]
         ]
     },
@@ -1205,55 +1385,55 @@
         "left_eyes": [
             [
                 0.12,
-                "oeil-coeur.png"
+                "v2-oeil-coeur-g.png"
             ],
             [
                 0.2,
-                "oeil-coeur-petit.png"
+                "v2-oeil-coeur-battu-g.png"
             ],
             [
                 0.32,
-                "oeil-coeur.png"
+                "v2-oeil-coeur-g.png"
+            ],
+            [
+                0.4,
+                "v2-oeil-coeur-battu-g.png"
             ],
             [
                 1.0,
-                "oeil-coeur-petit.png"
+                "v2-oeil-coeur-g.png"
             ]
         ],
         "right_eyes": [
             [
                 0.12,
-                "oeil-coeur.png"
+                "v2-oeil-coeur-d.png"
             ],
             [
                 0.2,
-                "oeil-coeur-petit.png"
+                "v2-oeil-coeur-battu-d.png"
             ],
             [
                 0.32,
-                "oeil-coeur.png"
+                "v2-oeil-coeur-d.png"
+            ],
+            [
+                0.4,
+                "v2-oeil-coeur-battu-d.png"
             ],
             [
                 1.0,
-                "oeil-coeur-petit.png"
+                "v2-oeil-coeur-d.png"
             ]
         ],
         "mouths": [
             [
-                0.12,
-                "coeur.png"
-            ],
-            [
-                0.2,
-                "coeur-mini.png"
-            ],
-            [
                 0.32,
-                "coeur.png"
+                "v2-bouche-amour-plus.png"
             ],
             [
                 1.0,
-                "coeur-mini.png"
+                "v2-bouche-amour.png"
             ]
         ]
     },
@@ -1457,47 +1637,39 @@
         "left_eyes": [
             [
                 0.33,
-                "oeil-reflechit-hg.png"
+                "v2-oeil-reflechit-hg-g.png"
             ],
             [
                 0.66,
-                "oeil-reflechit-hc.png"
+                "v2-oeil-reflechit-hc-g.png"
             ],
             [
                 1.0,
-                "oeil-reflechit-hd.png"
+                "v2-oeil-reflechit-hd-g.png"
             ]
         ],
         "right_eyes": [
             [
                 0.33,
-                "oeil-reflechit-hg.png"
+                "v2-oeil-reflechit-hg-d.png"
             ],
             [
                 0.66,
-                "oeil-reflechit-hc.png"
+                "v2-oeil-reflechit-hc-d.png"
             ],
             [
                 1.0,
-                "oeil-reflechit-hd.png"
+                "v2-oeil-reflechit-hd-d.png"
             ]
         ],
         "mouths": [
             [
-                0.25,
-                "chargement1.png"
-            ],
-            [
                 0.5,
-                "chargement2.png"
-            ],
-            [
-                0.75,
-                "chargement3.png"
+                "v2-bouche-reflechit.png"
             ],
             [
                 1.0,
-                "chargement4.png"
+                "v2-bouche-reflechit-cote.png"
             ]
         ]
     },
@@ -1509,39 +1681,51 @@
         "left_eyes": [
             [
                 0.5,
-                "oeil-neon-centre.png"
+                "v2-oeil-parle-g.png"
             ],
             [
                 1.0,
-                "oeil-neon-droit.png"
+                "v2-oeil-parle-d-g.png"
             ]
         ],
         "right_eyes": [
             [
                 0.5,
-                "oeil-neon-centre.png"
+                "v2-oeil-parle-d.png"
             ],
             [
                 1.0,
-                "oeil-neon-gauche.png"
+                "v2-oeil-parle-d-d.png"
             ]
         ],
         "mouths": [
             [
-                0.25,
-                "parle-neon-petit.png"
+                0.12,
+                "v2-bouche-parle-petit.png"
             ],
             [
-                0.5,
-                "parle-neon-grand.png"
+                0.3,
+                "v2-bouche-parle-grand.png"
             ],
             [
-                0.75,
-                "parle-neon-moyen.png"
+                0.4,
+                "v2-bouche-parle-ferme.png"
+            ],
+            [
+                0.58,
+                "v2-bouche-parle-moyen.png"
+            ],
+            [
+                0.7,
+                "v2-bouche-parle-petit.png"
+            ],
+            [
+                0.82,
+                "v2-bouche-parle-ferme.png"
             ],
             [
                 1.0,
-                "parle-neon-ferme.png"
+                "v2-bouche-parle-moyen.png"
             ]
         ]
     },
@@ -1590,6 +1774,178 @@
             [
                 1.0,
                 "bouche-bordure.png"
+            ]
+        ]
+    },
+    "ecoute": {
+        "name": "ecoute",
+        "keys": [],
+        "duration": 4000,
+        "loop": true,
+        "left_eyes": [
+            [
+                0.45,
+                "v2-oeil-ecoute-g.png"
+            ],
+            [
+                0.47,
+                "v2-oeil-ecoute-mi-g.png"
+            ],
+            [
+                0.5,
+                "v2-oeil-ecoute-ferme-g.png"
+            ],
+            [
+                0.53,
+                "v2-oeil-ecoute-mi-g.png"
+            ],
+            [
+                0.8,
+                "v2-oeil-ecoute-g.png"
+            ],
+            [
+                1.0,
+                "v2-oeil-ecoute-penche-g.png"
+            ]
+        ],
+        "right_eyes": [
+            [
+                0.45,
+                "v2-oeil-ecoute-d.png"
+            ],
+            [
+                0.47,
+                "v2-oeil-ecoute-mi-d.png"
+            ],
+            [
+                0.5,
+                "v2-oeil-ecoute-ferme-d.png"
+            ],
+            [
+                0.53,
+                "v2-oeil-ecoute-mi-d.png"
+            ],
+            [
+                0.8,
+                "v2-oeil-ecoute-d.png"
+            ],
+            [
+                1.0,
+                "v2-oeil-ecoute-penche-d.png"
+            ]
+        ],
+        "mouths": [
+            [
+                1.0,
+                "v2-bouche-ecoute.png"
+            ]
+        ]
+    },
+    "emerveille": {
+        "name": "emerveille",
+        "keys": [],
+        "duration": 1500,
+        "loop": true,
+        "left_eyes": [
+            [
+                0.5,
+                "v2-oeil-emerveille-g.png"
+            ],
+            [
+                1.0,
+                "v2-oeil-emerveille-brille-g.png"
+            ]
+        ],
+        "right_eyes": [
+            [
+                0.5,
+                "v2-oeil-emerveille-d.png"
+            ],
+            [
+                1.0,
+                "v2-oeil-emerveille-brille-d.png"
+            ]
+        ],
+        "mouths": [
+            [
+                0.5,
+                "v2-bouche-emerveille.png"
+            ],
+            [
+                1.0,
+                "v2-bouche-emerveille-plus.png"
+            ]
+        ]
+    },
+    "malice": {
+        "name": "malice",
+        "keys": [],
+        "duration": 3000,
+        "loop": false,
+        "left_eyes": [
+            [
+                0.55,
+                "v2-oeil-malice-g.png"
+            ],
+            [
+                0.75,
+                "v2-oeil-malice-clin-g.png"
+            ],
+            [
+                1.0,
+                "v2-oeil-malice-g.png"
+            ]
+        ],
+        "right_eyes": [
+            [
+                0.55,
+                "v2-oeil-malice-d.png"
+            ],
+            [
+                0.75,
+                "v2-oeil-malice-clin-d.png"
+            ],
+            [
+                1.0,
+                "v2-oeil-malice-d.png"
+            ]
+        ],
+        "mouths": [
+            [
+                0.55,
+                "v2-bouche-malice.png"
+            ],
+            [
+                1.0,
+                "v2-bouche-malice-plus.png"
+            ]
+        ]
+    },
+    "dodo": {
+        "name": "dodo",
+        "keys": [],
+        "duration": 4000,
+        "loop": true,
+        "left_eyes": [
+            [
+                1.0,
+                "v2-oeil-dodo-g.png"
+            ]
+        ],
+        "right_eyes": [
+            [
+                1.0,
+                "v2-oeil-dodo-d.png"
+            ]
+        ],
+        "mouths": [
+            [
+                0.5,
+                "v2-bouche-dodo.png"
+            ],
+            [
+                1.0,
+                "v2-bouche-dodo-souffle.png"
             ]
         ]
     }
