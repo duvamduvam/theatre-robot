@@ -22,9 +22,9 @@ from test.unit.test_director_node import (BATTERIE, LUBIE, _cmd, _creer, _echos,
                                                  _fader, _journal, _poi, _publie, _recevoir, _tick_a,
                                                  _voix, regisseur)  # noqa: F401 (fixture)
 
-# Banc de ce test sans fichier de tours : taille INCONNUE -> arrêt prudent à 2,5 m du centre
-# (revue O1, 19/11 : director.standoff_pour).
-ORDRE_BANC = {"name": "banc", "x": 5.0, "y": 0.0, "standoff": 2.5}
+# Banc de ce test sans fichier de tours : taille INCONNUE -> arrêt prudent à 1,5 + 0,90 (garde du
+# corps sûr de la sim, A0-4) + 0,5 = 2,9 m du centre (director.standoff_pour).
+ORDRE_BANC = {"name": "banc", "x": 5.0, "y": 0.0, "standoff": 2.9}
 
 
 def _odom(noeud, x, y, t=None):

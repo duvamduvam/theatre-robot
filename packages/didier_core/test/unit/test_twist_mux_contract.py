@@ -58,12 +58,22 @@ def test_priorites_remote_100_web_50_follow_20_anim_10():
             > topics["anim"]["priority"])
 
 
-def test_web_ecoute_bien_cmd_vel_web():
-    assert _params()["topics"]["web"]["topic"] == "cmd_vel_web"
+# Lot A0-4 (20/11, spec docs/spec-A0-corps-sur.md §3.1) : les trois entrées AUTONOMES sont les
+# sorties du corps sûr (didier_corps_sur), plus les demandes brutes ; la télécommande reste brute.
+def test_web_ecoute_bien_cmd_vel_web_sur():
+    assert _params()["topics"]["web"]["topic"] == "cmd_vel_web_sur"
 
 
-def test_follow_ecoute_bien_cmd_vel_follow():
-    assert _params()["topics"]["follow"]["topic"] == "cmd_vel_follow"
+def test_follow_ecoute_bien_cmd_vel_follow_sur():
+    assert _params()["topics"]["follow"]["topic"] == "cmd_vel_follow_sur"
+
+
+def test_anim_ecoute_bien_cmd_vel_anim_sur():
+    assert _params()["topics"]["anim"]["topic"] == "cmd_vel_anim_sur"
+
+
+def test_la_telecommande_ne_passe_pas_par_le_corps_sur():
+    assert _params()["topics"]["remote"]["topic"] == "cmd_vel_remote"
 
 
 def test_tous_les_timeouts_topics_a_un_demi_seconde():

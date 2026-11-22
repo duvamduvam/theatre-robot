@@ -16,9 +16,10 @@ cd /home/ros2_ws/
 
 # build/ et install/ ne sont pas persistés (décision 11) : colcon à chaque `up`, jamais d'install
 # périmé. La liste = les packages copiés par monde/Dockerfile (didier_core : bibliothèque de la
-# répétition et du jeu, aucun de ses nœuds n'est lancé ici).
+# répétition et du jeu, aucun de ses nœuds n'est lancé ici ; didier_corps_sur : relancé par les
+# épreuves CS seulement, A0-4).
 colcon build --packages-select theatre_contrats theatre_interfaces dadou_utils_ros didier_core \
-    didier_description didier_sim didier_rehearsal didier_jeu
+    didier_description didier_sim didier_rehearsal didier_jeu didier_corps_sur
 source /home/ros2_ws/install/setup.bash
 
 # Audios privés (14/11) : medias/audios/ est le dossier privé du PC monté en lecture seule

@@ -500,7 +500,7 @@ R=$PWD
 (cd packages/didier_jeu        && $R/.venv/bin/python -m pytest -q -o addopts=)
 (cd packages/theatre_contrats  && $R/.venv/bin/python -m pytest -q -o addopts=)
 (cd packages/didier_perception && $R/.venv/bin/python -m pytest -q -o addopts=)   # tableau des objets (O0)
-(cd packages/didier_corps_sur  && $R/.venv/bin/python -m pytest -q -o addopts=)   # corps sûr (A0), logique pure
+(cd packages/didier_corps_sur  && $R/.venv/bin/python -m pytest -q -o addopts=)   # corps sûr (A0) : logique, moteur, contrat du nœud
 (cd legacy/dadou_control_ros   && $R/.venv/bin/python -m pytest -q -o addopts=)   # télécommande (→ L4)
 (cd packages/didier_vision     && $R/packages/didier_vision/.venv/bin/python -m pytest -q -o addopts=)
 ```
@@ -661,6 +661,54 @@ ni sur GitHub ; `~/tmp` plutôt que `~/.local/state`, précision du même soir).
 `up`. **À la main : `mkdir -p ~/tmp/didier-sim/{log,log-vision,log-telecommande}` avant
 `docker compose up`**, sinon Docker le crée root. Fichiers écrits par les conteneurs = root :
 effacer via un conteneur (`docker run --rm -v ~/tmp/didier-sim:/j alpine rm -rf /j/log/…`).
+
+## Horloge simulée : `/clock` décimé à 200 Hz (21/11)
+
+**Le piège.** Gazebo publie son horloge à CHAQUE pas de physique (1 ms). Le pont ros_gz la relayait
+telle quelle : ≈ 954 Hz mesurés, avec des trous jusqu'à 258 ms vus par un abonné. Chaque nœud
+Python en `use_sim_time` traite chaque message : 38 à 62 % d'un cœur CHACUN (corps_sur 62 %,
+servos_sim 55 %, deadman 38 %), contre ≈ 1 % pour un nœud Python sans horloge simulée. Sous
+charge, un nœud ainsi occupé se fige plus de 0,30 s. Le corps sûr se verrouillait alors seul
+(`capteur_perdu`), et la fumée 2026-11-21-1929 est tombée en V-R3.
+
+**La parade, côté sim seulement** (décision du 21/11 : ni la règle ni son seuil de 0,30 s ne
+bougent). `/clock` n'est plus dans `gz_bridge.yaml`. Le nœud C++ `relais_horloge`
+(`packages/didier_sim/src/relais_horloge.cpp`, lancé par `monde.launch.py`) s'abonne au topic gz
+`/clock` par gz-transport. Il publie `/clock` côté ROS une fois par 5 ms d'horloge SIMULÉE (200 Hz,
+gravé par `test_relais_horloge.py`), au temps exact du pas. La physique reste à 1 ms : la
+diff-drive et les contacts ne changent pas. Mesuré sur une sim chantiers au repos : 199 Hz, pas de
+5,00 ms, aucun trou ; corps_sur 15 %, servos_sim 13 %, deadman 10 % ; le relais 7 %.
+
+**Ce que ça change pour les minuteries** : l'horloge des nœuds ROS avance par pas de 5 ms. Une
+minuterie sur horloge simulée part donc jusqu'à 5 ms en retard. C'est le cas du tic de 50 ms du
+corps sûr, de son chien de garde de 0,30 s, du deadman de 0,40 s et des chronos des épreuves
+(porte de l'étude : 200 ms). Les horodatages des capteurs gz restent exacts : un `scan` peut
+paraître jusqu'à 5 ms « en avance » sur l'horloge du nœud, ce qui est sans effet sur `trop_vieux`.
+
+- Le relais est **facultatif à la construction** : didier_sim se construit aussi dans le
+  conteneur robot et sur le Pi, qui n'ont pas gz-transport. Le CMakeLists le saute alors. Sans le
+  relais, `monde.launch.py` échoue bruyamment.
+- Figé ou mort, le relais arrête l'horloge simulée pour TOUS, comme une pause de Gazebo. Aucun
+  verrou n'en naît. Le SIGSTOP de `pont_lidar` (CS8) ne touche pas `/clock`.
+- Mesurer : un abonné rclpy fiable compte `/clock` pendant 20 s ; `top` dans `monde` voit tous
+  les conteneurs (espace de processus partagé).
+
+## Fast DDS en UDP seul dans la sim (21/11)
+
+**Le piège.** En mémoire partagée (le transport par défaut de Fast DDS entre participants du même
+hôte), un abonné rclpy se FIGE de 0,33 à 0,43 s, sans perte de message, une dizaine de fois en
+4 min de répétition. Les gels tombent sur une grille de 3 s (période des annonces de Fast DDS). Le
+corps sûr en faisait les frais : `capteur_perdu`, verrou, V-R3 rouge (fumées 2026-11-21-1929 et
+-2042). Ce n'était ni le capteur (aucun trou dans les horodatages gz des scans), ni l'horloge
+(aucun trou dans le temps simulé de `/clock`), ni l'ordonnanceur : une boucle Python nue, sans
+ROS, dans les mêmes conteneurs, n'a eu AUCUN réveil en retard de plus de 50 ms sur 300 s.
+
+**La parade.** `FASTDDS_BUILTIN_TRANSPORTS=UDPv4` dans les quatre services de
+`machines/sim/docker-compose.yml` (gravé par `test_compose_sim.py`). Même essai, même charge :
+zéro gel, aucun verrou. Sim seulement : le Pi n'est pas touché. Sur le robot, la fréquence de ces
+gels est à MESURER en A0-6/A0-7 avant tout roulage autonome (corps sûr et lidar réel).
+Une commande `docker exec … ros2 …` dans un conteneur hérite de l'UDP. Un participant SHM (sans
+la variable) parle encore aux autres, par UDP.
 
 ## Mémoire partagée Fast DDS : le ménage au démarrage (18/11)
 
@@ -1000,6 +1048,47 @@ Le script contient sa propre perception scriptée et joue la console et la bouch
 il rend T1-T7 (spec §6) et un code de retour. La séance Chantiers *sans*
 `jeu:=true` reste vérifiée par `validate-rehearsal-chantiers.sh` (V-R3).
 
+## Corps sûr — le filtre des roues autonomes (lot A0-4, 20/11)
+
+Spec `docs/spec-A0-corps-sur.md` ; package `packages/didier_corps_sur` (son README : contrat,
+conventions, mutants, points ouverts). Le nœud `/didier/corps_sur` est lancé par
+`drive.launch.py` (sans relance) DEVANT `twist_mux` : `cmd_vel_anim`, `cmd_vel_follow` et
+`cmd_vel_web` sont des DEMANDES, le mux lit `cmd_vel_*_sur`. `cmd_vel_remote` n'y passe pas.
+
+- **Configurations** : sim = `machines/sim/robot/corps_sur.yaml` (passée par l'entrée du conteneur
+  `robot`, refusée hors domaine 43) ; robot = `machines/robot/corps_sur.yaml` (défaut du lancement,
+  `src/robot/conf/corps_sur.yaml` sur le Pi). Toute valeur changée = son test gravé
+  (`test_configs_machines.py`) dans le même commit.
+- **Lire l'état** (latché, `--qos-durability transient_local` obligatoire, sinon rien) :
+  `ros2 topic echo --qos-durability transient_local --qos-reliability reliable /didier/corps_sur/etat theatre_interfaces/msg/StringTime`
+  ; diagnostics à 1 Hz sur `/didier/diagnostics` (âge du dernier balayage, rayons, points
+  valides, dernier refus par canal, durée du rappel `scan`).
+- **Réarmer** après un VERROU (capteur perdu, superviseur perdu, `e_stop`) : la cause doit avoir
+  disparu et le lidar être sain depuis 1 s, sinon refus journalisé —
+  `ros2 topic pub --once /didier/corps_sur/rearmer std_msgs/msg/Empty "{}"`. Relâcher `e_stop`
+  rend la télécommande, PAS l'autonomie. (Page scène : A0-5.)
+- **Sur le robot sans lidar** (aujourd'hui) : DEMARRAGE `capteur_absent` permanent, aucune
+  source autonome ne fait tourner les roues ; la télécommande conduit comme avant.
+- **Épreuves CS** (monde `stage` OBLIGATOIRE : obstacle et passant scriptés) :
+  `HEADLESS=true WORLD=stage docker compose up -d` puis
+  `docker exec didier-sim-monde bash /home/ros2_ws/validate-corps-sur.sh` (25 verdicts, ≈ 15 min ;
+  sous-ensemble : `docker exec -e CS_SEULEMENT=CS2,CS3 …`). L'épreuve relance le nœud depuis
+  `monde` (journal : `log/corps-sur-cs.log`), fige `pont_lidar` (SIGSTOP), tue le filtre : en fin
+  d'épreuve la configuration de la sim est remise et vérifiée, mais c'est le nœud relancé par
+  l'épreuve qui tourne — pour retrouver le bringup intact, relancer la sim.
+- **Pièges** : un `ros2 topic pub` sur `cmd_vel_follow` ne fait plus bouger Didier sans lidar
+  sain (sim : `pont_lidar` vivant) ; pour conduire sans filtre, `cmd_vel_remote` (la
+  télécommande). Une pause des conteneurs (garde thermique) fige l'horloge simulée ET le pilote :
+  sans conséquence sur les mesures, mais une fumée rouge après des pauses se RELANCE.
+- **Le corps sûr du bringup dans la fumée** (21/11) : avant edition, V-R3, A1, OBJ et CONV,
+  `machines/sim/corps_sur_bringup.py` (lancé dans `monde`) exige ARME sur le terrain `sim`. Il
+  réarme un VERROU `capteur_perdu` spontané (nœud figé par la charge du PC), lui seul, deux fois
+  au plus par épreuve, et le dit sur la page. Tout autre état rend l'épreuve rouge, avec l'état lu
+  (`corps-sur-bringup.log`). Un verrou né pendant l'épreuve est dit sur la page. Le journal
+  complet du conteneur robot d'un rouge est dans `conteneur-<phase>.tar.gz` (`robot-docker.log`).
+  Les `docker-didier-sim-*.log` du brut ne sont que la capture du DÉMARRAGE : ils s'arrêtent dès
+  que colcon a fini.
+
 ## Fumée automatique — la sim rejouée toute seule (lot F, 07/11)
 
 Un script shell (`machines/sim/fumee.sh` depuis L1e-4c, zéro token) rejoue sur le **checkout de main** toutes
@@ -1019,10 +1108,12 @@ domaine 43 lu dans les 4 conteneurs, colcon ×4 sans échec, pont gz, `noeuds_at
 < 0,8 : le reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.sh` →
 animation `parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) →
 `validate-data-edit.sh` (L1d, 13 épreuves ; sim lancée avec `DATA_EDIT=true`) →
-`validate-machines.sh` (L2b, M1-M4 et M6) → régisseur (`monde`) + regard (`robot`) puis
+`validate-machines.sh` (L2b, M1-M4 et M6) → **sim relancée sur le monde `stage`,
+`validate-corps-sur.sh` (CS, A0-4, 25 verdicts, rouge BLOQUANT, ≈ 15 min ; section « Corps sûr »)**
+→ sim relancée sur `chantiers`, régisseur (`monde`) + regard (`robot`) puis
 `validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh` (A1) → sim relancée
 AVEC LA TÊTE, `validate-conversation.sh` (CONV, 16/11, ci-dessous). La chaîne roues n'est plus
-lancée par la fumée : elle fait partie du bringup du robot. ≈ 55-60 min.
+lancée par la fumée : elle fait partie du bringup du robot (corps sûr compris). ≈ 75-80 min.
 
 **Épreuve de conversation scriptée (CONV, 16/11)** — `machines/sim/validate-conversation.sh`,
 19 contrôles gravés, seule épreuve où la tête tourne : la sim est relancée avec la surcouche

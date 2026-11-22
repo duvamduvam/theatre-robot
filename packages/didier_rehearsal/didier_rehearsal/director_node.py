@@ -119,6 +119,7 @@ from theatre_contrats import objets as tableau_objets
 from theatre_contrats import stringtime, topics
 
 from didier_core.diagnostic.journal import JournalWriter, make_event
+from didier_corps_sur.reglages import ReglagesError, charger_reglages
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
                                        CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC, JOURNAL_TOPIC,
@@ -128,7 +129,7 @@ from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD,
                                        ROUTE_STATE_TOPIC, check_domain)
 from didier_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
                                       decide_forward, decide_goto, decide_tour, decide_turn, fader_moved,
-                                      goto_order,
+                                      garde_corps_sur_m, goto_order,
                                       messages, move_reply, objects_payload, poi_name_of,
                                       route_cmd_kind, speed_factor, speed_in_effect)
 from didier_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
@@ -166,10 +167,23 @@ class DirectorNode(Node):
         # au plus tard max — ensuite la relance EXPIRE et le journal le dit.
         self.declare_parameter("reenable_min_delay_s", 6.0)
         self.declare_parameter("reenable_max_delay_s", 30.0)
+        # A0-4 (22/11) : configuration du corps sûr de la machine (le MÊME fichier que le nœud
+        # corps_sur : machines/sim/robot/corps_sur.yaml en sim, passé par rehearsal.launch.py).
+        # « Aller voir » gare Didier hors de sa bande d'arrêt (director.garde_corps_sur_m).
+        # Absente ou refusée = refus AU DÉMARRAGE : jamais de standoff deviné.
+        self.declare_parameter("corps_sur_config", "")
 
         path = str(self.get_parameter("scenario_file").value)
         if not path:
             raise RuntimeError("scenario_file manquant")
+        corps_sur_config = str(self.get_parameter("corps_sur_config").value)
+        if not corps_sur_config:
+            raise RuntimeError("corps_sur_config manquant (configuration du corps sûr de la machine)")
+        try:
+            self._garde_corps_m = garde_corps_sur_m(charger_reglages(corps_sur_config,
+                                                                     os.environ.get("ROS_DOMAIN_ID")))
+        except (ReglagesError, ValueError) as e:
+            raise RuntimeError(f"corps sûr illisible ({corps_sur_config}) : {e}") from e
         route_file = str(self.get_parameter("route_file").value)
         self._poi_lubie = {}   # nom de POI -> champ lubie de l'itinéraire
         self._pois = ()        # POI de l'itinéraire : vocabulaire d'« aller voir » (lot M1)
@@ -614,7 +628,7 @@ class DirectorNode(Node):
                     name=decision.objet.nom if decision.effect == "accepted" else None)
         if decision.effect != "accepted":
             return
-        self._accept_maneuver(decision.objet.nom, goto_order(decision.objet), "aller_voir", now,
+        self._accept_maneuver(decision.objet.nom, goto_order(decision.objet, self._garde_corps_m), "aller_voir", now,
                               target=poi_name_of(decision.objet))
 
     def _geste(self, intent: dict):

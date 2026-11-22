@@ -1,0 +1,77 @@
+# Corps sûr de Didier — configuration de la SIM (spec docs/spec-A0-corps-sur.md §5.4, colonne
+# « sim »). Montée en lecture seule dans le conteneur robot (/home/ros2_ws/sim/corps_sur.yaml) par
+# machines/sim/docker-compose.yml et passée au lancement par robot/entree.sh
+# (corps_sur_config:=…). Refusée hors ROS_DOMAIN_ID=43 (borne dure, reglages.py).
+# Gravée par packages/didier_corps_sur/test/test_configs_machines.py ; la pose du lidar est
+# gravée égale aux défauts du xacro gz (packages/didier_core/test/unit/test_urdf.py).
+terrain: sim
+
+# Rectangle de la caisse : défauts de la spec §4.1 (la sim garde les défauts).
+caisse:
+  x_avant: 0.30
+  x_arriere: -0.57
+  demi_largeur: 0.40
+  x_essieu: 0.10
+  rayon_balayage: 0.65
+
+lidar:
+  # = défauts du xacro gz (lidar_x 0,33 ; lidar_y 0 ; lidar_lacet 0) : pose A, face avant, plan à
+  # 0,25 m du sol (lidar_z 0,02, sol à −0,23).
+  x: 0.33
+  y: 0.0
+  lacet_rad: 0.0
+  hauteur_plan_m: 0.25
+  # Masque mesuré en sim le 19/11 (tools/mesurer_masques.py, pose 25 cm) : [96.64, -96.64].
+  # On garde le PROVISOIRE du package, [90, 270], qui le recouvre de 6,6° de chaque côté :
+  # aucun auto-retour hors masque (sinon retour_dans_caisse = ARRET permanent).
+  masques_deg:
+    - [90.0, 270.0]
+  # Témoin : l'auto-retour de la sim est un artefact de portée minimale (README du package,
+  # point ouvert 4) — non exigé.
+  temoin:
+    exige: false
+    secteur_deg: null
+    distance_m: null
+    points_min: 0
+
+balayage:
+  portee_min_m: 0.05
+  portee_max_m: 12.0
+  # Échelon 1 de la spec §8.2 retenu en A0-2 (500 rayons, 10 Hz) : 300 au moins.
+  rayons_min: 300
+  age_max_reception_s: 0.25
+
+zones:
+  marge_arret_m: 0.60
+  marge_ralenti_m: 1.20
+  facteur_ralenti: 0.5
+  hysteresis_m: 0.05
+  balayages_de_sortie: 3
+
+couverture:
+  part_aveugle_max: 0.10
+  # Décision de David du 18/11 (spec §13, réponse 1) : « Sim et maison : pose A, avec
+  # angulaire_aveugle_autorise vrai ». En sim, personne sur les flancs.
+  angulaire_aveugle_autorise: true
+  w_max_aveugle: 1.0          # §5.4 : 1,0 en sim (personne)
+
+# §5.4, colonne sim : follow et web = ABS_MAX des sources et défauts de web_bridge (aucun
+# changement de comportement) ; anim ≥ borne des données (consigne ≤ 0,89 par roue, ω ≤ 3,07).
+canaux:
+  anim:   {v_max: 0.9, w_max: 3.2}
+  follow: {v_max: 0.5, w_max: 1.0}
+  web:    {v_max: 0.5, w_max: 1.0}
+
+capteur:
+  perime_s: 0.30
+  sante_s: 1.0
+
+superviseur:
+  # Les épreuves existantes n'ont pas de battement (§5.4).
+  exige: false
+  perime_s: 1.0
+
+duree:
+  # 0 = désactivée : en sim, la vérité terrain tient lieu d'odométrie (§5.4).
+  duree_max_mouvement_s: 0.0
+  pause_s: 1.0

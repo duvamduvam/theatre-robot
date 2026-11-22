@@ -9,6 +9,10 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <!-- relais_horloge (C++, 21/11), FACULTATIF : gz_transport_vendor et gz_msgs_vendor ne sont PAS
+       déclarés (le Pi construit didier_sim sans Gazebo) ; le CMakeLists le saute s'ils manquent. -->
+  <depend>rclcpp</depend>
+  <depend>rosgraph_msgs</depend>
   <exec_depend>didier_description</exec_depend>
   <exec_depend>xacro</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>

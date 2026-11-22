@@ -16,6 +16,7 @@ Revue adversariale R3 (2026-10-14) — mutations listées dans le rapport du lot
 """
 import importlib
 import json
+import pathlib
 import sys
 import types
 
@@ -100,6 +101,10 @@ class _StringTime:
         self.anim = anim
 
 
+
+# A0-4 (22/11) : configuration du corps sûr de la sim, celle que rehearsal.launch.py passe au régisseur.
+CONF_CORPS_SUR_SIM = str(pathlib.Path(__file__).resolve().parents[4] / "machines" / "sim" / "robot" / "corps_sur.yaml")
+
 class _QoS:
     def __init__(self, depth=10, durability="VOLATILE"):
         self.depth = depth
@@ -158,7 +163,9 @@ def _creer(regisseur, monkeypatch, tmp_path, faults, *, duration_s=300, **params
     scenario.write_text(yaml.safe_dump({"name": "essai", "seed": 0, "duration_s": duration_s,
                                         "faults": faults}, allow_unicode=True), encoding="utf-8")
     imposes = {"scenario_file": str(scenario), "route_file": str(route),
-               "journal_dir": str(tmp_path / "journal")}
+               "journal_dir": str(tmp_path / "journal"),
+               # A0-4 : le VRAI fichier du corps sûr de la sim (garde d'« aller voir »).
+               "corps_sur_config": CONF_CORPS_SUR_SIM}
     imposes.update(params)
     monkeypatch.setattr(_NodeFactice, "imposes", imposes)
     noeud = regisseur.DirectorNode()
@@ -961,3 +968,13 @@ def test_etat_ne_trahit_jamais_le_tirage(regisseur, monkeypatch, tmp_path):
     assert _publie(n, "rehearsal/state") == [SEANCE_ATTENTE, SEANCE_EN_COURS]
     for texte in _publie(n, "rehearsal/state"):
         assert sorted(json.loads(texte)) == ["arret_vocal", "seance"]
+
+
+def test_sans_corps_sur_le_regisseur_refuse_de_demarrer(regisseur, monkeypatch, tmp_path):
+    """A0-4 : jamais de standoff deviné — configuration du corps sûr absente ou refusée = refus."""
+    with pytest.raises(RuntimeError, match="corps_sur_config manquant"):
+        _creer(regisseur, monkeypatch, tmp_path, [], corps_sur_config="")
+    faux = tmp_path / "corps_sur.yaml"
+    faux.write_text("terrain: sim\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="corps sûr illisible"):
+        _creer(regisseur, monkeypatch, tmp_path, [], corps_sur_config=str(faux))

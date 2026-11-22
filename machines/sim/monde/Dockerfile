@@ -59,6 +59,8 @@ COPY --from=dadou_utils_ros . /home/ros2_ws/src/dadou_utils_ros
 COPY --from=didier_jeu . /home/ros2_ws/src/didier_jeu
 COPY --from=didier_rehearsal . /home/ros2_ws/src/didier_rehearsal
 COPY --from=didier_core . /home/ros2_ws/src/didier_core
+# Lot A0-4 : le corps sûr, relancé par les épreuves CS (validate-corps-sur.sh) depuis ce conteneur.
+COPY --from=didier_corps_sur . /home/ros2_ws/src/didier_corps_sur
 COPY entree.sh /home/ros2_ws/entree.sh
 
 # json/ : robot_lights.json, lights_base.json, colors.json lus par leds_sim_node (mêmes fichiers

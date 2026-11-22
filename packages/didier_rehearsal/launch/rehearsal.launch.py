@@ -128,6 +128,9 @@ def _director(scenario_file, route_file, condition, remappings):
             "speed": ParameterValue(LaunchConfiguration("speed"), value_type=float),
             "seed": ParameterValue(LaunchConfiguration("seed"), value_type=int),
             "autostart": ParameterValue(LaunchConfiguration("autostart"), value_type=bool),
+            # A0-4 (22/11) : le corps sûr de la SIM (le régisseur ne vit qu'en domaine 43), le
+            # même fichier que lit le nœud corps_sur du conteneur robot ; monde monte machines/.
+            "corps_sur_config": "/home/ros2_ws/machines/sim/robot/corps_sur.yaml",
         }],
         remappings=remappings,
         condition=condition,

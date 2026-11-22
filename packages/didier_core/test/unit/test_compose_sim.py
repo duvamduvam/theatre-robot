@@ -28,10 +28,13 @@ SERVICES = {
                      "legacy/dadou_control_ros/conf/docker/x86/Dockerfile-x86"),
 }
 # Les packages du conteneur `monde` (décision 18 : Dockerfile-sim moins bringup, drive, web).
-PACKAGES_MONDE = ["dadou_utils_ros", "didier_core", "didier_description", "didier_jeu", "didier_rehearsal",
-                  "didier_sim", "theatre_contrats", "theatre_interfaces"]
+# A0-4 (20/11) : + didier_corps_sur, que les épreuves CS relancent depuis monde (aucun launch de
+# monde ne le démarre).
+PACKAGES_MONDE = ["dadou_utils_ros", "didier_core", "didier_corps_sur", "didier_description", "didier_jeu",
+                  "didier_rehearsal", "didier_sim", "theatre_contrats", "theatre_interfaces"]
 INTERDITS_MONDE = {"didier_core", "didier_drive", "didier_web"}   # aucun de leurs exécutables dans monde
-EPREUVES = ["validate-catalogue.sh", "validate-conversation.sh", "validate-data-edit.sh", "validate-jeu-a1.sh",
+EPREUVES = ["validate-catalogue.sh", "validate-conversation.sh", "validate-corps-sur.sh", "validate-data-edit.sh",
+            "validate-jeu-a1.sh",
             "validate-machines.sh",
             "validate-namespace.sh", "validate-objets.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
             "validate-rehearsal-route.sh"]
@@ -40,7 +43,7 @@ EXEC_ROBOT = ('exec /bin/bash /home/ros2_ws/src/robot/conf/scripts/launch-ros-in
               'use_sim_time:=true camera_topic:=camera/image_raw camera_compressed:=false '
               'perception_topic:=camera/image_raw/compressed exterior_topic:=camera_ext/image_raw '
               'web_port:=${WEB_PORT:-8765} web_drive:=${WEB_DRIVE:-false} rehearsal:=${REHEARSAL:-false} '
-              'exiger_validation_roues:=false')
+              'exiger_validation_roues:=false corps_sur_config:=/home/ros2_ws/sim/corps_sur.yaml')
 
 
 def _compose(chemin=COMPOSE):
@@ -86,6 +89,13 @@ def test_domaine_43_en_litteral_partout_et_jamais_lu_dans_l_environnement():
     for f in sorted(SIM.glob("*.yml")):
         assert "${ROS_DOMAIN_ID" not in f.read_text(encoding="utf-8"), f.name
         assert "ROS_DOMAIN_ID=42" not in f.read_text(encoding="utf-8"), f.name
+
+
+def test_fast_dds_en_udp_seul_dans_les_quatre_services():
+    """21/11 : en mémoire partagée, des abonnés rclpy se figeaient 0,33-0,43 s (le corps sûr se
+    verrouillait) ; en UDP seul, zéro gel sur le même essai. Gravé : aucun service sans."""
+    for nom, s in _services().items():
+        assert _env(s)["FASTDDS_BUILTIN_TRANSPORTS"] == "UDPv4", nom
 
 
 def test_reseau_et_ipc_de_l_hote_partout():

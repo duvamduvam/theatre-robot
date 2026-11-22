@@ -13,6 +13,9 @@
 #     exiger_validation_roues:=false (décision de David du 15/11) : la barrière de jeu est levée en
 #     sim — il faut bien y jouer la piste roues qu'on vient y valider ; animations_node l'ignore
 #     hors domaine 43.
+#     corps_sur_config:=/home/ros2_ws/sim/corps_sur.yaml (lot A0-4) : la configuration du corps
+#     sûr pour la SIM (machines/sim/robot/corps_sur.yaml, montée en lecture seule par le compose),
+#     refusée par le nœud hors domaine 43 ; sur le Pi, drive.launch.py lit celle de la machine.
 if [ "${ROS_DOMAIN_ID:-}" != 43 ]; then
     echo "REFUS : ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-absent}, le robot simulé ne tourne qu'en 43"
     exit 2
@@ -37,4 +40,4 @@ exec /bin/bash /home/ros2_ws/src/robot/conf/scripts/launch-ros-in-docker.sh \
     camera_topic:=camera/image_raw camera_compressed:=false \
     perception_topic:=camera/image_raw/compressed exterior_topic:=camera_ext/image_raw \
     web_port:=${WEB_PORT:-8765} web_drive:=${WEB_DRIVE:-false} rehearsal:=${REHEARSAL:-false} \
-    exiger_validation_roues:=false
+    exiger_validation_roues:=false corps_sur_config:=/home/ros2_ws/sim/corps_sur.yaml

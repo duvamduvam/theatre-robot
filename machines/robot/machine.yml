@@ -27,7 +27,7 @@ unites_systemd:
 # conteneur (rôle conteneur). FAUX dans le dépôt — le passer à vrai est une décision de David,
 # après sa validation de L1d et une relecture adverse. Essai ponctuel : -e edition_donnees=true.
 edition_donnees: false
-# Contrôle de fin de déploiement (rôle conteneur) : les 17 nœuds du robot seul
+# Contrôle de fin de déploiement (rôle conteneur) : les 18 nœuds du robot seul
 # (vision_status vient du Pi vision, il n'est pas exigé ici). Un nœud renommé ou
 # ajouté au launch = cette liste à suivre (relays_node et wheels_node tournent même
 # sans carte I²C : hors robot ils restent présents).
@@ -35,6 +35,9 @@ noeuds_attendus:
   - /didier/animations_node
   - /didier/audio_node
   - /didier/catalogue_node
+  # A0-4 : le corps sûr, TOUJOURS vivant, même sans lidar (il reste alors en DEMARRAGE
+  # « capteur_absent »). Le pilote du lidar (lidar_node, A0-6) n'est pas exigé ici.
+  - /didier/corps_sur
   # L1d : l'écrivain des données, toujours lancé (désactivé, il répond edition_desactivee).
   # validation_sim_node n'est PAS ici : il n'existe qu'en sim (domaine 43).
   - /didier/data_edit_node
@@ -53,13 +56,14 @@ noeuds_attendus:
   - /didier/wheels_node
 # Packages poussés dans ros2_ws/src/ (rôle synchronise) : les 3 communs (dont la lib
 # dadou_utils_ros, package à part depuis L1e-3a) + les 6 packages ROS autonomes + le cœur
-# didier_core (L1e-3c). La liste est gravée par test_arborescence.py ; une machine qui n'en
+# didier_core (L1e-3c) + le corps sûr didier_corps_sur (A0-4, lancé par drive.launch.py). La liste est gravée par test_arborescence.py ; une machine qui n'en
 # déclare pas prend packages_default (deploy/vars/main.yml).
 packages:
   - theatre_contrats
   - theatre_interfaces
   - dadou_utils_ros
   - didier_core
+  - didier_corps_sur
   - didier_bringup
   - didier_description
   - didier_drive

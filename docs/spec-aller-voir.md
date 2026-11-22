@@ -60,7 +60,10 @@ fois `marche` et `aller_voir`, `aller_voir` gagne sauf si `marche` vaut
 
 StringTime JSON : `{"name": "anneaux", "x": 78.42, "y": 4.19, "standoff": 2.5}`
 ou `"cancel"`. **Standoff = distance du centre de Didier au CENTRE de l'objet** (revue O1 du
-19/11, `director.standoff_pour`) : `max(1,5 ; emprise + 0,5 + 0,5)` — emprise de l'objet
+19/11, `director.standoff_pour`) : `max(1,5 ; emprise + 0,5 + 0,5)` — **depuis A0-4 (22/11)
+`max(1,5 ; emprise + 0,5 + 0,5 ; emprise + garde du corps sûr + 0,5)`, garde = `caisse.x_avant` +
+`zones.marge_arret_m` lus dans les réglages du corps sûr (0,90 en sim) : Didier se gare HORS de sa
+bande ARRET (banc 2,5 m, table 2,1 m, taille inconnue 2,9 m)** — emprise de l'objet
 (champ `emprise_m` du tableau), rayon balayé de Didier (0,5 m : roulette arrière à 0,45 m,
 c'est elle qui frôle quand il pivote face à l'objet), marge 0,5 m (tolérance d'arrivée 0,3 +
 0,2 de jeu) ; **taille inconnue** (POI sans géométrie, objet vu par la caméra) : emprise
@@ -108,7 +111,12 @@ Sûreté (tests gravés + mutation) :
 - Jamais `ABS_MAX_LIN` / `ABS_MAX_ANG` dépassés (bornes de contracts.py).
 - Reprise (go) : le suivi d'itinéraire repart vers le **waypoint le plus
   proche devant** la pose courante (pas vers l'ancien index s'il est
-  derrière).
+  derrière). **Depuis le 22/11 (A0-4, CONV D5), il rejoint D'ABORD le point du chemin le plus
+  proche** (projection sur le segment courant, `route.nearest_on_route`), PUIS il continue vers ce
+  waypoint. Pour toutes les reprises d'« aller voir ». La diagonale directe passait au coin de
+  l'objet qu'il venait de voir, et le corps sûr l'arrêtait en ARRET. Gravé sur le cas de la table
+  basse par `test_route_reprise.py` : centre de Didier ≥ garde + marge (1,4 m) de la table, caisse
+  jamais dans la bande ARRET.
 
 ## 5. Hors lot (noté)
 

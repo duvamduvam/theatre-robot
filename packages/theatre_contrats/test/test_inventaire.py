@@ -34,6 +34,12 @@ TOPICS_EDITION = {"DATA_EDIT": "data_edit", "DATA_EDIT_RESULT": "data_edit_resul
 # Nouveaux au lot L1d-2 (porte sim) : PAS repris de utils_static.
 TOPICS_PORTE_SIM = {"VALIDATION_SIM": "validation_sim", "VALIDATION_SIM_DEMANDE": "validation_sim_demande",
                     "ROUES_REFUSEES": "roues_refusees"}
+# Nouveaux au lot A0 (corps sûr, didier_corps_sur, spec docs/spec-A0-corps-sur.md §3.2) : PAS repris
+# de utils_static.
+TOPICS_CORPS_SUR = {"SCAN": "scan", "CMD_VEL_ANIM_SUR": "cmd_vel_anim_sur",
+                    "CMD_VEL_FOLLOW_SUR": "cmd_vel_follow_sur", "CMD_VEL_WEB_SUR": "cmd_vel_web_sur",
+                    "SUPERVISEUR_BATTEMENT": "superviseur/battement", "CORPS_SUR_ETAT": "corps_sur/etat",
+                    "CORPS_SUR_REARMER": "corps_sur/rearmer"}
 CLES = {
     "A": "A", "ANGLO": "anglo", "AUDIOS": "audios", "B": "B", "BACKWARD": "backward",
     "BRIGHTNESS": "brightness", "COLOR": "color", "DEFAULT": "default", "DEVICES": "devices",
@@ -58,7 +64,7 @@ def test_organes():
 def test_topics():
     assert _constantes(topics) == {**ORGANES, **TOPICS_HORS_ORGANES, **TOPICS_PERCEPTION, **TOPICS_JEU,
                                          **TOPICS_CATALOGUE, **TOPICS_EDITION, **TOPICS_PORTE_SIM,
-                                         **TOPICS_OBJETS}
+                                         **TOPICS_OBJETS, **TOPICS_CORPS_SUR}
 
 
 def test_cles():

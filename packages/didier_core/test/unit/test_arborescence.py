@@ -48,8 +48,9 @@ COMMUNS = ["theatre_contrats", "theatre_interfaces", "dadou_utils_ros"]
 # du Pi » est L1e-4). didier_jeu (sim-only) n'y figure PAS, et ne doit jamais y
 # figurer sans décision. dadou_utils_ros (lib partagée) y est depuis L1e-3a ;
 # theatre_interfaces y remplace robot_interfaces depuis L1e-3b ; didier_core (le cœur, qui
-# vivait dans src/robot/) y entre au L1e-3c.
-HOTE_ROBOT_GRAVE = ["dadou_utils_ros", "didier_bringup", "didier_core", "didier_description",
+# vivait dans src/robot/) y entre au L1e-3c ; didier_corps_sur (le corps sûr, lancé par
+# drive.launch.py devant twist_mux) y entre au lot A0-4 (20/11).
+HOTE_ROBOT_GRAVE = ["dadou_utils_ros", "didier_bringup", "didier_core", "didier_corps_sur", "didier_description",
                     "didier_drive", "didier_rehearsal", "didier_sim", "didier_web",
                     "theatre_contrats", "theatre_interfaces"]
 # L1e-3a : chemins (sous ros2_ws/) des copies embarquées de la lib, effacés des Pi par la
@@ -98,7 +99,7 @@ def test_les_six_packages_sont_dans_packages_avec_leur_package_xml():
         assert (PACKAGES / nom / "package.xml").is_file(), nom
 
 
-def test_l_hote_robot_pousse_exactement_les_dix_packages_graves():
+def test_l_hote_robot_pousse_exactement_les_onze_packages_graves():
     robot = _machine("robot")
     assert sorted(robot["packages"]) == HOTE_ROBOT_GRAVE
     assert len(robot["packages"]) == len(set(robot["packages"])), "doublon dans la liste"
@@ -828,7 +829,10 @@ def test_un_journal_de_fumee_non_suivi_ne_salit_pas_le_sha(tmp_path):
 # x86 du robot et celui de la vision.
 SIM_A_PLAT = [# 16/11 (lot fiabilité des épreuves) : l'enregistreur des mesures et sa bibliothèque bash.
               "capture_topics.py", "captures.sh",
-              "coeurs_reserves.py", "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
+              "coeurs_reserves.py",
+              # 21/11 (A0-4) : contrôle de fumée « corps sûr du bringup armé ».
+              "corps_sur_bringup.py",
+              "didier-fumee.service", "didier-fumee.timer", "docker-compose.banc.yml",
               # 16/11 : surcouche « tête » de l'épreuve de conversation (seule, avec le banc, à monter
               # des secrets).
               "docker-compose.tete.yml",
@@ -839,13 +843,16 @@ SIM_A_PLAT = [# 16/11 (lot fiabilité des épreuves) : l'enregistreur des mesure
               "pub.sh", "rejouer-modifiees.sh",
               # 15/11 (567382b) : séance « Chantiers » en une commande.
               "seance-chantiers.sh",
-              "validate-catalogue.sh", "validate-conversation.sh", "validate-data-edit.sh",
+              "validate-catalogue.sh", "validate-conversation.sh",
+              # 20/11 (A0-4) : épreuves CS du corps sûr.
+              "validate-corps-sur.sh", "validate-data-edit.sh",
               "validate-jeu-a1.sh", "validate-machines.sh",
               "validate-namespace.sh", "validate-objets.sh", "validate-rehearsal-chantiers.sh", "validate-rehearsal-faults.sh",
               "validate-rehearsal-route.sh"]
 # L2b : le conteneur `monde` (Dockerfile + entrée) et l'entrée du conteneur `robot` de la sim.
 SIM_MONDE = ["Dockerfile", "entree.sh"]
-SIM_ROBOT = ["entree.sh"]
+# A0-4 (20/11) : + la configuration du corps sûr pour la sim, montée dans le conteneur robot.
+SIM_ROBOT = ["corps_sur.yaml", "entree.sh"]
 # L2b : l'ancien banc mono-conteneur (banc-robot/) et le compose x86 du banc vision sont supprimés ;
 # banc-vision/ ne garde que l'alias ALSA et l'outil de réglage du casque.
 BANC_VISION = ["asound-pc.conf", "audio_banc.py"]

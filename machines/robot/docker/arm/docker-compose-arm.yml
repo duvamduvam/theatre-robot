@@ -28,6 +28,8 @@ services:
         didier_rehearsal: ../../../../didier_rehearsal
         didier_sim: ../../../../didier_sim
         didier_web: ../../../../didier_web
+        # Lot A0-4 : le corps sûr (filtre des entrées autonomes des roues, devant twist_mux).
+        didier_corps_sur: ../../../../didier_corps_sur
         # L1e-4b : données du robot (Dockerfile : COPY --from=data). Dans le dépôt elles
         # vivent dans data/ ; sur le Pi, Ansible les copie dans src/robot/{json,medias,db}
         # (chemin Pi INCHANGÉ), c'est-à-dire ../../.. d'ici — les montages json/ et medias/
@@ -89,6 +91,8 @@ services:
       - ../../../../didier_description:/home/ros2_ws/src/didier_description
       - ../../../../didier_rehearsal:/home/ros2_ws/src/didier_rehearsal
       - ../../../../didier_sim:/home/ros2_ws/src/didier_sim
+      # Lot A0-4 : le corps sûr, lancé par drive.launch.py (liste `packages` de l'hôte robot).
+      - ../../../../didier_corps_sur:/home/ros2_ws/src/didier_corps_sur
       - ../../../../../build:/home/ros2_ws/build
       - ../../../../../install:/home/ros2_ws/install
       - ../../../../../log:/home/ros2_ws/log

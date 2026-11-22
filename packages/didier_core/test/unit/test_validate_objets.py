@@ -6,7 +6,9 @@ TEL QU'IL EST dans le script (extrait du heredoc), sur une pose d'arrêt donnée
 Mutations (doivent rougir) :
   - E1d revenu à « 1,2 <= d <= 1,8 »          -> test_e1d_contact_echoue (1,55 m passerait)
   - tolérance élargie à ± 0,6 sans jeu minimal -> test_e1d_contact_echoue (le jeu ≥ 0,2 m est la vraie
-    garde ; avec ± 0,3 autour de 2,1 il coïncide avec la borne basse, 1,8)
+    garde contre le contact)
+  - STANDOFF_BANC revenu à 2,1 (sans la garde du corps sûr, A0-4) -> test_e1d_arret_dans_la_bande_arret_
+    du_corps_sur_echoue
 """
 import json
 import math
@@ -58,7 +60,15 @@ def test_e1d_contact_echoue(tmp_path, distance_m):
         assert "CONTACT" in ligne
 
 
-@pytest.mark.parametrize("distance_m", [1.81, 2.1, 2.39])
+@pytest.mark.parametrize("distance_m", [1.81, 2.1, 2.19])
+def test_e1d_arret_dans_la_bande_arret_du_corps_sur_echoue(tmp_path, distance_m):
+    # A0-4 (22/11) : standoff 2,5 = 1,1 + garde du corps sûr 0,90 + 0,5. L'ancien arrêt O1 (2,1) met
+    # l'avant de la caisse à 2,1 − 0,30 − 1,1 = 0,70 m de l'emprise, à la limite de la bande ARRET
+    # (0,60) avec la tolérance d'arrivée : c'est ce qui a garé Didier en ARRET (CONV D5, 21/11).
+    assert _verdict_e1d(tmp_path, distance_m).lstrip().startswith("❌")
+
+
+@pytest.mark.parametrize("distance_m", [2.21, 2.5, 2.79])
 def test_e1d_arret_a_distance_de_jeu_reussit(tmp_path, distance_m):
     ligne = _verdict_e1d(tmp_path, distance_m)
     assert ligne.lstrip().startswith("✅"), ligne

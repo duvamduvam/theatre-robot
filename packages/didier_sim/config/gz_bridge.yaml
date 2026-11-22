@@ -4,18 +4,14 @@
 #
 # Namespace (lot L1b) : côté ROS, les noms sont RELATIFS — le parameter_bridge
 # est lancé dans le groupe PushRosNamespace de monde.launch.py, rclcpp les étend
-# donc en /<ROBOT_NAME>/… (/didier/cmd_vel). DEUX exceptions, gravées par
-# robot/tests/unit/test_namespace_contract.py, globales PAR CONSTRUCTION ROS :
-#   /clock : TimeSource (rclcpp/rclpy) de TOUT nœud use_sim_time s'abonne à
-#            /clock ABSOLU — namespacé, l'horloge simulée n'arriverait plus ;
+# donc en /<ROBOT_NAME>/… (/didier/cmd_vel). UNE exception, gravée par
+# didier_core/test/unit/test_namespace_contract.py, globale PAR CONSTRUCTION ROS :
 #   /tf    : TransformBroadcaster/Listener parlent /tf absolu (comme /tf_static).
 # Les gz_topic_name ne changent PAS : le monde gz ignore les namespaces ROS.
-
-- ros_topic_name: "/clock"
-  gz_topic_name: "/clock"
-  ros_type_name: "rosgraph_msgs/msg/Clock"
-  gz_type_name: "gz.msgs.Clock"
-  direction: GZ_TO_ROS
+#
+# /clock N'EST PLUS ICI depuis le 21/11 : ce pont le relayait à chaque pas de physique (≈ 954 Hz),
+# ce qui coûtait 38 à 62 % d'un cœur à CHAQUE nœud Python en use_sim_time. Il est publié par
+# `relais_horloge` (src/relais_horloge.cpp, lancé par monde.launch.py), décimé à 200 Hz.
 
 # Interface standard des roues — le coeur de la Phase 2.
 - ros_topic_name: "cmd_vel"
@@ -123,6 +119,13 @@
 # l'horloge simulée). Le lidar, lui, a son propre pont (pont_lidar.yaml).
 - ros_topic_name: "sim/obstacle_pose"
   gz_topic_name: "/model/obstacle/pose"
+  ros_type_name: "geometry_msgs/msg/PoseStamped"
+  gz_type_name: "gz.msgs.Pose"
+  direction: GZ_TO_ROS
+
+# Même chose pour le PASSANT (A0-4, épreuve CS13 : distance VRAIE passant-caisse).
+- ros_topic_name: "sim/passant_pose"
+  gz_topic_name: "/model/passant/pose"
   ros_type_name: "geometry_msgs/msg/PoseStamped"
   gz_type_name: "gz.msgs.Pose"
   direction: GZ_TO_ROS

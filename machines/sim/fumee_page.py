@@ -89,7 +89,9 @@ EPREUVES = [
     ("parle", "Animation « parle » (animation_state \"\" → \"parle\" → \"\")"),
     ("edition", "validate-data-edit.sh (édition à travers le robot, L1d)"),
     ("machines", "validate-machines.sh (les machines de la sim, vues depuis le monde, L2b)"),
-    ("chantiers", "Régisseur + regard (chaîne roues du bringup), puis validate-rehearsal-chantiers.sh (V-R3)"),
+    ("corps_sur", "Sim relancée (monde stage), validate-corps-sur.sh (CS : corps sûr, lot A0-4)"),
+    ("chantiers", "Sim relancée (monde chantiers), régisseur + regard (chaîne roues du bringup), puis "
+                  "validate-rehearsal-chantiers.sh (V-R3)"),
     ("a1", "Sim relancée, validate-jeu-a1.sh (A1)"),
     ("objets", "Sim relancée, validate-objets.sh (OBJ : tableau des objets, lot O1)"),
     ("conversation", "Sim relancée avec la tête (Claude Haiku, Anthropic direct), validate-conversation.sh (CONV)"),
