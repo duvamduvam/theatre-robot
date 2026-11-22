@@ -1,0 +1,193 @@
+# Passe d'ESSAI de la fumée complète sur un runner GitHub gratuit (22/11/2026).
+#
+# Question posée : la fumée de machines/sim/fumee.sh tient-elle sur un runner public (4 vCPU,
+# 16 Go, aucun GPU : Gazebo, ses caméras et le lidar simulé rendus par le CPU, sous Xvfb) ? La
+# mesure qui compte est le RTF de la sonde (seuil 0,8) ; le verdict des épreuves est un bonus.
+# Compte rendu : docs/operations.md § « Fumée sur GitHub Actions », docs/chantiers.md.
+#
+# Lancement à la main SEULEMENT (jamais à la poussée : ≈ 2 h de runner) :
+#   gh workflow run fumee.yml --ref <branche> [-f ref=<sha ou branche à tester>]
+#
+# Adaptations, toutes explicites par variable (fumee.sh garde ses défauts du PC de David) :
+#   FUMEE_DEPOT=$GITHUB_WORKSPACE, tous les chemins sous $RUNNER_TEMP/fumee/ ;
+#   FUMEE_COEURS=        pas de réservation de cœurs (4 vCPU, rien d'autre ne tourne) ;
+#   FUMEE_SIM_OCCUPEE    verrou « sim occupée » propre au runner (aucune séance de David ici) ;
+#   FUMEE_PROFIL=0       pas de profil d'énergie (pas de power-profiles-daemon) ;
+#   FUMEE_COMMIT=0       aucun commit depuis la CI ;
+#   FUMEE_DELAI_DEMARRAGE=1200  colcon ×4 sur 4 vCPU est plus lent que sur le PC ;
+#   DISPLAY=:99          Xvfb lancé sur l'hôte du runner (le compose monte /tmp/.X11-unix) ;
+#   DIDIER_MEDIAS_PRIVES dossier VIDE (les audios privés ne quittent pas le PC).
+# fumee.sh n'a ni garde thermique, ni test llama-server, ni bascule réseau : rien à couper.
+#
+# Clé Anthropic : lue dans secrets.ANTHROPIC_API_KEY S'IL EXISTE (posé par David, jamais ici).
+# Sans clé, CONV est « non lancée (pas de clé) » — facultative, jamais rouge. Avec la clé, les deux
+# fichiers de la surcouche tête sont écrits dans ~/.config/didier/ du runner (VM jetable, 600),
+# effacés en fin de job, et les artefacts sont fouillés pour la valeur avant d'être publiés.
+name: fumee
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branche, tag ou sha à tester (vide = la branche choisie au lancement)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  fumee:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Chemins de la passe (sous RUNNER_TEMP)
+        run: |
+          R="$RUNNER_TEMP/fumee"
+          mkdir -p "$R"/{etat,brut,pages,sim,medias-prives/audios,tmp}
+          : >"$R/xauthority"
+          {
+            echo "FUMEE_R=$R"
+            echo "FUMEE_DEPOT=$GITHUB_WORKSPACE"
+            echo "FUMEE_ETAT=$R/etat"
+            echo "FUMEE_BRUT=$R/brut"
+            echo "FUMEE_SORTIE=$R/pages"
+            echo "DIDIER_SIM_JOURNAUX=$R/sim"
+            echo "FUMEE_SIM_OCCUPEE=$R/sim-occupee"
+            echo "DIDIER_MEDIAS_PRIVES=$R/medias-prives"
+            echo "TMPDIR=$R/tmp"
+            echo "FUMEE_COEURS="
+            echo "FUMEE_PROFIL=0"
+            echo "FUMEE_COMMIT=0"
+            echo "FUMEE_DELAI_DEMARRAGE=1200"
+            echo "DISPLAY=:99"
+            echo "XAUTHORITY=$R/xauthority"
+          } >>"$GITHUB_ENV"
+
+      - name: Libérer le disque (4 images ≈ 11 Go)
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune -af >/dev/null || true
+          df -h /
+
+      - name: Écran virtuel (Xvfb :99) et /dev/dri vide
+        run: |
+          # Le compose monte /dev/dri sur `monde` (GPU du PC) : absent ici, Docker refuserait le
+          # montage. Un dossier vide suffit ; Mesa rend alors en logiciel (llvmpipe).
+          sudo mkdir -p /dev/dri
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb >/dev/null
+          # -ac : pas de contrôle d'accès (VM jetable) — le fichier XAUTHORITY vide suffit au compose.
+          nohup Xvfb :99 -screen 0 1280x1024x24 -ac +extension GLX +render -noreset >"$FUMEE_R/xvfb.log" 2>&1 &
+          sleep 3
+          test -S /tmp/.X11-unix/X99 && echo "Xvfb :99 prêt"
+          nproc; free -g
+
+      - name: Secrets de la tête (si ANTHROPIC_API_KEY existe)
+        id: secrets
+        env:
+          CLE_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLE_OPENROUTER: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$CLE_ANTHROPIC" ]; then
+            echo "pas de secret ANTHROPIC_API_KEY : CONV sera « non lancée (pas de clé) »"
+            echo "cle=0" >>"$GITHUB_OUTPUT"; exit 0
+          fi
+          umask 077
+          mkdir -p "$HOME/.config/didier"
+          printf 'ANTHROPIC_API_KEY=%s\n' "$CLE_ANTHROPIC" >"$HOME/.config/didier/secrets.env"
+          # chat_node exige openrouter_key au démarrage (secours LLM + STT). Sans secret OpenRouter,
+          # une valeur factice : la conversation passe par Anthropic, le secours échouerait.
+          printf 'openrouter_key=%s\n' "${CLE_OPENROUTER:-absente-en-ci}" >"$HOME/.config/didier/vision-conf-secret"
+          echo "secrets de la tête posés (valeurs non affichées)"
+          echo "cle=1" >>"$GITHUB_OUTPUT"
+
+      - name: Construire les 4 images de la sim
+        working-directory: machines/sim
+        run: |
+          t0=$SECONDS
+          if ! docker compose build >"$FUMEE_R/build.log" 2>&1; then
+            tail -80 "$FUMEE_R/build.log"; exit 1
+          fi
+          echo "images construites en $(( (SECONDS - t0) / 60 )) min"
+          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep didier-sim
+          df -h /
+
+      - name: Fumée complète (headless)
+        id: fumee
+        timeout-minutes: 140
+        run: |
+          set +e
+          bash machines/sim/fumee.sh
+          rc=$?
+          echo "rc=$rc" >>"$GITHUB_OUTPUT"
+          echo "fumee.sh a rendu le code $rc"
+
+      - name: Résumé (RTF, verdict par épreuve)
+        if: always()
+        run: |
+          res="$(ls -t "$FUMEE_R"/brut/*/resultat.json 2>/dev/null | head -1)"
+          if [ -z "$res" ]; then echo "aucun resultat.json" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          python3 - "$res" <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json, sys
+          r = json.load(open(sys.argv[1]))
+          print("## Fumée sur GitHub Actions : %s" % r.get("verdict"))
+          print()
+          print("RTF **%s** (seuil %s), %s min, sha %s, %s cœurs" % (
+              r.get("rtf"), r.get("rtf_min"), round((r.get("duree_s") or 0) / 60), r.get("sha"), r.get("nb_coeurs")))
+          print()
+          print("| épreuve | statut | ok/attendu | durée (s) | détail |")
+          print("|---|---|---|---|---|")
+          for e in r.get("epreuves", []):
+              compte = "%s/%s" % (e.get("ok"), e.get("attendu")) if e.get("attendu") is not None else (e.get("obtenu") or "")
+              print("| %s | %s | %s | %s | %s |" % (e.get("id"), e.get("statut"), compte, e.get("duree_s", ""),
+                                                   str(e.get("detail") or "").replace("|", "/")[:160]))
+          for n in r.get("notes", []):
+              print("- note : " + str(n).replace("|", "/")[:300])
+          PY
+
+      - name: Effacer les secrets et fouiller les artefacts
+        if: always()
+        env:
+          CLE_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLE_OPENROUTER: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          rm -f "$HOME/.config/didier/secrets.env" "$HOME/.config/didier/vision-conf-secret"
+          A="$FUMEE_R/artefact"; mkdir -p "$A"
+          cp -r "$FUMEE_R/pages" "$FUMEE_R/brut" "$A/" 2>/dev/null || true
+          cp "$FUMEE_R/build.log" "$FUMEE_R/xvfb.log" "$A/" 2>/dev/null || true
+          cp "$FUMEE_R/etat/journal.log" "$A/journal-fumee.log" 2>/dev/null || true
+          # Journaux de la sim (écrits root par les conteneurs) : réduits à l'essentiel lisible.
+          sudo tar -czf "$A/journaux-sim.tar.gz" -C "$FUMEE_R" sim 2>/dev/null || true
+          sudo chown -R "$(id -u):$(id -g)" "$A"
+          trouve=0
+          for cle in "$CLE_ANTHROPIC" "$CLE_OPENROUTER"; do
+            [ -n "$cle" ] || continue
+            if grep -rqF -- "$cle" "$A"; then trouve=1; fi
+            for t in $(find "$A" -name '*.tar.gz'); do
+              tar -xzOf "$t" 2>/dev/null | grep -qF -- "$cle" && trouve=1
+            done
+          done
+          if [ "$trouve" = 1 ]; then
+            echo "::error::une clé apparaît dans les artefacts : rien n'est publié"
+            rm -rf "$A"; exit 1
+          fi
+          du -sh "$A"
+
+      - name: Artefacts (page, resultat.json, journaux bruts)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fumee-${{ github.run_id }}
+          path: ${{ runner.temp }}/fumee/artefact
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Verdict de la fumée
+        if: always()
+        run: |
+          [ "${{ steps.fumee.outputs.rc }}" = 0 ] || { echo "fumée non verte (code ${{ steps.fumee.outputs.rc }}) : voir le résumé"; exit 1; }

@@ -748,7 +748,7 @@ def test_les_conteneurs_de_la_fumee_sont_ceux_du_compose():
     assert [compose[s]["container_name"] for s in ("monde", "robot", "vision", "telecommande")] == [
         "didier-sim-monde", "didier-sim-robot", "didier-sim-vision", "didier-sim-telecommande"]
     assert "IMAGES=(didier-sim/monde:local didier-sim/robot:local didier-sim/vision:local didier-sim/telecommande:local)" in src
-    assert "DELAI_DEMARRAGE=600" in src
+    assert 'DELAI_DEMARRAGE="${FUMEE_DELAI_DEMARRAGE:-600}"' in src   # 600 s gravé, réglable (CI)
     # La chaîne roues tourne dans le bringup du robot : la fumée ne la lance plus.
     assert "drive.launch.py" not in "\n".join(l for l in src.splitlines() if not l.lstrip().startswith("#"))
 

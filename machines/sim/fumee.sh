@@ -86,6 +86,7 @@
 #   FUMEE_DODO_DELAI   secondes entre la fin et le poweroff (défaut 20)
 #   FUMEE_COEURS       CPU RÉSERVÉS à la sim pendant la fumée (défaut 8-15 = 4 cœurs rapides
 #                      du PC de David) ; vide = pas de réservation. Voir coeurs_reserves.py.
+#   FUMEE_DELAI_DEMARRAGE  secondes accordées à chaque démarrage de sim (défaut 600)
 #   FUMEE_PROFIL       1 (défaut) = profil d'énergie « performance » pendant la fumée, SUR SECTEUR
 #                      seulement, profil d'origine rendu à la fin (ventilateurs du portable,
 #                      22/11) ; 0 = jamais touché (CI, PC sans power-profiles-daemon)
@@ -146,8 +147,9 @@ CHEMINS_IMAGES=(machines/sim machines/robot/docker machines/vision/docker
                 machines/robot/packages-docker.txt machines/robot/requirements.txt
                 machines/vision/packages-docker.txt machines/vision/requirements.txt
                 legacy/dadou_control_ros/conf)
-# Démarrage (décision 20) : colcon ×4 + nœuds attendus du robot et de la vision, 600 s au plus.
-DELAI_DEMARRAGE=600
+# Démarrage (décision 20) : colcon ×4 + nœuds attendus du robot et de la vision, 600 s au plus
+# (FUMEE_DELAI_DEMARRAGE : la passe GitHub Actions, 4 vCPU, compile plus lentement que le PC).
+DELAI_DEMARRAGE="${FUMEE_DELAI_DEMARRAGE:-600}"
 NB_COEURS="$(nproc)"
 # Cœurs réservés (08/11) : sous un pic de charge le RTF tombait à 0,76 ; sim seule sur 4 cœurs
 # rapides réservés = 0,987 (mesuré). Pendant la fumée SEULEMENT : tout est rendu à la fin.
