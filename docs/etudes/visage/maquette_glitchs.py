@@ -230,7 +230,11 @@ def animation(sortie: Path) -> None:
 
 
 # ---------------------------------------------------------------------------------------
-# Le résultat complet : visage + ruban du corps + témoin, joué puis réel.
+# Le résultat complet : visage + ruban du corps, joué puis réel.
+# La vraie panne porte une MARQUE RÉSERVÉE, visible de partout (David bouge : pas de LED fixe) :
+# - visage : les 4 coins de la bouche (2 sur les pans de côté) et les coins hauts des yeux, en ambre ;
+# - corps : tout le ruban bat « toc-toc… pause » en ambre, toutes les 2 s.
+# Aucune expression ni animation du répertoire ne les utilise ; seule la détection des pannes les dessine.
 # ---------------------------------------------------------------------------------------
 ORANGE = np.array([255, 90, 0])
 VIOLET = np.array([150, 40, 255])
@@ -246,12 +250,33 @@ def corps_chase(t: int, couleur=ORANGE, vitesse=1.0, k=1.0) -> np.ndarray:
     return ruban
 
 
-def image_complete(z, ruban, temoin) -> np.ndarray:
-    """Visage (28x28) + ruban du corps (une ligne) + témoin, une LED à part."""
-    c = np.zeros((33, 32, 3), np.uint8)
+AMBRE = np.array([255, 140, 0], np.uint8)
+
+
+def marque_visage(z, allume: bool):
+    """Marque réservée aux vraies pannes : coins de la bouche + coins hauts des yeux."""
+    if not allume:
+        return z
+    og, od, b = (x.copy() for x in z)
+    for y, x in ((0, 0), (0, 23), (15, 0), (15, 23)):
+        b[y, x] = AMBRE
+    og[0, 0] = AMBRE
+    od[0, 7] = AMBRE
+    return [og, od, b]
+
+
+def battement(i: int) -> float:
+    """« toc-toc… pause » sur 2 s : deux battements de 150 ms à 300 ms d'écart (2 flashs / 2 s,
+    sous la règle des 3 flashs par seconde)."""
+    phase = i % (2 * IPS)
+    return 1.0 if phase in (0, 1, 2, 6, 7, 8) else 0.0
+
+
+def image_complete(z, ruban) -> np.ndarray:
+    """Visage (28x28) + ruban du corps (une ligne : il fait le tour du torse en vrai)."""
+    c = np.zeros((31, 28, 3), np.uint8)
     c[:28, :28] = assembler(z)
     c[30, :28] = ruban
-    c[30, 30] = temoin
     return c
 
 
@@ -261,10 +286,10 @@ def resultat(sortie: Path) -> None:
     plan = [  # (titre, durée s, mode)
         ("calme — un micro-bug toutes les ~10 s", 12.0, "calme"),
         ("ça monte", 4.0, "monte"),
-        ("BUG JOUÉ — le témoin reste éteint", 2.5, "bug"),
+        ("BUG JOUÉ — pas de marque ambre", 2.5, "bug"),
         ("il se remet", 3.5, "remet"),
         ("calme", 1.5, "calme"),
-        ("VRAIE PANNE : réseau perdu — témoin allumé", 6.0, "panne"),
+        ("VRAIE PANNE : réseau — coins ambre + corps toc-toc", 6.0, "panne"),
         ("réseau revenu", 2.0, "calme"),
     ]
     en_cours, reste, t = None, 0, 0
@@ -276,7 +301,6 @@ def resultat(sortie: Path) -> None:
                        "remet": 0.6 * (1 - i / n) ** 2, "panne": 0.0}[mode]
             z = zones(REPOS)
             ruban = corps_chase(t)
-            temoin = np.zeros(3, np.uint8)
             if mode == "bug":
                 for k in range(3):
                     z[k] = ligne_decalee(z[k], rng, lignes=2 if k == 2 else 1, dx=int(rng.integers(1, 4)))
@@ -296,8 +320,10 @@ def resultat(sortie: Path) -> None:
                 f = min(1.0, i / (0.8 * IPS))
                 z = [derive(x, tour=0.28 * f) for x in z]
                 ruban = corps_chase(t, couleur=VIOLET, vitesse=0.35, k=0.6)
-                # Le témoin, vers David seulement : orange lent, 1 Hz (sous la règle des 3 flashs).
-                temoin = ORANGE.astype(np.uint8) if (i // (IPS // 2)) % 2 == 0 else np.array([60, 20, 0], np.uint8)
+                # La marque : coins ambre fixes, et tout le corps qui bat « toc-toc… pause ».
+                z = marque_visage(z, True)
+                if battement(i):
+                    ruban = np.tile(AMBRE, (N_CORPS, 1))
             else:
                 if en_cours is None and rng.random() < (P_CALME + 0.14 * tension ** 2):
                     effet, ou, dur, kw = MICRO[rng.integers(len(MICRO))]
@@ -312,12 +338,12 @@ def resultat(sortie: Path) -> None:
                     reste -= 1
                     if reste <= 0:
                         en_cours = None
-            cadre = m.agrandir(image_complete(z, ruban, temoin), 9)
+            cadre = m.agrandir(image_complete(z, ruban), 9)
             im = Image.new("RGB", (cadre.width + 150, cadre.height + 30), (26, 26, 26))
             im.paste(cadre, (0, 30))
             d = ImageDraw.Draw(im)
             d.text((6, 7), titre, fill=(230, 230, 230), font=m.POLICE)
-            d.text((cadre.width + 8, 30 + 30 * 9 - 2), "← corps, témoin", fill=(150, 150, 150), font=m.POLICE)
+            d.text((cadre.width + 8, 30 + 30 * 9 - 2), "← corps", fill=(150, 150, 150), font=m.POLICE)
             images.append(im)
     images[0].save(sortie, save_all=True, append_images=images[1:], duration=1000 // IPS, loop=0)
     print("écrit", sortie.relative_to(m.RACINE), len(images), "images")

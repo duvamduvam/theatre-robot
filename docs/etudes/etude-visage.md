@@ -529,7 +529,7 @@ moteur d'images **actuel**, sans attendre le visage paramétrique.
 |---|---|---|
 | **G0** | module pur des 12 effets + tirage à graine dans `didier_core`, branché sous `Face` ; sujets relatifs `face_tension` (0 à 1, latché, périmé) et `face_glitch` (un accroc à l'unité) | tests à valeur gravée (graine fixe → image attendue) ; aperçu sim ; règle des 3 flashs testée |
 | **G1** | le sélecteur publie la tension ; l'annonce d'un bug joué devient une rafale ; retombée | épreuve IMPRO : rafale vue avant chaque bug non ordonné, tension nulle après STOP IMPRO |
-| **G2** | signatures par émotion, signatures des défaillances réelles avec témoin (§11.7), calque étendu au ruban du corps | visuel de David en sim, puis sur le robot |
+| **G2** | signatures par émotion, signatures des défaillances réelles avec la marque réservée (§11.7), calque étendu au ruban du corps | visuel de David en sim, puis sur le robot |
 
 À terme les boucles dessinées `repos glitch`, `fuzz` et `glitch total` laissent la place au calque
 (lot V5) ; rien n'est supprimé avant.
@@ -543,23 +543,40 @@ moteur d'images **actuel**, sans attendre le visage paramétrique.
 
 ### 11.7 Joué ou réel : comment David fait la différence
 
-Résultat complet, visage + corps + témoin, 31 s : calme, montée, bug joué, retombée, puis une vraie
-panne de réseau et son retour — [`visage/glitchs-resultat.gif`](visage/glitchs-resultat.gif).
+David bouge pendant le jeu (22/11) : un témoin fixe ne marche pas. La différence doit se lire **de
+partout, sur le visage et sur le ruban du corps**.
 
-Quatre différences, dont **une seule suffit** à David (le témoin) ; les trois autres sont là pour
-que les deux restent lisibles même s'il ne le regarde pas :
+Résultat complet, 31 s — calme, montée, bug joué, retombée, puis une vraie panne de réseau et son
+retour : [`visage/glitchs-resultat.gif`](visage/glitchs-resultat.gif).
+
+**La marque de panne réelle**, réservée, jamais utilisée par le jeu :
+
+- **visage** : les coins de la bouche s'allument en ambre (deux sont sur les pans de côté, donc
+  visibles de profil) et le coin haut de chaque œil aussi. Ces six LED sont **toujours éteintes**
+  dans toutes les expressions (les formes ont des coins arrondis) : allumées, elles ne peuvent
+  vouloir dire qu'une chose ;
+- **corps** : **tout le ruban d'un coup** bat en ambre, « toc-toc… pause », toutes les 2 s. Il
+  fait le tour du torse, donc se voit de dos. Aucune animation du corps ne s'allume entière en
+  même temps.
+
+Pour le public, ce sont des pixels de plus et un corps qui palpite. Toi, tu sais.
 
 | | Bug joué, micro-bug | Vraie panne |
 |---|---|---|
-| **Témoin** — une LED du ruban du corps, placée du côté de David | **éteint, toujours** | allumé, orange, clignotement lent (1 par seconde) |
-| Allure | **scintille** : des éclats qui vont et viennent | **s'installe et tient** : une signature fixe, tant que la panne dure |
-| Montée | précédé de micro-bugs de plus en plus serrés (la tension) | arrive d'un coup, sans montée |
+| **Marque** (coins ambre + corps toc-toc) | **jamais** | **toujours**, tant que la panne dure |
+| Allure | **scintille** : des éclats qui vont et viennent | **s'installe et tient** : une signature fixe |
+| Montée | précédé de micro-bugs de plus en plus serrés | arrive d'un coup |
 | Durée | 15 s au plus | tant que la panne dure, puis retour net |
 | Coulisses | « BUG JOUÉ : … » | « PANNE : réseau » |
 
-**Le ruban du corps** suit les mêmes règles : un micro-bug sur trois y fait sauter l'animation ;
-un bug joué l'emballe (couleurs au hasard, segments qui sautent) ; une panne réelle y pose sa
-signature (couleur et vitesse).
+**Pourquoi c'est sûr** : la marque est dessinée **par-dessus tout le reste**, par un seul module
+qui n'écoute que la détection des pannes. Le répertoire, la conversation et le sélecteur ne
+peuvent pas l'allumer. Deux tests le gravent : aucune image du dossier ne contient de LED allumée
+aux six coins réservés, et aucune animation du corps n'allume tout le ruban en même temps.
+
+**Le ruban du corps** suit les règles du visage : un micro-bug sur trois y fait sauter
+l'animation ; un bug joué l'emballe (couleurs au hasard, segments qui sautent) ; une panne réelle
+y pose sa couleur et sa vitesse, plus la marque.
 
 Signatures de départ, à affiner avec David au visuel :
 
@@ -569,11 +586,4 @@ Signatures de départ, à affiner avec David au visuel :
 | oreille en panne (micro, reconnaissance vocale) | les yeux faiblissent | animation pâlie |
 | batterie basse | pixels morts de plus en plus nombreux | le ruban s'éteint par un bout |
 
-Règle de fond : **le témoin n'est piloté que par la détection des pannes**, jamais par le
-répertoire, la conversation ou le sélecteur. Un bug joué ne peut donc pas l'allumer, par
-construction. Le dessin de l'animation de la panne peut ressembler à un bug ; le témoin, non.
-
-Reste à décider : **quelle LED sert de témoin**. Il faut qu'elle soit visible depuis là où tu te
-tiens en jeu et le moins possible du public : sans doute au dos ou sur un flanc. Si c'est une LED
-du ruban existant, aucun achat ni câblage. Plus tard, la télécommande pourra aussi vibrer ou
-l'afficher.
+Photosensibilité : 2 battements toutes les 2 s, sous la règle des 3 flashs par seconde.
