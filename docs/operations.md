@@ -1418,7 +1418,7 @@ Vantard) publient le nom de variante sur le topic `persona`, consommé par
 valider avec David). Chaque changement recompose le system prompt et ouvre
 une **nouvelle session de conversation** (l'historique de l'ancien
 personnage est abandonné — sinon Didier serait schizophrène) ; re-cliquer la
-personnalité déjà active est sans effet. Défaut au démarrage : `bougon`
+personnalité déjà active est sans effet. Défaut au démarrage : `naif` (choix de David le 22/11, avant : `bougon`)
 (config `chat_persona` côté vision, surchargeable par paramètre ROS
 `persona`). Nom inconnu = warning loggué avec la liste, jamais un crash.
 

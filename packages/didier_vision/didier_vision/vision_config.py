@@ -544,7 +544,9 @@ config = {
     # « gouaille de rue » déjà validé sur le proto du 10/07, les deux autres
     # variantes ("naif", "vantard") sont l'expérience à mener en conditions
     # réelles. Commutable à chaud via le topic `persona` (console web).
-    "chat_persona": "bougon",
+    # 22/11, séance sim, David : « naïf par défaut » (Didier émerveillé, cohérent avec la
+    # séance d'intention « Didier amoureux de tout » ; le bougon se mettait trop en colère).
+    "chat_persona": "naif",
 }
 
 WAKE_UP_WORD = config["wake_up_word"]

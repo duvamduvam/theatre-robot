@@ -350,3 +350,9 @@ def test_colere_rare_et_emotions_positives_en_tete():
     assert "La colère (\"anger\") est RARE" in AI_INSTRUCTIONS
     assert '"emotion": "anger"}' not in AI_INSTRUCTIONS
     assert "jamais une vraie colère" in PERSONAS["bougon"]
+
+
+def test_personnalite_de_demarrage_est_le_naif():
+    """22/11, David : « naïf par défaut » (Didier émerveillé plutôt que râleur)."""
+    from didier_vision.vision_config import config
+    assert config["chat_persona"] == "naif"
