@@ -855,7 +855,7 @@ SIM_MONDE = ["Dockerfile", "entree.sh"]
 SIM_ROBOT = ["corps_sur.yaml", "entree.sh"]
 # L2b : l'ancien banc mono-conteneur (banc-robot/) et le compose x86 du banc vision sont supprimés ;
 # banc-vision/ ne garde que l'alias ALSA et l'outil de réglage du casque.
-BANC_VISION = ["asound-pc.conf", "audio_banc.py"]
+BANC_VISION = ["asound-pc.conf", "audio_banc.py", "audio_veille.py"]   # + veille de l'onglet Audio (22/11)
 # Hôte de l'inventaire -> machine (dossier machines/<machine>/).
 HOTES_MACHINES = {"r": "robot", "ai": "vision", "c": "telecommande",
                   "gl": "gant-gauche", "gr": "gant-droit"}
