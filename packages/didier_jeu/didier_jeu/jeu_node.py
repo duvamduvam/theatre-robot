@@ -42,7 +42,7 @@ from theatre_contrats import stringtime, topics
 
 from didier_jeu.journal import Journal, marquer_sans_pourquoi
 from didier_jeu.reglages import charger_reglages
-from didier_jeu.repertoire import candidates, charger_deplacements, par_emploi
+from didier_jeu.repertoire import bugs_joues, candidates, charger_deplacements, par_emploi
 from didier_jeu.relais import RelaisSeul
 from didier_jeu.selecteur import Selecteur
 
@@ -118,6 +118,15 @@ def main(args=None):
             self.pub_journal = self.create_publisher(StringTime, topics.JEU_JOURNAL, 10)
 
             if demarrage is not None:
+                # Bugs joués (lot I0) : inventaire journalisé au démarrage, refus compris ; le
+                # sélecteur ne les joue pas encore (emploi `bug` = lot I1). À part : un défaut
+                # ici ne doit jamais faire tomber le jeu en mode dégradé.
+                try:
+                    inventaire = bugs_joues(p("sequences_dir"))
+                    demarrage["bugs_joues"] = [b.id for b in inventaire.acceptes]
+                    demarrage["bugs_refuses"] = {chemin: list(erreurs) for chemin, erreurs in inventaire.refuses}
+                except (OSError, ValueError) as e:
+                    self.get_logger().error(f"inventaire des bugs joués illisible : {e!r}")
                 self._journaliser("demarrage", demarrage)
 
             self.create_subscription(PointStamped, topics.VISION_PERSON_BOX, self._on_box, 10)

@@ -30,6 +30,36 @@ par des demandes au régisseur (`jeu/chat_move`), qui les arbitre, puis par
 Les noms `jeu/*` sont définis dans `theatre_contrats.topics`. Ceux du régisseur
 viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
 
+## Bugs joués (lot I0, 22/11)
+
+Étude : `docs/etudes/etude-improvisation.md` §2. Un bug joué est une séquence de
+`data/json/sequences/bugs-joues/` (type `bug-joue`), jugée par `theatre_contrats.bugs_joues`
+(ni `wheels` ni `relay`, ≤ 15 s, sons ≤ 4 s lus au manifeste, classe V ou M, `desc`,
+`direction` facultative, repos du visage et des lumières rétabli).
+
+- `repertoire.candidates()` les EXCLUT (dossier et type) : le sélecteur ne les joue pas encore.
+- `repertoire.bugs_joues(sequences_dir)` rend l'inventaire (acceptés, refusés avec raisons) ;
+  `jeu_node` le journalise au démarrage (`bugs_joues`, `bugs_refuses` de la ligne `demarrage`).
+  L'emploi `bug` (annonce, réfractaires, rétablissement, coupures) est le lot I1.
+- Au 22/11 : les 6 bugs de classe V de l'étude §2.2 ; les 2 de classe M attendent le
+  protocole caméra (I5). Jeu manuel : groupe « Bugs joués » de la page scène.
+- **Sons** (`bugs-joues/begaiement.wav`, `bips-mise-a-jour.wav`, `demarrage.wav`) : synthèse,
+  dans les AUDIOS PRIVÉS (jamais dans le dépôt). Les refaire :
+
+  ```bash
+  docker run --rm --user $(id -u):$(id -g) -v $PWD/packages/didier_jeu/tools:/outil:ro \
+    -v ~/Nextcloud/dev/didier/medias-prives/audios/bugs-joues:/sortie --entrypoint python3 \
+    didier-sim/vision:local -I /outil/sons_bugs_joues.py /sortie \
+    --voix /home/ros2_ws/src/vision/medias/voices/didier.onnx
+  PYTHONPATH=packages/theatre_contrats python3 -m theatre_contrats.donnees manifeste-audios data
+  ```
+
+  La voix (Piper `fr_FR-siwis-medium`) est dans l'image de la vision ; bips et démarrage sont en
+  stdlib. Déterministe : mêmes octets à chaque fabrication. En sim, aucun son n'est audible
+  (`audio_node` sans carte son) : les écouter directement.
+- Tests : `test/test_repertoire.py` (exclusion, inventaire réel, séquence piégée refusée) ;
+  garanties gravées une par une dans `packages/theatre_contrats/test/test_bugs_joues.py`.
+
 ## Ce qui décide (dans l'ordre de l'arbre)
 
 1. **Arrêt vocal** : un `stop` venu de la bouche ou de la console est **relayé

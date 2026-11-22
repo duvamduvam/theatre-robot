@@ -1,0 +1,46 @@
+{
+    "keys": "",
+    "duration": 5000,
+    "types": [
+        "bug-joue"
+    ],
+    "classe": "V",
+    "desc": "les rubans s'emballent, les yeux s'affolent",
+    "direction": "ce n'est pas toi, c'est l'éclairage public",
+    "faces": [
+        [
+            0,
+            "warning"
+        ]
+    ],
+    "robot_lights": [
+        [
+            0,
+            "color cycle"
+        ]
+    ],
+    "left_eye": [
+        [
+            0,
+            {
+                "mode": "random",
+                "random move min": 60,
+                "random move max": 90,
+                "random time min": 150,
+                "random time max": 400
+            }
+        ]
+    ],
+    "right_eye": [
+        [
+            0,
+            {
+                "mode": "random",
+                "random move min": 60,
+                "random move max": 90,
+                "random time min": 150,
+                "random time max": 400
+            }
+        ]
+    ]
+}

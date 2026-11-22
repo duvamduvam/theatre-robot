@@ -1,0 +1,25 @@
+{
+    "keys": "",
+    "duration": 3000,
+    "types": [
+        "bug-joue"
+    ],
+    "classe": "V",
+    "desc": "le visage se déchire puis revient",
+    "faces": [
+        [
+            0,
+            "glitch total"
+        ],
+        [
+            0.6,
+            "repos glitch"
+        ]
+    ],
+    "robot_lights": [
+        [
+            0,
+            "trip"
+        ]
+    ]
+}

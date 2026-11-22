@@ -1,5 +1,20 @@
 {
  "audios": {
+  "bugs-joues/begaiement.wav": {
+   "duree_s": 2.16,
+   "sha256": "70496da39357cf744e1d27397024e6195a31e42784118405cf98f613e1018c3d",
+   "taille": 95400
+  },
+  "bugs-joues/bips-mise-a-jour.wav": {
+   "duree_s": 2.79,
+   "sha256": "708ecb85085c4ffa090314356f39f5032dfefe61f2aff1fca0722c2f94742ce5",
+   "taille": 123082
+  },
+  "bugs-joues/demarrage.wav": {
+   "duree_s": 3.76,
+   "sha256": "d6d5a5b1c0607f50eaac553c85fa814654f7048770bcccd3c5e98e15359a9734",
+   "taille": 165860
+  },
   "didier20/.attachments.372811/c-est-gagne.mp3": {
    "duree_s": null,
    "sha256": "28ad1030fbb0551ae3d58adc63ee5dc4d33931f839c5e48a521409ca0e36d2e4",

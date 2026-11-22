@@ -34,9 +34,12 @@ def fichiers_de_l_arbre_git():
     return sorted({c for c in sortie.decode("utf-8", "surrogateescape").split("\0") if c})
 
 
-def test_le_manifeste_porte_les_254_audios_du_14_11():
-    # Gravé le 14/11 (254 .mp3/.wav sortis du dépôt). Un audio ajouté : regraver ce nombre.
-    assert len(MANIFESTE) == 254
+def test_le_manifeste_porte_les_257_audios_du_22_11():
+    # Gravé le 14/11 (254 .mp3/.wav sortis du dépôt), puis 22/11 : + 3 sons de synthèse des
+    # bugs joués (bugs-joues/*.wav, lot I0). Un audio ajouté : regraver ce nombre.
+    assert len(MANIFESTE) == 257
+    assert sorted(a for a in MANIFESTE if a.startswith("bugs-joues/")) == [
+        "bugs-joues/begaiement.wav", "bugs-joues/bips-mise-a-jour.wav", "bugs-joues/demarrage.wav"]
     with open(os.path.join(DATA_ROOT, donnees.FICHIER_MANIFESTE_AUDIOS), encoding="utf-8") as f:
         assert json.load(f)["version"] == donnees.VERSION_MANIFESTE_AUDIOS
 

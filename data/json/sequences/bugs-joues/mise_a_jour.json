@@ -1,0 +1,32 @@
+{
+    "keys": "",
+    "duration": 8000,
+    "types": [
+        "bug-joue"
+    ],
+    "classe": "V",
+    "desc": "« mise à jour 3 sur 47 », il attend",
+    "direction": "ne pas éteindre le robot",
+    "audios": [
+        [
+            0,
+            "bugs-joues/bips-mise-a-jour.wav"
+        ]
+    ],
+    "faces": [
+        [
+            0,
+            "upgrade"
+        ],
+        [
+            0.25,
+            "internet"
+        ]
+    ],
+    "robot_lights": [
+        [
+            0,
+            "scan"
+        ]
+    ]
+}

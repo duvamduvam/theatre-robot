@@ -1,0 +1,44 @@
+{
+    "keys": "",
+    "duration": 12000,
+    "types": [
+        "bug-joue"
+    ],
+    "classe": "V",
+    "desc": "noir, démarrage, il revient changé",
+    "direction": "pendant le noir, tu as vu quelque chose",
+    "audios": [
+        [
+            0.3,
+            "bugs-joues/demarrage.wav"
+        ]
+    ],
+    "faces": [
+        [
+            0,
+            "off"
+        ],
+        [
+            0.3,
+            "upgrade"
+        ],
+        [
+            0.75,
+            "default"
+        ]
+    ],
+    "robot_lights": [
+        [
+            0,
+            "off"
+        ],
+        [
+            0.3,
+            "transfer"
+        ],
+        [
+            0.75,
+            "default"
+        ]
+    ]
+}
