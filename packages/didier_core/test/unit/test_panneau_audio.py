@@ -219,6 +219,15 @@ class _FausseVeille:
         return app
 
 
+async def _reponse(ws, n):
+    """Attend la n-ième réponse : le relais vers la veille tourne dans une tâche à part."""
+    for _ in range(300):
+        if len(ws.envoyes) >= n:
+            return ws.envoyes[n - 1]
+        await asyncio.sleep(0.01)
+    raise AssertionError("pas de réponse n°{}".format(n))
+
+
 def _scenario(pont, noeud, veille, corps):
     """Lance la fausse veille sur un port libre, pointe le nœud dessus, joue `corps(client)`."""
     from aiohttp.test_utils import TestClient, TestServer
@@ -291,7 +300,7 @@ def test_tester_le_son_writer_seul(pont, monkeypatch):
         assert ws.envoyes == [{"type": "err", "reason": "écriture non détenue"}]
         assert veille.appels == []
         await pont.handle_client_message(noeud, app, "lecteur", ws, '{"type":"audio_banc","action":"tester"}')
-        assert ws.envoyes[-1] == {"type": "ack", "topic": "audio_banc"}
+        assert await _reponse(ws, 2) == {"type": "ack", "topic": "audio_banc"}
         assert veille.appels == ["POST /tester"]
 
     _scenario(pont, noeud, veille, corps)
@@ -308,10 +317,10 @@ def test_redetecter_puis_rouvre_le_micro_de_la_tete(pont, monkeypatch):
     async def corps(_client, app):
         _ecrivain(noeud)
         await pont.handle_client_message(noeud, app, "c1", ws, '{"type":"audio_banc","action":"redetecter"}')
-        assert ws.envoyes == [{"type": "ack", "topic": "audio_banc"}]
-        # Une 2e demande pendant la première est refusée sans déranger la veille.
+        # Une 2e demande (double clic) est refusée aussitôt, sans déranger la veille.
         await pont.handle_client_message(noeud, app, "c1", ws, '{"type":"audio_banc","action":"redetecter"}')
-        assert ws.envoyes[-1] == {"type": "err", "reason": "re-détection déjà en cours"}
+        assert ws.envoyes[0] == {"type": "err", "reason": "re-détection déjà en cours"}
+        assert await _reponse(ws, 2) == {"type": "ack", "topic": "audio_banc"}
         for _ in range(200):
             if not noeud.redetection_en_cours:
                 break
@@ -320,6 +329,22 @@ def test_redetecter_puis_rouvre_le_micro_de_la_tete(pont, monkeypatch):
         assert [m.msg for m in noeud.publishers["chat"].messages] == ['"off"', '"on"']
 
     _scenario(pont, noeud, veille, corps)
+
+
+def test_veille_injoignable_refuse_et_libere_la_redetection(pont, monkeypatch):
+    noeud = _creer_noeud(pont, monkeypatch, domaine="43", audio_banc_port=9)   # port fermé
+    ws = _WsFactice()
+    from aiohttp.test_utils import TestServer
+
+    async def tout():
+        app = pont.build_app(noeud)
+        async with TestServer(app):
+            _ecrivain(noeud)
+            await pont.handle_client_message(noeud, app, "c1", ws, '{"type":"audio_banc","action":"redetecter"}')
+            assert await _reponse(ws, 1) == {"type": "err", "reason": "audio : veille audio du banc injoignable"}
+            assert noeud.redetection_en_cours is False
+
+    asyncio.run(tout())
 
 
 def test_redetecter_ne_rallume_pas_une_parole_off(pont, monkeypatch):

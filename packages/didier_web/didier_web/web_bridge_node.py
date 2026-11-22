@@ -820,32 +820,42 @@ async def _rouvrir_micro_apres_redetection(node: WebBridgeNode, app: web.Applica
 
 
 async def _handle_audio_banc(node, app, client_id, ws, msg):
-    """« Tester le son » / « Re-détecter » : writer seul, simulation seule. L'ack dit « fait »
-    (bip joué) ou « lancée » (re-détection) ; le résultat détaillé arrive par /api/audio."""
+    """« Tester le son » / « Re-détecter » : writer seul, simulation seule. Relayé dans une
+    TÂCHE à part : la boucle de réception du writer ne doit jamais attendre la veille (le bip
+    passe par `docker exec`, jusqu'à 10 s), sinon ses battements de cœur prendraient du retard
+    et l'écriture serait libérée (WRITE_TIMEOUT_S = 3 s)."""
     if not node.sessions.is_writer(client_id):
         await _send_json_safe(ws, build_err(ERR_LECTURE_SEULE))
         return
     if not node.audio_banc:
         await _send_json_safe(ws, build_err("onglet audio : simulation seulement (domaine 43)"))
         return
-    if msg["action"] == "redetecter" and node.redetection_en_cours:
-        await _send_json_safe(ws, build_err("re-détection déjà en cours"))
-        return
-    # Le bip passe par `docker exec` dans la tête : jusqu'à quelques secondes.
-    rep = await _veille_audio(app, "POST", "/" + msg["action"], delai_s=AUDIO_BANC_ACTION_TIMEOUT_S)
+    if msg["action"] == "redetecter":
+        if node.redetection_en_cours:
+            await _send_json_safe(ws, build_err("re-détection déjà en cours"))
+            return
+        node.redetection_en_cours = True   # levé ICI (synchrone) : un double clic est refusé
+    tache = asyncio.ensure_future(_relayer_audio_banc(node, app, ws, msg["action"]))
+    app["audio_taches"].add(tache)
+    tache.add_done_callback(app["audio_taches"].discard)
+
+
+async def _relayer_audio_banc(node, app, ws, action: str) -> None:
+    """Relaie l'action à la veille ; ack = bip joué / re-détection lancée, err sinon. Le
+    résultat détaillé arrive par /api/audio. Re-détection lancée : attend sa fin et rouvre
+    le micro de la tête (_rouvrir_micro_apres_redetection baisse le drapeau)."""
+    rep = await _veille_audio(app, "POST", "/" + action, delai_s=AUDIO_BANC_ACTION_TIMEOUT_S)
     if rep is None or not rep.get("ok"):
+        if action == "redetecter":
+            node.redetection_en_cours = False
         raison = (rep or {}).get("message") or "veille audio du banc injoignable"
-        node.get_logger().warning("audio_banc {} refusé : {}".format(msg["action"], raison))
+        node.get_logger().warning("audio_banc {} refusé : {}".format(action, raison))
         await _send_json_safe(ws, build_err("audio : {}".format(raison)))
         return
-    node.get_logger().info("audio_banc {} : {}".format(msg["action"], rep.get("message")))
-    if msg["action"] == "redetecter":
-        # Tâche à part : la boucle de réception du writer ne doit pas attendre (heartbeat).
-        node.redetection_en_cours = True
-        tache = asyncio.ensure_future(_rouvrir_micro_apres_redetection(node, app))
-        app["audio_taches"].add(tache)
-        tache.add_done_callback(app["audio_taches"].discard)
+    node.get_logger().info("audio_banc {} : {}".format(action, rep.get("message")))
     await _send_json_safe(ws, build_ack("audio_banc"))
+    if action == "redetecter":
+        await _rouvrir_micro_apres_redetection(node, app)
 
 
 # Dispatch par type : chaque handler applique et répond son propre message.
