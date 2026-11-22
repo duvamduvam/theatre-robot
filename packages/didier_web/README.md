@@ -11,6 +11,7 @@ Package ROS 2 du robot Didier, autonome (aucun import `robot.*` ni `dadou_utils_
 | `validation_sim` | `validation_sim_node` | **lot L1d-2**, SIM SEULEMENT : l'observateur de la porte sim, qui tamponne `json/validations-sim.json` |
 | — | `lecture_donnees` | **lot L1d-3** : lecture pure des données éditables pour `GET /api/data` (liste + états de la porte sim, contenu + sha) ; **lot I0** : `bugs_joues()` pour `GET /api/bugs-joues` |
 | — | `apercu_lumieres` | **lot I0** : modèle pur de ce que le ruban LED afficherait (aperçu des bandes de la page scène) |
+| — | `panneau_audio` | **22/11** : verdict pur de l'onglet « Audio » de la page scène (`GET /api/audio`, sim seulement) |
 
 ## `catalogue_node` (L1c)
 
@@ -137,3 +138,44 @@ Aperçu du visage (`face_sim`, port 8766) : servi normalement le 22/11 (sim `FAC
 Tests (hôte) : `packages/didier_core/test/unit/test_apercu_lumieres.py` (modèle sur les vraies
 données, valeurs gravées ; dessin de `lumieres.js` joué par `node` quand il est installé, sinon
 ignoré) et `test_web_protocol.py` (ordre des scripts, noms globaux sans collision).
+
+## Page scène : onglet « Audio » (22/11, banc PC en simulation)
+
+Demande de David en séance : « je ne sais jamais si je suis branché et si le son entre et sort ».
+L'onglet (colonne de droite, au-dessus de l'« Oreille de Didier ») et un bouton **🟢/🟠/🔴 Audio**
+dans le bandeau donnent le verdict d'un coup d'œil, même replié ; ouvert : micro et sortie
+utilisés (nom lisible, présent / casque éteint / coupé), **vumètre** du micro (trait rouge = seuil
+d'un micro vivant, trait clair = crête des 3 s), témoins **« Didier m'entend »** (un tour entendu il
+y a moins de 6 s, gardé ; « jeté » sinon) et **« Didier parle »** (`chat_state` = speaking),
+boutons **Tester le son** et **Re-détecter** (writer seul).
+
+Architecture — le son du banc vit sur l'HÔTE (PipeWire, Bluetooth), pas dans les conteneurs :
+
+```mermaid
+flowchart LR
+  page["page scène"] -- "GET /api/audio (4 Hz ouvert, 0,5 Hz replié)" --> pont["web_bridge_node<br/>(conteneur robot, réseau host)"]
+  page -- "WS audio_banc tester/redetecter (writer)" --> pont
+  pont -- "HTTP 127.0.0.1:8767" --> veille["audio_veille.py (hôte)<br/>réutilise audio_banc.py"]
+  veille -- "pactl, bluetoothctl, parecord" --> pw["PipeWire + Bluetooth du PC"]
+  veille -- "docker exec aplay -D mixette (bip)" --> tete["tête : didier-sim-vision"]
+  pont -- "chat off puis on (micro rouvert)" --> tete
+  tete -- "chat_state, chat_hearing" --> pont
+```
+
+- **Veille** : `machines/sim/banc-vision/audio_veille.py`, lancée par `seance-chantiers.sh`
+  (`--stop` l'arrête), écoute en 127.0.0.1 seulement. Elle CONSTATE : micro et sortie écrits dans
+  `asound-pc.conf` (défaut d'Ubuntu résolu), présents ou non dans PipeWire, coupés ou non, casque
+  connecté ou non, niveau mesuré en continu par `parecord` sur le nœud même que lit la tête.
+- **Pont** : `GET /api/audio` = `panneau_audio.synthese(état de la veille, chat_state, dernier
+  chat_hearing)` ; 404 hors domaine 43 (`hello.audio_banc`). Le message WebSocket `audio_banc`
+  (`tester` | `redetecter`, liste fermée, writer seul, sim seule) est relayé à la veille.
+- **Tester le son** : un bip de 0,35 s joué par `aplay -D mixette` DANS la tête — même alias,
+  même `asound.conf` que la voix de Didier. ⚠️ Sans casque, le micro peut l'entendre.
+- **Re-détecter** : `audio_banc.py choisir auto --sans-redemarrer`, puis le pont coupe et rouvre
+  le micro de la tête (Parole OFF puis ON) — `arecord`/`aplay` sont relancés à chaque tour et
+  relisent `asound.conf` : personnalité, conversation et vision sont gardées. Si la Parole était
+  OFF, rien n'est rallumé. Port de la veille : paramètre `audio_banc_port` (défaut 8767).
+- Le vumètre montre le niveau BRUT du nœud PipeWire (avant l'atténuation ×0,075 de la tête).
+
+Tests (hôte) : `packages/didier_core/test/unit/test_panneau_audio.py` (verdicts gravés, pont
+devant une fausse veille) et `packages/didier_vision/test/unit/test_audio_veille.py` (veille).

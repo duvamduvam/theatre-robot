@@ -877,6 +877,22 @@ un ⚠️ si le micro du PC peut entendre Didier. Ensuite il redémarre la tête
 pour l'éviter). Vécu le 18/11 : sans ce choix, le M50 éteint faisait retomber PipeWire EN
 SILENCE sur un micro muet ou sur le micro du PC (transcription lente, tours vides).
 
+**Onglet « Audio » de la page scène (22/11)** — « suis-je branché, le son entre-t-il et sort-il ? »
+sans ouvrir de terminal. Bouton **🟢/🟠/🔴 Audio** dans le bandeau (clic = ouvre l'onglet, colonne de
+droite) : verdict + action à faire (« casque « M50 » déconnecté : allume-le, puis Re-détecter »,
+« micro coupé (muet) », « micro plat depuis 3 s », « Parole OFF », « pas de casque : le micro peut
+entendre Didier »…), micro et sortie utilisés, vumètre, témoins « Didier m'entend » / « Didier
+parle », et deux boutons (avoir la main) :
+- **Tester le son** : bip de 0,35 s joué par la tête (`aplay -D mixette` dans `didier-sim-vision`,
+  la chaîne exacte de sa voix) ;
+- **Re-détecter** : `audio_banc.py choisir auto --sans-redemarrer`, puis Parole OFF → ON pour que
+  la tête rouvre son micro sur le nouveau choix (~5 à 40 s selon les casques à essayer ; la tête
+  n'est PAS redémarrée, la personnalité reste). Parole OFF au départ : rien n'est rallumé.
+Derrière : la veille HÔTE `machines/sim/banc-vision/audio_veille.py` (127.0.0.1:8767, lancée et
+arrêtée par `seance-chantiers.sh`, journal `~/tmp/didier-sim/audio-veille.log`) ; « veille
+injoignable » en rouge = la relancer : `python3 machines/sim/banc-vision/audio_veille.py`.
+Le vumètre montre le niveau brut du micro (avant l'atténuation ×0,075 de la tête).
+
 **3. La page scène** : http://localhost:8765/scene — un poste de jeu qui tient
 dans l'écran (refonte du 12/11, `docs/spec-refonte-page-scene.md`, captures
 `docs/pictures/page-scene/`) :

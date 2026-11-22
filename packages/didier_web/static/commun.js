@@ -62,6 +62,7 @@ const state = {
   exterior: false,          // hello.exterior : le serveur sert /exterior (caméra de poursuite sim)
   dataEdit: false,          // hello.data_edit : le pont relaie les retouches (L1d-3, drapeau DATA_EDIT)
   validationSim: false,     // hello.validation_sim : porte sim présente (domaine 43)
+  audioBanc: false,         // hello.audio_banc : onglet « Audio » du banc PC (domaine 43)
   reconnectDelayMs: RECONNECT_MIN_MS,
   rttSamples: [],           // fenêtre glissante (ms)
   hbTimer: null,
@@ -229,6 +230,7 @@ function traiterHello(msg) {
   state.exterior = !!msg.exterior;  // absent = ancien serveur = non
   state.dataEdit = !!msg.data_edit;            // idem : éditeur de la scène absent
   state.validationSim = !!msg.validation_sim;  // idem : ni états ni validation des roues
+  state.audioBanc = !!msg.audio_banc;          // idem : pas d'onglet « Audio »
   majBadgeEcriture();
   demarrerHeartbeatSiWriter();
 
