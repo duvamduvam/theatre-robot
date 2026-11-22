@@ -21,6 +21,7 @@ import os
 import re
 import struct
 import zlib
+from typing import Any, Dict, List
 
 # ---------------------------------------------------------------- familles éditables (décision 3)
 # kind -> cible, relative à data_dir. Hors liste : relais, audios, colors.json, visuals.json,
@@ -100,11 +101,11 @@ FAMILLES_REJOUEES = ("sequence", "expression", "lumiere")
 
 
 # ================================================================ outils
-def est_nombre(v):
+def est_nombre(v: object) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
-def est_nombre_fini(v):
+def est_nombre_fini(v: object) -> bool:
     return est_nombre(v) and math.isfinite(v)
 
 
@@ -161,7 +162,7 @@ def _lire_json(chemin, defaut):
         return json.load(f)
 
 
-def charger_references(data_dir, dossier_audios=None):
+def charger_references(data_dir: Any, dossier_audios: Any = None) -> Dict[str, Any]:
     """Ce que les contrats consultent : les fichiers référencés et les dossiers d'assets.
 
     Fichier absent = dict vide (toute référence vers lui sera une faute) ; fichier
@@ -204,7 +205,7 @@ def _est_keyframe(keyframe):
 
 
 # ================================================================ séquences
-def verifier_sequence(sequence, references):
+def verifier_sequence(sequence: Any, references: Dict[str, Any]) -> List[str]:
     """Contrat d'une séquence (anciens test_sequences_json.py + test_sequences_assets.py)
     plus les bornes roues de la décision 7 — le seul durcissement."""
     if not isinstance(sequence, dict):
@@ -234,6 +235,12 @@ def verifier_sequence(sequence, references):
             _verifier_valeur(piste, ou, keyframe[1], references, erreurs)
         if piste == "wheels":
             _verifier_bornes_roues(valeurs, duree if duree_ok else None, erreurs)
+    # Lot I0 : une séquence de type "bug-joue" porte en plus les garanties de l'étude
+    # improvisation §2.1 (pas de roues ni de relais, 15 s, sons de 4 s, repos rétabli).
+    # Import local : bugs_joues s'appuie sur ce module.
+    from theatre_contrats import bugs_joues
+    if bugs_joues.est_bug_joue(sequence):
+        erreurs += bugs_joues.verifier_bug_joue(sequence, references)
     return erreurs
 
 
