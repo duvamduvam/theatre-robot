@@ -111,7 +111,12 @@ Sûreté (tests gravés + mutation) :
 - Jamais `ABS_MAX_LIN` / `ABS_MAX_ANG` dépassés (bornes de contracts.py).
 - Reprise (go) : le suivi d'itinéraire repart vers le **waypoint le plus
   proche devant** la pose courante (pas vers l'ancien index s'il est
-  derrière).
+  derrière). **Depuis le 22/11 (A0-4, CONV D5), il rejoint D'ABORD le point du chemin le plus
+  proche** (projection sur le segment courant, `route.nearest_on_route`), PUIS il continue vers ce
+  waypoint. Pour toutes les reprises d'« aller voir ». La diagonale directe passait au coin de
+  l'objet qu'il venait de voir, et le corps sûr l'arrêtait en ARRET. Gravé sur le cas de la table
+  basse par `test_route_reprise.py` : centre de Didier ≥ garde + marge (1,4 m) de la table, caisse
+  jamais dans la bande ARRET.
 
 ## 5. Hors lot (noté)
 

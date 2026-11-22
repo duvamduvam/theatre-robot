@@ -245,12 +245,13 @@ max 301 ms ; 20 Hz : max 155 ms, encore sous la porte). Sans mutant, la même pa
    (`caisse.x_avant` + `zones.marge_arret_m`, lus dans les réglages, 0,90 en sim) + 0,5 du centre
    de l'objet (`didier_rehearsal.director.standoff_pour`) : table 2,1 m, banc 2,5 m. **Sortir
    de l'ARRET par recul ou pivot : NON**, renvoyé à la relecture A0-8 (Fable), avec la règle.
-   **Reste ouvert (22/11) : la reprise.** Garé hors bande, Didier y rentre quand même en
-   repartant. `RouteFollower.rejoin()` vise directement la FIN du segment le plus proche, (20 ; 0),
-   et la diagonale depuis (15,8 ; 1,6) frôle le coin de la table : RALENTI à 1,2 m, ARRET à
-   0,6 m, CONV D3/D5 rouges dans 2 rejeux sur 2. Piste : rejoindre d'abord le point projeté sur
-   le chemin, qui passe à 1,8 m de la table. C'est un choix de conception sur toutes les reprises
-   d'`aller_voir`, à trancher.
+   **Décidé et fait le 22/11 : la reprise.** Garé hors bande, Didier y rentrait quand même en
+   repartant : `rejoin()` visait directement (20 ; 0), et la diagonale depuis (15,8 ; 1,6) frôlait
+   le coin de la table (ARRET à 0,6 m). Désormais `RouteFollower.rejoin()` rejoint D'ABORD la
+   projection sur le segment courant (15,8 ; 0), puis continue. Sur la table basse
+   (`test_route_reprise.py`), le centre de Didier reste à au moins 1,43 m de la table (1,4 exigé)
+   au lieu de 0,63, et la caisse à au moins 0,95 m au lieu de 0,23. Aucune règle du corps sûr
+   n'a bougé. Reste pour A0-8 : sortir d'une zone ARRET par recul ou pivot.
 
 ## Relecture critique d'A0-3 (19/11) — points ouverts, documentés, pas tranchés
 

@@ -206,6 +206,29 @@ def load_tours(data, pois: Sequence[Poi]) -> Dict[str, Tour]:
     return tours
 
 
+def nearest_on_route(waypoints: Sequence[Tuple[float, float]], x: float,
+                     y: float) -> Tuple[int, Tuple[float, float]]:
+    """(index de reprise, point du CHEMIN le plus proche de la pose) : la projection bornée sur le
+    segment le plus proche (premier en cas d'égalité) et l'index de sa FIN — avant le départ
+    (projection au début du 1er segment) : (0, premier waypoint). Itinéraire d'un seul point :
+    (0, ce point). Voir nearest_ahead_index pour le sens de « devant »."""
+    if len(waypoints) < 2:
+        return 0, (float(waypoints[0][0]), float(waypoints[0][1]))
+    best_d, best_i, best_t, best_p = math.inf, 0, 0.0, (float(waypoints[0][0]), float(waypoints[0][1]))
+    for i in range(len(waypoints) - 1):
+        (ax, ay), (bx, by) = waypoints[i], waypoints[i + 1]
+        dx, dy = bx - ax, by - ay
+        length2 = dx * dx + dy * dy
+        t = 0.0 if length2 == 0.0 else max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / length2))
+        px, py = ax + t * dx, ay + t * dy
+        d = math.hypot(px - x, py - y)
+        if d < best_d:
+            best_d, best_i, best_t, best_p = d, i, t, (px, py)
+    if best_i == 0 and best_t == 0.0:
+        return 0, best_p
+    return best_i + 1, best_p
+
+
 def nearest_ahead_index(waypoints: Sequence[Tuple[float, float]], x: float, y: float) -> int:
     """Index de REPRISE de l'itinéraire depuis une pose quelconque (lot M1,
     spec §4 : après une manœuvre « aller voir », vers le waypoint le plus
@@ -215,18 +238,7 @@ def nearest_ahead_index(waypoints: Sequence[Tuple[float, float]], x: float, y: f
     (projection bornée, premier en cas d'égalité) ; on vise sa FIN. Seule
     exception : avant le départ (projection au début du 1er segment) -> 0.
     RouteFollower.tick avance ensuite l'index s'il est déjà atteint."""
-    best_d, best_i, best_t = math.inf, 0, 0.0
-    for i in range(len(waypoints) - 1):
-        (ax, ay), (bx, by) = waypoints[i], waypoints[i + 1]
-        dx, dy = bx - ax, by - ay
-        length2 = dx * dx + dy * dy
-        t = 0.0 if length2 == 0.0 else max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / length2))
-        d = math.hypot(ax + t * dx - x, ay + t * dy - y)
-        if d < best_d:
-            best_d, best_i, best_t = d, i, t
-    if best_i == 0 and best_t == 0.0:
-        return 0
-    return best_i + 1
+    return nearest_on_route(waypoints, x, y)[0]
 
 
 def yaw_from_quaternion(x: float, y: float, z: float, w: float) -> float:
@@ -299,6 +311,9 @@ class RouteFollower:
         self._pose: Optional[Tuple[float, float, float]] = None
         self._pose_ms: Optional[int] = None
         self._index = 0
+        # Point du chemin à rejoindre D'ABORD après une manœuvre (rejoin) ; None = suivre les
+        # waypoints.
+        self._rejoin_point: Optional[Tuple[float, float]] = None
         self._lin = 0.0
         self._ang = 0.0
 
@@ -314,6 +329,11 @@ class RouteFollower:
     @property
     def waypoint_index(self) -> int:
         return self._index
+
+    @property
+    def rejoin_point(self) -> Optional[Tuple[float, float]]:
+        """Le point du chemin visé avant le waypoint courant (après rejoin), sinon None."""
+        return self._rejoin_point
 
     def set_enabled(self, enabled: bool) -> None:
         if not enabled:
@@ -340,14 +360,25 @@ class RouteFollower:
     def restart(self) -> None:
         """Reprend l'itinéraire depuis le premier point (nouvelle séance)."""
         self._index = 0
+        self._rejoin_point = None
 
     def rejoin(self) -> None:
         """Après une manœuvre (lot M1) : vise le waypoint le plus proche
         DEVANT la pose courante (nearest_ahead_index) — y compris EN ARRIÈRE
         de l'ancien index (demi-tour vers un objet dépassé : on ne saute pas
-        le bout de chemin qui reste). Sans pose : index inchangé."""
-        if self._pose is not None:
-            self._index = nearest_ahead_index(self.route.waypoints, self._pose[0], self._pose[1])
+        le bout de chemin qui reste). Sans pose : index inchangé.
+
+        Décision du 22/11 (A0-4, CONV D5) : Didier rejoint D'ABORD le point du chemin le plus
+        proche (la projection sur le segment courant), PUIS continue vers le waypoint. La
+        diagonale directe vers le waypoint passait au coin de l'objet qu'il venait de voir (la
+        table basse) et le corps sûr l'arrêtait en ARRET. Déjà sur le chemin (moins que
+        arrive_radius_m) : pas de point de reprise."""
+        if self._pose is None:
+            return
+        x, y = self._pose[0], self._pose[1]
+        self._index, point = nearest_on_route(self.route.waypoints, x, y)
+        loin = math.hypot(point[0] - x, point[1] - y) >= self.config.arrive_radius_m
+        self._rejoin_point = point if loin else None
 
     # --- sortie ------------------------------------------------------------
     def _zero(self, reason: str, finished: bool = False) -> RouteOutput:
@@ -399,6 +430,12 @@ class RouteFollower:
             return self._zero("held")
 
         tx, ty = wps[self._index]
+        if self._rejoin_point is not None:
+            rx, ry = self._rejoin_point
+            if math.hypot(rx - x, ry - y) < self.config.arrive_radius_m:
+                self._rejoin_point = None          # sur le chemin : on continue vers le waypoint
+            else:
+                tx, ty = rx, ry
         err = wrap_angle(math.atan2(ty - y, tx - x) - yaw)
         c = self.config
         ang_target = max(-c.max_ang, min(c.max_ang, c.ang_gain * err))

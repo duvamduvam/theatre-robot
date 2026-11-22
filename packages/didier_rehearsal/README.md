@@ -179,7 +179,9 @@ voir **Ordre** (demi-tour s'il l'a dépassé), pivote face à lui, s'arrête. SI
   `route off`, `route on` -> zéro franc immédiat. Ceinture : route_driver
   refuse aussi un ordre tant que la route est OFF par David.
 - **Reprise** : « go », Route ON ou geste du fader devant l'objet -> la route
-  repart vers le waypoint le plus proche DEVANT (le long du chemin).
+  rejoint D'ABORD le point du chemin le plus proche (projection sur le segment courant,
+  `RouteFollower.rejoin_point`, décision du 22/11), puis repart vers le waypoint le plus proche
+  DEVANT (le long du chemin).
 - Journal : `goto_arrived`, `goto_cancelled` (`by`), `goto_abort` (d'après
   l'état latché), `goto_result` (détail publié par route_driver sur
   `route_goto_result` : `timeout`, `max_travel`, `stalled`, `cancelled`…),
