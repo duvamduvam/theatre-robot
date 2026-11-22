@@ -485,7 +485,8 @@ ce sont les quatre derniers qui comptent.
 ### 11.3 Ce que ça apporte au scénario
 
 1. **Un thermomètre.** Une grandeur interne, la **tension** (0 à 1), règle la fréquence des
-   micro-bugs : un toutes les 20 à 40 s au calme, plusieurs par seconde quand ça chauffe. Ce qui
+   micro-bugs : un toutes les 8 à 12 s au calme (réglage de David du 22/11 : « un peu plus
+   prononcé au calme »), plusieurs par seconde quand ça chauffe. Ce qui
    la fait monter est un choix d'écriture : émotion trop forte (amoureux → surchauffe), durée de
    jeu, contradiction, foule. Le public voit Didier « monter » avant qu'il ne dise rien.
 2. **L'annonce du bug, dans la fiction.** L'étude improvisation impose 2 s d'annonce avant tout
@@ -537,6 +538,7 @@ moteur d'images **actuel**, sans attendre le visage paramétrique.
 
 ### 11.6 Questions pour David
 
-1. **Au calme** : presque rien (un micro-bug toutes les 30 s), ou une texture permanente ?
+1. ~~Au calme~~ — **tranché le 22/11** : un peu plus prononcé que « presque rien », soit un
+   micro-bug toutes les 8 à 12 s.
 2. **Le lapsus** : on le garde ?
 3. **Les vraies défaillances** affichées dans la langue des glitchs : oui ou non ?
