@@ -800,13 +800,15 @@ panne_reseau_build() {
 
 # construire_images : reconstruit ; si l'échec vient du réseau, UN essai de plus après
 # ${FUMEE_ATTENTE_RESEAU:-60} s (une coupure DNS de quelques secondes ne doit pas rougir la fumée).
+# FUMEE_BUILD_ARGS : options en plus pour `docker compose build` (vide en local ; le workflow
+# GitHub y met le frontend Dockerfile « labs », son Docker ne connaît pas COPY --exclude).
 construire_images() {
-  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build) >"$TMP/image.log" 2>&1 && return 0
+  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build ${FUMEE_BUILD_ARGS:-}) >"$TMP/image.log" 2>&1 && return 0
   panne_reseau_build "$TMP/image.log" || return 1
   dit "registre Docker injoignable : nouvel essai dans ${FUMEE_ATTENTE_RESEAU:-60} s"
   sleep "${FUMEE_ATTENTE_RESEAU:-60}"
   echo "=== nouvel essai après panne réseau ===" >>"$TMP/image.log"
-  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build) >>"$TMP/image.log" 2>&1
+  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build ${FUMEE_BUILD_ARGS:-}) >>"$TMP/image.log" 2>&1
 }
 
 phase_demarrage() {

@@ -63,6 +63,7 @@ jobs:
             echo "FUMEE_COEURS="
             echo "FUMEE_PROFIL=0"
             echo "FUMEE_COMMIT=0"
+            echo "FUMEE_BUILD_ARGS=--build-arg BUILDKIT_SYNTAX=docker/dockerfile:1-labs"
             echo "FUMEE_DELAI_DEMARRAGE=1200"
             echo "DISPLAY=:99"
             echo "XAUTHORITY=$R/xauthority"
