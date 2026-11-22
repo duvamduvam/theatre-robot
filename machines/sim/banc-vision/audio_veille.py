@@ -121,6 +121,7 @@ def decrire_cote(conf: str | None, symbole_defaut: str, defaut_reel: str | None,
                 break
     nom_lisible = (infos or {}).get("description") or (casque or {}).get("nom") or pipewire
     return {
+        "respeaker": bool(pipewire and ab._RESPEAKER.search(pipewire)),
         "conf": conf,
         "suit_ubuntu": suit_ubuntu,
         "pipewire": pipewire,
@@ -129,6 +130,15 @@ def decrire_cote(conf: str | None, symbole_defaut: str, defaut_reel: str | None,
         "muet": (infos or {}).get("muet"),
         "casque": casque,
     }
+
+
+def decrire_casques(casques: list[tuple[str, str, bool]], sources: list[str], sinks: list[str]) -> list[Json]:
+    """Casques appairés, et pour chacun si PipeWire a son entrée (micro, profil HFP) et sa
+    sortie : de quoi dire « casque connecté mais son micro n'est pas utilisé » (22/11)."""
+    return [{"nom": nom, "connecte": co,
+             "micro_present": co and ab.trouver_noeud(sources, mac) is not None,
+             "sortie_present": co and ab.trouver_noeud(sinks, mac) is not None}
+            for mac, nom, co in casques]
 
 
 def etat_niveau(fenetre: Fenetre, maintenant: float, ouvert_depuis: float | None,
@@ -196,7 +206,7 @@ def sonder() -> Json:
                               sources, casques),
         "sortie": decrire_cote(conf["sortie"], ab.DEFAULT_OUT, _pactl_c("get-default-sink").strip() or None,
                                sinks, casques),
-        "casques": [{"nom": nom, "connecte": co} for _mac, nom, co in casques],
+        "casques": decrire_casques(casques, list(sources), list(sinks)),
     }
 
 

@@ -892,6 +892,12 @@ Derrière : la veille HÔTE `machines/sim/banc-vision/audio_veille.py` (127.0.0.
 arrêtée par `seance-chantiers.sh`, journal `~/tmp/didier-sim/audio-veille.log`) ; « veille
 injoignable » en rouge = la relancer : `python3 machines/sim/banc-vision/audio_veille.py`.
 Le vumètre montre le niveau brut du micro (avant l'atténuation ×0,075 de la tête).
+Vécu le 22/11 au premier essai : M50 connecté, mais la tête écoutait le micro interne (muet) — le
+choix automatique du début de séance avait écarté le micro du casque parce qu'il était SILENCIEUX
+pendant la mesure (un micro BT en HFP rend des zéros quand personne ne parle). Corrigé : le micro
+d'un casque connecté n'est plus jugé au silence, `auto` attend la carte et l'entrée Bluetooth de
+PipeWire, et l'onglet dit la vraie cause : « casque « M50 » connecté mais son micro n'est pas
+utilisé → Re-détecter » (de même pour la sortie).
 
 **3. La page scène** : http://localhost:8765/scene — un poste de jeu qui tient
 dans l'écran (refonte du 12/11, `docs/spec-refonte-page-scene.md`, captures
@@ -1124,7 +1130,9 @@ domaine 43 lu dans les 4 conteneurs, colcon ×4 sans échec, pont gz, `noeuds_at
 < 0,8 : le reste ne serait pas fiable) → `validate-namespace.sh` → `validate-catalogue.sh` →
 animation `parle` (`animation_state` `""` → `"parle"` → `""`, jouée en rclpy) →
 `validate-data-edit.sh` (L1d, 13 épreuves ; sim lancée avec `DATA_EDIT=true`) →
-`validate-machines.sh` (L2b, M1-M4 et M6) → **sim relancée sur le monde `stage`,
+`validate-machines.sh` (L2b, M1-M4 et M6) → `validate-audio.sh` (onglet « Audio », 22/11, AU1-AU10 :
+contrat de `/api/audio`, page, Tester / Re-détecter devant une FAUSSE veille sur 127.0.0.1:8767 —
+aucun casque ; une vraie veille qui tourne rend l'épreuve « banc faux ») → **sim relancée sur le monde `stage`,
 `validate-corps-sur.sh` (CS, A0-4, 25 verdicts, rouge BLOQUANT, ≈ 15 min ; section « Corps sûr »)**
 → sim relancée sur `chantiers`, régisseur (`monde`) + regard (`robot`) puis
 `validate-rehearsal-chantiers.sh` (V-R3) → sim relancée, `validate-jeu-a1.sh` (A1) → sim relancée

@@ -69,7 +69,7 @@ def test_decrire_cote_casque_par_mac():
     noeuds = av.lire_noeuds_pactl(PACTL_SOURCES)
     assert av.decrire_cote("bluez_input.40_9C_A7_00_00_01.0", "@DEFAULT_SOURCE@", "x", noeuds, CASQUES) == {
         "conf": "bluez_input.40_9C_A7_00_00_01.0", "suit_ubuntu": False,
-        "pipewire": "bluez_input.40_9C_A7_00_00_01.0", "nom": "M50", "present": True, "muet": True,
+        "respeaker": False, "pipewire": "bluez_input.40_9C_A7_00_00_01.0", "nom": "M50", "present": True, "muet": True,
         "casque": {"nom": "M50", "connecte": True}}
 
 
@@ -85,6 +85,23 @@ def test_decrire_cote_casque_eteint_absent():
     d = av.decrire_cote("bluez_output.AC_80_0A_00_00_02.1", "@DEFAULT_SINK@", None, {}, CASQUES)
     assert (d["present"], d["muet"], d["nom"], d["casque"]) == (
         False, None, "Sony", {"nom": "Sony", "connecte": False})
+
+
+def test_decrire_casques():
+    sources = ["alsa_input.pci-0000_00_1f.3.analog-stereo", "bluez_input.40_9C_A7_00_00_01.0",
+               "bluez_input.AC_80_0A_00_00_02.0"]
+    sinks = ["bluez_output.40_9C_A7_00_00_01.1", "bluez_output.AC_80_0A_00_00_02.1"]
+    assert av.decrire_casques(CASQUES, sources, sinks) == [
+        {"nom": "M50", "connecte": True, "micro_present": True, "sortie_present": True},
+        # Déconnecté : ses nœuds éventuels ne comptent pas.
+        {"nom": "Sony", "connecte": False, "micro_present": False, "sortie_present": False}]
+    assert av.decrire_casques(CASQUES[:1], [], sinks)[0]["micro_present"] is False
+
+
+def test_respeaker_reconnu():
+    d = av.decrire_cote("alsa_input.usb-Seeed_reSpeaker_XVF3800_4-Mic_Array-00.analog-stereo", "@DEFAULT_SOURCE@",
+                        None, {}, [])
+    assert d["respeaker"] is True
 
 
 def test_etat_niveau_muet_seulement_apres_3_s_d_ecoute():

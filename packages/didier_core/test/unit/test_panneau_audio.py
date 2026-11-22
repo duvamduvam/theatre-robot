@@ -21,7 +21,7 @@ HOTE_OK = {
               "nom": "M50", "present": True, "muet": False, "casque": {"nom": "M50", "connecte": True}},
     "sortie": {"conf": "bluez_output.40_9C.1", "suit_ubuntu": False, "pipewire": "bluez_output.40_9C.1",
                "nom": "M50", "present": True, "muet": False, "casque": {"nom": "M50", "connecte": True}},
-    "casques": [{"nom": "M50", "connecte": True}],
+    "casques": [{"nom": "M50", "connecte": True, "micro_present": True, "sortie_present": True}],
     "photo_age_s": 0.4,
     "erreur_sonde": None,
     "niveau": {"crete": 3277, "crete_3s": 32767, "ecoute_s": 12.0, "muet_constate": False,
@@ -87,7 +87,7 @@ def test_casque_connecte_sans_micro_hfp():
 
 
 def test_micro_filaire_debranche():
-    s = pa.synthese(hote(micro__present=False, micro__casque=None, micro__nom="Scarlett 4i4"),
+    s = pa.synthese(hote(micro__present=False, micro__casque=None, micro__nom="Scarlett 4i4", casques=[]),
                     "listening", None, None)
     assert (s["message"], s["action"]) == ("micro « Scarlett 4i4 » débranché", "rebranche-le, puis « Re-détecter »")
 
@@ -119,14 +119,53 @@ def test_parole_off_et_tete_muette():
 
 
 def test_sans_casque_le_micro_peut_entendre_didier():
-    s = pa.synthese(hote(micro__casque=None, sortie__casque=None), "listening", None, None)
+    s = pa.synthese(hote(micro__casque=None, sortie__casque=None, casques=[]), "listening", None, None)
     assert (s["verdict"], s["message"]) == ("attention", "pas de casque : le micro peut entendre Didier")
+
+
+# Constat de la séance du 22/11 à 19h56, tel que la veille le rendait.
+INTERNE_MUET = {"conf": "@DEFAULT_SOURCE@", "suit_ubuntu": True,
+                "pipewire": "alsa_input.pci-0000_00_1f.3.analog-stereo", "nom": "Audio interne Stéréo analogique",
+                "present": True, "muet": True, "casque": None, "respeaker": False}
+
+
+def test_cas_du_22_11_casque_connecte_micro_interne_muet():
+    s = pa.synthese(hote(micro=INTERNE_MUET, niveau__muet_constate=True, niveau__crete=0), "listening", None, None)
+    assert (s["verdict"], s["message"], s["action"]) == (
+        "ko", "casque « M50 » connecté mais son micro n'est pas utilisé (Didier écoute « Audio interne Stéréo analogique »)",
+        "« Re-détecter » : le micro du casque sera choisi")
+    assert s["autres"] == ["micro « Audio interne Stéréo analogique » coupé (muet) dans le réglage son",
+                           "micro plat depuis 3 s : aucun son n'entre"]
+
+
+def test_casque_connecte_en_ecoute_seule_et_micro_interne():
+    h = hote(micro=INTERNE_MUET, casques=[{"nom": "M50", "connecte": True, "micro_present": False,
+                                           "sortie_present": True}])
+    assert pa.synthese(h, "listening", None, None)["message"].startswith("casque « M50 » connecté mais son micro")
+    # Casque connecté sans aucun nœud, tout sur le PC : la cause est le casque, pas « pas de casque ».
+    h = hote(micro=INTERNE_MUET, sortie__casque=None, casques=[{"nom": "M50", "connecte": True,
+                                                                "micro_present": False, "sortie_present": False}])
+    s = pa.synthese(h, "listening", None, None)
+    assert s["message"].startswith("casque « M50 » connecté mais son micro")
+    assert "pas de casque : le micro peut entendre Didier" not in s["autres"]
+
+
+def test_respeaker_avec_casque_connecte_ok():
+    h = hote(micro__casque=None, micro__respeaker=True, micro__nom="reSpeaker")
+    assert pa.synthese(h, "listening", None, None)["verdict"] == "ok"
+
+
+def test_casque_connecte_mais_sortie_sur_le_pc():
+    s = pa.synthese(hote(sortie__casque=None, sortie__nom="Audio interne"), "listening", None, None)
+    assert (s["verdict"], s["message"]) == (
+        "ko", "casque « M50 » connecté mais la voix de Didier n'y va pas (elle sort sur « Audio interne »)")
 
 
 def test_micro_du_casque_et_haut_parleurs_du_pc_ok():
     """Même règle que audio_banc.plan_auto : l'alerte « boucle » vise le micro du PC hors casque."""
-    s = pa.synthese(hote(sortie__casque=None, sortie__nom="Audio interne"), "listening", None, None)
-    assert (s["verdict"], s["message"]) == ("ok", "tout va bien : « M50 » → « Audio interne »")
+    h = hote(sortie__casque=None, sortie__nom="Audio interne",
+             casques=[{"nom": "M50", "connecte": True, "micro_present": True, "sortie_present": False}])
+    assert (pa.synthese(h, "listening", None, None)["verdict"],) == ("ok",)
 
 
 def test_redetection_en_cours_passe_avant_les_attentions_apres_les_ko():

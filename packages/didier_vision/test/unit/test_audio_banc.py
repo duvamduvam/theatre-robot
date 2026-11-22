@@ -121,3 +121,21 @@ def test_auto_casque_sans_hfp_sert_de_sortie_seulement():
 def test_auto_ignore_les_monitors():
     micro, _, _ = ab.plan_auto([], [PC_OUT + ".monitor"], [])
     assert micro == "@DEFAULT_SOURCE@"
+
+
+def test_auto_cas_du_22_11_casque_connecte_silencieux_micro_interne_muet():
+    """Vécu en séance le 22/11 : M50 connecté, David silencieux pendant la mesure (son micro
+    HFP rend des zéros), micro interne coupé. Avant : aucun micro « vivant », défaut d'Ubuntu
+    = micro interne muet, Didier sourd. Le micro d'un casque connecté n'est pas jugé au silence."""
+    micro, sortie, pourquoi = ab.plan_auto([M50], [PC_IN, M50_IN], [PC_OUT, M50_OUT], {PC_IN: 0, M50_IN: 0})
+    assert (micro, sortie) == (M50_IN, M50_OUT)
+    assert pourquoi == (f"micro = micro du casque M50 [{M50_IN}] ; sortie = casque M50"
+                        f" ; micros muets écartés : {PC_IN}")
+
+
+def test_auto_micro_bluez_d_un_casque_non_connecte_reste_juge_au_silence():
+    autre = "bluez_input.AC:80:0A:7F:3C:53"
+    micro, _, _ = ab.plan_auto([M50], [autre, M50_IN], [M50_OUT], {autre: 0, M50_IN: 0})
+    assert micro == M50_IN
+    micro, _, _ = ab.plan_auto([], [autre], [], {autre: 0})
+    assert micro == "@DEFAULT_SOURCE@"

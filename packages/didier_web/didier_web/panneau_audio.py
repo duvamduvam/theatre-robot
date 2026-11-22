@@ -80,6 +80,19 @@ def problemes(hote: Json | None, chat_state: str | None) -> list[Json]:
         trouves.append(_cote_absent(micro, "micro"))
     if not sortie.get("present"):
         trouves.append(_cote_absent(sortie, "sortie"))
+    connectes = [c for c in hote.get("casques") or [] if c.get("connecte")]
+    # 22/11 (vécu en séance) : M50 connecté, la tête écoutait le micro interne muet et le verdict
+    # disait « micro coupé » — vrai mais trompeur. La vraie cause passe devant.
+    casque_micro = next((c for c in connectes if c.get("micro_present")), None) or (connectes[0] if connectes else None)
+    if (casque_micro and micro.get("present") and not micro.get("casque") and not micro.get("respeaker")):
+        trouves.append(_probleme(KO, f"casque « {casque_micro['nom']} » connecté mais son micro n'est pas utilisé"
+                                     f" (Didier écoute « {micro.get('nom')} »)",
+                                 "« Re-détecter » : le micro du casque sera choisi"))
+    casque_sortie = next((c for c in connectes if c.get("sortie_present")), None)
+    if casque_sortie and sortie.get("present") and not sortie.get("casque"):
+        trouves.append(_probleme(KO, f"casque « {casque_sortie['nom']} » connecté mais la voix de Didier n'y va pas"
+                                     f" (elle sort sur « {sortie.get('nom')} »)",
+                                 "« Re-détecter » : la sortie du casque sera choisie"))
     if micro.get("present") and micro.get("muet"):
         trouves.append(_probleme(KO, f"micro « {micro.get('nom')} » coupé (muet) dans le réglage son",
                                  "réactive-le : Paramètres > Son > Entrée (ou le bouton muet du casque)"))
@@ -97,7 +110,8 @@ def problemes(hote: Json | None, chat_state: str | None) -> list[Json]:
                                  "la tête est-elle lancée ? docker logs didier-sim-vision"))
     elif chat_state == "off":
         trouves.append(_probleme(ATTENTION, "Parole OFF : Didier n'écoute pas", "Parole → ON (colonne de gauche)"))
-    if micro.get("present") and sortie.get("present") and not micro.get("casque") and not sortie.get("casque"):
+    if (not connectes and micro.get("present") and sortie.get("present")
+            and not micro.get("casque") and not sortie.get("casque")):
         trouves.append(_probleme(ATTENTION, "pas de casque : le micro peut entendre Didier",
                                  "allume un casque Bluetooth, puis « Re-détecter »"))
     return sorted(trouves, key=lambda p: _GRAVITE[p["niveau"]])
