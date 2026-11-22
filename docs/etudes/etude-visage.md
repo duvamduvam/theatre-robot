@@ -1,6 +1,6 @@
 # Étude — le visage de Didier (dessin, animation, lumière, matériel)
 
-**Statut : PROPOSÉE le 22/11/2026 — rien d'acté, rien de modifié dans le robot.** Demande de
+**Statut : DÉCIDÉ le 22/11/2026 (David) — les 4 questions du §8 tranchées : pupille mobile, cyan, `default` = repos néon, feu vert V0 bis puis V1. Premier geste fait le même jour : lot « V1-images » (§10).** Demande de
 David : « une étude complète sur le design du visage, avec des propositions ».
 Modèle : Fable 5.2 (étude), trois agents de recherche web, une relecture contradictoire
 (20 constats dont 2 bloquants, tous intégrés ; cette version est la réécriture).
@@ -335,7 +335,7 @@ touche `didier_vision`.
 4. **Toute couleur contient du vert.** Le « triste » passe de (0, 80, 255) à (70, 150, 255).
 5. **Trait de 2 LED au moins**, formes pleines plutôt que contours : une marge de prudence pour
    la distance et le jour, à confirmer par la mesure.
-6. **L'essentiel de la bouche dans les 12 colonnes du centre.**
+6. **La bouche occupe la largeur** : 16 à 22 colonnes sur 24 pour les expressions courantes (David, 22/11 : « la largeur possible de la bouche est moins utilisée » ; remplace la règle des 12 colonnes du centre). Les pans de côté prolongent le dessin.
 7. **Budget de lumière** : une expression de fond sous 160 LED allumées. Les douze proposées
    font 40 à 160 LED, soit 0,8 à 4,8 A à 100 %, contre 2,6 à 10 A aujourd'hui.
 8. **Les numéros restent des numéros**, appelés exprès.
@@ -425,3 +425,20 @@ règle — la vie au repos est un calque du visage, pas une source de plus.
 - Les rythmes (clignement, parole) viennent de résumés non ouverts.
 - Les dessins sont un point de départ réglable : c'est David qui dira si « malice » ou
   « triste » sont justes.
+
+## 10. Lot V1-images (22/11) — le nouveau visage en images, sans changer le moteur
+
+En attendant le moteur paramétrique, le visage v2 est posé **dans les données** :
+[`visage/generer_visuels.py`](visage/generer_visuels.py) dessine chaque image avec la maquette et
+réécrit les pistes de 13 expressions dans `data/json/expressions.json`. Rejouable à l'identique.
+
+- **Remplacées, noms gardés** : `default` (devient le repos cyan : fin du visage jaune après
+  chaque réplique), `repos neon`, `joie`, `colere`, `tristesse`, `surprise`, `reflechit`,
+  `parle`, `amour neon`. Conversation, télécommande, séquences et page scène inchangées.
+- **Nouvelles** : `ecoute`, `emerveille`, `malice`, `dodo` — branchées sur rien pour l'instant.
+- **Clignements** : repos (simple puis double), tristesse (lent), écoute ; l'œil fermé est un
+  trait de 2 LED, jamais du noir.
+- **Images** : 89 PNG `v2-*` ajoutés ; les anciens restent (retrait = V5).
+- **Supprime** : rien.
+
+Planche image par image : [`visage/planche-v2.png`](visage/planche-v2.png).

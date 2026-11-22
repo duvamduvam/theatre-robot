@@ -63,8 +63,8 @@ class Oeil:
 @dataclass(frozen=True)
 class Bouche:
     """La bouche 24x16. Le pan de FACE ne porte que les colonnes 8 à 15 : l'essentiel du
-    dessin tient dans les 12 colonnes du centre, le reste déborde sur les pans de côté."""
-    largeur: float = 12.0
+    dessin occupe presque toute la largeur (choix de David du 22/11) ; les pans de côté le prolongent."""
+    largeur: float = 20.0      # sur 24 : la bouche occupe toute la largeur (David, 22/11)
     courbure: float = 0.0        # > 0 sourire, < 0 moue ; flèche de la courbe en LED
     ouverture: float = 0.0       # hauteur du vide entre les lèvres, en LED
     epaisseur: float = 2.0       # trait jamais sous 2 LED
@@ -158,27 +158,27 @@ def _v(oeil: Oeil, bouche: Bouche, oeil_d: Oeil | None = None) -> Visage:
     return Visage(oeil, oeil_d or oeil, bouche)
 
 
-NEUTRE = _v(Oeil(), Bouche(courbure=1.2))
+NEUTRE = _v(Oeil(), Bouche(courbure=1.6))
 VOCABULAIRE: dict[str, Visage] = {
     "repos": NEUTRE,
-    "joie": _v(Oeil(paupiere_bas=0.18, arc_bas=2.6, pupille=0), Bouche(largeur=14, courbure=4.5, ouverture=3.5)),
+    "joie": _v(Oeil(paupiere_bas=0.18, arc_bas=2.6, pupille=0), Bouche(largeur=22, courbure=5.5, ouverture=4.0)),
     "émerveillé": _v(Oeil(largeur=7, hauteur=7, arrondi=2.6, pupille=1.5, regard=(0, -0.4), couleur=BLANC),
-                     Bouche(largeur=7, ouverture=4, rond=1)),
-    "amour": _v(Oeil(forme="coeur", largeur=8, hauteur=8, pupille=0, couleur=ROSE), Bouche(largeur=10, courbure=3.2, couleur=ROSE)),
+                     Bouche(largeur=11, ouverture=5, rond=1)),
+    "amour": _v(Oeil(forme="coeur", largeur=8, hauteur=8, pupille=0, couleur=ROSE), Bouche(largeur=18, courbure=4.0, couleur=ROSE)),
     "triste": _v(Oeil(paupiere_haut=0.22, pente_haut=-0.45, pupille=0.9, regard=(0, 1.3), couleur=BLEU_PALE),
-                 Bouche(largeur=10, courbure=-3.0, couleur=BLEU_PALE)),
+                 Bouche(largeur=18, courbure=-4.0, couleur=BLEU_PALE)),
     "colère": _v(Oeil(paupiere_haut=0.25, pente_haut=0.6, pupille=0, couleur=ROUGE),
-                 Bouche(largeur=12, courbure=-2.6, epaisseur=2.4, couleur=ROUGE)),
-    "surprise": _v(Oeil(largeur=7, hauteur=7.6, arrondi=3.0, pupille=0.8), Bouche(largeur=8, ouverture=6, rond=1)),
-    "écoute": _v(Oeil(hauteur=7, pupille=1.3, couleur=VERT), Bouche(largeur=6, courbure=0.8, couleur=VERT)),
+                 Bouche(largeur=20, courbure=-3.4, epaisseur=2.4, couleur=ROUGE)),
+    "surprise": _v(Oeil(largeur=7, hauteur=7.6, arrondi=3.0, pupille=0.8), Bouche(largeur=12, ouverture=7, rond=1)),
+    "écoute": _v(Oeil(hauteur=7, pupille=1.3, couleur=VERT), Bouche(largeur=12, courbure=1.0, couleur=VERT)),
     "réfléchit": _v(Oeil(hauteur=5, regard=(1.0, -0.5), couleur=AMBRE),
-                    Bouche(largeur=7, courbure=-0.6, couleur=AMBRE),
+                    Bouche(largeur=12, courbure=-0.8, couleur=AMBRE),
                     Oeil(regard=(-1.0, -1.0), couleur=AMBRE)),
-    "parle": _v(Oeil(), Bouche(largeur=11, courbure=1.0, ouverture=5)),
+    "parle": _v(Oeil(), Bouche(largeur=18, courbure=1.2, ouverture=5)),
     "malice": _v(Oeil(paupiere_haut=0.34, pupille=0.9, regard=(1.0, 1.0)),
-                 Bouche(largeur=11, courbure=2.6),
+                 Bouche(largeur=18, courbure=3.4),
                  Oeil(paupiere_haut=0.34, pupille=0.9, regard=(-1.0, 1.0))),
-    "dodo": _v(Oeil(paupiere_haut=0.82, pupille=0, couleur=BLEU_PALE), Bouche(largeur=5, ouverture=1.5, rond=1, couleur=BLEU_PALE)),
+    "dodo": _v(Oeil(paupiere_haut=0.82, pupille=0, couleur=BLEU_PALE), Bouche(largeur=8, ouverture=1.5, rond=1, couleur=BLEU_PALE)),
 }
 
 # Les trois grammaires d'œil comparées dans l'étude.
