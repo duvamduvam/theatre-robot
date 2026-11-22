@@ -442,3 +442,101 @@ réécrit les pistes de 13 expressions dans `data/json/expressions.json`. Rejoua
 - **Supprime** : rien.
 
 Planche image par image : [`visage/planche-v2.png`](visage/planche-v2.png).
+
+## 11. Glitchs et micro-bugs (22/11, proposé — demande de David)
+
+David : « étudie des glitchs LED également, des micro-bugs, ça rend pas mal, et ça alimente mon
+scénario ». Maquette : [`visage/maquette_glitchs.py`](visage/maquette_glitchs.py).
+
+![Catalogue des micro-bugs](visage/glitchs-catalogue.png)
+
+Animation de 14 s — la tension monte, les micro-bugs se rapprochent, le bug éclate, Didier se
+remet : [`visage/glitchs-tension.gif`](visage/glitchs-tension.gif) (la barre orange est la tension).
+
+### 11.1 Trois échelles, trois rôles
+
+| Échelle | Durée | Ce que c'est | Qui décide |
+|---|---|---|---|
+| **Micro-bug** | 50 à 300 ms, une zone, quelques LED | une **texture** : l'expression reste lisible, ce n'est pas un événement | personne : tiré au hasard, à un rythme fixé par la tension |
+| **Accroc** | 0,3 à 1 s, visible de loin | un **signe** : dérive de couleur, lapsus, œil en retard, gel | une séquence, la conversation ou le sélecteur, à l'unité |
+| **Bug joué** | 3 à 15 s | une **scène** : le catalogue de [`etude-improvisation.md`](etude-improvisation.md) §2 | le sélecteur, avec annonce, veto et plafonds |
+
+Les micro-bugs ne remplacent donc pas les bugs joués : ils les **préparent** et les **prolongent**.
+
+### 11.2 Le catalogue
+
+Douze effets, tous des calques : ils abîment l'image en cours, quelle que soit l'expression.
+
+| Effet | Portée | Sens possible |
+|---|---|---|
+| pixel chaud, pixel mort, neige | de près (une LED) | usure, fatigue, parasites |
+| ligne décalée, saut, bloc | de près à moyen | déchirure, sursaut, mémoire qui se mélange |
+| balayage | de près | vieil écran |
+| couleurs séparées | de loin | surcharge, émotion trop forte |
+| baisse (un œil ou la bouche faiblit) | de loin | il s'éteint, il faiblit |
+| dérive de couleur | de loin | « ce n'est plus tout à fait lui » |
+| œil en retard | de loin | un œil qui cligne seul : fatigue, ou clin d'œil raté |
+| **lapsus** : une image d'une autre émotion | de loin | ce qu'il pense vraiment, le temps d'un éclair |
+
+Réserve honnête : les effets à une LED ne se lisent que de près (une LED à 15 m fait 1,9′). En
+rue ils seront vus par le premier cercle, à 3-5 m — là où se joue la rencontre. Pour porter loin,
+ce sont les quatre derniers qui comptent.
+
+### 11.3 Ce que ça apporte au scénario
+
+1. **Un thermomètre.** Une grandeur interne, la **tension** (0 à 1), règle la fréquence des
+   micro-bugs : un toutes les 20 à 40 s au calme, plusieurs par seconde quand ça chauffe. Ce qui
+   la fait monter est un choix d'écriture : émotion trop forte (amoureux → surchauffe), durée de
+   jeu, contradiction, foule. Le public voit Didier « monter » avant qu'il ne dise rien.
+2. **L'annonce du bug, dans la fiction.** L'étude improvisation impose 2 s d'annonce avant tout
+   bug joué, pour que David puisse refuser. Une rafale de micro-bugs **est** cette annonce :
+   David la voit sur le visage sans regarder la télécommande, et le public la reçoit comme un
+   présage.
+3. **La retombée.** Après un bug, des micro-bugs de plus en plus rares : « il se remet ». Un bug
+   n'est plus un interrupteur, il a une queue.
+4. **Le lapsus.** Didier dit « tout va très bien » et son visage affiche la colère pendant deux
+   images. À manier rarement : c'est l'effet le plus fort du catalogue.
+5. **Une signature par état**, au lieu du hasard pur : amoureux → pixels roses qui débordent ;
+   triste → pixels morts, baisse ; en colère → lignes déchirées ; fatigué → œil en retard.
+6. **Les vraies défaillances dans la même langue.** Réseau perdu, oreille en échec, batterie
+   basse : chacune avec sa signature. Une vraie dégradation ressemble alors au personnage, et
+   David la lit sur le visage. Condition : le panneau Coulisses dit laquelle est réelle.
+
+### 11.4 Garde-fous
+
+- **Photosensibilité.** Règle WCAG 2.3.1 (page du W3C lue le 22/11) : pas plus de **trois flashs
+  par seconde**, un flash étant un aller-retour de luminance d'au moins 10 % ; l'exception ne vaut
+  que sous un quart d'un champ de vision de 10°. Or un enfant à 1 m voit la bouche sous environ
+  11° × 8° : de près, le visage **est** ce champ. Donc : jamais plus de 3 changements pleine zone
+  par seconde, jamais de flash en rouge saturé, et un micro-bug touche une seule zone et moins
+  d'un dixième de ses LED. À vérifier à cette aune : la boucle `glitch total` actuelle (4 images
+  pleine face par seconde).
+- **L'état de conversation reste lisible** : pas de micro-bug pendant la demi-seconde qui suit un
+  passage écoute / réflexion / parole ; un micro-bug dure 6 images au plus.
+- **Jamais sur une mire** de calibration ni sur un numéro dessiné.
+- **STOP IMPRO et « stop » mettent la tension à zéro**, comme pour les bugs joués.
+- **Joué ou réel ?** Chaque micro-bug est tiré d'une graine et écrit au journal avec sa cause. Un
+  défaut d'affichage qui n'est pas au journal est une vraie panne (il y en a eu une, le 13/07).
+- **Courant** : au plus quelques LED blanches en plus ; couvert par le limiteur de P4.
+- **Cadence** : un micro-bug ajoute des affichages du ruban ; il passe par l'affichage unique par
+  tranche de 50 ms (lot V0 bis).
+
+### 11.5 Réalisation
+
+Le calque travaille sur l'image de chaque zone juste avant son envoi au ruban : il marche avec le
+moteur d'images **actuel**, sans attendre le visage paramétrique.
+
+| Lot | Contenu | Vérification |
+|---|---|---|
+| **G0** | module pur des 12 effets + tirage à graine dans `didier_core`, branché sous `Face` ; sujets relatifs `face_tension` (0 à 1, latché, périmé) et `face_glitch` (un accroc à l'unité) | tests à valeur gravée (graine fixe → image attendue) ; aperçu sim ; règle des 3 flashs testée |
+| **G1** | le sélecteur publie la tension ; l'annonce d'un bug joué devient une rafale ; retombée | épreuve IMPRO : rafale vue avant chaque bug non ordonné, tension nulle après STOP IMPRO |
+| **G2** | signatures par émotion, lapsus à la demande de la conversation, signatures des défaillances réelles | visuel de David en sim, puis sur le robot |
+
+À terme les boucles dessinées `repos glitch`, `fuzz` et `glitch total` laissent la place au calque
+(lot V5) ; rien n'est supprimé avant.
+
+### 11.6 Questions pour David
+
+1. **Au calme** : presque rien (un micro-bug toutes les 30 s), ou une texture permanente ?
+2. **Le lapsus** : on le garde ?
+3. **Les vraies défaillances** affichées dans la langue des glitchs : oui ou non ?
