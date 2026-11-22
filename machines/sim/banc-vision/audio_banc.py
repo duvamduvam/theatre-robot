@@ -133,10 +133,18 @@ def plan_auto(casques: list, sources: list, sinks: list, cretes: dict | None = N
     des casques CONNECTÉS ; sources/sinks = noms PipeWire présents ; `cretes` =
     {source: crête mesurée} (None = pas de mesure, tout micro présent est
     supposé vivant). Le micro d'un casque n'existe qu'en profil HFP : l'appelant
-    le pose avant (sinon ce casque ne sert que de sortie)."""
+    le pose avant (sinon ce casque ne sert que de sortie).
+    22/11 (vécu en séance) : le micro d'un casque CONNECTÉ n'est jamais écarté pour silence —
+    un micro BT en HFP rend des zéros tant que personne ne parle (réduction de bruit) ; le
+    seuil de vie vise les entrées filaires sans rien de branché (Scarlett vide). Sans ça, le
+    M50 allumé et silencieux était écarté et la tête retombait sur le micro interne MUET."""
     noms_casques = {mac_cle(m): n for m, n in casques}
+
+    def du_casque(source: str) -> bool:
+        return source.startswith("bluez_") and any(k in source.upper().replace(":", "_") for k in noms_casques)
+
     micros = [s for s in sources if not s.endswith(".monitor")
-              and (cretes is None or cretes.get(s, 0) >= CRETE_VIVANT)]
+              and (cretes is None or du_casque(s) or cretes.get(s, 0) >= CRETE_VIVANT)]
     morts = [s for s in sources if not s.endswith(".monitor") and s not in micros]
     sortie = quoi_sortie = None
     for mac, nom in casques:
@@ -226,16 +234,28 @@ def etat() -> int:
     return 0 if ok else 1
 
 
+def _attendre(trouver, delai_s: float = 6.0, pas_s: float = 0.5):
+    """Rappelle `trouver()` jusqu'à un résultat non vide (PipeWire crée les nœuds Bluetooth en
+    différé : la carte quelques secondes après la connexion, l'entrée HFP après le profil)."""
+    for _ in range(int(delai_s / pas_s) + 1):
+        res = trouver()
+        if res:
+            return res
+        subprocess.run(["sleep", str(pas_s)])
+    return None
+
+
 def poser_hfp(mac: str) -> bool:
-    """Passe la carte PipeWire du casque en profil casque+micro. False si absente/sans HFP."""
-    carte = next((c for c in noeuds("cards") if mac_cle(mac) in c.upper().replace(":", "_")), None)
+    """Passe la carte PipeWire du casque en profil casque+micro, puis attend son entrée.
+    False si carte absente, sans HFP, ou entrée jamais apparue."""
+    carte = _attendre(lambda: next((c for c in noeuds("cards") if mac_cle(mac) in c.upper().replace(":", "_")), None))
     if not carte:
         return False
     profil = choisir_profil_hfp(re.findall(r"^\t\t([\w-]+):", sh("pactl", "list", "cards"), re.M))
     if not profil:
         return False
     sh("pactl", "set-card-profile", carte, profil)
-    return True
+    return _attendre(lambda: trouver_noeud(noeuds("sources"), mac)) is not None
 
 
 def crete(source: str, duree_s: float = 2.0) -> int:
@@ -273,10 +293,9 @@ def auto() -> tuple:
     if not respeaker:
         # Sans ReSpeaker, le micro vient du casque : profil HFP (sinon le casque reste
         # en A2DP, meilleure sortie, et le ReSpeaker écoute).
-        for mac, _ in connectes:
-            poser_hfp(mac)
-        if connectes:
-            subprocess.run(["sleep", "2"])   # PipeWire crée les nœuds HFP en différé
+        for mac, nom in connectes:
+            if not poser_hfp(mac):
+                print(f"⚠️ casque {nom} : pas d'entrée micro (profil casque+micro refusé ?)", flush=True)
     sources = noeuds("sources")
     cretes = {s: crete(s) for s in sources if not s.endswith(".monitor")}
     return plan_auto(connectes, sources, noeuds("sinks"), cretes)

@@ -47,6 +47,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 
+import aiohttp
 import rclpy
 from aiohttp import web, WSMsgType
 from ament_index_python.packages import get_package_share_directory
@@ -61,7 +62,7 @@ from theatre_interfaces.msg import StringTime
 # n'attrape que TypeError/JSONDecodeError (pas tout ValueError) et sa
 # sémantique générique est gardée à l'identique.
 from theatre_contrats import donnees, qos, stringtime
-from didier_web import apercu_lumieres, lecture_donnees
+from didier_web import apercu_lumieres, lecture_donnees, panneau_audio
 from didier_web.web_catalog import build_catalog
 from didier_web.web_protocol import (
     DATA_EDIT_TOPIC, DRIVE_TIMEOUT_S, TOPICS_FLUX, TOPICS_LECTURE,
@@ -97,6 +98,16 @@ FEED_QUEUE_MAX = 256
 # Raison de refus commune aux messages qui exigent l'écriture (cmd/drive/stop) :
 # l'UI s'en sert telle quelle dans son journal d'erreurs.
 ERR_LECTURE_SEULE = "écriture non détenue"
+# Onglet « Audio » (22/11) : la veille audio du banc PC (machines/sim/banc-vision/audio_veille.py)
+# répond en local ; au-delà de ce délai elle est déclarée injoignable (la page le dit en rouge).
+AUDIO_BANC_TIMEOUT_S = 0.8
+AUDIO_BANC_ACTION_TIMEOUT_S = 12.0   # > délai du bip côté veille (10 s)
+# Re-détection : `audio_banc.py choisir auto` essaie chaque casque (~8 s) et écoute chaque micro
+# (2 s) ; le pont attend sa fin (sondage 1 s) au plus ce temps avant de rouvrir le micro.
+AUDIO_BANC_REDETECTION_MAX_S = 200.0
+AUDIO_BANC_SONDE_S = 1.0
+# Parole OFF -> ON : le temps que le arecord de la tête meure avant d'en relancer un.
+AUDIO_BANC_PAUSE_MICRO_S = 0.5
 
 
 class WebBridgeNode(Node):
@@ -158,6 +169,10 @@ class WebBridgeNode(Node):
         # même que data_edit_node, lue par GET /api/data (lecture seule).
         self.declare_parameter("data_edit_enabled", False)
         self.declare_parameter("data_dir", "/home/ros2_ws/src/robot")
+        # Onglet « Audio » (22/11, SIM-ONLY) : port LOCAL de la veille audio du banc PC
+        # (audio_veille.py, lancée par seance-chantiers.sh sur l'hôte). Le pont (réseau host)
+        # la relaie à la page ; hors domaine 43 elle n'est jamais contactée.
+        self.declare_parameter("audio_banc_port", 8767)
 
         self.web_port = self.get_parameter("web_port").value
         self.json_dir = self.get_parameter("json_dir").value
@@ -174,6 +189,7 @@ class WebBridgeNode(Node):
         self.exterior_topic = str(self.get_parameter("exterior_topic").value or "")
         self.data_edit_enabled = bool(self.get_parameter("data_edit_enabled").value)
         self.data_dir = str(self.get_parameter("data_dir").value)
+        self.audio_banc_url = "http://127.0.0.1:{}".format(int(self.get_parameter("audio_banc_port").value))
 
         # ROS_DOMAIN_ID n'est pas exposé comme paramètre de node par rclpy :
         # c'est une variable d'environnement du PROCESSUS, lue une fois au
@@ -249,6 +265,11 @@ class WebBridgeNode(Node):
         self.validation_sim = rehearsal_allowed(self.domain_id)
         self.validation_demande_pub = self.create_publisher(
             StringTime, VALIDATION_SIM_DEMANDE_TOPIC, qos.volatile(10)) if self.validation_sim else None
+        # Onglet « Audio » : le banc PC n'existe qu'en simulation (même garde). Le dernier tour
+        # entendu (flux chat_hearing) est gardé ici pour le témoin « Didier m'entend ».
+        self.audio_banc = rehearsal_allowed(self.domain_id)
+        self.dernier_entendu = None   # (payload décodé, horloge monotone) sous self.lock
+        self.redetection_en_cours = False   # touché seulement depuis la boucle asyncio
 
         # --- Pilotage roues (SIM-ONLY, W3) --------------------------------------
         # Le publisher cmd_vel_web N'EXISTE que si drive_enabled : quand il vaut
@@ -330,13 +351,17 @@ class WebBridgeNode(Node):
         traverse vers le thread asyncio. Surtout PAS de send direct ici : les
         WebSockets appartiennent à la boucle asyncio, pas au thread rclpy."""
         def _on_feed(msg):
-            sink = self.feed_sink  # une seule lecture : l'attribut peut passer à None en arrêt
-            if sink is None:
-                return
             try:
                 value = stringtime.loads(msg.msg)
             except (TypeError, json.JSONDecodeError):
                 value = msg.msg
+            if topic == "chat_hearing":
+                # Témoin « Didier m'entend » de l'onglet Audio : gardé même sans client connecté.
+                with self.lock:
+                    self.dernier_entendu = (value, time.monotonic())
+            sink = self.feed_sink  # une seule lecture : l'attribut peut passer à None en arrêt
+            if sink is None:
+                return
             sink(build_feed(topic, value))
         return _on_feed
 
@@ -464,6 +489,17 @@ class WebBridgeNode(Node):
         provisoire.replace(chemin)
         return chemin
 
+    def tete_audio(self) -> tuple:
+        """(chat_state, dernier tour entendu, il y a combien de s) pour l'onglet « Audio »."""
+        now = time.monotonic()
+        with self.lock:
+            etat = self.last_topics.get("chat_state")
+            entendu = self.dernier_entendu
+        chat_state = etat["msg"] if etat is not None and isinstance(etat["msg"], str) else None
+        if entendu is None:
+            return chat_state, None, None
+        return chat_state, entendu[0], now - entendu[1]
+
     def refresh_node_names(self) -> None:
         self.node_names_cache = sorted(
             name for name, _namespace in self.get_node_names_and_namespaces())
@@ -485,7 +521,8 @@ class WebBridgeNode(Node):
                            perception=bool(self.perception_topic),
                            exterior=bool(self.exterior_topic),
                            data_edit=self.data_edit_enabled,
-                           validation_sim=self.validation_sim)
+                           validation_sim=self.validation_sim,
+                           audio_banc=self.audio_banc)
 
 
 # --- Encodage vidéo (JPEG) : fonction pure, hors du node -------------------
@@ -728,6 +765,99 @@ async def _handle_valider_roues(node, app, client_id, ws, msg):
     await _send_json_safe(ws, build_ack("valider_roues"))
 
 
+# --- Onglet « Audio » (22/11, SIM-ONLY) : relais de la veille audio du banc PC ---------
+
+async def _veille_audio(app: web.Application, methode: str, chemin: str,
+                        delai_s: float = AUDIO_BANC_TIMEOUT_S) -> dict | None:
+    """Appel à la veille audio de l'hôte ; None si elle est injoignable ou répond mal."""
+    node = app["node"]
+    try:
+        async with app["audio_http"].request(methode, node.audio_banc_url + chemin,
+                                             timeout=aiohttp.ClientTimeout(total=delai_s)) as rep:
+            corps = await rep.json(content_type=None)
+            return corps if isinstance(corps, dict) else None
+    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError):
+        return None
+
+
+async def audio_handler(request: web.Request) -> web.Response:
+    """GET /api/audio : le verdict de l'onglet « Audio » (panneau_audio.synthese). 404 hors
+    simulation. Lecture seule : la page l'interroge ~4 fois/s, onglet ouvert."""
+    node = request.app["node"]
+    if not node.audio_banc:
+        return web.Response(status=404, text="onglet audio : banc PC en simulation seulement")
+    hote = await _veille_audio(request.app, "GET", "/etat")
+    chat_state, entendu, age = node.tete_audio()
+    return web.json_response(panneau_audio.synthese(hote, chat_state, entendu, age))
+
+
+async def _rouvrir_micro_apres_redetection(node: WebBridgeNode, app: web.Application) -> None:
+    """Attend la fin de `choisir auto`, puis coupe et rouvre le micro de la tête (Parole OFF ->
+    ON) : son arecord suivant relit asound.conf, sans redémarrer la tête (personnalité,
+    conversation et vision gardées). Rien si la parole était coupée. Le drapeau
+    redetection_en_cours est levé par le handler, baissé ici."""
+    try:
+        debut = time.monotonic()
+        while time.monotonic() - debut < AUDIO_BANC_REDETECTION_MAX_S:
+            await asyncio.sleep(AUDIO_BANC_SONDE_S)
+            etat = await _veille_audio(app, "GET", "/etat")
+            if etat is not None and not (etat.get("redetection") or {}).get("en_cours"):
+                break
+        else:
+            node.get_logger().warning("re-détection audio : pas finie après {:.0f} s".format(
+                AUDIO_BANC_REDETECTION_MAX_S))
+            return
+        chat_state, _entendu, _age = node.tete_audio()
+        if not panneau_audio.faut_rouvrir_micro(chat_state):
+            node.get_logger().info("re-détection audio finie ; micro non rouvert (parole {})".format(chat_state))
+            return
+        node.publish_cmd("chat", "off")
+        await asyncio.sleep(AUDIO_BANC_PAUSE_MICRO_S)
+        node.publish_cmd("chat", "on")
+        node.get_logger().info("re-détection audio finie : micro de la tête rouvert (Parole OFF -> ON)")
+    finally:
+        node.redetection_en_cours = False
+
+
+async def _handle_audio_banc(node, app, client_id, ws, msg):
+    """« Tester le son » / « Re-détecter » : writer seul, simulation seule. Relayé dans une
+    TÂCHE à part : la boucle de réception du writer ne doit jamais attendre la veille (le bip
+    passe par `docker exec`, jusqu'à 10 s), sinon ses battements de cœur prendraient du retard
+    et l'écriture serait libérée (WRITE_TIMEOUT_S = 3 s)."""
+    if not node.sessions.is_writer(client_id):
+        await _send_json_safe(ws, build_err(ERR_LECTURE_SEULE))
+        return
+    if not node.audio_banc:
+        await _send_json_safe(ws, build_err("onglet audio : simulation seulement (domaine 43)"))
+        return
+    if msg["action"] == "redetecter":
+        if node.redetection_en_cours:
+            await _send_json_safe(ws, build_err("re-détection déjà en cours"))
+            return
+        node.redetection_en_cours = True   # levé ICI (synchrone) : un double clic est refusé
+    tache = asyncio.ensure_future(_relayer_audio_banc(node, app, ws, msg["action"]))
+    app["audio_taches"].add(tache)
+    tache.add_done_callback(app["audio_taches"].discard)
+
+
+async def _relayer_audio_banc(node, app, ws, action: str) -> None:
+    """Relaie l'action à la veille ; ack = bip joué / re-détection lancée, err sinon. Le
+    résultat détaillé arrive par /api/audio. Re-détection lancée : attend sa fin et rouvre
+    le micro de la tête (_rouvrir_micro_apres_redetection baisse le drapeau)."""
+    rep = await _veille_audio(app, "POST", "/" + action, delai_s=AUDIO_BANC_ACTION_TIMEOUT_S)
+    if rep is None or not rep.get("ok"):
+        if action == "redetecter":
+            node.redetection_en_cours = False
+        raison = (rep or {}).get("message") or "veille audio du banc injoignable"
+        node.get_logger().warning("audio_banc {} refusé : {}".format(action, raison))
+        await _send_json_safe(ws, build_err("audio : {}".format(raison)))
+        return
+    node.get_logger().info("audio_banc {} : {}".format(action, rep.get("message")))
+    await _send_json_safe(ws, build_ack("audio_banc"))
+    if action == "redetecter":
+        await _rouvrir_micro_apres_redetection(node, app)
+
+
 # Dispatch par type : chaque handler applique et répond son propre message.
 # Table plutôt qu'une cascade if/elif -- garde handle_client_message sous le
 # seuil de complexité et isole chaque règle (motif de web_protocol._PARSERS).
@@ -741,6 +871,7 @@ _HANDLERS = {
     "ticket": _handle_ticket,
     "data_edit": _handle_data_edit,
     "valider_roues": _handle_valider_roues,
+    "audio_banc": _handle_audio_banc,
 }
 
 
@@ -918,6 +1049,16 @@ async def _background_loops_ctx(app: web.Application):
         task.cancel()
 
 
+async def _audio_http_ctx(app: web.Application):
+    """Client HTTP de la veille audio (une session pour toutes les requêtes, délai court)."""
+    app["audio_http"] = aiohttp.ClientSession()
+    app["audio_taches"] = set()
+    yield
+    for task in list(app["audio_taches"]):
+        task.cancel()
+    await app["audio_http"].close()
+
+
 async def _servir_mjpeg(request: web.Request, flux: DerniereFrameJpeg) -> web.StreamResponse:
     """Flux MJPEG (multipart/x-mixed-replace) de la dernière frame
     du flux donné, servi à video_fps. Aucune frame fraîche (ou flux tari > VIDEO_STALE_S)
@@ -995,6 +1136,7 @@ def build_app(node: WebBridgeNode) -> web.Application:
     app.router.add_get("/api/catalog", catalog_handler)
     app.router.add_get("/api/data", data_handler)
     app.router.add_get("/api/bugs-joues", bugs_joues_handler)
+    app.router.add_get("/api/audio", audio_handler)
     app.router.add_get("/ws", websocket_handler)
     app.router.add_get("/video", video_handler)
     app.router.add_get("/perception", perception_handler)
@@ -1002,6 +1144,7 @@ def build_app(node: WebBridgeNode) -> web.Application:
     app.router.add_static("/static/", static_dir)
 
     app.cleanup_ctx.append(_background_loops_ctx)
+    app.cleanup_ctx.append(_audio_http_ctx)
     return app
 
 

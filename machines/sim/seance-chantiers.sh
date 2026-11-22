@@ -15,13 +15,26 @@ export HEADLESS=true WORLD=chantiers REHEARSAL=true FACE=true DATA_EDIT=true CHA
 export DIDIER_SIM_JOURNAUX="${DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier-sim}"
 mkdir -p "$DIDIER_SIM_JOURNAUX"/log "$DIDIER_SIM_JOURNAUX"/log-vision "$DIDIER_SIM_JOURNAUX"/log-telecommande
 
-if [ "${1:-}" = "--stop" ]; then "${COMPOSE[@]}" down; exit 0; fi
+# Veille audio du banc (22/11, onglet « Audio » de la page scène) : service HÔTE (PipeWire et
+# Bluetooth ne sont que sur le PC), lu par le pont web en local. Un seul exemplaire, PID noté.
+VEILLE_PID="$DIDIER_SIM_JOURNAUX/audio-veille.pid"
+arreter_veille() {
+  if [ -f "$VEILLE_PID" ] && kill -0 "$(cat "$VEILLE_PID")" 2>/dev/null; then kill "$(cat "$VEILLE_PID")"; fi
+  rm -f "$VEILLE_PID"
+}
+
+if [ "${1:-}" = "--stop" ]; then arreter_veille; "${COMPOSE[@]}" down; exit 0; fi
 
 # Micro + sortie de la tête choisis d'après ce qui est RÉELLEMENT branché (18/11 : le M50 codé
 # en dur était éteint, PipeWire retombait en silence sur le micro du PC qui entendait Didier).
 # AVANT le compose : la tête ouvre micro et sortie à son démarrage.
 python3 banc-vision/audio_banc.py choisir auto --sans-redemarrer \
   || echo "⚠️ choix audio automatique en échec : asound-pc.conf inchangé"
+
+# Détachée (setsid) : elle survit au terminal de la séance ; --stop l'arrête par son PID.
+arreter_veille
+setsid nohup python3 banc-vision/audio_veille.py > "$DIDIER_SIM_JOURNAUX/audio-veille.log" 2>&1 < /dev/null &
+echo $! > "$VEILLE_PID"
 
 "${COMPOSE[@]}" up -d
 ros() { docker exec "$1" bash -c "source /opt/ros/\$ROS_DISTRO/setup.sh && source /home/ros2_ws/install/setup.bash && $2"; }

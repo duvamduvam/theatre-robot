@@ -346,6 +346,20 @@ def _parse_valider_roues(msg: dict) -> dict:
             "id": id_demande, "name": _texte_court(name)}
 
 
+# Onglet « Audio » (22/11) : {type: "audio_banc", action: "tester" | "redetecter"}. PAS un
+# topic ROS : le pont relaie à la veille audio de l'HÔTE (audio_veille.py, 127.0.0.1) ; hors
+# whitelist, writer seul et simulation seule (contrôlés par le handler du node). Liste fermée
+# des actions dupliquée de panneau_audio.ACTIONS (module autonome) ; égalité gravée par test.
+AUDIO_BANC_ACTIONS = frozenset({"tester", "redetecter"})
+
+
+def _parse_audio_banc(msg: dict) -> dict:
+    action = msg.get("action")
+    if not isinstance(action, str) or action not in AUDIO_BANC_ACTIONS:
+        raise ProtocolError("audio_banc.action inconnue : {!r}".format(action))
+    return {"type": "audio_banc", "action": action}
+
+
 # Dispatch par type : chaque entrée valide/normalise son propre message
 # (dict -> dict), les types sans champ additionnel se contentent de le
 # renvoyer tel quel ("cmd" est traité à part, cf. parse_client_message).
@@ -361,6 +375,7 @@ _PARSERS = {
     "ticket": _parse_ticket,
     "data_edit": _parse_data_edit,
     "valider_roues": _parse_valider_roues,
+    "audio_banc": _parse_audio_banc,
 }
 
 
@@ -447,7 +462,7 @@ def build_hello(domain_id: int, writer: bool, token_required: bool,
                 drive_enabled: bool, max_linear: float, max_angular: float,
                 rehearsal: bool = False, perception: bool = False,
                 exterior: bool = False, data_edit: bool = False,
-                validation_sim: bool = False) -> dict:
+                validation_sim: bool = False, audio_banc: bool = False) -> dict:
     # drive_enabled/max_linear/max_angular : l'UI affiche les plafonds et
     # VERROUILLE le pad de pilotage si drive_enabled=false (WEB_DRIVE=false),
     # elle n'a donc pas à les deviner. Le plafond DUR reste appliqué serveur
@@ -463,6 +478,8 @@ def build_hello(domain_id: int, writer: bool, token_required: bool,
     # DATA_EDIT) -> la page scène montre son éditeur ; défaut False = panneau absent.
     # validation_sim (L1d-3) : domaine 43, la porte sim existe -> états « rejouée /
     # à rejouer / roues… » et bouton « Valider les roues pour le robot ».
+    # audio_banc (22/11) : domaine 43, le pont relaie la veille audio du banc PC -> la page
+    # scène montre l'onglet « Audio » ; défaut False = onglet absent (vrai robot).
     return {
         "type": "hello",
         "domain_id": domain_id,
@@ -477,6 +494,7 @@ def build_hello(domain_id: int, writer: bool, token_required: bool,
         "exterior": exterior,
         "data_edit": data_edit,
         "validation_sim": validation_sim,
+        "audio_banc": audio_banc,
     }
 
 

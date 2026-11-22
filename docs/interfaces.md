@@ -198,6 +198,13 @@ source (W1 à venir).
   `{"acceptes": [{id, desc, classe, duree_s, direction, pistes}], "refuses": [{chemin, erreurs}]}`
   — les bugs joués jugés par `theatre_contrats.bugs_joues` ; la page joue un bug par `cmd`
   `animation` = `id`.
+  `GET /api/audio` (22/11, SIM-ONLY : 404 hors domaine 43, LECTURE SEULE) : verdict de l'onglet
+  « Audio » = `didier_web.panneau_audio.synthese(état de la veille audio de l'hôte, chat_state,
+  dernier chat_hearing)` — `{service, verdict: ok|attention|ko|attente, message, action, autres,
+  entree: {nom, present, muet, suit_ubuntu, casque, casque_connecte, pct, pct_3s, seuil_pct},
+  sortie: {…}, temoins: {entend: oui|jete|non, entendu, parle, chat_state}, redetection,
+  derniere_action}`. La veille (`machines/sim/banc-vision/audio_veille.py`) est lue sur
+  `http://127.0.0.1:<audio_banc_port>` (défaut 8767) ; injoignable = `verdict: ko`, `service: false`.
 - **Aperçu des bandes LED** (lot I0, 22/11) : le pont tient un modèle de ce que le ruban du robot
   afficherait d'après les `robot_lights` reçus (`didier_web.apercu_lumieres`) ; le message
   `state` porte `lumieres` = `{sequence, brique, methode, rgb, depuis_ms, luminosite, repos,
@@ -264,6 +271,7 @@ source (W1 à venir).
 | `drive` | `x: float`, `z: float` (∈ [-1, 1]) | **SIM-ONLY.** Consigne de pilotage roues normalisée (x = linéaire avant/arrière, z = angulaire). Voir bloc pilotage ci-dessous. |
 | `data_edit` | `demande: {id, kind, mode, name, content, base_sha256?}` | **Lot L1d-3**, writer seul. Publie la demande, en JSON compact, sur `data_edit` (format et codes : § « Data editing through the robot »). Le pont ne juge que l'enveloppe (objet, `id` texte non vide) et la taille (≤ 131 072 octets UTF-8, `DATA_EDIT_TAILLE_MAX`, égale à celle de l'écrivain par test) ; le reste est jugé par le robot. Publisher créé SEULEMENT si `data_edit_enabled` (drapeau `DATA_EDIT`), sinon `err`. `ack` = publiée ; le verdict arrive par le flux `data_edit_result`, même `id`. |
 | `valider_roues` | `id: str`, `name: "<dossier>/<nom>"` | **Lot L1d-3, SIM-ONLY**, writer seul. Publie `{id, name}` sur `validation_sim_demande` (publisher créé seulement en domaine 43, sinon `err`) ; verdict par le flux `validation_sim`, même `id`. |
+| `audio_banc` | `action: "tester" \| "redetecter"` (liste fermée) | **22/11, SIM-ONLY**, writer seul. Relayé à la veille audio de l'hôte (pas un topic) : `tester` = bip par la chaîne de la voix ; `redetecter` = `audio_banc.py choisir auto --sans-redemarrer`, puis, à sa fin, `chat` `off` → `on` si la parole était active (le micro de la tête se rouvre sur le nouveau choix). `ack` = fait / lancée ; détail par `GET /api/audio`. Veille injoignable ou refus → `err`. |
 
 `data_edit` et `validation_sim_demande` ne sont dans AUCUNE whitelist : un `cmd` ne peut pas
 les publier.
@@ -293,7 +301,8 @@ PAS par la whitelist ; `cmd_vel_web` n'y figure jamais) :
 que l'UI verrouille le pad et affiche les plafonds), `hb_ack` (`t` échoté),
 `rehearsal` (bool : boutons route/vitesse/séance de `/scene`), `data_edit` (bool, L1d-3 :
 le pont relaie les retouches → éditeur de `/scene`), `validation_sim` (bool, L1d-3 : domaine 43,
-états de porte sim et bouton de validation des roues)), `feed`
+états de porte sim et bouton de validation des roues), `audio_banc` (bool, 22/11 : domaine 43,
+onglet « Audio » de `/scene`)), `feed`
 (`topic`, `msg` — UN message par événement d'un topic de FLUX, `TOPICS_FLUX =
 {chat_transcript, chat_hearing, jeu/journal, data_edit_result, validation_sim, roues_refusees}`,
 diffusé immédiatement à tous les clients, sans historique),

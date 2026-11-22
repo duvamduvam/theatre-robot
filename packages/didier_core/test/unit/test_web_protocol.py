@@ -298,7 +298,7 @@ def test_build_hello():
         "writer": True, "token_required": False,
         "drive_enabled": False, "max_linear": 0.5, "max_angular": 1.0,
         "rehearsal": False, "perception": False, "exterior": False,
-        "data_edit": False, "validation_sim": False}
+        "data_edit": False, "validation_sim": False, "audio_banc": False}
 
 
 def test_build_hello_expose_les_plafonds_et_l_etat_pilotage():

@@ -60,6 +60,10 @@
     <span id="rtt">RTT -- ms</span>
     <span id="badge-ecriture" class="badge badge-off">lecture seule</span>
     <button id="btn-prendre-main" type="button">Prendre la main</button>
+    <!-- Onglet « Audio » (22/11) : son verdict dans le bandeau, toujours sous les yeux ;
+         un clic ouvre l'onglet (colonne de droite). Masqué hors banc PC. -->
+    <button id="audio-bandeau" class="audio-bandeau" type="button" hidden
+            title="son du banc : cliquer pour le détail">⏳ Audio</button>
     <span id="token-box" hidden>
       <input id="token-input" type="password" placeholder="token" autocomplete="off">
       <button id="btn-token" type="button">Connexion</button>
@@ -348,6 +352,46 @@
             <h3>Régisseur</h3>
             <ol id="coulisses-journal" class="coulisses-journal" aria-live="polite"></ol>
           </section>
+        </div>
+      </details>
+
+      <!-- Onglet « Audio » (22/11, banc PC en simulation : hello.audio_banc) : « suis-je
+           branché, le son entre-t-il et sort-il ? » d'un coup d'œil. Le verdict reste
+           lisible REPLIÉ (dans le résumé). Tout vient de GET /api/audio : la veille audio
+           de l'hôte (audio_veille.py) croisée avec l'état de la tête, rien de supposé. -->
+      <details id="scene-audio" class="scene-audio" hidden>
+        <summary>Audio <span id="audio-verdict" class="audio-pastille">⏳</span>
+          <span id="audio-verdict-texte" class="audio-verdict-texte">pas encore vérifié</span></summary>
+        <div class="scene-audio-corps">
+          <p id="audio-action" class="audio-action"></p>
+          <ul id="audio-autres" class="audio-autres"></ul>
+          <div class="audio-ligne">
+            <span class="audio-libelle">Entrée</span>
+            <span id="audio-micro-nom" class="audio-nom">—</span>
+            <span id="audio-micro-etat" class="badge badge-off">—</span>
+          </div>
+          <div class="audio-vumetre" title="niveau du micro mesuré en continu sur le PC ; trait = seuil d'un micro vivant">
+            <div id="audio-vumetre-barre" class="audio-vumetre-barre"></div>
+            <div id="audio-vumetre-pic" class="audio-vumetre-pic"></div>
+            <div id="audio-vumetre-seuil" class="audio-vumetre-seuil"></div>
+          </div>
+          <div class="audio-ligne">
+            <span id="audio-temoin-entend" class="badge badge-off">Didier m'entend</span>
+            <span id="audio-entendu" class="audio-entendu"></span>
+          </div>
+          <div class="audio-ligne">
+            <span class="audio-libelle">Sortie</span>
+            <span id="audio-sortie-nom" class="audio-nom">—</span>
+            <span id="audio-sortie-etat" class="badge badge-off">—</span>
+          </div>
+          <div class="audio-ligne">
+            <span id="audio-temoin-parle" class="badge badge-off">Didier parle</span>
+          </div>
+          <div class="audio-boutons">
+            <button type="button" id="audio-tester" title="un bip court, joué par la tête comme sa voix">Tester le son</button>
+            <button type="button" id="audio-redetecter" title="refait le choix automatique du micro et de la sortie, sans relancer la séance">Re-détecter</button>
+          </div>
+          <p id="audio-resultat" class="audio-resultat"></p>
         </div>
       </details>
 

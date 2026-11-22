@@ -1287,6 +1287,19 @@ Vérification en sim à faire.
 Verrous : aucun côté robot. Les verrous roues (test scénique, W1,
 coup-de-poing) ne bougent pas : la sim ne qualifie rien côté sécurité.
 
+### Onglet « Audio » de la page scène — CODE FAIT le 22/11 (branche `onglet-audio`)
+
+Demande de David en séance : « je ne sais jamais si je suis branché et si le son entre et sort ».
+Verdict 🟢/🟠/🔴 dans le bandeau et l'onglet « Audio » (micro et sortie réels, vumètre, « Didier
+m'entend », « Didier parle », Tester le son, Re-détecter sans relancer la séance). Veille HÔTE
+`machines/sim/banc-vision/audio_veille.py` (réutilise `audio_banc.py`), relayée par le pont
+(`GET /api/audio`, sim seulement) — architecture : `packages/didier_web/README.md` § onglet Audio.
+Tests gravés + mutations. **Essai de David en séance (22/11, 19h56) : défaut trouvé** — M50
+connecté mais micro interne muet choisi (micro du casque écarté au silence) ; corrigé le soir même
+(choix + verdict « casque connecté mais son micro n'est pas utilisé »), épreuve de fumée AU (10
+contrôles, fausse veille). **Reste : revérifier avec le M50 ALLUMÉ** (verdict vert, vumètre sur la
+voix, bip entendu) — il était éteint pendant la vérification de l'agent.
+
 ## Pistes en veille (pas urgentes, pas oubliées)
 
 - **CAMÉRA DE PROFONDEUR — avis du 2026-11-11, rien d'acté.** Utile pour **mesurer** la

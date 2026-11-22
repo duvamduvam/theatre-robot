@@ -103,6 +103,7 @@ services:
       - ../../packages/didier_corps_sur:/home/ros2_ws/src/didier_corps_sur
       # Épreuves : elles tournent ICI (docker exec didier-sim-monde bash /home/ros2_ws/<script>).
       - ./validate-namespace.sh:/home/ros2_ws/validate-namespace.sh:ro
+      - ./validate-audio.sh:/home/ros2_ws/validate-audio.sh:ro
       - ./validate-catalogue.sh:/home/ros2_ws/validate-catalogue.sh:ro
       - ./validate-data-edit.sh:/home/ros2_ws/validate-data-edit.sh:ro
       - ./validate-machines.sh:/home/ros2_ws/validate-machines.sh:ro

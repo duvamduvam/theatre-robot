@@ -89,6 +89,7 @@ EPREUVES = [
     ("parle", "Animation « parle » (animation_state \"\" → \"parle\" → \"\")"),
     ("edition", "validate-data-edit.sh (édition à travers le robot, L1d)"),
     ("machines", "validate-machines.sh (les machines de la sim, vues depuis le monde, L2b)"),
+    ("audio", "validate-audio.sh (onglet « Audio » de la page scène, fausse veille, 22/11)"),
     ("corps_sur", "Sim relancée (monde stage), validate-corps-sur.sh (CS : corps sûr, lot A0-4)"),
     ("chantiers", "Sim relancée (monde chantiers), régisseur + regard (chaîne roues du bringup), puis "
                   "validate-rehearsal-chantiers.sh (V-R3)"),

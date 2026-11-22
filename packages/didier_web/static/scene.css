@@ -485,6 +485,32 @@
 
 .scene-conversation .scene-saisie button { min-height: 38px; padding: 0.4rem 0.8rem; }
 
+/* --- Onglet « Audio » (22/11) : verdict lisible replié, vumètre ouvert ------- */
+
+.scene-audio { font-size: 0.85em; }
+.scene-audio summary { cursor: pointer; font-weight: bold; color: var(--texte-doux); }
+.audio-pastille { font-size: 1.05em; }
+.audio-verdict-texte { font-weight: normal; color: var(--texte); }
+.scene-audio-corps { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.3rem 0; }
+.audio-action { margin: 0; color: var(--texte); font-weight: bold; }
+.audio-action:empty, .audio-resultat:empty, .audio-autres:empty { display: none; }
+.audio-autres { margin: 0; padding-left: 1.1rem; color: var(--texte-doux); }
+.audio-ligne { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.audio-libelle { color: var(--texte-doux); min-width: 3.5rem; }
+.audio-nom { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.audio-entendu { color: var(--texte-doux); font-style: italic; overflow-wrap: anywhere; }
+.audio-vumetre { position: relative; height: 12px; background: var(--bg-carte-2); border: 1px solid var(--bord);
+                 border-radius: 6px; overflow: hidden; }
+.audio-vumetre-barre { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ok);
+                       transition: width 80ms linear; }
+.audio-vumetre-pic { position: absolute; top: 0; bottom: 0; width: 2px; left: 0; background: var(--texte); opacity: 0.6; }
+.audio-vumetre-seuil { position: absolute; top: 0; bottom: 0; width: 1px; left: 0; background: var(--stop); }
+.audio-boutons { display: flex; gap: 0.4rem; }
+.audio-boutons button { min-height: 34px; padding: 0.3rem 0.7rem; }
+.audio-resultat { margin: 0; color: var(--texte-doux); white-space: pre-wrap; max-height: 6rem; overflow-y: auto; }
+.badge.badge-ko { background: #5a1a16; color: #ffd9d5; }
+.audio-bandeau { padding: 0.2rem 0.6rem; }
+
 /* --- Oreille de Didier (31/10) : repliée par défaut (D6) --------------------- */
 
 .scene-oreille { font-size: 0.85em; }

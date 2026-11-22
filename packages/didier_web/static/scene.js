@@ -113,9 +113,11 @@ liaison.surLiaison = () => {
   // Éditeur : « Charger » reste actif (lire ne demande pas l'écriture), pas les envois.
   document.querySelectorAll(".bouton-catalogue, #scene-form-texte button, "
       + "#scene-form-consigne button, #scene-vitesse, .jeu-bouton, #jeu-cible-va-la, "
-      + "#editeur-envoyer, #editeur-rejouer, #editeur-valider-roues, #editeur-image-envoyer, #bugs-couper")
+      + "#editeur-envoyer, #editeur-rejouer, #editeur-valider-roues, #editeur-image-envoyer, #bugs-couper, "
+      + "#audio-tester, #audio-redetecter")
     .forEach((el) => { el.disabled = !state.isWriter; });
   majEditeurVisible();
+  majAudioVisible();
   // Route / vitesse / séance : seulement si le serveur les accepte (hello.rehearsal).
   document.querySelectorAll(".scene-repetition").forEach((el) => {
     el.hidden = !state.rehearsal;
@@ -312,6 +314,146 @@ liaison.surEtat = (msg) => {
     recevoirLumieres(msg.lumieres);
   }
 };
+
+// --- Onglet « Audio » (22/11, banc PC en simulation) --------------------------------
+// Tout le jugement est côté pont (didier_web/panneau_audio.py, testé) : la page AFFICHE le
+// verdict de GET /api/audio, rien n'est déduit ici. Sondage 4 fois/s onglet ouvert (vumètre),
+// toutes les 2 s replié (le verdict du résumé reste frais), jamais page cachée.
+const AUDIO_PERIODE_OUVERT_MS = 250;
+const AUDIO_PERIODE_REPLIE_MS = 2000;
+const AUDIO_PASTILLE = { ok: "🟢", attention: "🟠", ko: "🔴", attente: "⏳" };
+let audioMinuterie = null;
+let audioDemarre = false;   // une seule chaîne de sondage, quel que soit le nombre de hello
+
+function majAudioVisible() {
+  $("scene-audio").hidden = !state.audioBanc;
+  $("audio-bandeau").hidden = !state.audioBanc;
+  if (state.audioBanc && !audioDemarre) {
+    audioDemarre = true;
+    sonderAudio();
+  }
+}
+
+function planifierAudio() {
+  const delai = $("scene-audio").open ? AUDIO_PERIODE_OUVERT_MS : AUDIO_PERIODE_REPLIE_MS;
+  audioMinuterie = setTimeout(sonderAudio, delai);
+}
+
+async function sonderAudio() {
+  audioMinuterie = null;
+  if (!state.audioBanc) {
+    audioDemarre = false;
+    return;
+  }
+  if (document.visibilityState === "visible") {
+    try {
+      const reponse = await fetch(urlHttp("/api/audio"), { cache: "no-store" });
+      if (!reponse.ok) {
+        throw new Error("HTTP " + reponse.status);
+      }
+      afficherAudio(await reponse.json());
+    } catch (e) {
+      afficherAudio({ verdict: "ko", message: "pont web injoignable pour l'audio (" + e.message + ")",
+                      action: "", autres: [] });
+    }
+  }
+  planifierAudio();
+}
+
+function badgeCote(id, cote) {
+  const el = $(id);
+  if (!cote) {
+    el.textContent = "—";
+    el.className = "badge badge-off";
+    return;
+  }
+  const ok = cote.present && cote.muet !== true;
+  el.textContent = !cote.present ? (cote.casque_connecte === false ? "casque éteint" : "absent")
+      : (cote.muet ? "coupé (muet)" : "présent");
+  el.className = "badge " + (ok ? "badge-on" : "badge-ko");
+}
+
+function nomCote(cote) {
+  if (!cote) {
+    return "—";
+  }
+  const casque = cote.casque ? " · casque " + cote.casque : "";
+  return (cote.nom || "?") + casque + (cote.suit_ubuntu ? " (réglage son d'Ubuntu)" : "");
+}
+
+function afficherVumetre(entree) {
+  const pct = (v) => (v === null || v === undefined ? 0 : v) + "%";
+  $("audio-vumetre-barre").style.width = pct(entree ? entree.pct : null);
+  $("audio-vumetre-pic").style.left = pct(entree ? entree.pct_3s : null);
+  $("audio-vumetre-seuil").style.left = pct(entree ? entree.seuil_pct : null);
+}
+
+function afficherAudio(a) {
+  $("audio-verdict").textContent = AUDIO_PASTILLE[a.verdict] || "⏳";
+  $("audio-bandeau").textContent = (AUDIO_PASTILLE[a.verdict] || "⏳") + " Audio";
+  $("audio-bandeau").title = a.message || "";
+  $("audio-verdict-texte").textContent = a.message || "";
+  $("audio-action").textContent = a.action ? "→ " + a.action : "";
+  const autres = $("audio-autres");
+  autres.replaceChildren();
+  for (const texte of a.autres || []) {
+    const li = document.createElement("li");
+    li.textContent = texte;
+    autres.appendChild(li);
+  }
+  $("audio-micro-nom").textContent = nomCote(a.entree);
+  badgeCote("audio-micro-etat", a.entree);
+  $("audio-sortie-nom").textContent = nomCote(a.sortie);
+  badgeCote("audio-sortie-etat", a.sortie);
+  afficherVumetre(a.entree);
+  const t = a.temoins || {};
+  const entend = $("audio-temoin-entend");
+  entend.textContent = t.entend === "jete" ? "Didier a entendu… et jeté" : "Didier m'entend";
+  entend.className = "badge " + (t.entend === "oui" ? "badge-on" : (t.entend === "jete" ? "badge-ko" : "badge-off"));
+  // textContent : le texte vient du micro, jamais interprété comme du HTML.
+  $("audio-entendu").textContent = t.entendu ? "« " + t.entendu + " »" : "";
+  $("audio-temoin-parle").className = "badge " + (t.parle ? "badge-on" : "badge-off");
+  $("audio-resultat").textContent = resultatAudio(a);
+  $("audio-redetecter").textContent = a.redetection && a.redetection.en_cours ? "Re-détection…" : "Re-détecter";
+}
+
+// Dernier geste (bip, re-détection) et son résultat, tant qu'il date de moins d'une minute.
+function resultatAudio(a) {
+  const lignes = [];
+  const act = a.derniere_action;
+  if (act && act.il_y_a_s < 60) {
+    lignes.push((act.ok ? "✓ " : "✗ ") + act.message);
+  }
+  const r = a.redetection;
+  if (r && !r.en_cours && r.il_y_a_s !== null && r.il_y_a_s < 60) {
+    lignes.push("re-détection (code " + r.code + ") :\n" + (r.resume || ""));
+  }
+  return lignes.join("\n");
+}
+
+function installerAudio() {
+  for (const [id, action] of [["audio-tester", "tester"], ["audio-redetecter", "redetecter"]]) {
+    $(id).addEventListener("click", (event) => {
+      if (!state.isWriter) {
+        return;
+      }
+      state.attenteAck.audio_banc = event.currentTarget;
+      state.dernierBouton = event.currentTarget;
+      envoyer({ type: "audio_banc", action: action });
+    });
+  }
+  $("audio-bandeau").addEventListener("click", () => {
+    $("scene-audio").open = true;
+    $("scene-audio").scrollIntoView({ block: "nearest" });
+  });
+  // Ouvert : le vumètre passe tout de suite à 4 Hz (sans attendre la prochaine sonde lente).
+  $("scene-audio").addEventListener("toggle", () => {
+    if (state.audioBanc && $("scene-audio").open && audioMinuterie !== null) {
+      clearTimeout(audioMinuterie);
+      sonderAudio();
+    }
+  });
+}
 
 // --- Bandes LED (lot I0) : ce que le ruban afficherait ---------------------------------
 // Le pont tient le MODÈLE (didier_web/apercu_lumieres.py : quelle brique, depuis quand) ;
@@ -1434,6 +1576,7 @@ installerErreurs();
 installerVues();
 installerEditeur();
 installerCoulisses();
+installerAudio();
 // Tout est inerte et la répétition masquée jusqu'au premier hello du serveur.
 installerPerception();
 installerExterieur();
