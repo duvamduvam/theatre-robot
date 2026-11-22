@@ -499,9 +499,21 @@ def build_feed(topic: str, msg) -> dict:
     return {"type": "feed", "topic": topic, "msg": msg}
 
 
-def build_state(topics: dict, nodes: list, clients: int, writer_present: bool) -> dict:
-    return {"type": "state", "topics": topics, "nodes": nodes, "clients": clients,
+def build_lumieres(instant: dict) -> dict:
+    """Aperçu des bandes LED (lot I0) : poussé dès que la brique affichée change (le `state`
+    ne passe que toutes les 2 s, trop lent pour juger un bug de 3 s)."""
+    return {"type": "lumieres", "lumieres": instant}
+
+
+def build_state(topics: dict, nodes: list, clients: int, writer_present: bool,
+                lumieres: dict | None = None) -> dict:
+    """`lumieres` (lot I0) : l'aperçu des bandes LED (didier_web.apercu_lumieres), ce que le
+    ruban afficherait d'après les `robot_lights` reçus ; absent si le pont n'en tient pas."""
+    etat = {"type": "state", "topics": topics, "nodes": nodes, "clients": clients,
             "writer_present": writer_present}
+    if lumieres is not None:
+        etat["lumieres"] = lumieres
+    return etat
 
 
 # --- Session d'écriture exclusive + heartbeat -------------------------------

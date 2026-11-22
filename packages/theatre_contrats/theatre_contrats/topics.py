@@ -56,6 +56,20 @@ JEU_CHAT_MOVE = 'jeu/chat_move'
 # StringTime volatile : une ligne du journal JSONL du sélecteur par message
 # (format boîte noire, didier_core.diagnostic.journal), pour la page scène.
 JEU_JOURNAL = 'jeu/journal'
+# Improvisation (lot I0, étude docs/etudes/etude-improvisation.md §3.2 et §4.1) : forme des
+# payloads, encodeurs et décodeurs dans theatre_contrats/impro.py.
+# StringTime VOLATILE (un vieux « on » rejoué ne doit jamais rallumer l'impro), page scène ou
+# télécommande -> sélecteur : "on" | "off" (JSON ou brut, comme `route`).
+JEU_IMPRO = 'jeu/impro'
+# StringTime LATCHÉ (qos.latched() des DEUX côtés), écrit par le sélecteur SEUL :
+# {"impro": "on"|"off", "cause", "t_ms"} — la page n'affiche que cet état, jamais le dernier clic.
+JEU_IMPRO_STATE = 'jeu/impro_state'
+# StringTime VOLATILE, réflexion (scénariste) -> sélecteur : {"quoi": "<id du répertoire>",
+# "cible": "<id>"|null, "pourquoi"} ; une PROPOSITION que le sélecteur pèse et peut refuser.
+JEU_PROPOSITION = 'jeu/proposition'
+# StringTime LATCHÉ, écrit par le sélecteur SEUL : ce qui est jouable maintenant, 12 entrées au
+# plus [{"id", "genre", "desc", "dispo", "dans_s"}] — la liste FERMÉE du scénariste.
+JEU_REPERTOIRE = 'jeu/repertoire'
 
 # ---------------------------------------------------------------- tableau des objets (lot O0)
 # StringTime LATCHÉ (qos.latched() des DEUX côtés), écrit par didier_perception/objets_node

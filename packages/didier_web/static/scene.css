@@ -678,3 +678,39 @@
   background: #000;
   border: 1px solid var(--bord-clair);
 }
+
+/* --- Bandes LED sous le visage (lot I0) -----------------------------------------------
+   Une rangée de pixels par bande (canvas dessiné par scene.js + lumieres.js), la légende à
+   droite : le titre de la tuile occupe le coin bas gauche. */
+.scene-lumieres {
+  flex: none;
+  padding: 0.3rem 0.5rem 0.35rem;
+  border-top: 1px solid var(--bord);
+  background: #000;
+}
+.scene-lumieres-bandes canvas {
+  display: block;
+  width: 100%;
+  height: 14px;
+  image-rendering: pixelated;
+}
+.scene-lumieres-bandes canvas + canvas { margin-top: 3px; }
+.scene-lumieres-legende {
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  color: var(--texte-doux, #9aa3b2);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scene-tuile:not(.principale) .scene-lumieres-bandes canvas { height: 8px; }
+.scene-tuile:not(.principale) .scene-lumieres-legende { display: none; }
+
+/* --- Bugs joués (lot I0) ------------------------------------------------------------------ */
+#scene-bugs .bouton-catalogue { font-size: 0.8rem; }
+#bugs-couper { min-height: 28px; padding: 0.1rem 0.6rem; font-size: 0.75rem; }
+.scene-note { white-space: pre-line; margin: 0.3rem 0 0; font-size: 0.72rem; color: var(--texte-doux, #9aa3b2); }
+/* Le titre « Visage » passe au-dessus des bandes LED (il les masquait en vignette). */
+#scene-visage-tuile .scene-tuile-titre { bottom: 1.9rem; }
+.scene-tuile:not(.principale)#scene-visage-tuile .scene-tuile-titre { bottom: 1.2rem; }

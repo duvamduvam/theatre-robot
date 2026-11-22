@@ -1,7 +1,9 @@
 """Le RÉPERTOIRE de Didier : ce qu'il peut jouer (spec A1 §2, §8.4).
 
 - Séquences : json/sequences/**.json qui ont une clé `types`, SAUF celles de
-  `bugs/` (des pannes jouées, pas du jeu) et SAUF toute séquence qui a une
+  `bugs/` (séquences du spectacle à roues, pas du jeu), SAUF les BUGS JOUÉS
+  (`bugs-joues/` et tout type "bug-joue" : lot I0, ils passent par `bugs_joues()`
+  et ses garanties, jamais par un emploi ordinaire) et SAUF toute séquence qui a une
   piste `wheels` NON VIDE : A1 n'a pas de corps sûr, rien ne doit bouger les
   roues hors des verrous du sélecteur (une piste roues de séquence passe en
   prio 10 du twist_mux, sans fatigue, sans superviseur, sans « stop »).
@@ -13,6 +15,7 @@
 - Vocabulaire de déplacements (config/deplacements.yaml) -> payload régisseur.
 """
 import json
+import os
 import pathlib
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -20,10 +23,14 @@ from typing import Dict, List, Optional, Tuple
 import yaml
 # Le nom de la piste roues d'une séquence = l'organe WHEELS du contrat commun
 # (revue A1, point 14 : pas de littéral local).
+from theatre_contrats import bugs_joues as contrat_bugs
 from theatre_contrats.organs import WHEELS
 
-# Dossier des séquences de PANNES (bugs joués par le régisseur) : jamais du jeu.
+# Dossiers jamais lus comme du jeu ordinaire : `bugs/` (séquences du spectacle, toutes à
+# roues) et `bugs-joues/` (lot I0 : le sélecteur ne les jouera que par l'emploi `bug` du lot
+# I1, sous les garanties de theatre_contrats.bugs_joues).
 DOSSIER_EXCLU = "bugs"
+DOSSIERS_EXCLUS = (DOSSIER_EXCLU, contrat_bugs.DOSSIER)
 # Commandes que le régisseur accepte sur chat_move (didier_rehearsal.contracts :
 # CHAT_MOVE_GOTO_CMD, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
 # CHAT_MOVE_FORWARD_CMD) ; égalité gravée par test_repertoire.py.
@@ -74,11 +81,25 @@ def lire_sequences(dossier) -> List[Sequence]:
 
 def candidates(dossier) -> List[Sequence]:
     """Séquences JOUABLES par le sélecteur (filtre gravé en test) : clé
-    `types` présente, hors bugs/, sans piste roues."""
+    `types` présente, hors bugs/ et bugs-joues/, sans type bug-joue, sans piste roues."""
     return [s for s in lire_sequences(dossier)
             if s.a_types
-            and pathlib.PurePath(s.chemin).parts[0] != DOSSIER_EXCLU
+            and pathlib.PurePath(s.chemin).parts[0] not in DOSSIERS_EXCLUS
+            and contrat_bugs.TYPE not in s.types
             and not s.roues]
+
+
+def bugs_joues(dossier: "str | os.PathLike[str]",
+               dossier_audios: "str | os.PathLike[str] | None" = None) -> contrat_bugs.Inventaire:
+    """Inventaire des BUGS JOUÉS (lot I0) : acceptés et refusés, jugés par le contrat commun
+    (theatre_contrats.bugs_joues : ni roues ni relais, 15 s, sons de 4 s, repos rétabli).
+    `dossier` = le dossier des séquences (json/sequences) ; les références (expressions,
+    lumières, manifeste des audios) se lisent deux niveaux au-dessus, à la racine des données.
+    Un fichier refusé ne fait jamais tomber les autres : le refus se journalise.
+    `dossier_audios` : comme donnees.charger_references (défaut <racine>/medias/audios ; absent,
+    seule l'inscription au manifeste est jugée — cas du conteneur `monde` de la sim)."""
+    racine = pathlib.Path(dossier).resolve().parent.parent
+    return contrat_bugs.lire(racine, dossier_audios)
 
 
 def par_emploi(sequences, emplois: Dict[str, str]):

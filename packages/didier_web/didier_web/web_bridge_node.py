@@ -61,19 +61,28 @@ from theatre_interfaces.msg import StringTime
 # n'attrape que TypeError/JSONDecodeError (pas tout ValueError) et sa
 # sémantique générique est gardée à l'identique.
 from theatre_contrats import donnees, qos, stringtime
-from didier_web import lecture_donnees
+from didier_web import apercu_lumieres, lecture_donnees
 from didier_web.web_catalog import build_catalog
 from didier_web.web_protocol import (
     DATA_EDIT_TOPIC, DRIVE_TIMEOUT_S, TOPICS_FLUX, TOPICS_LECTURE,
     VALIDATION_SIM_DEMANDE_TOPIC, WRITE_TIMEOUT_S, DriveFlow,
     ProtocolError, SessionManager, build_ack, build_err, build_feed,
-    build_hb_ack, build_hello, build_state, drive_to_twist,
+    build_hb_ack, build_hello, build_lumieres, build_state, drive_to_twist,
     effective_whitelist, mode_from_domain_id, parse_client_message,
     rehearsal_allowed, snapshot_visible, stop_all_commands,
 )
 from didier_web.tickets import PareRafale, construire_ticket, nom_fichier
 
 STATE_PERIOD_S = 2.0  # cadence de diffusion du message "state" à tous les clients
+# Topic de l'aperçu des bandes LED (lot I0) : littéral de la whitelist (WHITELIST_SPECTACLE).
+ROBOT_LIGHTS_TOPIC = "robot_lights"
+# Relecture de l'aperçu : 10 Hz, ne pousse qu'au changement (quelques messages par bug).
+LUMIERES_PERIOD_S = 0.1
+
+
+def _maintenant_ms() -> float:
+    """Horloge de l'aperçu des lumières : monotone, en ms (le modèle ne compare que des écarts)."""
+    return time.monotonic() * 1000.0
 NODES_REFRESH_PERIOD_S = 5.0  # get_node_names_and_namespaces() : évite de le refaire à 2 Hz
 # Boucle de zéro pilotage : 20 Hz, comme le twist_deadman des roues -- assez
 # fin pour publier l'arrêt franc peu après DRIVE_TIMEOUT_S (0.3 s) de silence.
@@ -192,6 +201,9 @@ class WebBridgeNode(Node):
         # last_topics : topic -> {"msg": <valeur brute décodée>, "at_s": horloge monotone}.
         self.lock = threading.Lock()
         self.last_topics = {}
+        # Aperçu des bandes LED (lot I0) : nourri par le listener de robot_lights (topic de la
+        # whitelist, donc déjà écouté), lu à chaque `state`. Sous self.lock (deux threads).
+        self.apercu_lumieres = apercu_lumieres.Apercu(self.json_dir, _maintenant_ms())
         self.node_names_cache = []
 
         # Un publisher/subscriber par topic whitelisté : IMPOSSIBLE de publier
@@ -303,7 +315,14 @@ class WebBridgeNode(Node):
                 value = msg.msg
             with self.lock:
                 self.last_topics[topic] = {"msg": value, "at_s": time.monotonic()}
+                if topic == ROBOT_LIGHTS_TOPIC:
+                    # msg.time compte : il remplace la durée de l'entrée (fin -> repos).
+                    self.apercu_lumieres.recevoir(value, msg.time, _maintenant_ms())
         return _on_message
+
+    def instant_lumieres(self) -> dict:
+        with self.lock:
+            return self.apercu_lumieres.instant(_maintenant_ms())
 
     def _make_feed_listener(self, topic):
         """Callback d'un topic de flux (thread SPIN). Décode comme _make_listener
@@ -572,6 +591,17 @@ async def data_handler(request: web.Request) -> web.Response:
     return web.json_response(element)
 
 
+async def bugs_joues_handler(request: web.Request) -> web.Response:
+    """GET /api/bugs-joues (lot I0) : la liste des bugs joués pour les boutons de la page scène.
+    Relue à chaque appel (une retouche se voit au rechargement de la page)."""
+    node = request.app["node"]
+    try:
+        return web.json_response(lecture_donnees.bugs_joues(node.data_dir))
+    except (OSError, ValueError) as e:
+        node.get_logger().warning("lecture /api/bugs-joues : {}".format(e))
+        return web.Response(status=500, text="lecture impossible : {}".format(e))
+
+
 async def _handle_auth(node, app, client_id, ws, msg):
     if not node.sessions.authenticate(client_id, msg["token"], time.monotonic()):
         node.get_logger().warning("auth web refusée id={} (mauvais token)".format(client_id))
@@ -798,7 +828,25 @@ async def _state_loop(app: web.Application) -> None:
             nodes=node.node_names_cache,
             clients=len(app["clients"]),
             writer_present=node.sessions.writer_present(),
+            lumieres=node.instant_lumieres(),
         ))
+
+
+async def _lumieres_loop(app: web.Application) -> None:
+    """Boucle de fond (lot I0) : toutes les LUMIERES_PERIOD_S, l'aperçu des bandes LED est
+    relu ; s'il a CHANGÉ de brique (ou de luminosité, de repos), il part tout de suite à tous
+    les clients. Les fins d'entrée (retour au repos) n'ont pas de message : c'est d'ici
+    qu'elles se voient, au plus 0,1 s après."""
+    node = app["node"]
+    dernier = None
+    while True:
+        await asyncio.sleep(LUMIERES_PERIOD_S)
+        instant = node.instant_lumieres()
+        cle = (instant["sequence"], instant["brique"], instant["luminosite"], instant["repos"])
+        # Une nouvelle activation de la même brique (relance) remet depuis_ms à ~0 : à pousser aussi.
+        if cle != dernier or instant["depuis_ms"] < LUMIERES_PERIOD_S * 1000:
+            dernier = cle
+            await _broadcast(app, build_lumieres(instant))
 
 
 async def _drive_zero_loop(app: web.Application) -> None:
@@ -859,6 +907,7 @@ async def _background_loops_ctx(app: web.Application):
     feed_queue = asyncio.Queue(maxsize=FEED_QUEUE_MAX)
     tasks = [asyncio.ensure_future(_state_loop(app)),
              asyncio.ensure_future(_drive_zero_loop(app)),
+             asyncio.ensure_future(_lumieres_loop(app)),
              asyncio.ensure_future(_feed_loop(app, feed_queue))]
     # Branché APRÈS la création de la file et de son consommateur : le thread
     # spin ne peut pas déposer dans une file sans lecteur.
@@ -945,6 +994,7 @@ def build_app(node: WebBridgeNode) -> web.Application:
     app.router.add_get("/scene", scene_handler)
     app.router.add_get("/api/catalog", catalog_handler)
     app.router.add_get("/api/data", data_handler)
+    app.router.add_get("/api/bugs-joues", bugs_joues_handler)
     app.router.add_get("/ws", websocket_handler)
     app.router.add_get("/video", video_handler)
     app.router.add_get("/perception", perception_handler)

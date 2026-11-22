@@ -154,6 +154,24 @@
   }
  },
  "sequence": {
+  "bugs-joues/begaiement": {
+   "rejeu": "23caa718c96a08001bbf545221295034ba238671a798862ef2dc9147c51991e7"
+  },
+  "bugs-joues/ecran_noir": {
+   "rejeu": "bf4d0a706b2245562c543f7588ada682e49886298d2cbfaeb5c61b127ac49f16"
+  },
+  "bugs-joues/faux_redemarrage": {
+   "rejeu": "edee927d0026ba7f76209aabaf6a84457c3fabc9f0d1a29e9b462aa8450d1616"
+  },
+  "bugs-joues/glitch_visage": {
+   "rejeu": "d5ae14ed5dcaa7cbd3a3a5cc28f435bc528a81cd6bca15ac8cf3bb6489d0ddc5"
+  },
+  "bugs-joues/lumieres_folles": {
+   "rejeu": "ab59b1e8c60c031ec3150e153264b3783d792636e499178756563ed096374c6d"
+  },
+  "bugs-joues/mise_a_jour": {
+   "rejeu": "51223762358bb9557d2296d767600603dc2953ee9b827d0be4a06ba561d87420"
+  },
   "bugs/bug1": {
    "origine_roues": "heritee",
    "rejeu": "7563fada361f2574f3601a1e54eb0c13d371887dfb272572478b9ab4d1a96ec2",

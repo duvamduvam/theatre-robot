@@ -24,6 +24,9 @@ TOPICS_PERCEPTION = {
 TOPICS_JEU = {
     "JEU_CONSOLE": "jeu/console", "JEU_INTENTION": "jeu/intention",
     "JEU_CHAT_MOVE": "jeu/chat_move", "JEU_JOURNAL": "jeu/journal",
+    # Lot I0 (étude improvisation §3.2, §4.1) : STOP IMPRO, scénariste, répertoire.
+    "JEU_IMPRO": "jeu/impro", "JEU_IMPRO_STATE": "jeu/impro_state",
+    "JEU_PROPOSITION": "jeu/proposition", "JEU_REPERTOIRE": "jeu/repertoire",
 }
 # Nouveau au lot O0 (tableau des objets, theatre_contrats/objets.py) : PAS repris de utils_static.
 TOPICS_OBJETS = {"SCENE_OBJETS": "scene/objets"}

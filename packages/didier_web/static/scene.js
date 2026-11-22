@@ -113,7 +113,7 @@ liaison.surLiaison = () => {
   // Éditeur : « Charger » reste actif (lire ne demande pas l'écriture), pas les envois.
   document.querySelectorAll(".bouton-catalogue, #scene-form-texte button, "
       + "#scene-form-consigne button, #scene-vitesse, .jeu-bouton, #jeu-cible-va-la, "
-      + "#editeur-envoyer, #editeur-rejouer, #editeur-valider-roues, #editeur-image-envoyer")
+      + "#editeur-envoyer, #editeur-rejouer, #editeur-valider-roues, #editeur-image-envoyer, #bugs-couper")
     .forEach((el) => { el.disabled = !state.isWriter; });
   majEditeurVisible();
   // Route / vitesse / séance : seulement si le serveur les accepte (hello.rehearsal).
@@ -306,7 +306,105 @@ liaison.surEtat = (msg) => {
   afficherChaine(valeurTopic(msg.topics, "chat_audio_chain"));
   afficherJeu(msg);
   afficherMission(msg);
+  // Bandes LED (lot I0) : le `state` resynchronise (page ouverte en cours de jeu) ; les
+  // changements arrivent aussitôt par le message `lumieres`.
+  if (msg.lumieres) {
+    recevoirLumieres(msg.lumieres);
+  }
 };
+
+// --- Bandes LED (lot I0) : ce que le ruban afficherait ---------------------------------
+// Le pont tient le MODÈLE (didier_web/apercu_lumieres.py : quelle brique, depuis quand) ;
+// lumieres.js dit à quoi ressemble la brique. Ici : recaler l'horloge et peindre ~30 i/s,
+// seulement onglet visible. La luminosité réelle du ruban (0,05 au repos) n'est PAS appliquée
+// à l'écran (tout serait noir) : la légende la donne si un message l'a changée.
+const LUMIERES_PERIODE_MS = 33;
+const lumieres = { instant: null, recuA: 0, toiles: [], dernierePeinture: 0 };
+
+function recevoirLumieres(instant) {
+  lumieres.instant = instant;
+  lumieres.recuA = performance.now();
+  const bandes = instant.bandes || [];
+  const conteneur = $("scene-lumieres-bandes");
+  if (lumieres.toiles.length !== bandes.length) {
+    conteneur.replaceChildren();
+    lumieres.toiles = bandes.map((bande) => {
+      const toile = document.createElement("canvas");
+      toile.width = bande.leds;
+      toile.height = 1;
+      toile.title = "bande " + bande.nom + " (" + bande.leds + " LED)";
+      conteneur.appendChild(toile);
+      return toile;
+    });
+  }
+  const morceaux = [instant.sequence || "inconnue"];
+  if (instant.brique) {
+    morceaux.push(instant.brique + " (" + (instant.methode || "méthode inconnue") + ")");
+  }
+  if (instant.luminosite !== null && instant.luminosite !== undefined) {
+    morceaux.push("luminosité " + instant.luminosite);
+  }
+  $("scene-lumieres-legende").textContent = "lumières : " + morceaux.join(" · ");
+}
+
+function peindreLumieres(maintenant) {
+  requestAnimationFrame(peindreLumieres);
+  const instant = lumieres.instant;
+  if (!instant || document.hidden || maintenant - lumieres.dernierePeinture < LUMIERES_PERIODE_MS) {
+    return;
+  }
+  lumieres.dernierePeinture = maintenant;
+  const tMs = instant.depuis_ms + (maintenant - lumieres.recuA);
+  (instant.bandes || []).forEach((bande, k) => {
+    const toile = lumieres.toiles[k];
+    if (!toile) {
+      return;
+    }
+    const pixels = lumPixels(instant.methode, instant.rgb, tMs, bande.leds);
+    const ctx = toile.getContext("2d");
+    const image = ctx.createImageData(bande.leds, 1);
+    pixels.forEach(([r, g, b], i) => {
+      image.data.set([r, g, b, 255], 4 * i);
+    });
+    ctx.putImageData(image, 0, 0);
+  });
+}
+
+liaison.surLumieres = recevoirLumieres;
+
+// --- Bugs joués (lot I0) : jeu manuel pour le visuel de David ----------------------------
+// Liste lue sur GET /api/bugs-joues (bugs ACCEPTÉS par le contrat, refusés avec raisons) ;
+// chaque bouton publie `animation` <id> (bouton catalogue). Aucun sélecteur ici (lot I1).
+
+async function installerBugs() {
+  $("bugs-couper").addEventListener("click", () => {
+    if (state.isWriter) {
+      envoyerSaisie("animation", false, $("bugs-couper"));
+    }
+  });
+  let inventaire;
+  try {
+    const reponse = await fetch(urlHttp("/api/bugs-joues"), { cache: "no-store" });
+    if (!reponse.ok) {
+      throw new Error("HTTP " + reponse.status);
+    }
+    inventaire = await reponse.json();
+  } catch (e) {
+    logErreur("liste des bugs joués illisible : " + e.message);
+    return;
+  }
+  const groupe = $("groupe-bugs");
+  inventaire.acceptes.forEach((bug) => {
+    const btn = creerBoutonCatalogue("animation", bug.id, bug.id.replaceAll("_", " "));
+    btn.title = bug.desc + " — " + bug.duree_s + " s, classe " + bug.classe
+        + (bug.direction ? " ; ensuite : « " + bug.direction + " »" : "");
+    btn.disabled = !state.isWriter;
+    groupe.appendChild(btn);
+  });
+  const refus = $("bugs-refuses");
+  refus.hidden = inventaire.refuses.length === 0;
+  refus.textContent = inventaire.refuses.map((r) => "refusé : " + r.chemin + " — " + r.erreurs.join(" ; ")).join("\n");
+}
 
 // --- Conversation : flux chat_transcript ------------------------------------------
 
@@ -1342,4 +1440,6 @@ installerExterieur();
 liaison.surLiaison();
 installerVideo();
 installerVisage();
+installerBugs();
+requestAnimationFrame(peindreLumieres);
 connecter();

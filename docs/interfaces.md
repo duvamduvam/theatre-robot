@@ -194,6 +194,15 @@ source (W1 à venir).
   (`a_jour`, `a_faire`, `heritee` pour les roues ; clé absente = sans objet) ; avec `name`,
   `{name, content, sha256}` (`content` en base64 pour une image ; `sha256` = le
   `base_sha256` d'un `replace`). Kind hors liste, nom hors forme (`nom_valide`) ou absent → 404.
+  `GET /api/bugs-joues` (lot I0, 22/11, LECTURE SEULE, `lecture_donnees.bugs_joues(data_dir)`) :
+  `{"acceptes": [{id, desc, classe, duree_s, direction, pistes}], "refuses": [{chemin, erreurs}]}`
+  — les bugs joués jugés par `theatre_contrats.bugs_joues` ; la page joue un bug par `cmd`
+  `animation` = `id`.
+- **Aperçu des bandes LED** (lot I0, 22/11) : le pont tient un modèle de ce que le ruban du robot
+  afficherait d'après les `robot_lights` reçus (`didier_web.apercu_lumieres`) ; le message
+  `state` porte `lumieres` = `{sequence, brique, methode, rgb, depuis_ms, luminosite, repos,
+  bandes: [{nom, leds}]}`, et un message serveur `{"type": "lumieres", "lumieres": {…}}` part
+  dès que la brique change (relu à 10 Hz). La page dessine les pixels (`static/lumieres.js`).
 - **Source vidéo** (paramètre `camera_compressed`, 2026-07-11) : en **sim**,
   `camera/image_raw` (sensor_msgs/Image brut de la caméra gz, encodé JPEG par le
   bridge) ; sur le **vrai robot**, `camera/image_raw/compressed`

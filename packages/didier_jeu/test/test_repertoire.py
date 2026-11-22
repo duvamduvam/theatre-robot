@@ -124,3 +124,47 @@ def test_commande_et_payload_animation():
     assert commande(d, "aller_voir", objet="anneaux") == {"cmd": "aller_voir", "objet": "anneaux"}
     assert commande(d, "se_tourner_vers", angle_deg=-12.0) == {"cmd": "tourner", "angle_deg": -12.0}
     assert payload_animation(Sequence("aurore", ("random",), 7.0, "r/aurore.json", False, True)) == '"aurore"'
+
+
+# --- Bugs joués (lot I0, étude improvisation §2.1) -------------------------------------------
+
+def test_bugs_joues_jamais_jouables_comme_du_jeu_ordinaire(tmp_path):
+    """bugs-joues/ et le type bug-joue sont hors des emplois ordinaires : le sélecteur ne les
+    jouera que par l'emploi `bug` (lot I1), sous les garanties du contrat."""
+    from didier_jeu.repertoire import DOSSIERS_EXCLUS, candidates
+    assert DOSSIERS_EXCLUS == ("bugs", "bugs-joues")
+    _ecrire(tmp_path, "a/jouable.json", {"types": ["random"]})
+    _ecrire(tmp_path, "a/egare.json", {"types": ["random", "bug-joue"]})
+    _ecrire(tmp_path, "bugs-joues/ecran_noir.json", {"types": ["random"]})
+    assert [s.chemin for s in candidates(tmp_path)] == ["a/jouable.json"]
+
+
+def test_inventaire_des_bugs_joues_lu_depuis_le_dossier_des_sequences():
+    """Le nœud ne connaît que `sequences_dir` : les références se lisent deux niveaux plus haut.
+    Les 6 bugs de classe V, sans refus (valeurs gravées, inventaire complet côté contrat)."""
+    from theatre_contrats.donnees import dossier_audios_prives
+    from didier_jeu.repertoire import bugs_joues
+    inventaire = bugs_joues(SEQUENCES, dossier_audios_prives())
+    assert inventaire.refuses == ()
+    assert [b.id for b in inventaire.acceptes] == ["begaiement", "ecran_noir", "faux_redemarrage",
+                                                   "glitch_visage", "lumieres_folles", "mise_a_jour"]
+
+
+def test_sequence_piegee_refusee_par_le_repertoire(tmp_path):
+    """Une séquence à roues déposée dans bugs-joues/ : refusée au chargement, les vraies
+    restent jouables (copie des vraies données, seul le piège diffère)."""
+    import json
+    import shutil
+    from conftest import DONNEES
+    from didier_jeu.repertoire import bugs_joues
+    for fichier in ("expressions.json", "robot_lights.json", "audios-prives.json"):
+        (tmp_path / "json").mkdir(exist_ok=True)
+        shutil.copy(f"{DONNEES}/json/{fichier}", tmp_path / "json" / fichier)
+    shutil.copytree(f"{SEQUENCES}/bugs-joues", tmp_path / "json/sequences/bugs-joues")
+    piege = json.loads((tmp_path / "json/sequences/bugs-joues/mise_a_jour.json").read_text())
+    piege["wheels"] = [[0, [0.5, -0.5]], [0.5, [0, 0]]]
+    (tmp_path / "json/sequences/bugs-joues/tourne.json").write_text(json.dumps(piege))
+    inventaire = bugs_joues(tmp_path / "json" / "sequences", "/nulle-part")
+    assert inventaire.refuses == (("bugs-joues/tourne.json",
+                                   ("piste wheels interdite dans un bug joué (même vide)",)),)
+    assert len(inventaire.acceptes) == 6

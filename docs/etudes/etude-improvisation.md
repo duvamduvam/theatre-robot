@@ -1,7 +1,7 @@
 # Improvisation en vrai — bugs joués, scénariste, STOP IMPRO
 
-*Écrite le 2026-11-21 (Fable). Statut : **PROPOSÉE, à valider par David** (cinq questions au §9,
-chacune avec une réponse par défaut : sans réaction, les lots partent sur les défauts).
+*Écrite le 2026-11-21 (Fable). Statut : **VALIDÉE le 22/11** (réponses de David au §9, lots
+mis à jour au §7) ; **lot I0 fait le 22/11** (§11).
 Elle s'appuie sur les décisions du 02/11 ([`etude-autonomie-improvisation.md`](../etude-autonomie-improvisation.md) §8),
 du 17/11 (bugs JOUÉS sur le vrai robot) et du 18/11 (Didier joue de lui-même, STOP IMPRO, panneau
 Coulisses) : elle ne les re-tranche pas (§10). Tout ce qui est dit « existe » a été relu dans le
@@ -224,8 +224,8 @@ l'état est la vérité, et la page n'affiche que l'état.
 
 - **OFF au démarrage, toujours** (comme la route). Jouer de lui-même est un mode que David allume.
 - **OFF tout seul** si aucun battement de superviseur depuis 3 s (`{"presence": true}` de la page
-  à 2 Hz, déjà en place ; demain `superviseur/battement` de la télécommande) : pas d'impro sans un
-  bouton d'arrêt vivant. Il ne se rallume pas seul. 3 s et non 1 s (la règle des roues) : il n'y
+  à 2 Hz, déjà en place ; demain `superviseur/battement` de la télécommande ou du gant) : pas
+  d'impro sans un bouton d'arrêt vivant. Défaut gardé le 22/11, **à juger en séance sim** (§9, 2). Il ne se rallume pas seul. 3 s et non 1 s (la règle des roues) : il n'y
   a ici aucun mouvement de roues, et un téléphone en Wi-Fi a ses trous.
 - **OFF sur arrêt d'urgence** (`e_stop` vrai) : cause `e_stop`, à rallumer à la main.
 - Un « off » est toujours accepté ; un « on » est refusé (journalisé) sans battement ou sous `e_stop`.
@@ -249,7 +249,8 @@ de plus.
 
 **Priorités.** STOP roues et STOP IMPRO sont deux axes. L'arrêt d'urgence entraîne STOP IMPRO ;
 l'inverse jamais. Le « stop » dit ou cliqué coupe le bug en cours et impose 10 s de calme, sans
-éteindre l'impro (question 5). STOP CONTENUS envoie aussi `jeu/impro off` : sans cela le sélecteur
+éteindre l'impro (question 5, décidé le 22/11) : le « stop » vocal n'est PAS le STOP IMPRO, qui
+sera un bouton du gant. STOP CONTENUS envoie aussi `jeu/impro off` : sans cela le sélecteur
 relancerait une expression 8 s après le silence demandé.
 
 ### 4.3 Points d'entrée
@@ -257,8 +258,9 @@ relancerait une expression 8 s après le silence demandé.
 | Entrée | Quand | Forme |
 |---|---|---|
 | **Page scène** | lot I2 | interrupteur IMPRO dans la barre fixe, à côté de STOP et distinct de lui (autre couleur, libellé d'état lu sur `jeu/impro_state`) ; `jeu/impro` entre dans la liste blanche du pont, robot réel compris |
-| **Télécommande L4** | à porter dans l'étude UX et la spec de L4 | une touche dédiée, active en MANUEL comme en CONSOLE, état visible ; plus une touche « lance un délire » (`jeu/console {"cmd": "joue"}`, sans `quoi` = au choix du sélecteur) — c'est le « bouton pour lancer ou couper un délire » de la ligne des chantiers |
-| **Repli avant L4** | lots I2 et I4 | la page scène sur le téléphone, servie par le robot (pont web, W0) ; la télécommande actuelle garde son arrêt des contenus. **Pas de sortie en rue avec l'impro allumée sans touche physique** (question 4) |
+| **Bouton du gant** (RP2040) | **décidé le 22/11** : c'est LE STOP IMPRO physique ; à porter dans l'étude du gant ([`etude-identification-acteur.md`](../etude-identification-acteur.md), gant RP2040) et celle de la télécommande USB ([`etude-telecommande-usb.md`](../etude-telecommande-usb.md)) | un bouton dédié, distinct du bouton de désignation ; il publie `jeu/impro off` et sert de battement de superviseur ; tant que le gant n'existe pas, le bouton IMPRO de la page scène le remplace |
+| **Télécommande L4** | à porter dans l'étude UX et la spec de L4 | état IMPRO visible ; une touche « lance un délire » (`jeu/console {"cmd": "joue"}`, sans `quoi` = au choix du sélecteur) — c'est le « bouton pour lancer ou couper un délire » de la ligne des chantiers |
+| ~~Repli avant L4 : le téléphone~~ | **abandonné le 22/11** (question 4) | inutile tant que Didier ne tourne qu'en sim : rien à développer pour le téléphone. **Pas de sortie en rue avec l'impro allumée sans le bouton du gant** |
 
 Ordres ajoutés à `jeu/console` : `joue` (`quoi` facultatif : lancer un bug ou une lubie tout de
 suite, sans annonce, sous les garanties du §2.1) et `pas_maintenant` (veto de l'annonce en cours,
@@ -330,14 +332,15 @@ de suite ; I4 demande les Pi branchés.
 | Lot | Contenu | Modèle | Estimation | Prérequis | Critère de fin |
 |---|---|---|---|---|---|
 | **I0 — contrat et matière** | `theatre_contrats` : `jeu/impro`, `jeu/impro_state`, `jeu/proposition`, `jeu/repertoire`, encodeurs purs ; les 6 séquences de classe V et les 2 de classe M dans `bugs-joues/` ; 3 sons au manifeste ; contrôles de chargement (roues, relais, durées) | Opus | 4 h + David 15 min | aucun | tests verts avec mutation ; chaque séquence jouée depuis la page scène en sim ; **premier visuel de David** : il garde, retouche ou jette chaque bug |
-| **I1 — le sélecteur joue et se tait** | emploi `bug`, score, réfractaires et plafond glissant, annonce, rétablissement, coupures (stop, `e_stop`, télécommande, 15 s) ; branche `impro_coupee`, `jeu/impro_state`, OFF au démarrage et sans battement ; ordres `joue` et `pas_maintenant` ; `jeu/intention` enrichie, marqueur BUG JOUÉ au journal ; réglage `roues: false` ; `validate-impro.sh` et sa phase de fumée | Opus (jamais moins : arrêts et chaîne d'arrêt) | 9 h | I0 | verdicts R1-R4, S1-S5, S7, S9-S11 verts ; fumée complète verte ; à vérifier dans ce lot : ce que fait `chat_node` pendant `animation_state` non vide |
-| **I2 — la page** | interrupteur IMPRO, liste blanche, STOP CONTENUS → `jeu/impro off`, bloc « Didier s'apprête à… », boutons « pas maintenant » et « lance un délire », tenue sur téléphone ; tests gravés du protocole web | Opus | 4 h | I1 | capture validée par David ; une séance sim de 15 min où il coupe, relance et met un veto |
+| **I1 — le sélecteur joue et se tait** | emploi `bug` (servi par `repertoire.bugs_joues()`, posé en I0), score, réfractaires et plafond glissant, annonce, rétablissement, coupures (stop dit ou cliqué : bug coupé + 10 s de calme, impro laissée ON ; `e_stop`, télécommande, 15 s) ; branche `impro_coupee`, `jeu/impro_state`, OFF au démarrage et sans battement (défauts gardés le 22/11, **à juger en séance sim**) ; ordres `joue` et `pas_maintenant` ; `jeu/intention` enrichie, marqueur BUG JOUÉ au journal ; réglage `roues: false` ; `validate-impro.sh` et sa phase de fumée. Seuls les bugs que David a gardés au visuel d'I0 entrent dans le répertoire | Opus (jamais moins : arrêts et chaîne d'arrêt) | 9 h | I0 + tri de David | verdicts R1-R4, S1-S5, S7, S9-S11 verts ; fumée complète verte ; à vérifier dans ce lot : ce que fait `chat_node` pendant `animation_state` non vide |
+| **I2 — la page** | interrupteur IMPRO de la page scène (le STOP IMPRO tant que le gant n'existe pas), liste blanche, STOP CONTENUS → `jeu/impro off`, bloc « Didier s'apprête à… », boutons « pas maintenant » et « lance un délire » ; tests gravés du protocole web. **Plus de tenue sur téléphone** (décidé le 22/11 : inutile tant que Didier ne tourne qu'en sim) | Opus | 3 h 30 | I1 | capture validée par David ; une séance sim de 15 min où il coupe, relance et met un veto, et **juge l'annonce de 2 s** (question 3) |
 | **I3 — le scénariste** | champ `jouer`, `jeu/repertoire` dans le message, `jeu/proposition` → offre `scenariste`, retour par l'intention ; réflexion muette impro coupée ; lubies proposées sur `scene/objets` ; banc réel de 20 appels (propositions valides ≥ 90 %, coût mesuré) ; **supprime** la lecture par mots-clés (§10) | Opus, relecture adverse Fable avant fusion | 7 h + 1 h | I1 ; I2 souhaitable | 15/15 à l'épreuve ; séance sim : au moins 3 initiatives motivées par ce qui s'est dit ou vu, **relues par David** — c'est la porte du lot A3 du 02/11, que ce lot réalise pour le répertoire sans roues |
-| **I4 — sur le vrai robot, sans roues** | `jeu_node` démarre hors domaine 43 **seulement** avec `roues: false` (aucun éditeur vers les roues, superviseur exigé, impro OFF) ; package dans la liste du robot, dépendance py_trees dans son image, Ansible, `ecart-pi.sh` vert ; liste blanche du pont en réel : `jeu/impro`, `jeu/console` ; `CHAT_REFLEXION` posé sur le Pi vision | Opus, relecture adverse Fable avant mise en service | 5 h + 1 h + David 30 min | I1-I3 fusionnés, fumée verte, Pi branchés | sur le banc ou le robot hors sol : les 6 bugs de classe V joués, STOP IMPRO depuis le téléphone coupe en moins de 1 s, filmé ; le graphe ne montre aucun chemin du sélecteur vers `cmd_vel*` |
+| **I4 — sur le vrai robot, sans roues** | `jeu_node` démarre hors domaine 43 **seulement** avec `roues: false` (aucun éditeur vers les roues, superviseur exigé, impro OFF) ; package dans la liste du robot, dépendance py_trees dans son image, Ansible, `ecart-pi.sh` vert ; liste blanche du pont en réel : `jeu/impro`, `jeu/console` ; `CHAT_REFLEXION` posé sur le Pi vision ; **le bouton STOP IMPRO du gant** (RP2040 : `jeu/impro off` + battement de superviseur) | Opus, relecture adverse Fable avant mise en service | 6 h + 1 h + David 30 min | I1-I3 fusionnés, fumée verte, Pi branchés, **gant câblé** | sur le banc ou le robot hors sol : les bugs de classe V gardés par David joués, STOP IMPRO **depuis le bouton du gant** coupe en moins de 1 s, filmé ; le graphe ne montre aucun chemin du sélecteur vers `cmd_vel*` |
 | **I5 — cou et bras** | protocole caméra hors sol pour `tete_figee` et `bras_en_greve` (amplitudes, retour au repos, rien ne force) | Opus + David 30 min | 2 h | I4, robot remonté | vidéo relue ; les deux bugs passent de « sim » à « réel » dans le répertoire |
 
 Total : environ 29 h d'Opus et 2 h de Fable avant I5. Hors lots, mais à inscrire là où ils vivent :
-la touche STOP IMPRO et « lance un délire » dans l'étude UX de la télécommande et la spec L4 ;
+le bouton STOP IMPRO dans l'étude du gant (identification de l'acteur, RP2040) ; l'état IMPRO et
+« lance un délire » dans l'étude UX de la télécommande et la spec L4 ;
 les lubies sur objets vus dans le lot O2 (offre `objet` née du tableau au lieu d'un POI).
 
 Le sélecteur sur le vrai robot n'attend ni W1 ni l'odométrie ni A0-4 : sans roues, il reste dans
@@ -359,15 +362,15 @@ par celui-ci.
 | Nouveau nœud sur le Pi du robot | charge et mémoire mesurées en I4 ; aucun éditeur vers les roues, vérifié sur le graphe |
 | Bras en mouvement près du public | hors de cette étude tant que la classe M n'a pas passé I5 ; à juger sur la vidéo |
 
-## 9. Questions pour David
+## 9. Questions pour David — réponses du 22/11
 
-| # | Question | Par défaut |
-|---|---|---|
-| 1 | Le catalogue de 8 bugs (§2.2) : lesquels garder, lesquels manquent ? | les 6 de classe V d'abord, sons de synthèse ; tri au visuel de fin d'I0 |
-| 2 | L'impro est-elle éteinte au démarrage, et s'éteint-elle seule quand ni la page ni la télécommande ne répondent depuis 3 s ? | oui aux deux |
-| 3 | Veux-tu l'annonce de 2 s avec « pas maintenant » avant chaque bug, au prix de 2 s de retard ? | oui ; à raccourcir en séance si elle gêne |
-| 4 | Avant L4, le téléphone suffit-il comme STOP IMPRO ? | oui en sim et à la maison ; **non en rue** : pas d'impro allumée dehors sans touche physique (L4, ou une touche de la télécommande actuelle si elle se câble en moins d'une heure) |
-| 5 | Un « stop » dit à voix haute éteint-il l'impro, ou coupe-t-il seulement le bug en cours ? | il coupe le bug et impose 10 s de calme ; l'impro reste allumée (seuls STOP IMPRO, STOP CONTENUS et l'arrêt d'urgence l'éteignent) |
+| # | Question | Par défaut proposé | **Décidé le 22/11** |
+|---|---|---|---|
+| 1 | Le catalogue de 8 bugs (§2.2) : lesquels garder, lesquels manquent ? | les 6 de classe V d'abord, sons de synthèse ; tri au visuel de fin d'I0 | **à tester en sim, David trie au visuel.** Les 6 de classe V d'abord (faits en I0) ; les 2 de classe M attendent le protocole caméra (I5) |
+| 2 | L'impro est-elle éteinte au démarrage, et s'éteint-elle seule quand ni la page ni la télécommande ne répondent depuis 3 s ? | oui aux deux | **« je ne sais pas » : à tester en sim.** On garde le défaut (OFF au démarrage, OFF sans superviseur), à juger en séance (I1, I2) |
+| 3 | Veux-tu l'annonce de 2 s avec « pas maintenant » avant chaque bug, au prix de 2 s de retard ? | oui ; à raccourcir en séance si elle gêne | **à tester en sim** (séance du lot I2) |
+| 4 | Avant L4, le téléphone suffit-il comme STOP IMPRO ? | oui en sim et à la maison ; non en rue | **inutile** tant que Didier ne tourne qu'en sim : **rien à développer pour le téléphone**. En sim, le STOP IMPRO est sur la page scène |
+| 5 | Un « stop » dit à voix haute éteint-il l'impro, ou coupe-t-il seulement le bug en cours ? | il coupe le bug et impose 10 s de calme ; l'impro reste allumée | **le défaut est gardé** pour le « stop » vocal (bug coupé, 10 s de calme). Le STOP IMPRO physique sera **un bouton sur le gant** (RP2040 : étude d'identification de l'acteur, étude de la télécommande USB), pas la voix ; en attendant le gant, le bouton de la page scène le remplace |
 
 ## 10. Ce que cette étude ne re-tranche pas, et ce qu'elle supprime
 
@@ -392,3 +395,18 @@ les 20 pannes ; les 30 lubies du monde `chantiers`.
   une piste roues ; le sélecteur refuse de démarrer hors sim ; le lien metteur en scène → sélecteur
   passe par des mots-clés dans un texte ; STOP CONTENUS n'arrêterait pas un sélecteur en réel.
   En attente des réponses du §9.
+- **2026-11-22** — Réponses de David au §9 (tests en sim d'abord, téléphone inutile, STOP IMPRO =
+  bouton du gant) ; lots I1, I2, I4 mis à jour. **Lot I0 fait** (Opus) : contrat
+  `theatre_contrats.impro` (4 topics, encodeurs et décodeurs purs) et `theatre_contrats.bugs_joues`
+  (garanties du §2.1 appliquées par le contrat des données, donc aussi par l'écrivain du robot) ;
+  les 6 séquences de classe V dans `data/json/sequences/bugs-joues/` ; 3 sons de synthèse au
+  manifeste des audios privés (`bugs-joues/*.wav`, outil `packages/didier_jeu/tools/sons_bugs_joues.py`) ;
+  boutons « Bugs joués » et aperçu des bandes LED sur la page scène. Relevés en le faisant :
+  (a) le vrai code du visage prend pour repos toute expression marquée `"default": true` qu'on lui
+  joue (`off`, `fuzz`) : un bug qui joue `off` doit rejouer `default` avant sa fin, sinon Didier
+  reste au visage noir — garantie ajoutée au contrat (« repos rétabli ») ; (b) `trip` ne montre
+  que sa première brique (`sea colorcycle`, 10 s) dans un bug de 3 s : `glitch_visage` et
+  `lumieres_folles` ont la même lumière (le cycle magenta, orange, turquoise) — à trier au visuel ;
+  (c) `scan` et `transfer` ne montrent pas leur arc-en-ciel (brique de durée nulle) : une pulsation
+  verte, une rouge ; (d) aucun son n'est audible en sim (`audio_node` sans carte son) : les wav
+  s'écoutent à part.

@@ -1,0 +1,34 @@
+{
+    "keys": "",
+    "duration": 4000,
+    "types": [
+        "bug-joue"
+    ],
+    "classe": "V",
+    "desc": "tout s'éteint, puis il sursaute",
+    "direction": "tu ne t'es rendu compte de rien",
+    "faces": [
+        [
+            0,
+            "off"
+        ],
+        [
+            0.5,
+            "surprise"
+        ],
+        [
+            0.9,
+            "default"
+        ]
+    ],
+    "robot_lights": [
+        [
+            0,
+            "off"
+        ],
+        [
+            0.5,
+            "default"
+        ]
+    ]
+}

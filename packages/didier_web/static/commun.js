@@ -43,6 +43,7 @@ const liaison = {
   surMode: null,      // (mode) : le badge de mode vient d'être mis à jour
   surEtat: null,      // (msg) : message serveur "state" (toutes les 2 s)
   surFeed: null,      // (msg) : message serveur "feed" (un événement, à chaque message)
+  surLumieres: null,  // (lumieres) : message serveur "lumieres" (aperçu des bandes LED, lot I0)
   surReponse: null,   // (msg) : message serveur "ack" ou "err" (après le flash commun)
 };
 
@@ -201,6 +202,11 @@ function traiterMessageServeur(msg) {
       // pas (la console de régie) l'ignore en silence : ce n'est pas une erreur,
       // le serveur le diffuse à TOUS les clients.
       liaison.surFeed?.(msg);
+      break;
+    case "lumieres":
+      // Aperçu des bandes LED (lot I0) : la brique affichée vient de changer. Diffusé à
+      // tous ; une page sans aperçu (la console) l'ignore en silence, comme un feed.
+      liaison.surLumieres?.(msg.lumieres);
       break;
     default:
       logErreur("type de message serveur inconnu : " + msg.type);

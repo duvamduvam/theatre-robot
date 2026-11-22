@@ -28,6 +28,12 @@ def test_topics_du_jeu_graves():
     assert topics.JEU_INTENTION == "jeu/intention"
     assert topics.JEU_CHAT_MOVE == "jeu/chat_move"
     assert topics.JEU_JOURNAL == "jeu/journal"
+    # Lot I0 (étude improvisation) : valeurs DE FIL, partagées avec la page scène (I2) et la
+    # réflexion (I3).
+    assert topics.JEU_IMPRO == "jeu/impro"
+    assert topics.JEU_IMPRO_STATE == "jeu/impro_state"
+    assert topics.JEU_PROPOSITION == "jeu/proposition"
+    assert topics.JEU_REPERTOIRE == "jeu/repertoire"
 
 
 def test_topics_catalogue_graves():
@@ -56,5 +62,6 @@ def test_nombre_de_topics_grave():
     # 10 organes + 6 StringTime hors organes + 3 perception + 4 jeu (lot A1)
     # + 2 catalogue/version (lot L1c) + 2 édition (lot L1d) + 3 porte sim (lot L1d-2)
     # + 1 scene/objets (lot O0, 18/11 ; les objets proches du sélecteur du 15/11 sont supprimés en O1)
-    # + 7 corps sûr (lot A0-4, 20/11 : scan, trois sorties _sur, battement, état, réarmement).
-    assert len(_noms_de_topics()) == 38
+    # + 7 corps sûr (lot A0-4, 20/11 : scan, trois sorties _sur, battement, état, réarmement)
+    # + 4 improvisation (lot I0, 22/11 : impro, impro_state, proposition, repertoire).
+    assert len(_noms_de_topics()) == 42

@@ -1,0 +1,44 @@
+{
+    "keys": "",
+    "duration": 4000,
+    "types": [
+        "bug-joue"
+    ],
+    "classe": "V",
+    "desc": "il bute sur une syllabe en boucle",
+    "direction": "reprends ta phrase comme si de rien n'était",
+    "audios": [
+        [
+            0,
+            "bugs-joues/begaiement.wav"
+        ]
+    ],
+    "faces": [
+        [
+            0,
+            "speak loop"
+        ],
+        [
+            0.3,
+            "glitch total"
+        ],
+        [
+            0.38,
+            "speak loop"
+        ],
+        [
+            0.6,
+            "glitch total"
+        ],
+        [
+            0.66,
+            "speak loop"
+        ]
+    ],
+    "robot_lights": [
+        [
+            0,
+            "speak"
+        ]
+    ]
+}
