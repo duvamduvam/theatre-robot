@@ -458,14 +458,14 @@ remet : [`visage/glitchs-tension.gif`](visage/glitchs-tension.gif) (la barre ora
 | Échelle | Durée | Ce que c'est | Qui décide |
 |---|---|---|---|
 | **Micro-bug** | 50 à 300 ms, une zone, quelques LED | une **texture** : l'expression reste lisible, ce n'est pas un événement | personne : tiré au hasard, à un rythme fixé par la tension |
-| **Accroc** | 0,3 à 1 s, visible de loin | un **signe** : dérive de couleur, lapsus, œil en retard, gel | une séquence, la conversation ou le sélecteur, à l'unité |
+| **Accroc** | 0,3 à 1 s, visible de loin | un **signe** : dérive de couleur, œil en retard, gel | une séquence, la conversation ou le sélecteur, à l'unité |
 | **Bug joué** | 3 à 15 s | une **scène** : le catalogue de [`etude-improvisation.md`](etude-improvisation.md) §2 | le sélecteur, avec annonce, veto et plafonds |
 
 Les micro-bugs ne remplacent donc pas les bugs joués : ils les **préparent** et les **prolongent**.
 
 ### 11.2 Le catalogue
 
-Douze effets, tous des calques : ils abîment l'image en cours, quelle que soit l'expression.
+Onze effets, tous des calques : ils abîment l'image en cours, quelle que soit l'expression.
 
 | Effet | Portée | Sens possible |
 |---|---|---|
@@ -476,7 +476,6 @@ Douze effets, tous des calques : ils abîment l'image en cours, quelle que soit 
 | baisse (un œil ou la bouche faiblit) | de loin | il s'éteint, il faiblit |
 | dérive de couleur | de loin | « ce n'est plus tout à fait lui » |
 | œil en retard | de loin | un œil qui cligne seul : fatigue, ou clin d'œil raté |
-| **lapsus** : une image d'une autre émotion | de loin | ce qu'il pense vraiment, le temps d'un éclair |
 
 Réserve honnête : les effets à une LED ne se lisent que de près (une LED à 15 m fait 1,9′). En
 rue ils seront vus par le premier cercle, à 3-5 m — là où se joue la rencontre. Pour porter loin,
@@ -495,13 +494,12 @@ ce sont les quatre derniers qui comptent.
    présage.
 3. **La retombée.** Après un bug, des micro-bugs de plus en plus rares : « il se remet ». Un bug
    n'est plus un interrupteur, il a une queue.
-4. **Le lapsus.** Didier dit « tout va très bien » et son visage affiche la colère pendant deux
-   images. À manier rarement : c'est l'effet le plus fort du catalogue.
+4. ~~Le lapsus~~ (un éclair d'une autre émotion) : **écarté par David le 22/11**, « trop
+   compliqué à comprendre » ; à reconsidérer plus tard.
 5. **Une signature par état**, au lieu du hasard pur : amoureux → pixels roses qui débordent ;
    triste → pixels morts, baisse ; en colère → lignes déchirées ; fatigué → œil en retard.
-6. **Les vraies défaillances dans la même langue.** Réseau perdu, oreille en échec, batterie
-   basse : chacune avec sa signature. Une vraie dégradation ressemble alors au personnage, et
-   David la lit sur le visage. Condition : le panneau Coulisses dit laquelle est réelle.
+6. **Les vraies défaillances dans la même langue** — **retenu par David le 22/11, à condition
+   qu'il puisse faire la différence, et en incluant les animations LED du corps** (§11.7).
 
 ### 11.4 Garde-fous
 
@@ -531,14 +529,51 @@ moteur d'images **actuel**, sans attendre le visage paramétrique.
 |---|---|---|
 | **G0** | module pur des 12 effets + tirage à graine dans `didier_core`, branché sous `Face` ; sujets relatifs `face_tension` (0 à 1, latché, périmé) et `face_glitch` (un accroc à l'unité) | tests à valeur gravée (graine fixe → image attendue) ; aperçu sim ; règle des 3 flashs testée |
 | **G1** | le sélecteur publie la tension ; l'annonce d'un bug joué devient une rafale ; retombée | épreuve IMPRO : rafale vue avant chaque bug non ordonné, tension nulle après STOP IMPRO |
-| **G2** | signatures par émotion, lapsus à la demande de la conversation, signatures des défaillances réelles | visuel de David en sim, puis sur le robot |
+| **G2** | signatures par émotion, signatures des défaillances réelles avec témoin (§11.7), calque étendu au ruban du corps | visuel de David en sim, puis sur le robot |
 
 À terme les boucles dessinées `repos glitch`, `fuzz` et `glitch total` laissent la place au calque
 (lot V5) ; rien n'est supprimé avant.
 
-### 11.6 Questions pour David
+### 11.6 Décisions de David (22/11)
 
-1. ~~Au calme~~ — **tranché le 22/11** : un peu plus prononcé que « presque rien », soit un
-   micro-bug toutes les 8 à 12 s.
-2. **Le lapsus** : on le garde ?
-3. **Les vraies défaillances** affichées dans la langue des glitchs : oui ou non ?
+1. Au calme : **un peu plus prononcé** — un micro-bug toutes les 8 à 12 s.
+2. Lapsus : **non pour l'instant**, trop difficile à comprendre ; peut-être plus tard.
+3. Vraies pannes dans la langue des glitchs : **oui**, s'il peut faire la différence, et **le
+   ruban du corps en fait partie**.
+
+### 11.7 Joué ou réel : comment David fait la différence
+
+Résultat complet, visage + corps + témoin, 31 s : calme, montée, bug joué, retombée, puis une vraie
+panne de réseau et son retour — [`visage/glitchs-resultat.gif`](visage/glitchs-resultat.gif).
+
+Quatre différences, dont **une seule suffit** à David (le témoin) ; les trois autres sont là pour
+que les deux restent lisibles même s'il ne le regarde pas :
+
+| | Bug joué, micro-bug | Vraie panne |
+|---|---|---|
+| **Témoin** — une LED du ruban du corps, placée du côté de David | **éteint, toujours** | allumé, orange, clignotement lent (1 par seconde) |
+| Allure | **scintille** : des éclats qui vont et viennent | **s'installe et tient** : une signature fixe, tant que la panne dure |
+| Montée | précédé de micro-bugs de plus en plus serrés (la tension) | arrive d'un coup, sans montée |
+| Durée | 15 s au plus | tant que la panne dure, puis retour net |
+| Coulisses | « BUG JOUÉ : … » | « PANNE : réseau » |
+
+**Le ruban du corps** suit les mêmes règles : un micro-bug sur trois y fait sauter l'animation ;
+un bug joué l'emballe (couleurs au hasard, segments qui sautent) ; une panne réelle y pose sa
+signature (couleur et vitesse).
+
+Signatures de départ, à affiner avec David au visuel :
+
+| Panne réelle | Visage | Corps |
+|---|---|---|
+| réseau perdu (la tête ne répond plus) | glisse au violet et y reste | animation ralentie, violette |
+| oreille en panne (micro, reconnaissance vocale) | les yeux faiblissent | animation pâlie |
+| batterie basse | pixels morts de plus en plus nombreux | le ruban s'éteint par un bout |
+
+Règle de fond : **le témoin n'est piloté que par la détection des pannes**, jamais par le
+répertoire, la conversation ou le sélecteur. Un bug joué ne peut donc pas l'allumer, par
+construction. Le dessin de l'animation de la panne peut ressembler à un bug ; le témoin, non.
+
+Reste à décider : **quelle LED sert de témoin**. Il faut qu'elle soit visible depuis là où tu te
+tiens en jeu et le moins possible du public : sans doute au dos ou sur un flanc. Si c'est une LED
+du ruban existant, aucun achat ni câblage. Plus tard, la télécommande pourra aussi vibrer ou
+l'afficher.

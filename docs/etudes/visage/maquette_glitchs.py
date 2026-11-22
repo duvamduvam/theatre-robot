@@ -20,6 +20,8 @@ import maquette_visage as m
 
 ICI = Path(__file__).resolve().parent
 IPS = 20  # images par seconde du robot (tick de 50 ms)
+# Au calme, un micro-bug toutes les ~10 s (David, 22/11 : « un peu plus prononcé au calme »).
+P_CALME = 1 / (10 * IPS)
 
 
 # ---------------------------------------------------------------------------------------
@@ -143,7 +145,7 @@ CATALOGUE = [
     ("dérive", "la couleur tourne au violet", [avec(REPOS, derive, tour=0.12), avec(REPOS, derive, tour=0.28)]),
     ("balayage", "une ligne sombre descend", [avec(JOIE, balayage, ou=(2,), ligne=6), avec(JOIE, balayage, ou=(2,), ligne=9)]),
     ("bloc", "un morceau au mauvais endroit", [avec(JOIE, bloc, ou=(2,), cote=4, graine=6), avec(REPOS, bloc, ou=(0,), cote=3, graine=2)]),
-    ("lapsus", "une image d'une AUTRE émotion", [m.vignette(m.VOCABULAIRE["colère"]), m.vignette(m.VOCABULAIRE["amour"])]),
+    # « lapsus » (une image d'une autre émotion) : écarté par David le 22/11, trop difficile à comprendre.
     ("œil en retard", "un seul œil cligne", [assembler([zones(REPOS)[0], m.dessiner_oeil(m.replace(REPOS.oeil_d, hauteur=1.8, arrondi=0.6, pupille=0), miroir=True), zones(REPOS)[2]])] * 2),
 ]
 
@@ -207,7 +209,7 @@ def animation(sortie: Path) -> None:
                     z = [derive(x, tour=0.28) for x in z]
             else:
                 # micro-bugs : au calme un toutes les ~8 s, à tension 0,8 plus de deux par seconde
-                if en_cours is None and rng.random() < (0.006 + 0.14 * tension ** 2):
+                if en_cours is None and rng.random() < (P_CALME + 0.14 * tension ** 2):
                     effet, ou, dur, kw = MICRO[rng.integers(len(MICRO))]
                     en_cours, reste = (effet, ou[rng.integers(len(ou))], kw, int(rng.integers(1 << 30))), dur
                 if en_cours is not None:
@@ -227,6 +229,101 @@ def animation(sortie: Path) -> None:
     print("écrit", sortie.relative_to(m.RACINE), len(images), "images")
 
 
+# ---------------------------------------------------------------------------------------
+# Le résultat complet : visage + ruban du corps + témoin, joué puis réel.
+# ---------------------------------------------------------------------------------------
+ORANGE = np.array([255, 90, 0])
+VIOLET = np.array([150, 40, 255])
+N_CORPS = 28  # représentation réduite du ruban du corps (160 LED en vrai)
+
+
+def corps_chase(t: int, couleur=ORANGE, vitesse=1.0, k=1.0) -> np.ndarray:
+    """L'animation « chase me » du corps : un segment lumineux qui tourne sur un fond faible."""
+    ruban = np.tile((couleur * 0.12 * k).astype(np.uint8), (N_CORPS, 1))
+    tete = int(t * vitesse) % N_CORPS
+    for i in range(6):
+        ruban[(tete - i) % N_CORPS] = (couleur * k * (1 - i / 6)).astype(np.uint8)
+    return ruban
+
+
+def image_complete(z, ruban, temoin) -> np.ndarray:
+    """Visage (28x28) + ruban du corps (une ligne) + témoin, une LED à part."""
+    c = np.zeros((33, 32, 3), np.uint8)
+    c[:28, :28] = assembler(z)
+    c[30, :28] = ruban
+    c[30, 30] = temoin
+    return c
+
+
+def resultat(sortie: Path) -> None:
+    rng = np.random.default_rng(21)
+    images = []
+    plan = [  # (titre, durée s, mode)
+        ("calme — un micro-bug toutes les ~10 s", 12.0, "calme"),
+        ("ça monte", 4.0, "monte"),
+        ("BUG JOUÉ — le témoin reste éteint", 2.5, "bug"),
+        ("il se remet", 3.5, "remet"),
+        ("calme", 1.5, "calme"),
+        ("VRAIE PANNE : réseau perdu — témoin allumé", 6.0, "panne"),
+        ("réseau revenu", 2.0, "calme"),
+    ]
+    en_cours, reste, t = None, 0, 0
+    for titre, duree, mode in plan:
+        n = round(duree * IPS)
+        for i in range(n):
+            t += 1
+            tension = {"calme": 0.0, "monte": 0.05 + 0.75 * i / n, "bug": 1.0,
+                       "remet": 0.6 * (1 - i / n) ** 2, "panne": 0.0}[mode]
+            z = zones(REPOS)
+            ruban = corps_chase(t)
+            temoin = np.zeros(3, np.uint8)
+            if mode == "bug":
+                for k in range(3):
+                    z[k] = ligne_decalee(z[k], rng, lignes=2 if k == 2 else 1, dx=int(rng.integers(1, 4)))
+                    if rng.random() < 0.6:
+                        z[k] = couleurs_separees(z[k], dx=int(rng.integers(1, 3)))
+                    if rng.random() < 0.5:
+                        z[k] = neige(z[k], rng, n=3)
+                if i > n * 0.6:
+                    z = [derive(x, tour=0.28) for x in z]
+                # le corps s'emballe aussi : couleurs au hasard, segments qui sautent
+                ruban = np.roll(ruban, int(rng.integers(-6, 7)), axis=0)
+                for _ in range(6):
+                    ruban[rng.integers(N_CORPS)] = rng.integers(60, 256, 3)
+            elif mode == "panne":
+                # Une vraie panne ne SCINTILLE pas : elle s'installe et TIENT tant qu'elle dure.
+                # Signature « réseau » : le visage glisse au violet, le corps ralentit et pâlit.
+                f = min(1.0, i / (0.8 * IPS))
+                z = [derive(x, tour=0.28 * f) for x in z]
+                ruban = corps_chase(t, couleur=VIOLET, vitesse=0.35, k=0.6)
+                # Le témoin, vers David seulement : orange lent, 1 Hz (sous la règle des 3 flashs).
+                temoin = ORANGE.astype(np.uint8) if (i // (IPS // 2)) % 2 == 0 else np.array([60, 20, 0], np.uint8)
+            else:
+                if en_cours is None and rng.random() < (P_CALME + 0.14 * tension ** 2):
+                    effet, ou, dur, kw = MICRO[rng.integers(len(MICRO))]
+                    en_cours, reste = (effet, ou[rng.integers(len(ou))], kw, int(rng.integers(1 << 30)), rng.random() < 0.3), dur
+                if en_cours is not None:
+                    effet, ou, kw, graine, sur_corps = en_cours
+                    g = np.random.default_rng(graine)
+                    for k in ou:
+                        z[k] = effet(z[k], g, **kw)
+                    if sur_corps:  # un micro-bug sur trois saute aussi dans le corps
+                        ruban = np.roll(ruban, 3, axis=0)
+                    reste -= 1
+                    if reste <= 0:
+                        en_cours = None
+            cadre = m.agrandir(image_complete(z, ruban, temoin), 9)
+            im = Image.new("RGB", (cadre.width + 150, cadre.height + 30), (26, 26, 26))
+            im.paste(cadre, (0, 30))
+            d = ImageDraw.Draw(im)
+            d.text((6, 7), titre, fill=(230, 230, 230), font=m.POLICE)
+            d.text((cadre.width + 8, 30 + 30 * 9 - 2), "← corps, témoin", fill=(150, 150, 150), font=m.POLICE)
+            images.append(im)
+    images[0].save(sortie, save_all=True, append_images=images[1:], duration=1000 // IPS, loop=0)
+    print("écrit", sortie.relative_to(m.RACINE), len(images), "images")
+
+
 if __name__ == "__main__":
+    resultat(ICI / "glitchs-resultat.gif")
     planche(ICI / "glitchs-catalogue.png")
     animation(ICI / "glitchs-tension.gif")
