@@ -337,3 +337,16 @@ def test_mouvement_apprend_la_pause_regarde():
     assert '{"emotion": "surprise", "marche": "pause", "regarder": 0}' in template
     assert "Tu n'y vas PAS : regarder n'est pas aller voir." in template
     assert "(pas pour un simple « regarde » : c'est \"pause\")" in template
+
+
+def test_colere_rare_et_emotions_positives_en_tete():
+    """22/11, David : « pas très fan qu'il soit en colère si facilement […] les gens ont déjà
+    assez de colère et de peur ». La consigne d'émotion met les émotions positives en tête,
+    déclare la colère RARE et brève, et ne donne plus « anger » en exemple ; le bougon râle
+    sans vraie colère."""
+    from didier_vision.ai.ai_static import AI_INSTRUCTIONS
+    from didier_vision.ai.personas import PERSONAS
+    assert '["happy", "love", "surprise", "neutral", "sad", "disgust", "anger"]' in AI_INSTRUCTIONS
+    assert "La colère (\"anger\") est RARE" in AI_INSTRUCTIONS
+    assert '"emotion": "anger"}' not in AI_INSTRUCTIONS
+    assert "jamais une vraie colère" in PERSONAS["bougon"]
