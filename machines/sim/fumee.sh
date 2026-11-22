@@ -86,6 +86,12 @@
 #   FUMEE_DODO_DELAI   secondes entre la fin et le poweroff (défaut 20)
 #   FUMEE_COEURS       CPU RÉSERVÉS à la sim pendant la fumée (défaut 8-15 = 4 cœurs rapides
 #                      du PC de David) ; vide = pas de réservation. Voir coeurs_reserves.py.
+#   FUMEE_DELAI_DEMARRAGE  secondes accordées à chaque démarrage de sim (défaut 600)
+#   FUMEE_PROFIL       1 (défaut) = profil d'énergie « performance » pendant la fumée, SUR SECTEUR
+#                      seulement, profil d'origine rendu à la fin (ventilateurs du portable,
+#                      22/11) ; 0 = jamais touché (CI, PC sans power-profiles-daemon)
+#   FUMEE_SECTEUR      fichier « sur secteur » lu (défaut /sys/class/power_supply/ADP0/online)
+#   FUMEE_POWERPROFILESCTL  commande du profil (défaut powerprofilesctl, cherchée dans le PATH)
 # Codes de sortie : 0 vert ou reporté ou pas due ; 1 fumée ROUGE ; 2 refus/précondition.
 set -euo pipefail
 
@@ -141,14 +147,23 @@ CHEMINS_IMAGES=(machines/sim machines/robot/docker machines/vision/docker
                 machines/robot/packages-docker.txt machines/robot/requirements.txt
                 machines/vision/packages-docker.txt machines/vision/requirements.txt
                 legacy/dadou_control_ros/conf)
-# Démarrage (décision 20) : colcon ×4 + nœuds attendus du robot et de la vision, 600 s au plus.
-DELAI_DEMARRAGE=600
+# Démarrage (décision 20) : colcon ×4 + nœuds attendus du robot et de la vision, 600 s au plus
+# (FUMEE_DELAI_DEMARRAGE : la passe GitHub Actions, 4 vCPU, compile plus lentement que le PC).
+DELAI_DEMARRAGE="${FUMEE_DELAI_DEMARRAGE:-600}"
 NB_COEURS="$(nproc)"
 # Cœurs réservés (08/11) : sous un pic de charge le RTF tombait à 0,76 ; sim seule sur 4 cœurs
 # rapides réservés = 0,987 (mesuré). Pendant la fumée SEULEMENT : tout est rendu à la fin.
 COEURS="${FUMEE_COEURS-8-15}"
 COEURS_PY="$ICI/coeurs_reserves.py"
 MAINTIEN_PID=""
+# Profil d'énergie (22/11, demande de David) : sur le portable, la courbe des ventilateurs suit le
+# profil de power-profiles-daemon (platform_profile quiet/balanced/performance). « performance »
+# pendant la fumée, SUR SECTEUR seulement (sur batterie on ne vide pas le pack pour un test), et
+# le profil d'origine rendu à la fin quoi qu'il arrive (terminer, sous trap EXIT).
+PROFIL="${FUMEE_PROFIL:-1}"
+SECTEUR="${FUMEE_SECTEUR:-/sys/class/power_supply/ADP0/online}"
+PPC="${FUMEE_POWERPROFILESCTL:-powerprofilesctl}"
+PROFIL_ORIGINE=""   # non vide = CETTE fumée a basculé en performance et doit rendre ce profil
 CHARGE="$(cut -d' ' -f1 /proc/loadavg)"
 CHARGE_MAX="${FUMEE_CHARGE_MAX:-$(awk -v n="$NB_COEURS" 'BEGIN { printf "%.1f", n * 0.5 }')}"
 
@@ -1015,6 +1030,7 @@ terminer() {
   fi
   arreter_sim   # idempotent ; couvre le cas « reporté » après démarrage de la sim (RTF trop bas)
   liberer_coeurs
+  restaurer_profil
   liberer_verrou_sim
   # Reporté : pas de page, donc pas de dossier de journaux résiduel.
   [ "$ENGAGEE" = 1 ] || [ -z "$JDIR" ] || rm -rf "$JDIR"
@@ -1038,6 +1054,41 @@ liberer_verrou_sim() { # idempotent ; ne retire que NOTRE ligne, intacte
   [ "$VERROU_SIM_A_NOUS" = 1 ] || return 0
   VERROU_SIM_A_NOUS=0
   [ "$(cat "$SIM_OCCUPEE" 2>/dev/null)" = "${VERROU_SIM_CONTENU:-}" ] && rm -f -- "$SIM_OCCUPEE"
+  return 0
+}
+
+# --- Profil d'énergie (22/11) : jamais bloquant, toute panne est notée et la fumée continue ------
+basculer_profil() { # basculer_profil : « performance » si secteur ; mémorise le profil à rendre
+  [ "$PROFIL" = 1 ] || { journal "profil d'énergie : bascule désactivée (FUMEE_PROFIL=$PROFIL)"; return 0; }
+  command -v "$PPC" >/dev/null 2>&1 || { journal "profil d'énergie : $PPC absent, profil inchangé"; return 0; }
+  local secteur actuel
+  secteur="$(tr -cd '0-9' 2>/dev/null <"$SECTEUR" || true)"
+  if [ "$secteur" != 1 ]; then
+    journal "profil d'énergie : pas sur secteur ($SECTEUR = ${secteur:-illisible}), profil inchangé"; return 0
+  fi
+  if ! actuel="$("$PPC" get 2>/dev/null | tr -cd 'a-z-')" || [ -z "$actuel" ]; then
+    journal "profil d'énergie : « $PPC get » a échoué, profil inchangé"; return 0
+  fi
+  if [ "$actuel" = performance ]; then journal "profil d'énergie : déjà performance, rien à rendre"; return 0; fi
+  # Mémorisé AVANT le set : un signal entre les deux rendrait quand même le profil d'origine.
+  PROFIL_ORIGINE="$actuel"
+  if "$PPC" set performance >/dev/null 2>&1; then
+    journal "profil d'énergie : $actuel -> performance (sur secteur)"
+    dit "profil d'énergie : $actuel -> performance (sur secteur, rendu à la fin)"
+  else
+    PROFIL_ORIGINE=""
+    journal "profil d'énergie : « $PPC set performance » a échoué, profil laissé à $actuel"
+  fi
+}
+restaurer_profil() { # idempotent (aussi sous trap EXIT) ; ne rend que ce que CETTE fumée a changé
+  [ -n "$PROFIL_ORIGINE" ] || return 0
+  local origine="$PROFIL_ORIGINE"; PROFIL_ORIGINE=""
+  if "$PPC" set "$origine" >/dev/null 2>&1; then
+    journal "profil d'énergie rendu : performance -> $origine"
+    dit "profil d'énergie rendu : $origine"
+  else
+    journal "ÉCHEC : profil d'énergie NON rendu ($PPC set $origine a échoué) — à remettre à la main"
+  fi
   return 0
 }
 
@@ -1085,6 +1136,7 @@ if [ "$SAUTER_FUMEE" = 1 ]; then
 fi
 
 poser_verrou_sim
+basculer_profil
 deroule
 
 if [ "$MODE" = et-dodo ]; then

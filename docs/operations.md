@@ -1179,6 +1179,23 @@ les 32 fils : RTF 0,76 sim libre, 0,987 sim sur cœurs réservés. `FUMEE_COEURS
 désactive. Fumée tuée sans ménage : `python3 machines/sim/coeurs_reserves.py liberer` rend tout.
 Limite : les processus root hors conteneur ne sont pas déplacés.
 
+**Profil d'énergie « performance » (22/11, demande de David)** : sur le portable, la courbe des
+ventilateurs suit le profil de power-profiles-daemon (`powerprofilesctl`, qui pilote
+`platform_profile` quiet/balanced/performance). Au départ d'une fumée qui a lieu, `fumee.sh`
+mémorise le profil courant et passe en `performance` **seulement sur secteur**
+(`/sys/class/power_supply/ADP0/online` = 1, `FUMEE_SECTEUR` pour un autre fichier) ; le profil
+d'origine est rendu par `terminer()` (trap EXIT) quelle que soit l'issue : verte, rouge, Ctrl-C,
+arrêt de l'unité systemd (SIGTERM). Les deux bascules sont au journal
+(`~/.local/state/didier-fumee/journal.log`, « profil d'énergie : balanced -> performance » puis
+« profil d'énergie rendu »). Déjà en `performance` : rien touché, rien à rendre. Sur batterie,
+fichier illisible, `powerprofilesctl` absent ou en échec : profil inchangé, noté au journal, la
+fumée continue (jamais rouge pour ça). `FUMEE_PROFIL=0` désactive la bascule (CI, autre PC). Droits :
+polkit `switch-profile` = `allow_active` ; vérifié le 22/11 par `pkcheck` (lecture seule) depuis une
+unité `systemd-run --user` : autorisé tant que la session de David est active. Seul un SIGKILL
+(ou le PC coupé) laisse le profil en `performance` : `powerprofilesctl set balanced` à la main.
+Tests : faux `powerprofilesctl` en tête du PATH dans `test_fumee.py` (secteur, batterie, désactivé,
+déjà performance, absent ou en échec, SIGTERM et SIGINT pendant le démarrage de la sim).
+
 **Trois façons de la lancer**
 - `fumee.sh --si-due` : appelé toutes les 30 min par la minuterie (voir plus bas). Ne fait RIEN
   si rien n'est dû ; dû = un commit touchant un **chemin TESTÉ** est entré dans `main` après le
