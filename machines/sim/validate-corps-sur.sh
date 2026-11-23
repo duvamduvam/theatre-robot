@@ -9,7 +9,7 @@
 # aussi contre nous. Graine fixe 20261118. Téléportations par gz-transport (service set_pose).
 #
 # 25 verdicts (ATTENDU_CORPS_SUR=25 dans fumee.sh) :
-#   CS1  démarrage (3)   a. scan à 10 Hz ± 10 %, 500 rayons (échelon 1 retenu en A0-2)
+#   CS1  démarrage (3)   a. scan à 10 Hz ± 10 %, 720 rayons (ceux du pilote réel, banc du 23/11)
 #                        b. nœud relancé : ARME moins de 5 s après son premier état (1er balayage)
 #                        c. `vue` publié conforme à la pose A : avant seul
 #   CS2  porte de l'étude (4) : cmd_vel_follow 0,3 m/s, obstacle posé à 0,5 m de la caisse, 20
@@ -529,8 +529,8 @@ try:
         fen = [s for s in n.scans if s[0] >= n.t() - 5.0]
         freq = (len(fen) - 1) / (fen[-1][0] - fen[0][0]) if len(fen) > 1 and fen[-1][0] > fen[0][0] else 0.0
         rayons = sorted({s[2] for s in fen})
-        verdict(9.0 <= freq <= 11.0 and rayons == [500],
-                f"CS1a scan {freq:.2f} Hz en temps simulé (10 ± 10 %), rayons {rayons} (500 attendus)")
+        verdict(9.0 <= freq <= 11.0 and rayons == [720],
+                f"CS1a scan {freq:.2f} Hz en temps simulé (10 ± 10 %), rayons {rayons} (720 attendus)")
         t_premier = n.relancer(CONF_SIM)
         try:
             t_arme = n.attendre(lambda: n.etat().get("etat") == "ARME", 5, "ARME")

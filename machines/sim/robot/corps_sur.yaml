@@ -37,7 +37,7 @@ lidar:
 balayage:
   portee_min_m: 0.05
   portee_max_m: 12.0
-  # Échelon 1 de la spec §8.2 retenu en A0-2 (500 rayons, 10 Hz) : 300 au moins.
+  # 720 rayons depuis le 24/11 (ceux du pilote réel ; 500 en A0-2) : 300 au moins, inchangé.
   rayons_min: 300
   age_max_reception_s: 0.25
 

@@ -153,9 +153,9 @@ def test_gz_lidar_caracteristiques_c1(gz_urdf):
     assert s.findtext("gz_frame_id") == "laser_frame"
     assert float(s.findtext("update_rate")) == 10.0          # ne se baisse pas (porte des 200 ms)
     h = s.find("lidar/scan/horizontal")
-    assert int(h.findtext("samples")) == 500
+    assert int(h.findtext("samples")) == 720              # message du pilote réel (banc 23/11)
     assert float(h.findtext("min_angle")) == -3.14159265
-    assert float(h.findtext("max_angle")) == 3.12902628     # −π + 499 × 2π/500 : pas de 0,72°
+    assert float(h.findtext("max_angle")) == 3.14159265     # +π compris, comme sllidar_ros2 : pas 2π/719
     assert int(s.findtext("lidar/scan/vertical/samples")) == 1
     assert float(s.findtext("lidar/range/min")) == 0.05
     assert float(s.findtext("lidar/range/max")) == 12.0
