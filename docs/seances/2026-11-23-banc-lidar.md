@@ -58,6 +58,25 @@ Ansible, poussée sur le Hub (`sha256:86beb03a…`). `ecart-pi.sh robot` **VERT*
    Le robot n'est pas en UDP seul. À mesurer sur une longue durée en A0-7 : un verrou spontané
    en marche arrêterait Didier (sûr, mais injouable).
 
+### Mesures du soir sur ces deux points (23:20-23:35)
+
+**Gels : aucun en 10 min.** Abonné Python DANS le conteneur du robot (`/didier/scan`, profondeur
+10), 600 s : 6 006 balayages ; écart à la RÉCEPTION p50 100 ms, p99 104, **max 109 ms**, aucun
+au-dessus de 200 ms ; écart des HORODATAGES du pilote max 122 ms ; zéro gel de l'abonné seul.
+Et dans le journal du robot, de 20:52 à 23:35, **un seul `capteur_perdu`** : celui provoqué par
+`relancer-lidar.sh`. Les 425 ms du `ros2 topic hz` étaient donc propres à la CLI (son démarrage
+ou son abonné), pas au système. Point 2 **largement levé au repos** ; reste à le revoir en
+charge (vision, audio, roues alimentées) en A0-7/A0-9 — c'est là que la sim gelait.
+
+**CPU : la logique n'est pas le problème.** Micro-mesure sur le Pi, vraie configuration du
+robot, 720 rayons (87 % finis) : `lire_balayage` **3,65 ms**, `CorpsSur.balayage` 3,55 ms,
+`tic` 0,005 ms (sur le PC : 0,48 ms). À 10 Hz : ≈ 3,6 % d'un cœur. Le reste des 17,6 % (dont
+7,2 % sans aucun scan) est la plomberie rclpy : exécuteur, minuterie à 20 Hz, désérialisation du
+`LaserScan`, publication de l'état. Pistes, sans rien changer ce soir : l'`EventsExecutor` de
+rclpy, ou ne publier l'état qu'à son changement. Le but « < 15 % » de la spec date d'avant toute
+mesure : **à re-trancher en A0-8** (relecture Fable) plutôt qu'à forcer — le Pi est à 1,3 de
+charge sur 4 cœurs.
+
 ## Ce qui en découle
 
 - A0-6 fait le même soir : pilote dans l'image, règle udev, `lidar_node` dans le bringup (voir
