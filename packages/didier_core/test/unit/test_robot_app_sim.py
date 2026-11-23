@@ -28,6 +28,13 @@ ARGUMENTS_SIM = {
 }
 # Le 8e argument (15/11) : la barrière roues, vraie par défaut, pour animations_node seul.
 ARGUMENT_BARRIERE = {"exiger_validation_roues": "true"}
+# Lot A0-6 (23/11) : le pilote du lidar réel, vrai par défaut ; seule l'entrée sim passe faux.
+ARGUMENT_LIDAR = {"lidar_materiel": "true"}
+# Paramètres de lidar_node, GRAVÉS (spec A0 §7 ; sllidar_c1_launch.py du pilote 3430009, sauf le
+# port udev stable et frame_id = le lien laser_frame de l'URDF).
+LIDAR_PARAMETRES = {"channel_type": "serial", "serial_port": "/dev/didier-lidar",
+                    "serial_baudrate": 460800, "frame_id": "laser_frame", "inverted": False,
+                    "angle_compensate": True, "scan_mode": "Standard"}
 # Paramètres EFFECTIFS de web_bridge_node sans argument. Avant L2b : json_dir, camera_topic,
 # camera_compressed, data_edit_enabled ; les cinq clés neuves valent le défaut du nœud.
 WEB_BRIDGE_SANS_ARGUMENT = {
@@ -123,7 +130,32 @@ def _valeur_effective(noeud, declares):
 def test_les_sept_arguments_sont_declares_avec_les_defauts_d_avant():
     declares = _arguments_declares(_arbre())
     assert declares == {"robot_name": "EnvironmentVariable('ROBOT_NAME', default_value='didier')", **ARGUMENTS_SIM,
-                        **ARGUMENT_BARRIERE}
+                        **ARGUMENT_BARRIERE, **ARGUMENT_LIDAR}
+
+
+def _lidar_node(arbre):
+    (appel,) = [c for c in ast.walk(arbre) if isinstance(c, ast.Call) and getattr(c.func, "id", None) == "Node"
+                and any(k.arg == "name" and isinstance(k.value, ast.Constant) and k.value.value == "lidar_node"
+                        for k in c.keywords)]
+    return {k.arg: k.value for k in appel.keywords}
+
+
+def test_le_lidar_reel_a_ses_parametres_graves_et_se_relance_seul():
+    k = _lidar_node(_arbre())
+    assert ast.literal_eval(k["package"]) == "sllidar_ros2"
+    assert ast.literal_eval(k["executable"]) == "sllidar_node"
+    assert ast.literal_eval(k["parameters"]) == [LIDAR_PARAMETRES]
+    assert ast.literal_eval(k["respawn"]) is True
+    assert ast.literal_eval(k["respawn_delay"]) == 5.0
+    assert ast.unparse(k["condition"]) == "IfCondition(LaunchConfiguration('lidar_materiel'))"
+
+
+def test_pilote_absent_de_l_image_le_bringup_continue_sans_lidar():
+    """Un Node d'un package introuvable fait échouer TOUT le launch : le lidar est sauté, dit."""
+    src = ROBOT_APP.read_text(encoding="utf-8")
+    assert 'get_package_share_directory("sllidar_ros2")' in src
+    assert "except PackageNotFoundError:" in src
+    assert "group.extend(lidar)" in src
 
 
 def test_use_sim_time_n_est_pas_declare():

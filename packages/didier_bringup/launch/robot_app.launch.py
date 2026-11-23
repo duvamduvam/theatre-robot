@@ -1,5 +1,7 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
+from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, LogInfo
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import EnvironmentVariable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node, PushRosNamespace
@@ -233,6 +235,39 @@ def generate_launch_description():
         )
     )
 
+    # Lot A0-6 (spec A0 §7 et §9) : le pilote du lidar RPLIDAR C1, qui publie `scan` (relatif,
+    # donc /<robot>/scan) pour le corps sûr. Port = lien udev stable /dev/didier-lidar
+    # (machines/robot/udev/99-didier-lidar.rules), jamais /dev/ttyUSB0 (un autre adaptateur USB
+    # prendrait le numéro). `respawn` : USB arraché ou pilote mort -> relance toutes les 5 s ; en
+    # attendant, le corps sûr ne reçoit plus de balayage et se VERROUILLE (capteur_perdu), c'est
+    # lui qui protège, pas ce respawn. Paramètres = sllidar_c1_launch.py du pilote, sauf frame_id
+    # (laser_frame, le lien de l'URDF) et le port. La sim passe lidar_materiel:=false (son lidar
+    # est le pont Gazebo pont_lidar, qui publie le même `scan`).
+    # Pilote absent de l'image (ancienne image) : un Node d'un package introuvable ferait échouer
+    # TOUT le bringup au lancement ; on le saute en le disant, le corps sûr reste verrouillé.
+    try:
+        get_package_share_directory("sllidar_ros2")
+        lidar = [Node(
+            package="sllidar_ros2",
+            executable="sllidar_node",
+            name="lidar_node",
+            parameters=[{
+                "channel_type": "serial",
+                "serial_port": "/dev/didier-lidar",
+                "serial_baudrate": 460800,
+                "frame_id": "laser_frame",
+                "inverted": False,
+                "angle_compensate": True,
+                "scan_mode": "Standard",
+            }],
+            respawn=True,
+            respawn_delay=5.0,
+            condition=IfCondition(LaunchConfiguration("lidar_materiel")),
+        )]
+    except PackageNotFoundError:
+        lidar = [LogInfo(msg="AVERTISSEMENT : sllidar_ros2 absent de l'image, lidar_node non lancé"
+                             " (le corps sûr reste verrouillé capteur_absent)")]
+
     #group.append(ai_server_node)
     group.append(animations_server_node)
     group.append(audio_server_node)
@@ -250,6 +285,7 @@ def generate_launch_description():
     group.append(catalogue_node)
     group.append(data_edit_node)
     group.append(drive_launch)
+    group.extend(lidar)
 
     # drive.launch.py pousse lui aussi /<robot_name> en absolu : inclus ici, il
     # reçoit la même LaunchConfiguration robot_name, le résultat est identique.
@@ -280,5 +316,10 @@ def generate_launch_description():
         DeclareLaunchArgument("exiger_validation_roues", default_value="true",
                               description="SÉCURITÉ : barrière roues (piste non validée en sim = non jouée) ;"
                                           " vrai sur le robot ; faux accepté en domaine 43 seulement"),
+        # Lot A0-6 : le lidar matériel (vrai sur le robot ; la sim passe faux, son `scan` vient
+        # de Gazebo).
+        DeclareLaunchArgument("lidar_materiel", default_value="true",
+                              description="Lancer le pilote du lidar réel (sllidar_ros2) ;"
+                                          " faux en sim"),
         GroupAction([PushRosNamespace(["/", LaunchConfiguration("robot_name")]), *group]),
     ])

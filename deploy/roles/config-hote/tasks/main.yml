@@ -59,6 +59,17 @@
   loop: "{{ fichiers_etc }}"
   loop_control:
     label: "{{ item.dest }}"
+  register: fichiers_etc_copies
+
+# Lot A0-6 : une règle udev posée ou modifiée (lien /dev/didier-lidar du robot) ne vaut qu'après
+# rechargement ; `trigger` la rejoue sur les périphériques DÉJÀ branchés (lidar en place au
+# déploiement), sans débrancher. Inutile si aucune règle n'a changé.
+- name: Reload udev after a rule change
+  become: yes
+  ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger --subsystem-match=tty
+  when: >-
+    fichiers_etc_copies.results | selectattr('changed') |
+    map(attribute='item.dest') | select('match', '^/etc/udev/rules.d/') | list | length > 0
 
 # Fichiers lourds hors dépôt (vu le 07/11 au soir : la voix de Didier n'existait que sur la
 # vision, déposée à la main sous medias/voices/ — bind-monté, il MASQUE la voix de l'image —

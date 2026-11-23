@@ -43,7 +43,9 @@ EXEC_ROBOT = ('exec /bin/bash /home/ros2_ws/src/robot/conf/scripts/launch-ros-in
               'use_sim_time:=true camera_topic:=camera/image_raw camera_compressed:=false '
               'perception_topic:=camera/image_raw/compressed exterior_topic:=camera_ext/image_raw '
               'web_port:=${WEB_PORT:-8765} web_drive:=${WEB_DRIVE:-false} rehearsal:=${REHEARSAL:-false} '
-              'exiger_validation_roues:=false corps_sur_config:=/home/ros2_ws/sim/corps_sur.yaml')
+              'exiger_validation_roues:=false corps_sur_config:=/home/ros2_ws/sim/corps_sur.yaml '
+              # Lot A0-6 : pas de pilote du lidar réel en sim (le `scan` vient du pont Gazebo).
+              'lidar_materiel:=false')
 
 
 def _compose(chemin=COMPOSE):

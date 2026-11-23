@@ -38,6 +38,22 @@ ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 RUN pip3 install --no-cache-dir --ignore-installed -r /home/ros2_ws/src/robot/conf/requirements.txt
 
+# Lot A0-6 (spec A0 §9) : pilote du lidar SLAMTEC RPLIDAR C1. Le binaire Jazzy `rplidar_ros`
+# (2.1.0) ne porte pas le C1 : on compile `sllidar_ros2` depuis ses sources, au commit ÉPINGLÉ
+# (17/06/2024, « set the minimum distance to 5cm »), dans un espace de travail À PART
+# (/opt/lidar_ws) — rien du pilote n'entre dans le dépôt ni dans ros2_ws (que le Pi monte et
+# recompile). Compilé sous Jazzy ARM le 23/11 sur le Pi 4 hors robot : 48 s, OK. Repli fermé si
+# un jour il ne compile plus : `Slamtec/rplidar_ros` branche `ros2`, commit épinglé, nœud
+# `rplidar_node`, mêmes paramètres (spec §9). launch-ros-in-docker.sh source ce workspace AVANT
+# celui de Didier. Couche placée avant toute copie : elle ne se refait que si cette ligne change.
+ARG SLLIDAR_COMMIT=34300099fadfc772965962dec837bf436706188f
+RUN git clone --quiet https://github.com/Slamtec/sllidar_ros2.git /opt/lidar_ws/src/sllidar_ros2 && \
+    git -C /opt/lidar_ws/src/sllidar_ros2 checkout --quiet ${SLLIDAR_COMMIT} && \
+    rm -rf /opt/lidar_ws/src/sllidar_ros2/.git && \
+    cd /opt/lidar_ws && . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release && \
+    rm -rf /opt/lidar_ws/build /opt/lidar_ws/log
+
 # `conf` = la conf de la machine (machines/robot/ du dépôt, src/robot/conf/ du Pi).
 COPY --from=conf . /home/ros2_ws/src/robot/conf/
 # `data` = les données du robot (L1e-4b) : data/ du dépôt, src/robot/ du Pi (Ansible y copie
