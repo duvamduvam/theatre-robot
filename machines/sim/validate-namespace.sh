@@ -106,7 +106,20 @@ verdict "$([ -z "$intrus_n" ] && echo 1 || echo 0)" "tout nœud sous $NS/${intru
 # twist_mux namespacé : sa config doit être CHARGÉE (sinon mux sans entrées ni verrou).
 # Sans démon + --timeout : au tout premier appel, le démon ros2 naît avec un
 # graphe vide et répond « node not found » (vécu le 04/11 : faux KO).
-pget() { timeout 20 ros2 param get $NS/twist_mux "$1" --no-daemon --timeout 10 2>/dev/null | grep -oE '[0-9]+$'; }
+# Reprises (fumée 2026-11-23-2319, 1re fois en 19 fumées) : `topics.remote.priority` lu
+# « absent » alors que le journal du mux montrait remote à 100, la lecture précédente (e_stop)
+# ayant réussi — raté isolé d'un appel. Trois essais, 2 s entre deux ; si tous échouent, la
+# dernière erreur de la CLI va au journal (diagnostic) et le verdict reste KO.
+pget() {
+    local essai val err
+    for essai in 1 2 3; do
+        err=$(mktemp)
+        val=$(timeout 20 ros2 param get $NS/twist_mux "$1" --no-daemon --timeout 10 2>"$err" | grep -oE '[0-9]+$' || true)
+        if [ -n "$val" ]; then rm -f "$err"; echo "$val"; return 0; fi
+        echo "  (param $1 : essai $essai sans valeur : $(head -c 200 "$err" | tr '\n' ' '))" >&2
+        rm -f "$err"; sleep 2
+    done
+}
 prio=$(pget locks.e_stop.priority); remote=$(pget topics.remote.priority)
 echo "  $NS/twist_mux : locks.e_stop.priority=${prio:-absent}, topics.remote.priority=${remote:-absent}"
 verdict "$([ "$prio" = 255 ] && [ "$remote" = 100 ] && echo 1 || echo 0)" "twist_mux a chargé twist_mux.yaml sous namespace (e_stop 255, remote 100)"
