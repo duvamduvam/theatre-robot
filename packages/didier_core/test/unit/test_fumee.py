@@ -516,6 +516,9 @@ def test_validate_namespace_lit_le_graphe_sans_demon_et_avec_reprises():
     assert all("--no-daemon" in l for l in lectures), lectures
     pont = code[code.index("compte() {"):code.index('verdict "$([ "${pub_odom')]
     assert "for essai in 1 2 3 4; do" in pont and "break" in pont
+    # La lecture des paramètres du mux a ses reprises (fumée 2026-11-23-2319 : un raté isolé).
+    pget = code[code.index("pget() {"):code.index("prio=$(pget")]
+    assert "for essai in 1 2 3; do" in pget and "return 0" in pget
 
 
 def test_garde_fous_presents_dans_le_script():
