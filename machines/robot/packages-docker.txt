@@ -13,6 +13,8 @@ libcairo2-dev
 libgirepository1.0-dev
 
 # Build helpers
+# git : clone du pilote du lidar sllidar_ros2 au commit épinglé (Dockerfile, lot A0-6).
+git
 pkg-config
 python3-dev
 

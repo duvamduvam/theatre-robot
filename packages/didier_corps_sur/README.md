@@ -13,8 +13,12 @@ passe pas. Spec FERMÉE : `docs/spec-A0-corps-sur.md`.
 topics (`theatre_contrats.topics`) et les 25 épreuves de sim CS1-CS13
 (`machines/sim/validate-corps-sur.sh`, phase `corps_sur` de la fumée, rouge bloquant). Le package
 est dans la liste `packages:` du robot (`machines/robot/machine.yml`) : le PROCHAIN déploiement
-du Pi le portera. Reste à A0-6 : le pilote du lidar dans l'image, `lidar_node` dans
-`robot_app.launch.py`, la règle udev, la preuve à blanc sur le Pi hors robot.
+du Pi le portera. **A0-6 (23/11)** : le pilote du lidar `sllidar_ros2` est compilé dans l'image
+du robot (`/opt/lidar_ws`), `lidar_node` est lancé par `robot_app.launch.py` (port
+`/dev/didier-lidar`, règle udev de `machines/robot/udev/`, `respawn` 5 s ; la sim passe
+`lidar_materiel:=false`). Banc du 23/11 sur le Pi 4 hors robot : `docs/seances/2026-11-23-banc-lidar.md` — ARME seul en 2,2 s
+avec le vrai lidar ; **ouvert** : 17,6 % d'un cœur avec 720 rayons à 10 Hz (but : < 15 % avec le
+pilote) et gels d'abonnés de 425 ms vus sur le Pi (Fast DDS SHM), à mesurer en A0-7.
 
 ```
 télécommande ─ wheels ─► wheels_bridge ─► cmd_vel_remote ───────────────────── (prio 100) ─┐

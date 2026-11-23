@@ -1,0 +1,9 @@
+# Lidar de Didier (SLAMTEC RPLIDAR C1) — lot A0-6, spec docs/spec-A0-corps-sur.md §9.
+# Lien STABLE /dev/didier-lidar, lu par lidar_node (didier_bringup/launch/robot_app.launch.py) :
+# /dev/ttyUSB0 changerait de numéro au premier autre adaptateur USB-série branché.
+# Les trois identifiants sont ceux de l'adaptateur CP2102N livré avec CE lidar, relevés au banc
+# le 23/11/2026 sur le Pi 4 hors robot (`udevadm info -a -n /dev/ttyUSB0`). Changer de lidar ou
+# d'adaptateur = relever le nouveau numéro de série et le remplacer ici (un autre CP210x, sans ce
+# numéro, n'est PAS pris pour le lidar). Droits 0660 groupe dialout, pas le 0777 de la règle
+# SLAMTEC. Posé par Ansible (machine.yml, fichiers_etc ; rôle config-hote recharge udev).
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="6a08780ca81df111a44fc9e40f0f12f8", SYMLINK+="didier-lidar", GROUP="dialout", MODE="0660"

@@ -2,6 +2,14 @@
 
 # ROS_DISTRO est fourni par l'image de base (humble, jazzy...) : ne pas coder la distro en dur.
 source /opt/ros/${ROS_DISTRO}/setup.sh
+# Lot A0-6 : le pilote du lidar (sllidar_ros2) est compilé DANS L'IMAGE, à part (/opt/lidar_ws,
+# voir le Dockerfile). Sourcé avant le colcon de Didier : le workspace de Didier se superpose à
+# lui. Absent (ancienne image) : le bringup tourne quand même, lidar_node meurt et se relance.
+if [ -f /opt/lidar_ws/install/setup.sh ]; then
+    source /opt/lidar_ws/install/setup.sh
+else
+    echo "AVERTISSEMENT : /opt/lidar_ws absent de l'image, pas de pilote du lidar"
+fi
 cd /home/ros2_ws/
 
 # Sentinelle de build (L1e-3c) : dans le package du cœur, GITIGNORÉE (packages/didier_core/change

@@ -693,6 +693,23 @@ paraître jusqu'à 5 ms « en avance » sur l'horloge du nœud, ce qui est sans 
 - Mesurer : un abonné rclpy fiable compte `/clock` pendant 20 s ; `top` dans `monde` voit tous
   les conteneurs (espace de processus partagé).
 
+## Lidar du robot (A0-6, 23/11)
+
+Le RPLIDAR C1 se branche en USB sur le Pi 4 du robot ; rien à faire à la main.
+- **Pilote** : `sllidar_ros2`, compilé dans l'image (`machines/robot/docker/Dockerfile`, commit
+  épinglé, `/opt/lidar_ws`) ; nœud `/didier/lidar_node`, topic `/didier/scan`, 10 Hz, 720 rayons
+  (0,5°, `angle_compensate`), `frame_id` `laser_frame`.
+- **Port** : `/dev/didier-lidar`, lien posé par la règle `machines/robot/udev/99-didier-lidar.rules`
+  (numéro de série de CET adaptateur). Lidar remplacé : `udevadm info -a -n /dev/ttyUSB0 | grep serial`
+  sur le Pi, nouveau numéro dans la règle et dans `test_lidar_deploiement.py`, redéployer.
+- **USB arraché ou pilote mort** : `lidar_node` se relance toutes les 5 s ; entre-temps le corps
+  sûr se verrouille (`capteur_perdu`). Après rebranchement : `~/ros2_ws/src/robot/conf/scripts/rearmer-corps-sur.sh`.
+  Relancer le pilote à la main : `…/scripts/relancer-lidar.sh` (tue par PID, le respawn reprend).
+- **Image sans pilote** (ancienne image) : le bringup tourne quand même, le journal dit
+  « sllidar_ros2 absent de l'image », le corps sûr reste en `capteur_absent`. Vérifié le 23/11.
+- **Lire le scan** depuis le Pi : `sudo docker exec dadou-robot-container bash -c 'source
+  /opt/ros/jazzy/setup.sh && source install/setup.bash && ros2 topic hz /didier/scan'`.
+
 ## Fast DDS en UDP seul dans la sim (21/11)
 
 **Le piège.** En mémoire partagée (le transport par défaut de Fast DDS entre participants du même
@@ -706,7 +723,8 @@ ROS, dans les mêmes conteneurs, n'a eu AUCUN réveil en retard de plus de 50 ms
 **La parade.** `FASTDDS_BUILTIN_TRANSPORTS=UDPv4` dans les quatre services de
 `machines/sim/docker-compose.yml` (gravé par `test_compose_sim.py`). Même essai, même charge :
 zéro gel, aucun verrou. Sim seulement : le Pi n'est pas touché. Sur le robot, la fréquence de ces
-gels est à MESURER en A0-6/A0-7 avant tout roulage autonome (corps sûr et lidar réel).
+gels est à MESURER en A0-7 avant tout roulage autonome (corps sûr et lidar réel ; le pilote
+est sur le Pi depuis A0-6, voir § Lidar du robot).
 Une commande `docker exec … ros2 …` dans un conteneur hérite de l'UDP. Un participant SHM (sans
 la variable) parle encore aux autres, par UDP.
 

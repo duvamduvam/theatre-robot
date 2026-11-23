@@ -23,6 +23,11 @@ paquets_hote:
   - avahi-utils
 unites_systemd:
   - "{{ machines_dir }}/robot/systemd/avahi-alias-didier.service"
+# Lot A0-6 : lien stable /dev/didier-lidar du lidar (rôle config-hote, qui recharge udev quand
+# la règle change ; le conteneur, privilégié avec /dev monté, voit le lien).
+fichiers_etc:
+  - source: "{{ machines_dir }}/robot/udev/99-didier-lidar.rules"
+    dest: /etc/udev/rules.d/99-didier-lidar.rules
 # Édition des données à travers le robot (lot L1d, spec décision 10) : variable DATA_EDIT du
 # conteneur (rôle conteneur). FAUX dans le dépôt — le passer à vrai est une décision de David,
 # après sa validation de L1d et une relecture adverse. Essai ponctuel : -e edition_donnees=true.
@@ -36,7 +41,8 @@ noeuds_attendus:
   - /didier/audio_node
   - /didier/catalogue_node
   # A0-4 : le corps sûr, TOUJOURS vivant, même sans lidar (il reste alors en DEMARRAGE
-  # « capteur_absent »). Le pilote du lidar (lidar_node, A0-6) n'est pas exigé ici.
+  # « capteur_absent »). Le pilote du lidar (lidar_node, A0-6) n'est PAS exigé ici (spec §9) :
+  # sans capteur branché il se termine et se relance toutes les 5 s.
   - /didier/corps_sur
   # L1d : l'écrivain des données, toujours lancé (désactivé, il répond edition_desactivee).
   # validation_sim_node n'est PAS ici : il n'existe qu'en sim (domaine 43).
