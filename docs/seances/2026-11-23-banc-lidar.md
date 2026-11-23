@@ -46,6 +46,7 @@ Ansible, poussée sur le Hub (`sha256:86beb03a…`). `ecart-pi.sh robot` **VERT*
 | Image SANS pilote (avant reconstruction) | bringup intact, « sllidar_ros2 absent de l'image » au journal, corps sûr en `capteur_absent` |
 | CPU, 30 s chacun | pilote **4,5 %**, `corps_sur` **17,6 %** d'un cœur (7,2 % sans scan) ; charge du Pi 1,3 sur 4 cœurs |
 | `ros2 topic hz /didier/scan` (CLI) | 10,4 Hz, mais **écart max 425 ms** chez cet abonné Python ; le corps sûr, lui, n'a eu aucun verrou `capteur_perdu` |
+| Scripts d'atelier | `relancer-lidar.sh` : pilote tué par PID → corps sûr **VERROU `capteur_perdu`** → pilote relancé seul (respawn) ; `rearmer-corps-sur.sh` : « réarmement accepté » → **ARME** |
 | Alim, température | `0x0`, 45,7 °C |
 
 **Deux points ouverts**, consignés pour A0-7 et A0-8 :
