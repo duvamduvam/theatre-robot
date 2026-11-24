@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" font-family="system-ui, sans-serif" font-size="13">
+  <!-- Bras long (~1 m) fait maison : vue d'ensemble de principe, pas à l'échelle exacte. -->
+  <defs>
+    <marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="600" fill="#fbfaf7"/>
+  <text x="20" y="30" font-size="18" font-weight="bold">Bras long (~1 m) fait maison : vue d'ensemble</text>
+  <text x="20" y="50" fill="#5b636b">Principe, vue de côté. Tous les moteurs près de l'épaule : le bras reste léger au bout. Rien d'acté (veille du 18/11).</text>
+
+  <!-- Torse -->
+  <rect x="30" y="90" width="110" height="440" rx="14" fill="#d9d4c7" stroke="#333"/>
+  <text x="85" y="500" text-anchor="middle" font-weight="bold">Torse</text>
+  <text x="85" y="518" text-anchor="middle">de Didier</text>
+
+  <!-- Moteur épaule 1 : écarter le bras (axe horizontal, dans le torse) -->
+  <rect x="120" y="176" width="70" height="48" rx="6" fill="#6b7680" stroke="#333"/>
+  <text x="155" y="205" text-anchor="middle" fill="#fff" font-weight="bold">M1</text>
+
+  <!-- Butée mécanique épaule -->
+  <path d="M196,248 l14,0 l-7,14 z" fill="#c0392b"/>
+
+  <!-- Bras (tube carbone, 0,5 m) -->
+  <rect x="230" y="190" width="350" height="20" fill="#2b2b2b"/>
+  <!-- Courroie / câble Dyneema du coude dans le tube -->
+  <line x1="300" y1="194" x2="580" y2="194" stroke="#e0e0e0" stroke-width="2" stroke-dasharray="8 5"/>
+  <line x1="300" y1="206" x2="580" y2="206" stroke="#e0e0e0" stroke-width="2" stroke-dasharray="8 5"/>
+
+  <!-- Moteur épaule 2 : lever/baisser (axe perpendiculaire à la feuille) -->
+  <circle cx="230" cy="200" r="38" fill="#9aa4ad" stroke="#333"/>
+  <circle cx="230" cy="200" r="6" fill="#333"/>
+  <text x="230" y="232" text-anchor="middle" font-weight="bold">M2</text>
+
+  <!-- Moteur du coude, monté sur le bras près de l'épaule -->
+  <circle cx="300" cy="165" r="20" fill="#9aa4ad" stroke="#333"/>
+  <text x="300" y="170" text-anchor="middle" font-weight="bold">M3</text>
+  <line x1="300" y1="185" x2="300" y2="194" stroke="#e0e0e0" stroke-width="3"/>
+
+  <!-- Ressort de compensation : torse -> bras -->
+  <polyline points="120,110 150,118 140,132 175,138 165,152 200,158 190,172 225,176 215,185 255,180 245,190 330,190"
+            fill="none" stroke="#1a7f37" stroke-width="3"/>
+  <circle cx="120" cy="110" r="4" fill="#1a7f37"/>
+  <circle cx="330" cy="190" r="4" fill="#1a7f37"/>
+
+  <!-- Coude : poulie libre sur roulements -->
+  <circle cx="580" cy="200" r="22" fill="#f2c94c" stroke="#333"/>
+  <circle cx="580" cy="200" r="5" fill="#333"/>
+
+  <!-- Avant-bras (tube carbone, 0,5 m), incliné de 30° -->
+  <g transform="rotate(30 580 200)">
+    <rect x="580" y="191" width="350" height="18" fill="#2b2b2b"/>
+  </g>
+
+  <!-- Poignet + main -->
+  <rect x="868" y="358" width="34" height="30" rx="4" fill="#6b7680" stroke="#333" transform="rotate(30 885 373)"/>
+  <path d="M900,388 q22,12 30,34 q-14,4 -20,-6 q2,14 -6,24 q-10,-6 -8,-20 q-8,10 -18,6 q4,-22 22,-38 z" fill="#f2c94c" stroke="#333"/>
+
+  <!-- Cotes -->
+  <line x1="230" y1="275" x2="580" y2="275" stroke="#333" marker-start="url(#fl)" marker-end="url(#fl)"/>
+  <text x="405" y="293" text-anchor="middle">bras ≈ 0,5 m</text>
+  <line x1="560" y1="250" x2="835" y2="409" stroke="#333" marker-start="url(#fl)" marker-end="url(#fl)"/>
+  <text x="680" y="345" text-anchor="middle" transform="rotate(30 680 345)">avant-bras ≈ 0,5 m</text>
+
+  <!-- Étiquettes -->
+  <line x1="155" y1="176" x2="200" y2="80" stroke="#333"/>
+  <text x="160" y="74"><tspan font-weight="bold">M1</tspan> épaule, écarter le bras (DM-J4310)</text>
+  <line x1="255" y1="170" x2="420" y2="100" stroke="#333"/>
+  <text x="425" y="104"><tspan font-weight="bold">M2</tspan> épaule, lever / baisser (DM-J8009, la plus chargée)</text>
+  <line x1="318" y1="156" x2="460" y2="130" stroke="#333"/>
+  <text x="465" y="134"><tspan font-weight="bold">M3</tspan> moteur du coude, posé près de l'épaule</text>
+  <line x1="440" y1="200" x2="640" y2="160" stroke="#333"/>
+  <text x="645" y="164">courroie ou câble Dyneema DANS le tube → coude</text>
+  <line x1="600" y1="188" x2="720" y2="196" stroke="#333"/>
+  <text x="725" y="200">coude : poulie libre sur</text><text x="725" y="216">roulements, aucun moteur</text>
+  <line x1="160" y1="125" x2="90" y2="96" stroke="#1a7f37"/>
+  <text x="20" y="88" fill="#1a7f37">ressort de compensation</text>
+  <line x1="203" y1="262" x2="190" y2="330" stroke="#c0392b"/>
+  <text x="150" y="346" fill="#c0392b">butée mécanique</text>
+  <text x="150" y="362" fill="#c0392b">(en plus des butées logicielles)</text>
+  <line x1="930" y1="420" x2="900" y2="470" stroke="#333"/>
+  <text x="790" y="486">poignet : 2 servos + main</text>
+  <text x="790" y="502">(≈ 200 g au bout)</text>
+
+  <!-- Encadré -->
+  <rect x="300" y="420" width="460" height="160" fill="#fff" stroke="#e3e0d8"/>
+  <text x="314" y="444" font-weight="bold">Idées clés</text>
+  <text x="314" y="466">• 3 moteurs sans balais, tous à l'épaule ; le coude est entraîné à distance.</text>
+  <text x="314" y="486">• Le ressort porte le poids du bras : le moteur M2 ne fait que bouger.</text>
+  <text x="314" y="506">• Moteurs réversibles : poussé, le bras cède (sécurité public).</text>
+  <text x="314" y="526">• Cible : moins de 3 kg par bras. Couple estimé à l'épaule ≈ 7 N·m</text>
+  <text x="326" y="544">sans ressort (masses SUPPOSÉES, à peser sur la maquette).</text>
+  <text x="314" y="564">• Fils gainés dans les tubes, boucle de mou à chaque articulation.</text>
+</svg>
