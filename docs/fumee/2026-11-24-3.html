@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fumée Didier — 24/11/2026 à 19:30 — vert</title>
+<style>
+  :root { --fond:#fbfaf7; --texte:#1f2328; --doux:#5b636b; --trait:#e3e0d8;
+          --vert:#1a7f37; --rouge:#cf222e; --orange:#9a6700; --gris:#57606a; --lien:#0b5cad; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fond); color:var(--texte);
+         font:16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:2rem 1.25rem 4rem; }
+  header p { color:var(--doux); margin:.2rem 0; }
+  h1 { font-size:1.7rem; margin:0 0 .3rem; }
+  h2 { font-size:1.25rem; margin:2.2rem 0 .8rem; padding-bottom:.3rem; border-bottom:2px solid var(--trait); }
+  a { color:var(--lien); }
+  .bandeau { background:#fff; border:1px solid var(--trait); border-left:5px solid var(--gris);
+             border-radius:6px; padding:.8rem 1.1rem; margin:1rem 0; }
+  .bandeau.b-vert { border-left-color:var(--vert); } .bandeau.b-rouge { border-left-color:var(--rouge); }
+  .carte { background:#fff; border:1px solid var(--trait); border-radius:6px; padding:.8rem 1rem; margin:.7rem 0; }
+  .carte h3 { margin:0 0 .3rem; font-size:1rem; }
+  .meta { font-size:.85rem; color:var(--doux); margin:.2rem 0; }
+  .verdict { display:inline-block; font-size:.75rem; font-weight:600; text-transform:uppercase;
+             letter-spacing:.03em; padding:.1rem .5rem; border-radius:99px; color:#fff; margin-left:.4rem; vertical-align:middle; }
+  .vert { background:var(--vert); } .rouge { background:var(--rouge); }
+  .orange { background:var(--orange); } .non_lance { background:var(--gris); }
+  table { border-collapse:collapse; width:100%; } th, td { text-align:left; padding:.35rem .5rem; border-bottom:1px solid var(--trait); }
+  .doux { color:var(--doux); }
+  footer { margin-top:3rem; font-size:.85rem; color:var(--doux); border-top:1px solid var(--trait); padding-top:1rem; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Fumée nocturne — Didier</h1>
+  <p><strong>24/11/2026 à 19:30</strong> · sha testé <code>db2eb93</code> (branche sim-lidar-720)</p>
+  <p>Durée 53 min 05 s · mode force · lancée à la main (force)</p>
+</header>
+
+<div class="bandeau b-vert"><strong><span class="verdict vert">vert</span></strong> Toutes les épreuves sont vertes, aux valeurs gravées.</div>
+
+<p class="meta">Facteur temps réel (sonde 20 s) : <strong>1.00</strong> (seuil 0.8) ·
+charge 1 min au départ : <strong>1.49</strong> sur 32 cœurs ·
+image sim reconstruite : oui</p>
+
+<h2>Épreuves</h2>
+<table>
+<tr><th>Épreuve</th><th>Résultat</th><th>Compteur</th><th>Durée</th><th>Journal</th></tr>
+<tr><td>Images sim ×4 (reconstruites seulement si un Dockerfile/compose a changé)</td><td><span class="verdict vert">vert</span></td><td></td><td>2 s</td><td><code>image.log</code></td></tr><tr><td colspan="5" class="meta">reconstruite : aucune fumée verte de référence</td></tr>
+<tr><td>Sim headless, 4 conteneurs : domaine 43, colcon ×4, nœuds attendus</td><td><span class="verdict vert">vert</span></td><td></td><td>47 s</td><td><code>demarrage.log</code></td></tr><tr><td colspan="5" class="meta">4 conteneurs, domaine 43 dans chacun, colcon ×4, nœuds attendus, monde chantiers, headless</td></tr>
+<tr><td>Sonde du facteur temps réel (20 s)</td><td><span class="verdict vert">vert</span></td><td>0.996</td><td>23 s</td><td><code>rtf.log</code></td></tr><tr><td colspan="5" class="meta">seuil 0.8</td></tr>
+<tr><td>validate-namespace.sh</td><td><span class="verdict vert">vert</span></td><td>5 / 5 OK, 0 KO</td><td>49 s</td><td><code>namespace.log</code></td></tr>
+<tr><td>validate-catalogue.sh</td><td><span class="verdict vert">vert</span></td><td>4 / 4 OK, 0 KO</td><td>10 s</td><td><code>catalogue.log</code></td></tr>
+<tr><td>Animation « parle » (animation_state &quot;&quot; → &quot;parle&quot; → &quot;&quot;)</td><td><span class="verdict vert">vert</span></td><td>3 / 3 OK, 0 KO</td><td>4 s</td><td><code>parle.log</code></td></tr><tr><td colspan="5" class="meta">ETATS=[&quot;&quot;, &quot;parle&quot;, &quot;&quot;]</td></tr>
+<tr><td>validate-data-edit.sh (édition à travers le robot, L1d)</td><td><span class="verdict vert">vert</span></td><td>13 / 13 OK, 0 KO</td><td>35 s</td><td><code>edition.log</code></td></tr>
+<tr><td>validate-machines.sh (les machines de la sim, vues depuis le monde, L2b)</td><td><span class="verdict vert">vert</span></td><td>5 / 5 OK, 0 KO</td><td>21 s</td><td><code>machines.log</code></td></tr>
+<tr><td>validate-audio.sh (onglet « Audio » de la page scène, fausse veille, 22/11)</td><td><span class="verdict vert">vert</span></td><td>10 / 10 OK, 0 KO</td><td>5 s</td><td><code>audio.log</code></td></tr>
+<tr><td>Sim relancée (monde stage), validate-corps-sur.sh (CS : corps sûr, lot A0-4)</td><td><span class="verdict vert">vert</span></td><td>25 / 25 OK, 0 KO</td><td>5 min 27 s</td><td><code>corps_sur.log</code></td></tr>
+<tr><td>Sim relancée (monde chantiers), régisseur + regard (chaîne roues du bringup), puis validate-rehearsal-chantiers.sh (V-R3)</td><td><span class="verdict vert">vert</span></td><td>21 / 21 OK, 0 KO</td><td>15 min 27 s</td><td><code>chantiers.log</code></td></tr>
+<tr><td>Sim relancée, validate-jeu-a1.sh (A1)</td><td><span class="verdict vert">vert</span></td><td>14 / 14 OK, 0 KO</td><td>15 min 09 s</td><td><code>a1.log</code></td></tr>
+<tr><td>Sim relancée, validate-objets.sh (OBJ : tableau des objets, lot O1)</td><td><span class="verdict vert">vert</span></td><td>13 / 13 OK, 0 KO</td><td>2 min 56 s</td><td><code>objets.log</code></td></tr>
+<tr><td>Sim relancée avec la tête (Claude Haiku, Anthropic direct), validate-conversation.sh (CONV)</td><td><span class="verdict vert">vert</span></td><td>19 / 19 OK, 0 KO</td><td>2 min 18 s</td><td><code>conversation.log</code></td></tr>
+</table>
+<h2>Notes</h2><ul><li>le checkout testé est sur la branche sim-lidar-720, pas sur main</li></ul>
+<h2>Journaux</h2>
+<p>Bruts, sur le PC de la fumée seulement (ni dans git ni sur Nextcloud) : <code>~/tmp/fumee-720/s720-brut/2026-11-24-1930/</code>
+(<code>resultat.json</code>, journaux, captures). Vert : purgé après 30 jours ; rouge : gardé
+tant que le dossier ne porte pas le marqueur <code>TRAITE</code>. Résumé permanent :
+<code>historique.jsonl</code>.</p>
+
+<footer>Généré par <code>machines/sim/fumee.sh</code> (lot F, zéro token) · <a href="index.html">toutes les fumées</a></footer>
+</main>
+</body>
+</html>

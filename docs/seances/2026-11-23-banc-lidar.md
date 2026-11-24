@@ -81,9 +81,10 @@ charge sur 4 cœurs.
 
 - A0-6 fait le même soir : pilote dans l'image, règle udev, `lidar_node` dans le bringup (voir
   `docs/chantiers.md`).
-- **Sim à aligner** : le `gpu_lidar` simulé publie 500 rayons (0,72°), le vrai 720 (0,5°). La
-  logique du corps sûr ne dépend que de `angle_increment`, mais le coût CPU et le RTF, si. Lot à
-  part, avec remesure du RTF et épreuve CS (500 y est gravé).
+- **Sim alignée le 24/11** (branche `sim-lidar-720`) : le `gpu_lidar` simulé publie 720 rayons de
+  −π à +π comme le pilote réel (500 à 0,72° avant). Fumée 2026-11-24-1104 : **RTF 0,996** (0,995 à
+  500 rayons), **CS 25/25**. A1 y fut rouge (T6, deux silences de 5,5 s) à cause de deux pauses
+  thermiques de la garde (11:40:49 et 11:43:45, écart identique à celui des trous), pas du lidar.
 - Reste du banc (A0-7, David, 20 min) : orientation (carton à 1 m devant puis à gauche), portée
   minimale réelle, délai balayage → ARRET, jean noir / vitre / miroir, débranchement de l'USB,
   plein jour dehors.
