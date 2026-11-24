@@ -274,6 +274,68 @@ refus et durées dans le régisseur recréerait deux décideurs, la cause même 
 Ce qui est retenu : **le rôle « régisseur » que David entend est une humeur du sélecteur**
 (un réglage, une jauge), journalisée sous ce nom ; `director` ne garde que les pannes.
 
+## 8 bis. Les quatre rôles — proposition du 24/11, à valider par David
+
+Demande de David (24/11, 23:50) : « je vois le régisseur ou le metteur en scène comme un LLM
+avec une feuille de route, des skills, des règles ; on ne code pas tout en dur, on crée le
+cockpit. Est-ce que ça a du sens ? J'aimerais donner de la clarté architecturale à tout ça. »
+
+**Oui, à une condition : le LLM choisit, le code autorise.** C'est d'ailleurs déjà la moitié
+de ce qui existe (le metteur en scène est un LLM lent qui tient la mission) ; ce qui manque est
+de lui donner le bon métier et de retirer ce métier au code.
+
+| Rôle | Qui | Rythme | Son métier | Ce qu'il ne fait jamais |
+|---|---|---|---|---|
+| **David** | toi : voix, cockpit, télécommande | quand tu veux | ordonner, arrêter, écrire la feuille de route | — |
+| **Metteur en scène** (ton « régisseur ») | LLM lent | toutes les 4 à 10 s | **choisir** : l'humeur, l'objet qui l'intéresse, refuser ou accepter une envie, combien de temps rester, quel numéro du répertoire jouer | toucher un moteur ; décider d'un arrêt ou d'un départ à la seconde près |
+| **Bouche** | LLM rapide | à chaque réplique | parler, en lisant l'état du corps et l'humeur du moment | décider d'un mouvement |
+| **Corps** | code, sans LLM | 10 Hz | **autoriser et exécuter** : ordres de David d'abord, bornes, sécurité, un seul état `corps/etat` | inventer une envie |
+
+```mermaid
+flowchart TB
+  D[David — cockpit] -->|ordres| C
+  D -->|feuille de route, règles, répertoire| MS
+  MS[Metteur en scène — LLM lent<br/>choisit dans le répertoire] -->|propositions + humeur| C
+  MS -->|humeur, fil de l'histoire| B[Bouche — LLM rapide]
+  C[Corps — code<br/>autorise, exécute, protège] -->|corps/etat| MS
+  C -->|corps/etat| B
+  C --> R[roues, tête, bras, visage]
+```
+
+**Ce que « ne pas tout coder en dur » veut dire ici.** Trois fichiers de texte que David écrit et
+relit, et que le metteur en scène reçoit à chaque réflexion :
+- **la feuille de route** : où l'on va, ce qu'on cherche, l'état d'esprit du jour ;
+- **les règles de jeu** : « passe à l'objet neuf », « ne ressasse pas », « insiste », « refuse
+  parfois, toujours en le disant » (les consignes du 24/11 y vont telles quelles) ;
+- **le répertoire** (les « skills ») : la liste fermée de ce que Didier sait faire, chaque
+  entrée avec un nom, une phrase de description et ses bornes (rester, repartir, aller voir,
+  tourner, bug joué, refuser avec humeur…).
+Changer le jeu de Didier, c'est modifier ces fichiers, pas le code. Le cockpit les montre et
+montre le choix en cours (« il s'apprête à… », avec « pas maintenant »).
+
+**Ce qui reste en dur, et pourquoi.** Un LLM met plusieurs secondes à répondre, peut se tromper
+et peut ne pas répondre (réseau). Donc : l'arrêt, les ordres de David, les bornes (10 à 40 s,
+jamais un refus sur un stop, la deuxième demande passe, un arrêt par 2 min), le corps sûr et
+l'état du corps restent du code testé. Sans réseau, le corps continue seul avec ses règles
+simples : Didier est moins inventif, jamais dangereux ni figé.
+
+**Ce que ça clarifie dans le code.**
+- Le sélecteur (`didier_jeu`) devient « le corps qui autorise » : il perd ses envies codées
+  (jauges d'ennui, de curiosité, de lubie, poids du score) au profit des propositions du
+  metteur en scène, et ne garde qu'un repli simple pour le hors-réseau. C'est une suppression.
+- Le nœud `director`, appelé « régisseur » dans le code, ne fait que les pannes
+  d'entraînement : il est **renommé** (« pannes d'entraînement ») pour que le mot régisseur ne
+  désigne plus deux choses.
+- Le canal existe déjà sur le papier : c'est `jeu/proposition` de l'étude improvisation (I3).
+
+**Ordre.** Rien de ceci ne passe avant S1 et S2 : un metteur en scène qui propose à un corps
+qui n'a ni autorité claire ni état unique reproduirait la séance du 24/11. Les quatre rôles sont
+la cible ; S1 et S2 en sont les deux premières marches, et le lot « metteur en scène à feuille
+de route » (S4) remplace I3 au dégel.
+
+**Risque à garder en tête.** Le choix d'un LLM ne se teste pas comme du code : on teste les
+bornes (code) et on juge le jeu en séance, au journal. Et chaque réflexion coûte un appel.
+
 ## 9. Ce que cette étude ne re-tranche pas
 
 Gardé tel quel : le sélecteur seul décideur du corps (02/11, décision 6 : cette étude
