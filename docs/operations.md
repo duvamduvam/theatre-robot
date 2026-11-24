@@ -1618,6 +1618,10 @@ Validé le 11/11 depuis le téléphone en 4G (console `http://192.168.1.131:8765
   **jamais allumé automatiquement** (à la maison il ferait doublon avec le réseau local).
   Hors de chez soi : `nmcli connection up wg-maison` (ou l'icône réseau), puis ssh, Ansible et la
   console comme à la maison ; `nmcli connection down wg-maison` en partant.
+  **Allumé SEULEMENT quand c'est nécessaire** (consigne du 24/11) : hors du réseau de la maison ET
+  pour une tâche qui touche les Pi ; coupé dès la fin de cette tâche, jamais laissé allumé
+  « au cas où ». Pour un agent : allumage avec l'accord de David, règle détaillée dans le skill
+  `/diag` (`.claude/skills/diag/SKILL.md`, « Droits et interdits »).
 - **Clés** : jamais dans le dépôt. Fichier d'origine du portable dans `~/.config/didier/`
   (mode 600) ; à garder aussi dans un gestionnaire de mots de passe. Révoquer un appareil perdu =
   supprimer son utilisateur dans Freebox OS.
