@@ -109,7 +109,9 @@ def test_topics_lecture_jamais_publiables():
     assert TOPICS_LECTURE == {"chat_state", "persona_state", "route_state", "chat_audio_chain",
                               "rehearsal/state", "camera_state", "camera_source_state",
                               "camera_sources", "jeu/intention", "rehearsal/objects",
-                              "deploy_sha", "mission_state"}
+                              "deploy_sha", "mission_state",
+                              # corps_sur/etat (24/11, lot A0-5) : état du corps sûr, LATCHÉ.
+                              "corps_sur/etat"}
     # Les topics VOLATILS du panneau « Coulisses » n'y sont PAS : un abonnement
     # TRANSIENT_LOCAL est incompatible avec un publieur volatile (ils sont en flux).
     assert TOPICS_LECTURE.isdisjoint({"chat_situation", "chat_prompt", "rehearsal/journal"})
@@ -588,8 +590,10 @@ TOPICS_REPETITION_GRAVES = {"route", "route_speed", "rehearsal/cmd", "camera_ena
 def _publishers_de_base(domaine):
     """Publishers d'un pont sans option : la whitelist de base, plus -- en domaine 43
     seulement (L1d-3) -- le publisher DÉDIÉ de la porte sim `validation_sim_demande`
-    (hors whitelist, bouton « Valider les roues pour le robot »)."""
-    return WHITELIST_BASE_GRAVEE | ({"validation_sim_demande"} if domaine == "43" else set())
+    (hors whitelist, bouton « Valider les roues pour le robot »). Partout (A0-5, 24/11) : le
+    publisher DÉDIÉ `corps_sur/rearmer` (bouton « Réarmer », robot ET sim)."""
+    return WHITELIST_BASE_GRAVEE | {"corps_sur/rearmer"} | (
+        {"validation_sim_demande"} if domaine == "43" else set())
 
 
 def test_whitelist_repetition_exacte_et_hors_whitelist_de_base():
@@ -870,10 +874,12 @@ def test_scene_ne_lit_que_les_topics_d_etat_publics():
     jeu/intention (02/11, lot A1) : ce que le SÉLECTEUR DE JEU a choisi et
     pourquoi — la lisibilité voulue (spec A1 §5), pas un tirage du régisseur
     (la séance A1 tourne avec un scénario vide) ; rehearsal/objects : le
-    vocabulaire d'objets, déjà public (envoyé à la bouche)."""
+    vocabulaire d'objets, déjà public (envoyé à la bouche).
+    corps_sur/etat (24/11, lot A0-5) : l'état du filtre des roues autonomes, public ; ses
+    causes sont des pannes RÉELLES (lidar, arrêt d'urgence), jamais un tirage du régisseur."""
     lus = re.findall(r'valeurTopic\(msg\.topics, "([^"]+)"\)', _lire("scene.js"))
     assert sorted(lus) == ["camera_source_state", "camera_sources", "camera_state",
-                           "chat_audio_chain", "chat_state", "jeu/intention", "mission_state",
+                           "chat_audio_chain", "chat_state", "corps_sur/etat", "jeu/intention", "mission_state",
                            "persona_state", "rehearsal/objects", "rehearsal/state", "route_state"]
     # Et aucun autre accès direct aux topics du message state.
     assert len(re.findall(r"msg\.topics", _lire("scene.js"))) == len(lus)
@@ -1038,12 +1044,15 @@ def pont(monkeypatch):
         "rclpy.node": _module("rclpy.node", Node=_NodeFactice),
         "rclpy.qos": _module("rclpy.qos", QoSProfile=_QoSFactice,
                              DurabilityPolicy=types.SimpleNamespace(TRANSIENT_LOCAL="TRANSIENT_LOCAL"),
-                             ReliabilityPolicy=types.SimpleNamespace(BEST_EFFORT="BEST_EFFORT")),
+                             ReliabilityPolicy=types.SimpleNamespace(BEST_EFFORT="BEST_EFFORT",
+                                                                     RELIABLE="RELIABLE")),
         "ament_index_python": _module("ament_index_python"),
         "ament_index_python.packages": _module(
             "ament_index_python.packages", get_package_share_directory=lambda _nom: str(PACKAGE_WEB)),
         "geometry_msgs": _module("geometry_msgs"),
         "geometry_msgs.msg": _module("geometry_msgs.msg", Twist=type("Twist", (), {})),
+        "std_msgs": _module("std_msgs"),
+        "std_msgs.msg": _module("std_msgs.msg", Empty=type("Empty", (), {})),
         "sensor_msgs": _module("sensor_msgs"),
         "sensor_msgs.msg": _module("sensor_msgs.msg", CompressedImage=type("CompressedImage", (), {}),
                                    Image=type("Image", (), {})),
@@ -1173,7 +1182,7 @@ def test_pont_repetition_demandee_hors_simulation_est_ignoree_et_dite(pont, monk
     vrai robot (ou inconnu) n'ouvre rien, et le dit en ERROR (jamais silencieux)."""
     noeud = _creer_noeud(pont, monkeypatch, domaine=domaine, rehearsal_enabled=True)
     assert noeud.rehearsal_enabled is False
-    assert set(noeud.publishers) == WHITELIST_BASE_GRAVEE
+    assert set(noeud.publishers) == _publishers_de_base(domaine)
     assert noeud.hello_message("c1")["rehearsal"] is False
     erreurs = [t for niveau, t in noeud.journal.lignes if niveau == "error"]
     assert len(erreurs) == 1 and "rehearsal_enabled IGNORÉ" in erreurs[0]
@@ -1667,6 +1676,26 @@ def test_pont_valider_roues_en_simulation_seulement(pont, monkeypatch):
                            "reason": "validation des roues : simulation seulement (domaine 43)"}]
 
 
+def test_parse_corps_sur_rearmer_sans_champ():
+    assert parse_client_message('{"type": "corps_sur_rearmer", "x": 1}') == {"type": "corps_sur_rearmer"}
+
+
+def test_pont_rearmer_le_corps_sur_ecrivain_seul_robot_et_sim(pont, monkeypatch):
+    """Lot A0-5 : le bouton publie UN Empty sur corps_sur/rearmer, robot (42) comme sim (43) ;
+    lecture seule = refus, rien de publié (le réarmement rend le mouvement autonome possible)."""
+    for domaine in ("42", "43"):
+        noeud = _creer_noeud(pont, monkeypatch, domaine=domaine)
+        ws = _WsFactice()
+        _envoyer(pont, noeud, ws, "c1", {"type": "corps_sur_rearmer"})
+        assert ws.envoyes == [{"type": "err", "reason": pont.ERR_LECTURE_SEULE}]
+        assert noeud.publishers["corps_sur/rearmer"].messages == []
+        _ecrivain(noeud)
+        ws = _WsFactice()
+        _envoyer(pont, noeud, ws, "c1", {"type": "corps_sur_rearmer"})
+        assert ws.envoyes == [{"type": "ack", "topic": "corps_sur_rearmer"}]
+        assert [type(m).__name__ for m in noeud.publishers["corps_sur/rearmer"].messages] == ["Empty"]
+
+
 def test_pont_verdicts_diffuses_en_flux(pont, monkeypatch):
     noeud = _creer_noeud(pont, monkeypatch)
     recus = []
@@ -1738,3 +1767,20 @@ def test_scene_editeur_n_ecrit_que_par_data_edit_et_valider_roues():
     # JSON illisible : erreur locale, AUCUN envoi (le return précède la construction).
     bloc = js[js.index("function envoyerTexte()"):js.index("function texteVerdict")]
     assert bloc.index("JSON.parse") < bloc.index("return;\n  }\n  const demande")
+
+
+def test_scene_corps_sur_bouton_rearmer_regles_gravees():
+    """Lot A0-5 : groupe « Corps sûr » HORS .scene-repetition (robot ET sim) ; « Réarmer »
+    désactivé au chargement, actif seulement en VERROU ET avec la main, une demande à la fois ;
+    envoie le seul type corps_sur_rearmer ; le refus du nœud est dit (cause encore là)."""
+    html = _lire("scene.html")
+    groupe = html[html.index('<div id="scene-corps-sur"'):html.index('<p id="corps-sur-detail"')]
+    assert "scene-repetition" not in groupe
+    assert '<button id="corps-sur-rearmer" type="button" disabled' in groupe
+    js = _lire("scene.js")
+    assert '$("corps-sur-rearmer").disabled = !(state.isWriter && verrou && corpsSur.demande === null);' in js
+    assert 'const verrou = corpsSur.etat !== null && corpsSur.etat.etat === "VERROU";' in js
+    assert 'envoyer({ type: "corps_sur_rearmer" });' in js
+    assert "réarmement refusé : cause encore là" in js
+    # Un err du pont pendant la demande est dit tel quel (pas « cause encore là »).
+    assert "surReponseRearmer(msg);" in js and '"réarmement refusé par le pont : " + msg.reason' in js

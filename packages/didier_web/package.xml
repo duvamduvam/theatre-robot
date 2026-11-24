@@ -16,6 +16,8 @@
        50). Vidéo : Image de la caméra embarquée, encodée en JPEG côté pont. -->
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
+  <!-- Lot A0-5 : std_msgs/Empty publié sur corps_sur/rearmer (bouton « Réarmer »). -->
+  <depend>std_msgs</depend>
 
   <!-- Serveur HTTP/WebSocket ; pas de dépendance ROS pour ça, un simple paquet
        système (comme dans le Dockerfile-sim : apt install python3-aiohttp). -->

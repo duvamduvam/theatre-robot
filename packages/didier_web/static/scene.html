@@ -142,6 +142,21 @@
         </span>
       </div>
 
+      <!-- Corps sûr (lot A0-5, 24/11) : l'état du filtre des roues autonomes (corps_sur/etat,
+           latché, lu dans `state`) et « Réarmer » (type WebSocket corps_sur_rearmer -> Empty sur
+           corps_sur/rearmer, avoir la main). Sur le robot ET en sim : un VERROU en pleine rue
+           doit se lever d'ici (spec A0 §15). Le nœud refuse tant que la cause est là ; la page
+           le dit en relisant l'état. Aucun lien avec la télécommande, jamais filtrée. -->
+      <div id="scene-corps-sur" class="scene-groupe">
+        <div class="scene-groupe-tete">
+          <h2>Corps sûr</h2>
+          <span id="corps-sur-etat" class="badge badge-off" title="état du corps sûr (corps_sur/etat)">pas d'état</span>
+          <button id="corps-sur-rearmer" type="button" disabled
+                  title="lève un VERROU si sa cause a disparu (lidar sain, pas d'arrêt d'urgence)">Réarmer</button>
+        </div>
+        <p id="corps-sur-detail" class="scene-note">nœud corps_sur muet : rien ne roule en autonome</p>
+      </div>
+
       <div class="scene-groupe scene-repetition" hidden>
         <div class="scene-groupe-tete">
           <h2>Route</h2>

@@ -1106,7 +1106,12 @@ conventions, mutants, points ouverts). Le nœud `/didier/corps_sur` est lancé p
 - **Réarmer** après un VERROU (capteur perdu, superviseur perdu, `e_stop`) : la cause doit avoir
   disparu et le lidar être sain depuis 1 s, sinon refus journalisé —
   `ros2 topic pub --once /didier/corps_sur/rearmer std_msgs/msg/Empty "{}"`. Relâcher `e_stop`
-  rend la télécommande, PAS l'autonomie. (Page scène : A0-5.)
+  rend la télécommande, PAS l'autonomie. **Depuis la page scène (A0-5, 24/11)** : groupe « Corps
+  sûr » (robot ET sim), badge d'état (armé / démarrage / VERROU / pause, avec la cause), ligne
+  zone · obstacle le plus proche · régions vues, bouton **Réarmer** actif seulement en VERROU et
+  avec la main ; 2,5 s après, la page dit « réarmé » ou « refusé : cause encore là ». Sur le Pi :
+  `~/ros2_ws/src/robot/conf/scripts/rearmer-corps-sur.sh`. La page montre le DERNIER état publié
+  (à chaque changement) : elle ne voit pas un nœud mort.
 - **Sur le robot sans lidar** (aujourd'hui) : DEMARRAGE `capteur_absent` permanent, aucune
   source autonome ne fait tourner les roues ; la télécommande conduit comme avant.
 - **Épreuves CS** (monde `stage` OBLIGATOIRE : obstacle et passant scriptés) :
