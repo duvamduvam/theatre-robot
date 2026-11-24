@@ -23,6 +23,13 @@ ROS 2 Jazzy). Plan du chantier : `docs/etude-telediagnostic.md`.
   constaté MORT (pas un soupçon), UN seul restart par incident, annoncer avant.
 - En session interactive (atelier), demander confirmation à David reste la
   norme ; l'autonomie complète est réservée à l'agent embarqué du terrain.
+- **VPN `wg-maison` : allumé SEULEMENT quand c'est nécessaire** (consigne de David du
+  24/11, après une journée entière laissé allumé). Nécessaire = le PC n'est PAS sur le
+  réseau de la maison (`ip route get 192.168.1.131` ne sort pas par l'interface du réseau
+  local) ET une tâche a besoin des Pi. Allumer = réglage réseau du poste : avec l'accord
+  de David. Couper (`nmcli connection down wg-maison`) dès la fin de CETTE tâche (déploiement,
+  mesure, preuve), pas en fin de journée ; jamais laissé allumé à la fin d'un tour. À la
+  maison : jamais (doublon avec le réseau local).
 
 ## Procédure
 
