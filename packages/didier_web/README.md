@@ -139,6 +139,18 @@ Tests (hôte) : `packages/didier_core/test/unit/test_apercu_lumieres.py` (modèl
 données, valeurs gravées ; dessin de `lumieres.js` joué par `node` quand il est installé, sinon
 ignoré) et `test_web_protocol.py` (ordre des scripts, noms globaux sans collision).
 
+## Page scène : corps sûr (lot A0-5, 24/11, robot et sim)
+
+Groupe « Corps sûr » de `scene.html`, hors `.scene-repetition` : il vit aussi sur le vrai robot.
+- **Lecture** : `corps_sur/etat` (latché, JSON du nœud `corps_sur`) est un topic de lecture seule du
+  pont (`TOPICS_LECTURE`), lu dans `state` : badge armé / démarrage / VERROU / pause + cause,
+  ligne zone · obstacle le plus proche · régions vues.
+- **Réarmer** : type WebSocket `corps_sur_rearmer` (sans champ) → `std_msgs/Empty` sur
+  `corps_sur/rearmer` par un publisher DÉDIÉ, hors whitelist ; avoir la main obligatoire. Le
+  bouton n'est actif qu'en VERROU ; le nœud refuse tant que la cause est là (la page le dit en
+  relisant l'état 2,5 s plus tard). Règles gravées : `test_web_protocol.py`.
+- Limite connue : l'état n'est publié qu'à son changement ; un nœud mort laisse son dernier état.
+
 ## Page scène : onglet « Audio » (22/11, banc PC en simulation)
 
 Demande de David en séance : « je ne sais jamais si je suis branché et si le son entre et sort ».

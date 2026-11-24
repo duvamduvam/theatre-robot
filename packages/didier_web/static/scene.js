@@ -118,6 +118,7 @@ liaison.surLiaison = () => {
     .forEach((el) => { el.disabled = !state.isWriter; });
   majEditeurVisible();
   majAudioVisible();
+  majBoutonRearmer();
   // Route / vitesse / séance : seulement si le serveur les accepte (hello.rehearsal).
   document.querySelectorAll(".scene-repetition").forEach((el) => {
     el.hidden = !state.rehearsal;
@@ -308,6 +309,7 @@ liaison.surEtat = (msg) => {
   afficherChaine(valeurTopic(msg.topics, "chat_audio_chain"));
   afficherJeu(msg);
   afficherMission(msg);
+  afficherCorpsSur(msg);
   // Bandes LED (lot I0) : le `state` resynchronise (page ouverte en cours de jeu) ; les
   // changements arrivent aussitôt par le message `lumieres`.
   if (msg.lumieres) {
@@ -678,7 +680,93 @@ function viderTicketSiAcquitte(msg) {
 liaison.surReponse = (msg) => {
   viderTicketSiAcquitte(msg);
   surReponseEditeur(msg);
+  surReponseRearmer(msg);
 };
+
+// --- Corps sûr (lot A0-5, 24/11) : état + « Réarmer » ---------------------------------
+// corps_sur/etat (latché, JSON du nœud, publié à CHAQUE CHANGEMENT seulement : la page montre
+// le dernier état publié, elle ne sait pas si le nœud est mort depuis) :
+// {"etat", "cause", "zone", "d_min_m", "vue", "superviseur", "temoin", "terrain"}.
+// Libellés : spec A0 §5.5-5.6 (garde.py). Le bouton n'est actif qu'en VERROU et avec la main.
+
+const CORPS_SUR_ETATS = {
+  ARME: ["armé", "badge-on"],
+  DEMARRAGE: ["démarrage", "badge-off"],
+  VERROU: ["VERROU", "badge-alerte"],
+  PAUSE_DUREE: ["pause (durée bornée)", "badge-alerte"],
+};
+const CORPS_SUR_CAUSES = {
+  e_stop: "arrêt d'urgence",
+  capteur_absent: "lidar absent",
+  capteur_perdu: "lidar perdu",
+  superviseur_absent: "superviseur absent",
+  superviseur_perdu: "superviseur perdu",
+  sante_en_cours: "lidar en vérification",
+};
+// Après un « Réarmer », l'état doit passer ARME : sinon le nœud a refusé (cause encore là).
+const CORPS_SUR_VERDICT_MS = 2500;
+const corpsSur = { etat: null, demande: null };
+
+function texteCorpsSur(e) {
+  const zone = e.zone ? "zone " + e.zone : "";
+  const dMin = typeof e.d_min_m === "number" ? "obstacle le plus proche " + e.d_min_m.toFixed(2) + " m" : "rien vu";
+  const vues = e.vue && typeof e.vue === "object"
+    ? Object.keys(e.vue).filter((k) => e.vue[k] === true) : [];
+  return [zone, dMin, "vu : " + (vues.length ? vues.join(", ") : "rien")].filter(Boolean).join(" · ");
+}
+
+function afficherCorpsSur(msg) {
+  const e = lireJson(valeurTopic(msg.topics, "corps_sur/etat"));
+  if (e === null || typeof e !== "object") {
+    return;
+  }
+  corpsSur.etat = e;
+  const [libelle, classe] = CORPS_SUR_ETATS[e.etat] || [String(e.etat), "badge-off"];
+  const cause = e.cause ? " — " + (CORPS_SUR_CAUSES[e.cause] || e.cause) : "";
+  const badge = $("corps-sur-etat");
+  badge.textContent = libelle + cause;
+  badge.className = "badge " + classe;
+  if (corpsSur.demande === null) {
+    $("corps-sur-detail").textContent = texteCorpsSur(e);
+  }
+  majBoutonRearmer();
+}
+
+// Un err du PONT pendant la demande (main perdue…) est le verdict : ne pas laisser croire, 2,5 s
+// plus tard, que le nœud a refusé pour sa cause. (Un err n'a pas de topic : attribué à la
+// demande en cours, comme pour l'éditeur.)
+function surReponseRearmer(msg) {
+  if (corpsSur.demande === null || msg.type !== "err") {
+    return;
+  }
+  clearTimeout(corpsSur.demande);
+  corpsSur.demande = null;
+  $("corps-sur-detail").textContent = "réarmement refusé par le pont : " + msg.reason;
+  majBoutonRearmer();
+}
+
+function majBoutonRearmer() {
+  const verrou = corpsSur.etat !== null && corpsSur.etat.etat === "VERROU";
+  $("corps-sur-rearmer").disabled = !(state.isWriter && verrou && corpsSur.demande === null);
+}
+
+$("corps-sur-rearmer").addEventListener("click", (event) => {
+  if (!state.isWriter) {
+    return;
+  }
+  state.attenteAck.corps_sur_rearmer = event.currentTarget;
+  state.dernierBouton = event.currentTarget;
+  $("corps-sur-detail").textContent = "réarmement demandé…";
+  corpsSur.demande = setTimeout(() => {
+    corpsSur.demande = null;
+    const e = corpsSur.etat || {};
+    $("corps-sur-detail").textContent = e.etat === "ARME" ? "réarmé · " + texteCorpsSur(e)
+      : "réarmement refusé : cause encore là (" + (CORPS_SUR_CAUSES[e.cause] || e.cause || "?") + ")";
+    majBoutonRearmer();
+  }, CORPS_SUR_VERDICT_MS);
+  majBoutonRearmer();
+  envoyer({ type: "corps_sur_rearmer" });
+});
 
 // --- Vitesse de la route (SIM-ONLY, visible si hello.rehearsal) ---------------------
 

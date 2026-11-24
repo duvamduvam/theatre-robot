@@ -127,7 +127,10 @@ def effective_whitelist(rehearsal_enabled: bool) -> frozenset:
 TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chain",
                   "rehearsal/state", "camera_state", "camera_source_state",
                   "camera_sources", "jeu/intention", "rehearsal/objects",
-                  "deploy_sha", "mission_state"}
+                  "deploy_sha", "mission_state",
+                  # Lot A0-5 (24/11) : l'état du corps sûr (latché, JSON du nœud corps_sur :
+                  # etat, cause, zone, d_min_m, vue…), affiché sur la page scène.
+                  "corps_sur/etat"}
 
 # Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
 # clients (message "feed"), contrairement à `state` qui ne porte que la
@@ -376,6 +379,10 @@ _PARSERS = {
     "data_edit": _parse_data_edit,
     "valider_roues": _parse_valider_roues,
     "audio_banc": _parse_audio_banc,
+    # Lot A0-5 (24/11) : « Réarmer » le corps sûr. Aucun champ : le pont publie un
+    # std_msgs/Empty sur corps_sur/rearmer (publisher dédié, hors whitelist) ; le nœud
+    # corps_sur ne lève le verrou que si sa cause a disparu (spec A0 §5.6), sinon il refuse.
+    "corps_sur_rearmer": lambda msg: {"type": "corps_sur_rearmer"},
 }
 
 

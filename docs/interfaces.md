@@ -144,8 +144,8 @@ cmd_vel_remote (teleop/controller, NOT filtered) ──────────�
 | `cmd_vel_anim_sur`, `cmd_vel_follow_sur`, `cmd_vel_web_sur` | `geometry_msgs/Twist` | out | reliable, 10 | one output per input, plus the anticipated ZERO (always null) when the body becomes blocked |
 | `e_stop` | `std_msgs/Bool` | in | reliable, 10 | same topic as the mux lock |
 | `superviseur/battement` | `std_msgs/Empty` | in | best effort, 1 | contract for A-préalables: ≥ 5 Hz, any message = present |
-| `corps_sur/rearmer` | `std_msgs/Empty` | in | reliable, 10 | lifts a lock once its cause is gone |
-| `corps_sur/etat` | `theatre_interfaces/StringTime` | out | latched | JSON `{etat, cause, zone, d_min_m, vue, superviseur, temoin, terrain}`, on change |
+| `corps_sur/rearmer` | `std_msgs/Empty` | in | reliable, 10 | lifts a lock once its cause is gone; published by the stage page « Réarmer » button (`web_bridge_node`, WS type `corps_sur_rearmer`, writer only, A0-5) |
+| `corps_sur/etat` | `theatre_interfaces/StringTime` | out | latched | JSON `{etat, cause, zone, d_min_m, vue, superviseur, temoin, terrain}`, on change; shown on the stage page (read-only topic of `web_bridge_node`, A0-5) |
 | `diagnostics` | `diagnostic_msgs/DiagnosticArray` | out | reliable, 10 | 1 Hz; ERROR in VERROU |
 
 Safe by construction: if `corps_sur` dies, freezes or is not launched, nothing reaches the `_sur`

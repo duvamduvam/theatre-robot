@@ -56,12 +56,13 @@ from PIL import Image as PILImage
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage, Image
+from std_msgs.msg import Empty
 
 from theatre_interfaces.msg import StringTime
 # Codec StringTime commun (lot L1a) : `loads` et non decode_or_raw — le pont
 # n'attrape que TypeError/JSONDecodeError (pas tout ValueError) et sa
 # sémantique générique est gardée à l'identique.
-from theatre_contrats import donnees, qos, stringtime
+from theatre_contrats import donnees, qos, stringtime, topics as contrats_topics
 from didier_web import apercu_lumieres, lecture_donnees, panneau_audio
 from didier_web.web_catalog import build_catalog
 from didier_web.web_protocol import (
@@ -270,6 +271,15 @@ class WebBridgeNode(Node):
         self.audio_banc = rehearsal_allowed(self.domain_id)
         self.dernier_entendu = None   # (payload décodé, horloge monotone) sous self.lock
         self.redetection_en_cours = False   # touché seulement depuis la boucle asyncio
+
+        # --- Réarmement du corps sûr (lot A0-5, 24/11) ------------------------------
+        # Publisher DÉDIÉ, hors whitelist (un `cmd` générique ne l'atteint pas), sur le robot
+        # comme en sim : un verrou en pleine rue doit pouvoir se lever depuis la page (spec A0
+        # §15). Fiable, profondeur 10 = la QoS de l'abonné (didier_corps_sur/contrat.py).
+        # Sans danger par construction : le nœud refuse tant que la cause est là.
+        self.rearmer_pub = self.create_publisher(
+            Empty, contrats_topics.CORPS_SUR_REARMER,
+            QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
 
         # --- Pilotage roues (SIM-ONLY, W3) --------------------------------------
         # Le publisher cmd_vel_web N'EXISTE que si drive_enabled : quand il vaut
@@ -765,6 +775,19 @@ async def _handle_valider_roues(node, app, client_id, ws, msg):
     await _send_json_safe(ws, build_ack("valider_roues"))
 
 
+async def _handle_corps_sur_rearmer(node, app, client_id, ws, msg):
+    """« Réarmer » le corps sûr (lot A0-5) : writer seul (il rend le mouvement autonome
+    possible), robot ET sim. L'ack dit « demande publiée » ; le verdict se lit dans
+    corps_sur/etat (ARME, ou toujours VERROU avec sa cause : refus du nœud, journalisé)."""
+    if not node.sessions.is_writer(client_id):
+        node.get_logger().warning("corps_sur_rearmer refusé (lecture seule) id={}".format(client_id))
+        await _send_json_safe(ws, build_err(ERR_LECTURE_SEULE))
+        return
+    node.rearmer_pub.publish(Empty())
+    node.get_logger().info("corps_sur_rearmer relayé client={}".format(client_id))
+    await _send_json_safe(ws, build_ack("corps_sur_rearmer"))
+
+
 # --- Onglet « Audio » (22/11, SIM-ONLY) : relais de la veille audio du banc PC ---------
 
 async def _veille_audio(app: web.Application, methode: str, chemin: str,
@@ -872,6 +895,7 @@ _HANDLERS = {
     "data_edit": _handle_data_edit,
     "valider_roues": _handle_valider_roues,
     "audio_banc": _handle_audio_banc,
+    "corps_sur_rearmer": _handle_corps_sur_rearmer,
 }
 
 
