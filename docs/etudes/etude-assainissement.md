@@ -234,6 +234,16 @@ Jusqu'à deux séances sim propres (critère du §0) :
 |---|---|
 | Impro I1 à I5 (le sélecteur joue des bugs, scénariste, STOP IMPRO) | ajoute un quatrième canal de décision sur une base qui en a déjà trop ; I3 s'emboîtera proprement dans la règle 1 ensuite |
 | Bugs joués v2 (corps entier, effets §11), visage temps 2 (numéros à dessiner) | du contenu : il faut David, ses mains et son œil |
+
+**Demande de David (24/11, pendant l'étude) : les bugs joués doivent pouvoir bouger le corps
+sur place** : rotations, et micro-mouvements d'avant en arrière d'une vingtaine de centimètres.
+« Ça donne du jeu, de l'expression, sans risque. » Avis : **d'accord en sim, et c'est la bonne
+borne** ; la règle « jamais de roues dans un bug » date d'avant le corps sûr (I0, 22/11) et
+n'a plus de raison d'être telle quelle. Deux réserves, pour le vrai robot seulement : ce n'est
+pas « sans risque » mais « à risque borné » (une rotation balaie les bras, 20 cm en arrière
+suffisent pour un pied) ; donc toujours par le chemin filtré par le corps sûr, à vitesse lente,
+bornes gravées en test (angle, distance, retour au point de départ), et relecture adverse avant
+le terrain. À intégrer au lot « bugs joués v2 » quand il sera dégelé ; rien à coder d'ici là.
 | L2c (page de contrôle), O2 à O4, danse, éditeur en pistes, L4 | déjà en attente depuis le 18/11 ; inchangé |
 
 Non gelé : sécurité (A0-7, A0-8), fiabilité (fumée, raté CS1 à surveiller), S0 à S3.
