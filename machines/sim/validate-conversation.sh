@@ -483,15 +483,20 @@ partis = [v for t, v in msgs("jeu/chat_move", td or math.inf, fin_d)
 verdict(pause is not None and pause - td <= 20 and not partis,
         f"D2 la bouche demande une pause {('%.1f s' % (pause - td)) if pause else '—'} après la phrase "
         f"(≤ 20 s), aucun aller_voir/tour_de transmis au régisseur ({partis or 'aucun'})")
-stop_d = next((t for t, v in msgs("jeu/chat_move", pause or math.inf, fin_d) if v == "stop"), None)
+# Fenêtres ouvertes 0,1 s AVANT la pause (fumée 2026-11-24-1421) : le jeu publie le « stop »,
+# la pause et `pause_regard` dans la même milliseconde, sur des topics différents ; l'enregistreur
+# a daté le stop 2 ms avant la pause et D3/D5 l'ont manqué (Didier, lui, s'était bien arrêté puis
+# était reparti 6,0 s après). Même marge que T5 d'A1 (relais_stop, −0,1 s).
+avant = (pause or math.inf) - 0.1
+stop_d = next((t for t, v in msgs("jeu/chat_move", avant, fin_d) if v == "stop"), None)
 hold_d = next((t for t, v in msgs("route_speed", stop_d or math.inf, fin_d) if v in (0, 0.0, "0")), None)
-verdict(stop_d is not None and stop_d - pause <= 0.5 and hold_d is not None and hold_d - stop_d <= 1.0,
+verdict(stop_d is not None and abs(stop_d - pause) <= 0.5 and hold_d is not None and hold_d - stop_d <= 1.0,
         f"D3 arrêt : « stop » du jeu {('%.3f s' % (stop_d - pause)) if stop_d else '—'} après la pause "
         f"(≤ 0,5 s), route_speed 0 {('%.2f s' % (hold_d - stop_d)) if hold_d else '—'} après (≤ 1 s)")
 regard = [v for t, v in msgs("look", (pause or math.inf) - 0.5, (pause or math.inf) + 1.5)]
 verdict(bool(regard), f"D4 regard : {regard[0] if regard else 'aucun message look'} autour de la pause")
 go_d = next((t for t, v in msgs("jeu/chat_move", stop_d or math.inf, fin_d) if v == "go"), None)
-types_d = [v.get("type") for _, v in msgs("jeu/journal", pause or math.inf, fin_d) if isinstance(v, dict)]
+types_d = [v.get("type") for _, v in msgs("jeu/journal", avant, fin_d) if isinstance(v, dict)]
 gain_d = m.get("x_d_go10", math.nan) - m.get("x_d_go", math.nan)
 verdict(go_d is not None and 5.0 <= go_d - pause <= 8.0 and "pause_regard" in types_d and "reprise" in types_d
         and gain_d >= 0.3,

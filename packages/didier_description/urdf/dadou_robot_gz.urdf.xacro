@@ -204,8 +204,9 @@
            (et 0,904-0,912 lors d'un premier passage plus chargé, où l'avec donnait 0,858 et 0,994).
            Coût du capteur sous le bruit de mesure (~1 %) : RTF ≥ 0,90 et ≥ 0,95 × sans, porte
            du §8.2 passée au premier échelon. scan : 10,00 Hz en temps simulé, 500 rayons.
-           24/11 : passé à 720 rayons (le message du pilote réel) ; RTF remesuré par la fumée
-           de la branche sim-lidar-720 (voir docs/chantiers.md). -->
+           24/11 : passé à 720 rayons (le message du pilote réel). Fumée de la branche
+           2026-11-24-1104 : RTF 0,996 (contre 0,995 à 500 rayons la veille), CS 25/25 : coût
+           des 220 rayons de plus sous le bruit de mesure. -->
       <update_rate>10</update_rate>
       <always_on>1</always_on>
       <visualize>false</visualize>
