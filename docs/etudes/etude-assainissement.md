@@ -274,67 +274,73 @@ refus et durées dans le régisseur recréerait deux décideurs, la cause même 
 Ce qui est retenu : **le rôle « régisseur » que David entend est une humeur du sélecteur**
 (un réglage, une jauge), journalisée sous ce nom ; `director` ne garde que les pannes.
 
-## 8 bis. Les quatre rôles — proposition du 24/11, à valider par David
+## 8 bis. Les quatre rôles — VALIDÉS par David le 25/11 (remplace la proposition du 24/11)
 
-Demande de David (24/11, 23:50) : « je vois le régisseur ou le metteur en scène comme un LLM
-avec une feuille de route, des skills, des règles ; on ne code pas tout en dur, on crée le
-cockpit. Est-ce que ça a du sens ? J'aimerais donner de la clarté architecturale à tout ça. »
+La première version (24/11, « le LLM choisit, le code autorise ; le metteur en scène ne touche
+jamais un moteur ») a été **refusée** par David : « le régisseur doit faire bouger les roues et
+le robot, dans un cadre défini : la sécurité bien sûr ; après, ce sont des règles de jeu qui
+peuvent entrer dans le contexte du LLM ». Sa difficulté : « concilier le LLM rapide avec le
+régisseur : s'ils ne disent pas la même chose, c'est compliqué ». Version retenue :
 
-**Oui, à une condition : le LLM choisit, le code autorise.** C'est d'ailleurs déjà la moitié
-de ce qui existe (le metteur en scène est un LLM lent qui tient la mission) ; ce qui manque est
-de lui donner le bon métier et de retirer ce métier au code.
+**Le régisseur décide, la bouche raconte.** Un seul des deux LLM décide d'un mouvement ;
+l'autre brode sur un fait qu'il n'a pas inventé.
 
-| Rôle | Qui | Rythme | Son métier | Ce qu'il ne fait jamais |
-|---|---|---|---|---|
-| **David** | toi : voix, cockpit, télécommande | quand tu veux | ordonner, arrêter, écrire la feuille de route | — |
-| **Metteur en scène** (ton « régisseur ») | LLM lent | toutes les 4 à 10 s | **choisir** : l'humeur, l'objet qui l'intéresse, refuser ou accepter une envie, combien de temps rester, quel numéro du répertoire jouer | toucher un moteur ; décider d'un arrêt ou d'un départ à la seconde près |
-| **Bouche** | LLM rapide | à chaque réplique | parler, en lisant l'état du corps et l'humeur du moment | décider d'un mouvement |
-| **Corps** | code, sans LLM | 10 Hz | **autoriser et exécuter** : ordres de David d'abord, bornes, sécurité, un seul état `corps/etat` | inventer une envie |
+| Rôle | Qui | Son métier | Ce qu'il ne fait jamais |
+|---|---|---|---|
+| **David** | voix, cockpit, télécommande | ordonne, arrête, écrit la feuille de route et les règles de jeu | — |
+| **Régisseur** | LLM lent (4 à 10 s) | **décide des mouvements d'initiative** : avancer, tourner, aller voir, s'arrêter, repartir, rester, refuser avec humeur, jouer un numéro. Guidé par la feuille de route, les règles de jeu et le répertoire, tous en texte dans son contexte | passer devant un ordre de David ; sortir du cadre de sécurité |
+| **Bouche** | LLM rapide | **transmet** les ordres de David tels quels ; **raconte** ce que le régisseur a décidé et ce que le corps a réellement fait, avec ses mots | décider d'un mouvement ; inventer un fait sur le corps |
+| **Corps** | code | exécute, protège, rapporte : corps sûr, bornes de vitesse et de distance, priorité de David, et un seul état partagé | décider du jeu |
 
 ```mermaid
 flowchart TB
-  D[David — cockpit] -->|ordres| C
-  D -->|feuille de route, règles, répertoire| MS
-  MS[Metteur en scène — LLM lent<br/>choisit dans le répertoire] -->|propositions + humeur| C
-  MS -->|humeur, fil de l'histoire| B[Bouche — LLM rapide]
-  C[Corps — code<br/>autorise, exécute, protège] -->|corps/etat| MS
-  C -->|corps/etat| B
+  D[David — cockpit] -->|ordres : toujours prioritaires| C
+  D -->|feuille de route, règles de jeu, répertoire| RG
+  RG[Régisseur — LLM lent<br/>DÉCIDE les mouvements d'initiative] -->|« on va vers le banc »| C
+  C[Corps — code<br/>exécute, protège, rapporte] -->|état partagé : décision en cours + ce qui s'est vraiment passé| B
+  C -->|état partagé| RG
+  B[Bouche — LLM rapide<br/>RACONTE et transmet] -->|ordres de David, tels quels| C
   C --> R[roues, tête, bras, visage]
 ```
 
-**Ce que « ne pas tout coder en dur » veut dire ici.** Trois fichiers de texte que David écrit et
-relit, et que le metteur en scène reçoit à chaque réflexion :
-- **la feuille de route** : où l'on va, ce qu'on cherche, l'état d'esprit du jour ;
-- **les règles de jeu** : « passe à l'objet neuf », « ne ressasse pas », « insiste », « refuse
-  parfois, toujours en le disant » (les consignes du 24/11 y vont telles quelles) ;
-- **le répertoire** (les « skills ») : la liste fermée de ce que Didier sait faire, chaque
-  entrée avec un nom, une phrase de description et ses bornes (rester, repartir, aller voir,
-  tourner, bug joué, refuser avec humeur…).
-Changer le jeu de Didier, c'est modifier ces fichiers, pas le code. Le cockpit les montre et
-montre le choix en cours (« il s'apprête à… », avec « pas maintenant »).
+**L'exemple de David, qui fixe la règle.** Le régisseur décide « on va vers le banc ». La bouche
+dit : « Oulala, ce banc m'appelle, il me plaît, il m'aspire. » Elle brode, mais sur une situation
+réelle. **Le style est à elle, le fait ne l'est pas.**
 
-**Ce qui reste en dur, et pourquoi.** Un LLM met plusieurs secondes à répondre, peut se tromper
-et peut ne pas répondre (réseau). Donc : l'arrêt, les ordres de David, les bornes (10 à 40 s,
-jamais un refus sur un stop, la deuxième demande passe, un arrêt par 2 min), le corps sûr et
-l'état du corps restent du code testé. Sans réseau, le corps continue seul avec ses règles
-simples : Didier est moins inventif, jamais dangereux ni figé.
+**L'ordre des opérations fait la cohérence.** Pour une initiative : le régisseur décide, la
+décision est écrite dans l'état partagé, le mouvement part, puis la bouche reçoit la parole
+(« tu viens de décider d'aller vers le banc, dis-le »). Pour un ordre de David : la bouche le
+transmet, le corps l'exécute tout de suite, le régisseur en est informé ; il ne l'arbitre pas
+(les refus « qui donnent du jeu » du §8.1 sont des décisions du régisseur, dites, jamais sur un
+stop, et la deuxième demande passe).
 
-**Ce que ça clarifie dans le code.**
-- Le sélecteur (`didier_jeu`) devient « le corps qui autorise » : il perd ses envies codées
-  (jauges d'ennui, de curiosité, de lubie, poids du score) au profit des propositions du
-  metteur en scène, et ne garde qu'un repli simple pour le hors-réseau. C'est une suppression.
-- Le nœud `director`, appelé « régisseur » dans le code, ne fait que les pannes
-  d'entraînement : il est **renommé** (« pannes d'entraînement ») pour que le mot régisseur ne
-  désigne plus deux choses.
-- Le canal existe déjà sur le papier : c'est `jeu/proposition` de l'étude improvisation (I3).
+**Ce qui reste en dur, et seulement ça.** La sécurité (corps sûr, bornes), la priorité de David,
+l'exécution et le rapport de ce qui s'est réellement passé. Les règles de jeu (objet neuf, ne pas
+ressasser, insister, refuser parfois, durée d'un arrêt) quittent le code pour le contexte du
+régisseur. Le sélecteur (`didier_jeu`) perd ses jauges et son score ; il devient l'exécutant
+qui protège, avec un repli simple quand le réseau manque. Le nœud `director` (pannes
+d'entraînement) est renommé, pour que « régisseur » ne désigne qu'une chose.
 
-**Ordre.** Rien de ceci ne passe avant S1 et S2 : un metteur en scène qui propose à un corps
-qui n'a ni autorité claire ni état unique reproduirait la séance du 24/11. Les quatre rôles sont
-la cible ; S1 et S2 en sont les deux premières marches, et le lot « metteur en scène à feuille
-de route » (S4) remplace I3 au dégel.
+**Marge acceptée par David.** « Un peu de décalage, ce n'est pas grave. » Un décalage de ton ou
+de sujet est du personnage. Le seul défaut à chasser est le **mensonge sur le corps** (« j'ai
+avancé » sans avoir bougé). La cohérence passe avant la vitesse de réponse.
 
-**Risque à garder en tête.** Le choix d'un LLM ne se teste pas comme du code : on teste les
-bornes (code) et on juge le jeu en séance, au journal. Et chaque réflexion coûte un appel.
+**Ce qui est garanti, ce qui ne l'est pas.** Garanti par construction : la bouche ne peut plus
+arrêter, relancer ni annuler un ordre. Non garanti : qu'un LLM rapide raconte toujours juste,
+même avec l'état sous les yeux. D'où l'essai ci-dessous, **avant** d'écrire S2.
+
+### 8 ter. L'essai qui décide (« banc de cohérence »)
+
+Une vingtaine de situations tirées de la séance du 24/11 (verrou de sécurité, flaque, arrêt de
+David, séance non lancée, décision du régisseur d'aller vers un objet…), rejouées avec la bouche
+réelle, **sans** puis **avec** la phrase d'état. On compte les mensonges sur le corps.
+
+| Résultat | Suite |
+|---|---|
+| mensonges presque nuls avec la phrase d'état | on construit « le régisseur décide, la bouche raconte » (S1, S2, puis S4) |
+| mensonges encore fréquents | on passe au **LLM unique** qui parle et décide dans la même réponse : plus lent, mais il ne peut pas se contredire |
+
+Sans simulateur, sans David. Résultat consigné ici.
 
 ## 9. Ce que cette étude ne re-tranche pas
 
