@@ -258,6 +258,22 @@ Non gelé : sécurité (A0-7, A0-8), fiabilité (fumée, raté CS1 à surveiller
 | 4 | La marche obéit pareil, séance lancée ou non ? | **Oui.** « Séance » ne veut plus dire que « les pannes d'entraînement tombent » |
 | 5 | On gèle l'impro et les contenus, et le cap devient « deux séances propres » au lieu de fin février ? | **Oui.** Fin février reste possible, mais ce n'est plus toi qui dois courir après |
 
+### 8.1 Réponses de David (24/11, 23:40) et ce qu'elles changent
+
+| # | Réponse de David | Conséquence |
+|---|---|---|
+| 1 | « ok » | **Décidé** : un arrêt dit par Didier ne pose pas de verrou et il repart seul ; ton « stop » passe par les mots d'arrêt et la console |
+| 2 | les refus de temps en temps « donnent du jeu » : arbitrage du régisseur | **Décidé, avec trois bornes** : un refus est **toujours dit en personnage** (« non, pas envie, ce banc me fixe ») ; **jamais sur un stop** ; **la deuxième demande passe** (tu n'es jamais bloqué). Le refus muet (`pas_retenu`, `trop_tot`) disparaît |
+| 3 | la durée avant de repartir : décision du régisseur aussi | **Décidé** : durée variable selon l'humeur, **bornée de 10 à 40 s**, annoncée par Didier (« bon, j'y retourne ») |
+| 4 | la séance n'était pas lancée : il suffit de me le dire, avec humeur | **Re-tranché** : la règle séance est **gardée**, mais rendue **symétrique** (hors séance : ni stop ni go du jeu, Didier suit sa route et obéit à toi) et **dite** : demander de bouger hors séance → Didier répond qu'on n'a pas lancé la séance, avec humeur (cause `seance_non_lancee` de `corps/etat`, lot S2) |
+| 5 | « ok, c'est plus sage » ; me le rappeler si je redemande | **Décidé** : gel ; l'agent rappelle ce gel si une demande neuve le touche |
+
+**Où vivent les refus et l'humeur (points 2 et 3).** Dans le code, « régisseur » désigne
+`director`, qui sert les pannes d'entraînement ; le sélecteur décide déjà de la marche. Mettre
+refus et durées dans le régisseur recréerait deux décideurs, la cause même de l'usine à gaz.
+Ce qui est retenu : **le rôle « régisseur » que David entend est une humeur du sélecteur**
+(un réglage, une jauge), journalisée sous ce nom ; `director` ne garde que les pannes.
+
 ## 9. Ce que cette étude ne re-tranche pas
 
 Gardé tel quel : le sélecteur seul décideur du corps (02/11, décision 6 : cette étude
