@@ -4,6 +4,30 @@
 chantier. Créé le 2026-07-12 en dégraissant CLAUDE.md (qui était devenu un
 journal de bord illisible).*
 
+## Ordre de travail (décidé le 25/11, à tenir)
+
+Règle posée par David le 25/11 : **la fiabilité et la réutilisabilité d'abord**. Une idée
+nouvelle en séance est notée ici et rangée dans un lot, puis on revient au lot en cours (sauf
+défaut de fiabilité). Avant de coder un morceau, on vérifie qu'aucun paquet ROS ou outil
+standard ne le fait déjà (essai borné, verdict écrit).
+
+1. **F4** — fumée sur GitHub Actions (correctif de build à fusionner) ; étude fumée §8 bis.
+2. **F1** — le programme de fumée (`docs/spec-F1-programme-fumee.md`).
+3. **Fin de phrase** — 17 énoncés sur 25 coupés à 12 s le 25/11 (souffle du casque) : lag du stop et des réponses.
+4. **S1** — ordres et propositions : corrections de la relecture Fable, nouvelle relecture, fumée, séance courte.
+5. **Essais de réutilisation** — A0-1 (`nav2_collision_monitor` à la place des zones du corps sûr, décidé le 11/11, jamais fait) ; `ros2 bag record` à la place de `capture_topics.py`.
+6. **S2** — le corps raconte (dont « se tourner vers un objet »).
+7. **S3** — restes : bouton Séance en haut de la page, Réarmer, visage temps 1.
+8. **Migration** — L2c-L2e, L3, L4 (après l'étude UX de la télécommande), L5.
+
+Gelés jusqu'à deux séances sim propres : impro I1-I5, bugs joués v2, visage temps 2, L2c.
+
+**Tester au fur et à mesure (David, 26/11).** Chaque lot se termine par un essai que David peut
+faire en dix minutes (séance sim courte, une consigne écrite). Ses retours sont notés et rangés
+dans un lot ; l'ordre ci-dessus peut être revu **après le ménage (L5)**, sur la base de ces essais.
+Quand David donne une indication, l'agent lui dit dans quel lot elle est rangée et quand elle
+viendra.
+
 **Convention de tenue** (pour que ça ne se re-dégrade pas) :
 - Chaque lot terminé met à jour **sa ligne** du tableau et **sa section** ici —
   pas CLAUDE.md (qui ne garde que les règles, commandes et priorités de tête).
