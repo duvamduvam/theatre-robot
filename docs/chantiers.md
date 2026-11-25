@@ -22,6 +22,12 @@ standard ne le fait déjà (essai borné, verdict écrit).
 
 Gelés jusqu'à deux séances sim propres : impro I1-I5, bugs joués v2, visage temps 2, L2c.
 
+**Tester au fur et à mesure (David, 26/11).** Chaque lot se termine par un essai que David peut
+faire en dix minutes (séance sim courte, une consigne écrite). Ses retours sont notés et rangés
+dans un lot ; l'ordre ci-dessus peut être revu **après le ménage (L5)**, sur la base de ces essais.
+Quand David donne une indication, l'agent lui dit dans quel lot elle est rangée et quand elle
+viendra.
+
 **Convention de tenue** (pour que ça ne se re-dégrade pas) :
 - Chaque lot terminé met à jour **sa ligne** du tableau et **sa section** ici —
   pas CLAUDE.md (qui ne garde que les règles, commandes et priorités de tête).
