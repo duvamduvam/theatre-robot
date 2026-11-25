@@ -19,6 +19,10 @@ Ce que je propose : **un petit programme Python, un plan d'épreuves déclaratif
 processeur alors que le PC a une carte graphique inutilisée). Cinq lots courts, F0 à F4 ; les
 deux premiers suffisent à sortir de la situation d'aujourd'hui.
 
+> **Mise à jour du 25/11, 23:00 (F0 mesuré, §8 bis).** La carte graphique ne fait rien gagner ;
+> en revanche la fumée complète tourne déjà sur GitHub Actions (essai vert du 22/11, oublié). La
+> fumée quitte le PC d'abord (F4 avant F1) ; le programme Python reste nécessaire.
+
 ## 1. Ce que la fumée fait bien (on le garde)
 
 - Elle rejoue **tout** sur une vraie sim, quatre conteneurs, et compare à des compteurs gravés.
@@ -170,10 +174,27 @@ entre deux lots S ; F4 selon la mesure.
 | 3 | « ok, mais tu fais dix fumées par jour, j'ai l'impression » | **Décidé** : une fumée complète la nuit, gardée. Et une **borne** : hors la nuit, plus de fumée complète pour valider un lot ; un lot rejoue seulement ce qu'il touche (F2). Le 25/11, cinq fumées complètes ont été lancées, dont trois perdues pour la chaleur ; F1 (rejeu de l'épreuve invalide) et F2 (rejeu ciblé) visent **une fumée complète par nuit, et pour chaque lot une fumée de 10 à 20 min** |
 | 4 | « je peux lancer des fumées le midi, mais souvent sans internet » | **Décidé** : **mode hors ligne** dans F1. La sim n'a besoin du réseau que pour trois choses : reconstruire une image (paquets téléchargés), l'épreuve de conversation (API Anthropic) et poser le statut sur la PR. Hors ligne : images prises dans le cache, jamais reconstruites (image absente du cache : fumée « invalide : hors ligne », pas rouge) ; conversation « non lancée (hors ligne) » ; statut GitHub mis en file et posé au retour du réseau |
 
+## 8 bis. F0 mesuré (25/11, 23:00) : ce qui change
+
+| Mesure | Résultat | Conséquence |
+|---|---|---|
+| Gazebo sur la carte graphique (runtime `nvidia`), conteneur monde seul, monde chantiers | sans réglage, Gazebo rend **déjà** sur la puce graphique Intel (bibliothèques Mesa chargées), pas en logiciel. Avec `nvidia` : la RTX passe de 28 à 52 %, mais le conteneur monde reste à environ 2 cœurs et le paquet CPU à 69 °C | **piste abandonnée** ; le §2 se trompait (« rendu sur le processeur ») |
+| Sim complète au repos (quatre conteneurs) | monde 2,2 cœurs, robot 0,8, vision 0,6 ; 68-69 °C | la sim seule ne chauffe pas ce PC : la chaleur du 25/11 venait des reconstructions d'images (24 min à chaque fumée), des `colcon` à chaque relance de sim et des autres charges du PC |
+| Sim complète sur 4 cœurs lents du PC (4 GHz) | temps réel 1,0 | une machine à 4 cœurs suffit au repos |
+| **Fumée complète sur GitHub Actions** (`.github/workflows/fumee.yml`, essai du 22/11, oublié depuis : ni la doc ni cette étude ne le mentionnaient) | temps réel **0,896** (seuil 0,8), **13 épreuves sur 13 vertes**, conversation non lancée (pas de secret), 54 min. Le correctif qui le permettait (frontend Dockerfile « labs » pour `COPY --exclude`) était resté sur une branche : sur `main`, le build échoue (vu le 25/11) ; réappliqué sur `fumee-gh-buildkit2` | **la fumée peut quitter le PC dès maintenant** |
+
+**Ce qui change dans le plan.**
+
+- **F4 devient la voie normale**, et passe avant F1 : une fumée par lot tourne sur GitHub, gratuite (dépôt public), sans chauffer ni occuper le PC, verdict lisible sur GitHub. Le PC ne garde que la fumée du midi hors ligne (réponse 4 du §8.1) et les séances.
+- **F1 reste nécessaire**, pour d'autres raisons que la chaleur : 1 250 lignes de bash, arrêt au premier rouge, pas de verdict « invalide », pas de mémoire des images. Sur GitHub, une fumée complète coûte 54 min et reconstruit les images à chaque fois : c'est là que le rejeu ciblé (F2) et le cache d'images paient.
+- **Le gardien de chaleur** de F1 devient un filet pour les fumées locales, plus le cœur du lot.
+- **La conversation sur GitHub** demande le secret `ANTHROPIC_API_KEY` dans les réglages du dépôt, à poser par David lui-même (un agent ne saisit jamais une clé).
+
+Ordre révisé : **F4 (fusion du correctif, fumée GitHub par lot) → F1 → F2 → F3**.
+
 ## 9. Limites
 
-- Le gain de la carte graphique n'est **pas mesuré** : c'est l'objet de F0. S'il est nul, le
-  gardien reste la seule protection et les fumées de journée resteront plus lentes.
+- Le gain de la carte graphique a été mesuré nul (§8 bis).
 - Les « moins de 20 minutes » supposent que la plupart des lots ne touchent qu'une ou deux
   épreuves. Un lot qui touche le cœur rejoue presque tout.
 - Les 500 lignes sont une estimation, pas un engagement ; le critère est « relisible par
