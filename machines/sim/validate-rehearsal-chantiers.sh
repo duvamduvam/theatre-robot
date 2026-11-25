@@ -211,6 +211,11 @@ echo "  pending/error :${bad:- aucun}"
 verdict "$([ -n "$status" ] && [ -z "$bad" ] && echo 1 || echo 0)" "aucune panne ni lubie en pending/error à la fin (done ou skipped seulement)"
 # Fin de la mesure : enregistreur arrêté proprement (FIN écrit = tout est sur disque). Mort en
 # cours de route = la mesure ne vaut rien : code 2 (banc faux), PAS un rouge de Didier.
+# Délai de garde AVANT l'arrêt (25/11, fumée rouge à tort) : la dernière panne du scénario
+# (« sourd ») a démarré 1 ms avant scenario_end ; l'enregistreur, arrêté dès scenario_end lu
+# dans le journal, n'avait pas encore reçu son chat_fault : 4 ops comptées pour 5 pannes.
+# Le journal est écrit dans le processus du régisseur, le topic voyage par DDS : 3 s suffisent.
+sleep 3
 capture_arreter || { echo "=== V-R3 : mesure invalide (enregistreur mort), aucun verdict $(date +%T) ==="; exit 2; }
 # Mêmes fichiers texte qu'avec la CLI (une valeur de msg par ligne) : les comptes ci-dessous
 # sont INCHANGÉS.
