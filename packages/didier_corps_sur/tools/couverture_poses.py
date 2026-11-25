@@ -10,7 +10,7 @@ masques, témoin, régions vues) et écrit une table Markdown + le JSON brut.
     .venv/bin/python packages/didier_corps_sur/tools/couverture_poses.py --sortie ~/tmp/a0/couverture
 
 Garde-fous (règles du PC de David) : refuse si un conteneur didier-sim-* existe, si la fumée
-tourne, ou si ~/tmp/sim-occupee existe sans être à nous ; pose « agent-A0 <heure> » dans ce
+tourne, ou si ~/tmp/didier/sim-occupee existe sans être à nous ; pose « agent-A0 <heure> » dans ce
 verrou pendant les mesures et le retire à la fin (un verrou « agent-A0 … » déjà posé par
 l'agent qui l'appelle est respecté et laissé à son auteur) ; la sim lancée ici est toujours
 arrêtée (finally).

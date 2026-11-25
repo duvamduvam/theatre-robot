@@ -653,14 +653,14 @@ l'aperçu visage 8766 (`FACE=true`).
 
 Les quatre conteneurs écrivent leurs journaux (`robot.log`, `rehearsal/`, `jeu/`, `tickets/`,
 `captures/`, colcon) dans **`$DIDIER_SIM_JOURNAUX`**, défaut
-**`~/tmp/didier-sim/`** : `log/` (partagé par `monde` et `robot`),
+**`~/tmp/didier/sim/`** : `log/` (partagé par `monde` et `robot`),
 `log-vision/`, `log-telecommande/`. Avant, c'était `machines/sim/workspace/` dans le checkout,
 donc synchronisé par Nextcloud (décision de David, 16/11 : pas besoin des journaux ni sur Nextcloud
 ni sur GitHub ; `~/tmp` plutôt que `~/.local/state`, précision du même soir). UNE variable, le même défaut dans `docker-compose.yml`, `fumee.sh` et
 `seance-chantiers.sh` (gravé par `test_compose_sim.py`) ; ces deux scripts créent le dossier avant
-`up`. **À la main : `mkdir -p ~/tmp/didier-sim/{log,log-vision,log-telecommande}` avant
+`up`. **À la main : `mkdir -p ~/tmp/didier/sim/{log,log-vision,log-telecommande}` avant
 `docker compose up`**, sinon Docker le crée root. Fichiers écrits par les conteneurs = root :
-effacer via un conteneur (`docker run --rm -v ~/tmp/didier-sim:/j alpine rm -rf /j/log/…`).
+effacer via un conteneur (`docker run --rm -v ~/tmp/didier/sim:/j alpine rm -rf /j/log/…`).
 
 ## Horloge simulée : `/clock` décimé à 200 Hz (21/11)
 
@@ -789,9 +789,9 @@ défaut, pertes sous charge) et disparue avec `/tmp` : impossible de dire si Did
   hors sim `calibre-distance.sh`, `validate-cmdvel-protocol.sh` (robot réel), `collect-incident.sh`.
 
 **Où lire les captures** : sous `/home/ros2_ws/log/captures/<épreuve>-<date>/` dans `monde`, soit
-`~/tmp/didier-sim/log/captures/` sur le PC (`$DIDIER_SIM_JOURNAUX`, § Journaux de la sim ;
+`~/tmp/didier/sim/log/captures/` sur le PC (`$DIDIER_SIM_JOURNAUX`, § Journaux de la sim ;
 fichiers root : effacer via un conteneur) ; en fumée, chaque épreuve a son dossier, **copié dans
-le brut LOCAL de la fumée, `~/tmp/didier-fumee/<id>/captures-<épreuve>/`**
+le brut LOCAL de la fumée, `~/tmp/didier/fumee-brut/<id>/captures-<épreuve>/`**
 (`journal.jsonl[.gz]`, `dernier/`, `PRET`, `FIN`, `enregistreur.log` ; pour A1 `capture.json[.gz]`
 et `verdicts.txt`). Relire un compte : `zcat journal.jsonl.gz | python3 -c 'import json,sys;
 [print(json.loads(l)["payload"]["msg"]) for l in sys.stdin if "chat_instruction" in l]'`.
@@ -830,7 +830,7 @@ Tout sur le domaine **43**.
 
 **En une commande (15/11)** : `machines/sim/seance-chantiers.sh` lance corps, tête (chat ON,
 surcouche banc), régie (`jeu:=true`) et regard ; `--stop` garde d'abord les journaux des
-conteneurs, de la régie et du regard dans `~/tmp/didier-sim/seances/<date_heure>/` (25/11), puis éteint tout. Puis page scène
+conteneurs, de la régie et du regard dans `~/tmp/didier/sim/seances/<date_heure>/` (25/11), puis éteint tout. Puis page scène
 http://localhost:8765/scene : **Route ON**, **Séance → Démarrer** — sans séance démarrée, le
 régisseur ignore « go » et tout geste demandé (`hors_seance`). Le détail pas à pas suit.
 
@@ -908,7 +908,7 @@ parle », et deux boutons (avoir la main) :
   la tête rouvre son micro sur le nouveau choix (~5 à 40 s selon les casques à essayer ; la tête
   n'est PAS redémarrée, la personnalité reste). Parole OFF au départ : rien n'est rallumé.
 Derrière : la veille HÔTE `machines/sim/banc-vision/audio_veille.py` (127.0.0.1:8767, lancée et
-arrêtée par `seance-chantiers.sh`, journal `~/tmp/didier-sim/audio-veille.log`) ; « veille
+arrêtée par `seance-chantiers.sh`, journal `~/tmp/didier/sim/audio-veille.log`) ; « veille
 injoignable » en rouge = la relancer : `python3 machines/sim/banc-vision/audio_veille.py`.
 Le vumètre montre le niveau brut du micro (avant l'atténuation ×0,075 de la tête).
 Vécu le 22/11 au premier essai : M50 connecté, mais la tête écoutait le micro interne (muet) — le
@@ -967,12 +967,12 @@ n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
 
 **Ticket « Noter un problème » (08/11)** : champ du bandeau de la page scène, utilisable sans
 la main. Le pont écrit un JSON dans `log/tickets/` (texte, heure, topics visibles — jamais
-les topics masqués). En sim, `log/` est monté sur le PC : `~/tmp/didier-sim/log/`
+les topics masqués). En sim, `log/` est monté sur le PC : `~/tmp/didier/sim/log/`
 (gitignoré, partagé par `monde` et `robot` depuis L2b), il survit aux recréations des conteneurs. Le ramasseur qui les range avec les
 journaux reste à faire (`docs/seances/2026-11-08-a1-casque.md` #11).
 
 **4. Après** : le journal JSONL de la séance est dans
-`/home/ros2_ws/log/rehearsal/` du conteneur `monde` (`~/tmp/didier-sim/log/rehearsal/` sur le PC ; ce qui a été tiré, quand) ;
+`/home/ros2_ws/log/rehearsal/` du conteneur `monde` (`~/tmp/didier/sim/log/rehearsal/` sur le PC ; ce qui a été tiré, quand) ;
 `machines/robot/scripts/rehearsal/carte_seance.py` en fait la carte.
 
 **Vérification technique rejouable** (sans la tête, dans le conteneur `monde`, étapes 1
@@ -1237,14 +1237,14 @@ déjà performance, absent ou en échec, SIGTERM et SIGINT pendant le démarrage
   de 30 min plus tard réessaie. Sont reportés : charge 1 min > nb de cœurs × 0,5 (seuil
   `FUMEE_CHARGE_MAX`, 16 sur ce PC de 32 cœurs ; le RTF reste le vrai juge), RTF < 0,8 après
   démarrage de la sim, **un conteneur de la sim déjà présent** (`didier-sim-*` — la sim de
-  quelqu'un : jamais touchée), **le verrou `~/tmp/sim-occupee`** (18/11, ci-dessous), checkout qui
+  quelqu'un : jamais touchée), **le verrou `~/tmp/didier/sim-occupee`** (18/11, ci-dessous), checkout qui
   n'est pas sur la branche `main`, **plage sans commit** (11/11 :
   fichier LOCAL hors dépôt `~/.config/didier/plages-sans-commit`, une ligne « JOURS DEBUT FIN »,
   jours ISO 1 = lundi, heures pleines, FIN exclue ; la fumée ne démarre ni dedans ni dans l'heure
   d'avant, puisqu'elle commite sa page ; fichier absent = aucune plage ; même fichier lu par une
   garde `pre-commit`/`pre-merge-commit` locale du dépôt, non versionnée). Due depuis plus de 2 jours et
   toujours reportée → `notify-send` + ligne « RAPPEL » au journal (au plus toutes les 12 h).
-- **Verrou « sim occupée » (18/11)** : `~/tmp/sim-occupee` (`FUMEE_SIM_OCCUPEE`), une ligne
+- **Verrou « sim occupée » (18/11)** : `~/tmp/didier/sim-occupee` (`FUMEE_SIM_OCCUPEE`), une ligne
   « <qui> <heure> », posé par les agents et par David pendant LEUR sim. Présent et âgé de moins
   de **6 h** (date du fichier : le contenu n'a pas de jour) → `--si-due` reporte, la fumée lancée
   à la main ou `--et-dodo` **refuse** (code 2) sauf `--forcer-verrou` (lève le verrou de fichier
@@ -1284,10 +1284,10 @@ Amorcé le 16/11 avec les 32 fumées du 07/11 au 16/11. Les journaux bruts versi
 ont été retirés (`git rm --cached`, historique NON réécrit : `git show <commit>:docs/fumee/journaux/…`
 les retrouve) ; leurs anciennes pages gardent des liens morts.
 
-**Le brut est LOCAL** (`FUMEE_BRUT`, défaut `~/tmp/didier-fumee/<id>/`, jamais
+**Le brut est LOCAL** (`FUMEE_BRUT`, défaut `~/tmp/didier/fumee-brut/<id>/`, jamais
 dans git ni sur Nextcloud). **Purge** à la fin de chaque fumée (`fumee_page.py purger`) : brut d'une
 fumée **verte** supprimé au-delà de **30 jours** ; brut d'une fumée **rouge JAMAIS purgé** tant que
-son dossier ne porte pas le marqueur **`TRAITE`** (`touch ~/tmp/didier-fumee/<id>/TRAITE`
+son dossier ne porte pas le marqueur **`TRAITE`** (`touch ~/tmp/didier/fumee-brut/<id>/TRAITE`
 une fois la conclusion écrite dans `docs/incidents/`), puis 30 jours comme une verte.
 Les journaux sont COPIÉS hors des conteneurs avant leur arrêt, dans ce brut
 (`<épreuve>.log`, `conteneur-<phase>.tar.gz` = logs ROS + journaux de séance + sortie des 4
@@ -1296,7 +1296,7 @@ les fichiers > 1 Mo réduits à leurs 3000 dernières lignes), **`captures-<épr
 de l'enregistreur, ENTIÈRES, gzippées au-delà de 64 ko — § Mesures des épreuves ; une ligne
 « MESURE INVALIDE » sur la page = l'enregistreur est mort, défaut du banc) et **`resultat.json`**, qui est la vérité
 (la page n'en est que le rendu : `python3 machines/sim/fumee_page.py pages --sortie docs/fumee
---brut ~/tmp/didier-fumee` régénère le sommaire et les pages dont le brut existe encore). **Avant d'accuser une épreuve rouge, regarder le RTF** : sous 0,8 le régisseur
+--brut ~/tmp/didier/fumee-brut` régénère le sommaire et les pages dont le brut existe encore). **Avant d'accuser une épreuve rouge, regarder le RTF** : sous 0,8 le régisseur
 (horloge murale) manque l'arrivée. Un arrêt propre (Ctrl-C, SIGTERM) en cours de route laisse une page
 rouge « interrompue » ; un SIGKILL ou une coupure de courant n'en laisse aucune.
 
@@ -1590,7 +1590,7 @@ outdoors, in summer. Feeds lot V0b of
   `ssh r '~/ros2_ws/src/*/conf/scripts/collect-incident.sh'` → timestamped
   tarball in `~/incidents/` (logs tail, docker logs/inspect, ROS graph,
   temperatures, disk, dmesg). Testable against the sim:
-  `CONTAINER=didier-sim-robot LOG_DIR=~/tmp/didier-sim/log ./collect-incident.sh`.
+  `CONTAINER=didier-sim-robot LOG_DIR=~/tmp/didier/sim/log ./collect-incident.sh`.
 - **Investigate**: open a Claude session on the workstation and invoke
   `/diag` (skill in `.claude/skills/diag/` — read-only rules, reading-points
   map, known traps). Feed it the tarball.
