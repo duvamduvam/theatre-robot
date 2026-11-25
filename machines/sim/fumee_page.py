@@ -37,9 +37,12 @@ Format de `resultat.json` (version 1) :
     notes       [str] observations non bloquantes (arbre modifié pendant la
                       fumée, journal tronqué…)
     epreuves    [ {id, statut, ok, attendu, ko, obtenu, detail, duree_s, journal} ]
-                statut : « vert » | « rouge » | « non_lance ». Les épreuves
-                absentes sont complétées en « non_lance » par la page.
-    verdict     « vert » (toutes vertes) | « rouge »
+                statut : « vert » | « rouge » | « non_lance » | « invalide » (F1,
+                25/11 : un gardien du banc a parlé — chaleur, temps réel, réseau,
+                enregistreur mort ; ni vert ni rouge). Les épreuves absentes sont
+                complétées en « non_lance » par la page.
+    verdict     « vert » (toutes vertes) | « rouge » | « invalide » (aucune rouge, au
+                moins une invalide : jamais « dernière verte », jamais comptée rouge)
     bloquant    id de la première épreuve rouge, ou null
     page        nom du fichier HTML (relatif à <sortie>)
 
@@ -283,13 +286,20 @@ def completer_epreuves(epreuves: list) -> list:
 
 def verdict_global(epreuves: list):
     """(verdict, premier id rouge) ; une épreuve non lancée sans rouge avant = rouge — sauf une
-    FACULTATIVE déclarée non lancée par la fumée elle-même (`facultative`, ex. pas de clé)."""
+    FACULTATIVE déclarée non lancée par la fumée elle-même (`facultative`, ex. pas de clé).
+    F1 (25/11) : une INVALIDE ne rougit pas ; aucune rouge et au moins une invalide (les non
+    lancées qui la suivent comprises) = « invalide »."""
+    invalide = False
     for e in completer_epreuves(epreuves):
         if e["statut"] == "non_lance" and e.get("facultative") and e["id"] in FACULTATIVES:
             continue
-        if e["statut"] != "vert":
-            return "rouge", (e["id"] if e["statut"] == "rouge" else None)
-    return "vert", None
+        if e["statut"] == "rouge":
+            return "rouge", e["id"]
+        if e["statut"] == "invalide":
+            invalide = True
+        elif e["statut"] != "vert" and not invalide:
+            return "rouge", None
+    return ("invalide" if invalide else "vert"), None
 
 
 # --------------------------------------------------------------------------
@@ -309,13 +319,14 @@ CSS = """  :root { --fond:#fbfaf7; --texte:#1f2328; --doux:#5b636b; --trait:#e3e
   .bandeau { background:#fff; border:1px solid var(--trait); border-left:5px solid var(--gris);
              border-radius:6px; padding:.8rem 1.1rem; margin:1rem 0; }
   .bandeau.b-vert { border-left-color:var(--vert); } .bandeau.b-rouge { border-left-color:var(--rouge); }
+  .bandeau.b-invalide { border-left-color:var(--orange); }
   .carte { background:#fff; border:1px solid var(--trait); border-radius:6px; padding:.8rem 1rem; margin:.7rem 0; }
   .carte h3 { margin:0 0 .3rem; font-size:1rem; }
   .meta { font-size:.85rem; color:var(--doux); margin:.2rem 0; }
   .verdict { display:inline-block; font-size:.75rem; font-weight:600; text-transform:uppercase;
              letter-spacing:.03em; padding:.1rem .5rem; border-radius:99px; color:#fff; margin-left:.4rem; vertical-align:middle; }
   .vert { background:var(--vert); } .rouge { background:var(--rouge); }
-  .orange { background:var(--orange); } .non_lance { background:var(--gris); }
+  .orange, .invalide { background:var(--orange); } .non_lance { background:var(--gris); }
   table { border-collapse:collapse; width:100%; } th, td { text-align:left; padding:.35rem .5rem; border-bottom:1px solid var(--trait); }
   .doux { color:var(--doux); }
   footer { margin-top:3rem; font-size:.85rem; color:var(--doux); border-top:1px solid var(--trait); padding-top:1rem; }"""
@@ -326,7 +337,7 @@ def _e(valeur) -> str:
 
 
 def _pastille(statut: str) -> str:
-    libelle = {"vert": "vert", "rouge": "rouge", "non_lance": "non lancée"}.get(statut, statut)
+    libelle = {"vert": "vert", "rouge": "rouge", "non_lance": "non lancée", "invalide": "invalide"}.get(statut, statut)
     return '<span class="verdict {}">{}</span>'.format(_e(statut), _e(libelle))
 
 
@@ -355,6 +366,9 @@ def rendre_page(res: dict) -> str:
     bloquant = res.get("bloquant")
     if verdict == "vert":
         phrase = "Toutes les épreuves sont vertes, aux valeurs gravées."
+    elif verdict == "invalide":
+        phrase = ("INVALIDE : aucune épreuve rouge, mais le banc a parlé (chaleur, temps réel, réseau "
+                  "ou enregistreur) — ni vert ni rouge, à relancer.")
     elif bloquant:
         phrase = "ROUGE à l'épreuve « {} » : les suivantes n'ont pas été lancées.".format(
             NOMS.get(bloquant, bloquant))
@@ -632,7 +646,7 @@ def construire_parseur() -> argparse.ArgumentParser:
     s = sub.add_parser("epreuve", help="ajoute une épreuve au fichier de travail")
     s.add_argument("--jsonl", required=True)
     s.add_argument("--id", required=True)
-    s.add_argument("--statut", choices=["vert", "rouge", "non_lance"])
+    s.add_argument("--statut", choices=["vert", "rouge", "non_lance", "invalide"])
     s.add_argument("--ok", type=int)
     s.add_argument("--attendu", type=int)
     s.add_argument("--ko", type=int)

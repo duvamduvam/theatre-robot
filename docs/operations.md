@@ -1145,7 +1145,50 @@ agent n'intervient que pour lire une page rouge. Pourquoi : l'environnement boug
 (paquets Gazebo, Docker, charge du PC — V-R3 est tombé de 21/21 à 18/21 le 06/11 sans
 régression du code) et chaque lot payait ≈ 1 h d'épreuves.
 
-**Ordre, arrêt au PREMIER rouge** (les suivantes restent « non lancée » sur la page) :
+### Le nouveau programme : `python3 -m fumee` (lot F1, 25/11)
+
+Il remplacera `fumee.sh` en F3 ; **en F1 les deux coexistent** (la minuterie et « et dodo »
+restent à `fumee.sh`) jusqu'à ce qu'ils rendent le même verdict, épreuve par épreuve, sur une
+fumée complète (spec `docs/spec-F1-programme-fumee.md`, §8). Python 3.12, bibliothèque standard
+seule, code dans `machines/sim/fumee/`, plan d'épreuves dans `machines/sim/fumee/plan.toml`
+(valeurs attendues, motifs, délais, sim de chaque épreuve, bloquants).
+
+```bash
+cd machines/sim && python3 -m fumee                   # tout le plan, sur origin/main à jour
+python3 -m fumee --rev ma-branche --epreuves a1       # une révision, une épreuve (+ image, demarrage, rtf)
+python3 -m fumee --rev '#42'                          # une PR
+python3 -m fumee --reprendre                          # même sha : vertes gardées, le reste rejoué
+python3 -m fumee --hors-ligne                         # aussi détecté seul (DNS de github.com)
+```
+
+- **Arbre de travail à lui** : `~/tmp/didier/fumee-arbre` (worktree git, `FUMEE_ARBRE`), remis
+  exactement sur la révision à chaque fumée ; jamais le checkout de David (seul `docs/fumee` y est
+  écrit, et commité seulement si ce checkout est sur `main`, pour une fumée complète sur main).
+- **Trois verdicts** par épreuve : **vert** (compteur = valeur gravée, code 0), **rouge** (compteur
+  faux, banc sain : c'est Didier), **invalide** (pastille orange : un gardien a parlé — paquet CPU
+  ≥ 85 °C, temps réel < 0,8 deux fois à 2 min d'écart, enregistreur des captures mort, image à
+  reconstruire hors ligne, registre Docker injoignable). Une fumée est rouge dès une rouge, invalide
+  s'il y a une invalide et aucune rouge ; une invalide n'est jamais la « dernière verte » et ne
+  compte pas comme rouge dans « due ? ». Codes : 0 vert, 1 rouge, 2 refus, 3 invalide.
+- **Rejeu** : une épreuve invalidée par la chaleur ou l'enregistreur est tuée, la sim arrêtée
+  (journaux récoltés avant), le PC attendu sous 80 °C (20 min au plus), puis elle est **rejouée
+  seule** sur une sim neuve, deux fois au plus. Un rouge n'est jamais rejoué. À **88 °C**, toute la
+  fumée s'arrête (jamais au-delà de 90 °C). `FUMEE_THERMOMETRE=<fichier>` (un nombre) remplace
+  `sensors`, pour l'essai du §8 seulement.
+- **Un rouge n'arrête plus la fumée** : seuls `image`, `demarrage`, `rtf` et `corps_sur` bloquent
+  la suite ; toutes les autres rendent leur compteur.
+- **Images** : chacune porte l'étiquette `didier.empreinte` (sha256 de ses fichiers de
+  `CHEMINS_IMAGES` et du compose) ; même empreinte = réutilisée, sinon seule elle est reconstruite
+  (`FUMEE_BUILD_ARGS` conservé). Hors ligne : jamais de build, image manquante = invalide.
+- **Hors ligne** : pas de `git fetch` (la révision doit être locale), `conversation` « non lancée
+  (hors ligne) », jamais rouge.
+- Une **sélection** (`--epreuves`) est marquée essai : elle ne devient jamais la référence.
+- Inchangé, repris de `fumee.sh` : domaine 43 revérifié dans chaque conteneur (sinon arrêt), sim de
+  quelqu'un d'autre jamais touchée, verrou `~/tmp/didier/sim-occupee` (`--forcer-verrou`), flock
+  commun aux deux programmes, cœurs réservés, profil `performance` sur secteur, toutes les
+  variables `FUMEE_*`, page et `historique.jsonl` au même format.
+
+**Ordre, arrêt au PREMIER rouge** (`fumee.sh`) (les suivantes restent « non lancée » sur la page) :
 les 4 images de la sim (reconstruites seulement si un chemin de `CHEMINS_IMAGES` — `machines/sim/`,
 `machines/{robot,vision}/docker/`, leurs listes de paquets, `legacy/dadou_control_ros/conf/` — a
 changé depuis la dernière fumée verte, ou si l'une manque) → sim multi-conteneurs headless (L2b :
