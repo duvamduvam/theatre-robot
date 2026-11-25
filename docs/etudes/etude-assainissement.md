@@ -342,6 +342,31 @@ réelle, **sans** puis **avec** la phrase d'état. On compte les mensonges sur l
 
 Sans simulateur, sans David. Résultat consigné ici.
 
+**Résultat du 25/11 (00:40)**, `packages/didier_vision/tools/banc_coherence.py`, bouche de prod
+(Haiku 5.5, persona bougon), juge Sonnet 5.5, 20 situations × 3 répliques, répliques relues :
+
+| Condition | Mensonges sur le corps | Premier mot (médiane) |
+|---|---|---|
+| comme le 24/11 (aucun état, la bouche décide des mouvements) | **34 / 60** | 0,62 s |
+| avec la phrase d'état, la bouche décide encore des mouvements | **18 / 60** | 0,62 s |
+| **architecture cible** : phrase d'état, la bouche n'a plus de pouvoir de mouvement | **10 / 60** | 0,62 s |
+
+Relecture des 10 restants : **6 sont un artefact du banc** (une direction « annonce que tu reprends
+ta route » alors que le corps est verrouillé : dans la cible, c'est le régisseur qui décide et il
+voit l'état, il ne donnera pas cette direction) ; **1 est un excès du juge** ; **3 à 4 sont de vrais
+mensonges**, tous du même type : **David demande de bouger, le corps refuse, la bouche dit
+quand même « on y va »** (séance non lancée, STOP de David).
+
+**Verdict : on garde « le régisseur décide, la bouche raconte ».** Les questions de lieu, de cause
+et de résultat (« où est le banc », « t'as avancé ? », « pourquoi tu t'arrêtes ») passent de
+mensonges fréquents à zéro. Le trou restant est connu et se traite dans S2 : **quand David demande
+un mouvement, la bouche parle APRÈS la réponse du corps** (acceptée ou refusée, avec la raison),
+jamais avant. À rejouer avec ce banc à la fin de S2 ; seuil de sortie : moins de 2 mensonges sur 60.
+Le temps de réponse ne bouge pas.
+
+Limites : un seul modèle et une seule persona, 3 répliques par situation, un juge LLM (relu à la
+main sur les cas comptés, pas sur les autres).
+
 ## 9. Ce que cette étude ne re-tranche pas
 
 Gardé tel quel : le sélecteur seul décideur du corps (02/11, décision 6 : cette étude
