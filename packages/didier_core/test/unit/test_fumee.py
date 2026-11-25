@@ -395,7 +395,7 @@ def test_page_verte_porte_sha_rtf_et_compteurs():
     assert "Toutes les épreuves sont vertes, aux valeurs gravées." in page
     # 16/11 : plus de lien vers des journaux versionnés — le nom du fichier et le dossier LOCAL.
     assert "<code>namespace.log</code>" in page and 'href="journaux/' not in page
-    assert "<code>~/tmp/didier-fumee/2026-11-07-2130/</code>" in page
+    assert "<code>~/tmp/didier/fumee-brut/2026-11-07-2130/</code>" in page
     assert "9 min 45 s" in page
     assert "non lancée" not in page
 
@@ -585,7 +585,7 @@ def banc(tmp_path):
                FAUX_NOTIFS=str(tmp_path / "notifs.txt"), FUMEE_DRY_POWEROFF="1",
                FUMEE_PLAGES=str(tmp_path / "aucune-plage"),   # jamais le fichier réel du PC
                # Jamais le brut réel du PC non plus : sans cette variable, les essais
-               # écrivaient leurs fausses fumées rouges dans ~/tmp/didier-fumee (vu le 17/11 :
+               # écrivaient leurs fausses fumées rouges dans ~/tmp/didier/fumee-brut (vu le 17/11 :
                # quatre « main, démarrage rouge » aux sha inexistants dans le vrai brut).
                FUMEE_BRUT=str(tmp_path / "brut"),
                # Ni le vrai verrou « sim occupée » (18/11) : posé par un agent pendant SA sim, il
@@ -935,7 +935,7 @@ def test_amorcer_l_historique_depuis_les_anciens_journaux(tmp_path):
 
 def test_fumee_sh_brut_local_purge_et_sim_hors_depot():
     sh = _lire_sh()
-    assert 'BRUT="${FUMEE_BRUT:-$HOME/tmp/didier-fumee}"' in sh and 'JDIR="$BRUT/$ID"' in sh
+    assert 'BRUT="${FUMEE_BRUT:-$HOME/tmp/didier/fumee-brut}"' in sh and 'JDIR="$BRUT/$ID"' in sh
     assert '"$PAGE_PY" purger --brut "$BRUT"' in sh
     assert '"$SORTIE/journaux' not in sh
     assert 'DIDIER_SIM_JOURNAUX="$JOURNAUX_SIM"' in sh
@@ -1008,7 +1008,7 @@ def test_extinction_du_pc_notee_par_simple_lecture_de_systemd():
 
 
 # --- Verrou « sim occupée » des agents et de David (18/11) ---------------------------------
-# ~/tmp/sim-occupee (« <qui> <heure> ») : la minuterie l'ignorait et pouvait lancer une fumée
+# ~/tmp/didier/sim-occupee (« <qui> <heure> ») : la minuterie l'ignorait et pouvait lancer une fumée
 # par-dessus la sim d'un agent ou une séance de David. Ici : chemin dans tmp_path (banc).
 
 def _poser_verrou(tmp, contenu, age_s=0):

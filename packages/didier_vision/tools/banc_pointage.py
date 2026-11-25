@@ -10,7 +10,7 @@ vérité est connue (géométrie du SDF + pose ground_truth) : taux de bonne
 désignation, erreur d'azimut, erreur de projection au sol, latence, coût.
 
 Quatre étapes, quatre sous-commandes (les résultats bruts vont HORS dépôt,
-défaut ~/tmp/banc-pointage/) :
+défaut ~/tmp/didier/travaux/banc-pointage/) :
 
   preparer   (PC, stdlib + yaml)  poses + vérité des objets -> plan.json
   capturer   (conteneur didier-sim-monde, rclpy + cv2 + gz) téléporte le robot

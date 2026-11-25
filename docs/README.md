@@ -25,7 +25,7 @@ Documentation vivante du mono-dépôt (arrivée de `legacy/dadou_robot_ros/docs/
 - `outils/` : utilitaires d'atelier (feuille millimétrée imprimable, schémas du tronc) — voir `outils/README.md`.
 - `pictures/` : photos et schémas cités par les pages.
 - `veille/` : veille robotique hebdomadaire (une page HTML par semaine, sommaire `veille/index.html`, méthode `veille/README.md`). Créée le 2026-11-02.
-- `fumee/` : fumée nocturne de la sim (une page HTML par fumée, sommaire `fumee/index.html`, `fumee/historique.jsonl` = une ligne par fumée, pour toujours ; journaux bruts LOCAUX depuis le 16/11, `~/tmp/didier-fumee/`). Écrit et commité par `machines/sim/fumee.sh` — **ne pas éditer à la main** ; mode d'emploi : `operations.md`, section « Fumée automatique ». Créé le 2026-11-07 (lot F).
+- `fumee/` : fumée nocturne de la sim (une page HTML par fumée, sommaire `fumee/index.html`, `fumee/historique.jsonl` = une ligne par fumée, pour toujours ; journaux bruts LOCAUX depuis le 16/11, `~/tmp/didier/fumee-brut/`). Écrit et commité par `machines/sim/fumee.sh` — **ne pas éditer à la main** ; mode d'emploi : `operations.md`, section « Fumée automatique ». Créé le 2026-11-07 (lot F).
 - `architecture-ui-telecommande.html` : schémas de l'UI de la télécommande sans X11.
 
 Voir aussi : [`../README.md`](../README.md) (carte du dépôt) et [`../CLAUDE.md`](../CLAUDE.md) (règles de travail).

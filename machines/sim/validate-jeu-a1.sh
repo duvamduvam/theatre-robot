@@ -41,7 +41,7 @@ source /home/ros2_ws/install/setup.bash
 # ses noms RELATIFS se résolvent alors comme ceux des nœuds qu'il observe.
 NS="/${ROBOT_NAME:-didier}"
 # Capture du pilote : hors /tmp pour SURVIVRE à l'épreuve (lot fiabilité, 16/11) — log/captures/
-# ($DIDIER_SIM_JOURNAUX/log/captures/ du PC, défaut ~/tmp/didier-sim/), ou $CAPTURE_DIR donné par la fumée.
+# ($DIDIER_SIM_JOURNAUX/log/captures/ du PC, défaut ~/tmp/didier/sim/), ou $CAPTURE_DIR donné par la fumée.
 CAP="${CAPTURE_DIR:-/home/ros2_ws/log/captures/a1-$(date +%Y%m%d-%H%M%S)}"; rm -rf "$CAP"; mkdir -p "$CAP"
 JDIR=/home/ros2_ws/log/jeu
 RDIR=/home/ros2_ws/log/rehearsal
