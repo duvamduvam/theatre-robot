@@ -289,7 +289,12 @@ function ajouterEntendu(h) {
   const tete = document.createElement("span");
   tete.className = "scene-msg-role";
   const duree = h.stt_ms === null || h.stt_ms === undefined ? "" : " · " + h.stt_ms + " ms";
-  tete.textContent = new Date().toLocaleTimeString() + " · " + h.moteur + duree + " · " + h.verdict;
+  // S0 (25/11) : pour un énoncé jeté, sa durée et sa crête (silence, bruit ou voix incomprise).
+  const niveau = typeof h.crete === "number"
+    ? " · énoncé " + (h.duree_ms / 1000).toFixed(1) + " s, crête " + h.crete
+      + (h.jetes_de_suite > 1 ? " · " + h.jetes_de_suite + " de suite" : "")
+    : "";
+  tete.textContent = new Date().toLocaleTimeString() + " · " + h.moteur + duree + " · " + h.verdict + niveau;
   const texte = document.createElement("span");
   // textContent : le texte vient du micro, jamais interprété comme du HTML.
   texte.textContent = h.entendu === "" ? "(rien)" : "« " + h.entendu + " »";

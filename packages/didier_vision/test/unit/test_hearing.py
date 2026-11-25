@@ -39,12 +39,20 @@ def test_encode_hearing():
     h = json.loads(encode_hearing({"stt_text": "Salut, dis-y-ais !", "stt_ms": 812.4, "total_ms": 2101.6,
                                    "abandoned": False}, "distant", 1000))
     assert h == {"t_ms": 1000, "entendu": "Salut, dis-y-ais !", "moteur": "distant", "stt_ms": 812,
-                 "reponse_ms": 2102, "verdict": "gardé"}
+                 "reponse_ms": 2102, "verdict": "gardé", "duree_ms": None, "crete": None,
+                 "jetes_de_suite": None}
     h = json.loads(encode_hearing({"stt_text": "...", "stt_ms": 300, "abandoned": True}, "repli", 1))
     assert h["verdict"] == "jeté : rien de compréhensible" and h["moteur"] == "REPLI local (le distant a échoué)"
     assert h["reponse_ms"] is None
     h = json.loads(encode_hearing({"stt_text": "stop", "abandoned": True}, None, 1))
     assert h["verdict"].startswith("jeté (") and h["moteur"] == "local"
+
+
+def test_encode_hearing_porte_le_niveau_de_l_enonce_jete():
+    # S0 (25/11) : ce qui départage micro plat, bruit et voix incomprise.
+    h = json.loads(encode_hearing({"stt_text": "", "stt_ms": 300, "abandoned": True, "duree_ms": 1840,
+                                   "crete": 412, "jetes_de_suite": 3}, "distant", 1))
+    assert (h["duree_ms"], h["crete"], h["jetes_de_suite"]) == (1840, 412, 3)
 
 
 class _Ok:

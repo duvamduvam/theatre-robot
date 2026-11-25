@@ -213,6 +213,7 @@ from dataclasses import dataclass
 from typing import Callable, Optional, Union
 
 from didier_vision.ai import performance
+from didier_vision.audio.mic import frame_peak
 from didier_vision.ai.emergency import is_emergency_stop, normalized_words, stop_words_in
 from didier_vision.ai import raccord
 from didier_vision.ai.move_task import MoveTask
@@ -612,6 +613,21 @@ class _ReplyGuard:
         return True
 
 
+# Énoncés inexploitables de suite à partir desquels on alerte (log WARNING ;
+# la page scène lit `jetes_de_suite` dans chat_hearing, cf. hearing.py).
+JETES_ALERTE = 3
+
+
+def utterance_level(speech: bytes, sample_rate: int) -> dict:
+    """Durée (ms) et crête (|échantillon| max, S16_LE mono) d'un énoncé capté.
+    PURE. POURQUOI (S0, 25/11) : le 24/11, 5 énoncés ont été jetés « STT
+    inexploitable : '' » sans qu'on puisse dire si le micro rendait du
+    silence, du bruit ou une voix que la transcription ne comprenait pas."""
+    n = len(speech) // 2
+    duree_ms = int(round(n * 1000 / sample_rate)) if sample_rate > 0 else 0
+    return {"duree_ms": duree_ms, "crete": int(frame_peak(speech[:2 * n]))}
+
+
 def has_usable_text(text: Optional[str]) -> bool:
     """Un texte STT est exploitable s'il contient au moins 2 caractères
     alphanumériques. POURQUOI pas un simple len(strip()) : whisper transcrit
@@ -667,6 +683,10 @@ class ConversationEngine:
         self._stt_lock = threading.Lock()
         # Source STT du tour en cours (cf. run_once, _notify_timing).
         self._turn_stt_source: Optional[str] = None
+        # Énoncés jetés DE SUITE pour « STT inexploitable » (S0, 25/11) : la
+        # séance du 24/11 en a jeté 5 d'affilée sans que la page ne le dise ;
+        # remis à 0 au premier tour compris (cf. run_once, hearing).
+        self._jetes_de_suite = 0
         # Gate « source audio vivante » (half-duplex élargi, cf.
         # dadou_robot_ros/docs/etude-declenchement-conversation.md §10) :
         # None = comportement HISTORIQUE inchangé à l'octet près (clause de
@@ -1345,13 +1365,22 @@ class ConversationEngine:
             # Bruit ou énoncé trop court : PAS d'appel LLM (payant), retour à
             # l'écoute. Loggé en INFO : c'est la trace qui permet de régler le
             # VAD/gain micro quand Didier « entend des voix » sur scène.
-            logger.info("Tour abandonné, STT inexploitable : %r", text)
+            # S0 (25/11) : avec la durée et la crête de l'énoncé, qui
+            # départagent micro plat (crête ~0), bruit, ou voix incomprise.
+            self._jetes_de_suite += 1
+            niveau = utterance_level(speech_bytes, self._mic.sample_rate)
+            logger.info("Tour abandonné, STT inexploitable : %r (%d ms, crête %d, %d de suite)",
+                        text, niveau["duree_ms"], niveau["crete"], self._jetes_de_suite)
+            if self._jetes_de_suite == JETES_ALERTE:
+                logger.warning("%d énoncés jetés de suite : Didier n'entend plus ce qu'on lui dit"
+                               " (micro ? onglet Audio de la page scène)", JETES_ALERTE)
             # abandoned=True, champs AVAL (après le STT) à None : ce tour n'a
             # jamais atteint le LLM/TTS, il n'y a rien de plus à mesurer (cf.
             # docstring de module OBSERVABILITÉ).
             self._notify_timing({
                 "stt_ms": stt_ms, "llm_first_ms": None, "audio_first_ms": None,
                 "total_ms": None, "stt_text": text, "abandoned": True,
+                "jetes_de_suite": self._jetes_de_suite, **niveau,
             })
             # Rattrapage idle() AVANT de relancer le micro (cf. docstring de
             # module, correctif 2026-07-12) : sans ça, le visage restait
@@ -1363,6 +1392,7 @@ class ConversationEngine:
             return False
 
         logger.info("STT : %r", text)
+        self._jetes_de_suite = 0
         return self._reply_with_stage(text, stt_ms=stt_ms, speech_end_at=speech_end_at)
 
     def _wait_dead_mic_backoff(self) -> None:

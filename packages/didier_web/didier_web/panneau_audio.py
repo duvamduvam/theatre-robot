@@ -117,6 +117,31 @@ def problemes(hote: Json | None, chat_state: str | None) -> list[Json]:
     return sorted(trouves, key=lambda p: _GRAVITE[p["niveau"]])
 
 
+# S0 (25/11) : énoncés jetés de suite à partir desquels on alerte (même valeur que JETES_ALERTE de
+# la tête, didier_vision.ai.conversation) ; sous SON_PLAT de crête, l'énoncé était du silence
+# (même seuil que le micro vivant de la veille, audio_banc.CRETE_VIVANT).
+JETES_ALERTE = 3
+SON_PLAT = 30
+
+
+def probleme_enonces_jetes(entendu: Json | None) -> list[Json]:
+    """Plusieurs énoncés de suite captés puis jetés « rien de compréhensible » (vécu le 24/11 : 5
+    d'affilée, la page n'en disait rien). La crête du dernier départage les causes."""
+    if not isinstance(entendu, dict):
+        return []
+    n = entendu.get("jetes_de_suite")
+    if not isinstance(n, int) or n < JETES_ALERTE:
+        return []
+    crete = entendu.get("crete")
+    if isinstance(crete, int) and crete < SON_PLAT:
+        return [_probleme(KO, f"{n} phrases de suite jetées : le son capté est plat (crête {crete})",
+                          "le micro ne transmet rien : bouton muet du casque, puis « Re-détecter »")]
+    niveau = f" (crête {crete})" if isinstance(crete, int) else ""
+    return [_probleme(KO, f"{n} phrases de suite jetées : du son arrive{niveau} mais rien n'est compris",
+                      "parle près du micro ; si ça dure, « Re-détecter » (micro de casque en "
+                      "mauvais mode, ou mauvais micro)")]
+
+
 def temoins(chat_state: str | None, entendu: Json | None, entendu_il_y_a_s: float | None) -> Json:
     """« Didier m'entend » (un tour récent : gardé = oui, jeté = jeté) et « Didier parle »."""
     entend = "non"
@@ -140,7 +165,8 @@ def _resume_cote(cote: Json | None) -> Json | None:
 def synthese(hote: Json | None, chat_state: str | None, entendu: Json | None,
              entendu_il_y_a_s: float | None) -> Json:
     """Tout ce que l'onglet affiche. `hote` = /etat de la veille (None = injoignable)."""
-    liste = problemes(hote, chat_state)
+    liste = sorted(problemes(hote, chat_state) + probleme_enonces_jetes(entendu),
+                   key=lambda p: _GRAVITE[p["niveau"]])
     if liste:
         verdict, message, action = liste[0]["niveau"], liste[0]["message"], liste[0]["action"]
     else:

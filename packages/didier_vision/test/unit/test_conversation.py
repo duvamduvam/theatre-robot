@@ -3839,3 +3839,42 @@ def test_garde_locale_est_celle_du_contrat():
     assert "objets.garde_geste(tableau, intent)" in source
     code = "\n".join(l for l in source.splitlines() if not l.strip().startswith("#"))
     assert "resoudre(" not in code and ".atteignable" not in code and "PAS_ICI" not in code
+
+
+# --------------------------------------------------------------------------
+# S0 (25/11) : énoncés jetés DE SUITE et niveau de l'énoncé. La séance du
+# 24/11 a jeté 5 énoncés « STT inexploitable : '' » d'affilée sans que la
+# page ne le dise, ni si le micro rendait du silence ou une voix incomprise.
+# --------------------------------------------------------------------------
+
+def test_utterance_level_duree_et_crete_gravees():
+    from didier_vision.ai.conversation import utterance_level
+    son = b"\x00\x00" * 1599 + (-1000).to_bytes(2, "little", signed=True)  # 1600 éch. à 16 kHz
+    assert utterance_level(son, 16000) == {"duree_ms": 100, "crete": 1000}
+    assert utterance_level(b"", 16000) == {"duree_ms": 0, "crete": 0}
+    assert utterance_level(b"\x01", 16000) == {"duree_ms": 0, "crete": 0}  # octet orphelin ignoré
+
+
+def test_jetes_de_suite_compte_puis_repart_a_zero_au_tour_compris(timeline):
+    timings = []
+    frames, events = _speech_frames_and_events()
+    engine = _make_engine(timeline, frames=frames, vad_events=events, stt_text="",
+                          brain_deltas=["Oui."], on_timing=timings.append)
+
+    def tour(texte):
+        f, e = _speech_frames_and_events()
+        engine._mic._frames, engine._vad._events, engine._stt._text = list(f), list(e), texte
+        engine.run_once()
+
+    try:
+        engine.run_once()
+        tour("")
+        tour("")
+        tour("bonjour Didier")
+        tour("...")
+    finally:
+        _cleanup_beeps(engine)
+    jetes = [t.get("jetes_de_suite") for t in timings if t.get("abandoned")]
+    assert jetes == [1, 2, 3, 1]
+    assert all(isinstance(t["crete"], int) and isinstance(t["duree_ms"], int)
+               for t in timings if t.get("abandoned"))

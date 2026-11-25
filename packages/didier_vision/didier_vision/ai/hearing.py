@@ -80,7 +80,14 @@ def encode_hearing(timing: dict, source: Optional[str], t_ms: int) -> str:
     def ms(k):
         v = timing.get(k)
         return None if v is None else int(round(v))
+    # S0 (25/11) : durée et crête de l'énoncé jeté, et combien de suite (None
+    # quand le tour ne les porte pas : gardé, texte tapé, panne de régie).
+    def entier(k):
+        v = timing.get(k)
+        return None if v is None else int(v)
     return json.dumps({
         "t_ms": int(t_ms), "entendu": text, "moteur": SOURCE_LABELS.get(source or "local", source),
         "stt_ms": ms("stt_ms"), "reponse_ms": ms("total_ms"), "verdict": verdict,
+        "duree_ms": entier("duree_ms"), "crete": entier("crete"),
+        "jetes_de_suite": entier("jetes_de_suite"),
     }, ensure_ascii=False, sort_keys=True)

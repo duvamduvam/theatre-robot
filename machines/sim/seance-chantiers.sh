@@ -23,7 +23,22 @@ arreter_veille() {
   rm -f "$VEILLE_PID"
 }
 
-if [ "${1:-}" = "--stop" ]; then arreter_veille; "${COMPOSE[@]}" down; exit 0; fi
+# Journaux de la séance gardés AVANT le down (S0, 25/11) : la tête n'écrit que sur sa sortie
+# standard, effacée avec le conteneur ; le 24/11, la panne du micro (5 phrases jetées) n'a
+# plus pu être relue. Un dossier par séance ; jamais de secret dans ces sorties (la tête ne
+# journalise aucune clé). Un conteneur absent est sauté sans erreur.
+garder_journaux() {
+  local d="$DIDIER_SIM_JOURNAUX/seances/$(date +%Y-%m-%d_%H%M)"
+  mkdir -p "$d"
+  for c in didier-sim-monde didier-sim-robot didier-sim-vision didier-sim-telecommande; do
+    docker logs "$c" >"$d/$c.log" 2>&1 || rm -f "$d/$c.log"
+  done
+  docker cp didier-sim-monde:/tmp/rehearsal.log "$d/rehearsal.log" >/dev/null 2>&1 || true
+  docker cp didier-sim-robot:/tmp/gaze.log "$d/gaze.log" >/dev/null 2>&1 || true
+  echo "journaux de la séance gardés dans $d"
+}
+
+if [ "${1:-}" = "--stop" ]; then arreter_veille; garder_journaux; "${COMPOSE[@]}" down; exit 0; fi
 
 # Micro + sortie de la tête choisis d'après ce qui est RÉELLEMENT branché (18/11 : le M50 codé
 # en dur était éteint, PipeWire retombait en silence sur le micro du PC qui entendait Didier).

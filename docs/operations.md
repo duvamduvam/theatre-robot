@@ -829,7 +829,8 @@ chemin déclenchent ses lubies, David joue au casque et à la page scène.
 Tout sur le domaine **43**.
 
 **En une commande (15/11)** : `machines/sim/seance-chantiers.sh` lance corps, tête (chat ON,
-surcouche banc), régie (`jeu:=true`) et regard ; `--stop` éteint tout. Puis page scène
+surcouche banc), régie (`jeu:=true`) et regard ; `--stop` garde d'abord les journaux des
+conteneurs, de la régie et du regard dans `~/tmp/didier-sim/seances/<date_heure>/` (25/11), puis éteint tout. Puis page scène
 http://localhost:8765/scene : **Route ON**, **Séance → Démarrer** — sans séance démarrée, le
 régisseur ignore « go » et tout geste demandé (`hors_seance`). Le détail pas à pas suit.
 
