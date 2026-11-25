@@ -4,7 +4,7 @@ Demande de David, le 25/11 au soir, après quatre fumées rouges dans la journé
 n'accusait Didier : « c'est l'usine, la fumée, 1 000 lignes de bash » ; « vu que mon PC va
 fumer des mois, fais une étude pour un programme de fumée digne de ce nom ».
 
-Étude écrite en Fable 5.2, sans code. Statut : **PROPOSÉ**, rien n'est décidé.
+Étude écrite en Fable 5.2, sans code. Statut : **VALIDÉE par David le 25/11** (§8.1).
 
 ## 0. Réponse courte
 
@@ -160,6 +160,14 @@ entre deux lots S ; F4 selon la mesure.
    de travail. C'est une trace d'agent, pas un échange avec toi : d'accord ?
 3. **La fumée complète de nuit** : la garder, sachant que tu éteins le PC ? Sinon, une fois
    par semaine, lancée à la main avant d'aller dormir (« et dodo »).
+
+### 8.1 Réponses de David (25/11, 22:00)
+
+| # | Réponse | Conséquence |
+|---|---|---|
+| 1 | « ok » | **Décidé** : F0 puis F1, avant la reprise de S1 |
+| 2 | « ok » | **Décidé** : les agents posent un statut GitHub sur la PR, aussi en journée (trace d'agent, pas d'échange avec David) |
+| 3 | « ok, mais tu fais dix fumées par jour, j'ai l'impression » | **Décidé** : une fumée complète la nuit, gardée. Et une **borne** : hors la nuit, plus de fumée complète pour valider un lot ; un lot rejoue seulement ce qu'il touche (F2). Le 25/11, cinq fumées complètes ont été lancées, dont trois perdues pour la chaleur ; F1 (rejeu de l'épreuve invalide) et F2 (rejeu ciblé) visent **une fumée complète par nuit, et pour chaque lot une fumée de 10 à 20 min** |
 
 ## 9. Limites
 
