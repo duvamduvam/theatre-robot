@@ -409,3 +409,31 @@ def test_redetecter_ne_rallume_pas_une_parole_off(pont, monkeypatch):
 def types_msg(brut):
     import types
     return types.SimpleNamespace(msg=brut, time=0, anim=False)
+
+
+# --- S0 (25/11) : phrases jetées de suite ------------------------------------------------
+
+def _jete(n, crete):
+    return {"entendu": "", "verdict": "jeté : rien de compréhensible", "jetes_de_suite": n, "crete": crete}
+
+
+def test_trois_phrases_jetees_et_son_plat():
+    s = pa.synthese(HOTE_OK, "listening", _jete(3, 4), 1.0)
+    assert s["verdict"] == "ko"
+    assert s["message"] == "3 phrases de suite jetées : le son capté est plat (crête 4)"
+
+
+def test_trois_phrases_jetees_avec_du_son():
+    s = pa.synthese(HOTE_OK, "listening", _jete(5, 412), 1.0)
+    assert s["verdict"] == "ko"
+    assert s["message"] == "5 phrases de suite jetées : du son arrive (crête 412) mais rien n'est compris"
+
+
+@pytest.mark.parametrize("entendu", [None, _jete(2, 0), _jete(None, 0), {"verdict": "gardé", "entendu": "salut"}])
+def test_pas_d_alerte_sous_trois_jetees(entendu):
+    assert pa.synthese(HOTE_OK, "listening", entendu, 1.0)["verdict"] == "ok"
+
+
+def test_veille_injoignable_reste_premiere_meme_avec_des_jetees():
+    s = pa.synthese(None, "listening", _jete(4, 0), 1.0)
+    assert s["message"].startswith("veille audio du banc injoignable")

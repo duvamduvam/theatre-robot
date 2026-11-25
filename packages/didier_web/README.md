@@ -179,7 +179,9 @@ flowchart LR
   `asound-pc.conf` (défaut d'Ubuntu résolu), présents ou non dans PipeWire, coupés ou non, casque
   connecté ou non, niveau mesuré en continu par `parecord` sur le nœud même que lit la tête.
 - **Pont** : `GET /api/audio` = `panneau_audio.synthese(état de la veille, chat_state, dernier
-  chat_hearing)` ; 404 hors domaine 43 (`hello.audio_banc`). Le message WebSocket `audio_banc`
+  chat_hearing)` ; 404 hors domaine 43 (`hello.audio_banc`). Depuis le 25/11, `chat_hearing` porte
+  pour un énoncé jeté sa durée, sa crête et `jetes_de_suite` : à 3 de suite, le verdict passe au rouge
+  (« son capté plat » sous une crête de 30, sinon « du son arrive mais rien n'est compris »). Le message WebSocket `audio_banc`
   (`tester` | `redetecter`, liste fermée, writer seul, sim seule) est relayé à la veille.
 - **Tester le son** : un bip de 0,35 s joué par `aplay -D mixette` DANS la tête — même alias,
   même `asound.conf` que la voix de Didier. ⚠️ Sans casque, le micro peut l'entendre.
