@@ -133,7 +133,7 @@ programme, comparée épreuve par épreuve à l'ancienne.
 | Lot | Contenu | Fin |
 |---|---|---|
 | **F0 — mesurer** | 1) caméras de Gazebo sur la carte graphique : température, charge et temps réel avant/après, sur l'épreuve A1 ; 2) la même épreuve sur une machine gratuite de GitHub (4 cœurs) : temps réel tenu ou non | deux chiffres ; on sait si la chaleur disparaît, et si une exécution hors du PC est possible |
-| **F1 — le programme** | plan déclaratif, trois verdicts, épreuves indépendantes, abandon et rejeu, arbre de travail propre, cache d'images ; l'ancienne fumée reste en place | même verdict que l'ancienne sur une fumée complète ; une épreuve rendue invalide exprès (charge artificielle sous 85 °C) est rejouée seule |
+| **F1 — le programme** | plan déclaratif, trois verdicts, épreuves indépendantes, abandon et rejeu, arbre de travail propre, cache d'images, mode hors ligne (§8.1, réponse 4) ; l'ancienne fumée reste en place | même verdict que l'ancienne sur une fumée complète ; une épreuve rendue invalide exprès (charge artificielle sous 85 °C) est rejouée seule |
 | **F2 — au service des lots** | épreuves choisies par les chemins touchés ; statut posé sur la PR ; file d'attente (une fumée à la fois, les suivantes attendent) | une PR qui ne touche que la bouche est validée en moins de 20 min, verdict lisible sur GitHub |
 | **F3 — le ménage** | suppression de `fumee.sh`, de la moitié de `fumee_page.py`, des scripts de `~/tmp` ; la minuterie appelle le nouveau programme ; doc | moins de 700 lignes à nous ; `operations.md` raccourci |
 | **F4 — hors du PC** (seulement si F0 le permet) | les épreuves sans temps réel serré tournent sur GitHub à chaque PR ; le PC ne garde que les chronométrées | le PC de David fume deux à trois fois moins |
@@ -168,6 +168,7 @@ entre deux lots S ; F4 selon la mesure.
 | 1 | « ok » | **Décidé** : F0 puis F1, avant la reprise de S1 |
 | 2 | « ok » | **Décidé** : les agents posent un statut GitHub sur la PR, aussi en journée (trace d'agent, pas d'échange avec David) |
 | 3 | « ok, mais tu fais dix fumées par jour, j'ai l'impression » | **Décidé** : une fumée complète la nuit, gardée. Et une **borne** : hors la nuit, plus de fumée complète pour valider un lot ; un lot rejoue seulement ce qu'il touche (F2). Le 25/11, cinq fumées complètes ont été lancées, dont trois perdues pour la chaleur ; F1 (rejeu de l'épreuve invalide) et F2 (rejeu ciblé) visent **une fumée complète par nuit, et pour chaque lot une fumée de 10 à 20 min** |
+| 4 | « je peux lancer des fumées le midi, mais souvent sans internet » | **Décidé** : **mode hors ligne** dans F1. La sim n'a besoin du réseau que pour trois choses : reconstruire une image (paquets téléchargés), l'épreuve de conversation (API Anthropic) et poser le statut sur la PR. Hors ligne : images prises dans le cache, jamais reconstruites (image absente du cache : fumée « invalide : hors ligne », pas rouge) ; conversation « non lancée (hors ligne) » ; statut GitHub mis en file et posé au retour du réseau |
 
 ## 9. Limites
 
