@@ -540,3 +540,14 @@ def test_fumee_complete_de_bout_en_bout_ecrit_la_page_et_rend_le_verrou(banc):
     assert fp.dernier_vert(fp.lire_resultats(tmp_path / "pages")) is None
     assert not (tmp_path / "sim-occupee").exists()      # notre « fumee HH:MM », retiré à la fin
     assert sy.sim_up is False                            # sim arrêtée
+
+
+def test_un_essai_n_ecrit_jamais_dans_docs_fumee_du_depot(banc, monkeypatch):
+    # 26/11 : la 1re vraie fumée F1 (--essai) avait écrit page et historique dans le checkout de
+    # David. Sans FUMEE_SORTIE, un essai écrit sous ~/tmp/didier/fumee-essais, jamais dans le dépôt.
+    sy, tmp_path = banc
+    del sy.env["FUMEE_SORTIE"]
+    monkeypatch.setenv("HOME", str(tmp_path / "maison"))
+    programme.main(["--essai"], sy=sy)
+    assert not (tmp_path / "depot" / "docs" / "fumee").exists()
+    assert list((tmp_path / "maison" / "tmp" / "didier" / "fumee-essais").glob("*.html"))

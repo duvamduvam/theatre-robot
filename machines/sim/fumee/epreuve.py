@@ -3,6 +3,7 @@ invalide (un gardien a parlé). Une invalide est rejouée SEULE, deux fois au pl
 Un rouge n'arrête plus la fumée : seules les épreuves `bloque = ["*"]` arrêtent ce qui suit.
 """
 import re
+import time
 from pathlib import Path
 
 from . import images
@@ -145,6 +146,17 @@ def une_fois(f, ep) -> dict:
     return r
 
 
+def dit(texte: str) -> None:
+    """Une ligne de progression datée sur la sortie (F1, 26/11 : la 1re fumée n'affichait rien
+    avant la fin ; fumee.sh annonçait chaque étape). flush : le journal se lit en direct."""
+    print("[fumée {}] {}".format(time.strftime("%H:%M:%S"), texte), flush=True)
+
+
+def resume(r: dict) -> str:
+    compte = " {}/{}".format(r["ok"], r["attendu"]) if "attendu" in r and "ok" in r else ""
+    return "{}{}{}".format(r["statut"], compte, " — " + r["detail"] if r.get("detail") else "")
+
+
 def jouer(f, ep) -> dict:
     """L'épreuve, rejouée seule si un gardien l'a invalidée : sim arrêtée, PC refroidi, sim neuve."""
     debut = f.sy.horloge()
@@ -153,7 +165,9 @@ def jouer(f, ep) -> dict:
         if (essai or chaleur(f.sy.temperature())) and not refroidir(f):
             r = {"id": ep.id, "statut": "invalide", "detail": "invalide : chaleur, PC pas redescendu sous 80 °C en 20 min"}
             break
+        dit("épreuve {}{}".format(ep.id, " (rejeu {})".format(essai) if essai else ""))
         r = une_fois(f, ep)
+        dit("  {} : {}".format(ep.id, resume(r)))
         if not rejouable(r) or essai == REJEUX_MAX:
             break
         f.notes.append("{} invalide ({}) : rejouée seule ({}/{})".format(ep.id, r.get("detail"), essai + 1, REJEUX_MAX))
@@ -169,6 +183,7 @@ def derouler(f, plan) -> list:
     resultats, bloquees = [], {}
     for ep in plan:
         if ep.id in bloquees:
+            dit("épreuve {} non lancée (« {} » n'est pas verte)".format(ep.id, bloquees[ep.id]))
             resultats.append({"id": ep.id, "statut": "non_lance",
                               "detail": "non lancée : « {} » n'est pas verte".format(bloquees[ep.id])})
             continue

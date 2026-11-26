@@ -48,7 +48,11 @@ def main(argv=None, sy=None) -> int:
     o, sy = options(argv), sy or Systeme()
     env, maintenant = sy.env, datetime.now().astimezone()
     depot = Path(env.get("FUMEE_DEPOT", DEPOT_DEFAUT))
-    sortie_defaut = depot / "docs" / "fumee"
+    # 26/11 (1re vraie fumée F1) : un ESSAI (ou une sélection d'épreuves) avait écrit sa page et
+    # son historique dans docs/fumee du checkout de David. Ses pages vont désormais hors du dépôt ;
+    # seule une fumée de référence écrit dans docs/fumee (et seule elle peut y être commitée).
+    essai = o.essai or bool(o.epreuves)
+    sortie_defaut = (Path.home() / "tmp/didier/fumee-essais") if essai else depot / "docs" / "fumee"
     sortie = Path(env.get("FUMEE_SORTIE", sortie_defaut))
     etat = Path(env.get("FUMEE_ETAT", Path.home() / ".local/state/didier-fumee"))
     brut = Path(env.get("FUMEE_BRUT", Path.home() / "tmp/didier/fumee-brut"))
