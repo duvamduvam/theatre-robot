@@ -470,7 +470,7 @@ def test_valeurs_attendues_gravees_en_tete_du_script():
     assert gravees == {"ATTENDU_NAMESPACE": "5", "ATTENDU_CATALOGUE": "4", "ATTENDU_PARLE": "3",
                        "ATTENDU_EDITION": "13", "ATTENDU_MACHINES": "5", "ATTENDU_AUDIO": "10", "ATTENDU_CORPS_SUR": "25",
                        "ATTENDU_CHANTIERS": "21",
-                       "ATTENDU_A1": "14", "ATTENDU_OBJETS": "13", "ATTENDU_CONVERSATION": "19"}
+                       "ATTENDU_A1": "17", "ATTENDU_OBJETS": "13", "ATTENDU_CONVERSATION": "19"}
     assert re.search(r"^RTF_MIN_DEFAUT=0\.8$", src, re.M)
 
 
