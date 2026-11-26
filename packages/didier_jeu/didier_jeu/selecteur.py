@@ -19,6 +19,10 @@ Sorties (tuples, dans l'ordre où elles doivent partir) :
   ("intention", dict)          -> jeu/intention (latché)
   ("journal", type, payload)   -> fichier JSONL + jeu/journal ; payload porte
                                   TOUJOURS un `pourquoi` non vide (porte T6)
+  ("corps_etat", texte)        -> corps/etat (latché) : l'état du corps encodé par
+                                  theatre_contrats.corps_etat (lot S2a, 27/11) ; produit
+                                  par rafraichir_corps(now), que le node appelle avant
+                                  chaque vidage
 
 RÈGLES GRAVÉES (chiffres : config/reglages.yaml ; tests : test/test_selecteur.py,
 test/test_ordres_propositions.py pour le lot S1) :
@@ -89,6 +93,20 @@ test/test_ordres_propositions.py pour le lot S1) :
   au-delà de durees_s.deplacement_accuse : réponse « no_reply ». Un
   déplacement REFUSÉ ou sans suite n'a pas eu lieu : ses périodes
   réfractaires et sa fatigue sont RENDUES.
+- ÉTAT DU CORPS (lot S2a, 27/11, spec-S2 §2) : le sélecteur est le SEUL écrivain de
+  corps/etat. Il RASSEMBLE les faits (route, corps sûr, séance et arrêt vocal, verrou,
+  reprise et sa cause, dernier geste, tableau des objets) ; la marche, l'unique cause et
+  la phrase sont décidées par theatre_contrats.corps_etat (pur, gravé). Republié à chaque
+  changement et au plus tard toutes les 2 s ; un changement de marche ou de cause est une
+  ligne `corps_etat` du journal (son `pourquoi` = la phrase) ;
+- RÉPONSE À TOUTE DEMANDE DE DAVID (lot S2a, spec-S2 §3) : go, stop, pause et gestes de la
+  bouche d'origine « david » ont TOUS une réponse sur chat_move_reply — « accepted », ou
+  « dropped » + raison (« arrete » avec le genre du verrou, « sans_superviseur », « pas_ici »,
+  « hors_atteinte », « corps_sur »). Un stop n'est jamais refusé ni retardé : sa réponse part
+  APRÈS lui. Celle d'un geste accepté part AVANT sa transmission au régisseur : elle précède
+  toujours le verdict du régisseur (la bouche actuelle prend le `name` de la DERNIÈRE réponse
+  acceptée — l'inverse le lui ferait perdre). Corps sûr VERROUILLÉ (ou pas encore armé) : go
+  et gestes de David refusés « corps_sur », ni relayés ni transmis ;
 - Supprimés au lot S1 : les mots-clés du metteur en scène (sur_situation, et
   l'indication de mission_state) — « fragiles, sans identifiant ni retour »
   (étude improvisation) ; jeu/proposition les remplacera (I3).
@@ -100,6 +118,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from didier_jeu import arbre, phrases
+from theatre_contrats import corps_etat
 from theatre_contrats import objets as tableau_objets
 from didier_jeu.phrases import n as num
 from didier_jeu.offres import Offre, Offres
@@ -214,6 +233,18 @@ class Selecteur:
         self.plus_lent_fin: Optional[float] = None
         self.piste_regardee: Optional[str] = None
         self.reaction_due: List[dict] = []         # [{"cible", "kind", "t"}] : offres nées sans réponse
+        # État du corps (lot S2a) : faits que seul le sélecteur rassemble. `corps_sur` : dernier
+        # corps_sur/etat LISIBLE (None = jamais reçu) ; `seance_connue` : rehearsal/state lu
+        # (sinon l'état du corps est INCONNU, jamais deviné) ; `arret_vocal` : son badge.
+        self.corps_sur: Optional[corps_etat.CorpsSur] = None
+        self.seance_connue = False
+        self.arret_vocal = False
+        # Le dernier geste (spec-S2 §2) : {"demande", "etat", "raison", "parcouru_m", "t"} — dit
+        # pendant corps_etat.GESTE_MEMOIRE_S après son issue.
+        self.geste_corps: Optional[dict] = None
+        self._corps_cle: Optional[tuple] = None        # clé du dernier corps/etat publié
+        self._corps_t: Optional[float] = None          # et son instant
+        self._corps_marche_cause: Optional[tuple] = None   # dernière (marche, cause) journalisée
         self._t_prec: Optional[float] = None
         self._now = 0.0
         self._decision_tick: Optional[Decision] = None
@@ -286,7 +317,9 @@ class Selecteur:
         stop / go / pause relayés à la réception (relayer_stop, relayer_go, pause_regard) ;
         un geste d'origine « david » est un ORDRE, exécuté tout de suite (_ordre_bouche) ;
         une proposition de geste (« didier ») n'est pas retenue en S1 (aucun producteur :
-        la bouche ne décide aucun mouvement, §8 bis) — le chat le sait."""
+        la bouche ne décide aucun mouvement, §8 bis) — le chat le sait.
+        Lot S2a : toute demande lue « david » a sa réponse (`valeur` telle quelle : la bouche
+        apparie par égalité) ; cf. docstring de module, RÉPONSE À TOUTE DEMANDE DE DAVID."""
         demande, origine = lire(valeur)
         if origine == DAVID:
             # Règle de la 3e relecture : TOUTE action de David efface l'ordre suspendu, acceptée
@@ -294,20 +327,34 @@ class Selecteur:
             self._oublier_suspendu("David demande autre chose à Didier")
         if demande == STOP:
             self.relayer_stop(origine, "bouche", now)
+            if origine == DAVID:
+                self._repondre(valeur, "accepted")      # APRÈS le stop : il n'attend jamais
             return
         if demande == PAUSE and origine is None:
             # Une pause contient un arrêt : d'origine inconnue, c'est un stop (lu « david »,
             # comme le stop d'origine inconnue — sens sûr).
             self.relayer_stop(DAVID, "bouche", now)
+            self._repondre(valeur, "accepted")
             return
         if demande == GO and origine is None:
             self._journal("refus", f"« go » d'origine inconnue ({valeur!r}) : ignoré", source="bouche")
             return
         if demande == GO:
-            self.relayer_go(origine, "bouche", now)
+            if origine == DAVID and self._corps_verrouille():
+                self._refus_corps_sur(valeur, "« go »")
+                return
+            genre = self.relayer_go(origine, "bouche", now)
+            if origine == DAVID:
+                if genre is None:
+                    self._repondre(valeur, "accepted")
+                else:
+                    self._repondre(valeur, "dropped", "arrete", verrou=genre)
             return
         if demande == PAUSE:
             self.pause_regard(origine, now)
+            if origine == DAVID:
+                # Toujours tenue : en marche il s'arrête pour regarder, déjà arrêté il regarde.
+                self._repondre(valeur, "accepted")
             return
         if not isinstance(demande, dict) or demande.get("cmd") not in COMMANDES_REGISSEUR:
             self._journal("refus", f"demande de mouvement incompréhensible ({valeur!r})", source="bouche")
@@ -319,28 +366,55 @@ class Selecteur:
                           "non retenue — la bouche ne décide aucun mouvement", source="bouche",
                           demande=demande, code="pas_retenu", origine=origine)
             return
+        if self._corps_verrouille():
+            self._refus_corps_sur(demande, phrases.demande(demande), geste=True, now=now)
+            return
         if self._hors_atteinte(demande, now):
             return
-        self._ordre_bouche(demande, now)
+        self._ordre_bouche(demande, now, repondre=True)
 
-    def _ordre_bouche(self, demande: dict, now: float, t_ordre: Optional[float] = None) -> None:
+    def _repondre(self, demande, effet: str, code=None, **extra) -> None:
+        """Réponse du sélecteur à une demande de la bouche (rehearsal/chat_move_reply)."""
+        self.sorties.append(("chat_move_reply", reponse_bouche(demande, effet, code, **extra)))
+
+    def _corps_verrouille(self) -> bool:
+        """Le corps sûr est VERROUILLÉ ou pas encore armé : rien ne bougera (lot S2a). Jamais
+        reçu : on ne refuse rien (ses règles s'appliquent quand même aux roues)."""
+        return self.corps_sur is not None and self.corps_sur.verrouille
+
+    def _refus_corps_sur(self, demande, quoi: str, geste: bool = False, now: float = 0.0) -> None:
+        """Go ou geste de David sous le corps sûr verrouillé : ni relayé ni transmis, dit au chat."""
+        self._repondre(demande, "dropped", "corps_sur")
+        if geste:
+            self._noter_geste(demande, corps_etat.GESTE_REFUSE, "corps_sur", 0.0, now)
+        self._journal("refus", f"David voulait {quoi}, mais non : son corps est verrouillé par sécurité "
+                      f"({self.corps_sur.etat}{' ' + self.corps_sur.cause if self.corps_sur.cause else ''})",
+                      source="bouche", demande=demande, code="corps_sur")
+
+    def _ordre_bouche(self, demande: dict, now: float, t_ordre: Optional[float] = None,
+                      repondre: bool = False) -> None:
         """Un geste demandé par David à la bouche (tour humain ou continuation de SA tâche) :
         un ORDRE (lot S1, étude assainissement règle 1). Il part TOUT DE SUITE, sans score ni
         hystérésis, et n'est refusé que sous le verrou de David ou sans superviseur (l'objet
         hors d'atteinte est déjà refusé par _hors_atteinte, la sécurité par le régisseur).
         L'action engagée cède (un ordre passe devant) ; un ordre macro de la console en
         attente aussi (le plus récent de David gagne). Fatigue et réfractaire « deplacement »
-        sont COMPTÉS (ses propres envies attendront) et rendus si le régisseur refuse."""
+        sont COMPTÉS (ses propres envies attendront) et rendus si le régisseur refuse.
+        `repondre` (lot S2a) : la demande vient de la bouche à l'instant — « accepted » part AVANT
+        la transmission (cf. docstring de module) ; une ré-émission R4 n'a personne à qui répondre."""
         code = texte = None
         if self.verrou_david:
             code, texte = "arrete", "il est arrêté jusqu'au go de David"
         elif self.superviseur_absent():
             code, texte = "sans_superviseur", "personne ne surveille (page fermée)"
         if code is not None:
-            self.sorties.append(("chat_move_reply", reponse_bouche(demande, "dropped", code)))
+            self._repondre(demande, "dropped", code, **({"verrou": self.verrou} if code == "arrete" else {}))
+            self._noter_geste(demande, corps_etat.GESTE_REFUSE, code, 0.0, now)
             self._journal("refus", f"David voulait {phrases.demande(demande)}, mais non : {texte}",
                           source="bouche", demande=demande, code=code)
             return
+        if repondre:
+            self._repondre(demande, "accepted")
         c = Candidat("bouche", demande.get("objet") or demande.get("cmd"), None, None, {"demande": demande})
         self.ordre = None
         self._oublier_suspendu("David donne un nouvel ordre")
@@ -385,6 +459,7 @@ class Selecteur:
         code = "hors_atteinte" if o.ici else "pas_ici"
         self.sorties.append(("chat_move_reply", reponse_bouche(demande, "dropped", code, distance_m=o.distance_m,
                                                                cote=o.cote)))
+        self._noter_geste(demande, corps_etat.GESTE_REFUSE, code, 0.0, now)
         ou = tableau_objets.ou_dit(o) or "on ne sait pas où"
         self._journal("refus", f"il voulait {phrases.demande(demande)}, mais non : « {o.nom} » est {ou}, "
                       f"hors d'atteinte", source="bouche", demande=demande, code=code, id=o.id)
@@ -503,14 +578,26 @@ class Selecteur:
     def sur_seance(self, etat, now: float) -> None:
         """rehearsal/state (latché, régisseur) : {"seance": "attente"|"en_cours"|"terminee", …}.
         Seule « en_cours » est une séance ; tout le reste (illisible compris) = hors séance
-        (règle R2, sens sûr : pas d'initiative)."""
+        (règle R2, sens sûr : pas d'initiative). Lot S2a : `arret_vocal` (badge du régisseur)
+        est retenu pour l'état du corps ; illisible -> état du corps INCONNU."""
         en = isinstance(etat, dict) and etat.get("seance") == SEANCE_EN_COURS
+        self.seance_connue = isinstance(etat, dict) and isinstance(etat.get("seance"), str)
+        self.arret_vocal = isinstance(etat, dict) and etat.get("arret_vocal") is True
         if en != self.en_seance:
             if not en:
                 self._oublier_suspendu("la séance est finie")
             self.en_seance = en
             self._journal("seance", "séance lancée : il peut prendre des initiatives" if en else
                           "hors séance : aucune initiative de mouvement (ni lubie, ni approche)", en_seance=en)
+
+    def sur_corps_sur(self, payload, now: float) -> None:
+        """corps_sur/etat (latché, nœud corps_sur, publié à chaque changement) : retenu pour
+        l'état du corps et le refus « corps_sur » (lot S2a). Illisible : le précédent est gardé."""
+        lu = corps_etat.lire_corps_sur(payload)
+        if lu is None:
+            self._journal("corps_sur", f"état du corps sûr illisible ({str(payload)[:80]!r}) : le précédent est gardé")
+            return
+        self.corps_sur = lu
 
     def sur_goto_result(self, payload, now: float) -> None:
         e = self.en_cours
@@ -528,6 +615,13 @@ class Selecteur:
             return
         # La reprise après le déplacement (le sien ou un geste de la bouche) s'arme dans _finir.
         raison = payload.get("reason") if isinstance(payload, dict) else None
+        parcouru = tableau_objets.nombre_fini(payload.get("travelled")) if isinstance(payload, dict) else None
+        if resultat == "arrived":
+            self._issue_geste(corps_etat.GESTE_ARRIVE, None, parcouru, now)
+        else:
+            # Corps sûr verrouillé pendant le geste : c'est LUI la raison (spec-S2 §2, exemple 5).
+            self._issue_geste(corps_etat.GESTE_ABANDONNE, "corps_sur" if self._corps_verrouille()
+                              else (raison or resultat), parcouru, now)
         self._finir(now, "il est arrivé" if resultat == "arrived" else f"il a renoncé ({raison or resultat})")
 
     def sur_move_reply(self, payload, now: float) -> None:
@@ -548,6 +642,7 @@ class Selecteur:
             e.nom_ordre = nom if isinstance(nom, str) else None
             return
         raison = payload.get("reason")
+        self._issue_geste(corps_etat.GESTE_REFUSE, effet if isinstance(effet, str) else None, 0.0, now)
         self._rendre_refractaires(e)
         self._finir(now, f"le régisseur refuse ({effet}{' : ' + raison if raison else ''}) : "
                          "il n'a pas bougé")
@@ -601,7 +696,7 @@ class Selecteur:
             reste = " ; David a déjà posé le verrou : il attend son go" if self.verrou_david else ""
             self._journal("relais_stop", f"Didier « stop » → il s'arrête tout de suite, sans verrou{reste}",
                           source=source, origine=origine)
-            self._armer_reprise(now, "il s'est arrêté de lui-même")
+            self._armer_reprise(now, "il s'est arrêté de lui-même", genre=corps_etat.DIDIER_STOP)
             if self.reprise is not None and (suspendu or garde) is not None:
                 self.reprise["ordre"] = suspendu or garde
                 if suspendu is not None:
@@ -632,29 +727,30 @@ class Selecteur:
             self._annuler(now, "« regarde » : il s'arrête pour regarder")
         self._journal("pause_regard", "« regarde » → il s'arrête et regarde, il repartira seul", arrete=False,
                       origine=origine)
-        self._armer_reprise(now, "regard terminé")
+        self._armer_reprise(now, "regard terminé", genre=corps_etat.DIDIER_PAUSE)
         self.pourquoi_courant = "il s'arrête pour regarder ; il repartira seul"
         self._publier_intention(now)
 
-    def relayer_go(self, origine: str, source: str, now: float) -> None:
+    def relayer_go(self, origine: str, source: str, now: float) -> Optional[str]:
         """« go » d'origine « david » (console, tour humain) : lève le verrou, repart tout de
         suite (sans score : sinon il mourait au réfractaire de 10 s), la reprise devient
         caduque. D'origine « didier » : ignoré et journalisé — la bouche n'en émet plus en S1,
-        et ce que Didier a arrêté, seule SA reprise le relance."""
+        et ce que Didier a arrêté, seule SA reprise le relance.
+        -> le genre du verrou qui le REFUSE (lot S2a : la réponse « arrete » le dit), sinon None."""
         if origine != DAVID:
             self._journal("refus", "« go » proposé par Didier : ignoré (seule sa reprise, après le "
                           "silence, le relance)", source=source, origine=origine)
-            return
+            return None
         if source != "console" and self.verrou == VERROU_CONSOLE:
             # R3 : ce que David a arrêté à la CONSOLE, seul son GO console le relance — un « en
             # route » interprété par la bouche ne suffit pas.
             self._journal("refus", "« go » dit à Didier, mais David a arrêté à la console : seul un GO "
                           "console le relance", source=source, origine=origine)
-            return
+            return VERROU_CONSOLE
         if source != "console" and self.verrou == VERROU_ROUTE:
             self._journal("refus", "« go » dit à Didier, mais David a coupé la route : elle se relance par la "
                           "route (ou le GO console)", source=source, origine=origine)
-            return
+            return VERROU_ROUTE
         self.verrou = None
         self.reprise = None
         self._arret_reviens = False
@@ -662,6 +758,7 @@ class Selecteur:
         self._journal("relais_go", f"David « go » ({source}) → il repart", source=source, origine=origine)
         self.pourquoi_courant = "David « go »"
         self._publier_intention(now)
+        return None
 
     def _ignorer(self, cible: Optional[str], now: float) -> None:
         cible = cible or self.courante[1] or (self.en_cours.candidat.cible if self.en_cours else None)
@@ -810,6 +907,52 @@ class Selecteur:
             return None
         return self.piste_regardee if self.piste_regardee == p.id else p.id
 
+    # ================================================================ état du corps (lot S2a, 27/11)
+    def _noter_geste(self, demande, etat: str, raison: Optional[str], parcouru_m: Optional[float],
+                     now: float) -> None:
+        """Le dernier geste (spec-S2 §2) devient `demande` : en cours, ou refusé avant de partir."""
+        self.geste_corps = {"demande": demande, "etat": etat, "raison": raison, "parcouru_m": parcouru_m, "t": now}
+
+    def _issue_geste(self, etat: str, raison: Optional[str], parcouru_m: Optional[float], now: float) -> None:
+        """Issue du geste EN COURS (arrivé, abandonné, refusé par le régisseur) ; la première dite
+        gagne (une annulation suivie de l'issue « cancelled » du même ordre ne la réécrit pas)."""
+        g = self.geste_corps
+        if g is not None and g["etat"] == corps_etat.GESTE_EN_COURS:
+            g.update(etat=etat, raison=raison, parcouru_m=None if parcouru_m is None else round(parcouru_m, 1), t=now)
+
+    def etat_corps(self, now: float) -> corps_etat.EtatCorps:
+        """Les FAITS du sélecteur, tels quels, donnés à la règle unique (corps_etat.etablir)."""
+        e, rep, g = self.en_cours, self.reprise, self.geste_corps
+        geste = None
+        if g is not None and (g["etat"] == corps_etat.GESTE_EN_COURS
+                              or now - g["t"] <= corps_etat.GESTE_MEMOIRE_S + EPS):
+            geste = corps_etat.Geste(g["demande"], g["etat"], g["raison"], g["parcouru_m"])
+        return corps_etat.etablir(corps_etat.Faits(
+            route_state=self.route_state, corps_sur=self.corps_sur, seance_connue=self.seance_connue,
+            en_seance=self.en_seance, arret_vocal=self.arret_vocal, verrou=self.verrou,
+            reprise=rep["genre"] if rep is not None else None,
+            reprise_cible=rep["cible"] if rep is not None else None,
+            repart_dans_s=rep["delai"] - (now - rep["silence_depuis"]) if rep is not None else None,
+            geste_en_cours=e is not None and e.candidat.deplacement and e.candidat.action != "repartir",
+            geste=geste, ici=corps_etat.ici_depuis(self.tableau(now))))
+
+    def rafraichir_corps(self, now: float) -> None:
+        """Republie corps/etat s'il a CHANGÉ (corps_etat.cle) ou s'il date de PERIODE_MAX_S ; un
+        changement de marche ou de cause est une ligne `corps_etat` du journal — c'est elle qui
+        dit « il a décidé » ou « David a arrêté ». Appelé par le node avant chaque vidage : après
+        un stop, l'état part dans le même lot de sorties que lui, derrière lui."""
+        etat = self.etat_corps(now)
+        cle = corps_etat.cle(etat)
+        if cle == self._corps_cle and self._corps_t is not None \
+                and now - self._corps_t < corps_etat.PERIODE_MAX_S - EPS:
+            return
+        if (etat.marche, etat.cause) != self._corps_marche_cause:
+            self._corps_marche_cause = (etat.marche, etat.cause)
+            self._journal("corps_etat", etat.phrase, marche=etat.marche, cause=etat.cause,
+                          qui_relance=etat.qui_relance)
+        self._corps_cle, self._corps_t = cle, now
+        self.sorties.append(("corps_etat", corps_etat.encoder(etat, int(now * 1000))))
+
     # ================================================================ tick
     def tick(self, now: float) -> Optional[Decision]:
         self._now = now
@@ -855,7 +998,8 @@ class Selecteur:
                           + (", regard tourné vers elle" if regard else " (sans regard : position inconnue)")
                           + f", pas de refus en {self.r.get('lubie.delai_refus_s'):g} s → il s'arrête",
                           cible=e.candidat.cible, kind="lubie", regard=regard)
-            self._armer_reprise(now, f"lubie « {e.candidat.cible} »", cible=e.candidat.cible)
+            self._armer_reprise(now, f"lubie « {e.candidat.cible} »", cible=e.candidat.cible,
+                                genre=corps_etat.DIDIER_LUBIE)
             self.pourquoi_courant = f"arrêté devant « {e.candidat.cible} »" + (
                 f" ; repartir ? (après {phrases.s(self.reprise['delai'])} de silence)" if self.reprise else "")
             self._publier_intention(now)
@@ -866,6 +1010,7 @@ class Selecteur:
                 # Le régisseur s'est tu (sa réponse aurait accusé ou fini) : le
                 # chat doit le savoir, sinon Didier affirme le geste.
                 self.sorties.append(("chat_move_reply", reponse_bouche(e.etape, "no_reply", None)))
+            self._issue_geste(corps_etat.GESTE_REFUSE, "sans_suite", 0.0, now)
             self._finir(now, "le régisseur n'a pas donné suite (voir son journal) : il n'a pas bougé")
             return
         if now >= e.fin_prevue - EPS:
@@ -874,6 +1019,7 @@ class Selecteur:
     def _etape_suivante(self, e: Engagement, now: float) -> None:
         etape = e.etapes.pop(0)
         e.accuse, e.t_etape, e.etape, e.nom_ordre = False, now, etape, None
+        self._noter_geste(etape, corps_etat.GESTE_EN_COURS, None, None, now)
         self.sorties.append(("chat_move", etape))
 
     def _rendre_refractaires(self, e: Engagement) -> None:
@@ -892,12 +1038,13 @@ class Selecteur:
 
     # ================================================================ la reprise (une seule, lot S1)
     def _armer_reprise(self, now: float, pourquoi: str, cible: Optional[str] = None,
-                       apres_geste: bool = False) -> None:
+                       apres_geste: bool = False, *, genre: str) -> None:
         """Didier vient de s'arrêter de lui-même (cf. docstring de module, UNE SEULE REPRISE) :
         il repartira seul après D s de SILENCE, D tiré MAINTENANT dans [reprise.min_s,
         reprise.max_s] par le générateur semé (self.hasard), au dixième de seconde. Un nouvel
         arrêt retire. Jamais sous le verrou de David (règle du 31/10). `apres_geste` : arrêt
-        de fin de déplacement — si la route a repris entre-temps, rien à relancer."""
+        de fin de déplacement — si la route a repris entre-temps, rien à relancer. `genre` : la
+        cause de l'arrêt dans l'état du corps (corps_etat.REPRISES, lot S2a)."""
         if self.verrou_david:
             return
         if apres_geste and not self.en_seance:
@@ -908,7 +1055,7 @@ class Selecteur:
             return
         delai = round(self.hasard.uniform(self.r.get("reprise.min_s"), self.r.get("reprise.max_s")), 1)
         self.reprise = {"t": now, "silence_depuis": now, "delai": delai, "pourquoi": pourquoi,
-                        "cible": cible, "apres_geste": apres_geste, "ordre": None}
+                        "cible": cible, "apres_geste": apres_geste, "ordre": None, "genre": genre}
         self._journal("reprise_armee", f"{pourquoi} → il repartira après {phrases.s(delai)} de silence",
                       cause=pourquoi, delai_s=delai, cible=cible)
 
@@ -985,7 +1132,9 @@ class Selecteur:
             # hors de sa route : il la reprendra seul. Refusé sans l'avoir quittée (« on ») :
             # rien n'a changé, une reprise déjà armée (lubie, stop de Didier) reste.
             self._armer_reprise(now, "geste terminé" if pourquoi == "il est arrivé" else "geste échoué",
-                                apres_geste=True)
+                                apres_geste=True, genre=corps_etat.GESTE_FINI)
+        # Fin sans issue dite (échéance du geste) : abandonné. Une issue déjà notée reste.
+        self._issue_geste(corps_etat.GESTE_ABANDONNE, "timeout", None, now)
         self.en_cours = None
         self.courante = (RIEN, None)
         self.pourquoi_courant = f"{phrases.action(fini.action, fini.cible, fini.detail)} : {pourquoi}"
@@ -998,6 +1147,7 @@ class Selecteur:
     def _annuler(self, now: float, pourquoi: str) -> None:
         """Interruption imposée (stop, ignore, va_la) : PAS une décision (porte T1)."""
         fini = self.en_cours.candidat
+        self._issue_geste(corps_etat.GESTE_ABANDONNE, "annule", None, now)
         self.en_cours = None
         self.courante = (RIEN, None)
         phrase = f"{pourquoi} → il arrête de {phrases.action(fini.action, fini.cible, fini.detail)}"

@@ -130,7 +130,10 @@ TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chai
                   "deploy_sha", "mission_state",
                   # Lot A0-5 (24/11) : l'état du corps sûr (latché, JSON du nœud corps_sur :
                   # etat, cause, zone, d_min_m, vue…), affiché sur la page scène.
-                  "corps_sur/etat"}
+                  "corps_sur/etat",
+                  # Lot S2a (27/11) : l'état du corps écrit par le sélecteur de jeu (latché, JSON
+                  # theatre_contrats.corps_etat) — sa `phrase` en tête de la colonne Jeu.
+                  "corps/etat"}
 
 # Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
 # clients (message "feed"), contrairement à `state` qui ne porte que la

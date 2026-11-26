@@ -450,7 +450,9 @@ o = ordres[0] if ordres else None
 verdict(o is not None and norm(o[1].get("objet")) in NOMS_TABLE and o[0] - tb <= 20,
         f"B1 la bouche demande aller_voir table basse (à {m.get('dist_b')} m) : {o[1] if o else 'rien'}")
 rep = next(((t, v) for t, v in msgs("rehearsal/chat_move_reply", tb or math.inf, fin_b)
-            if isinstance(v, dict) and o and v.get("demande") == o[1]), None)
+            # S2a (27/11) : le jeu répond aussi (« accepted », source jeu) et AVANT le régisseur ;
+            # B2 juge la réponse du RÉGISSEUR, la seule qui porte le `name` de la manœuvre.
+            if isinstance(v, dict) and o and v.get("demande") == o[1] and v.get("source") == "director"), None)
 verdict(rep is not None and rep[1].get("source") == "director" and rep[1].get("effect") == "accepted"
         and rep[0] - tb <= 30, f"B2 accepté par le régisseur : {rep[1] if rep else 'aucune réponse'}")
 arr = next(((t, v) for t, v in msgs("route_goto_result", tb or math.inf, fin_b)

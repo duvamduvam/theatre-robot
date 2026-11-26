@@ -75,8 +75,9 @@ def test_seance_du_15_11_elephant_transmis_apres_un_refus():
               "il n'a pas bougé"),
         (11.1, "faire ce qu'il a dit (faire le tour de « elephant ») : le régisseur refuse (no_tour) : "
                "il n'a pas bougé")]
-    # Le régisseur a répondu lui-même au chat : le jeu n'ajoute rien.
-    assert reponses(out) == []
+    # Le régisseur a répondu lui-même au chat (son verdict) ; lot S2a (27/11, spec-S2 §3) : le jeu
+    # dit seulement qu'il a transmis, à la réception (avant : rien).
+    assert reponses(out) == [(1.0, {"demande": GRUE, "effect": "accepted", "reason": None, "source": "jeu"}), (11.0, {"demande": ELEPHANT, "effect": "accepted", "reason": None, "source": "jeu"})]
 
 
 def test_refus_rend_refractaires_et_fatigue():
@@ -97,16 +98,21 @@ def test_ordre_redemande_juste_apres_un_geste_reussi_part_tout_de_suite():
            (7.0, bouche(ELEPHANT))]
     out = jouer_regisseur(sel, 12.0, evs, arrive)
     assert moves(out) == [(1.0, {"cmd": "aller_voir", "objet": "banc"}), (7.0, ELEPHANT)]
-    assert reponses(out) == [] and journal(out, "refus") == []
+    # Lot S2a (spec-S2 §3) : chaque ordre transmis est « accepted » par le jeu (avant : rien).
+    assert reponses(out) == [(1.0, {"demande": {"cmd": "aller_voir", "objet": "banc"}, "effect": "accepted", "reason": None, "source": "jeu"}),
+                             (7.0, {"demande": ELEPHANT, "effect": "accepted", "reason": None, "source": "jeu"})]
+    assert journal(out, "refus") == []
 
 
 def test_demande_sous_verrou_repond_dropped_arrete():
     out = jouer_regisseur(fabriquer(pools={}), 6.0, [(0.0, marche), (1.0, bouche("stop")), (2.0, bouche(ELEPHANT))],
                           refus_no_tour)
     assert moves(out) == [(1.0, STOP_DAVID)]
-    # Refusé À LA RÉCEPTION (avant le lot S1 : au bout du TTL de l'offre, 5,0 s).
-    assert reponses(out) == [(2.0, {"demande": ELEPHANT, "effect": "dropped", "reason": "arrete",
-                                    "source": "jeu"})]
+    # Refusé À LA RÉCEPTION (avant le lot S1 : au bout du TTL de l'offre, 5,0 s). Lot S2a (spec-S2
+    # §3) : le stop de David a lui aussi sa réponse, et le refus dit le GENRE du verrou (voix).
+    assert reponses(out) == [(1.0, {"demande": "stop", "effect": "accepted", "reason": None, "source": "jeu"}),
+                             (2.0, {"demande": ELEPHANT, "effect": "dropped", "reason": "arrete",
+                                    "source": "jeu", "verrou": "voix"})]
 
 
 def test_proposition_de_geste_de_didier_non_retenue_et_dite_au_chat():
@@ -123,8 +129,10 @@ def test_regisseur_muet_repond_no_reply_a_4_1_s():
     sel = fabriquer(pools={})
     out = jouer_regisseur(sel, 6.0, [(0.0, marche), (1.0, bouche(ELEPHANT))], lambda d: None)
     assert moves(out) == [(1.0, ELEPHANT)]
-    # Parti à 1,0 s ; muet au-delà de durees_s.deplacement_accuse (3 s) -> 4,1 s.
-    assert reponses(out) == [(4.1, {"demande": ELEPHANT, "effect": "no_reply", "reason": None,
+    # Parti à 1,0 s (« accepted » du jeu, lot S2a) ; muet au-delà de durees_s.deplacement_accuse
+    # (3 s) -> 4,1 s.
+    assert reponses(out) == [(1.0, {"demande": ELEPHANT, "effect": "accepted", "reason": None, "source": "jeu"}),
+                             (4.1, {"demande": ELEPHANT, "effect": "no_reply", "reason": None,
                                     "source": "jeu"})]
     assert sel.derniers == {} and sel.pulsions.fatigue == 0.0     # il n'a pas bougé
 
@@ -134,7 +142,8 @@ def test_reponse_acceptee_accuse_sans_route_state():
         return {"demande": demande, "effect": "accepted", "reason": None, "source": "director"}
     sel = fabriquer(pools={})
     out = jouer_regisseur(sel, 10.0, [(0.0, marche), (1.0, bouche(ELEPHANT))], accepte)
-    assert journal(out, "fin") == [] and reponses(out) == []      # pas de faux « sans suite »
+    assert journal(out, "fin") == []                               # pas de faux « sans suite »
+    assert reponses(out) == [(1.0, {"demande": ELEPHANT, "effect": "accepted", "reason": None, "source": "jeu"})]           # seule la transmission (lot S2a)
     assert sel.en_cours is not None and sel.en_cours.accuse is True
 
 
@@ -151,10 +160,13 @@ def test_reponse_etrangere_ignoree(rep):
     assert sel.vider_sorties() == []
 
 
-def test_go_de_la_bouche_jamais_de_reponse():
+def test_go_et_stop_de_la_bouche_ont_chacun_leur_reponse():
+    """Lot S2a (27/11, spec-S2 §3, test 3) — remplace « go de la bouche : jamais de réponse » (S1) :
+    le sélecteur répond désormais à TOUTE demande de David, go et stop compris."""
     out = jouer(fabriquer(pools={}), 0.0, 6.0, [(0.0, marche), (1.0, bouche("stop")), (2.0, bouche("go")),
                                         (3.0, bouche("go"))])
-    assert reponses(out) == []
+    assert [(t, r["demande"], r["effect"], r["reason"]) for t, r in reponses(out)] == [
+        (1.0, "stop", "accepted", None), (2.0, "go", "accepted", None), (3.0, "go", "accepted", None)]
 
 
 def test_reponse_bouche_code_inconnu_refuse():
@@ -216,7 +228,9 @@ def test_seance_2121_tour_pendant_aller_voir_puis_arrivee_de_l_ancien():
     assert [(t, p["pourquoi"]) for t, p in journal(out, "fin")] == [
         (11.1, "faire ce qu'il a dit (faire le tour de « elephant ») : le régisseur refuse (no_tour) : "
                "il n'a pas bougé")]
-    assert journal(out, "refus") == [] and reponses(out) == []
+    assert journal(out, "refus") == []
+    # Lot S2a (spec-S2 §3) : chaque ordre transmis est « accepted » par le jeu (avant : rien).
+    assert reponses(out) == [(1.0, {"demande": AV_ELEPHANT, "effect": "accepted", "reason": None, "source": "jeu"}), (11.0, {"demande": ELEPHANT, "effect": "accepted", "reason": None, "source": "jeu"})]
 
 
 def test_issue_d_un_autre_ordre_ignoree_pendant_l_engagement():

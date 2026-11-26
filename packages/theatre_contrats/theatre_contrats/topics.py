@@ -78,6 +78,14 @@ JEU_REPERTOIRE = 'jeu/repertoire'
 # bouche, la réflexion, le sélecteur de jeu et la régie, qui désignent un objet par son `id`.
 SCENE_OBJETS = 'scene/objets'
 
+# ---------------------------------------------------------------- état du corps (lot S2a, 27/11)
+# StringTime LATCHÉ (qos.latched() des DEUX côtés, profondeur 1), écrit par le sélecteur de jeu
+# (didier_jeu, SEUL écrivain) : ce que le corps fait et pourquoi, en une phrase — forme, règle et
+# encodage dans theatre_contrats/corps_etat.py, spec docs/spec-S2-le-corps-raconte.md §2.
+# Republié à chaque changement et au plus tard toutes les 2 s. Lu par la page scène (et, au lot
+# S2b, par la bouche et la réflexion).
+CORPS_ETAT = 'corps/etat'
+
 # ---------------------------------------------------------------- catalogue + version (lot L1c)
 # StringTime LATCHÉ (qos.latched() des DEUX côtés), publié par catalogue_node
 # (didier_web) : msg = JSON de l'objet des 6 familles {faces, audios, animations,

@@ -6,7 +6,8 @@ pistes de personnes et les pulsions alimentent ce choix ; chaque décision est
 journalisée avec son `pourquoi`. Spec :
 `docs/spec-A1-selecteur-de-jeu.md` (décisions §8 du 02/11), **révisée par
 `docs/spec-S1-ordres-propositions.md`** (lot S1, 25/11 : ordres et propositions,
-verrou de David seul, une seule reprise) ; le pourquoi se trouve dans
+verrou de David seul, une seule reprise), **puis par `docs/spec-S2-le-corps-raconte.md`**
+(lot S2a, 27/11 : le sélecteur écrit `corps/etat` et répond à toute demande de David) ; le pourquoi se trouve dans
 `docs/etude-autonomie-improvisation.md` §4.1-4.2 et `docs/etudes/etude-assainissement.md` §4.
 
 **SIM-ONLY** : `jeu_node` refuse de démarrer hors `ROS_DOMAIN_ID=43`. Il utilise
@@ -23,11 +24,12 @@ par des demandes au régisseur (`jeu/chat_move`), qui les arbitre, puis par
 | `jeu/console` | page scène → sélecteur | StringTime JSON `{"cmd": "va_la"\|"joue_avec"\|"ignore"\|"reviens"\|"plus_lent"\|"stop"\|"go", "cible"?, "presence": true}` ; la page envoie `{"presence": true}` à 2 Hz (battement) |
 | `jeu/intention` | sélecteur → page | **latché**, republié toutes les 0,5 s : `{"action", "cible", "pourquoi", "t_ms", "fin_prevue_ms", "reste_ms", "verrou", "jauges", "proposition"?}` ; `"action": "rien"` au repos, jamais vide |
 | `jeu/chat_move` | sélecteur → régisseur | même contrat que `rehearsal/chat_move` (lot S1) : marche `{"cmd": "stop"\|"go", "origine": "david"\|"didier"}`, geste avec son `origine` ; les reprises et lubies du sélecteur sont `didier`, ce qui vient de David garde `david`. Le régisseur y est remappé par `rehearsal.launch.py jeu:=true` |
-| `rehearsal/chat_move_reply` | sélecteur → chat_node (et régisseur → tous) | `{"demande", "effect", "reason", "source": "jeu"}` : demande de GESTE de la bouche **non transmise** (`dropped` + code `arrete`, `sans_superviseur`, `pas_ici`, `hors_atteinte`, `pas_retenu` pour une proposition d'origine `didier`, `degrade`) ou transmise mais **régisseur muet** 3 s (`no_reply`). Le sélecteur écoute aussi les réponses `source: "director"` : `accepted` accuse l'étape, un refus finit l'engagement tout de suite (15/11) |
+| `rehearsal/chat_move_reply` | sélecteur → chat_node (et régisseur → tous) | `{"demande", "effect", "reason", "source": "jeu"}` : depuis le lot S2a, une réponse à **TOUTE** demande d'origine `david` de la bouche — go, stop, pause, gestes : `accepted` (relayée ; un geste : transmis, réponse partie AVANT lui, donc avant le verdict du régisseur) ou `dropped` + code (`arrete` avec `"verrou"`: `console`\|`route`\|`voix`, `sans_superviseur`, `pas_ici`, `hors_atteinte`, `corps_sur`) ; un stop n'est jamais refusé et sa réponse part APRÈS lui. Aussi : `pas_retenu` (proposition de geste d'origine `didier`, seule demande `didier` qui a une réponse), `degrade` (mode dégradé, gestes seulement), `no_reply` (régisseur muet 3 s). Le sélecteur écoute aussi les réponses `source: "director"` : `accepted` accuse l'étape, un refus finit l'engagement tout de suite (15/11) |
+| `corps/etat` | sélecteur → page scène (S2b : bouche, réflexion) | **latché**, profondeur 1 : l'état du corps (`theatre_contrats.corps_etat`, spec-S2 §2) — `marche`, UNE `cause`, `qui_relance`, `repart_dans_s`, `geste`, `ici`, `phrase` (≤ 300 car.). Republié à chaque changement et au plus tard toutes les 2 s (`Selecteur.rafraichir_corps`, appelé par le node avant chaque vidage) ; rien en mode dégradé |
 | `jeu/journal` | sélecteur → page (+ fichier) | une ligne JSONL (format boîte noire `robot.diagnostic.journal`) par message |
 | `animation` | sélecteur → animations_node | nom de séquence (JSON chaîne) |
 | `look` | sélecteur → gaze_follower | `{"angle_deg", "hold_ms"}` (« regarder », spec-aller-voir §7.1) |
-| entrées | | `vision/person_box`, `rehearsal/poi_event`, `rehearsal/chat_move` (la bouche, lue par `didier_rehearsal.contracts.lire_chat_move` : anciennes formes = `david`), `chat_transcript` (rôle `david` = parole entendue), `route_state`, `route_state_cause`, `route_goto_result`, `rehearsal/chat_move_reply`, `animation_state`, `scene/objets` (le tableau des objets, latché, lot O1 — remplace `rehearsal/objects` et la pose vérité terrain) |
+| entrées | | `vision/person_box`, `rehearsal/poi_event`, `rehearsal/chat_move` (la bouche, lue par `didier_rehearsal.contracts.lire_chat_move` : anciennes formes = `david`), `chat_transcript` (rôle `david` = parole entendue), `route_state`, `route_state_cause`, `route_goto_result`, `rehearsal/chat_move_reply`, `animation_state`, `scene/objets` (le tableau des objets, latché, lot O1 — remplace `rehearsal/objects` et la pose vérité terrain), `rehearsal/state` (latché : séance et arrêt vocal), `corps_sur/etat` (latché, lot S2a) |
 
 Les noms `jeu/*` sont définis dans `theatre_contrats.topics`. Ceux du régisseur
 viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
@@ -159,8 +161,8 @@ Le tableau est PÉRIMÉ après `theatre_contrats.objets.PEREMPTION_S` (3 s) sans
 l'oubli et le retour sont journalisés (type `tableau`).
 
 **Réponse à la bouche** (15/11, séance « fais le tour de l'éléphant ») : toute
-demande de GESTE de la bouche a une issue que le chat apprend. Transmise, c'est
-le régisseur qui répond. Non transmise (offre morte au bout de ses 3 s), une
+demande de GESTE de la bouche a une issue que le chat apprend. Transmise, le
+sélecteur répond `accepted` (lot S2a) et le régisseur rend son verdict. Non transmise (offre morte au bout de ses 3 s), une
 ligne `refus` dit pourquoi et `rehearsal/chat_move_reply` porte `dropped` + le
 code. Sinon Didier affirmait un geste qui n'avait pas eu lieu. Un déplacement
 **refusé** par le régisseur, ou resté sans réponse, n'a pas eu lieu : ses
@@ -168,6 +170,19 @@ périodes réfractaires et sa fatigue sont **rendues**. Une nouvelle demande de 
 bouche interrompt celle en cours, même sur le même objet (le plus récent ordre de
 David gagne). Seule l'issue de l'ordre accepté (`name` de la réponse du régisseur)
 finit l'étape ; les autres sont journalisées `issue_ignoree`.
+
+**L'état du corps** (lot S2a, 27/11, spec-S2 §2) : le sélecteur est le SEUL écrivain de
+`corps/etat`. Il rassemble les faits (`route_state`, `corps_sur/etat`, `rehearsal/state` et son
+arrêt vocal, genre du verrou, cause de la reprise armée, dernier geste, tableau des objets) ; la
+règle — priorité corps sûr > verrou de David > geste en cours > reprise > hors séance > en
+route — et la phrase sont dans `theatre_contrats.corps_etat` (pur, textes gravés). Une source
+jamais reçue ou illisible : état INCONNU (« Tu ne sais pas où en est ton corps. »). Chaque
+changement de `marche` ou de `cause` est une ligne `corps_etat` du journal, dont le `pourquoi`
+est la phrase. Corps sûr VERROUILLÉ (ou en démarrage) : un go ou un geste de David est refusé
+`corps_sur`, ni relayé ni transmis (un go relayé lèverait l'arrêt de David pour un départ
+surprise au réarmement) ; pas en zone ARRET (un pivot pour se dégager doit rester possible).
+Hors séance, un ordre de David part toujours (S1, R1/R5) : le sélecteur ne répond jamais
+`hors_seance`. Tests : `test/test_corps_etat_jeu.py`.
 
 **Metteur en scène** : plus de mots-clés depuis le lot S1 (`sur_situation`,
 l'indication de `mission_state` et `metteur_en_scene.*` supprimés — « fragiles,

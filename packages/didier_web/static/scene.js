@@ -888,6 +888,13 @@ const temoinPresence = document.createElement("span");
 // total : premier reste_ms vu pour une échéance (fin_prevue_ms) = durée de la
 // barre ; l'intention ne porte pas la durée totale de l'action.
 const jeu = { intention: null, recuA: 0, piste: null, objets: "", fin: null, total: 1 };
+// État du corps (lot S2a, 27/11) : corps/etat, latché, republié par le sélecteur au plus tard
+// toutes les 2 s, et son `t_ms` change à chaque publication. Le `state` du pont arrive toutes
+// les 2 s : un brut inchangé depuis CORPS_MUET_MS (péremption de 3 s du contrat + une période du
+// state) veut dire un écrivain mort -> la phrase du contrat pour l'état inconnu, jamais l'ancienne.
+const CORPS_MUET_MS = 5000;
+const CORPS_INCONNU = "Tu ne sais pas où en est ton corps.";
+const corps = { brut: null, vuA: 0 };
 
 function lireJson(brut) {
   try {
@@ -914,11 +921,27 @@ function afficherJeu(msg) {
     $("jeu-proposition").hidden = !intention.proposition;
     afficherJauges(intention.jauges || {});
   }
+  afficherCorps(valeurTopic(msg.topics, "corps/etat"));
   const brutObjets = valeurTopic(msg.topics, "rehearsal/objects");
   if (brutObjets !== null && brutObjets !== jeu.objets) {
     jeu.objets = brutObjets;
     remplirCibles();
   }
+}
+
+function afficherCorps(brut) {
+  // « Corps : <phrase> » (spec S2 §2) : la phrase telle quelle, par textContent. Jamais reçu, ou
+  // muet : l'état inconnu (une page ouverte avant le sélecteur ne doit rien inventer).
+  if (brut !== null && brut !== corps.brut) {
+    corps.brut = brut;
+    corps.vuA = Date.now();
+  }
+  const e = lireJson(corps.brut);
+  const frais = e !== null && typeof e === "object" && typeof e.phrase === "string"
+    && Date.now() - corps.vuA <= CORPS_MUET_MS;
+  const ligne = $("jeu-corps");
+  ligne.textContent = "Corps : " + (frais ? e.phrase : CORPS_INCONNU);
+  ligne.title = frais ? (e.marche || "") + " · " + (e.cause || "") : "corps/etat muet ou jamais reçu";
 }
 
 function afficherJauges(jauges) {

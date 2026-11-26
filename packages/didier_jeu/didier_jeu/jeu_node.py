@@ -18,11 +18,17 @@ Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
         animation_state (latché), scene/objets (latché, le tableau des objets du
         lot O1 : regard d'une lubie vers l'objet, cible d'un « va là », refus d'un
         geste de la bouche vers un objet hors d'atteinte — plus de pose ni de carte ici ;
-        PÉRIMÉ par le sélecteur après theatre_contrats.objets.PEREMPTION_S sans republication).
+        PÉRIMÉ par le sélecteur après theatre_contrats.objets.PEREMPTION_S sans republication),
+        corps_sur/etat (latché, lot S2a : l'état du corps sûr, pour corps/etat et le refus
+        « corps_sur » d'un ordre de David).
 Écrit : jeu/chat_move (-> régisseur, remappé par rehearsal.launch.py jeu:=true),
-        rehearsal/chat_move_reply (-> chat_node : demande de geste de la bouche
-        non transmise ou restée sans réponse, 15/11), animation (nom de séquence), look (« regarder », gaze_follower),
-        jeu/intention (latché, republié toutes les 0,5 s), jeu/journal (+ JSONL).
+        rehearsal/chat_move_reply (-> chat_node : réponse à TOUTE demande de David — go,
+        stop, pause, gestes —, lot S2a ; geste non transmis ou resté sans réponse, 15/11),
+        animation (nom de séquence), look (« regarder », gaze_follower),
+        jeu/intention (latché, republié toutes les 0,5 s), jeu/journal (+ JSONL),
+        corps/etat (latché, lot S2a : l'état du corps, SEUL écrivain ; republié à chaque
+        changement et au plus tard toutes les 2 s — Selecteur.rafraichir_corps, appelé avant
+        chaque vidage ; rien en mode dégradé : ses lecteurs le tiennent alors pour inconnu).
 Lot S1 (25/11) : plus d'abonnement à chat_situation ni à mission_state — les mots-clés
 du metteur en scène sont supprimés (spec-S1 §2). Paramètre `graine` : semence du
 générateur qui tire la durée de silence des reprises (-1 = tirée au démarrage),
@@ -127,6 +133,8 @@ def main(args=None):
             self.pub_look = self.create_publisher(StringTime, LOOK_TOPIC, 10)
             self.pub_intention = self.create_publisher(StringTime, topics.JEU_INTENTION, qos.latched())
             self.pub_journal = self.create_publisher(StringTime, topics.JEU_JOURNAL, 10)
+            # État du corps (lot S2a) : LATCHÉ des deux côtés, profondeur 1 (qos.latched()).
+            self.pub_corps = self.create_publisher(StringTime, topics.CORPS_ETAT, qos.latched())
 
             if demarrage is not None:
                 # Bugs joués (lot I0) : inventaire journalisé au démarrage, refus compris ; le
@@ -157,6 +165,9 @@ def main(args=None):
             self.create_subscription(StringTime, topics.ANIMATION_STATE, self._json(self.sel.sur_animation_state),
                                      qos.latched())
             self.create_subscription(StringTime, topics.SCENE_OBJETS, self._on_scene_objets, qos.latched())
+            # Corps sûr (lot S2a) : LATCHÉ des deux côtés (corps_sur publie TRANSIENT_LOCAL depth 1).
+            self.create_subscription(StringTime, topics.CORPS_SUR_ETAT, self._json(self.sel.sur_corps_sur),
+                                     qos.latched())
             self._t_intention = 0.0
             self.create_timer(tick_s, self._tick)
             self._vider()
@@ -222,6 +233,14 @@ def main(args=None):
             self._vider()
 
         def _vider(self):
+            # État du corps (lot S2a) : recalculé avant CHAQUE vidage, pour partir dans le même lot
+            # que ce qui l'a changé (après un stop : derrière lui). Absent en mode dégradé.
+            rafraichir = getattr(self.sel, "rafraichir_corps", None)
+            if rafraichir is not None:
+                try:
+                    rafraichir(time.monotonic())
+                except Exception as e:  # noqa: BLE001 — l'état du corps ne fait jamais tomber le relais
+                    self.get_logger().error(f"corps/etat : {e!r}")
             for sortie in self.sel.vider_sorties():
                 kind = sortie[0]
                 if kind == "chat_move":
@@ -237,6 +256,8 @@ def main(args=None):
                     self._t_intention = time.monotonic()
                     self.pub_intention.publish(StringTime(msg=json.dumps(sortie[1], ensure_ascii=False),
                                                           time=0, anim=False))
+                elif kind == "corps_etat":
+                    self.pub_corps.publish(StringTime(msg=sortie[1], time=0, anim=False))
                 elif kind == "journal":
                     self._journaliser(sortie[1], sortie[2])
 

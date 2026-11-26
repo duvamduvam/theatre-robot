@@ -340,6 +340,11 @@
 .jeu-ligne h2 { margin: 0; }
 .jeu-action { font-size: 1.35em; }
 .jeu-cible { font-size: 1.05em; opacity: 0.85; }
+/* Lot S2a : « Corps : … », la phrase de corps/etat (jusqu'à 300 caractères : elle passe à la ligne). */
+.jeu-corps {
+  font-size: 0.9em;
+  margin: 0.15rem 0;
+}
 .jeu-pourquoi {
   font-size: 0.85em;
   color: var(--texte-doux);

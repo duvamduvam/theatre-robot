@@ -64,7 +64,8 @@ def test_aller_voir_table_basse_proche_part():
     # (jusqu'à 4 s : sans régisseur dans ce banc, le « no_reply » tomberait à 4,1 s)
     out = jouer(fabriquer(pools={}), 0.0, 4.0, [(0.0, scene_x14), (1.0, lambda s, t: s.sur_chat_move_bouche(av, t))])
     assert moves(out) == [(1.0, av)]                  # un ordre : parti à la réception (lot S1)
-    assert reponses(out) == []
+    # Lot S2a (spec-S2 §3) : « accepted » du jeu à la transmission (avant : rien).
+    assert reponses(out) == [(1.0, {"demande": av, "effect": "accepted", "reason": None, "source": "jeu"})]
 
 
 def test_sans_id_la_regie_juge():

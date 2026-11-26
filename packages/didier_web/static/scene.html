@@ -280,7 +280,7 @@
       <!-- Panneau « Jeu » (lot A1, 02/11) : le SÉLECTEUR DE JEU (didier_jeu, SIM-ONLY).
            Masqué tant que hello.rehearsal n'est pas vrai, comme la route : le serveur
            refuse de toute façon jeu/console hors domaine 43. Lit jeu/intention (latché,
-           via `state`), rehearsal/objects (latché) et le flux jeu/journal ; écrit
+           via `state`), corps/etat (latché, lot S2a), rehearsal/objects (latché) et le flux jeu/journal ; écrit
            jeu/console (ordres macro + battement « presence » à 2 Hz tant que l'onglet
            est visible et qu'on a la main). -->
       <section id="scene-jeu" class="scene-jeu scene-repetition" hidden>
@@ -292,6 +292,9 @@
             <span id="jeu-verrou" class="badge badge-alerte" hidden>arrêté jusqu'au go</span>
             <span id="jeu-proposition" class="badge badge-alerte" hidden>repartir ?</span>
           </div>
+          <!-- Lot S2a (27/11) : l'état du corps (corps/etat, latché, écrit par le sélecteur) — la
+               MÊME phrase que lit la bouche. Muet plus de 5 s : « ne sait pas » (jamais un vieil état). -->
+          <div id="jeu-corps" class="jeu-corps">Corps : —</div>
           <div id="jeu-pourquoi" class="jeu-pourquoi">sélecteur pas lancé ? (ros2 run didier_jeu jeu_node)</div>
           <div class="jeu-barre" title="temps restant de l'action en cours"><div id="jeu-barre-temps"></div></div>
         </div>

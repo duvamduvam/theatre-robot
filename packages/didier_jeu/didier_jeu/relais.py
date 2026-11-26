@@ -20,8 +20,9 @@ de la bouche y est refusée ET le chat le sait (réponse « dropped », code
 « degrade » : Didier ne doit jamais affirmer un geste qui n'a pas eu lieu).
 """
 from didier_rehearsal.contracts import (CHAT_MOVE_GO, CHAT_MOVE_ORIGINE_DAVID, CHAT_MOVE_ORIGINE_DIDIER,
-                                       CHAT_MOVE_PAUSE, CHAT_MOVE_REPLY_JEU_REASONS, CHAT_MOVE_REPLY_NO_REPLY,
-                                       CHAT_MOVE_STOP, lire_chat_move)
+                                       CHAT_MOVE_PAUSE, CHAT_MOVE_REPLY_ACCEPTED, CHAT_MOVE_REPLY_DROPPED,
+                                       CHAT_MOVE_REPLY_JEU_REASONS, CHAT_MOVE_REPLY_NO_REPLY,
+                                       CHAT_MOVE_REPLY_VERROUS, CHAT_MOVE_STOP, lire_chat_move)
 
 STOP, GO = CHAT_MOVE_STOP, CHAT_MOVE_GO
 # « Regarde ça » de la bouche (lot « texte raccord », 18/11) : arrêt bref puis reprise par le
@@ -54,19 +55,28 @@ def lire(valeur):
     return demande, origine
 
 
-def reponse_bouche(demande, effet: str, code, distance_m=None, cote=None) -> dict:
+def reponse_bouche(demande, effet: str, code, distance_m=None, cote=None, verrou=None) -> dict:
     """Payload de rehearsal/chat_move_reply émis par le JEU (contracts.
     CHAT_MOVE_REPLY_TOPIC) : la demande de la bouche telle quelle (le chat
-    apparie par égalité), « dropped » + code connu, ou « no_reply ».
+    apparie par égalité), « dropped » + code connu, « no_reply », ou — lot S2a (27/11) :
+    le sélecteur répond à TOUTE demande de David — « accepted » (sans code).
     `distance_m`, `cote` (codes « pas_ici » / « hors_atteinte », lu dans le tableau des
-    objets) : ajoutés au payload s'ils sont connus."""
-    if effet != CHAT_MOVE_REPLY_NO_REPLY and code not in CHAT_MOVE_REPLY_JEU_REASONS:
+    objets) : ajoutés au payload s'ils sont connus ; `verrou` (code « arrete ») : le genre
+    du verrou de David (VERROU_*), pour que Didier dise QUI le relance."""
+    if effet == CHAT_MOVE_REPLY_DROPPED and code not in CHAT_MOVE_REPLY_JEU_REASONS:
         raise ValueError(f"code de refus inconnu : {code!r}")
+    if effet not in (CHAT_MOVE_REPLY_ACCEPTED, CHAT_MOVE_REPLY_DROPPED, CHAT_MOVE_REPLY_NO_REPLY) \
+            or (effet != CHAT_MOVE_REPLY_DROPPED and code is not None):
+        raise ValueError(f"réponse hors contrat : {effet!r} / {code!r}")
+    if verrou is not None and (code != "arrete" or verrou not in CHAT_MOVE_REPLY_VERROUS):
+        raise ValueError(f"genre de verrou hors contrat : {verrou!r} (code {code!r})")
     out = {"demande": demande, "effect": effet, "reason": code, "source": "jeu"}
     if distance_m is not None:
         out["distance_m"] = distance_m
     if cote is not None:
         out["cote"] = cote
+    if verrou is not None:
+        out["verrou"] = verrou
     return out
 
 
