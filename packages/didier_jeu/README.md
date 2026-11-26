@@ -68,10 +68,16 @@ viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
    sa réception, sans passer par le score** — un arrêt n'est jamais refusé.
    **Origine `david`** (mot d'arrêt, console, STOP CONTENUS de la page) : il pose
    le **verrou de David**, seul verrou qui existe (lot S1 ; supprimé : le verrou à
-   deux sources console/bouche), à **deux genres** (R3, 25/11) : `console` (STOP
-   de la console, Route OFF par David — `route_state_cause = cmd`), levé par un GO
-   de la console **seulement** ; `voix` (mot d'arrêt), levé aussi par un `go` de
-   David en tour humain. **Origine `didier`** (le `marche: stop` du LLM, en tour
+   deux sources console/bouche), à **trois genres** (R3, 25-26/11) : `console`
+   (STOP de la console), levé par un GO de la console **seulement** ; `route`
+   (Route OFF par David — `route_state_cause = cmd`), levé quand la route revient à
+   `on` (ou par un GO console), jamais par un go vocal ; `voix` (mot d'arrêt), levé
+   aussi par un `go` de David en tour humain. Un ordre de David suspendu par un stop
+   de Didier n'est rejoué que s'il vise un objet (`aller_voir`, `tour_de` ; jamais
+   `avancer`/`tourner`), a moins de 60 s, passe les contrôles d'un ordre neuf, et
+   qu'aucun nouvel ordre de David n'est venu entre-temps. Un ordre console identique
+   reçu dans la seconde est ignoré ; « reviens » pendant une manœuvre l'annule d'abord
+   (`stop`) et ne relance qu'une fois l'annulation vue. **Origine `didier`** (le `marche: stop` du LLM, en tour
    humain ou en continuation) : il arrête, **sans verrou**, et la reprise s'arme ;
    pendant un geste de David, l'ordre est **suspendu** puis ré-émis à la reprise
    (R4). Un `go` d'origine `didier` est ignoré et journalisé. Il n'y a jamais de

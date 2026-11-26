@@ -22,9 +22,9 @@ ATTENDU = {
                       "regarder": 4.0, "deplacement": 10.0},
     "lubie": {"delai_refus_s": 3.0},
     # Lot S1 (25/11) : une seule reprise, silence tiré dans [10, 40] s (David, 24/11).
-    "reprise": {"min_s": 10.0, "max_s": 40.0},
+    "reprise": {"min_s": 10.0, "max_s": 40.0, "ordre_suspendu_max_s": 60.0},
     "superviseur": {"mode": "suppose", "silence_max_s": 1.0},
-    "console": {"ignore_s": 30.0, "joue_avec_s": 30.0,
+    "console": {"ignore_s": 30.0, "rebond_s": 1.0, "joue_avec_s": 30.0,
                 "plus_lent_s": 60.0, "plus_lent_facteur": 2.0},
     "approche": {"hauteur_max": 0.55},
     "poids": {"offre": 1.0, "pulsion": 0.6, "console": 1.5},

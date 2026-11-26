@@ -32,6 +32,10 @@ DAVID, DIDIER = CHAT_MOVE_ORIGINE_DAVID, CHAT_MOVE_ORIGINE_DIDIER
 # par un GO console seulement ; la VOIX (mot d'arrêt), levée aussi par un go de David en tour
 # humain (la bouche).
 VERROU_CONSOLE, VERROU_VOIX = "console", "voix"
+# Troisième genre (seconde relecture, 26/11) : la Route OFF de David, levée quand la route revient
+# à « on » (route_state) — jamais par un go vocal. Sans lui, OFF puis ON laissait un verrou
+# « console » fantôme : Didier roulait mais refusait tout.
+VERROU_ROUTE = "route"
 
 
 def marche(cmd: str, origine: str) -> dict:

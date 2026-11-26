@@ -1052,8 +1052,9 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   pas un arrêt de fin de geste : journal du jeu `reprise_annulee … hors séance`, R2).
 - **Ordres et propositions** (lot S1, 25/11, `docs/spec-S1-ordres-propositions.md`) :
   un mot d'arrêt (« stop », « arrête ») est un **ordre** de David : il verrouille
-  jusqu'à SON « go » (console, ou « en route » dit à Didier). Un STOP de la console
-  ou une Route OFF ne se lèvent QUE par le GO de la console (R3). Le « stop » que le
+  jusqu'à SON « go » (console, ou « en route » dit à Didier). Un STOP de la console ne
+  se lève QUE par le GO de la console ; une Route OFF se lève en remettant la route
+  ON (R3). Le « stop » que le
   LLM décide de lui-même (clé `marche`, tour humain ou continuation) est une
   **proposition** : Didier s'arrête, sans verrou, et repart seul après le silence —
   s'il exécutait un geste demandé par David, ce geste repart à la place (R4). Un

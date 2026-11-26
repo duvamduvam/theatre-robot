@@ -141,11 +141,13 @@ def test_go_de_la_bouche_ne_leve_pas_un_stop_de_david():
         (5.0, "« go » dit à Didier, mais David a arrêté à la console : seul un GO console le relance")]
 
 
-def test_r3_route_off_de_david_verrou_de_la_console():
+def test_r3_route_off_de_david_verrou_de_la_route_le_go_vocal_ne_le_leve_pas():
     sel = fabriquer(pools={})
     out = jouer(sel, 0.0, 6.0, [(0.0, marche), (1.0, lambda s, t: s.sur_route_cause("cmd", t)),
-                                (3.0, bouche(GO_DAVID))])
-    assert sel.verrou == "console" and marches(out) == []
+                                (1.0, lambda s, t: s.sur_route_state("off", t)), (3.0, bouche(GO_DAVID))])
+    assert sel.verrou == "route" and marches(out) == []
+    assert [p["pourquoi"] for _, p in journal(out, "refus")] == [
+        "« go » dit à Didier, mais David a coupé la route : elle se relance par la route (ou le GO console)"]
 
 
 def test_r3_mot_d_arret_leve_par_le_go_de_david_en_tour_humain():
@@ -352,3 +354,166 @@ def test_9_geste_sans_origine_est_un_ordre():
     out = jouer_regisseur(fabriquer(pools={}), 2.0, [(0.0, marche), (1.0, bouche(AV_ELEPHANT))], regisseur_2121)
     assert moves(out) == [(1.0, AV_ELEPHANT)]                      # relayé tel quel (le chat apparie)
     assert [p["pourquoi"] for _, p in journal(out, "ordre")] == ["David : aller voir « elephant » → il y va tout de suite"]
+
+
+# ================================================================ seconde relecture (26/11)
+def _off(s, t):
+    s.sur_route_cause("cmd", t)            # route_driver : la cause d'abord…
+    s.sur_route_state("off", t)            # … puis l'état
+
+
+def test_bloquant_route_off_puis_on_l_ordre_suivant_est_accepte():
+    """Route OFF puis ON par David sans GO console (ce que font A1 et CONV) : avant, un verrou
+    « console » fantôme restait, Didier roulait mais refusait tout. Le verrou « route » tombe au
+    retour de la route à « on »."""
+    sel = fabriquer(pools={})
+    out = jouer_regisseur(sel, 6.0, [(0.0, marche), (1.0, _off), (3.0, lambda s, t: s.sur_route_state("on", t)),
+                                     (4.0, bouche(AV_ELEPHANT_DAVID))], regisseur_2121)
+    assert moves(out) == [(4.0, AV_ELEPHANT_DAVID)] and sel.verrou is None
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "verrou")] == [
+        (1.0, "David a coupé la route → verrou de la route, levé quand il la remet"),
+        (3.0, "David a remis la route → verrou de la route levé")]
+
+
+def test_bloquant_le_on_latche_d_avant_le_off_ne_leve_rien():
+    sel = fabriquer(pools={})
+    jouer(sel, 0.0, 3.0, [(0.0, marche), (1.0, lambda s, t: s.sur_route_cause("cmd", t)),
+                          (1.5, lambda s, t: s.sur_route_state("on", t))])
+    assert sel.verrou == "route"
+
+
+def test_bloquant_un_stop_console_garde_son_verrou_apres_off_et_on():
+    sel = fabriquer(pools={})
+    out = jouer(sel, 0.0, 6.0, [(0.0, marche), (1.0, lambda s, t: s.sur_console({"cmd": "stop"}, t)),
+                                (2.0, _off), (3.0, lambda s, t: s.sur_route_state("on", t)),
+                                (4.0, bouche(AV_ELEPHANT_DAVID))])
+    assert sel.verrou == "console" and moves(out) == [(1.0, STOP_DAVID)]
+    assert [r["reason"] for _, r in reponses(out)] == ["arrete"]
+
+
+# ---------------------------------------------------------------- majeur 1 : jamais un ordre périmé
+def test_m1_tout_nouvel_ordre_de_david_efface_l_ordre_suspendu():
+    out = jouer_regisseur(fabriquer(pools={}), 25.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (3.0, bouche(STOP_DIDIER)),
+        (5.0, lambda s, t: s.sur_console({"cmd": "plus_lent"}, t))], regisseur_2121)
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (3.0, STOP_DIDIER), (20.1, GO_DIDIER)]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "ordre_suspendu")][-1] == (
+        5.0, "ordre de David suspendu oublié (aller voir « elephant ») : David donne un nouvel ordre")
+
+
+def test_m1_r2_hors_seance_la_reprise_precedente_tombe_aussi():
+    def arrivee(s, t):
+        s.sur_route_state("arrived", t)
+        s.sur_goto_result({"name": "elephant", "result": "arrived"}, t)
+    out = jouer_regisseur(fabriquer(pools={}), 60.0, [
+        (0.0, marche), (1.0, bouche(STOP_DIDIER)),                          # reprise armée : 18,1 s
+        (2.0, lambda s, t: s.sur_seance({"seance": "terminee", "arret_vocal": False}, t)),
+        (3.0, bouche(AV_ELEPHANT_DAVID)), (6.0, arrivee)], regisseur_2121)
+    assert marches(out) == [(1.0, STOP_DIDIER)]                            # jamais de go périmé
+
+
+def test_m1_ordre_suspendu_trop_ancien_abandonne():
+    paroles = [(float(k), lambda s, t: s.sur_parole("encore", t)) for k in range(5, 61, 5)]
+    out = jouer_regisseur(fabriquer(pools={}), 80.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (3.0, bouche(STOP_DIDIER))] + paroles, regisseur_2121)
+    # Dernière parole à 60 s : reprise à 77,1 s, l'ordre a 74,1 s (> 60) -> simple go.
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (3.0, STOP_DIDIER), (77.1, GO_DIDIER)]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "ordre_suspendu")][-1] == (
+        77.1, "ordre de David abandonné : trop ancien (aller voir « elephant », suspendu depuis plus de 60 s)")
+
+
+def test_m1_la_reemission_repasse_par_hors_atteinte():
+    from theatre_contrats.objets import Objet, Tableau
+    loin = Tableau((Objet(id="carte/elephant", nom="elephant", x=30.0, y=0.0, distance_m=30.0, azimut_deg=0.0,
+                          cote="devant", en_vue=False, atteignable=False),))
+    av = dict(AV_ELEPHANT_DAVID, id="carte/elephant")
+    # jouer : l'écrivain republie le tableau (ici, « loin » dès 10 s) ; sans régisseur, le geste
+    # n'est pas accusé, mais le stop de 3 s tombe avant les 3 s d'attente.
+    out = jouer(fabriquer(pools={}), 0.0, 25.0, [
+        (0.0, marche), (1.0, bouche(av)), (3.0, bouche(STOP_DIDIER)),
+        (10.0, lambda s, t: s.sur_tableau(loin, t))])
+    assert moves(out) == [(1.0, av), (3.0, STOP_DIDIER), (20.1, GO_DIDIER)]
+    assert [(t, r["reason"]) for t, r in reponses(out)] == [(20.1, "pas_ici")]
+
+
+def test_m1_un_geste_relatif_n_est_jamais_rejoue():
+    av = {"cmd": "avancer", "metres": 3.0, "origine": "david"}
+    out = jouer(fabriquer(pools={}), 0.0, 25.0, [(0.0, marche), (1.0, bouche(av)),
+                                                 (2.0, lambda s, t: s.sur_route_state("goto", t)),
+                                                 (3.0, bouche(STOP_DIDIER))])
+    assert moves(out) == [(1.0, av), (3.0, STOP_DIDIER), (20.1, GO_DIDIER)]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "ordre_suspendu")] == [
+        (3.0, "geste relatif non repris (avancer de 3.0 m) : il ne mènerait plus au même endroit")]
+
+
+# ---------------------------------------------------------------- majeur 2 : ordres de la console aussi
+def test_m2_un_ordre_console_est_suspendu_et_un_second_stop_le_garde():
+    av_banc = {"cmd": "aller_voir", "objet": "banc", "id": "carte/banc", "origine": "david"}
+    out = jouer_regisseur(fabriquer(pools={}), 40.0, [
+        (0.0, marche), (1.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t)),
+        (3.0, bouche(STOP_DIDIER)), (8.0, bouche(STOP_DIDIER))], regisseur_2121)
+    # Second stop : nouveau tirage (26,3 s) -> 34,3 s ; l'ordre (31 s d'âge) repart.
+    assert moves(out) == [(1.0, av_banc), (3.0, STOP_DIDIER), (8.0, STOP_DIDIER), (34.3, av_banc)]
+
+
+# ---------------------------------------------------------------- mineurs
+def test_mineur_la_reprise_attend_la_fin_d_un_deplacement():
+    sel = fabriquer(pools={})
+    out = jouer_regisseur(sel, 40.0, [(0.0, marche), (1.0, bouche(STOP_DIDIER)), (5.0, bouche(AV_ELEPHANT_DAVID))],
+                          regisseur_2121)
+    assert marches(out) == [(1.0, STOP_DIDIER)]                            # pas de go à 18,1 s : le geste roule
+    assert sel.en_cours is not None and sel.reprise is not None
+
+
+def test_mineur_un_stop_fait_tomber_l_ordre_console_pas_encore_parti():
+    # Un stop de Didier (sans verrou, donc rien d'autre ne retient l'ordre) : l'ordre reçu juste
+    # avant, pas encore parti, tombe — rien ne repart derrière un arrêt (sens sûr).
+    out = jouer(fabriquer(pools={}), 0.0, 4.0, [(0.0, marche),
+                                                (2.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t)),
+                                                (2.0, bouche(STOP_DIDIER))])
+    assert moves(out) == [(2.0, STOP_DIDIER)]
+
+
+def test_mineur_r2_la_fin_de_seance_desarme_la_reprise_apres_un_geste():
+    def arrivee(s, t):
+        s.sur_route_state("arrived", t)
+        s.sur_goto_result({"name": "elephant", "result": "arrived"}, t)
+    out = jouer_regisseur(fabriquer(pools={}), 40.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (5.0, arrivee),
+        (10.0, lambda s, t: s.sur_seance({"seance": "terminee", "arret_vocal": False}, t))], regisseur_2121)
+    assert marches(out) == []
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "reprise_annulee")] == [
+        (10.0, "la séance s'est arrêtée → il ne repartira pas de lui-même")]
+
+
+def test_mineur_l_ordre_console_passe_avant_la_reprise_du_meme_tick():
+    out = jouer(fabriquer(pools={}), 0.0, 20.0, [
+        (0.0, marche), (1.0, bouche(STOP_DIDIER)),
+        (18.1, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t))])
+    assert [(t, m) for t, m in moves(out) if t >= 18.0] == [
+        (18.1, {"cmd": "aller_voir", "objet": "banc", "id": "carte/banc", "origine": "david"})]
+
+
+def test_mineur_r6_rafale_le_meme_ordre_console_dans_la_seconde_est_ignore():
+    sel = fabriquer(pools={})
+    out = jouer(sel, 0.0, 4.0, [(0.0, marche),
+                                (1.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t)),
+                                (1.5, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t))])
+    assert [t for t, m in moves(out)] == [1.0]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "console") if p.get("doublon")] == [
+        (1.5, "David : va voir « banc » — reçu deux fois en moins de 1 s : le doublon est ignoré")]
+
+
+def test_mineur_reviens_pendant_un_geste_annule_la_manoeuvre_puis_go():
+    out = jouer_regisseur(fabriquer(pools={}), 8.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (1.5, lambda s, t: s.sur_route_state("goto", t)),
+        (4.0, lambda s, t: s.sur_console({"cmd": "reviens"}, t)),
+        (5.0, lambda s, t: s.sur_route_state("off", t))], regisseur_2121)       # le régisseur a annulé
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (4.0, STOP_DAVID), (5.0, GO_DAVID)]
+
+
+def test_mineur_reviens_sans_confirmation_go_au_bout_de_5_s():
+    out = jouer_regisseur(fabriquer(pools={}), 12.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (1.5, lambda s, t: s.sur_route_state("goto", t)),
+        (4.0, lambda s, t: s.sur_console({"cmd": "reviens"}, t))], regisseur_2121)
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (4.0, STOP_DAVID), (9.0, GO_DAVID)]

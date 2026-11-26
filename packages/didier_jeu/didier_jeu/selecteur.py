@@ -31,8 +31,11 @@ test/test_ordres_propositions.py pour le lot S1) :
   d'origine « didier » : AUCUN verrou, la reprise s'arme ; pendant un geste de
   David, l'ordre est SUSPENDU et ré-émis à la reprise (R4). Le verrou n'a qu'une
   source, David (supprimé : le verrou à deux sources console/bouche de la revue
-  A1), à deux GENRES (R3) : « console » (STOP console, Route OFF), levé par le GO
-  console seul ; « voix » (mot d'arrêt), levé aussi par un go de tour humain ;
+  A1), à trois GENRES (R3) : « console » (STOP console), levé par le GO console seul ;
+  « route » (Route OFF), levé quand la route revient à « on » ; « voix » (mot d'arrêt),
+  levé aussi par un go de tour humain. L'ordre suspendu (R4) n'est rejoué que s'il
+  vise un objet, a moins de reprise.ordre_suspendu_max_s, passe les contrôles d'un
+  ordre neuf, et qu'aucun nouvel ordre de David n'est venu (seconde relecture, 26/11) ;
 - « go » : d'origine « david » (console, tour humain) il lève le verrou et part
   tout de suite ; d'origine « didier » il est ignoré et journalisé (seule la
   reprise relance ce que Didier a arrêté) ;
@@ -102,14 +105,21 @@ from didier_jeu.phrases import n as num
 from didier_jeu.offres import Offre, Offres
 from didier_jeu.pistes import Pistes
 from didier_jeu.pulsions import Pulsions
-from didier_jeu.relais import (DAVID, DIDIER, GO, PAUSE, STOP, VERROU_CONSOLE, VERROU_VOIX, lire, marche,
-                               reponse_bouche)
+from didier_jeu.relais import (DAVID, DIDIER, GO, PAUSE, STOP, VERROU_CONSOLE, VERROU_ROUTE, VERROU_VOIX, lire,
+                               marche, reponse_bouche)
 from didier_rehearsal.rehearsal_state import SEANCE_EN_COURS
 from didier_jeu.repertoire import COMMANDES_REGISSEUR, commande
 from didier_jeu.scores import ARRET_DIDIER, RIEN, Candidat, Contexte, classer
 
 # Commandes de la console (spec §4), gravées avec la page scène.
 CONSOLE_CMDS = ("va_la", "joue_avec", "ignore", "reviens", "plus_lent", "stop", "go")
+# Gestes de David qu'un stop de Didier suspend puis REJOUE (R4) : ceux qui visent un objet. Les
+# gestes RELATIFS (avancer, tourner) ne se rejouent jamais : depuis une autre pose, ils
+# mèneraient ailleurs (seconde relecture, 26/11).
+GESTES_REJOUABLES = ("aller_voir", "tour_de")
+# « reviens » pendant une manœuvre : attente maximale (s) que le régisseur ait confirmé
+# l'annulation (route_state quitte « goto ») avant d'envoyer le « go ».
+REVIENS_ATTENTE_MAX_S = 5.0
 # Angle sous lequel « se tourner vers » une piste est inutile avant d'avancer (°).
 ANGLE_MIN_TOURNER_DEG = 5.0
 # Tolérance des comparaisons d'échéances : 5,6 − 5,0 vaut 0,5999… en flottant,
@@ -175,11 +185,13 @@ class Selecteur:
         self.derniere_spontanee: Optional[float] = None
         self.leader: Optional[str] = None
         self.leader_depuis = 0.0
-        # Verrou d'arrêt de DAVID SEUL (lot S1), à deux GENRES (règle R3, 25/11) : None (pas de
-        # verrou) | VERROU_CONSOLE (STOP de la console, Route OFF : levé par un GO console
-        # SEUL) | VERROU_VOIX (mot d'arrêt : levé par un go de David en tour humain ou par un
-        # GO console).
+        # Verrou d'arrêt de DAVID SEUL (lot S1), à trois GENRES (R3, 25-26/11) : None (pas de
+        # verrou) | VERROU_CONSOLE (STOP de la console : levé par un GO console SEUL) |
+        # VERROU_ROUTE (Route OFF : levé quand la route revient à « on », ou par un GO console) |
+        # VERROU_VOIX (mot d'arrêt : levé par un go de David en tour humain ou un GO console).
         self.verrou: Optional[str] = None
+        self._route_vue_off = False                # Route OFF : l'état « off » a-t-il été vu ?
+        self._dernier_ordre: Optional[tuple] = None  # (cmd, cible, t) : rebond des ordres console
         # Séance du régisseur (rehearsal/state, règle R2) : hors séance — ou état inconnu —
         # Didier ne prend AUCUNE initiative de mouvement (lubie, approche, reprise d'un arrêt
         # qu'il n'a pas posé).
@@ -321,6 +333,7 @@ class Selecteur:
             return
         c = Candidat("bouche", demande.get("objet") or demande.get("cmd"), None, None, {"demande": demande})
         self.ordre = None
+        self._oublier_suspendu("David donne un nouvel ordre")
         self._executer_ordre(c, now, f"David : {phrases.demande(demande)} → il y va tout de suite",
                              f"David demande : {phrases.demande(demande)}", source="bouche", demande=demande)
 
@@ -378,6 +391,7 @@ class Selecteur:
             return
         cible = payload.get("cible")
         cible = str(cible) if isinstance(cible, (str, int)) and str(cible) else None
+        self._oublier_suspendu("David donne un nouvel ordre")   # n'importe lequel (seconde relecture)
         if cmd == STOP:
             self.relayer_stop(DAVID, "console", now)
         elif cmd == GO:
@@ -425,6 +439,14 @@ class Selecteur:
         e = self.en_cours
         if e is not None and etat == "goto":
             e.accuse = True
+        if self.verrou == VERROU_ROUTE:
+            # La route revient à « on » APRÈS avoir été vue « off » (route_driver publie la cause
+            # avant l'état : l'ancien « on » latché ne lève rien) : David l'a relancée.
+            if etat == "off":
+                self._route_vue_off = True
+            elif etat == "on" and self._route_vue_off:
+                self.verrou = None
+                self._journal("verrou", "David a remis la route → verrou de la route levé", genre=VERROU_ROUTE)
 
     def sur_parole(self, texte, now: float) -> None:
         """Une parole ENTENDUE (chat_transcript, rôle david : ce que Didier a
@@ -438,9 +460,11 @@ class Selecteur:
 
     def sur_route_cause(self, cause, now: float) -> None:
         """route_state_cause (latché, régisseur) : « cmd » = David a coupé la
-        route — traité comme un STOP de la console (règle R3) : verrou « console »,
-        levé par un GO console seulement ; reprise désarmée, lubie en attente
-        annulée (revue A1, bloquant 3). « boot » : rien."""
+        route — verrou « route » (R3, seconde relecture du 26/11 : route_driver publie
+        la cause à chaque `off` et RIEN au `on`, un verrou « console » restait donc
+        posé après OFF/ON), levé quand la route revient à « on » ; un STOP console
+        posé avant garde le sien. Reprise désarmée, lubie en attente annulée (revue
+        A1, bloquant 3). « boot » : rien."""
         if cause != "cmd":
             return
         e = self.en_cours
@@ -448,10 +472,11 @@ class Selecteur:
             self._annuler(now, "David a coupé la route")
         self._desarmer_reprise("David a coupé la route")
         self.ordre = None
-        if self.verrou != VERROU_CONSOLE:
-            self.verrou = VERROU_CONSOLE
-            self._journal("verrou", "David a coupé la route → verrou de la console, levé par son GO",
-                          genre=VERROU_CONSOLE)
+        if self.verrou not in (VERROU_CONSOLE, VERROU_ROUTE):
+            self.verrou = VERROU_ROUTE
+            self._route_vue_off = self.route_state == "off"
+            self._journal("verrou", "David a coupé la route → verrou de la route, levé quand il la remet",
+                          genre=VERROU_ROUTE)
 
     def sur_seance(self, etat, now: float) -> None:
         """rehearsal/state (latché, régisseur) : {"seance": "attente"|"en_cours"|"terminee", …}.
@@ -527,9 +552,17 @@ class Selecteur:
         self.ordre = None
         self.leader = None
         e = self.en_cours
-        # R4 : un stop de Didier pendant un geste de David SUSPEND l'ordre (ré-émis à la reprise).
-        suspendu = (e.candidat.detail["demande"] if origine == DIDIER and e is not None
-                    and e.candidat.action == "bouche" and e.origine == DAVID else None)
+        # R4 : un stop de Didier pendant un ORDRE de David engagé (geste de la bouche ou de la
+        # console) le SUSPEND ; un second stop de Didier garde l'ordre déjà suspendu.
+        garde = self.reprise.get("ordre") if (origine == DIDIER and self.reprise is not None) else None
+        suspendu = None
+        if (origine == DIDIER and e is not None and e.origine == DAVID and e.candidat.deplacement
+                and e.etape is not None):
+            if e.etape.get("cmd") in GESTES_REJOUABLES:
+                suspendu = {"demande": e.etape, "t": now}
+            else:
+                self._journal("ordre_suspendu", f"geste relatif non repris ({phrases.demande(e.etape)}) : il ne "
+                              "mènerait plus au même endroit", demande=e.etape)
         if e is not None and (e.candidat.deplacement or e.candidat.action == "lubie"):
             self._annuler(now, f"stop de {qui}")
         if origine == DAVID:
@@ -544,10 +577,11 @@ class Selecteur:
             self._journal("relais_stop", f"Didier « stop » → il s'arrête tout de suite, sans verrou{reste}",
                           source=source, origine=origine)
             self._armer_reprise(now, "il s'est arrêté de lui-même")
-            if suspendu is not None and self.reprise is not None:
-                self.reprise["ordre"] = suspendu
-                self._journal("ordre_suspendu", f"ordre de David suspendu ({phrases.demande(suspendu)}) : "
-                              "il le reprendra après le silence", demande=suspendu)
+            if self.reprise is not None and (suspendu or garde) is not None:
+                self.reprise["ordre"] = suspendu or garde
+                if suspendu is not None:
+                    self._journal("ordre_suspendu", f"ordre de David suspendu ({phrases.demande(suspendu['demande'])}) "
+                                  ": il le reprendra après le silence", demande=suspendu["demande"])
             self.pourquoi_courant = f"Didier « stop » : arrêté{reste or ', il repartira seul'}"
         self._publier_intention(now)
 
@@ -587,10 +621,14 @@ class Selecteur:
                           "silence, le relance)", source=source, origine=origine)
             return
         if source != "console" and self.verrou == VERROU_CONSOLE:
-            # R3 : ce que David a arrêté à la CONSOLE (ou par Route OFF), seul son GO console le
-            # relance — un « en route » interprété par la bouche ne suffit pas.
+            # R3 : ce que David a arrêté à la CONSOLE, seul son GO console le relance — un « en
+            # route » interprété par la bouche ne suffit pas.
             self._journal("refus", "« go » dit à Didier, mais David a arrêté à la console : seul un GO "
                           "console le relance", source=source, origine=origine)
+            return
+        if source != "console" and self.verrou == VERROU_ROUTE:
+            self._journal("refus", "« go » dit à Didier, mais David a coupé la route : elle se relance par la "
+                          "route (ou le GO console)", source=source, origine=origine)
             return
         self.verrou = None
         self.reprise = None
@@ -645,6 +683,14 @@ class Selecteur:
     def _ordre(self, ordre: dict, now: float, pourquoi: str) -> None:
         """Ordre macro de la console (va là, reviens) : refusé tout de suite s'il ne peut pas
         partir, sinon il PART AU PROCHAIN TICK (_ordre_console), sans score (règle R6)."""
+        cle = (ordre["cmd"], ordre.get("cible"))
+        if self._dernier_ordre is not None and self._dernier_ordre[:2] == cle \
+                and now - self._dernier_ordre[2] < self.r.get("console.rebond_s") - EPS:
+            self._journal("console", f"{pourquoi} — reçu deux fois en moins de "
+                          f"{self.r.get('console.rebond_s'):g} s : le doublon est ignoré", cmd=ordre["cmd"],
+                          cible=ordre.get("cible"), doublon=True)
+            return
+        self._dernier_ordre = cle + (now,)
         refus = self._refus_deplacement(now, ordre=True)
         if refus:
             self._journal("refus", f"{pourquoi} — impossible : {refus}", source="console", cmd=ordre["cmd"],
@@ -660,6 +706,8 @@ class Selecteur:
         o, self.ordre = self.ordre, None
         if o is None:
             return
+        if o["action"] == "repartir" and self._reviens_annule_la_manoeuvre(o, now):
+            return
         refus = self._refus_deplacement(now, ordre=True)
         piste = self.pistes.courante(now)
         if refus is None and o["action"] == "approcher":
@@ -674,6 +722,26 @@ class Selecteur:
         detail = {"azimut": piste.azimut} if o["action"] == "approcher" else {}
         self._executer_ordre(Candidat(o["action"], o["cible"], None, None, detail), now, o["pourquoi"],
                              o["pourquoi"], source="console", cmd=o["cmd"])
+
+    def _reviens_annule_la_manoeuvre(self, o: dict, now: float) -> bool:
+        """« reviens » pendant une manœuvre (geste en cours, route « goto ») : la reprendre au
+        régisseur exige de l'ANNULER d'abord — son seul moyen est le « stop », qui publie
+        « cancel » sur route_goto ; le « go » ne relance la route qu'une fois l'état sorti de
+        « goto » (GotoPolicy.rejoin_allowed). Le sélecteur envoie donc « stop » (origine david :
+        c'est l'ordre de David, le go de David le lèvera) puis garde l'ordre jusqu'à ce que la
+        route quitte « goto » (au plus REVIENS_ATTENTE_MAX_S). -> True si l'ordre attend."""
+        if "annule_t" not in o:
+            e = self.en_cours
+            if e is None or not e.candidat.deplacement or e.candidat.action == "repartir" \
+                    or self.route_state != "goto":
+                return False
+            self.sorties.append(("chat_move", marche(STOP, DAVID)))
+            self._annuler(now, "David : reviens → la manœuvre en cours est annulée")
+            o["annule_t"] = now
+        if self.route_state == "goto" and now - o["annule_t"] < REVIENS_ATTENTE_MAX_S - EPS:
+            self.ordre = o
+            return True
+        return False
 
     def _refus_deplacement(self, now: float, ordre: bool = False) -> Optional[str]:
         """Pourquoi un déplacement ne peut pas partir (None = il peut). `ordre` : un ordre de
@@ -787,7 +855,9 @@ class Selecteur:
         if self.verrou_david:
             return
         if apres_geste and not self.en_seance:
-            # R2 : l'arrêt de fin de geste n'est pas le sien — hors séance, David relance.
+            # R2 : l'arrêt de fin de geste n'est pas le sien — hors séance, David relance. La
+            # reprise précédente et son ordre suspendu tombent aussi (rien de périmé ne repart).
+            self.reprise = None
             self._journal("reprise_annulee", f"{pourquoi}, hors séance → il ne repartira pas de lui-même")
             return
         delai = round(self.hasard.uniform(self.r.get("reprise.min_s"), self.r.get("reprise.max_s")), 1)
@@ -795,6 +865,32 @@ class Selecteur:
                         "cible": cible, "apres_geste": apres_geste, "ordre": None}
         self._journal("reprise_armee", f"{pourquoi} → il repartira après {phrases.s(delai)} de silence",
                       cause=pourquoi, delai_s=delai, cible=cible)
+
+    def _oublier_suspendu(self, pourquoi: str) -> None:
+        """Tout NOUVEL ordre de David efface l'ordre suspendu (seconde relecture, 26/11) : son
+        ordre le plus récent gagne, l'ancien ne doit jamais repartir derrière lui."""
+        if self.reprise is not None and self.reprise.get("ordre") is not None:
+            demande = self.reprise["ordre"]["demande"]
+            self.reprise["ordre"] = None
+            self._journal("ordre_suspendu", f"ordre de David suspendu oublié ({phrases.demande(demande)}) : "
+                          f"{pourquoi}", demande=demande)
+
+    def _reprendre_suspendu(self, rep: dict, now: float) -> bool:
+        """R4 : ré-émet l'ordre suspendu s'il a moins de reprise.ordre_suspendu_max_s et passe
+        les contrôles d'un ordre neuf (objet atteignable, verrou, superviseur). -> True s'il
+        est reparti ; sinon la reprise fait un simple « go »."""
+        o = rep["ordre"]
+        ordre = dict(o["demande"], origine=DAVID)
+        if now - o["t"] > self.r.get("reprise.ordre_suspendu_max_s") + EPS:
+            self._journal("ordre_suspendu", f"ordre de David abandonné : trop ancien ({phrases.demande(ordre)}, "
+                          f"suspendu depuis plus de {self.r.get('reprise.ordre_suspendu_max_s'):g} s)", demande=ordre)
+            return False
+        if self._hors_atteinte(ordre, now):
+            return False
+        self._journal("reprise", f"ordre de David suspendu, repris après {phrases.s(rep['delai'])} de silence "
+                      f"({phrases.demande(ordre)})", cause=rep["pourquoi"], delai_s=rep["delai"], demande=ordre)
+        self._ordre_bouche(ordre, now)
+        return True
 
     def _desarmer_reprise(self, pourquoi: str) -> None:
         if self.reprise is not None:
@@ -821,11 +917,7 @@ class Selecteur:
         if now - rep["silence_depuis"] < rep["delai"] - EPS:
             return
         self.reprise = None
-        if rep["ordre"] is not None:
-            ordre = dict(rep["ordre"], origine=DAVID)
-            self._journal("reprise", f"ordre de David suspendu, repris après {phrases.s(rep['delai'])} de silence "
-                          f"({phrases.demande(ordre)})", cause=rep["pourquoi"], delai_s=rep["delai"], demande=ordre)
-            self._ordre_bouche(ordre, now)
+        if rep["ordre"] is not None and self._reprendre_suspendu(rep, now):
             return
         self.sorties.append(("chat_move", marche(GO, DIDIER)))
         self._journal("reprise", f"reprise : il repart de lui-même ({rep['pourquoi']}, après "

@@ -91,6 +91,9 @@ reprise:
   # automatique après un stop ou une Route OFF de David (31/10).
   min_s: 10.0
   max_s: 40.0
+  # Un geste de David suspendu par un stop de Didier (R4) n'est ré-émis que s'il a moins de
+  # cet âge (s, depuis sa suspension) ; au-delà, abandonné (seconde relecture, 26/11).
+  ordre_suspendu_max_s: 60.0
 
 superviseur:
   # « suppose » (A1 sim, défaut) : présence supposée. « exigeant » : sans
@@ -100,6 +103,10 @@ superviseur:
 
 console:
   ignore_s: 30.0          # « ignore » : aucune action vers la cible pendant 30 s (T4)
+  # Rafale (seconde relecture, 26/11) : le MÊME ordre de déplacement (même commande, même
+  # cible) reçu moins de rebond_s après le précédent est ignoré — un double-clic ne nourrit
+  # pas la fatigue.
+  rebond_s: 1.0
   # (Lot S1, R6 : plus d'ordre_ttl_s — un ordre macro part au tick ou est refusé tout de suite.)
   # « joue avec lui » : biais console sur la piste pendant 30 s ; approches
   # RÉPÉTÉES permises (David, 02/11), bornées par approche.hauteur_max.
