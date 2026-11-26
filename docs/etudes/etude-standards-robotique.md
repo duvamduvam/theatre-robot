@@ -214,6 +214,10 @@ supprime pas* : l'odométrie elle-même, toujours nécessaire.
 
 ### 5.3 Nav2 — **le moniteur de collision oui (à l'essai), la navigation sur carte non**
 
+> **18/11 : essai sauté par David** (spec A0 corps sûr §13, réponse 2) : le nœud maison reste
+> nécessaire, la partie remplaçable fait une centaine de lignes testées, et le moniteur ajouterait
+> trois nœuds *lifecycle* sur le chemin des roues. À revoir si le nœud maison grossit.
+
 - **Moniteur de collision** (`nav2_collision_monitor`) : il lit un `LaserScan`, se place sur
   le chemin de `cmd_vel`, ignore les cartes de coût, et coûte 4 à 5 ms par balayage de
   360 points (README Jazzy, lu). Zones d'arrêt, de ralenti et d'approche se déclarent en
@@ -247,6 +251,16 @@ sur SD, 30 jours, sans caméra). L'étude d'aujourd'hui précise seulement **ave
 
 *Ce que ça supprime* : tout enregistreur maison ; à terme `collect-incident.sh` n'aurait plus
 qu'à joindre le fichier.
+
+**Vérifié le 27/11 (ordre de travail du 25/11, « essais de réutilisation »)** : `rosbag2` ne
+remplace pas l'enregistreur des **épreuves** de la sim (`machines/sim/capture_topics.py`, né le
+16/11, après cette étude). Il n'en couvre que l'écriture des messages ; il ne fait ni la
+sentinelle `PRET` (l'épreuve ne démarre qu'une fois chaque abonnement apparié à son éditeur :
+c'est ce qui a supprimé les faux rouges du 15/11), ni la lecture en direct pendant l'épreuve
+(`lire`, un fichier MCAP en cours d'écriture ne se lit pas proprement), ni la dernière valeur
+par topic. Remplacer imposerait de réécrire les scripts d'épreuve, que l'étude fumée exclut.
+Verdict : `capture_topics.py` reste pour les épreuves ; `rosbag2` reste le choix de la **boîte
+noire** du robot (§ ci-dessus), où ces trois besoins n'existent pas.
 
 ### 5.5 Ce que je recommande de **ne pas** intégrer
 
