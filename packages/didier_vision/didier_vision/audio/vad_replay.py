@@ -158,7 +158,7 @@ def main(argv=None) -> int:
         # initiale (1re seconde, cf. VadConfig.calibration_ms) ne doit pas
         # hériter du seuil d'un fichier précédent — chaque enregistrement rue
         # a son propre bruit de fond.
-        vad = EnergyVad(config["chat_vad"], frame_ms=FRAME_MS)
+        vad = EnergyVad(config["chat_vad"], frame_ms=FRAME_MS, adaptatif=True)  # comme l'écoute normale (26/11)
         events = replay(pcm, sample_rate, FRAME_MS, vad)
         duration_s = len(pcm) / (sample_rate * _BYTES_PER_SAMPLE)
         _summarize(path, events, duration_s)

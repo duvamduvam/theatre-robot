@@ -13,7 +13,7 @@ standard ne le fait déjà (essai borné, verdict écrit).
 
 1. **F4** — fumée sur GitHub Actions (correctif de build à fusionner) ; étude fumée §8 bis.
 2. **F1** — le programme de fumée (`docs/spec-F1-programme-fumee.md`).
-3. **Fin de phrase** — 17 énoncés sur 25 coupés à 12 s le 25/11 (souffle du casque) : lag du stop et des réponses.
+3. **Fin de phrase** — 17 énoncés sur 25 coupés à 12 s le 25/11 (souffle du casque) : lag du stop et des réponses. **Cause trouvée le 26/11** : la détection de parole ne mesurait le bruit qu'une fois au démarrage (casque connecté après) ; **corrigé** (plancher de bruit suivi sur 10 s, écoute normale seulement) ; reste l'essai de David au casque.
 4. **S1** — ordres et propositions : corrections de la relecture Fable, nouvelle relecture, fumée, séance courte.
 5. **Essais de réutilisation** — A0-1 (`nav2_collision_monitor` à la place des zones du corps sûr, décidé le 11/11, jamais fait) ; `ros2 bag record` à la place de `capture_topics.py`.
 6. **S2** — le corps raconte (dont « se tourner vers un objet »).
