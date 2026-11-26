@@ -158,3 +158,31 @@ casse et espaces (`" STOP"` est un stop) ; `pause` émise par le sélecteur en `
 | Mineur 2 (rafale R6) | Un ordre console de déplacement IDENTIQUE (même commande, même cible) reçu moins de `console.rebond_s` = 1 s après le précédent est ignoré (journal `console`, `doublon`) : un double-clic ne nourrit pas la fatigue. | `test_mineur_r6_rafale_*` |
 | Mineur 3 (« reviens » pendant un geste) | Le régisseur n'annule une manœuvre que sur un `stop` (il publie `cancel` sur `route_goto`) et ne relance la route sur un `go` qu'une fois l'état sorti de `goto`. « reviens » pendant une manœuvre : le sélecteur envoie `stop` (origine `david`), puis le `go` de David quand `route_state` quitte `goto` (au plus 5 s). Le sélecteur ne publie toujours que des demandes. | `test_mineur_reviens_*` |
 | Mineur 4 (respawn de `jeu_node`) | **Limite connue, sens sûr, pas de code** : un `jeu_node` relancé (respawn) perd son verrou, sa reprise et son ordre suspendu ; il relit les topics latchés (`route_state`, `route_state_cause`, `rehearsal/state`). Une cause `cmd` latchée d'une Route OFF ancienne, déjà suivie d'un ON, repose un verrou `route` qui ne tombera qu'au prochain OFF/ON ou GO console ; hors séance il ne fait rien de lui-même ; le régisseur garde l'arrêt vocal (M2). Au pire Didier reste arrêté, jamais il ne repart seul. |
+
+### 7 ter. Troisième relecture adverse (26/11, sur a400aa15) — FAIT FOI
+
+**Règle simple de l'ordre suspendu** (remplace le détail du 7 bis, majeur 1) : il est EFFACÉ par
+toute action de David, acceptée OU refusée — `chat_move` d'origine `david` (même refusé `pas_ici`,
+`arrete`, `sans_superviseur` : effacé avant tout refus), ordre de la console (même refusé ou
+doublon), Route ON (retour de `route_state` à `on`) ou Route OFF (cause `cmd`), STOP/GO console,
+fin de séance (la reprise devient alors un simple go si elle était permise). Son âge se compte
+depuis l'ordre D'ORIGINE, jamais remis à zéro par une ré-émission ou une nouvelle suspension ;
+60 s au plus. Gestes relatifs jamais rejoués, ré-émission contrôlée comme un ordre neuf
+(inchangé).
+
+**Écart assumé (à valider)** : la relecture demandait d'effacer sur `route_state` on/off. Le
+`off` qui suit l'annulation d'une manœuvre par le stop de Didier (`goto` puis `off`) n'est pas une
+action de David, et l'effacer rendrait R4 inopérant (aucun ordre ne serait jamais rejoué). La
+Route OFF de David est donc lue par sa cause `cmd` (que route_driver publie à chaque `off` par
+commande, avant l'état) ; le retour à `on` efface toujours.
+
+| Point | Règle | Test |
+|---|---|---|
+| M1 | `sur_chat_move_bouche` efface l'ordre suspendu dès qu'une demande d'origine `david` arrive, avant tout refus. | `test_3r_toute_action_de_david_efface_l_ordre_suspendu_meme_refusee[evenement0]` |
+| M2 | Retour de la route à `on` et Route OFF (cause `cmd`) effacent ; le `off` d'une annulation, non. | `test_3r_toute_action…[evenement2]`, `test_3r_le_off_d_une_annulation_n_efface_pas_l_ordre_suspendu` |
+| m1 | « reviens » pendant un geste demandé envoie toujours le `stop` (puis le `go`), même si la route n'est pas encore `goto`. | `test_3r_m1_reviens_annule_un_geste_meme_avant_goto` |
+| m2 | Le `stop` du « reviens » reste `david`. Si son `go` ne part pas (stop de Didier, regard, Route OFF, autre ordre), Didier ne reste jamais sous cet arrêt : la reprise armée part alors en `david` ; sans reprise, un `go` `david` part dès que plus rien ne l'empêche (aucun déplacement, ni verrou ni superviseur absent). Tout `go` ou `stop` de David efface cette dette. | `test_3r_m2_*` |
+| m3 | `sur_route_cause` ne remplace jamais un verrou plus fort : seul un verrou absent devient `route`. | `test_3r_m3_la_route_ne_remplace_pas_un_verrou_plus_fort` |
+| m4 | Le rebond ne mémorise que les ordres acceptés. | `test_3r_m4_un_ordre_refuse_n_arme_pas_le_rebond` |
+| m5 | Âge depuis l'ordre d'origine. | `test_3r_l_age_compte_depuis_l_ordre_d_origine` |
+| Fin de séance | Efface l'ordre suspendu. | `test_3r_toute_action…[evenement3]` |

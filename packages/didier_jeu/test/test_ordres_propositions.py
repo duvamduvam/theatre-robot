@@ -416,10 +416,10 @@ def test_m1_ordre_suspendu_trop_ancien_abandonne():
     paroles = [(float(k), lambda s, t: s.sur_parole("encore", t)) for k in range(5, 61, 5)]
     out = jouer_regisseur(fabriquer(pools={}), 80.0, [
         (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (3.0, bouche(STOP_DIDIER))] + paroles, regisseur_2121)
-    # Dernière parole à 60 s : reprise à 77,1 s, l'ordre a 74,1 s (> 60) -> simple go.
+    # Dernière parole à 60 s : reprise à 77,1 s, l'ordre (donné à 1,0 s) a 76,1 s (> 60) -> simple go.
     assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (3.0, STOP_DIDIER), (77.1, GO_DIDIER)]
     assert [(t, p["pourquoi"]) for t, p in journal(out, "ordre_suspendu")][-1] == (
-        77.1, "ordre de David abandonné : trop ancien (aller voir « elephant », suspendu depuis plus de 60 s)")
+        77.1, "ordre de David abandonné : trop ancien (aller voir « elephant », donné il y a plus de 60 s)")
 
 
 def test_m1_la_reemission_repasse_par_hors_atteinte():
@@ -517,3 +517,86 @@ def test_mineur_reviens_sans_confirmation_go_au_bout_de_5_s():
         (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (1.5, lambda s, t: s.sur_route_state("goto", t)),
         (4.0, lambda s, t: s.sur_console({"cmd": "reviens"}, t))], regisseur_2121)
     assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (4.0, STOP_DAVID), (9.0, GO_DAVID)]
+
+
+# ================================================================ troisième relecture (26/11)
+AV_ANNEAUX = {"cmd": "aller_voir", "objet": "anneaux", "id": "carte/anneaux", "origine": "david"}   # pas ici
+
+
+def _suspendu_puis(evenement, t1=25.0):
+    """Geste de David à 1 s, stop de Didier à 3 s (suspendu, reprise à 20,1 s), puis `evenement`."""
+    return jouer(fabriquer(pools={}), 0.0, t1, [(0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)),
+                                                (3.0, bouche(STOP_DIDIER))] + evenement)
+
+
+@pytest.mark.parametrize("evenement", [
+    [(5.0, bouche(AV_ANNEAUX))],                                               # chat_move david REFUSÉ (pas_ici)
+    [(5.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "lune"}, t))],  # ordre console refusé
+    [(3.5, lambda s, t: s.sur_route_state("off", t)),                          # annulation de la manœuvre,
+     (5.0, lambda s, t: s.sur_route_state("on", t))],                          # puis la route repart (M2)
+    [(5.0, lambda s, t: s.sur_seance({"seance": "terminee", "arret_vocal": False}, t))],   # fin de séance
+])
+def test_3r_toute_action_de_david_efface_l_ordre_suspendu_meme_refusee(evenement):
+    out = _suspendu_puis(evenement)
+    # Plus de ré-émission : la reprise (arrêt posé par Didier, permise hors séance) fait un go.
+    assert [(t, m) for t, m in moves(out) if t >= 20.0] == [(20.1, GO_DIDIER)]
+    assert [(t, p["pourquoi"][:30]) for t, p in journal(out, "ordre_suspendu")][-1] == (
+        5.0, "ordre de David suspendu oublié")
+
+
+def test_3r_le_off_d_une_annulation_n_efface_pas_l_ordre_suspendu():
+    """Le « off » qui suit l'annulation de la manœuvre par le stop de Didier n'est pas David."""
+    out = _suspendu_puis([(3.5, lambda s, t: s.sur_route_state("off", t))])
+    assert [(t, m) for t, m in moves(out) if t >= 20.0] == [(20.1, AV_ELEPHANT_DAVID)]
+
+
+def test_3r_l_age_compte_depuis_l_ordre_d_origine():
+    """Ordre à 1 s, suspendu à 3 s, ré-émis à 20,1 s, re-suspendu à 25 s : son âge reste celui
+    de 1 s — à la reprise suivante (25 + 26,3 + paroles) il a dépassé 60 s."""
+    paroles = [(float(k), lambda s, t: s.sur_parole("encore", t)) for k in (30, 35)]
+    out = jouer_regisseur(fabriquer(pools={}), 70.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (3.0, bouche(STOP_DIDIER)),
+        (25.0, bouche(STOP_DIDIER))] + paroles, regisseur_2121)
+    # 2e tirage 26,3 s depuis la dernière parole (35 s) -> 61,3 s ; l'ordre a 60,3 s : abandonné.
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (3.0, STOP_DIDIER), (20.1, AV_ELEPHANT_DAVID),
+                          (25.0, STOP_DIDIER), (61.3, GO_DIDIER)]
+
+
+def test_3r_m3_la_route_ne_remplace_pas_un_verrou_plus_fort():
+    sel = fabriquer(pools={})
+    jouer(sel, 0.0, 3.0, [(0.0, marche), (1.0, bouche(STOP_DAVID)), (2.0, _off)])
+    assert sel.verrou == "voix"
+
+
+def test_3r_m4_un_ordre_refuse_n_arme_pas_le_rebond():
+    out = jouer(fabriquer(pools={}), 0.0, 3.0, [
+        (0.0, marche), (1.0, lambda s, t: s.sur_console({"cmd": "stop"}, t)),
+        (1.2, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t)),     # refusé : arrêté
+        (1.4, lambda s, t: s.sur_console({"cmd": "go"}, t)),
+        (1.6, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t))])    # pas un doublon
+    assert moves(out) == [(1.0, STOP_DAVID), (1.4, GO_DAVID),
+                          (1.6, {"cmd": "aller_voir", "objet": "banc", "id": "carte/banc", "origine": "david"})]
+
+
+def test_3r_m1_reviens_annule_un_geste_meme_avant_goto():
+    out = jouer_regisseur(fabriquer(pools={}), 6.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)),
+        (4.0, lambda s, t: s.sur_console({"cmd": "reviens"}, t))], regisseur_2121)
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (4.0, STOP_DAVID), (4.0, GO_DAVID)]
+
+
+def test_3r_m2_stop_de_didier_pendant_le_reviens_la_reprise_part_en_david():
+    """Le stop de Didier fait tomber le go du « reviens » : sa reprise lèvera l'arrêt « david »
+    du reviens d'un go de David (un go de Didier serait refusé « arret_de_david »)."""
+    out = jouer_regisseur(fabriquer(pools={}), 25.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (1.5, lambda s, t: s.sur_route_state("goto", t)),
+        (4.0, lambda s, t: s.sur_console({"cmd": "reviens"}, t)), (4.5, bouche(STOP_DIDIER))], regisseur_2121)
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (4.0, STOP_DAVID), (4.5, STOP_DIDIER), (21.6, GO_DAVID)]
+
+
+def test_3r_m2_reviens_tombe_sur_route_off_le_go_part_au_retour_de_la_route():
+    out = jouer_regisseur(fabriquer(pools={}), 8.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (1.5, lambda s, t: s.sur_route_state("goto", t)),
+        (4.0, lambda s, t: s.sur_console({"cmd": "reviens"}, t)), (4.5, _off),
+        (6.0, lambda s, t: s.sur_route_state("on", t))], regisseur_2121)
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (4.0, STOP_DAVID), (6.0, GO_DAVID)]
