@@ -15,7 +15,7 @@ standard ne le fait déjà (essai borné, verdict écrit).
 2. **F1** — le programme de fumée (`docs/spec-F1-programme-fumee.md`).
 3. **Fin de phrase** — **FAIT le 26/11** (#46) : vérifié en séance par David (casque allumé après le démarrage, aucune phrase coupée à 12 s, stop immédiat).
 4. **S1** — ordres et propositions : **FUSIONNÉ le 26/11** (PR #47) après trois relectures Fable, une fumée ciblée verte et l'essai de David (`docs/seances/2026-11-26-seance-s1.md`).
-5. **Essais de réutilisation** — A0-1 (`nav2_collision_monitor` à la place des zones du corps sûr, décidé le 11/11, jamais fait) ; `ros2 bag record` à la place de `capture_topics.py`.
+5. **Essais de réutilisation** — **TRANCHÉS le 27/11** : A0-1 (`nav2_collision_monitor`) **sauté par David le 18/11** (spec A0 §13, réponse 2 ; remis ici par erreur le 25/11) ; `ros2 bag record` ne remplace pas `capture_topics.py` pour les épreuves (pas de sentinelle `PRET`, pas de lecture en direct), il reste le choix de la boîte noire du robot (étude standards §5.4).
 6. **S2** — le corps raconte (dont « se tourner vers un objet », finir face à l'objet, position réelle `ici`, et « je fonce » dit alors que le go est refusé — séance du 26/11).
 7. **S3** — restes : bouton Séance en haut de la page, Réarmer, visage temps 1.
 8. **Migration** — L2c-L2e, L3, L4 (après l'étude UX de la télécommande), L5.
