@@ -245,9 +245,12 @@ def test_acceptation_puis_arrivee_inchangee():
     (_reponse("invalid", "hors_bornes"), "c'est plus que ce que ton corps sait faire en un geste"),
     (_reponse("invalid", "sens"), "le sens du tour était incompréhensible"),
     (_reponse("invalid", "nouveau"), "ta demande de geste était incompréhensible"),
-    (_reponse("dropped", "trop_tot", source="jeu"), "tu viens déjà de te déplacer, pas tout de suite"),
+    # Lot S1 : trop_tot / fatigue retirés (un ordre de David n'est plus refusé pour ça) ; le
+    # régisseur refuse un geste « didier » hors séance ou sous un arrêt de David.
+    (_reponse("hors_seance"), "la séance n'est pas lancée, tu ne pars pas de toi-même"),
     (_reponse("dropped", "arrete", source="jeu"), "tu es arrêté jusqu'à ce qu'on te dise de repartir"),
-    (_reponse("dropped", "fatigue", source="jeu"), "tu es trop fatigué pour te déplacer maintenant"),
+    (_reponse("arret_de_david"), "David t'a arrêté, tu attends qu'il te relance"),
+    (_reponse("dropped", "trop_tot", source="jeu"), "le geste n'a pas pu se faire"),   # code retiré : défaut sûr
     (_reponse("dropped", "degrade", source="jeu"), "ton corps ne répond qu'à « stop » et « go » en ce moment"),
     (_reponse("dropped", "lune", source="jeu"), "le geste n'a pas pu se faire"),
     (_reponse("no_reply", source="jeu"), "personne n'a donné suite"),

@@ -127,6 +127,19 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        tout tour spontané) : réplique `spontaneous=False`, garde armée, qui
        enchaîne le geste suivant — ou, sans geste, clôt la tâche. Parole ou
        texte de David, et tout "stop", la ferment aussi.
+       ORIGINE (lot S1, 25/11, docs/spec-S1-ordres-propositions.md §1 ; contrat
+       didier_rehearsal.contracts, CHAT_MOVE_ORIGINES) : `on_move` reçoit TOUJOURS
+       la forme du contrat — marche {"cmd": "stop"|"go"|"pause", "origine": …},
+       geste {…, "origine": …} — et la bouche dit qui porte la demande : mot
+       d'arrêt (écoute normale ou garde) -> "stop" ORIGINE_DAVID ; tour humain :
+       "go", "pause" et tout geste -> ORIGINE_DAVID (elle transmet ce que David a
+       demandé), "marche": "stop" -> ORIGINE_DIDIER (le LLM interprète : pas de
+       verrou, le sélecteur le relancera, réponse 1 du §8.1) ; continuation de
+       tâche (règle R3, 25/11) : gestes -> ORIGINE_DAVID (la tâche vient de David),
+       "stop" -> ORIGINE_DIDIER (le LLM décide de s'arrêter), "go" NON émis (la
+       reprise du sélecteur relance après le geste) ; TOUR SPONTANÉ -> RIEN,
+       aucune clé de marche ni de geste n'est lue (journalisé : « la bouche ne
+       décide aucun mouvement », §8 bis) — supprimé : le "stop" qu'il permettait.
 
        METTEUR EN SCÈNE INTÉRIEUR (2026-10-23, lot P, dadou_robot_ros/docs/
        spec-metteur-en-scene.md, étude etude-niveaux-reflexion.md) : la
@@ -135,8 +148,8 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        Quatre ajouts, tous inertes tant que rien n'est branché/publié :
        - ARRÊT D'URGENCE vocal (didier_vision.ai.emergency) : sur ce que le STT a
          VRAIMENT produit, AVANT les pannes deaf/garble et le LLM —
-         on_move("stop") part dès la fin du STT, puis le tour continue
-         (Didier joue l'arrêt en personnage).
+         on_move({"cmd": "stop", "origine": ORIGINE_DAVID}) part dès la fin du
+         STT, puis le tour continue (Didier joue l'arrêt en personnage).
        - TABLEAU DE SITUATION (StageState.situation, TTL) : relu à chaque
          tour, envoyé comme message system (llm_stream.SITUATION_PREFIX).
        - TOUR SPONTANÉ (StageState.pop_prompt) : servi pendant une écoute
@@ -144,7 +157,8 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
          que quelqu'un parle (in_speech), jamais pendant que Didier parle ni
          chat OFF (le micro est coupé : aucune trame, aucun sondage), jamais
          moins de SPONTANEOUS_MIN_GAP_S après le précédent. Il n'émet
-         JAMAIS "go" (seul un humain remet Didier en route) ; tout énoncé de
+         AUCUN mouvement (lot S1 : ni "go" — B1, 23/10 — ni "stop", ni geste ;
+         le regard, tête seule, reste permis) ; tout énoncé de
          David vide l'emplacement (direction devenue caduque). (La
          continuation d'une tâche du lot M4 n'est PAS un tour spontané : elle
          prolonge une demande humaine, cf. MOUVEMENT.)
@@ -172,7 +186,7 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        - un thread STT les transcrit (MÊME STT que l'écoute normale, avec son
          repli ; appels sérialisés par `_stt_lock` : FallbackStt n'est pas
          sûr entre threads) ;
-       - urgence -> on_move("stop") D'ABORD, puis AudioPlayer.interrupt(), et
+       - urgence -> on_move(stop, ORIGINE_DAVID) D'ABORD, puis AudioPlayer.interrupt(), et
          le thread de conversation abandonne le flux LLM à l'événement suivant
          (visage idle, ligne transcript "david", AUCUN appel LLM : Didier se
          tait, il ne joue pas l'arrêt) ;
@@ -329,6 +343,14 @@ LOOK_HOLD_MS = 4000
 # « Regarde ça » (lot « texte raccord », 18/11) : valeur de la clé "marche" ET de l'ordre publié
 # sur chat_move (contrat didier_rehearsal.contracts.CHAT_MOVE_PAUSE, gravé des deux côtés).
 PAUSE_CMD = "pause"
+# ORIGINE d'une demande de mouvement (lot S1, 25/11) : contrat didier_rehearsal.contracts
+# CHAT_MOVE_ORIGINE_DAVID / CHAT_MOVE_ORIGINE_DIDIER, gravé des deux côtés (test de contrat).
+# « david » = un ordre (mot d'arrêt, demande d'un tour humain), « didier » = une proposition.
+ORIGINE_DAVID = "david"
+ORIGINE_DIDIER = "didier"
+# Clés du JSON de fin qui demandent un MOUVEMENT du corps (le regard n'en est pas un) : toutes
+# ignorées en tour spontané (lot S1).
+MOVE_KEYS = ("marche", "aller_voir", "faire_le_tour", "tourner", "avancer")
 
 
 def _gesture_number(raw, words=None):
@@ -863,18 +885,26 @@ class ConversationEngine:
                            exc_info=True)
 
     def _notify_move(self, params, spontaneous: bool = False) -> bool:
-        """Clé "marche" du JSON de fin -> `on_move("go"|"stop")` (cf.
-        docstring de module MOUVEMENT). Normalisée (str, strip, lower) : le
-        LLM écrit parfois "Go" ou "stop ". Toute autre valeur ou type =
-        ignorée avec un warning — jamais d'exception, jamais d'ordre deviné
-        (« recule » n'est PAS un stop). Callback qui lève = tour préservé :
-        un ordre perdu vaut mieux qu'un Didier muet.
+        """Clé "marche" du JSON de fin -> `on_move({"cmd": "go"|"stop"|"pause",
+        "origine": …})` (cf. docstring de module MOUVEMENT et ORIGINE). Normalisée
+        (str, strip, lower) : le LLM écrit parfois "Go" ou "stop ". Toute autre
+        valeur ou type = ignorée avec un warning — jamais d'exception, jamais
+        d'ordre deviné (« recule » n'est PAS un stop). Callback qui lève = tour
+        préservé : un ordre perdu vaut mieux qu'un Didier muet.
 
-        `spontaneous` (tour spontané, cf. _serve_prompt) : seul "stop" passe.
-        Revue adversariale du 23/10 (B1, bloquant) : une direction du metteur
-        en scène (« reprends la route ») faisait écrire "go" au LLM — Didier
-        se remettait en marche sans qu'aucun humain l'ait demandé, y compris
-        juste après un « stop » de David.
+        `spontaneous` (tour spontané, cf. _serve_prompt) : AUCUNE clé de
+        mouvement n'est lue (lot S1, 25/11, §8 bis : « le régisseur décide, la
+        bouche raconte »), journalisé. Revue adversariale du 23/10 (B1,
+        bloquant) : une direction du metteur en scène (« reprends la route »)
+        faisait écrire "go" au LLM ; le "stop" qui restait permis arrêtait
+        Didier sans qu'aucun humain l'ait demandé (séance du 24/11) — supprimé.
+
+        Origine (lot S1) : "marche": "stop" d'un tour humain = ORIGINE_DIDIER
+        (le LLM interprète, ce n'est pas un mot d'arrêt de David), dans une
+        continuation de tâche aussi (règle R3, 25/11) ; "pause" et les gestes =
+        ORIGINE_DAVID (émis seulement hors tour spontané) ; "go" = ORIGINE_DAVID en
+        tour humain, JAMAIS émis en continuation (la reprise du sélecteur relance déjà
+        la route après le geste ; un go de David y lèverait un arrêt vocal).
 
         Clé "aller_voir" (lot M1, 31/10, dadou_robot_ros/docs/
         spec-aller-voir.md §2.2) : chaîne non vide, rognée (la casse est
@@ -913,15 +943,21 @@ class ConversationEngine:
         "marche": "pause" (lot « texte raccord », séance du 18/11 21:35 : « il y
         a une lettre sur le banc, tu pourrais regarder » finissait en « aller
         voir » d'un banc à 20 m) : « regarde ça » = s'arrêter, regarder, puis
-        reprendre la route — `on_move("pause")`, que le sélecteur de jeu
-        traduit en stop, puis « go » au bout de reprise.apres_regard_s (le
-        régisseur seul le prend pour un stop). Le regard part avec (clé
+        reprendre la route — `on_move({"cmd": "pause", "origine": "david"})`, que
+        le sélecteur de jeu traduit en stop sans verrou, puis « go » par sa reprise
+        (silence tiré, lot S1) ; le régisseur seul le prend pour un stop. Le regard part avec (clé
         "regarder", 0 = devant à défaut, cf. _handle_event). Préséance stop >
         pause > gestes > go : la pause contient un arrêt, elle l'emporte sur
         toute mise en mouvement. Mêmes règles qu'un go (elle finit par une
         reprise) : jamais en tour spontané, verrou de la garde. -> True si la
         pause est partie."""
         if self._on_move is None or not isinstance(params, dict):
+            return False
+        if spontaneous:
+            demandes = [key for key in MOVE_KEYS if key in params]
+            if demandes:
+                logger.warning("Tour spontané : la bouche ne décide aucun mouvement — clé(s) %s "
+                               "ignorée(s).", ", ".join(f'"{key}"' for key in demandes))
             return False
         cmd = None
         if "marche" in params:
@@ -937,7 +973,8 @@ class ConversationEngine:
             raw = params["aller_voir"]
             objet = raw.strip() if isinstance(raw, str) else None
             if objet:
-                gestures.append(("aller_voir", objet, {"cmd": "aller_voir", "objet": objet}))
+                gestures.append(("aller_voir", objet,
+                                 {"cmd": "aller_voir", "objet": objet, "origine": ORIGINE_DAVID}))
             else:
                 logger.warning("Clé \"aller_voir\" ignorée : %r (attendu un nom d'objet).", raw)
         if "faire_le_tour" in params:
@@ -954,7 +991,7 @@ class ConversationEngine:
                         logger.warning("Clé \"sens\" : %r invalide (attendu \"gauche\" ou "
                                        "\"droite\"), \"gauche\" retenu.", raw_sens)
                 gestures.append(("faire_le_tour", objet,
-                                 {"cmd": "tour_de", "objet": objet, "sens": sens}))
+                                 {"cmd": "tour_de", "objet": objet, "sens": sens, "origine": ORIGINE_DAVID}))
             else:
                 logger.warning("Clé \"faire_le_tour\" ignorée : %r (attendu un nom d'objet).",
                                raw)
@@ -962,7 +999,8 @@ class ConversationEngine:
             raw = params["tourner"]
             angle = _gesture_number(raw, TURN_WORDS)
             if angle is not None and abs(angle) <= TURN_MAX_DEG:
-                gestures.append(("tourner", angle, {"cmd": "tourner", "angle_deg": angle}))
+                gestures.append(("tourner", angle,
+                                 {"cmd": "tourner", "angle_deg": angle, "origine": ORIGINE_DAVID}))
             else:
                 logger.warning("Clé \"tourner\" ignorée : %r (attendu des degrés signés, "
                                "|a| <= %d, ou \"gauche\"/\"droite\"/\"demi_tour\").",
@@ -971,7 +1009,8 @@ class ConversationEngine:
             raw = params["avancer"]
             metres = _gesture_number(raw)
             if metres is not None and 0 < metres <= FORWARD_MAX_M:
-                gestures.append(("avancer", metres, {"cmd": "avancer", "metres": metres}))
+                gestures.append(("avancer", metres,
+                                 {"cmd": "avancer", "metres": metres, "origine": ORIGINE_DAVID}))
             else:
                 logger.warning("Clé \"avancer\" ignorée : %r (attendu des mètres, "
                                "0 < m <= %d : Didier ne recule pas).", raw, FORWARD_MAX_M)
@@ -979,16 +1018,13 @@ class ConversationEngine:
             for key, value, _intent in gestures:
                 logger.warning("Clé \"%s\" : %r ignoré : la même réplique "
                                "demande \"stop\" (le stop gagne toujours).", key, value)
-            self._emit_move("stop")
+            # Le LLM interprète (tour humain ou continuation) : une PROPOSITION, sans verrou.
+            self._emit_move("stop", ORIGINE_DIDIER)
             return False
         if cmd == PAUSE_CMD:
             for key, value, _intent in gestures:
                 logger.warning("Clé \"%s\" : %r ignoré : la même réplique demande \"pause\" "
                                "(il s'arrête pour regarder, il ne part pas).", key, value)
-            if spontaneous:
-                logger.warning("Clé \"marche\" : pause ignorée : tour spontané "
-                               "(aucun humain ne l'a demandée).")
-                return False
             return self._emit_start(PAUSE_CMD, "Clé \"marche\" : pause")
         if gestures:
             key, value, intent = gestures[0]
@@ -997,10 +1033,6 @@ class ConversationEngine:
             for lost_key, lost_value, _intent in gestures[1:]:
                 logger.info("Clé \"%s\" : %r remplacé par %s %r.",
                             lost_key, lost_value, key, value)
-            if spontaneous:
-                logger.warning("Clé \"%s\" : %r ignoré : tour spontané "
-                               "(aucun humain ne l'a demandé).", key, value)
-                return False
             if (self._turn_continuation and self._move_task is not None
                     and not self._move_task.is_open()):
                 # Réplique de continuation dont la tâche est déjà CLOSE (geste
@@ -1024,9 +1056,9 @@ class ConversationEngine:
             return False
         if cmd != "go":
             return False
-        if spontaneous:
-            logger.warning("Clé \"marche\" : go ignoré : tour spontané "
-                           "(aucun humain ne l'a demandé).")
+        if self._turn_continuation:
+            logger.info("Clé \"marche\" : go non émis en continuation de tâche (la reprise du "
+                        "sélecteur relance la route après le geste).")
             return False
         self._emit_start("go", "Clé \"marche\" : go")
         return False
@@ -1076,8 +1108,9 @@ class ConversationEngine:
                                             gesture=intent)
 
     def _emit_start(self, intent, label: str) -> bool:
-        """Émet un ordre de MISE EN MOUVEMENT ("go", aller_voir, faire_le_tour,
-        tourner ou avancer) en
+        """Émet un ordre de MISE EN MOUVEMENT ("go", "pause", aller_voir,
+        faire_le_tour, tourner ou avancer) — toujours d'ORIGINE_DAVID (lot S1 : seul
+        un tour humain ou la continuation de sa tâche en émet) — en
         respectant l'écoute garde (cf. docstring de module ÉCOUTE GARDE).
         `label` (« Clé "marche" : go ») ne sert qu'aux journaux. -> False si
         l'ordre a été JETÉ (réplique interrompue par un arrêt vocal) : un
@@ -1091,7 +1124,7 @@ class ConversationEngine:
                            GUARD_LATE_GO_WAIT_S, label)
         guard = self._guard
         if guard is None:
-            self._emit_move(intent)
+            self._emit_move(intent, ORIGINE_DAVID)
             return True
         # Sous le verrou de la garde : l'urgence (stop émis PUIS interrupted
         # levé, atomiquement) et cet ordre ne peuvent pas se croiser — jamais
@@ -1101,13 +1134,16 @@ class ConversationEngine:
                 logger.warning("%s ignoré : réplique interrompue par un arrêt "
                                "d'urgence vocal.", label)
                 return False
-            self._emit_move(intent)
+            self._emit_move(intent, ORIGINE_DAVID)
             return True
 
-    def _emit_move(self, cmd) -> None:
+    def _emit_move(self, cmd, origine: str) -> None:
         """Seul point d'émission d'une intention de marche — partagé par la
         clé "marche" (fin de réplique), les clés "aller_voir", "tourner" et
-        "avancer" (`cmd` est alors le dict du contrat) et l'arrêt d'urgence vocal (avant le LLM). `on_move` None = mouvement désactivé : rien, sans erreur.
+        "avancer" (`cmd` est alors le dict du contrat, `origine` comprise) et
+        l'arrêt d'urgence vocal (avant le LLM). Marche (`cmd` chaîne) : publiée
+        sous la forme du contrat {"cmd", "origine"} (lot S1). `on_move` None =
+        mouvement désactivé : rien, sans erreur.
         Callback qui lève = ordre perdu, JAMAIS le tour : une publication en
         échec ne doit pas rendre Didier muet (et le deadman reste l'arrêt
         effectif, cf. didier_vision.ai.emergency).
@@ -1120,10 +1156,11 @@ class ConversationEngine:
             self._move_task.close("stop")
         if self._on_move is None:
             return
+        payload = {"cmd": cmd, "origine": origine} if isinstance(cmd, str) else cmd
         try:
-            self._on_move(cmd)
+            self._on_move(payload)
         except Exception:
-            logger.exception("Callback on_move en échec (ordre %r perdu).", cmd)
+            logger.exception("Callback on_move en échec (ordre %r perdu).", payload)
 
     def _notify_look(self, params, default_angle=None) -> None:
         """Clé "regarder" du JSON de fin -> `on_look({"angle_deg": a,
@@ -1205,7 +1242,7 @@ class ConversationEngine:
         (transcript, bouche "parle", didascalies, émotion) : c'est le bug
         réel simulé, « texte sans voix » (audio muet en silence).
 
-        `spontaneous` : tour spontané, transmis à _notify_move (jamais de "go")."""
+        `spontaneous` : tour spontané, transmis à _notify_move (aucun mouvement, lot S1)."""
         if isinstance(event, Sentence):
             if timing_marks["first_sentence_at"] is None:
                 # Horodaté AVANT même la synthèse TTS qui suit (elle peut
@@ -1428,7 +1465,8 @@ class ConversationEngine:
         il ne « calcule » pas une réponse, il a une idée. Pas de ligne
         transcript "david" (David n'a rien dit) ; pas de panne deaf/garble
         (rien n'a été entendu) — seule `mute` s'applique (la voix est en
-        panne, quoi qu'il dise). Jamais de "go" (B1, cf. _notify_move)."""
+        panne, quoi qu'il dise). Aucun mouvement : ni "go" (B1) ni "stop" ni geste
+        (lot S1, cf. _notify_move) ; le regard seul reste permis."""
         # Contexte du tour (lot M4) : ni demande humaine ni continuation. Ne
         # FERME pas la tâche en cours : la relance du metteur en scène peut
         # tomber pendant un geste, son issue sera servie après.
@@ -1570,7 +1608,7 @@ class ConversationEngine:
                                "(mouvement à la voix désactivé) : %r", stt_text)
             else:
                 logger.warning("ARRÊT D'URGENCE vocal : %r", stt_text)
-                self._emit_move("stop")
+                self._emit_move("stop", ORIGINE_DAVID)   # un mot d'arrêt est un ORDRE de David
         # Écoute garde armée DÈS ICI (revue du 31/10, I3), pas seulement au
         # début de la réplique : la panne delay (jusqu'à 9 s) et l'attente du
         # LLM sont des phases où Didier roule sans écouter. Fermée par
@@ -1793,8 +1831,8 @@ class ConversationEngine:
         `direction` : direction de jeu d'un tour spontané (cf. _serve_prompt),
         transmise au brain avec le tableau de situation — ignorée sans `stage`.
 
-        `spontaneous` : tour spontané (cf. _serve_prompt) — la clé "marche"
-        n'y transmet que "stop" (B1, cf. _notify_move).
+        `spontaneous` : tour spontané (cf. _serve_prompt) — aucune clé de
+        mouvement n'y est lue (lot S1, cf. _notify_move).
 
         `replay` : réplique DÉJÀ générée et contrôlée (_controlled_reply), dite
         et émise comme un flux d'un seul morceau, sans appel LLM."""
@@ -1968,7 +2006,7 @@ class ConversationEngine:
             self._guard_vad.reset()
             guard = _ReplyGuard(mic=self._mic, vad=self._guard_vad, stt=self._stt,
                                 stt_lock=self._stt_lock,
-                                emit_stop=lambda: self._emit_move("stop"),
+                                emit_stop=lambda: self._emit_move("stop", ORIGINE_DAVID),
                                 interrupt_audio=self._player.interrupt,
                                 should_listen=self._chat_enabled)
             self._mic.start()

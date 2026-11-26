@@ -10,8 +10,9 @@ Toutes bornées dans [0, 1]. Chiffres : reglages.yaml `pulsions` (spec §3 et
 - fatigue : +par_deplacement par action de déplacement ; −retombee_par_s / s ;
   au-dessus de seuil_interdit, tout déplacement est interdit.
 - pression de route : ne monte QUE pendant un arrêt décidé par Didier
-  (jamais après un stop/off de David) : temps écoulé / reprise.delai_s. Elle
-  ne coupe rien ; à 1, Didier propose de repartir et envoie « go ».
+  (jamais après un stop/off de David) : silence écoulé / D (la durée tirée de
+  la reprise, lot S1). AFFICHÉE seulement (intention, journal) : elle ne coupe
+  rien et ne choisit plus rien — le « go » part de selecteur._reprise_due.
 """
 
 

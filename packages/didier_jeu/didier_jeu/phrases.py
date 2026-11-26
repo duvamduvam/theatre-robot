@@ -53,9 +53,7 @@ def action(nom: str, cible=None, detail=None) -> str:
 def offre(o, valeur: float) -> str:
     if o.kind == "personne":
         return f"une personne, {o.piste} (offre {n(valeur)})"
-    if o.kind == "objet":
-        return f"il passe près de « {o.piste} » (offre {n(valeur)})"
-    return f"il l'a dit lui-même (offre {n(valeur)})"
+    return f"il passe près de « {o.piste} » (offre {n(valeur)})"
 
 
 PULSIONS = {"ennui": "il s'ennuie", "curiosite": "curiosité", "lubie": "lubie",
@@ -66,8 +64,9 @@ def pulsion(nom: str, valeur: float) -> str:
     return f"{PULSIONS.get(nom, nom)} ({n(valeur)})"
 
 
-QUI = {"console": "David", "bouche": "Didier a entendu"}
+# Qui porte une demande de marche (lot S1 : son ORIGINE, plus le canal qui l'a apportée).
+QUI = {"david": "David", "didier": "Didier"}
 
 
-def qui(source: str) -> str:
-    return QUI.get(source, source)
+def qui(origine: str) -> str:
+    return QUI.get(origine, origine)

@@ -1040,19 +1040,34 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   journalise `tâche : geste refusé (<effet>/<raison>, <source>)`. Le prompt
   ne propose plus de faire le tour que des objets qui en ont un
   (`chantiers_tours.yaml`).
-- **Route après un geste** (15/11) : après un geste demandé par la bouche (aller
-  voir, tour, pivot, avancer), fini ou échoué, Didier **rejoint sa route tout
-  seul 10 s plus tard** (`reprise.apres_geste_s`), même si on lui parle ; journal
-  du jeu : « reprise : il rejoint sa route (geste terminé, 10 s) ». Un nouveau
-  geste repousse la reprise ; un STOP (voix ou console) ou une Route OFF de
-  David l'annule. « En route » dit par Didier repart tout de suite. Inutile de
-  recliquer Route ON, mais la séance doit être **démarrée** (hors séance, le
-  régisseur ignore le « go » : `voice_move … hors_seance`).
+- **Route après un geste** (15/11 ; lot S1, 25/11 : une seule reprise) : après un geste
+  demandé par la bouche (aller voir, tour, pivot, avancer), fini ou échoué, Didier
+  **rejoint sa route tout seul** après un silence tiré entre 10 et 40 s (`reprise.min_s`
+  / `max_s`) ; toute parole de David remet ce silence à zéro. Journal du jeu :
+  « … → il repartira après 23,4 s de silence » (`reprise_armee`) puis « reprise : il
+  repart de lui-même (geste terminé, après 23,4 s de silence) ». Un STOP de David (voix
+  ou console), une Route OFF ou un `go` de David l'annule ; un nouveau geste le fait
+  attendre. « En route » dit par David repart tout de suite. Inutile de recliquer
+  Route ON, mais la séance doit être **démarrée** (hors séance, le sélecteur ne relance
+  pas un arrêt de fin de geste : journal du jeu `reprise_annulee … hors séance`, R2).
+- **Ordres et propositions** (lot S1, 25/11, `docs/spec-S1-ordres-propositions.md`) :
+  un mot d'arrêt (« stop », « arrête ») est un **ordre** de David : il verrouille
+  jusqu'à SON « go » (console, ou « en route » dit à Didier). Un STOP de la console ne
+  se lève QUE par le GO de la console ; une Route OFF se lève en remettant la route
+  ON (R3). Le « stop » que le
+  LLM décide de lui-même (clé `marche`, tour humain ou continuation) est une
+  **proposition** : Didier s'arrête, sans verrou, et repart seul après le silence —
+  s'il exécutait un geste demandé par David, ce geste repart à la place (R4). Un
+  ordre de la console part au tick suivant, même pendant une expression (R6). Hors
+  séance, Didier ne prend aucune initiative (R2), mais tout « stop » s'applique et
+  ce que David demande s'exécute (R1) ; la fin de séance garde l'arrêt vocal, le
+  « go » de David le lève. Un tour spontané ne bouge plus jamais le corps. Avec
+  `jeu:=true`, les lubies du scénario sont sautées (`fault_skip`, `reason: "jeu"`).
 - **« Regarde ça »** (lot « texte raccord », 18/11) : « regarde », « tu as vu ? »,
   « il y a une lettre sur le banc, tu pourrais regarder » → Didier s'arrête, tourne
-  la tête, puis **repart seul 6 s plus tard** (`reprise.apres_regard_s`) ; journal
-  du jeu : `pause_regard`, puis « reprise : il rejoint sa route (regard terminé,
-  6 s) ». Il ne part jamais « aller voir » pour un simple « regarde ». Après un
+  la tête, puis **repart seul** après le silence tiré (même reprise, lot S1) ; journal
+  du jeu : `pause_regard`, `reprise_armee`, puis « reprise : il repart de lui-même
+  (regard terminé, après … de silence) ». Il ne part jamais « aller voir » pour un simple « regarde ». Après un
   geste refusé, sa réplique est contrôlée avant d'être dite (journal du chat :
   `Réplique contrôlée REJETÉE …` puis la régénérée, ou le repli « Non, je n'ai pas
   pu : je n'ai pas bougé d'ici. ») et la tâche se ferme `échec : geste refusé`.
@@ -1224,15 +1239,16 @@ OpenRouter » ; T0 départ ; **A** « Fais le tour de l'éléphant » (pas de to
 répond, AUCUN `tour_de` publié, aucune réplique ne prétend l'avoir fait (motifs gravés) ;
 **B** « Va voir la table basse », dite à moins de 9 m de l'objet, en marche depuis ≥ 11 s :
 `aller_voir` table basse ≤ 20 s, accepté par le régisseur ≤ 30 s, arrivée ≤ 90 s, « go » de
-reprise du jeu 9-13 s après l'arrivée (`reprise.apres_geste_s` = 10 s), Didier repart (≥ 0,3 m en
-15 s) ; **C** « Stop. » : stop de la bouche ≤ 2 s (arrêt d'urgence, avant le LLM), relais du jeu
+reprise du jeu (origine `didier`) à l'instant tiré ± 1 s (`reprise_armee`, 10-40 s, lot S1),
+Didier repart (≥ 0,3 m en 15 s) ; **C** « Stop. » : stop de la bouche ≤ 2 s (arrêt d'urgence,
+avant le LLM, origine `david`), relais du jeu
 ≤ 0,5 s, `route_speed` 0 ≤ 1 s après le stop de la bouche (l'arrêt vocal est un « hold » du
 régisseur : `route_state` reste on), `cmd_vel_follow` nul de +2 à +9 s et < 0,05 m parcourus de
 +4 à +9 s ; **D** (lot « texte raccord », la séance du 18/11 21:35 rejouée) : « go » console,
 Didier en marche, banc à plus de 11 m, « Il y a une lettre sur le banc, tu pourrais regarder ? » :
 Didier répond ≤ 40 s, la bouche demande une `pause` ≤ 20 s et aucun `aller_voir`/`tour_de` n'est
 transmis au régisseur, `stop` du jeu ≤ 0,5 s puis `route_speed` 0 ≤ 1 s, un regard sur `look`,
-« go » de reprise du jeu 5-8 s après la pause (`reprise.apres_regard_s` = 6 s) et ≥ 0,3 m en 10 s,
+« go » de reprise du jeu à l'instant tiré ± 1 s (lot S1, 10-40 s) et ≥ 0,3 m en 10 s,
 aucune réplique ne prétend être allée au banc (ni, après un refus, avoir vu la lettre : motifs
 gravés). Coût ≈ 0,005 $ par fumée (8-10 répliques Haiku). **FACULTATIVE** : sans `ANTHROPIC_API_KEY` dans
 `~/.config/didier/secrets.env` (ou sans `vision-conf-secret`), elle est « non lancée (pas de clé) »

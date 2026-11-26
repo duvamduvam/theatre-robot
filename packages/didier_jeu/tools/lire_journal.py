@@ -45,6 +45,8 @@ def _ligne(r: dict, t0: int) -> tuple[str, str, str, str]:
         return f"{t:7.1f}", typ.replace("relais_", "relais ").upper(), cible, p.get("pourquoi", "")
     if typ == "console":
         return f"{t:7.1f}", "CONSOLE (David)", f"{p.get('cmd', '')} {cible}".strip(), p.get("pourquoi", "")
+    if typ == "ordre":   # lot S1 : geste demandé par David à la bouche, exécuté sans score
+        return f"{t:7.1f}", "ORDRE (David)", cible, p.get("pourquoi", "")
     if typ == "naissance_piste":
         return f"{t:7.1f}", "personne", cible, p.get("pourquoi", "")
     return f"{t:7.1f}", typ, cible, p.get("pourquoi", "")

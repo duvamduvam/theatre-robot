@@ -83,25 +83,39 @@ ros2 launch didier_rehearsal rehearsal.launch.py route:=chantiers scenario:=jeu-
 
 `jeu:=true` remappe le régisseur sur **`jeu/chat_move`** (publié par le sélecteur
 `packages/didier_jeu` du mono-dépôt) au lieu de `rehearsal/chat_move` : un seul
-décideur du corps, la bouche ne fait plus que déposer des intentions (son `stop`
-est relayé sans arbitrage). Le launch démarre **lui-même** `jeu_node` (respawn),
+décideur du corps (lot S1 : la bouche transmet les ordres de David, son `stop` est
+toujours relayé). Le launch démarre **lui-même** `jeu_node` (respawn),
 sous la même condition que le remap : jamais de remap sans relais du `stop` (si
-le répertoire est illisible, le sélecteur ne fait que relayer stop/go). `director`
-ne change pas ; défaut `false`
-= séance Chantiers inchangée (V-R3). `scenario:=jeu-a1` : scénario VIDE (0 bug,
-0 lubie — les lubies viennent du sélecteur), qu'il faut quand même **starter**
-(un `go` hors séance est ignoré). `rehearsal/objects` porte depuis A1 `x`, `y`
+le répertoire est illisible, le sélecteur ne fait que relayer stop/go). Il passe
+aussi `jeu:=true` au régisseur (paramètre `jeu`, lot S1) : **les lubies du
+scénario ne partent pas** (`fault_skip`, `reason: "jeu"`), le sélecteur a les
+siennes. Défaut `false` = séance Chantiers inchangée (V-R3). `scenario:=jeu-a1` :
+scénario VIDE (0 bug, 0 lubie), qu'il faut quand même **starter** (hors séance, le
+sélecteur ne prend aucune initiative et le régisseur refuse ses gestes, lot S1 R2). `rehearsal/objects` porte depuis A1 `x`, `y`
 de chaque objet (le sélecteur oriente le regard d'une lubie).
 
 ## Lot I1 — mouvement à la voix (étude §13.11, 22/10)
 
 Didier peut demander à repartir ou à s'arrêter : la clé `"marche": "go"|"stop"`
 de son JSON de fin part de `chat_node` (dépôt vision, seulement si
-`CHAT_MOUVEMENT` est posé — banc de répétition) sur **`rehearsal/chat_move`**
-(StringTime, `json.dumps("go"|"stop")`). Le régisseur est le **seul**
-consommateur ; il décide (`director.VoiceMove`, pur) et agit par `route` /
-`route_speed`, comme pour les lubies. Tout ordre est journalisé `voice_move`
-(`effect` : `close_lubie` | `resume` | `relaunch` | `hold` | `ignored` + `reason`).
+`CHAT_MOUVEMENT` est posé — banc de répétition) sur **`rehearsal/chat_move`**.
+Contrat depuis le lot S1 (25/11, `docs/spec-S1-ordres-propositions.md`) :
+`{"cmd": "go"|"stop"|"pause", "origine": "david"|"didier"}` — `david` pour un mot
+d'arrêt et ce que David demande, `didier` pour le `marche: stop` interprété par le
+LLM (et, en `jeu:=true`, les reprises et lubies du sélecteur) ; les anciennes formes
+(`json.dumps("go"|"stop")`, objet sans `origine`) sont lues `david`
+(`contracts.lire_chat_move`). Le régisseur décide (`director.VoiceMove`, pur) et
+agit par `route` / `route_speed`, comme pour les lubies. Tout ordre est journalisé
+`voice_move` avec son `origine` (`effect` : `close_lubie` | `resume` | `relaunch` |
+`hold` | `ignored` + `reason`).
+
+- **Origine (lot S1, règle R1 du 25/11)** : un `stop` n'est **jamais** ignoré, séance
+  ou non, quelle que soit son origine. L'arrêt vocal retient l'origine de qui l'a posé
+  (David l'emporte) : un `go` `didier` ne lève qu'un arrêt `didier` (sinon
+  `arret_de_david`), un `go` `david` lève tout. Hors séance, seuls les **gestes**
+  `didier` sont refusés (réponse `hors_seance` ; sous un arrêt de David, `arret_de_david`).
+  Origine inconnue : `stop` lu `david`, `go` ignoré (`origine_inconnue`). Supprimé :
+  toute condition de séance sur la marche.
 
 - **go** : ferme la lubie active (`closed_by: "voix"`, la vitesse en vigueur
   EST rendue), sinon lève l'arrêt vocal (vitesse d'avant, plafonnée), sinon
@@ -109,17 +123,18 @@ consommateur ; il décide (`director.VoiceMove`, pur) et agit par `route` /
   `route_state_cause` latchée `boot` (salve de 3 `on`, confirmée par
   `route_state`). **Jamais** après une extinction par commande (cause `cmd`,
   ou `off`/`false`/`0` vu sur `route`) : `route_off_par_david` ; cause jamais
-  reçue : `cause_inconnue`. Hors séance : ignoré. Anti-rebond 2 s.
-- **stop** : `route_speed 0` **toujours** republié (même hors séance, même
-  pendant une lubie), arrêt vocal **toujours** posé sans jamais écraser une
-  vitesse déjà retenue ; pas d'anti-rebond.
+  reçue : `cause_inconnue`. Anti-rebond 2 s.
+- **stop** : `route_speed 0` **toujours** republié (même pendant une lubie, même
+  hors séance), arrêt vocal **toujours** posé sans jamais écraser une vitesse déjà
+  retenue ; pas d'anti-rebond.
 - **Règle générale** (défaut trouvé en sim le 22/10) : tant qu'un arrêt vocal
   est posé, le régisseur ne publie **jamais** de vitesse non nulle, sauf par
   « go » ou levée au fader — une lubie qui finit ne rend rien, une panne
   `speed` ne publie rien (`"suppressed_by": "voice_hold"` au journal).
 - Vitesse en vigueur : celle d'une panne `speed` active, sinon le fader.
-  Le fader lève l'arrêt vocal sans rien publier ; abort / fin de séance aussi
-  (Didier reste à l'arrêt) et annulent une salve de relance.
+  Le fader lève l'arrêt vocal sans rien publier. Abort / fin de séance le
+  **gardent** (lot S1, M2 : avant, ils le levaient en silence et le `go` de David
+  qui suivait ne rendait plus rien) et annulent une salve de relance.
 
 `route_driver` publie `route_state_cause` (latché, JSON `"boot"` | `"cmd"`) :
 `boot` au démarrage, `cmd` à chaque extinction par commande, tout format.

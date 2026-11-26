@@ -2,8 +2,8 @@
 # Réglage de départ, se règle au journal : David relit le journal d'une
 # séance (jeu/journal, JSONL) et règle ici. Sources : spec A1 §3 et §8
 # (theatre-robot/docs/spec-A1-selecteur-de-jeu.md), étude autonomie §4.2,
-# décisions du 31/10 et du 23/10. Aucune valeur n'est « sourcée » : ce sont
-# des points de départ.
+# décisions du 31/10 et du 23/10, lot S1 (docs/spec-S1-ordres-propositions.md,
+# 25/11). Aucune valeur n'est « sourcée » : ce sont des points de départ.
 # GRAVÉ : test/test_reglages.py recopie chaque valeur en dur — en changer une
 # exige de toucher le test (c'est voulu : un réglage se change en conscience).
 
@@ -29,7 +29,9 @@ reaction:
 
 engagement:
   # Une action engagée se finit ; seule une offre de VALEUR >= ce seuil peut
-  # l'interrompre (la bouche, valeur 0,9).
+  # l'interrompre. Lot S1 : plus aucune offre ne l'atteint (la bouche, 0,9, n'est
+  # plus une offre mais un ordre) — un ordre de David engagé n'est jamais
+  # interrompu par le score, quel que soit ce seuil.
   seuil_rupture: 0.9
 
 offres:
@@ -38,7 +40,6 @@ offres:
   valeur:
     personne: 0.7     # naissance d'une piste de personne
     objet: 0.8        # rehearsal/poi_event « enter » (décision 02/11, §8.1)
-    bouche: 0.9       # demande de mouvement de la bouche (rehearsal/chat_move)
 
 pistes:
   # Silence de vision/person_box au-delà duquel la piste est perdue
@@ -79,23 +80,20 @@ lubie:
   delai_refus_s: 3.0
 
 reprise:
-  # Après un arrêt décidé par DIDIER : il propose « repartir ? » puis envoie
-  # lui-même « go » après ce délai de SILENCE — toute parole entendue
-  # (chat_transcript, rôle david) remet le compteur à zéro : jamais de « go »
-  # tant que la scène parle (décision de David, 02/11). Sauf stop/ignore de la
-  # console ; jamais de « go » automatique après un stop/off de David (31/10).
-  # Vaut pour SES arrêts hors geste demandé (lubie, approche de lui-même).
-  delai_s: 90.0
-  # Après un GESTE demandé par la bouche (aller voir, tour, pivot, avancer),
-  # fini OU échoué, plus aucun geste ne roulant : il rejoint sa route tout
-  # seul après ce délai (David, 15/11 : « la route doit se remettre toute
-  # seule »). La parole ne remet PAS ce compteur à zéro (il écoute en marche,
-  # décision du 08/11). Annulé par un nouveau geste, un stop, une Route OFF de David.
-  apres_geste_s: 10.0
-  # « Regarde ça » (lot « texte raccord », 18/11) : la bouche demande une PAUSE (chat_move
-  # "pause") -> il s'arrête, regarde (regard de la bouche, 4 s), puis rejoint sa route tout seul
-  # après ce délai. Mêmes annulations que apres_geste_s ; la parole ne le remet pas à zéro.
-  apres_regard_s: 6.0
+  # UNE SEULE REPRISE (lot S1, 25/11 ; remplace delai_s 90 s, apres_geste_s 10 s et
+  # apres_regard_s 6 s). Après un arrêt décidé par DIDIER — lubie, « stop » d'origine
+  # « didier », pause « regarde ça », fin d'un geste de la bouche ou de son propre
+  # déplacement — il propose « repartir ? » puis envoie lui-même « go » après D s de
+  # SILENCE, D tiré au moment de l'arrêt dans [min_s, max_s] (David, 24/11 : « une
+  # décision du régisseur », bornée de 10 à 40 s ; l'humeur qui choisira D viendra
+  # avec le régisseur LLM, S4). Toute parole entendue (chat_transcript, rôle david)
+  # remet le silence à zéro sans retirer le tirage (02/11). Jamais de « go »
+  # automatique après un stop ou une Route OFF de David (31/10).
+  min_s: 10.0
+  max_s: 40.0
+  # Un geste de David suspendu par un stop de Didier (R4) n'est ré-émis que s'il a moins de
+  # cet âge (s, depuis sa suspension) ; au-delà, abandonné (seconde relecture, 26/11).
+  ordre_suspendu_max_s: 60.0
 
 superviseur:
   # « suppose » (A1 sim, défaut) : présence supposée. « exigeant » : sans
@@ -105,7 +103,11 @@ superviseur:
 
 console:
   ignore_s: 30.0          # « ignore » : aucune action vers la cible pendant 30 s (T4)
-  ordre_ttl_s: 10.0       # un ordre macro non exécutable tombe (refus journalisé)
+  # Rafale (seconde relecture, 26/11) : le MÊME ordre de déplacement (même commande, même
+  # cible) reçu moins de rebond_s après le précédent est ignoré — un double-clic ne nourrit
+  # pas la fatigue.
+  rebond_s: 1.0
+  # (Lot S1, R6 : plus d'ordre_ttl_s — un ordre macro part au tick ou est refusé tout de suite.)
   # « joue avec lui » : biais console sur la piste pendant 30 s ; approches
   # RÉPÉTÉES permises (David, 02/11), bornées par approche.hauteur_max.
   joue_avec_s: 30.0
@@ -127,7 +129,6 @@ approche:
 poids:
   offre: 1.0
   pulsion: 0.6
-  metteur_en_scene: 0.8
   console: 1.5
 
 # Score de l'immobilité (« rien » est candidat aussi) : base − pente × ennui.
@@ -146,9 +147,8 @@ gains:
   spontanee: 1.0      # expression de types « random » / « little move »
   approcher: 0.7      # se tourner vers une piste puis avancer
   lubie: 1.0
-  bouche: 1.0
-  aller_voir: 1.0     # va_la vers un objet (console)
-  repartir: 2.0       # reprise après un arrêt de Didier ou « reviens »
+  # (Lot S1 : plus de gain « bouche », « aller_voir » ni « repartir » — gestes de la bouche,
+  # « va là » et « reviens » sont des ORDRES, exécutés sans score, R6.)
 
 # Emploi des séquences selon leur clé `types` (répertoire). Une séquence dont
 # aucun type n'est listé ici est chargée mais SANS EMPLOI (journalisée).
@@ -169,20 +169,5 @@ durees_s:
 regard:
   # Azimut normalisé ±1 = bord de l'image = ± demi-champ caméra (60° -> 30°).
   demi_champ_deg: 30.0
-
-metteur_en_scene:
-  # Péremption d'une indication (= SITUATION_TTL_S de la boucle de réflexion).
-  ttl_s: 5.0
-  # Un mot-clé de DÉPLACEMENT (approche) ne fait bouger que si le texte nomme
-  # une piste (« p3 ») ; au plus ce nombre de pas par piste nommée, et jamais
-  # au-delà de approche.hauteur_max (David, 02/11) — le texte est republié
-  # chaque seconde : sans cette borne, il ferait avancer Didier en boucle.
-  pas_par_piste: 1
-  # Mot-clé (texte normalisé : minuscules, sans accents) -> action servie.
-  mots_cles:
-    approche: approcher
-    regarde: regarder
-    salue: accueil
-    bonjour: accueil
-    danse: spontanee
-    bouge: spontanee
+# (Lot S1 : section metteur_en_scene — mots-clés, ttl_s, pas_par_piste — supprimée avec
+# les mots-clés du metteur en scène ; jeu/proposition les remplacera au lot I3.)

@@ -193,7 +193,7 @@ def test_poi_name_of():
 
 def test_accept_goto_leve_l_arret_vocal_a_la_vitesse_du_go():
     v = VoiceMove()
-    v.decide("stop", 0.0, in_session=True, lubie_active=False, route_on=True,
+    v.decide("stop", 0.0, lubie_active=False, route_on=True,
              relaunch_refusal=None, speed_in_effect=0.6)
     d = v.accept_goto(lubie_active=False, speed_in_effect=0.6)
     assert (d.effect, d.speed, v.hold_before) == ("goto", 0.6, None)
@@ -201,7 +201,7 @@ def test_accept_goto_leve_l_arret_vocal_a_la_vitesse_du_go():
 
 def test_accept_goto_jamais_au_dessus_de_la_batterie():
     v = VoiceMove()
-    v.decide("stop", 0.0, in_session=True, lubie_active=False, route_on=True,
+    v.decide("stop", 0.0, lubie_active=False, route_on=True,
              relaunch_refusal=None, speed_in_effect=0.8)
     assert v.accept_goto(lubie_active=False, speed_in_effect=0.4).speed == 0.4
 
@@ -214,7 +214,7 @@ def test_accept_goto_sans_arret_ne_publie_aucune_vitesse_et_ferme_la_lubie():
 
 def test_accept_goto_annule_une_salve_de_relance():
     v = VoiceMove()
-    v.decide("go", 0.0, in_session=True, lubie_active=False, route_on=False,
+    v.decide("go", 0.0, lubie_active=False, route_on=False,
              relaunch_refusal=None, speed_in_effect=0.5)
     assert v.relaunching
     v.accept_goto(lubie_active=False, speed_in_effect=0.5)
@@ -223,13 +223,13 @@ def test_accept_goto_annule_une_salve_de_relance():
 
 def test_go_rejoin_releve_l_arret_et_relance():
     v = VoiceMove()
-    v.decide("stop", 0.0, in_session=True, lubie_active=False, route_on=False,
+    v.decide("stop", 0.0, lubie_active=False, route_on=False,
              relaunch_refusal=None, speed_in_effect=0.5)
-    d = v.decide("go", 5.0, in_session=True, lubie_active=False, route_on=False,
+    d = v.decide("go", 5.0, lubie_active=False, route_on=False,
                  relaunch_refusal="etat_inconnu", speed_in_effect=0.5, rejoin=True)
     assert (d.effect, d.speed, d.rejoin, v.relaunching) == ("resume", 0.5, True, True)
     w = VoiceMove()
-    d = w.decide("go", 5.0, in_session=True, lubie_active=False, route_on=False,
+    d = w.decide("go", 5.0, lubie_active=False, route_on=False,
                  relaunch_refusal="etat_inconnu", speed_in_effect=0.5, rejoin=True)
     assert (d.effect, d.rejoin) == ("rejoin", True)
 

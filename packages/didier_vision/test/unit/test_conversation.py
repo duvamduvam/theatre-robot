@@ -34,6 +34,12 @@ from didier_vision.audio.vad import VadEvent
 REFRESH_MS = 15000
 BEEPS_PCM = b"\x00\x01" * 100  # contenu bidon, seule la présence compte ici
 BEEPS_RATE = 22050
+# La marche telle que on_move la reçoit (lot S1, 25/11, contrat didier_rehearsal.contracts) :
+# mot d'arrêt et continuation = « david », « marche »: « stop » d'un tour humain = « didier ».
+STOP_DAVID = {"cmd": "stop", "origine": "david"}
+STOP_DIDIER = {"cmd": "stop", "origine": "didier"}
+GO_DAVID = {"cmd": "go", "origine": "david"}
+PAUSE_DAVID = {"cmd": "pause", "origine": "david"}
 
 
 # ---------------------------------------------------------------------------
@@ -1566,7 +1572,7 @@ def test_marche_go_appelle_on_move_une_fois(timeline):
     ordres = []
     assert _tour_avec_marche(timeline, ['On y va. {"emotion": "happy", "marche": "go"}'],
                              ordres.append) is True
-    assert ordres == ["go"]
+    assert ordres == [GO_DAVID]
     # L'émotion joue toujours : la clé en plus ne gêne pas le visage.
     publishes = [event[1] for event in timeline if event[0] == "publish"]
     assert publishes[-1] == RosMessage(FACE, json.dumps("joie"))
@@ -1575,7 +1581,7 @@ def test_marche_go_appelle_on_move_une_fois(timeline):
 def test_marche_normalisee_casse_et_espaces(timeline):
     ordres = []
     _tour_avec_marche(timeline, ['Halte. {"emotion": "neutral", "marche": "STOP "}'], ordres.append)
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DIDIER]
 
 
 @pytest.mark.parametrize("valeur", ['"recule"', '"vas-y"', '""', "true", "1", "null",
@@ -1636,7 +1642,7 @@ def test_marche_part_meme_pendant_une_panne_mute(timeline):
     finally:
         _cleanup_beeps(engine)
     assert "tts_synthesize" not in [event[0] for event in timeline]   # la voix est coupée…
-    assert ordres == ["go"]                                         # …pas les jambes
+    assert ordres == [GO_DAVID]                                         # …pas les jambes
 
 
 # --------------------------------------------------------------------------
@@ -1674,10 +1680,10 @@ def test_urgence_emise_avant_le_llm_puis_le_tour_continue(timeline):
     assert result is True
     tags = [event[0] for event in timeline]
     # L'intention part APRÈS le STT et AVANT le premier appel LLM…
-    assert timeline.index(("move", "stop")) < tags.index("brain_stream_reply")
-    assert tags.index("stt_transcribe") < timeline.index(("move", "stop"))
+    assert timeline.index(("move", STOP_DAVID)) < tags.index("brain_stream_reply")
+    assert tags.index("stt_transcribe") < timeline.index(("move", STOP_DAVID))
     # …une seule fois, et le tour va jusqu'au bout (Didier joue l'arrêt).
-    assert timeline.count(("move", "stop")) == 1
+    assert timeline.count(("move", STOP_DAVID)) == 1
     assert ("brain_stream_reply", "Didier, stop !") in timeline
     assert ("tts_synthesize", "Bon, bon, je m'arrête.") in timeline
 
@@ -1693,7 +1699,7 @@ def test_urgence_avant_la_ligne_david_du_transcript(timeline):
         assert engine.run_once() is True
     finally:
         _cleanup_beeps(engine)
-    assert (timeline.index(("move", "stop"))
+    assert (timeline.index(("move", STOP_DAVID))
             < timeline.index(("transcript", "david", "Arrête !"))
             < [e[0] for e in timeline].index("brain_stream_reply"))
 
@@ -1714,7 +1720,8 @@ def test_phrase_avec_contexte_ne_declenche_pas_l_urgence(timeline, caplog):
 
 
 def test_urgence_puis_marche_stop_du_llm_emet_deux_fois(timeline):
-    # Le régisseur est idempotent (hold republié) : pas de dédup ici.
+    # Le régisseur est idempotent (hold republié) : pas de dédup ici. Lot S1 : le premier
+    # est l'ordre de David (mot d'arrêt), le second la proposition du LLM.
     ordres = []
     _tour = _make_engine(timeline, frames=_speech_frames_and_events()[0],
                          vad_events=_speech_frames_and_events()[1], stt_text="Stop !",
@@ -1724,7 +1731,7 @@ def test_urgence_puis_marche_stop_du_llm_emet_deux_fois(timeline):
         assert _tour.run_once() is True
     finally:
         _cleanup_beeps(_tour)
-    assert ordres == ["stop", "stop"]
+    assert ordres == [STOP_DAVID, STOP_DIDIER]
 
 
 def test_urgence_avec_on_move_qui_leve_le_tour_continue(timeline, caplog):
@@ -1780,8 +1787,8 @@ def test_urgence_testee_sur_le_stt_avant_la_panne_garble(timeline):
     finally:
         _cleanup_beeps(engine)
     # L'intention part AVANT le LLM, qui reçoit quand même le contresens.
-    assert timeline.count(("move", "stop")) == 1
-    assert (timeline.index(("move", "stop"))
+    assert timeline.count(("move", STOP_DAVID)) == 1
+    assert (timeline.index(("move", STOP_DAVID))
             < timeline.index(("brain_stream_reply", "Tu as dit banane ?")))
     assert lines[0] == ("david", "Tu as dit banane ?")
 
@@ -1818,10 +1825,10 @@ def test_urgence_transmise_sous_panne_deaf_puis_enonce_jete(timeline):
         assert engine.run_once() is False
     finally:
         _cleanup_beeps(engine)
-    assert timeline.count(("move", "stop")) == 1
+    assert timeline.count(("move", STOP_DAVID)) == 1
     assert "brain_stream_reply" not in [event[0] for event in timeline]
     assert lines == []
-    assert timeline.index(("move", "stop")) < timeline.index(("publish", IDLE))
+    assert timeline.index(("move", STOP_DAVID)) < timeline.index(("publish", IDLE))
     assert timeline[-1] == ("mic_start",)
 
 
@@ -2109,14 +2116,15 @@ def test_tour_spontane_n_emet_jamais_go(timeline, clock, caplog):
         _cleanup_beeps(engine)
     assert ordres == []
     assert [r.message for r in caplog.records] == [
-        "Clé \"marche\" : go ignoré : tour spontané (aucun humain ne l'a demandé)."]
+        "Tour spontané : la bouche ne décide aucun mouvement — clé(s) \"marche\" ignorée(s)."]
     # Le reste du tour est intact (la réplique est dite, l'émotion jouée).
     assert ("tts_synthesize", "On repart !") in timeline
     assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
 
 
-def test_tour_spontane_transmet_stop(timeline, clock):
-    # B1 : seul "stop" passe d'un tour spontané (s'arrêter n'est jamais dangereux).
+def test_tour_spontane_ne_transmet_plus_stop(timeline, clock):
+    # Lot S1 (25/11, §8 bis) : le "stop" qui restait permis en tour spontané (B1) arrêtait
+    # Didier sans qu'aucun humain l'ait demandé (séance du 24/11) — supprimé.
     stage = StageState()
     stage.push_prompt("Arrête-toi devant la vitrine.", clock.t)
     ordres = []
@@ -2128,7 +2136,32 @@ def test_tour_spontane_transmet_stop(timeline, clock):
         assert engine.run_once() is True
     finally:
         _cleanup_beeps(engine)
-    assert ordres == ["stop"]
+    assert ordres == []
+
+
+@pytest.mark.parametrize("cles", [
+    '"marche": "stop"', '"marche": "go"', '"marche": "pause"', '"aller_voir": "anneaux"',
+    '"faire_le_tour": "poubelle_tri"', '"tourner": -90', '"avancer": 2',
+    '"marche": "stop", "aller_voir": "anneaux", "faire_le_tour": "banc", "tourner": 90, "avancer": 1'])
+def test_s1_5_tour_spontane_aucune_emission_quelles_que_soient_les_cles(timeline, clock, caplog, cles):
+    """Spec S1 §5.5 : tour spontané -> RIEN sur on_move, quelles que soient les clés ;
+    journalisé une fois. Mutation faite à la livraison (garde `if spontaneous` retirée de
+    _notify_move) -> rouge."""
+    stage = StageState()
+    stage.push_prompt("Fais quelque chose.", clock.t)
+    ordres = []
+    engine, _brain = _spontane_engine(
+        timeline, stage, clock, frames=[b"f0", b"f1", b"f2"],
+        brain_deltas=['Tiens ! {"emotion": "happy", ' + cles + '}'])
+    engine._on_move = ordres.append
+    try:
+        with caplog.at_level("WARNING", logger="didier_vision.ai.conversation"):
+            assert engine.run_once() is True
+    finally:
+        _cleanup_beeps(engine)
+    assert ordres == []
+    assert len([r for r in caplog.records if r.message.startswith("Tour spontané : la bouche ne décide "
+                                                                   "aucun mouvement")]) == 1
 
 
 def test_enonce_de_david_vide_l_emplacement_du_tour_spontane(timeline):
@@ -2435,7 +2468,7 @@ def test_garde_stop_pendant_la_replique_arrete_et_interrompt(timeline, caplog, e
         result = engine.run_once()
 
     assert result is False                       # tour interrompu, pas mené au bout
-    assert ordres == ["stop"]                    # une fois, et JAMAIS le "go" de fin
+    assert ordres == [STOP_DAVID]                    # une fois, et JAMAIS le GO_DAVID de fin
     assert stt.calls == [(b"PREROLLg1g2", 16000)]  # même STT, tranche pré-roll + trames
     assert guard_vad.adopted == [7.5]            # seuil de l'écoute normale repris
     synth = [event[1] for event in timeline if event[0] == "tts_synthesize"]
@@ -2464,7 +2497,7 @@ def test_garde_parole_quelconque_ne_coupe_rien(timeline):
         timeline, stt=stt, on_move=on_move, pause=pause)
     assert engine.run_once() is True
     assert len(stt.calls) == 1                   # la garde a bien entendu…
-    assert ordres == ["go"]                      # …sans rien émettre : seul le go de fin
+    assert ordres == [GO_DAVID]                      # …sans rien émettre : seul le go de fin
     synth = [event[1] for event in timeline if event[0] == "tts_synthesize"]
     assert synth == ["Première phrase.", "Deuxième phrase."]
     assert "player_interrupt" not in _tags(timeline)
@@ -2500,7 +2533,7 @@ def test_garde_stt_qui_leve_la_replique_continue(timeline, caplog):
     assert len(stt.calls) == 1
     synth = [event[1] for event in timeline if event[0] == "tts_synthesize"]
     assert synth == ["Première phrase.", "Deuxième phrase."]
-    assert ordres == ["go"]
+    assert ordres == [GO_DAVID]
     assert any(record.message.startswith("Écoute garde : STT en échec")
                for record in caplog.records)
 
@@ -2521,7 +2554,7 @@ def test_garde_stop_transcrit_apres_la_fin_de_replique_emet_quand_meme(timeline)
     finally:
         hold.set()
     assert _wait_until(lambda: len(ordres) == 2)
-    assert ordres == ["go", "stop"]              # le stop tardif PART, après le go
+    assert ordres == [GO_DAVID, STOP_DAVID]              # le stop tardif PART, après le go
     assert "player_interrupt" not in _tags(timeline)   # mais n'interrompt rien
 
 
@@ -2537,7 +2570,7 @@ def test_garde_tranche_en_cours_a_la_fermeture_part_au_stt(timeline):
     assert engine.run_once() is True
     assert _wait_until(lambda: len(ordres) == 2)
     assert stt.calls == [(b"PREROLLg1g2", 16000)]
-    assert ordres == ["go", "stop"]
+    assert ordres == [GO_DAVID, STOP_DAVID]
     assert "player_interrupt" not in _tags(timeline)
 
 
@@ -2556,7 +2589,7 @@ def test_garde_stop_tardif_part_avant_le_go_du_tour_suivant(timeline):
     finally:
         timer.cancel()
         hold.set()
-    assert ordres == ["go", "stop", "go"]        # la nouvelle intention de David gagne
+    assert ordres == [GO_DAVID, STOP_DAVID, GO_DAVID]        # la nouvelle intention de David gagne
 
 
 # --- I2 : file STT bornée, les tranches récentes d'abord --------------------
@@ -2596,7 +2629,7 @@ def test_garde_stop_pendant_la_panne_delay_sans_appel_llm(timeline):
     started = time.monotonic()
     assert engine.run_once() is False
     assert time.monotonic() - started < 1.0      # l'attente de 1,5 s est écourtée
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DAVID]
     assert "brain_stream_reply" not in _tags(timeline)
     assert lines == [("david", "Raconte-moi la rue."), ("david", "Stop !")]
     assert states[-1] == "listening" and timeline[-1] == ("mic_start",)
@@ -2644,7 +2677,7 @@ def test_go_jamais_emis_apres_une_interruption_de_la_meme_replique(timeline):
     engine._guard = types.SimpleNamespace(lock=threading.Lock(), interrupted=interrupted)
     engine._notify_move({"marche": "go"})
     engine._notify_move({"marche": "stop"})
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DIDIER]
 
 
 def test_garde_stop_pendant_la_synthese_la_phrase_n_est_pas_jouee(timeline):
@@ -2663,7 +2696,7 @@ def test_garde_stop_pendant_la_synthese_la_phrase_n_est_pas_jouee(timeline):
     assert engine.run_once() is False
     assert ("tts_synthesize", "Deuxième phrase.") in timeline
     assert _tags(timeline).count("player_play") == 1     # synthétisée, jamais jouée
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DAVID]
 
 
 def test_garde_stop_pendant_le_drain_sortie_interrompue(timeline):
@@ -2684,7 +2717,7 @@ def test_garde_stop_pendant_le_drain_sortie_interrompue(timeline):
     publishes = [event[1] for event in timeline if event[0] == "publish"]
     assert publishes[-2:] == [SPEAKING_STOP, IDLE]       # pas l'émotion "joie" de fin
     assert lines[-1] == ("david", "Stop !")
-    assert ordres == ["go", "stop"]                      # go déjà parti, stop après
+    assert ordres == [GO_DAVID, STOP_DAVID]                      # go déjà parti, stop après
 
 
 def test_garde_fermee_sur_le_chemin_d_exception(timeline):
@@ -2707,7 +2740,7 @@ def test_garde_panne_llm_apres_urgence_rejoue_interrupt(timeline):
     assert engine.run_once() is False
     assert _tags(timeline).count("player_interrupt") == 2   # garde + rattrapage
     assert lines[-1] == ("david", "Stop !")
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DAVID]
     assert states[-1] == "listening" and timeline[-1] == ("mic_start",)
 
 
@@ -2768,7 +2801,7 @@ def test_garde_stop_crie_pendant_une_replique_sans_stop_est_emis(timeline):
         pause=lambda: holder["player"].interrupted.wait(timeout=WAIT_S))
     holder["player"] = player
     assert engine.run_once() is False
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DAVID]
     synth = [event[1] for event in timeline if event[0] == "tts_synthesize"]
     assert synth == ["D'accord, je m'arrête."]
 
@@ -2834,7 +2867,7 @@ def test_source_stt_du_tour_dans_le_dict_de_timing(timeline):
 # comme "go") ; stop > aller_voir > go.
 # --------------------------------------------------------------------------
 
-ANNEAUX = {"cmd": "aller_voir", "objet": "anneaux"}
+ANNEAUX = {"cmd": "aller_voir", "objet": "anneaux", "origine": "david"}
 
 
 def test_aller_voir_emis_rogne_au_format_du_contrat(timeline):
@@ -2845,7 +2878,7 @@ def test_aller_voir_emis_rogne_au_format_du_contrat(timeline):
     assert ordres == [ANNEAUX]
     # Payload publié par chat_node (json.dumps de l'intention) : GRAVÉ, c'est
     # la chaîne que le régisseur décode.
-    assert json.dumps(ordres[0]) == '{"cmd": "aller_voir", "objet": "anneaux"}'
+    assert json.dumps(ordres[0]) == '{"cmd": "aller_voir", "objet": "anneaux", "origine": "david"}'
     assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
 
 
@@ -2854,7 +2887,7 @@ def test_aller_voir_garde_la_casse(timeline):
     ordres = []
     _tour_avec_marche(timeline, ['Allons. {"emotion": "happy", "aller_voir": "La Grue"}'],
                       ordres.append)
-    assert ordres == [{"cmd": "aller_voir", "objet": "La Grue"}]
+    assert ordres == [{"cmd": "aller_voir", "objet": "La Grue", "origine": "david"}]
 
 
 def test_aller_voir_et_stop_le_stop_gagne(timeline, caplog):
@@ -2863,7 +2896,7 @@ def test_aller_voir_et_stop_le_stop_gagne(timeline, caplog):
         _tour_avec_marche(
             timeline, ['Euh. {"emotion": "neutral", "marche": "stop", "aller_voir": "anneaux"}'],
             ordres.append)
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DIDIER]
     assert any("aller_voir" in r.message and "stop" in r.message for r in caplog.records)
 
 
@@ -2891,7 +2924,7 @@ def test_aller_voir_invalide_laisse_passer_le_go(timeline):
     ordres = []
     _tour_avec_marche(timeline, ['Hop. {"emotion": "happy", "marche": "go", "aller_voir": ""}'],
                       ordres.append)
-    assert ordres == ["go"]
+    assert ordres == [GO_DAVID]
 
 
 def test_aller_voir_sans_on_move_aucun_effet(timeline, caplog):
@@ -2920,10 +2953,11 @@ def test_tour_spontane_n_emet_jamais_aller_voir(timeline, clock, caplog):
         _cleanup_beeps(engine)
     assert ordres == []
     assert [r.message for r in caplog.records] == [
-        "Clé \"aller_voir\" : 'anneaux' ignoré : tour spontané (aucun humain ne l'a demandé)."]
+        "Tour spontané : la bouche ne décide aucun mouvement — clé(s) \"marche\", \"aller_voir\" "
+        "ignorée(s)."]
 
 
-def test_tour_spontane_stop_avec_aller_voir_transmet_stop(timeline, clock):
+def test_tour_spontane_stop_avec_aller_voir_n_emet_rien(timeline, clock):
     stage = StageState()
     stage.push_prompt("Arrête-toi.", clock.t)
     ordres = []
@@ -2935,7 +2969,7 @@ def test_tour_spontane_stop_avec_aller_voir_transmet_stop(timeline, clock):
         assert engine.run_once() is True
     finally:
         _cleanup_beeps(engine)
-    assert ordres == ["stop"]
+    assert ordres == []                               # lot S1 : plus de stop spontané
 
 
 def test_aller_voir_jamais_emis_apres_une_interruption_de_la_meme_replique(timeline):
@@ -2946,7 +2980,7 @@ def test_aller_voir_jamais_emis_apres_une_interruption_de_la_meme_replique(timel
     engine._guard = types.SimpleNamespace(lock=threading.Lock(), interrupted=interrupted)
     engine._notify_move({"aller_voir": "anneaux"})
     engine._notify_move({"marche": "stop"})
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DIDIER]
 
 
 def test_aller_voir_pris_sous_le_verrou_de_la_garde(timeline):
@@ -2984,7 +3018,7 @@ def test_garde_stop_tardif_part_avant_l_aller_voir_du_tour_suivant(timeline):
     finally:
         timer.cancel()
         hold.set()
-    assert ordres == [ANNEAUX, "stop", ANNEAUX]  # la nouvelle intention de David gagne
+    assert ordres == [ANNEAUX, STOP_DAVID, ANNEAUX]  # la nouvelle intention de David gagne
 
 
 # --------------------------------------------------------------------------
@@ -2996,8 +3030,8 @@ def test_garde_stop_tardif_part_avant_l_aller_voir_du_tour_suivant(timeline):
 # émis EN PLUS d'un geste de mouvement).
 # --------------------------------------------------------------------------
 
-TOURNE_DROITE = {"cmd": "tourner", "angle_deg": -90}
-AVANCE_UN = {"cmd": "avancer", "metres": 1}
+TOURNE_DROITE = {"cmd": "tourner", "angle_deg": -90, "origine": "david"}
+AVANCE_UN = {"cmd": "avancer", "metres": 1, "origine": "david"}
 REGARDE_DROITE = {"angle_deg": -60, "hold_ms": 4000}
 
 
@@ -3029,7 +3063,7 @@ def _ordre_pour(timeline, cles):
     ('" Droite "', -90), ('"DEMI_TOUR"', 180)])
 def test_tourner_emis_au_format_du_contrat(timeline, valeur, angle):
     ordres = _ordre_pour(timeline, '"tourner": ' + valeur)
-    assert ordres == [{"cmd": "tourner", "angle_deg": angle}]
+    assert ordres == [{"cmd": "tourner", "angle_deg": angle, "origine": "david"}]
     assert [e[1] for e in timeline if e[0] == "publish"][-1] == JOIE
 
 
@@ -3037,7 +3071,7 @@ def test_tourner_payload_publie_grave(timeline):
     # Chaîne que le régisseur décode (json.dumps de chat_node._publish_move) ;
     # un entier reste un entier.
     assert json.dumps(_ordre_pour(timeline, '"tourner": "droite"')[0]) == (
-        '{"cmd": "tourner", "angle_deg": -90}')
+        '{"cmd": "tourner", "angle_deg": -90, "origine": "david"}')
 
 
 @pytest.mark.parametrize("valeur", ["181", "-180.5", "720", "NaN", "Infinity",
@@ -3052,11 +3086,11 @@ def test_tourner_illisible_ou_hors_bornes_ignore_avec_warning(timeline, caplog, 
 @pytest.mark.parametrize("graphie", ['"demi_tour"', '"demi-tour"', '" Demi Tour "'])
 def test_tourner_demi_tour_toutes_graphies(timeline, graphie):
     assert json.dumps(_ordre_pour(timeline, '"tourner": ' + graphie)[0]) == (
-        '{"cmd": "tourner", "angle_deg": 180}')
+        '{"cmd": "tourner", "angle_deg": 180, "origine": "david"}')
 
 
 def test_tourner_invalide_laisse_passer_le_go(timeline):
-    assert _ordre_pour(timeline, '"marche": "go", "tourner": 400') == ["go"]
+    assert _ordre_pour(timeline, '"marche": "go", "tourner": 400') == [GO_DAVID]
 
 
 def test_tourner_sans_on_move_aucun_effet(timeline, caplog):
@@ -3071,12 +3105,12 @@ def test_tourner_sans_on_move_aucun_effet(timeline, caplog):
 @pytest.mark.parametrize("valeur, metres", [("1", 1), ("0.5", 0.5), ("5", 5), ("2.25", 2.25)])
 def test_avancer_emis_au_format_du_contrat(timeline, valeur, metres):
     assert _ordre_pour(timeline, '"avancer": ' + valeur) == [
-        {"cmd": "avancer", "metres": metres}]
+        {"cmd": "avancer", "metres": metres, "origine": "david"}]
 
 
 def test_avancer_payload_publie_grave(timeline):
     assert json.dumps(_ordre_pour(timeline, '"avancer": 1.5')[0]) == (
-        '{"cmd": "avancer", "metres": 1.5}')
+        '{"cmd": "avancer", "metres": 1.5, "origine": "david"}')
 
 
 @pytest.mark.parametrize("valeur", ["0", "-1", "-0.5", "5.01", "12", "NaN", "Infinity",
@@ -3107,9 +3141,9 @@ def test_avancer_refus_explique_qu_il_ne_recule_pas(timeline, caplog):
     ('"avancer": 1, "aller_voir": "anneaux"', ANNEAUX),
     ('"marche": "go", "aller_voir": "anneaux", "tourner": -90, "avancer": 1', ANNEAUX),
     ('"marche": "go", "tourner": -90, "avancer": 1', TOURNE_DROITE),
-    ('"marche": "stop", "tourner": -90', "stop"),
-    ('"marche": "stop", "avancer": 1', "stop"),
-    ('"marche": "stop", "aller_voir": "anneaux", "tourner": -90, "avancer": 1', "stop"),
+    ('"marche": "stop", "tourner": -90', STOP_DIDIER),
+    ('"marche": "stop", "avancer": 1', STOP_DIDIER),
+    ('"marche": "stop", "aller_voir": "anneaux", "tourner": -90, "avancer": 1', STOP_DIDIER),
     ('"tourner": 999, "avancer": 1', AVANCE_UN),               # perdant illisible = suivant
 ])
 def test_preseance_des_gestes_un_seul_ordre(timeline, cles, attendu):
@@ -3118,7 +3152,7 @@ def test_preseance_des_gestes_un_seul_ordre(timeline, cles, attendu):
 
 def test_stop_journalise_chaque_geste_jete(timeline, caplog):
     with caplog.at_level("WARNING", logger="didier_vision.ai.conversation"):
-        assert _ordre_pour(timeline, '"marche": "stop", "tourner": -90, "avancer": 1') == ["stop"]
+        assert _ordre_pour(timeline, '"marche": "stop", "tourner": -90, "avancer": 1') == [STOP_DIDIER]
     messages = [r.message for r in caplog.records]
     assert ("Clé \"tourner\" : -90 ignoré : la même réplique demande \"stop\" "
             "(le stop gagne toujours).") in messages
@@ -3129,8 +3163,8 @@ def test_stop_journalise_chaque_geste_jete(timeline, caplog):
 # --- Mise en mouvement : spontané, verrou et barrière de la garde --------------
 
 @pytest.mark.parametrize("cles, cle, valeur", [
-    ('"marche": "go", "tourner": -90', "tourner", "-90"),
-    ('"avancer": 2', "avancer", "2")])
+    ('"marche": "go", "tourner": -90', '"marche", "tourner"', "-90"),
+    ('"avancer": 2', '"avancer"', "2")])
 def test_tour_spontane_n_emet_jamais_tourner_ni_avancer(timeline, clock, caplog, cles, cle,
                                                         valeur):
     # Revue B1 du 23/10 : un tour spontané ne met jamais Didier en mouvement.
@@ -3148,7 +3182,7 @@ def test_tour_spontane_n_emet_jamais_tourner_ni_avancer(timeline, clock, caplog,
         _cleanup_beeps(engine)
     assert ordres == []
     assert [r.message for r in caplog.records] == [
-        f"Clé \"{cle}\" : {valeur} ignoré : tour spontané (aucun humain ne l'a demandé)."]
+        f"Tour spontané : la bouche ne décide aucun mouvement — clé(s) {cle} ignorée(s)."]
 
 
 @pytest.mark.parametrize("params", [{"tourner": -90}, {"avancer": 1}])
@@ -3160,7 +3194,7 @@ def test_geste_jamais_emis_apres_une_interruption_de_la_meme_replique(timeline, 
     engine._guard = types.SimpleNamespace(lock=threading.Lock(), interrupted=interrupted)
     engine._notify_move(params)
     engine._notify_move({"marche": "stop"})
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DIDIER]
 
 
 @pytest.mark.parametrize("params", [{"tourner": 180}, {"avancer": 3}])
@@ -3198,7 +3232,7 @@ def test_garde_stop_tardif_part_avant_le_geste_du_tour_suivant(timeline, cles, o
     finally:
         timer.cancel()
         hold.set()
-    assert ordres == [ordre, "stop", ordre]
+    assert ordres == [ordre, STOP_DAVID, ordre]
 
 
 # --- « Regarder » -----------------------------------------------------------
@@ -3257,8 +3291,8 @@ def test_regarder_ne_passe_jamais_par_on_move(timeline):
 
 @pytest.mark.parametrize("cles, ordre", [
     ('"tourner": -90', TOURNE_DROITE), ('"avancer": 1', AVANCE_UN),
-    ('"aller_voir": "anneaux"', ANNEAUX), ('"marche": "go"', "go"),
-    ('"marche": "stop"', "stop")])
+    ('"aller_voir": "anneaux"', ANNEAUX), ('"marche": "go"', GO_DAVID),
+    ('"marche": "stop"', STOP_DIDIER)])
 def test_regarder_en_plus_d_un_geste_les_deux_partent(timeline, cles, ordre):
     ordres, regards = [], []
     _tour_avec_cles(
@@ -3310,20 +3344,20 @@ def test_on_look_qui_leve_ne_casse_pas_le_tour(timeline, caplog):
 # Préséance stop > aller_voir > faire_le_tour > tourner > avancer > go ; jamais
 # en tour spontané ; "sens" absent = gauche.
 
-TOUR_GAUCHE = {"cmd": "tour_de", "objet": "poubelle_tri", "sens": "gauche"}
+TOUR_GAUCHE = {"cmd": "tour_de", "objet": "poubelle_tri", "sens": "gauche", "origine": "david"}
 
 
 def test_faire_le_tour_sens_par_defaut_gauche_payload_grave(timeline):
     ordres = _ordre_pour(timeline, '"faire_le_tour": "  poubelle_tri "')
     assert ordres == [TOUR_GAUCHE]
-    assert json.dumps(ordres[0]) == '{"cmd": "tour_de", "objet": "poubelle_tri", "sens": "gauche"}'
+    assert json.dumps(ordres[0]) == '{"cmd": "tour_de", "objet": "poubelle_tri", "sens": "gauche", "origine": "david"}'
 
 
 @pytest.mark.parametrize("sens_brut, sens", [
     ('"droite"', "droite"), ('" Droite "', "droite"), ('"GAUCHE"', "gauche")])
 def test_faire_le_tour_sens_normalise(timeline, sens_brut, sens):
     assert _ordre_pour(timeline, '"faire_le_tour": "poubelle_tri", "sens": ' + sens_brut) == [
-        {"cmd": "tour_de", "objet": "poubelle_tri", "sens": sens}]
+        {"cmd": "tour_de", "objet": "poubelle_tri", "sens": sens, "origine": "david"}]
 
 
 def test_faire_le_tour_garde_la_casse_de_l_objet(timeline):
@@ -3351,7 +3385,7 @@ def test_faire_le_tour_vide_ou_non_chaine_ignore_avec_warning(timeline, caplog, 
     ('"faire_le_tour": "poubelle_tri", "tourner": -90', TOUR_GAUCHE),
     ('"avancer": 1, "faire_le_tour": "poubelle_tri"', TOUR_GAUCHE),
     ('"marche": "go", "faire_le_tour": "poubelle_tri"', TOUR_GAUCHE),
-    ('"marche": "stop", "faire_le_tour": "poubelle_tri"', "stop"),
+    ('"marche": "stop", "faire_le_tour": "poubelle_tri"', STOP_DIDIER),
     ('"faire_le_tour": "", "tourner": -90', TOURNE_DROITE),     # perdant illisible = suivant
 ])
 def test_faire_le_tour_preseance_un_seul_ordre(timeline, cles, attendu):
@@ -3373,8 +3407,7 @@ def test_tour_spontane_n_emet_jamais_faire_le_tour(timeline, clock, caplog):
         _cleanup_beeps(engine)
     assert ordres == []
     assert [r.message for r in caplog.records] == [
-        "Clé \"faire_le_tour\" : 'poubelle_tri' ignoré : tour spontané "
-        "(aucun humain ne l'a demandé)."]
+        "Tour spontané : la bouche ne décide aucun mouvement — clé(s) \"faire_le_tour\" ignorée(s)."]
 
 
 # --------------------------------------------------------------------------
@@ -3538,7 +3571,9 @@ def test_continuation_sans_geste_ferme_la_tache(timeline, clock):
 
 
 def test_continuation_avec_go_seul_ferme_la_tache(timeline, clock):
-    # "go" n'est pas un geste de corps : la tâche est finie, il reprend la route.
+    # "go" n'est pas un geste de corps : la tâche est finie. Lot S1 (R3, 25/11) : le go n'est
+    # plus émis en continuation — la reprise du sélecteur relance la route après le geste (un
+    # go de David y lèverait un arrêt vocal que David n'a pas levé).
     task = _tache_en_attente(clock.t)
     engine, _brain, ordres = _tache_engine(
         timeline, clock, task, deltas=['Fini, je repars. {"emotion": "happy", "marche": "go"}'])
@@ -3546,7 +3581,7 @@ def test_continuation_avec_go_seul_ferme_la_tache(timeline, clock):
         engine.run_once()
     finally:
         _cleanup_beeps(engine)
-    assert ordres == ["go"]
+    assert ordres == []
     assert not task.is_open()
 
 
@@ -3559,7 +3594,7 @@ def test_continuation_avec_stop_ferme_la_tache(timeline, clock):
         engine.run_once()
     finally:
         _cleanup_beeps(engine)
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DIDIER]          # R3 : le LLM décide de s'arrêter, une proposition
     assert not task.is_open()
 
 
@@ -3596,11 +3631,12 @@ def test_tour_spontane_ne_bouge_jamais_meme_avec_une_tache_ouverte(timeline, clo
     assert brain.calls[0]["user_text"] == SPONTANE
     assert ordres == []
     assert task.is_open() and task.steps == 1       # ni fermée ni avancée
-    assert "Clé \"avancer\" : 3 ignoré : tour spontané (aucun humain ne l'a demandé)." in [
+    assert "Tour spontané : la bouche ne décide aucun mouvement — clé(s) \"avancer\" ignorée(s)." in [
         r.message for r in caplog.records]
 
 
-def test_tour_spontane_stop_ferme_la_tache(timeline, clock):
+def test_tour_spontane_stop_ignore_la_tache_reste_ouverte(timeline, clock):
+    # Lot S1 : le "stop" d'un tour spontané n'est plus émis — rien ne ferme la tâche de David.
     stage = StageState()
     stage.push_prompt("Arrête-toi ici.", clock.t)
     task = MoveTask()
@@ -3612,8 +3648,8 @@ def test_tour_spontane_stop_ferme_la_tache(timeline, clock):
         engine.run_once()
     finally:
         _cleanup_beeps(engine)
-    assert ordres == ["stop"]
-    assert not task.is_open()
+    assert ordres == []
+    assert task.is_open()
 
 
 def test_continuation_sans_regie_transmet_la_direction(timeline, clock):
@@ -3648,7 +3684,7 @@ def test_continuation_garde_armee_stop_crie_arrete_et_ferme(timeline):
     task.on_result(FIN_DU_TOUR, time.monotonic())
     engine._move_task = task
     assert engine._serve_continuation(task.pop_continuation()) is False
-    assert ordres == ["stop"]
+    assert ordres == [STOP_DAVID]
     assert guard_vad.adopted == [7.5]            # garde armée (seuil repris)
     assert "player_interrupt" in _tags(timeline)
     assert not task.is_open()
@@ -3660,7 +3696,7 @@ def test_continuation_garde_armee_stop_crie_arrete_et_ferme(timeline):
 # régisseur) ; une continuation dont la tâche est déjà close ne bouge pas.
 # --------------------------------------------------------------------------
 
-TOUR_ELEPHANT = {"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}
+TOUR_ELEPHANT = {"cmd": "tour_de", "objet": "elephant", "sens": "gauche", "origine": "david"}
 
 
 def test_geste_emis_apparie_au_refus_du_regisseur(timeline):
@@ -3716,7 +3752,7 @@ def test_continuation_d_une_tache_close_ne_bouge_pas(timeline, clock, caplog):
 # le TABLEAU DES OBJETS et joint l'id de l'objet résolu au geste publié.
 # --------------------------------------------------------------------------
 
-AV_ELEPHANT = {"cmd": "aller_voir", "objet": "elephant"}
+AV_ELEPHANT = {"cmd": "aller_voir", "objet": "elephant", "origine": "david"}
 
 
 # Tableau de la séance du 15/11 vu de x = 14 (valeurs gravées dans didier_perception).
@@ -3807,7 +3843,7 @@ def test_tour_possible_publie_avec_l_id_du_tableau(timeline):
     task = MoveTask()
     ordres = _tour_humain(timeline, "fais le tour des poubelles",
                           'Allons-y. {"emotion": "happy", "faire_le_tour": "les poubelles"}', task)
-    assert ordres == [{"cmd": "tour_de", "objet": "les poubelles", "sens": "gauche", "id": "carte/poubelle_tri"}]
+    assert ordres == [{"cmd": "tour_de", "objet": "les poubelles", "sens": "gauche", "id": "carte/poubelle_tri", "origine": "david"}]
     assert task.pop_continuation() is None
 
 
@@ -3826,7 +3862,7 @@ def test_garde_non_branchee_le_geste_part_sans_id(timeline):
     task = MoveTask()
     ordres = _tour_humain(timeline, "fais le tour de l'éléphant",
                           'Hop. {"emotion": "happy", "faire_le_tour": "elephant"}', task, vocab=None)
-    assert ordres == [{"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}]
+    assert ordres == [{"cmd": "tour_de", "objet": "elephant", "sens": "gauche", "origine": "david"}]
 
 
 def test_garde_locale_est_celle_du_contrat():

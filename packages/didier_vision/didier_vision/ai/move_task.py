@@ -133,10 +133,12 @@ REFUSAL_REASONS = {
     "invalid": "ta demande de geste était incompréhensible",
     "arrete": "tu es arrêté jusqu'à ce qu'on te dise de repartir",
     "sans_superviseur": "personne ne te surveille, tu ne te déplaces pas seul",
-    "fatigue": "tu es trop fatigué pour te déplacer maintenant",
-    "trop_tot": "tu viens déjà de te déplacer, pas tout de suite",
-    "ignore": "on t'a dit de laisser ça de côté",
     "pas_retenu": "ton corps ne t'a pas suivi",
+    # Régisseur, lot S1 (25/11) : geste d'origine « didier » refusé (didier_rehearsal.director.
+    # VoiceMove.geste_refuse). (Retirés au même lot : fatigue, trop_tot, ignore — un ordre de
+    # David n'est plus refusé pour ça.)
+    "hors_seance": "la séance n'est pas lancée, tu ne pars pas de toi-même",
+    "arret_de_david": "David t'a arrêté, tu attends qu'il te relance",
     "degrade": "ton corps ne répond qu'à « stop » et « go » en ce moment",
     "no_reply": "personne n'a donné suite",
     NO_ANSWER: "personne n'a donné suite",

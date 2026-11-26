@@ -56,11 +56,13 @@ def test_topic_look_egal_a_celui_de_gaze_follower():
     assert re.search(r'^LOOK_TOPIC = "look"$', NODE.read_text(encoding="utf-8"), re.M)
 
 
-def test_topics_de_la_reflexion_egaux_au_contrat_vision():
-    src = (MONO / "packages" / "didier_vision" / "didier_vision" / "ai" / "reflection_contract.py").read_text(encoding="utf-8")
+def test_plus_d_abonnement_au_metteur_en_scene():
+    """Lot S1 (25/11) : les mots-clés du metteur en scène sont supprimés — le node n'écoute
+    plus chat_situation ni mission_state (avant : leurs littéraux étaient gravés ici)."""
     node = NODE.read_text(encoding="utf-8")
-    for nom, valeur in (("SITUATION_TOPIC", "chat_situation"), ("MISSION_STATE_TOPIC", "mission_state")):
-        assert f'{nom} = "{valeur}"' in src and f'{nom} = "{valeur}"' in node
+    for litteral in ('"chat_situation"', '"mission_state"', "SITUATION_TOPIC", "MISSION_STATE_TOPIC",
+                     "sur_situation", "sur_mission"):
+        assert litteral not in node, litteral
 
 
 def test_le_regisseur_ecoute_ce_que_le_selecteur_publie():

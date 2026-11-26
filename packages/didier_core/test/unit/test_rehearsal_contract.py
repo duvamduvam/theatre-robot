@@ -218,6 +218,17 @@ def test_topics_et_ops_partages_avec_chat_node():
     assert contracts.CHAT_MOVE_TOPIC == "rehearsal/chat_move"
 
 
+def test_s1_origines_et_marche_gravees_des_deux_cotes():
+    """Lot S1 (25/11) : origines et ordres de marche, littéraux GRAVÉS ici et relus dans la
+    bouche (didier_vision/ai/conversation.py, qui n'importe pas ce package)."""
+    assert contracts.CHAT_MOVE_ORIGINES == ("david", "didier")
+    assert (contracts.CHAT_MOVE_STOP, contracts.CHAT_MOVE_GO, contracts.CHAT_MOVE_PAUSE) == ("stop", "go", "pause")
+    src = (pathlib.Path(__file__).resolve().parents[4] / "packages" / "didier_vision" / "didier_vision" / "ai"
+           / "conversation.py").read_text(encoding="utf-8")
+    for ligne in ('ORIGINE_DAVID = "david"', 'ORIGINE_DIDIER = "didier"', 'PAUSE_CMD = "pause"'):
+        assert f"\n{ligne}\n" in src, ligne
+
+
 def test_itineraire_chantiers():
     route = load_route(_yaml("config", "chantiers.yaml"))
     assert route.name == "nefs-titan-grise"

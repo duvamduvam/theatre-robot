@@ -1247,15 +1247,17 @@ class ChatNode(Node):
         payload = stage.encode_transcript(role, text, int(time.time() * 1000))
         self._transcript_pub.publish(StringTime(msg=payload, time=0, anim=False))
 
-    def _publish_move(self, cmd: str) -> None:
+    def _publish_move(self, cmd: dict) -> None:
         """Callback `on_move` de ConversationEngine (thread de conversation,
         OU thread STT de l'écoute garde pour un "stop" crié pendant une
-        réplique — publish rclpy est sûr entre threads) :
-        "go"/"stop" (ou le dict {"cmd": "aller_voir", "objet": …}, lot M1,
-        ou {"cmd": "tourner", "angle_deg": …} / {"cmd": "avancer",
-        "metres": …}, lot M2) déjà validé par le moteur, publié en JSON sur CHAT_MOVE_TOPIC. Journalisé : c'est la trace qui dit, au débrief, que
-        l'ordre venait de Didier. PAS d'arbitrage : ce n'est pas un
-        actionneur, c'est une DEMANDE au régisseur."""
+        réplique — publish rclpy est sûr entre threads) : la demande déjà
+        validée par le moteur, à la forme du contrat (lot S1, 25/11) — marche
+        {"cmd": "go"|"stop"|"pause", "origine": "david"|"didier"}, ou geste
+        {"cmd": "aller_voir", "objet": …} (M1), {"cmd": "tourner", "angle_deg": …}
+        / {"cmd": "avancer", "metres": …} (M2), {"cmd": "tour_de", …} (M3), avec
+        son "origine" — publiée en JSON sur CHAT_MOVE_TOPIC. Journalisé : c'est la
+        trace qui dit, au débrief, qui l'a portée. PAS d'arbitrage : ce n'est pas
+        un actionneur, c'est une DEMANDE au sélecteur ou au régisseur."""
         self._move_pub.publish(StringTime(msg=json.dumps(cmd), time=0, anim=False))
         self.get_logger().info(f"ordre de marche publié : {cmd}")
 

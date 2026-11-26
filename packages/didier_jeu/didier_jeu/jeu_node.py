@@ -7,9 +7,12 @@ démarrer », c'est connu et assumé : une seule définition du garde-fou).
 Le refus a lieu AVANT rclpy.init : rien n'est jamais créé sur le domaine 42.
 
 Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
-        rehearsal/chat_move (la BOUCHE : ses demandes deviennent des intentions,
-        son « stop » est relayé sans arbitrage), jeu/console (page scène),
-        chat_situation, chat_transcript (parole entendue), mission_state (latché), route_state et route_state_cause (latchés),
+        rehearsal/chat_move (la BOUCHE, lue par l'ORIGINE de chaque demande, lot S1 :
+        ordres de David exécutés tout de suite, « stop » toujours relayé),
+        jeu/console (page scène), chat_transcript (parole entendue : remet à zéro
+        le silence de la reprise), route_state et route_state_cause (latchés),
+        rehearsal/state (latché : la séance du régisseur ; hors séance ou état inconnu,
+        aucune initiative de mouvement — règle R2 du lot S1),
         route_goto_result, rehearsal/chat_move_reply (réponse du régisseur à un
         geste ; les nôtres y reviennent aussi, filtrées par `source`),
         animation_state (latché), scene/objets (latché, le tableau des objets du
@@ -20,6 +23,10 @@ Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
         rehearsal/chat_move_reply (-> chat_node : demande de geste de la bouche
         non transmise ou restée sans réponse, 15/11), animation (nom de séquence), look (« regarder », gaze_follower),
         jeu/intention (latché, republié toutes les 0,5 s), jeu/journal (+ JSONL).
+Lot S1 (25/11) : plus d'abonnement à chat_situation ni à mission_state — les mots-clés
+du metteur en scène sont supprimés (spec-S1 §2). Paramètre `graine` : semence du
+générateur qui tire la durée de silence des reprises (-1 = tirée au démarrage),
+journalisée dans la ligne `demarrage` pour rejouer une séance.
 
 SÉCURITÉ : AUCUN éditeur de Twist ici (gravé par test_contrat_node.py). Les
 roues ne bougent que par le régisseur, qui arbitre, puis route_driver.
@@ -31,12 +38,13 @@ stop/go seul, journal `degrade`.
 import json
 import math
 import os
+import random
 import time
 
 # Garde-fou AVANT tout import rclpy à effet : check_domain est pur.
 from didier_rehearsal.contracts import (CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, POI_EVENT_TOPIC,
-                                       ROUTE_GOTO_RESULT_TOPIC, ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC,
-                                       check_domain)
+                                       REHEARSAL_STATE_TOPIC, ROUTE_GOTO_RESULT_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
+                                       ROUTE_STATE_TOPIC, check_domain)
 from theatre_contrats import objets as tableau_objets
 from theatre_contrats import stringtime, topics
 
@@ -49,10 +57,6 @@ from didier_jeu.selecteur import Selecteur
 # « regarder » (lot M2) : littéral gravé avec gaze_follower_node.LOOK_TOPIC
 # (test_contrat_node.py le relit dans le vrai fichier).
 LOOK_TOPIC = "look"
-# Boucle de réflexion (dépôt vision, didier_vision/ai/reflection_contract.py) :
-# SITUATION_TOPIC / MISSION_STATE_TOPIC, littéraux gravés en test.
-SITUATION_TOPIC = "chat_situation"
-MISSION_STATE_TOPIC = "mission_state"
 # Ce que Didier a COMPRIS (chat_node, « Flow », docs/interfaces.md) : JSON
 # {"role": "david"|"didier", "text", "t_ms"} ; rôle david = parole entendue.
 # Littéral gravé avec CHAT_TRANSCRIPT_TOPIC de chat_node (test_contrat_node.py).
@@ -84,7 +88,12 @@ def main(args=None):
             self.declare_parameter("deplacements_file", _share("config", "deplacements.yaml"))
             self.declare_parameter("sequences_dir", "/home/ros2_ws/json/sequences")
             self.declare_parameter("journal_dir", "/home/ros2_ws/log/jeu")
+            # Semence des tirages de reprise (lot S1) ; -1 = tirée ici, journalisée.
+            self.declare_parameter("graine", -1)
             p = lambda n: self.get_parameter(n).value  # noqa: E731
+            graine = int(p("graine"))
+            if graine < 0:
+                graine = random.SystemRandom().randrange(2 ** 31)
             self.journal = None
             self._compteur = {"sans_pourquoi": 0}   # lignes sans pourquoi (bugs), comptées
             try:
@@ -98,8 +107,10 @@ def main(args=None):
                 tick_s = self.reglages.get("tick_s")
                 pools, sans_emploi, doublons = par_emploi(candidates(p("sequences_dir")),
                                                           self.reglages.get("emplois"))
-                self.sel = Selecteur(self.reglages, pools, charger_deplacements(p("deplacements_file")))
+                self.sel = Selecteur(self.reglages, pools, charger_deplacements(p("deplacements_file")),
+                                     graine=graine)
                 demarrage = {"pourquoi": "le sélecteur de jeu démarre (simulation seulement, domaine 43)",
+                             "graine": graine,
                              "repertoire": {k: [s.nom for s in v] for k, v in pools.items()},
                              "sans_emploi": sans_emploi, "doublons_sans_emploi": doublons,
                              "superviseur": self.reglages.get("superviseur.mode")}
@@ -133,15 +144,15 @@ def main(args=None):
             self.create_subscription(StringTime, POI_EVENT_TOPIC, self._json(self.sel.sur_poi_event), 10)
             self.create_subscription(StringTime, CHAT_MOVE_TOPIC, self._json(self.sel.sur_chat_move_bouche), 10)
             self.create_subscription(StringTime, topics.JEU_CONSOLE, self._json(self.sel.sur_console), 10)
-            self.create_subscription(StringTime, SITUATION_TOPIC, self._on_situation, 10)
             self.create_subscription(StringTime, TRANSCRIPT_TOPIC, self._on_transcript, 10)
-            self.create_subscription(StringTime, MISSION_STATE_TOPIC, self._json(self.sel.sur_mission),
-                                     qos.latched())
             self.create_subscription(StringTime, ROUTE_STATE_TOPIC, self._on_route_state, qos.latched())
             # Cause latchée de l'état de route : « cmd » = Route OFF par David.
             self.create_subscription(StringTime, ROUTE_STATE_CAUSE_TOPIC, self._json(self.sel.sur_route_cause),
                                      qos.latched())
             self.create_subscription(StringTime, ROUTE_GOTO_RESULT_TOPIC, self._json(self.sel.sur_goto_result), 10)
+            # Séance du régisseur (R2) : LATCHÉ des deux côtés (il publie TRANSIENT_LOCAL depth 1).
+            self.create_subscription(StringTime, REHEARSAL_STATE_TOPIC, self._json(self.sel.sur_seance),
+                                     qos.latched())
             self.create_subscription(StringTime, CHAT_MOVE_REPLY_TOPIC, self._json(self.sel.sur_move_reply), 10)
             self.create_subscription(StringTime, topics.ANIMATION_STATE, self._json(self.sel.sur_animation_state),
                                      qos.latched())
@@ -170,11 +181,6 @@ def main(args=None):
             except Exception as e:  # noqa: BLE001
                 self.get_logger().error(f"person_box : {e!r}")
             self._vider()
-
-        def _on_situation(self, msg):
-            v = stringtime.decode_or_raw(msg.msg)
-            texte = v.get("text") if isinstance(v, dict) else None
-            self.sel.sur_situation(texte, time.monotonic())
 
         def _on_transcript(self, msg):
             v = stringtime.decode_or_raw(msg.msg)

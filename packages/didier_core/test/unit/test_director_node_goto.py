@@ -251,7 +251,7 @@ def test_go_apres_arrivee_relance_la_route(regisseur, monkeypatch, tmp_path):
     assert _journal(n)[-1] == ("goto_arrived", {"name": "banc"})
     _voix(n, "go", t=1010.0)
     assert _publie(n, "route") == ["on"]
-    assert [p for t, p in _journal(n) if t == "voice_move"][-1] == {"cmd": "go", "effect": "rejoin",
+    assert [p for t, p in _journal(n) if t == "voice_move"][-1] == {"cmd": "go", "origine": "david", "effect": "rejoin",
                                                                      "rejoin": True}
 
 
@@ -286,7 +286,7 @@ def test_aller_voir_illisible_ne_tue_pas_le_node(regisseur, monkeypatch, tmp_pat
     _recevoir(n, "rehearsal/chat_move", json.dumps({"cmd": "danser"}))
     assert _aller_voirs(n) == [{"effect": "unknown"}]
     assert [p for t, p in _journal(n) if t == "voice_move"] == [
-        {"cmd": {"cmd": "danser"}, "effect": "ignored", "reason": "invalide"}]
+        {"cmd": {"cmd": "danser"}, "origine": "david", "effect": "ignored", "reason": "invalide"}]
 
 
 LUBIE_FLAQUE = {"id": "lubie_flaque", "type": "lubie", "t": "poi", "poi": "flaque", "duration_s": 60}

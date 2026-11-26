@@ -243,6 +243,11 @@ def test_continuation_reussie_non_controlee_close_fini(horloge):
 
 
 # ------------------------------------------------------------------ « regarde » = pause
+# La pause telle que on_move la reçoit (lot S1 : forme du contrat, origine « david » — c'est
+# David qui a dit « regarde ») ; les arrêts : mot d'arrêt = « david », clé du LLM = « didier ».
+PAUSE_DAVID = {"cmd": "pause", "origine": "david"}
+STOP_DAVID = {"cmd": "stop", "origine": "david"}
+STOP_DIDIER = {"cmd": "stop", "origine": "didier"}
 REGARDE = 'Une lettre ? Je m\'arrête pour regarder. {"emotion": "surprise", "marche": "pause", "regarder": 10}'
 
 
@@ -250,7 +255,7 @@ def test_regarde_pause_et_regard(horloge):
     cerveau = Cerveau([REGARDE])
     engine, ordres, regards, _tts = moteur(horloge, cerveau, MoveTask())
     tour_humain(engine, LETTRE)
-    assert ordres == ["pause"]
+    assert ordres == [PAUSE_DAVID]
     assert regards == [{"angle_deg": 10, "hold_ms": LOOK_HOLD_MS}]
 
 
@@ -258,7 +263,7 @@ def test_pause_sans_regard_regarde_devant(horloge):
     cerveau = Cerveau(['Voyons. {"emotion": "surprise", "marche": "pause"}'])
     engine, ordres, regards, _tts = moteur(horloge, cerveau, MoveTask())
     tour_humain(engine, LETTRE)
-    assert ordres == ["pause"] and regards == [{"angle_deg": 0, "hold_ms": 4000}]
+    assert ordres == [PAUSE_DAVID] and regards == [{"angle_deg": 0, "hold_ms": 4000}]
 
 
 def test_pause_l_emporte_sur_aller_voir(horloge):
@@ -266,7 +271,7 @@ def test_pause_l_emporte_sur_aller_voir(horloge):
     cerveau = Cerveau(['Voyons. {"emotion": "surprise", "marche": "pause", "aller_voir": "table_basse"}'])
     engine, ordres, _regards, _tts = moteur(horloge, cerveau, task)
     tour_humain(engine, LETTRE)
-    assert ordres == ["pause"]
+    assert ordres == [PAUSE_DAVID]
     assert not task.is_open()                               # aucune tâche : rien n'est parti
 
 
@@ -274,7 +279,7 @@ def test_stop_l_emporte_sur_pause(horloge):
     cerveau = Cerveau(['Halte. {"emotion": "neutral", "marche": "stop"}'])
     engine, ordres, _regards, _tts = moteur(horloge, cerveau, MoveTask())
     tour_humain(engine, "stop")                             # (l'arrêt d'urgence vocal part aussi)
-    assert set(ordres) == {"stop"}
+    assert ordres == [STOP_DAVID, STOP_DIDIER]              # le mot d'arrêt, puis la clé du LLM
 
 
 def test_pause_ignoree_en_tour_spontane(horloge):

@@ -424,6 +424,18 @@ def test_voix_abonnements_qos(regisseur, monkeypatch, tmp_path):
     assert (qos.depth, qos.durability) == (1, "TRANSIENT_LOCAL")   # latché DES DEUX côtés
 
 
+def test_s1_jeu_la_lubie_du_scenario_journalisee_fault_skip_raison_jeu(regisseur, monkeypatch, tmp_path):
+    """Lot S1 (spec §3) : paramètre `jeu` (rehearsal.launch.py jeu:=true) -> la lubie du
+    scénario ne part pas, le journal dit pourquoi ; rien n'est publié (ni consigne ni 0)."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], jeu=True)
+    _cmd(n, "start")
+    _poi(n, "banc", "enter")
+    assert [p for t, p in _journal(n) if t == "fault_skip"] == [
+        {"id": "lubie_banc", "type": "lubie", "params": LUBIE_PARAMS, "text": LUBIE_BANC, "reason": "jeu"}]
+    assert _publie(n, "route_speed") == [] and _publie(n, "chat_instruction") == []
+    assert [p["jeu"] for t, p in _journal(n) if t == "scenario_loaded"] == [True]
+
+
 def test_voix_go_ferme_la_lubie_et_rend_la_vitesse(regisseur, monkeypatch, tmp_path):
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
     _fader(n, "0.7")
@@ -433,7 +445,7 @@ def test_voix_go_ferme_la_lubie_et_rend_la_vitesse(regisseur, monkeypatch, tmp_p
     _voix(n, "go", t=1010.0)
     assert _publie(n, "route_speed") == ["0", "0.7"]          # rendue, contrairement au fader
     assert _publie(n, "chat_instruction")[1:] == ['""']       # consigne levée
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "close_lubie"}]
+    assert _voice_moves(n) == [{"cmd": "go", "origine": "david", "effect": "close_lubie"}]
     assert [p for t, p in _journal(n) if t == "fault_stop"] == [
         {"id": "lubie_banc", "type": "lubie", "params": LUBIE_PARAMS, "text": LUBIE_BANC,
          "closed_by": "voix"}]
@@ -462,11 +474,11 @@ def test_voix_stop_puis_go_rend_la_vitesse_d_avant(regisseur, monkeypatch, tmp_p
     _voix(n, "stop", t=1001.5)                     # 2e stop : 0 republié, 0.6 reste retenu
     _voix(n, "go", t=1005.0)
     assert _publie(n, "route_speed") == ["0", "0", "0.6"]
-    assert _voice_moves(n) == [{"cmd": "stop", "effect": "hold"},
-                               {"cmd": "stop", "effect": "hold"},
-                               {"cmd": "go", "effect": "resume"}]
+    assert _voice_moves(n) == [{"cmd": "stop", "origine": "david", "effect": "hold"},
+                               {"cmd": "stop", "origine": "david", "effect": "hold"},
+                               {"cmd": "go", "origine": "david", "effect": "resume"}]
     _voix(n, "go", t=1008.0)
-    assert _voice_moves(n)[-1] == {"cmd": "go", "effect": "ignored", "reason": "deja_en_marche"}
+    assert _voice_moves(n)[-1] == {"cmd": "go", "origine": "david", "effect": "ignored", "reason": "deja_en_marche"}
     assert _publie(n, "route_speed") == ["0", "0", "0.6"]
 
 
@@ -494,7 +506,7 @@ def test_voix_stop_puis_fader_aucune_republication(regisseur, monkeypatch, tmp_p
     _recevoir(n, "route", "on")                    # (la route roule)
     _voix(n, "go", t=1005.0)
     assert _publie(n, "route_speed") == ["0"]      # rien rendu, jamais
-    assert _voice_moves(n)[-1] == {"cmd": "go", "effect": "ignored", "reason": "deja_en_marche"}
+    assert _voice_moves(n)[-1] == {"cmd": "go", "origine": "david", "effect": "ignored", "reason": "deja_en_marche"}
 
 
 def test_voix_rebond_2_s_sur_go_seulement(regisseur, monkeypatch, tmp_path):
@@ -509,27 +521,54 @@ def test_voix_rebond_2_s_sur_go_seulement(regisseur, monkeypatch, tmp_path):
     assert _publie(n, "route_speed") == ["0", "0", "0.5"]
 
 
-def test_voix_hors_seance_go_ignore_stop_applique(regisseur, monkeypatch, tmp_path):
+def test_voix_hors_seance_un_stop_n_est_jamais_ignore(regisseur, monkeypatch, tmp_path):
+    """Lot S1, règle R1 : hors séance comme en séance, un « stop » s'applique quelle que soit
+    son origine ; un « go » de Didier ne lève que l'arrêt de Didier, celui de David tout."""
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], speed=0.4)
-    _voix(n, "go")
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "ignored", "reason": "hors_seance"}]
-    _voix(n, "stop", t=1001.0)
-    assert _publie(n, "route_speed") == ["0"]      # s'arrêter est toujours sûr
-    _voix(n, "go", t=1005.0)
-    assert _publie(n, "route_speed") == ["0"] and _voice_moves(n)[-1]["reason"] == "hors_seance"
-    _cmd(n, "start")
-    _voix(n, "go", t=1009.0)                       # en séance : l'arrêt vocal se lève
+    _voix(n, {"cmd": "stop", "origine": "didier"}, t=1000.0)
+    assert _publie(n, "route_speed") == ["0"]               # appliqué hors séance
+    _voix(n, {"cmd": "go", "origine": "didier"}, t=1003.0)  # lève SON arrêt
     assert _publie(n, "route_speed") == ["0", "0.4"]
+    _voix(n, "stop", t=1006.0)                               # mot d'arrêt : David
+    _voix(n, {"cmd": "go", "origine": "didier"}, t=1009.0)
+    assert _publie(n, "route_speed") == ["0", "0.4", "0"]   # le go de Didier ne lève pas celui de David
+    _voix(n, {"cmd": "go", "origine": "david"}, t=1012.0)
+    assert _publie(n, "route_speed") == ["0", "0.4", "0", "0.4"]
+    assert _voice_moves(n) == [
+        {"cmd": "stop", "origine": "didier", "effect": "hold"},
+        {"cmd": "go", "origine": "didier", "effect": "resume"},
+        {"cmd": "stop", "origine": "david", "effect": "hold"},
+        {"cmd": "go", "origine": "didier", "effect": "ignored", "reason": "arret_de_david"},
+        {"cmd": "go", "origine": "david", "effect": "resume"}]
 
 
-def test_voix_go_apres_la_fin_de_seance_ignore(regisseur, monkeypatch, tmp_path):
+def test_s1_m2_stop_en_seance_fin_de_seance_go_de_david_il_repart(regisseur, monkeypatch, tmp_path):
+    """M2 (relecture adverse du 25/11) : la fin de séance GARDE l'arrêt vocal ; le « go » de
+    David qui suit rend la vitesse retenue. Avant : levé en silence, le go tombait
+    « deja_en_marche » et Didier restait planté à vitesse 0."""
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], duration_s=100)
-    _etat_route(n, "off", cause="boot")            # relançable… si la séance tournait
+    _recevoir(n, "route", "on"); _etat_route(n, "on")
     _cmd(n, "start")
-    _tick_a(n, 1100.0)                             # fin par durée
-    _voix(n, "go", t=1101.0)
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "ignored", "reason": "hors_seance"}]
-    assert _publie(n, "route") == []
+    _voix(n, "stop", t=1001.0)
+    _tick_a(n, 1100.0)                                       # fin par durée
+    assert _publie(n, "route_speed") == ["0"]
+    assert not any(t == "voice_hold_released" for t, _ in _journal(n))
+    _voix(n, {"cmd": "go", "origine": "didier"}, t=1101.0)   # arrêt de David : refusé
+    _voix(n, "go", t=1104.0)
+    assert _publie(n, "route_speed") == ["0", "0.5"]
+    assert [m.get("reason", m["effect"]) for m in _voice_moves(n)] == ["hold", "arret_de_david", "resume"]
+
+
+def test_s1_geste_de_didier_refuse_hors_seance_celui_de_david_passe(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _voix(n, {"cmd": "avancer", "metres": 1.0, "origine": "didier"}, t=1000.0)
+    assert [p for t, p in _journal(n) if t == "avancer"] == [{"effect": "hors_seance", "origine": "didier"}]
+    assert [json.loads(m) for m in _publie(n, "rehearsal/chat_move_reply")] == [
+        {"demande": {"cmd": "avancer", "metres": 1.0, "origine": "didier"}, "effect": "hors_seance",
+         "reason": None, "name": None, "source": "director"}]
+    assert _publie(n, "route_goto") == []
+    _voix(n, {"cmd": "avancer", "metres": 1.0, "origine": "david"}, t=1001.0)
+    assert [p.get("effect") for t, p in _journal(n) if t == "avancer"][-1] != "hors_seance"
 
 
 def test_voix_invalide_et_illisible_journalises(regisseur, monkeypatch, tmp_path):
@@ -539,11 +578,11 @@ def test_voix_invalide_et_illisible_journalises(regisseur, monkeypatch, tmp_path
     _recevoir(n, "rehearsal/chat_move", "go")      # brut toléré
     _recevoir(n, "rehearsal/chat_move", '"recule"')
     _recevoir(n, "rehearsal/chat_move", "{pas du json")
-    _recevoir(n, "rehearsal/chat_move", '"GO"')    # contrat exact : chat_node normalise
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "ignored", "reason": "deja_en_marche"},
-                               {"cmd": "recule", "effect": "ignored", "reason": "invalide"},
-                               {"cmd": "{pas du json", "effect": "ignored", "reason": "invalide"},
-                               {"cmd": "GO", "effect": "ignored", "reason": "invalide"}]
+    _recevoir(n, "rehearsal/chat_move", '"GO"')    # lot S1 : casse normalisée (sens sûr pour un stop)
+    assert _voice_moves(n) == [{"cmd": "go", "origine": "david", "effect": "ignored", "reason": "deja_en_marche"},
+                               {"cmd": "recule", "origine": "david", "effect": "ignored", "reason": "invalide"},
+                               {"cmd": "{pas du json", "origine": "david", "effect": "ignored", "reason": "invalide"},
+                               {"cmd": "go", "origine": "david", "effect": "ignored", "reason": "rebond"}]
     assert _publie(n, "route") == [] and _publie(n, "route_speed") == []
 
 
@@ -557,7 +596,7 @@ def test_voix_go_apres_kill_sans_relance_relance_la_route(regisseur, monkeypatch
     _etat_route(n, "off", cause="boot")            # route_driver respawné ÉTEINT
     _voix(n, "go", t=1010.0)
     assert _publie(n, "route") == ["on"]           # 1er envoi tout de suite
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "relaunch"}]
+    assert _voice_moves(n) == [{"cmd": "go", "origine": "david", "effect": "relaunch"}]
     for t in (1010.2, 1010.5, 1011.0, 1011.5):
         _tick_a(n, t)
     assert _publie(n, "route") == ["on", "on", "on"]   # salve de 3, pas un de plus
@@ -573,7 +612,7 @@ def test_voix_go_route_jamais_lancee_la_lance(regisseur, monkeypatch, tmp_path):
     _etat_route(n, "off", cause="boot")
     _cmd(n, "start")
     _voix(n, "go", t=1001.0)
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "relaunch"}]
+    assert _voice_moves(n) == [{"cmd": "go", "origine": "david", "effect": "relaunch"}]
     assert _publie(n, "route") == ["on"]
 
 
@@ -582,7 +621,7 @@ def test_voix_cause_jamais_recue_refus(regisseur, monkeypatch, tmp_path):
     _etat_route(n, "off")                          # état sans cause (route_driver ancien, latch perdu)
     _cmd(n, "start")
     _voix(n, "go", t=1001.0)
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "ignored", "reason": "cause_inconnue"}]
+    assert _voice_moves(n) == [{"cmd": "go", "origine": "david", "effect": "ignored", "reason": "cause_inconnue"}]
     assert _publie(n, "route") == []
 
 
@@ -593,7 +632,7 @@ def test_voix_off_de_david_sous_tout_format_jamais_relance(regisseur, monkeypatc
     _cmd(n, "start")
     _recevoir(n, "route", off); _etat_route(n, "off", cause="cmd")   # David coupe
     _voix(n, "go", t=1001.0)
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "ignored", "reason": "route_off_par_david"}]
+    assert _voice_moves(n) == [{"cmd": "go", "origine": "david", "effect": "ignored", "reason": "route_off_par_david"}]
     _tick_a(n, 1002.0)
     assert _publie(n, "route") == []
 
@@ -605,7 +644,7 @@ def test_voix_off_rate_par_le_regisseur_la_cause_suffit(regisseur, monkeypatch, 
     _etat_route(n, "off", cause="cmd")
     _cmd(n, "start")
     _voix(n, "go", t=1001.0)
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "ignored", "reason": "route_off_par_david"}]
+    assert _voice_moves(n) == [{"cmd": "go", "origine": "david", "effect": "ignored", "reason": "route_off_par_david"}]
 
 
 def test_voix_off_vu_puis_reboot_toujours_refuse(regisseur, monkeypatch, tmp_path):
@@ -616,7 +655,7 @@ def test_voix_off_vu_puis_reboot_toujours_refuse(regisseur, monkeypatch, tmp_pat
     _recevoir(n, "route", "false"); _etat_route(n, "off", cause="cmd")
     _etat_route(n, "off", cause="boot")            # reboot de route_driver
     _voix(n, "go", t=1005.0)
-    assert _voice_moves(n) == [{"cmd": "go", "effect": "ignored", "reason": "route_off_par_david"}]
+    assert _voice_moves(n) == [{"cmd": "go", "origine": "david", "effect": "ignored", "reason": "route_off_par_david"}]
 
 
 def test_voix_relance_sans_confirmation_expire(regisseur, monkeypatch, tmp_path):
@@ -641,25 +680,25 @@ def test_voix_off_de_david_pendant_la_salve_l_annule(regisseur, monkeypatch, tmp
 
 
 @pytest.mark.parametrize("cmd", ["stop", "abort"])
-def test_voix_abort_leve_l_arret_sans_republier(regisseur, monkeypatch, tmp_path, cmd):
+def test_voix_abort_garde_l_arret_le_go_de_david_rend_la_vitesse(regisseur, monkeypatch, tmp_path, cmd):
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
     _fader(n, "0.6")
     _cmd(n, "start")
     _voix(n, "stop", t=1001.0)
     _cmd(n, cmd)
-    assert _publie(n, "route_speed") == ["0"]      # Didier reste à l'arrêt jusqu'au fader
-    assert ("voice_hold_released", {"by": "abort", "held": 0.6}) in _journal(n)
-    _cmd(n, "start")                               # séance rejouée : plus d'arrêt vocal à rendre
+    assert _publie(n, "route_speed") == ["0"]      # Didier reste à l'arrêt…
+    assert not any(t == "voice_hold_released" for t, _ in _journal(n))   # …et l'arrêt est GARDÉ (M2)
+    _cmd(n, "start")
     _voix(n, "go", t=1005.0)
-    assert _publie(n, "route_speed") == ["0"]
+    assert _publie(n, "route_speed") == ["0", "0.6"]
 
 
-def test_voix_fin_de_seance_leve_l_arret_sans_republier(regisseur, monkeypatch, tmp_path):
+def test_voix_fin_de_seance_garde_l_arret_sans_republier(regisseur, monkeypatch, tmp_path):
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], duration_s=100)
     _cmd(n, "start")
     _voix(n, "stop", t=1001.0)
     _tick_a(n, 1100.0)                             # fin par durée
-    assert ("voice_hold_released", {"by": "fin", "held": 0.5}) in _journal(n)
+    assert n.voice.hold_before == 0.5 and n.voice.hold_origine == "david"   # M2 : gardé
     assert _publie(n, "route_speed") == ["0"]
 
 
@@ -690,7 +729,7 @@ def test_voix_echec_de_publication_du_0_ne_pose_pas_d_arret_fantome(regisseur, m
     assert any(niveau == "error" and "chat_move" in texte for niveau, texte in n.logs.lignes)
     n.pub_speed = sain
     _voix(n, "go", t=1005.0)                       # aucun arrêt fantôme à « rendre »
-    assert _voice_moves(n)[-1] == {"cmd": "go", "effect": "ignored", "reason": "deja_en_marche"}
+    assert _voice_moves(n)[-1] == {"cmd": "go", "origine": "david", "effect": "ignored", "reason": "deja_en_marche"}
     assert _publie(n, "route_speed") == []
 
 
@@ -745,7 +784,7 @@ def test_sim_22_10_lubie_stop_puis_stop_voix_puis_fin_par_duree(regisseur, monke
     assert _publie(n, "chat_instruction")[1:] == ['""']     # la consigne, elle, est levée
     assert n.director.status() == {"lubie_banc": "done"}
     _voix(n, "go", t=1063.0)
-    assert _voice_moves(n)[-1] == {"cmd": "go", "effect": "resume"}
+    assert _voice_moves(n)[-1] == {"cmd": "go", "origine": "david", "effect": "resume"}
     assert _publie(n, "route_speed") == ["0", "0", "0.6"]
 
 
@@ -828,10 +867,9 @@ def test_fin_de_batterie_pendant_l_arret_rien_publie(regisseur, monkeypatch, tmp
 
 
 def test_abort_pendant_lubie_et_arret_la_lubie_rend_sa_vitesse(regisseur, monkeypatch, tmp_path):
-    """Lecture LITTÉRALE de la consigne « fin d'une lubie (durée, abort
-    exclu) » : à l'abort, l'arrêt vocal est levé sans republier (règle 7),
-    PUIS la lubie révoquée rend la vitesse en vigueur comme avant I1. Gravé
-    pour être VISIBLE — point signalé au coordinateur (à confirmer)."""
+    """Lot S1, M2 : l'abort GARDE l'arrêt vocal ; la lubie révoquée ne rend donc RIEN (règle
+    générale : jamais de vitesse non nulle sous un arrêt vocal). Le « go » de David rend la
+    vitesse ensuite. (Avant : arrêt levé sans republier, puis la lubie rendait 0,6.)"""
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
     _fader(n, "0.6")
     _cmd(n, "start")
@@ -839,6 +877,8 @@ def test_abort_pendant_lubie_et_arret_la_lubie_rend_sa_vitesse(regisseur, monkey
     _echos(n)
     _voix(n, "stop", t=1010.0)
     _cmd(n, "abort")
+    assert _publie(n, "route_speed") == ["0", "0"]
+    _voix(n, "go", t=1013.0)
     assert _publie(n, "route_speed") == ["0", "0", "0.6"]
 
 
@@ -921,12 +961,12 @@ def test_etat_arret_vocal_pose_par_stop_leve_par_go(regisseur, monkeypatch, tmp_
 
 
 def test_etat_arret_vocal_pose_hors_seance_puis_go_ignore(regisseur, monkeypatch, tmp_path):
-    """Le cas du 31/10 : « stop » vocal hors séance retient Didier, le « go »
-    est ignoré -- la page doit pouvoir l'afficher."""
+    """Le cas du 31/10 : « stop » de David hors séance retient Didier ; un « go » de Didier
+    (lot S1 : celui de David, lui, s'applique) est ignoré -- la page doit pouvoir l'afficher."""
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
     _fader(n, "0.6")
     _voix(n, "stop", t=1001.0)
-    _voix(n, "go", t=1005.0)
+    _voix(n, {"cmd": "go", "origine": "didier"}, t=1005.0)
     assert _publie(n, "rehearsal/state") == [SEANCE_ATTENTE,
                                              '{"seance": "attente", "arret_vocal": true}']
 
@@ -941,20 +981,23 @@ def test_etat_arret_vocal_leve_par_le_fader(regisseur, monkeypatch, tmp_path):
     assert _publie(n, "rehearsal/state")[-2:] == [SEANCE_EN_COURS_ARRETEE, SEANCE_EN_COURS]
 
 
-def test_etat_arret_vocal_leve_par_abort(regisseur, monkeypatch, tmp_path):
+def test_etat_arret_vocal_garde_par_abort(regisseur, monkeypatch, tmp_path):
+    # Lot S1, M2 : l'arrêt vocal survit à l'abort — la page le montre toujours.
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], duration_s=100)
     _cmd(n, "start")
     _voix(n, "stop", t=1001.0)
     _cmd(n, "abort")
-    assert _publie(n, "rehearsal/state")[-2:] == [SEANCE_EN_COURS_ARRETEE, SEANCE_TERMINEE]
+    assert _publie(n, "rehearsal/state")[-2:] == [SEANCE_EN_COURS_ARRETEE,
+                                                  '{"seance": "terminee", "arret_vocal": true}']
 
 
-def test_etat_arret_vocal_leve_par_la_fin_de_seance(regisseur, monkeypatch, tmp_path):
+def test_etat_arret_vocal_garde_par_la_fin_de_seance(regisseur, monkeypatch, tmp_path):
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], duration_s=100)
     _cmd(n, "start")
     _voix(n, "stop", t=1001.0)
     _tick_a(n, 1100.0)                             # fin par durée
-    assert _publie(n, "rehearsal/state")[-2:] == [SEANCE_EN_COURS_ARRETEE, SEANCE_TERMINEE]
+    assert _publie(n, "rehearsal/state")[-2:] == [SEANCE_EN_COURS_ARRETEE,
+                                                  '{"seance": "terminee", "arret_vocal": true}']
 
 
 def test_etat_ne_trahit_jamais_le_tirage(regisseur, monkeypatch, tmp_path):

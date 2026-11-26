@@ -91,8 +91,8 @@ def test_messages_objet_croise_en_marche():
     assert messages[1]["content"] == (
         "Transcription récente :\n(rien de dit pour l'instant)\n\n"
         "Perception :\nPersonne en vue.\n"
-        "Didier passe devant : les anneaux — s'il en parle, une seule phrase courte ; "
-        "il peut demander à s'arrêter pour le regarder\n\n"
+        "Didier passe devant : les anneaux — s'il en parle, une seule phrase courte, "
+        "en marchant, sans annoncer qu'il s'arrête\n\n"   # lot S1 : plus d'arrêt réclamable
         "Mission :\nMission : x.")
     assert messages[0]["content"] == render_system_prompt("David", "le paradis")
     for absent in (None, ""):

@@ -74,10 +74,9 @@ def test_score_poids_et_immobilite():
     # gain accueil 0,8 -> 1,04 ; approcher 0,7 -> 0,91 : regarder domine de plus de 15 %
     assert score(Candidat("accueil", "p1", o, "curiosite"), ctx, s.r).total == pytest.approx(1.04)
     assert score(Candidat("approcher", "p1", o, "curiosite"), ctx, s.r).total == pytest.approx(0.91)
-    # metteur en scène 0,8 et console 1,5
-    ctx2 = Contexte(now=0.0, jauges={}, metteur={"action": "regarder", "mot": "regarde"},
-                   console={"action": None, "cible": "p1", "cmd": "joue_avec"})
-    assert score(Candidat("regarder", "p1"), ctx2, s.r).total == pytest.approx(2.3)
+    # console 1,5 (lot S1 : la considération « metteur en scène » est supprimée)
+    ctx2 = Contexte(now=0.0, jauges={}, console={"action": None, "cible": "p1", "cmd": "joue_avec"})
+    assert score(Candidat("regarder", "p1"), ctx2, s.r).total == pytest.approx(1.5)
 
 
 def test_refractaire_facteur_zero_puis_un():
@@ -92,6 +91,12 @@ def test_refractaire_facteur_zero_puis_un():
     assert score(c, lent, s.r).total == 0.0                        # « plus lent » : 16 s
     lubie = Candidat("lubie", "x", None, "lubie")
     assert score(lubie, Contexte(now=119.0, jauges={"lubie": 1.0}, derniers={"arret_didier": 0.0}), s.r).total == 0.0
+    # « joue avec » (un biais, pas un ordre : les ordres ne passent plus par le score, R6)
+    # reste soumis au réfractaire « deplacement ».
+    tot = {"deplacement": 0.0}
+    ap = Candidat("approcher", "p1")
+    biais = {"action": None, "cible": "p1", "cmd": "joue avec"}
+    assert score(ap, Contexte(now=1.0, jauges={}, console=biais, derniers=tot), s.r).total == 0.0
 
 
 # ------------------------------------------------------------------ arbre
@@ -100,13 +105,13 @@ def test_arbre_ordre_des_priorites_grave():
     from didier_jeu import arbre
     racine = fabriquer().arbre
     assert isinstance(racine, py_trees.composites.Selector)
-    assert [c.name for c in racine.children] == ["arret_vocal", "superviseur_absent", "ordre_macro",
-                                                 "engagee", "choisir"]
-    # Permissions par branche : (déplacement permis, interrompt l'action engagée).
+    # Lot S1, R6 (26/11) : plus de branche « ordre_macro » — un ordre de David part au tick,
+    # hors de l'arbre et du score.
+    assert [c.name for c in racine.children] == ["arret_vocal", "superviseur_absent", "engagee", "choisir"]
+    # Permissions par branche : déplacement permis.
     feuilles = {c.name: (c.children[1] if c.children else c) for c in racine.children}
-    assert {n: (f.deplacement_permis, f.interrompt) for n, f in feuilles.items()} == {
-        "arret_vocal": (False, False), "superviseur_absent": (False, False),
-        "ordre_macro": (True, True), "engagee": (True, False), "choisir": (True, False)}
+    assert {n: f.deplacement_permis for n, f in feuilles.items()} == {
+        "arret_vocal": False, "superviseur_absent": False, "engagee": True, "choisir": True}
     assert arbre.BRANCHES == tuple(c.name for c in racine.children)
 
 

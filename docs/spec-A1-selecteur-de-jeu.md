@@ -5,6 +5,17 @@
 `robot_rehearsal`. Objet : répondre à « pourquoi et quand Didier agit » avec un mécanisme
 réglable, journalisé, lisible — pas encore avec la vraie perception (scriptée en A1).*
 
+> **Dépassée en partie par le lot S1 (25/11), `docs/spec-S1-ordres-propositions.md`** — qui fait
+> foi là où elles divergent : chaque demande porte son **origine** (`david` = ordre, `didier` =
+> proposition) ; le **verrou n'a qu'une source**, David (fini le verrou à deux sources
+> console/bouche du §9) ; un `stop` de Didier arrête sans verrou ; un geste demandé par David à
+> la bouche est un **ordre exécuté sans score** (plus une intention pondérée, §1) et n'est plus
+> refusé pour fatigue, `trop_tot`, `pas_retenu` ni `ignore` ; **une seule reprise**, silence tiré
+> dans [10, 40] s (remplace les 90 s du §8.3/§9, les 10 s après un geste et les 6 s du regard) ;
+> **mots-clés du metteur en scène supprimés** (§3 point 5, §9) ; le régisseur ignore hors séance
+> toute marche `didier` et applique celle de David (la règle `hors_seance` du §8.3 était
+> asymétrique) ; avec `jeu:=true`, les lubies du scénario sont sautées.
+
 ## 0. Ce que A1 prouve, et ce qu'il ne prouve pas
 
 **Prouve** (porte de sortie, §6) : qu'un sélecteur déterministe, nourri d'offres et de
@@ -32,6 +43,8 @@ actionneurs), la sécurité (A0 — en sim il n'y a pas d'obstacle).
   `go/stop/aller_voir/tour_de/regarder/tourner/avancer` : ils deviennent des **intentions**
   que le sélecteur pondère. **Exception gravée** : `stop` (arrêt vocal, clé `marche: stop`)
   est **relayé immédiatement et sans arbitrage** — l'arrêt gagne toujours (règle du 23/10).
+  *(S1, 25/11 : le `stop` reste toujours relayé, mais seul celui de David verrouille ; les
+  gestes demandés par David ne sont plus pondérés — spec S1 §1-§2.)*
 - Les arbitrages du régisseur (jamais contre un `off` de David, distance max, refus
   journalisés — `spec-aller-voir` §3) **restent** : le sélecteur propose, le régisseur dispose,
   `route_driver` exécute. Le sélecteur n'a **aucun** éditeur de Twist.
@@ -68,6 +81,7 @@ packages/didier_jeu/
 Racine = **sélecteur de priorités** py_trees :
 
 1. **Arrêt vocal** (`stop` reçu) → relayer, tout annuler, verrou jusqu'au `go`. *Jamais pondéré.*
+   *(S1 : verrou seulement pour un `stop` d'origine `david`, levé par un `go` de David.)*
 2. **Superviseur absent** (`jeu/console` sans battement depuis > 1 s **en mode exigeant** ;
    en A1 sim, mode « présence supposée » par défaut, réglable) → aucune initiative de
    déplacement ; expressions autorisées.
@@ -169,6 +183,8 @@ séquences, garde-fou 43 effectif, aucun Twist), **pas montrable comme porte pas
   répertoire est illisible) ; STOP CONTENUS de la page n'atteignait pas le jeu ; bouton
   Stop/Go unique à 2 s de retard ; T7 lançait un vrai nœud en domaine 42 ; journal aux jauges
   photographiées APRÈS mutation (pourquoi contredit par les chiffres).
+- *(Les points suivants sur le verrou, la reprise et les mots-clés sont remplacés par la
+  spec S1 du 25/11 : voir l'encadré en tête.)*
 - **Décisions de David (02/11)** : reprise après SON arrêt = **90 s de silence** (toute parole
   remet le compteur à zéro — lettre du 31/10) ; `joue_avec` = **approches répétées
   autorisées avec garde de distance** (hauteur de boîte < 0,55) ; `plus_lent` = **moins
@@ -182,15 +198,14 @@ séquences, garde-fou 43 effectif, aucun Twist), **pas montrable comme porte pas
   par lui. Elle vient toujours d'un humain : un tour spontané ne bouge jamais Didier (B1). Elle
   est donc traitée comme un ordre de la console. Sans cela, une tâche (« va voir l'éléphant,
   puis fais le tour du banc ») ne pouvait pas enchaîner deux gestes à moins de 2 min (vu en
-  séance le 15/11). Restent : la fatigue et le réfractaire « deplacement » de 10 s ; un
-  déplacement refusé ne compte pas (spec-aller-voir §9.6). Test :
-  `test_tache_va_voir_l_elephant_puis_tour_du_banc_10_s_apres`.
+  séance le 15/11). *(S1 : c'est désormais un ORDRE exécuté à la réception, sans score ; ni
+  fatigue ni réfractaire ne s'y appliquent.)* Un déplacement refusé ne compte pas
+  (spec-aller-voir §9.6). Test : `test_tache_va_voir_l_elephant_puis_tour_du_banc_10_s_apres`.
 - **Décision de David (15/11 21:35), reprise après un geste** : une demande de geste de
-  la bouche finie OU échouée -> Didier rejoint sa route après `reprise.apres_geste_s` =
-  10 s, la parole ne remettant PAS ce compteur à zéro (il écoute en marche, 08/11).
-  Elle est annulée par un nouveau geste, un stop ou une Route OFF de David ; le `go`
-  de la bouche est relayé sans score. Les 90 s de silence restent pour les arrêts de
-  Didier (lubie, approche). Tests : `test_reprise_geste.py`.
+  la bouche finie OU échouée -> Didier rejoint sa route seul. *(S1 : par LA reprise unique,
+  silence tiré dans [10, 40] s que la parole remet à zéro — plus `reprise.apres_geste_s` =
+  10 s ; hors séance, pas de reprise après un geste de David, R2.)* Elle est annulée par un
+  stop ou une Route OFF de David. Tests : `test_reprise_geste.py`.
 - **15/11 21:29, distances** → **lot O1 (18/11), tableau des objets** : le sélecteur ne
   calcule plus aucune distance ni pose ; il lit `scene/objets` (étude
   `etudes/etude-objets-vus-et-carte.md`). Geste de la bouche vers un objet non

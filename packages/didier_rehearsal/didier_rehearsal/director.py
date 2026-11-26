@@ -19,7 +19,10 @@ pour les types purement messagers du lot R3, les messages EXACTS à publier
 speed_in_effect / fader_moved : la vitesse de cheminement telle que le
 régisseur la raisonne (rendue à la fin, référence de la fermeture au fader).
 VoiceMove (lot I1) : les ordres de marche demandés par Didier (« go » /
-« stop »), décidés ici, exécutés par le node via route / route_speed.
+« stop »), décidés ici, exécutés par le node via route / route_speed ; lot S1
+(25/11) : chacun porte son ORIGINE, et hors séance seule la marche de David
+s'applique. Director(jeu=True) (lot S1) : les lubies du scénario ne partent
+pas quand le sélecteur de jeu tourne (« skip », raison « jeu »).
 « Aller voir » (lot M1, spec-aller-voir.md) : objects_payload (vocabulaire
 latché pour chat_node), decide_goto (arbitrage : objet inconnu, route OFF par
 David, trop loin), goto_order (l'ordre à route_driver), GotoPolicy (la
@@ -45,7 +48,8 @@ from typing import Dict, List, Tuple
 
 from theatre_contrats import stringtime
 
-from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_PAUSE, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
+from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_ORIGINE_DAVID, CHAT_MOVE_ORIGINE_DIDIER,
+                                       CHAT_MOVE_PAUSE, EXTERNAL_SPEED_DELTA, FAULT_MAX_DURATION_S,
                                        FORWARD_MAX_M, FORWARD_MIN_M, GOTO_DIDIER_RAYON_M, GOTO_EMPRISE_INCONNUE_M,
                                        GOTO_MARGE_M, GOTO_MAX_DISTANCE_M, GOTO_STANDOFF_M, INSTRUCTION_TOPIC,
                                        ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
@@ -60,11 +64,20 @@ class Action:
     kind: str     # "start" | "stop" | "skip" | "end"
     fault: Fault | None
     t_s: float
+    reason: str | None = None   # pourquoi un « skip » (None = cible occupée, la règle historique)
+
+
+# Raison du « skip » d'une lubie du scénario quand le sélecteur de jeu tourne (lot S1).
+SKIP_LUBIE_JEU = "jeu"
 
 
 class Director:
-    def __init__(self, scenario: Scenario):
+    def __init__(self, scenario: Scenario, *, jeu: bool = False):
+        """`jeu` (lot S1, 25/11, spec-S1 §3) : le sélecteur de jeu tourne (jeu:=true) — il a
+        SES lubies ; celles du scénario sont SAUTÉES à leur échéance (« skip », raison
+        SKIP_LUBIE_JEU) : un seul mécanisme de lubies. Les autres pannes ne changent pas."""
         self.scenario = scenario
+        self.jeu = jeu
         self._status: Dict[str, str] = {f.id: "pending" for f in scenario.faults}
         self._stop_at: Dict[str, float] = {}
         self._active_targets: Dict[str, str] = {}   # cible -> id de la panne active
@@ -154,7 +167,11 @@ class Director:
 
     def _begin(self, f: Fault, now_s: float, start_rel: float) -> List[Action]:
         """Démarre f (fin prévue à start_rel + durée) — ou la SAUTE si sa cible
-        est occupée, jamais empilée. Dans les deux cas elle quitte « pending »."""
+        est occupée, jamais empilée, ou si c'est une lubie et que le jeu tourne
+        (lot S1). Dans tous les cas elle quitte « pending »."""
+        if self.jeu and f.type == "lubie":
+            self._status[f.id] = "skipped"
+            return [Action("skip", f, now_s, reason=SKIP_LUBIE_JEU)]
         if f.target in self._active_targets:
             self._status[f.id] = "skipped"
             return [Action("skip", f, now_s)]
@@ -486,6 +503,7 @@ VOICE_RELAUNCH_PERIOD_S = 0.5
 VOICE_RELAUNCH_CONFIRM_S = 3.0
 
 VOICE_COMMANDS = ("go", "stop")
+VOICE_ORIGINES = (CHAT_MOVE_ORIGINE_DAVID, CHAT_MOVE_ORIGINE_DIDIER)
 
 
 @dataclass(frozen=True)
@@ -509,8 +527,15 @@ class VoiceMove:
      - ordre hors {"go","stop"} -> ignoré (« invalide ») ; « go » reçu moins
        de debounce_s après un « go » -> ignoré (« rebond ») — JAMAIS
        d'anti-rebond sur « stop » (revue I1) ;
-     - hors séance : « go » ignoré (« hors_seance »), « stop » APPLIQUÉ —
-       s'arrêter est toujours sûr ;
+     - ORIGINE (lot S1, 25/11, spec-S1 §3, règle R1 de la relecture adverse) :
+       un « stop » n'est JAMAIS ignoré, séance ou non, quelle que soit son
+       origine. L'arrêt vocal retient l'origine de qui l'a posé (`hold_origine` ;
+       un « stop » de David sur un arrêt de Didier le fait passer à David,
+       jamais l'inverse). Un « go » d'origine « didier » ne lève qu'un arrêt
+       d'origine « didier » (sinon ignoré, « arret_de_david ») ; un « go » de
+       David lève tout. Origine inconnue : « stop » lu « david », « go » ignoré
+       (« origine_inconnue »). La séance ne compte plus pour la marche : hors
+       séance, seuls les GESTES « didier » sont refusés (geste_refuse) ;
      - RÈGLE GÉNÉRALE (défaut trouvé en sim le 22/10 : une lubie qui finissait
        par sa durée rendait la vitesse et Didier repartait contre l'ordre de
        David) : tant qu'un ARRÊT VOCAL est posé, le régisseur ne publie
@@ -537,15 +562,18 @@ class VoiceMove:
        de la lubie fermée / de l'arrêt vocal levé ; seul, effet « rejoin » ;
      - le fader reste maître : une consigne externe qui s'écarte de plus de
        EXTERNAL_SPEED_DELTA de la vitesse retenue LÈVE l'arrêt vocal sans
-       rien publier (le node ferme aussi une lubie stop active) ; abort / fin
-       de séance le lèvent sans republier (abort). Le scénario (lubie,
-       `speed`) ne le lève JAMAIS.
+       rien publier (le node ferme aussi une lubie stop active). Abort et fin
+       de séance le GARDENT (lot S1, M2 : avant, ils le levaient en silence et
+       le « go » de David qui suivait ne trouvait plus de vitesse à rendre —
+       Didier restait planté) ; ils n'annulent que la salve de relance
+       (fin_de_seance). Le scénario (lubie, `speed`) ne le lève JAMAIS.
     """
 
     def __init__(self, *, debounce_s: float = VOICE_MOVE_DEBOUNCE_S):
         self.debounce_s = float(debounce_s)
         self._last: Tuple[str, float] | None = None   # (ordre, instant) du dernier ordre valide
         self._hold_before: float | None = None        # vitesse retenue par l'arrêt vocal, None = pas d'arrêt
+        self._hold_origine: str | None = None         # qui l'a posé (VOICE_ORIGINES), None = pas d'arrêt
         self._relaunch_since: float | None = None     # premier envoi de la salve, None = pas de relance
         self._relaunch_sent = 0
         self._relaunch_last: float | None = None
@@ -555,15 +583,35 @@ class VoiceMove:
         return self._hold_before
 
     @property
+    def hold_origine(self) -> str | None:
+        return self._hold_origine
+
+    @property
     def relaunching(self) -> bool:
         return self._relaunch_since is not None
 
-    def decide(self, cmd, now_s: float, *, in_session: bool, lubie_active: bool,
+    def geste_refuse(self, origine: str | None, in_session: bool) -> str | None:
+        """Raison de refuser un GESTE (aller voir, tour, pivot, avancer) d'après son origine,
+        ou None (lot S1, R1). Un geste de David passe toujours (hors séance compris : il le
+        demande) ; un geste « didier » (initiative du sélecteur) est refusé hors séance
+        (« hors_seance ») et sous un arrêt vocal de David (« arret_de_david » : son
+        acceptation lèverait l'arrêt). Origine inconnue : traitée « didier » (sens sûr)."""
+        if origine == CHAT_MOVE_ORIGINE_DAVID:
+            return None
+        if not in_session:
+            return "hors_seance"
+        if self._hold_origine == CHAT_MOVE_ORIGINE_DAVID:
+            return "arret_de_david"
+        return None
+
+    def decide(self, cmd, now_s: float, *, lubie_active: bool,
                route_on: bool, relaunch_refusal: str | None,
-               speed_in_effect: float, rejoin: bool = False) -> VoiceDecision:
+               speed_in_effect: float, rejoin: bool = False,
+               origine: str | None = CHAT_MOVE_ORIGINE_DAVID) -> VoiceDecision:
         """Décide l'effet d'un ordre et met l'état à jour (arrêt vocal posé
         ou levé, salve de relance armée). `lubie_active` : une lubie tient la
-        cible `speed`. Le node exécute : close_lubie -> close_active +
+        cible `speed`. `origine` : celle de contracts.lire_chat_move (None =
+        inconnue). Le node exécute : close_lubie -> close_active +
         fermeture « voix » (+ `speed` publiée seule si non None) ; hold /
         resume -> route_speed `speed` ; relance -> relaunch_due()."""
         if cmd == CHAT_MOVE_PAUSE:
@@ -573,6 +621,14 @@ class VoiceMove:
             cmd = "stop"
         if cmd not in VOICE_COMMANDS:
             return VoiceDecision("ignored", "invalide")
+        if origine not in VOICE_ORIGINES:
+            if cmd != "stop":
+                return VoiceDecision("ignored", "origine_inconnue")
+            origine = CHAT_MOVE_ORIGINE_DAVID
+        if (cmd == "go" and origine == CHAT_MOVE_ORIGINE_DIDIER
+                and self._hold_origine == CHAT_MOVE_ORIGINE_DAVID):
+            # AVANT l'anti-rebond : une proposition ignorée ne compte pas comme dernier ordre.
+            return VoiceDecision("ignored", "arret_de_david")
         if (cmd == "go" and self._last is not None and self._last[0] == "go"
                 and now_s - self._last[1] < self.debounce_s):
             return VoiceDecision("ignored", "rebond")
@@ -583,24 +639,22 @@ class VoiceMove:
             self._cancel_relaunch()
             if self._hold_before is None:
                 self._hold_before = speed_in_effect
+            if self._hold_origine != CHAT_MOVE_ORIGINE_DAVID:
+                self._hold_origine = origine   # David l'emporte, jamais l'inverse
             # 0 entier : même texte « 0 » que l'arrêt d'une lubie.
             return VoiceDecision("hold", speed=0)
-        if not in_session:
-            return VoiceDecision("ignored", "hors_seance")
         if rejoin:
             self._arm_relaunch(now_s)
         if lubie_active:
             if self._hold_before is None:
                 return VoiceDecision("close_lubie", rejoin=rejoin)
             # Lubie ET arrêt vocal : les deux tombent, UNE seule vitesse part.
-            speed = min(self._hold_before, speed_in_effect)
-            self._hold_before = None
+            speed = min(self.release_hold(), speed_in_effect)
             return VoiceDecision("close_lubie", speed=speed, rejoin=rejoin)
         if self._hold_before is not None:
             # Jamais plus vite que la vitesse en vigueur : le jitter du boîtier
             # (sous le seuil, donc arrêt maintenu) a pu la baisser un peu.
-            speed = min(self._hold_before, speed_in_effect)
-            self._hold_before = None
+            speed = min(self.release_hold(), speed_in_effect)
             return VoiceDecision("resume", speed=speed, rejoin=rejoin)
         if rejoin:
             return VoiceDecision("rejoin", rejoin=True)
@@ -618,13 +672,12 @@ class VoiceMove:
         du fader ni d'une panne batterie) et une lubie active est fermée
         (« close_lubie », closed_by « voix ») ; sinon effet « goto ». Une salve
         de relance en vol est ANNULÉE : son « route on » abandonnerait la
-        manœuvre. Pas d'anti-rebond, pas de condition de séance : c'est David
-        qui le demande (spec §3)."""
+        manœuvre. Pas d'anti-rebond ; l'origine est jugée AVANT (geste_refuse :
+        un geste « didier » n'arrive ici ni hors séance ni sous un arrêt de David)."""
         self._cancel_relaunch()
         speed = None
         if self._hold_before is not None:
-            speed = min(self._hold_before, speed_in_effect)
-            self._hold_before = None
+            speed = min(self.release_hold(), speed_in_effect)
         return VoiceDecision("close_lubie" if lubie_active else "goto", speed=speed)
 
     def arm_relaunch(self, now_s: float) -> None:
@@ -638,10 +691,10 @@ class VoiceMove:
             self._relaunch_last = None
 
     def release_hold(self) -> float | None:
-        """Lève l'arrêt vocal SANS rien publier -> la vitesse qu'il retenait
-        (None s'il n'y en avait pas). Appelé à l'abort / la fin, et par le
-        node si le « 0 » d'un « stop » n'a pas pu partir."""
-        held, self._hold_before = self._hold_before, None
+        """Lève l'arrêt vocal (et oublie son origine) SANS rien publier -> la vitesse qu'il
+        retenait (None s'il n'y en avait pas). Seul point qui lève : go, geste accepté, fader,
+        et le node si le « 0 » d'un « stop » n'a pas pu partir."""
+        held, self._hold_before, self._hold_origine = self._hold_before, None, None
         return held
 
     def fader(self, value: float) -> bool:
@@ -650,7 +703,7 @@ class VoiceMove:
         Rien n'est publié : David vient de fixer la vitesse."""
         if self._hold_before is None or not fader_moved(value, self._hold_before):
             return False
-        self._hold_before = None
+        self.release_hold()
         return True
 
     def note_route_cmd(self, cmd: str) -> bool:
@@ -683,12 +736,13 @@ class VoiceMove:
             return True, False
         return False, False
 
-    def abort(self) -> Tuple[float | None, bool]:
-        """Abort / fin de séance : lève l'arrêt vocal SANS republier de
-        vitesse et annule la salve -> (vitesse qui était retenue, relance annulée ?)."""
+    def fin_de_seance(self) -> bool:
+        """Abort / fin de séance : annule la salve de relance -> True s'il y en avait une.
+        L'arrêt vocal est GARDÉ, avec sa vitesse et son origine (lot S1, M2) : le « go » de
+        David qui suit la rend (« resume »)."""
         relaunching = self._relaunch_since is not None
         self._cancel_relaunch()
-        return self.release_hold(), relaunching
+        return relaunching
 
     def _cancel_relaunch(self) -> None:
         self._relaunch_since = None
