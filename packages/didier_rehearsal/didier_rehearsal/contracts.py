@@ -187,7 +187,14 @@ ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
 #    reason = sous-raison d'invalid (illisible, hors_bornes, recul, sens) ;
 #  - source "jeu" (sélecteur didier_jeu, jeu:=true) : la demande de la bouche
 #    n'a PAS été transmise (effect "dropped", reason = CHAT_MOVE_REPLY_JEU_REASONS)
-#    ou le régisseur s'est tu (effect "no_reply").
+#    ou le régisseur s'est tu (effect "no_reply"). Lot S2a (27/11, spec-S2 §3) : le
+#    sélecteur répond à TOUTE demande d'origine « david » — go, stop, pause et gestes —
+#    « accepted » (relayée ; pour un geste : transmise au régisseur, qui rend ensuite
+#    SON verdict) ou « dropped » + raison ; un refus « arrete » porte "verrou" (genre du
+#    verrou de David : CHAT_MOVE_REPLY_VERROUS). Un stop n'est jamais refusé, et sa
+#    réponse part APRÈS lui ; celle d'un geste accepté part AVANT sa transmission (elle
+#    précède donc toujours le verdict du régisseur). Demande d'origine « didier » : pas
+#    de réponse (sauf « pas_retenu » d'un geste, inchangé).
 # Consommateurs : chat_node (didier_vision.ai.move_task : un refus devient une
 # fin de geste ÉCHOUÉE, dite en personnage) et le sélecteur (fin d'engagement).
 # Le chat apparie par ÉGALITÉ de `demande` avec le geste qu'il a émis (le
@@ -211,8 +218,16 @@ CHAT_MOVE_REPLY_NO_REPLY = "no_reply"
 # sert plus qu'à une PROPOSITION de geste (origine « didier »), qu'aucun producteur n'émet en S1.
 # Les refus « qui donnent du jeu » (étude assainissement §8.1, réponse 2) reviendront avec le
 # régisseur LLM (lot S4), seul à pouvoir les dire.
+# Lot S2a (27/11) : « corps_sur » — le corps sûr est VERROUILLÉ (ou pas encore armé, état
+# DEMARRAGE) : un go ou un geste de David n'est ni relayé ni transmis (rien ne bougerait, et un
+# go relayé lèverait l'arrêt de David pour un départ surprise au réarmement). Pas pour une zone
+# ARRET : le corps sûr y filtre chaque consigne, un pivot pour se dégager doit rester possible.
+# « hors_seance » reste un code du RÉGISSEUR (geste « didier ») : le sélecteur ne refuse jamais
+# un ordre de David hors séance (spec-S1 R1, R5 : il part).
 CHAT_MOVE_REPLY_JEU_REASONS = ("arrete", "sans_superviseur", "pas_retenu", "degrade", "pas_ici",
-                               "hors_atteinte")
+                               "hors_atteinte", "corps_sur")
+# Genre du verrou de David porté par un refus « arrete » (didier_jeu.relais, règle R3 du lot S1).
+CHAT_MOVE_REPLY_VERROUS = ("console", "route", "voix")
 # Distance de jeu : Didier s'arrête à ce rayon du CENTRE de l'objet (m) — un PLANCHER : la
 # distance d'arrêt réelle tient compte de la TAILLE de l'objet (director.standoff_pour, revue O1
 # du 19/11 : le banc, 1,1 m d'emprise, était touché à 1,5 m du centre — 1,1 + 0,4 de Didier) :

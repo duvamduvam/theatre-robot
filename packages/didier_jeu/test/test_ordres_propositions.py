@@ -179,8 +179,11 @@ def test_4_ordre_de_la_bouche_jamais_refuse_pour_fatigue_trop_tot_pas_retenu():
     out = jouer(sel, 0.0, 8.0, [(0.0, marche), (1.0, bouche(av[0])), (2.0, bouche(av[1])), (3.0, bouche(av[2]))],
                 continu=_pulsions_au_maximum)
     assert moves(out) == [(1.0, av[0]), (2.0, av[1]), (3.0, av[2])]      # chacun À LA RÉCEPTION
-    # Aucun refus du sélecteur (le « no_reply » de 6,1 s vient du régisseur absent du banc).
-    assert [r["effect"] for _, r in reponses(out)] == ["no_reply"] and journal(out, "refus") == []
+    # Aucun refus du sélecteur : chaque ordre est « accepted » à la réception (lot S2a) ; le
+    # « no_reply » de 6,1 s vient du régisseur absent du banc.
+    assert [(t, r["effect"]) for t, r in reponses(out)] == [(1.0, "accepted"), (2.0, "accepted"), (3.0, "accepted"),
+                                                            (6.1, "no_reply")]
+    assert journal(out, "refus") == []
 
 
 def test_4_ordre_de_la_console_jamais_refuse_pour_fatigue_ni_trop_tot():
@@ -433,7 +436,10 @@ def test_m1_la_reemission_repasse_par_hors_atteinte():
         (0.0, marche), (1.0, bouche(av)), (3.0, bouche(STOP_DIDIER)),
         (10.0, lambda s, t: s.sur_tableau(loin, t))])
     assert moves(out) == [(1.0, av), (3.0, STOP_DIDIER), (20.1, GO_DIDIER)]
-    assert [(t, r["reason"]) for t, r in reponses(out)] == [(20.1, "pas_ici")]
+    # (1,0 s : « accepted » de l'ordre d'origine, lot S2a ; la ré-émission R4 n'a pas de réponse
+    # « accepted » — personne ne l'a demandée à l'instant —, son refus reste dit.)
+    assert [(t, r["effect"], r["reason"]) for t, r in reponses(out)] == [(1.0, "accepted", None),
+                                                                         (20.1, "dropped", "pas_ici")]
 
 
 def test_m1_un_geste_relatif_n_est_jamais_rejoue():

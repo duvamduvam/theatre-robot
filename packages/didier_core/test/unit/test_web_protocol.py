@@ -111,7 +111,9 @@ def test_topics_lecture_jamais_publiables():
                               "camera_sources", "jeu/intention", "rehearsal/objects",
                               "deploy_sha", "mission_state",
                               # corps_sur/etat (24/11, lot A0-5) : état du corps sûr, LATCHÉ.
-                              "corps_sur/etat"}
+                              "corps_sur/etat",
+                              # corps/etat (27/11, lot S2a) : état du corps écrit par le sélecteur, LATCHÉ.
+                              "corps/etat"}
     # Les topics VOLATILS du panneau « Coulisses » n'y sont PAS : un abonnement
     # TRANSIENT_LOCAL est incompatible avec un publieur volatile (ils sont en flux).
     assert TOPICS_LECTURE.isdisjoint({"chat_situation", "chat_prompt", "rehearsal/journal"})
@@ -876,10 +878,14 @@ def test_scene_ne_lit_que_les_topics_d_etat_publics():
     (la séance A1 tourne avec un scénario vide) ; rehearsal/objects : le
     vocabulaire d'objets, déjà public (envoyé à la bouche).
     corps_sur/etat (24/11, lot A0-5) : l'état du filtre des roues autonomes, public ; ses
-    causes sont des pannes RÉELLES (lidar, arrêt d'urgence), jamais un tirage du régisseur."""
+    causes sont des pannes RÉELLES (lidar, arrêt d'urgence), jamais un tirage du régisseur.
+    corps/etat (27/11, lot S2a) : l'état du corps écrit par le SÉLECTEUR (verrou de David,
+    reprise de Didier, corps sûr, séance) — de même nature que jeu/intention, déjà public ; le
+    jeu tourne sans lubie du scénario (spec-S1 §3 : fault_skip), aucun tirage n'y passe."""
     lus = re.findall(r'valeurTopic\(msg\.topics, "([^"]+)"\)', _lire("scene.js"))
     assert sorted(lus) == ["camera_source_state", "camera_sources", "camera_state",
-                           "chat_audio_chain", "chat_state", "corps_sur/etat", "jeu/intention", "mission_state",
+                           "chat_audio_chain", "chat_state", "corps/etat", "corps_sur/etat", "jeu/intention",
+                           "mission_state",
                            "persona_state", "rehearsal/objects", "rehearsal/state", "route_state"]
     # Et aucun autre accès direct aux topics du message state.
     assert len(re.findall(r"msg\.topics", _lire("scene.js"))) == len(lus)
