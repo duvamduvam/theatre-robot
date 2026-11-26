@@ -1137,6 +1137,12 @@ conventions, mutants, points ouverts). Le nœud `/didier/corps_sur` est lancé p
 
 ## Fumée automatique — la sim rejouée toute seule (lot F, 07/11)
 
+**Sur GitHub Actions (essai du 22/11, retenu le 25/11).** `.github/workflows/fumee.yml`, à la
+main seulement : `gh workflow run fumee.yml --ref <branche>` (≈ 55 min, runner gratuit, 4 vCPU,
+sans carte graphique). Résultat du 22/11 : temps réel 0,896, 13 épreuves sur 13. Le verdict se
+lit dans le résumé du run (`gh run view <id> --log | grep Résumé`). La conversation n'y tourne que
+si le secret `ANTHROPIC_API_KEY` du dépôt est posé (par David). Étude : `docs/etudes/etude-fumee.md` §8 bis.
+
 Un script shell (`machines/sim/fumee.sh` depuis L1e-4c, zéro token) rejoue sur le **checkout de main** toutes
 les épreuves de la sim et compare chaque compteur à une valeur **gravée en tête du script** :
 namespace 5, catalogue 4, `parle` 3 états, édition 13, machines 5 (L2b), V-R3 21, A1 14, conversation 13

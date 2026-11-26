@@ -63,6 +63,7 @@ jobs:
             echo "FUMEE_COEURS="
             echo "FUMEE_PROFIL=0"
             echo "FUMEE_COMMIT=0"
+            echo "FUMEE_BUILD_ARGS=--build-arg BUILDKIT_SYNTAX=docker/dockerfile:1-labs"
             echo "FUMEE_DELAI_DEMARRAGE=1200"
             echo "DISPLAY=:99"
             echo "XAUTHORITY=$R/xauthority"
@@ -110,7 +111,10 @@ jobs:
         working-directory: machines/sim
         run: |
           t0=$SECONDS
-          if ! docker compose build >"$FUMEE_R/build.log" 2>&1; then
+          # COPY --exclude (Dockerfile du robot, audios privés) exige le frontend Dockerfile « labs » (1.18 stable ne suffit pas, essai du 22/11) ;
+          # le Docker du runner est plus ancien : on force le frontend ici seulement (le PC et le Pi
+          # ont un BuildKit récent, leur build ne change pas).
+          if ! docker compose build --build-arg BUILDKIT_SYNTAX=docker/dockerfile:1-labs >"$FUMEE_R/build.log" 2>&1; then
             tail -80 "$FUMEE_R/build.log"; exit 1
           fi
           echo "images construites en $(( (SECONDS - t0) / 60 )) min"
