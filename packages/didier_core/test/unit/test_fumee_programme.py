@@ -551,3 +551,34 @@ def test_un_essai_n_ecrit_jamais_dans_docs_fumee_du_depot(banc, monkeypatch):
     programme.main(["--essai"], sy=sy)
     assert not (tmp_path / "depot" / "docs" / "fumee").exists()
     assert list((tmp_path / "maison" / "tmp" / "didier" / "fumee-essais").glob("*.html"))
+
+
+def test_le_plan_vient_de_la_revision_testee(banc):
+    # 26/11 : la fumée de la branche S1 lisait le plan du checkout du programme (main) : A1 rendue
+    # « rouge 17/14 » alors que la branche attendait 17. Le plan de l'arbre testé fait foi.
+    sy, tmp_path = banc
+    d = tmp_path / "arbre" / "machines" / "sim" / "fumee"
+    d.mkdir(parents=True)
+    (d / "plan.toml").write_text(PETIT_PLAN.replace('id = "audio"\nscript = "validate-audio.sh"\nattendu = 10',
+                                                     'id = "audio"\nscript = "validate-audio.sh"\nattendu = 99'))
+    assert 'attendu = 99' in (d / "plan.toml").read_text()
+    programme.main(["--essai"], sy=sy)
+    res = json.loads(next((tmp_path / "brut").glob("*/resultat.json")).read_text())
+    audio = next(e for e in res["epreuves"] if e["id"] == "audio")
+    assert audio["attendu"] == 99 and audio["statut"] == "rouge"
+
+
+def test_sigterm_arrete_la_sim_sans_recolte():
+    # 26/11 : systemctl stop tuait la récolte avant le `down` ; la sim et le verrou restaient.
+    from fumee.sim import Sim
+    appels = []
+
+    class S:
+        vivante = True
+        compose = lambda self, *a: appels.append(("compose",) + a)
+        recolter = lambda self, nom: appels.append(("recolter", nom))
+        sy = type("Sy", (), {"sortie": lambda self, cmd: appels.append(tuple(cmd)) or (0, "")})()
+    s = S()
+    Sim.arreter_sans_recolte(s)
+    assert appels[0] == ("compose", "down", "-t", "5") and ("recolter", "fin") not in appels
+    assert s.vivante is False

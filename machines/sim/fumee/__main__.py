@@ -60,7 +60,11 @@ def main(argv=None, sy=None) -> int:
     occupee = Path(env.get("FUMEE_SIM_OCCUPEE", Path.home() / "tmp/didier/sim-occupee"))
     rtf_min = float(env.get("FUMEE_RTF_MIN", RTF_MIN))
     etat.mkdir(parents=True, exist_ok=True)
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))   # le ménage se fait dans `finally`
+    # SIGTERM (systemctl stop) : le ménage se fait dans `finally`, SANS récolte des journaux
+    # (26/11 : la récolte, longue, était tuée par systemd avant le `down` — 4 conteneurs et le
+    # verrou restaient en place). Lancer de préférence avec `-p KillMode=mixed` (operations.md).
+    interrompu = []
+    signal.signal(signal.SIGTERM, lambda *_: (interrompu.append(True), sys.exit(143)))
     try:
         le_plan = plans.lire()
         choisis = plans.choisir(le_plan, o.epreuves.split(",") if o.epreuves else None)
@@ -86,6 +90,15 @@ def main(argv=None, sy=None) -> int:
         contenu_verrou = banc.verrou_sim(occupee, o.forcer_verrou, notes)
         banc.conteneurs_libres(sy)
         sha, branche = banc.preparer_arbre(sy, depot, arbre, o.rev, hors_ligne)
+        # 26/11 : le plan (valeurs attendues comprises) est celui de la RÉVISION TESTÉE, pas celui du
+        # checkout d'où le programme tourne (A1 attendait 14 sur main, 17 dans la branche S1 testée).
+        plan_rev = arbre / "machines" / "sim" / "fumee" / "plan.toml"
+        if plan_rev.is_file():
+            try:
+                le_plan = plans.lire(plan_rev)
+                choisis = plans.choisir(le_plan, o.epreuves.split(",") if o.epreuves else None)
+            except plans.PlanInvalide as erreur:
+                raise Refus("plan de la révision testée : {}".format(erreur)) from None
         gardees, reprise = {}, None
         if o.reprendre:
             reprise = rapport.a_reprendre(brut, sha)
@@ -144,7 +157,10 @@ def main(argv=None, sy=None) -> int:
         return _refus(etat, refus)
     finally:
         if f is not None:
-            f.sim.arreter("fin")   # idempotent : journaux récoltés avant l'arrêt
+            if interrompu:
+                f.sim.arreter_sans_recolte()
+            else:
+                f.sim.arreter("fin")   # idempotent : journaux récoltés avant l'arrêt
             f.liberer_coeurs()
         banc.restaurer_profil(sy, etat, profil)
         banc.liberer_verrou_sim(occupee, contenu_verrou)
