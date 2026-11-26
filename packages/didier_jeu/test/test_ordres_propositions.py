@@ -1,18 +1,27 @@
-"""Lot S1 (25/11) — ordres et propositions, une seule reprise (docs/spec-S1-ordres-propositions.md
-§5, tests 1 à 4 et 9 ; les tests 5-6 sont dans didier_vision, 7-8 dans didier_core).
+"""Lot S1 (25-26/11) — ordres et propositions, une seule reprise (docs/spec-S1-ordres-propositions.md
+§5 tests 1 à 4 et 9, puis règles R1 à R6 de la relecture adverse ; les tests 5-6 sont dans
+didier_vision, 7-8 dans didier_core).
 
 Valeurs et instants GRAVÉS : ticks de 0,1 s, réglages réels (reprise [10, 40] s), graine des
 tests conftest.GRAINE = 3 -> première durée tirée 17,1 s, deuxième 26,3 s.
 
-Mutations faites à la livraison (doivent rougir) :
-  - un « stop » d'origine « didier » qui pose le verrou      -> test_1_*, test_2_*
-  - la parole qui ne remet plus le silence à zéro          -> test_2_une_parole_remet_le_silence_a_zero
-  - la fatigue rendue aux ordres (_refus_deplacement)       -> test_4_*
+Le banc `jouer_avec_regisseur` (R5) enchaîne le sélecteur et le VRAI régisseur de la marche
+(didier_rehearsal.director.VoiceMove) : chaque sortie chat_move du sélecteur lui est donnée
+telle que jeu_node la publierait, et l'on regarde la vitesse qu'il impose — c'est la chaîne
+complète qui doit faire repartir ou retenir Didier, pas chaque moitié séparément.
+
+Mutations faites à la livraison (doivent rougir) : voir le rapport du lot (stop de Didier qui
+verrouille, parole sans effet, fatigue rendue aux ordres, go de la bouche qui lève le verrou de
+la console, re-émission R4 retirée, lubie permise hors séance, ordre console repassé par le score).
 """
+import pytest
+
 from conftest import fabriquer
 
+from didier_rehearsal.contracts import lire_chat_move
+from didier_rehearsal.director import VoiceMove
 from test_reponse_bouche import AV_ELEPHANT, bouche, jouer_regisseur, regisseur_2121, reponses
-from test_selecteur import journal, jouer, marche, moves
+from test_selecteur import SEANCE, boite, decisions, journal, jouer, marche, moves, _poi
 
 # La marche telle que le sélecteur la publie sur jeu/chat_move (contrat lot S1), écrite EN DUR.
 STOP_DAVID = {"cmd": "stop", "origine": "david"}
@@ -26,6 +35,12 @@ def marches(out):
     return [(t, m) for t, m in moves(out) if not isinstance(m, dict) or m.get("cmd") in ("stop", "go")]
 
 
+def route_hors_seance(sel, t):
+    """Route en marche et tableau des objets, mais séance NON lancée (rehearsal/state inconnu)."""
+    sel.sur_route_state("on", t)
+    sel.sur_tableau(marche.__globals__["TABLEAU"], t)
+
+
 # ---------------------------------------------------------------- 1. un ordre de David n'est jamais annulé
 def test_1_le_verrou_de_david_ne_tombe_ni_sur_un_stop_ni_sur_un_go_de_didier():
     sel = fabriquer(pools={})
@@ -33,23 +48,31 @@ def test_1_le_verrou_de_david_ne_tombe_ni_sur_un_stop_ni_sur_un_go_de_didier():
                                   (3.0, bouche(GO_DIDIER))])
     # Le stop de Didier est relayé (un arrêt n'est jamais refusé), le go de Didier jamais.
     assert moves(out) == [(1.0, STOP_DAVID), (2.0, STOP_DIDIER)]
-    assert sel.verrou_david is True
+    assert sel.verrou == "voix"
     assert journal(out, "reprise_armee") == []                     # rien ne repartira sous son verrou
     assert [p["pourquoi"] for _, p in journal(out, "refus")] == [
         "« go » proposé par Didier : ignoré (seule sa reprise, après le silence, le relance)"]
 
 
-def test_1_un_stop_de_didier_pendant_un_geste_de_david_arrete_sans_verrou_et_arme_la_reprise():
-    """Spec §5.1 (« attention ») : le stop de Didier ARRÊTE quand même le corps — sens sûr, il
-    est relayé et le geste engagé tombe — mais ne pose pas de verrou, et la reprise s'arme."""
+def test_1_r4_un_stop_de_didier_suspend_le_geste_de_david_repris_apres_le_silence():
+    """Spec §5.1 révisé par R4 : le stop de Didier ARRÊTE le corps, sans verrou, mais SUSPEND
+    l'ordre de David — à la reprise, le geste est ré-émis (origine « david ») au lieu du go."""
     sel = fabriquer(pools={})
     out = jouer_regisseur(sel, 25.0, [(0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (3.0, bouche(STOP_DIDIER))],
                           regisseur_2121)
-    # L'ordre de David part À LA RÉCEPTION (sans score) ; le stop de Didier aussi ; puis la reprise.
-    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (3.0, STOP_DIDIER), (20.1, GO_DIDIER)]
-    assert sel.verrou_david is False
-    assert [(t, p["pourquoi"]) for t, p in journal(out, "annulation")] == [
-        (3.0, "stop de Didier → il arrête de faire ce qu'il a dit (aller voir « elephant »)")]
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (3.0, STOP_DIDIER), (20.1, AV_ELEPHANT_DAVID)]
+    assert sel.verrou is None
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "ordre_suspendu")] == [
+        (3.0, "ordre de David suspendu (aller voir « elephant ») : il le reprendra après le silence")]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "reprise")] == [
+        (20.1, "ordre de David suspendu, repris après 17,1 s de silence (aller voir « elephant »)")]
+
+
+def test_1_r4_un_stop_de_david_pendant_la_suspension_annule_tout():
+    out = jouer_regisseur(fabriquer(pools={}), 40.0, [
+        (0.0, marche), (1.0, bouche(AV_ELEPHANT_DAVID)), (3.0, bouche(STOP_DIDIER)),
+        (5.0, lambda s, t: s.sur_console({"cmd": "stop"}, t))], regisseur_2121)
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID), (3.0, STOP_DIDIER), (5.0, STOP_DAVID)]
 
 
 # ---------------------------------------------------------------- 2. ce que Didier arrête, il le relance
@@ -69,12 +92,26 @@ def test_2_une_parole_remet_le_silence_a_zero_sans_retirer():
     assert len(journal(out, "reprise_armee")) == 1
 
 
-def test_2_lubie_puis_reprise_au_deuxieme_tirage():
+def test_2_deux_arrets_deux_tirages():
     """Deux arrêts de Didier : chacun tire SA durée (17,1 puis 26,3 s)."""
     out = jouer(fabriquer(pools={}), 0.0, 80.0, [
         (0.0, marche), (1.0, bouche(STOP_DIDIER)),
         (20.0, lambda s, t: s.sur_route_state("on", t)), (21.0, bouche(STOP_DIDIER))])
     assert marches(out) == [(1.0, STOP_DIDIER), (18.1, GO_DIDIER), (21.0, STOP_DIDIER), (47.3, GO_DIDIER)]
+
+
+def test_2_r5_la_reprise_attend_le_superviseur():
+    """Garde superviseur de la reprise (mode « exigeant ») : sans battement de la page, pas de go ;
+    avec, le go part à l'instant tiré."""
+    def presence(s, t):
+        if abs(t * 2 - round(t * 2)) < 1e-6:                   # battement à 2 Hz
+            s.sur_console({"presence": True}, t)
+    sans = jouer(fabriquer({"superviseur.mode": "exigeant"}, pools={}), 0.0, 60.0,
+                 [(0.0, marche), (1.0, bouche(STOP_DIDIER))])
+    avec = jouer(fabriquer({"superviseur.mode": "exigeant"}, pools={}), 0.0, 60.0,
+                 [(0.0, marche), (1.0, bouche(STOP_DIDIER))], continu=presence)
+    assert marches(sans) == [(1.0, STOP_DIDIER)]
+    assert marches(avec) == [(1.0, STOP_DIDIER), (18.1, GO_DIDIER)]
 
 
 # ---------------------------------------------------------------- 3. arrêt de David : jamais de reprise seule
@@ -90,6 +127,38 @@ def test_3_stop_de_david_desarme_une_reprise_de_didier():
     assert moves(out) == [(1.0, STOP_DIDIER), (5.0, STOP_DAVID)]
     assert [(t, p["pourquoi"]) for t, p in journal(out, "reprise_annulee")] == [
         (5.0, "stop de David → il ne repartira pas de lui-même")]
+
+
+# ---------------------------------------------------------------- R3. verrou de David à deux genres
+def test_go_de_la_bouche_ne_leve_pas_un_stop_de_david():
+    """R3 (rétabli avec le VRAI message de la bouche en tour humain) : un STOP de la console
+    n'est levé que par un GO de la console ; le « en route » dit à Didier ne suffit pas."""
+    sel = fabriquer(pools={})
+    out = jouer(sel, 0.0, 12.0, [(0.0, marche), (1.0, lambda s, t: s.sur_console({"cmd": "stop"}, t)),
+                                 (5.0, bouche(GO_DAVID)), (8.0, lambda s, t: s.sur_console({"cmd": "go"}, t))])
+    assert moves(out) == [(1.0, STOP_DAVID), (8.0, GO_DAVID)]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "refus")] == [
+        (5.0, "« go » dit à Didier, mais David a arrêté à la console : seul un GO console le relance")]
+
+
+def test_r3_route_off_de_david_verrou_de_la_console():
+    sel = fabriquer(pools={})
+    out = jouer(sel, 0.0, 6.0, [(0.0, marche), (1.0, lambda s, t: s.sur_route_cause("cmd", t)),
+                                (3.0, bouche(GO_DAVID))])
+    assert sel.verrou == "console" and marches(out) == []
+
+
+def test_r3_mot_d_arret_leve_par_le_go_de_david_en_tour_humain():
+    sel = fabriquer(pools={})
+    out = jouer(sel, 0.0, 6.0, [(0.0, marche), (1.0, bouche(STOP_DAVID)), (3.0, bouche(GO_DAVID))])
+    assert moves(out) == [(1.0, STOP_DAVID), (3.0, GO_DAVID)] and sel.verrou is None
+
+
+def test_r3_un_mot_d_arret_ne_rabaisse_jamais_le_verrou_de_la_console():
+    sel = fabriquer(pools={})
+    jouer(sel, 0.0, 4.0, [(0.0, marche), (1.0, lambda s, t: s.sur_console({"cmd": "stop"}, t)),
+                          (2.0, bouche(STOP_DAVID))])
+    assert sel.verrou == "console"
 
 
 # ---------------------------------------------------------------- 4. un ordre n'est jamais refusé pour ses pulsions
@@ -117,25 +186,147 @@ def test_4_ordre_de_la_console_jamais_refuse_pour_fatigue_ni_trop_tot():
     out = jouer(sel, 0.0, 4.0, [(0.0, marche),
                                 (1.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t))],
                 continu=_pulsions_au_maximum)
-    # Par le score (hystérésis 0,3 s), mais ni fatigue ni réfractaire ne l'arrêtent.
-    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "banc", "id": "carte/banc", "origine": "david"})]
+    # R6 : au tick de sa réception, sans score.
+    assert moves(out) == [(1.0, {"cmd": "aller_voir", "objet": "banc", "id": "carte/banc", "origine": "david"})]
     assert journal(out, "refus") == []
 
 
 def test_4_la_fatigue_borne_toujours_ses_propres_deplacements():
     from didier_jeu.scores import Candidat
     sel = fabriquer(pools={})
+    sel.sur_seance(SEANCE, 0.0)
     sel.pulsions.fatigue = 0.81
     assert sel._permis(Candidat("approcher", "p1"), True) is False
     sel.pulsions.fatigue = 0.79
     assert sel._permis(Candidat("approcher", "p1"), True) is True
 
 
+# ---------------------------------------------------------------- R6. un ordre passe avant toute initiative
+def test_r6_ordre_de_la_console_pendant_une_expression_spontanee_part_au_tick():
+    """Fumée du 26/11 (épreuve A1, T4) : « va_la p1 » à 162,1 s, expression spontanée choisie
+    à 169,5 s, l'ordre mourait « pas faisable en 10 s, abandonné » à 172,2 s. Désormais l'ordre
+    interrompt l'initiative et part au tick de sa réception, jamais d'expiration."""
+    out = jouer(fabriquer(), 0.0, 20.0, [(0.0, marche),
+                                         (5.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "p1"}, t))],
+                continu=boite(4.6, 20.0))
+    assert decisions(out)[0] == (4.0, "spontanee", None)                 # l'initiative en cours
+    assert moves(out) == [(5.0, {"cmd": "tourner", "angle_deg": -9.0, "origine": "david"})]   # azimut +0,3
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "annulation")] == [
+        (5.0, "David : va vers p1 → il arrête de une expression spontanée")]
+    assert journal(out, "refus") == []
+
+
+def test_r6_l_ordre_engage_n_est_pas_interrompu_par_le_score():
+    sel = fabriquer()                                    # avec expressions spontanées (l'ennui monte)
+    out = jouer_regisseur(sel, 30.0, [(0.0, marche),
+                                      (1.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t))],
+                          regisseur_2121)
+    assert sel.en_cours is not None and sel.en_cours.candidat.action == "aller_voir" and decisions(out) == []
+
+
+# ---------------------------------------------------------------- R2. hors séance, aucune initiative
+def test_r2_aucune_lubie_hors_seance():
+    hors = jouer(fabriquer(pools={}), 0.0, 8.0, [(0.0, route_hors_seance), (1.0, _poi("anneaux"))])
+    en = jouer(fabriquer(pools={}), 0.0, 8.0, [(0.0, marche), (1.0, _poi("anneaux"))])
+    assert decisions(hors) == [] and moves(hors) == []
+    assert decisions(en) == [(1.3, "lubie", "anneaux")]
+
+
+def test_r2_aucune_approche_de_son_initiative_hors_seance_joue_avec_permis():
+    from didier_jeu.scores import Candidat
+    sel = fabriquer(pools={})
+    assert sel._permis(Candidat("approcher", "p1"), True) is False
+    sel.joue_avec = {"cible": "p1", "fin": 99.0}                         # David : « joue avec lui »
+    assert sel._permis(Candidat("approcher", "p1"), True) is True
+
+
+def test_r2_hors_seance_pas_de_reprise_apres_un_geste_de_david():
+    def arrivee(s, t):
+        s.sur_route_state("arrived", t)
+        s.sur_goto_result({"name": "elephant", "result": "arrived"}, t)
+    out = jouer_regisseur(fabriquer(pools={}), 40.0, [(0.0, route_hors_seance), (1.0, bouche(AV_ELEPHANT_DAVID)),
+                                                      (5.0, arrivee)], regisseur_2121)
+    assert moves(out) == [(1.0, AV_ELEPHANT_DAVID)]                     # le geste de David part
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "reprise_annulee")] == [
+        (5.0, "geste terminé, hors séance → il ne repartira pas de lui-même")]
+
+
+# ---------------------------------------------------------------- R5. la chaîne sélecteur -> régisseur
+class Regisseur:
+    """Le VRAI VoiceMove, nourri des sorties chat_move du sélecteur ; route en marche à 0,7."""
+
+    def __init__(self, en_seance: bool):
+        self.voice, self.en_seance, self.vitesse, self.effets = VoiceMove(), en_seance, 0.7, []
+
+    def recevoir(self, payload, t):
+        cmd, origine = lire_chat_move(payload)
+        if isinstance(cmd, dict):
+            refus = self.voice.geste_refuse(origine, self.en_seance)
+            if refus is None:
+                self.voice.accept_goto(lubie_active=False, speed_in_effect=0.7)
+                self.vitesse = 0.7                                        # la manœuvre roule
+            self.effets.append((t, cmd["cmd"], refus or "accepted"))
+            return
+        d = self.voice.decide(cmd, t, lubie_active=False, route_on=True, relaunch_refusal="route_off_par_david",
+                              speed_in_effect=0.7, origine=origine)
+        if d.speed is not None:
+            self.vitesse = d.speed
+        self.effets.append((t, cmd, d.reason or d.effect))
+
+
+def jouer_avec_regisseur(sel, reg, t1, evenements, seance):
+    evs = [(0.0, (lambda s, t: s.sur_seance(SEANCE, t)) if seance else (lambda s, t: None)),
+           (0.0, route_hors_seance)] + evenements
+    out = jouer(sel, 0.0, t1, evs)
+    for t, kind, *reste in out:
+        if kind == "chat_move":
+            reg.recevoir(reste[0], t)
+    return out
+
+
+@pytest.mark.parametrize("seance", [True, False])
+def test_r5_pause_regard_il_repart_seance_ou_non(seance):
+    reg = Regisseur(seance)
+    jouer_avec_regisseur(fabriquer(pools={}), reg, 30.0, [(2.0, bouche({"cmd": "pause", "origine": "david"}))],
+                         seance)
+    assert reg.effets == [(2.0, "stop", "hold"), (19.1, "go", "resume")] and reg.vitesse == 0.7
+
+
+@pytest.mark.parametrize("seance", [True, False])
+def test_r5_stop_de_didier_applique_puis_il_repart(seance):
+    reg = Regisseur(seance)
+    jouer_avec_regisseur(fabriquer(pools={}), reg, 30.0, [(1.0, bouche(STOP_DIDIER))], seance)
+    assert reg.effets == [(1.0, "stop", "hold"), (18.1, "go", "resume")] and reg.vitesse == 0.7
+
+
+def test_r5_geste_de_david_hors_seance_il_part():
+    reg = Regisseur(en_seance=False)
+    reg.voice.decide("stop", 0.0, lubie_active=False, route_on=True, relaunch_refusal=None,
+                     speed_in_effect=0.7, origine="didier")            # arrêté par Didier avant
+    reg.vitesse = 0
+    jouer_avec_regisseur(fabriquer(pools={}), reg, 3.0, [(1.0, bouche(dict(AV_ELEPHANT_DAVID)))], seance=False)
+    assert reg.effets == [(1.0, "aller_voir", "accepted")] and reg.vitesse == 0.7
+
+
+def test_r5_stop_console_puis_go_de_la_bouche_le_verrou_reste():
+    reg = Regisseur(en_seance=True)
+    jouer_avec_regisseur(fabriquer(pools={}), reg, 10.0, [(1.0, lambda s, t: s.sur_console({"cmd": "stop"}, t)),
+                                                          (4.0, bouche(GO_DAVID))], seance=True)
+    assert reg.effets == [(1.0, "stop", "hold")] and reg.vitesse == 0
+
+
+def test_r5_mot_d_arret_puis_go_en_tour_humain_il_repart():
+    reg = Regisseur(en_seance=False)
+    jouer_avec_regisseur(fabriquer(pools={}), reg, 10.0, [(1.0, bouche(STOP_DAVID)), (4.0, bouche(GO_DAVID))],
+                         seance=False)
+    assert reg.effets == [(1.0, "stop", "hold"), (4.0, "go", "resume")] and reg.vitesse == 0.7
+
+
 # ---------------------------------------------------------------- 9. anciennes formes lues « david »
 def test_9_anciennes_formes_lues_comme_david():
-    from didier_rehearsal.contracts import lire_chat_move
     assert lire_chat_move("stop") == ("stop", "david")
-    assert lire_chat_move({"cmd": "go"}) == ("go", "david")
+    assert lire_chat_move(" STOP ") == ("stop", "david")                 # casse et espaces normalisés
+    assert lire_chat_move({"cmd": "Go"}) == ("go", "david")
     assert lire_chat_move({"cmd": "pause", "origine": "didier"}) == ("pause", "didier")
     assert lire_chat_move({"cmd": "go", "origine": "lune"}) == ("go", None)
     assert lire_chat_move({"cmd": "avancer", "metres": 1.0}) == ({"cmd": "avancer", "metres": 1.0}, "david")
@@ -149,11 +340,12 @@ def test_9_chaine_stop_verrouille_et_chaine_go_le_leve():
     assert journal(out, "reprise_armee") == []
 
 
-def test_9_stop_d_origine_inconnue_lu_david_les_autres_refuses():
+def test_9_stop_et_pause_d_origine_inconnue_lus_david_le_go_refuse():
     sel = fabriquer(pools={})
-    out = jouer(sel, 0.0, 3.0, [(0.0, marche), (1.0, bouche({"cmd": "stop", "origine": "lune"})),
-                                (2.0, bouche({"cmd": "go", "origine": "lune"}))])
-    assert moves(out) == [(1.0, STOP_DAVID)] and sel.verrou_david is True
+    out = jouer(sel, 0.0, 4.0, [(0.0, marche), (1.0, bouche({"cmd": "stop", "origine": "lune"})),
+                                (2.0, bouche({"cmd": "go", "origine": "lune"})),
+                                (3.0, bouche({"cmd": "pause", "origine": "lune"}))])
+    assert moves(out) == [(1.0, STOP_DAVID), (3.0, STOP_DAVID)] and sel.verrou == "voix"
 
 
 def test_9_geste_sans_origine_est_un_ordre():

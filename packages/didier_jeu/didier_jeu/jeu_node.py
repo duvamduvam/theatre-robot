@@ -11,6 +11,8 @@ Lit   : vision/person_box (perception scriptée en A1), rehearsal/poi_event,
         ordres de David exécutés tout de suite, « stop » toujours relayé),
         jeu/console (page scène), chat_transcript (parole entendue : remet à zéro
         le silence de la reprise), route_state et route_state_cause (latchés),
+        rehearsal/state (latché : la séance du régisseur ; hors séance ou état inconnu,
+        aucune initiative de mouvement — règle R2 du lot S1),
         route_goto_result, rehearsal/chat_move_reply (réponse du régisseur à un
         geste ; les nôtres y reviennent aussi, filtrées par `source`),
         animation_state (latché), scene/objets (latché, le tableau des objets du
@@ -41,8 +43,8 @@ import time
 
 # Garde-fou AVANT tout import rclpy à effet : check_domain est pur.
 from didier_rehearsal.contracts import (CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, POI_EVENT_TOPIC,
-                                       ROUTE_GOTO_RESULT_TOPIC, ROUTE_STATE_CAUSE_TOPIC, ROUTE_STATE_TOPIC,
-                                       check_domain)
+                                       REHEARSAL_STATE_TOPIC, ROUTE_GOTO_RESULT_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
+                                       ROUTE_STATE_TOPIC, check_domain)
 from theatre_contrats import objets as tableau_objets
 from theatre_contrats import stringtime, topics
 
@@ -148,6 +150,9 @@ def main(args=None):
             self.create_subscription(StringTime, ROUTE_STATE_CAUSE_TOPIC, self._json(self.sel.sur_route_cause),
                                      qos.latched())
             self.create_subscription(StringTime, ROUTE_GOTO_RESULT_TOPIC, self._json(self.sel.sur_goto_result), 10)
+            # Séance du régisseur (R2) : LATCHÉ des deux côtés (il publie TRANSIENT_LOCAL depth 1).
+            self.create_subscription(StringTime, REHEARSAL_STATE_TOPIC, self._json(self.sel.sur_seance),
+                                     qos.latched())
             self.create_subscription(StringTime, CHAT_MOVE_REPLY_TOPIC, self._json(self.sel.sur_move_reply), 10)
             self.create_subscription(StringTime, topics.ANIMATION_STATE, self._json(self.sel.sur_animation_state),
                                      qos.latched())

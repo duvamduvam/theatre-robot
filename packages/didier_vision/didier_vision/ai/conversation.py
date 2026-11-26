@@ -135,7 +135,9 @@ DÉCISION (le déroulé du proto laissait un choix implicite à trancher) :
        "go", "pause" et tout geste -> ORIGINE_DAVID (elle transmet ce que David a
        demandé), "marche": "stop" -> ORIGINE_DIDIER (le LLM interprète : pas de
        verrou, le sélecteur le relancera, réponse 1 du §8.1) ; continuation de
-       tâche -> ORIGINE_DAVID (la tâche vient de David) ; TOUR SPONTANÉ -> RIEN,
+       tâche (règle R3, 25/11) : gestes -> ORIGINE_DAVID (la tâche vient de David),
+       "stop" -> ORIGINE_DIDIER (le LLM décide de s'arrêter), "go" NON émis (la
+       reprise du sélecteur relance après le geste) ; TOUR SPONTANÉ -> RIEN,
        aucune clé de marche ni de geste n'est lue (journalisé : « la bouche ne
        décide aucun mouvement », §8 bis) — supprimé : le "stop" qu'il permettait.
 
@@ -898,9 +900,11 @@ class ConversationEngine:
         Didier sans qu'aucun humain l'ait demandé (séance du 24/11) — supprimé.
 
         Origine (lot S1) : "marche": "stop" d'un tour humain = ORIGINE_DIDIER
-        (le LLM interprète, ce n'est pas un mot d'arrêt de David) ; d'une
-        continuation de tâche = ORIGINE_DAVID (la tâche vient de lui) ; "go",
-        "pause" et les gestes = ORIGINE_DAVID (émis seulement hors tour spontané).
+        (le LLM interprète, ce n'est pas un mot d'arrêt de David), dans une
+        continuation de tâche aussi (règle R3, 25/11) ; "pause" et les gestes =
+        ORIGINE_DAVID (émis seulement hors tour spontané) ; "go" = ORIGINE_DAVID en
+        tour humain, JAMAIS émis en continuation (la reprise du sélecteur relance déjà
+        la route après le geste ; un go de David y lèverait un arrêt vocal).
 
         Clé "aller_voir" (lot M1, 31/10, dadou_robot_ros/docs/
         spec-aller-voir.md §2.2) : chaîne non vide, rognée (la casse est
@@ -1014,9 +1018,8 @@ class ConversationEngine:
             for key, value, _intent in gestures:
                 logger.warning("Clé \"%s\" : %r ignoré : la même réplique "
                                "demande \"stop\" (le stop gagne toujours).", key, value)
-            # Le LLM interprète (tour humain) : une PROPOSITION, sans verrou ; dans une
-            # continuation, la tâche de David continue de parler pour lui.
-            self._emit_move("stop", ORIGINE_DAVID if self._turn_continuation else ORIGINE_DIDIER)
+            # Le LLM interprète (tour humain ou continuation) : une PROPOSITION, sans verrou.
+            self._emit_move("stop", ORIGINE_DIDIER)
             return False
         if cmd == PAUSE_CMD:
             for key, value, _intent in gestures:
@@ -1052,6 +1055,10 @@ class ConversationEngine:
                 self._note_gesture(intent)
             return False
         if cmd != "go":
+            return False
+        if self._turn_continuation:
+            logger.info("Clé \"marche\" : go non émis en continuation de tâche (la reprise du "
+                        "sélecteur relance la route après le geste).")
             return False
         self._emit_start("go", "Clé \"marche\" : go")
         return False

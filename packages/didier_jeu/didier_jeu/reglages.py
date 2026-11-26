@@ -21,7 +21,7 @@ REQUIS = (
     "refractaire_s.expression", "refractaire_s.regarder", "refractaire_s.deplacement",
     "lubie.delai_refus_s", "reprise.min_s", "reprise.max_s",
     "superviseur.mode", "superviseur.silence_max_s",
-    "console.ignore_s", "console.ordre_ttl_s", "console.joue_avec_s",
+    "console.ignore_s", "console.joue_avec_s",
     "console.plus_lent_s", "console.plus_lent_facteur",
     "poids.offre", "poids.pulsion", "poids.console",
     "immobilite.base", "immobilite.pente_ennui", "gains", "emplois",

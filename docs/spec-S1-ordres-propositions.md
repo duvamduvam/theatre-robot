@@ -1,4 +1,11 @@
-# Spec S1 — ordres et propositions (25/11/2026)
+# Spec S1 — ordres et propositions (25/11/2026, révisée les 25-26/11 : règles R1 à R6)
+
+> **Révision après la relecture adverse (25/11) et la fumée du 26/11** — elle fait foi là où
+> le texte d'origine diverge ; détail au §7. R1 : le régisseur n'ignore jamais un `stop`. R2 :
+> hors séance, le sélecteur ne prend aucune initiative. R3 : le verrou de David a deux genres
+> (console, voix). R4 : un `stop` `didier` suspend l'ordre de David, repris après le silence.
+> R5 : tests de la chaîne sélecteur → régisseur. R6 : un ordre de David part au tick, devant
+> toute initiative, sans score.
 
 Lot S1 de l'étude d'assainissement (`docs/etudes/etude-assainissement.md` §4 règles 1-2, §5,
 §6, réponses de David §8.1, rôles §8 bis). Sim seule (domaine 43). Corrige les problèmes 3, 4,
@@ -28,7 +35,7 @@ Qui émet quoi (la bouche, `didier_vision.ai.conversation`) :
 | tour humain, clé `marche: stop` (le LLM interprète) | `stop` | `didier` (réponse 1 du §8.1 : pas de verrou, il repart seul) |
 | tour humain, clé `marche: pause` (« regarde ça ») | `pause` | `david` |
 | **tour spontané** | **rien** : toute clé de marche ou de geste est ignorée et journalisée (« tour spontané : la bouche ne décide aucun mouvement », §8 bis) | — |
-| continuation de tâche (`_serve_continuation`, lot M4) | comme aujourd'hui | `david` (la tâche vient de David) |
+| continuation de tâche (`_serve_continuation`, lot M4) | gestes ; `stop` ; `go` **non émis** (R3) | gestes : `david` (la tâche vient de David) ; `stop` : `didier` (le LLM décide) ; pas de `go` : la reprise du sélecteur relance après le geste |
 
 Supprimé : le `stop` permis en tour spontané. Le metteur en scène ne passe plus jamais par un
 mouvement ; les initiatives restent celles du sélecteur (lubies) jusqu'à S4.
@@ -37,7 +44,8 @@ mouvement ; les initiatives restent celles du sélecteur (lubies) jusqu'à S4.
 
 **Verrou de David seul.** `relais.Verrou` perd ses deux sources : un booléen (ou un objet
 équivalent) posé par un `stop` d'origine `david` (bouche ou console), levé par un `go`
-d'origine `david` (console ou tour humain). Un `stop` d'origine `didier` ne verrouille jamais.
+d'origine `david` (console ou tour humain) — *à deux genres depuis R3 (§7) : console ou
+voix*. Un `stop` d'origine `didier` ne verrouille jamais.
 Un `go` d'origine `didier` n'existe pas en S1 (la bouche n'en émet plus) ; s'il arrive, il est
 ignoré et journalisé.
 
@@ -75,10 +83,12 @@ reprises et lubies du sélecteur sont `didier`.
 
 ## 3. Le régisseur (`didier_rehearsal/director.py`, `VoiceMove`)
 
-**Règle séance symétrique** (réponse 4 du §8.1, re-tranchée) : hors séance, une demande
-d'origine `didier` est ignorée, qu'elle soit `stop` ou `go` (`hors_seance`, journalisée) ; une
-demande d'origine `david` est APPLIQUÉE (stop et go) : hors séance, Didier suit sa route et
-t'obéit. En séance : comme aujourd'hui. (Le « dire avec humeur » est le lot S2,
+**Origine et séance (remplacé par R1, §7)** : le régisseur n'ignore JAMAIS un `stop`, séance
+ou non, quelle que soit l'origine ; il retient l'origine de l'arrêt vocal en cours : un `go`
+`didier` ne lève qu'un arrêt `didier`, un `go` `david` lève tout. Hors séance, il refuse
+seulement les GESTES d'origine `didier` (réponse `hors_seance`) — c'est le sélecteur qui, hors
+séance, ne lance aucune initiative (R2). La fin de séance et l'abort GARDENT l'arrêt vocal (le
+`go` de David qui suit rend la vitesse retenue). (Le « dire avec humeur » est le lot S2,
 `seance_non_lancee`.)
 
 **Lubies du scénario coupées quand le jeu tourne** : avec `jeu:=true`, les pannes de type
@@ -90,17 +100,16 @@ tourne en `jeu:=false` et doit rester verte, à vérifier).
 
 Corps sûr, route_driver, mux, bornes ; le chemin d'arrêt d'urgence de la bouche (mot d'arrêt →
 `stop` AVANT le LLM, interruption de la voix) garde sa priorité et son ordre ; un `stop` reste
-toujours relayé quel que soit le verrou ou la séance (un arrêt n'est jamais refusé) — sauf la
-seule exception voulue : hors séance, un `stop` d'origine `didier` est ignoré (Didier suit sa
-route). Aucun topic de mouvement publié sur le vrai robot (domaine 42) : tout cela reste derrière
+toujours relayé et appliqué quel que soit le verrou, la séance ou l'origine (un arrêt n'est
+jamais refusé, R1 : plus d'exception). Aucun topic de mouvement publié sur le vrai robot (domaine 42) : tout cela reste derrière
 `CHAT_MOUVEMENT` et le régisseur, sim seule.
 
 ## 5. Tests exigés (valeurs gravées, pas recalculées)
 
 1. « Un ordre de David n'est jamais annulé par la bouche » : verrou posé par `stop` `david`
-   → un `stop`/`go` `didier` ne le lève pas ; un geste `david` en cours n'est pas interrompu
-   par un `stop` `didier`… **attention** : un `stop` `didier` ARRÊTE quand même le corps (un
-   arrêt est toujours sûr) mais ne pose pas de verrou et la reprise s'arme.
+   → un `stop`/`go` `didier` ne le lève pas ; un `stop` `didier` pendant un geste `david`
+   ARRÊTE le corps, sans verrou, et SUSPEND l'ordre : à la reprise (D s de silence), le geste
+   de David est ré-émis (origine `david`) — R4 ; un `stop` `david` entre-temps annule tout.
 2. « Ce que Didier arrête, il le relance » : `stop` `didier` → aucune reprise avant `D` s de
    silence, `go` émis à `D` (graine fixée → `D` gravé) ; une parole remet le silence à zéro.
 3. `stop` `david` → aucune reprise, jamais, jusqu'au `go` `david`.
@@ -121,3 +130,19 @@ muets opposés à un ordre ; trois minuteries de reprise ; lubies en double ; mo
 en scène ; asymétrie `hors_seance`. Documentation à mettre à jour dans le même lot :
 `docs/spec-A1-selecteur-de-jeu.md` (renvoi vers cette spec là où elle est dépassée),
 `docs/chantiers.md`, README des packages touchés, étude §6 (S1 : fait).
+
+## 7. Révision des 25-26/11 (relecture adverse Fable, fumée du 26/11) — FAIT FOI
+
+| Règle | Contenu | Où, et test qui la couvre |
+|---|---|---|
+| **R1** (B1, B3, M2) | Le régisseur n'ignore jamais un `stop`. Il retient l'origine de l'arrêt vocal : un `go` `didier` ne lève qu'un arrêt `didier` (`arret_de_david` sinon), un `go` `david` lève tout. Hors séance, seuls les GESTES `didier` sont refusés (`hors_seance` ; sous un arrêt de David aussi : `arret_de_david`). Fin de séance et abort GARDENT l'arrêt vocal. | `director.VoiceMove` (`hold_origine`, `geste_refuse`, `fin_de_seance`) ; `test_director.py::test_s1_7_*`, `test_s1_m2_*`, `test_director_node.py::test_s1_m2_stop_en_seance_fin_de_seance_go_de_david_il_repart`, `test_s1_geste_de_didier_refuse_hors_seance_celui_de_david_passe` |
+| **R2** | Hors séance (ou état inconnu), le sélecteur ne prend aucune initiative : ni lubie, ni approche de son initiative (« joue avec » reste permis), ni reprise d'un arrêt qu'il n'a pas posé (la fin d'un geste de David). Il lit `rehearsal/state` (latché). La reprise d'un arrêt qu'il a posé (pause, stop `didier` relayé) reste permise. | `Selecteur.sur_seance`, `jeu_node` ; `test_ordres_propositions.py::test_r2_*` |
+| **R3** (B2) | Verrou de David à deux genres : `console` (STOP console, Route OFF), levé seulement par un GO console ; `voix` (mot d'arrêt), levé par un `go` `david` de tour humain ou un GO console. Continuation de tâche : `stop` en `didier`, `go` non émis. (Le prompt de continuation n'invitait à aucun `go` : rien à retirer.) | `Selecteur.verrou`, `RelaisSeul`, `conversation._notify_move` ; `test_go_de_la_bouche_ne_leve_pas_un_stop_de_david`, `test_r3_*`, `test_continuation_avec_*` |
+| **R4** (M1) | Un `stop` `didier` pendant un geste de David (aller_voir, tour_de, avancer, tourner) arrête le corps et SUSPEND l'ordre : à la reprise, le geste est ré-émis (`david`), journal « ordre de David suspendu, repris après D s ». Un `stop` `david` entre-temps annule tout. | `Selecteur.relayer_stop`, `_reprise_due` ; `test_1_r4_*` |
+| **R5** (M3) | Tests qui enchaînent le sélecteur et le vrai `VoiceMove`, séance on et off : pause-regard (il repart), geste de David hors séance (il part), stop `didier` (appliqué, puis il repart), STOP console puis go de la bouche (le verrou reste), mot d'arrêt puis go de tour humain (il repart) ; garde superviseur de la reprise ; R4 ; R2. | `test_ordres_propositions.py::test_r5_*`, `test_2_r5_la_reprise_attend_le_superviseur` |
+| **R6** (fumée du 26/11, A1 T4) | Un ordre de la console (et un ordre `david` de la bouche) passe avant toute initiative (expression, lubie, approche, regard), sans score ni écart minimal entre décisions : il part au prochain tick et interrompt l'initiative en cours. Branche `ordre_macro` de l'arbre, `console.ordre_ttl_s` et gains d'ordres supprimés. | `Selecteur._ordre_console`, `_executer_ordre` ; `test_r6_*` |
+
+Mineurs : une `pause` d'origine inconnue est un `stop` (lu `david`) ; `lire_chat_move` normalise
+casse et espaces (`" STOP"` est un stop) ; `pause` émise par le sélecteur en `stop` `didier`
+(c'est lui qui la relance, sinon son `go` ne lèverait pas l'arrêt au régisseur) ; codes morts
+`fatigue` / `trop_tot` / `ignore` retirés de `move_task`, `gains.bouche` retiré.

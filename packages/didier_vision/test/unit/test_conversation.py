@@ -3571,7 +3571,9 @@ def test_continuation_sans_geste_ferme_la_tache(timeline, clock):
 
 
 def test_continuation_avec_go_seul_ferme_la_tache(timeline, clock):
-    # "go" n'est pas un geste de corps : la tâche est finie, il reprend la route.
+    # "go" n'est pas un geste de corps : la tâche est finie. Lot S1 (R3, 25/11) : le go n'est
+    # plus émis en continuation — la reprise du sélecteur relance la route après le geste (un
+    # go de David y lèverait un arrêt vocal que David n'a pas levé).
     task = _tache_en_attente(clock.t)
     engine, _brain, ordres = _tache_engine(
         timeline, clock, task, deltas=['Fini, je repars. {"emotion": "happy", "marche": "go"}'])
@@ -3579,7 +3581,7 @@ def test_continuation_avec_go_seul_ferme_la_tache(timeline, clock):
         engine.run_once()
     finally:
         _cleanup_beeps(engine)
-    assert ordres == [GO_DAVID]
+    assert ordres == []
     assert not task.is_open()
 
 
@@ -3592,7 +3594,7 @@ def test_continuation_avec_stop_ferme_la_tache(timeline, clock):
         engine.run_once()
     finally:
         _cleanup_beeps(engine)
-    assert ordres == [STOP_DAVID]
+    assert ordres == [STOP_DIDIER]          # R3 : le LLM décide de s'arrêter, une proposition
     assert not task.is_open()
 
 

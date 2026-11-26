@@ -32,6 +32,7 @@ TABLEAU_X14 = Tableau((TABLE, POUBELLE, BANC))
 
 
 def scene_x14(s, t):
+    s.sur_seance({"seance": "en_cours", "arret_vocal": False}, t)     # lot S1, R2
     s.sur_route_state("on", t)
     s.sur_tableau(TABLEAU_X14, t)
 
@@ -76,7 +77,7 @@ def test_console_va_la_jamais_bornee_a_10_m():
     # Un ordre de DAVID : la cible du tableau, avec son id, même à 22 m (la régie borne à 40 m).
     out = jouer(fabriquer(pools={}), 0.0, 5.0, [(0.0, scene_x14),
                                                 (1.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "le banc"}, t))])
-    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "banc", "id": "carte/banc", "origine": "david"})]
+    assert moves(out) == [(1.0, {"cmd": "aller_voir", "objet": "banc", "id": "carte/banc", "origine": "david"})]
 
 
 def test_console_va_la_inconnu_refuse():

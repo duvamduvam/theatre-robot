@@ -3,7 +3,8 @@
 Ordres et propositions (lot S1, 25/11, docs/spec-S1-ordres-propositions.md) : chaque demande
 de marche porte son ORIGINE (didier_rehearsal.contracts.lire_chat_move). Le verrou n'a plus
 qu'une source, David : posé par un « stop » d'origine « david » (mot d'arrêt, console), levé
-par un « go » d'origine « david ». Un « stop » d'origine « didier » arrête toujours (un arrêt
+par un « go » d'origine « david » — à deux genres (R3 : la console n'est levée que par la
+console, la voix aussi par la bouche). Un « stop » d'origine « didier » arrête toujours (un arrêt
 n'est jamais refusé) mais ne verrouille jamais ; un « go » d'origine « didier » est ignoré
 (seul le sélecteur relance ce que Didier a arrêté). Supprimé : la classe Verrou à deux sources
 (console / bouche) de la revue A1 du 02/11.
@@ -27,6 +28,10 @@ STOP, GO = CHAT_MOVE_STOP, CHAT_MOVE_GO
 # sélecteur ; en mode dégradé, un simple stop (sens sûr : aucune reprise automatique).
 PAUSE = CHAT_MOVE_PAUSE
 DAVID, DIDIER = CHAT_MOVE_ORIGINE_DAVID, CHAT_MOVE_ORIGINE_DIDIER
+# Genres du verrou de David (règle R3, 25/11) : la CONSOLE (STOP console, Route OFF), levée
+# par un GO console seulement ; la VOIX (mot d'arrêt), levée aussi par un go de David en tour
+# humain (la bouche).
+VERROU_CONSOLE, VERROU_VOIX = "console", "voix"
 
 
 def marche(cmd: str, origine: str) -> dict:
@@ -66,7 +71,7 @@ class RelaisSeul:
 
     def __init__(self, raison: str):
         self.raison = raison
-        self.verrou_david = False   # informatif ici (intention) : aucun geste ne passe de toute façon
+        self.verrou = None          # None | VERROU_CONSOLE | VERROU_VOIX (mêmes règles que le sélecteur)
         self.sorties = []
         self._journal("degrade", f"le sélecteur n'a pas pu démarrer ({raison}) : il ne fait que "
                       "relayer stop et go, sans aucune initiative")
@@ -81,7 +86,7 @@ class RelaisSeul:
             demande = STOP     # mode dégradé : la pause est un stop, sans reprise
         if demande == STOP:
             if origine == DAVID:
-                self.verrou_david = True
+                self.verrou = VERROU_CONSOLE if source == "console" else (self.verrou or VERROU_VOIX)
             self.sorties.append(("chat_move", marche(STOP, origine)))
             self._journal("relais_stop", f"stop ({origine}) de {source} relayé (mode dégradé, aucune reprise)",
                           source=source, origine=origine)
@@ -90,7 +95,11 @@ class RelaisSeul:
                 self._journal("refus", f"« go » d'origine {origine!r} ignoré : seul un go de David le relance "
                               "(mode dégradé)", source=source, origine=origine)
                 return
-            self.verrou_david = False
+            if source != "console" and self.verrou == VERROU_CONSOLE:
+                self._journal("refus", "« go » dit à Didier, mais David a arrêté à la console : seul un GO "
+                              "console le relance (mode dégradé)", source=source, origine=origine)
+                return
+            self.verrou = None
             self.sorties.append(("chat_move", marche(GO, DAVID)))
             self._journal("relais_go", f"go de David ({source}) relayé (mode dégradé)", source=source,
                           origine=origine)
@@ -107,6 +116,10 @@ class RelaisSeul:
         cmd = payload.get("cmd") if isinstance(payload, dict) else None
         if cmd is not None:
             self._relayer(marche(cmd, DAVID), "console")
+
+    @property
+    def verrou_david(self) -> bool:
+        return self.verrou is not None
 
     def __getattr__(self, nom):
         # Toute autre entrée (person_box, poi_event, route_state…) est ignorée.

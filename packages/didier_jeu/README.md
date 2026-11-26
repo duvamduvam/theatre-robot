@@ -68,15 +68,20 @@ viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
    sa réception, sans passer par le score** — un arrêt n'est jamais refusé.
    **Origine `david`** (mot d'arrêt, console, STOP CONTENUS de la page) : il pose
    le **verrou de David**, seul verrou qui existe (lot S1 ; supprimé : le verrou à
-   deux sources console/bouche), levé par un `go` de David (console, ou bouche en
-   tour humain). **Origine `didier`** (le `marche: stop` interprété par le LLM) :
-   il arrête, **sans verrou**, et la reprise s'arme. Un `go` d'origine `didier`
-   est ignoré et journalisé. Une Route OFF par David (`route_state_cause = cmd`)
-   compte comme un stop de David. Il n'y a jamais de `go` automatique après un
-   stop de David.
+   deux sources console/bouche), à **deux genres** (R3, 25/11) : `console` (STOP
+   de la console, Route OFF par David — `route_state_cause = cmd`), levé par un GO
+   de la console **seulement** ; `voix` (mot d'arrêt), levé aussi par un `go` de
+   David en tour humain. **Origine `didier`** (le `marche: stop` du LLM, en tour
+   humain ou en continuation) : il arrête, **sans verrou**, et la reprise s'arme ;
+   pendant un geste de David, l'ordre est **suspendu** puis ré-émis à la reprise
+   (R4). Un `go` d'origine `didier` est ignoré et journalisé. Il n'y a jamais de
+   `go` automatique après un stop de David.
 2. **Superviseur absent** (mode `exigeant` seulement ; le défaut en A1 est `suppose`) :
    aucun déplacement.
-3. **Ordre macro** : `va_la` vise un objet du tableau `scene/objets` (→ `aller_voir` avec son `id`)
+3. **Ordres de la console** (hors de l'arbre depuis R6, 26/11 : ils partent au
+   prochain tick, avant toute initiative, sans score ni écart de 2 s ; plus de
+   branche `ordre_macro` ni d'expiration « pas faisable en 10 s ») :
+   `va_la` vise un objet du tableau `scene/objets` (→ `aller_voir` avec son `id`)
    ou une piste (→ `tourner` vers elle, puis `avancer` 1 m). `joue_avec` vise la
    piste regardée, approches répétées permises. `ignore` coupe les offres de
    la cible pendant 30 s et annule une lubie en attente ou une reprise.
@@ -90,6 +95,9 @@ viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
    de David engagé.
 5. **Choisir** : le score de chaque candidat (immobilité comprise), puis
    l'hystérésis (+15 % pendant 300 ms), et jamais deux changements à moins de 2 s.
+   **Hors séance** (`rehearsal/state` ≠ `en_cours`, ou jamais reçu — R2) : aucune
+   initiative de mouvement (ni lubie, ni approche de son initiative ; « joue avec »
+   reste permis), ni reprise après un geste de David.
 
 **Lubie** : un `poi_event enter` fait naître une offre `objet`. Didier réclame
 l'arrêt (par l'intention) **et** l'amorce (`look` vers l'objet, angle calculé
@@ -121,14 +129,14 @@ assainissement règle 1) : verrou de David (`arrete`), sécurité (dite par le
 régisseur et le corps sûr ; `sans_superviseur` ici) et impossible (`pas_ici`,
 `hors_atteinte` ; objet inconnu : le régisseur). Un geste de la bouche d'origine
 `david` (tour humain ou continuation de SA tâche) part **à la réception**, sans
-score ni hystérésis (journal `ordre`) ; la console passe par le score mais
-**ni fatigue ni réfractaire** ne l'arrêtent. Fatigue et réfractaires bornent les
+score ni hystérésis (journal `ordre`) ; un ordre de la console part au prochain tick,
+de même (R6). Ni fatigue ni réfractaire ne les arrêtent. Fatigue et réfractaires bornent les
 seules initiatives de Didier. Les refus « qui donnent du jeu » (étude §8.1,
 réponse 2) ne sont PAS là : ils viendront avec le régisseur LLM (S4).
 
 **« Regarde ça »** (lot « texte raccord », séance du 18/11 21:35) : la bouche envoie la pause
 (`{"cmd": "pause", "origine": "david"}`) sur `rehearsal/chat_move`. Didier en marche : `stop`
-relayé tout de suite (origine de la demande), **sans verrou**, puis la reprise (journal
+relayé tout de suite, d'origine `didier` (c'est lui qui le relancera), **sans verrou**, puis la reprise (journal
 `pause_regard` puis `reprise`). Déjà arrêté (verrou, reprise armée) ou pas en route : rien ne
 bouge, jamais de `go` qu'il n'aurait pas eu sans elle. Mode dégradé : un `stop`. Tests :
 `test/test_pause_regard.py`.

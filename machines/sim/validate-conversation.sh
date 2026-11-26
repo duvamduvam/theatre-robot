@@ -158,6 +158,8 @@ def en_marche(route_state, route_speed):
     l'arrêt d'une lubie du sélecteur est un « hold » (route_speed 0, route_state reste on). Fumée
     du 19/11 08:36 : hold de 98 s compté comme « en marche », phrase B publiée 3 s après le
     « repartir » du jeu (réfractaire déplacement 10 s) → refusée « trop_tot », B2-C3 en cascade.
+    (Depuis le lot S1, un geste de David n'est plus refusé « trop_tot » ; la garde reste : une
+    phrase dite pendant un hold ne teste pas la même scène.)
     Vitesse inconnue (jamais publiée) = pas en marche : le pilote la pose lui-même au départ."""
     if route_state != "on":
         return False

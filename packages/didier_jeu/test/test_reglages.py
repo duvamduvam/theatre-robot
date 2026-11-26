@@ -24,13 +24,12 @@ ATTENDU = {
     # Lot S1 (25/11) : une seule reprise, silence tiré dans [10, 40] s (David, 24/11).
     "reprise": {"min_s": 10.0, "max_s": 40.0},
     "superviseur": {"mode": "suppose", "silence_max_s": 1.0},
-    "console": {"ignore_s": 30.0, "ordre_ttl_s": 10.0, "joue_avec_s": 30.0,
+    "console": {"ignore_s": 30.0, "joue_avec_s": 30.0,
                 "plus_lent_s": 60.0, "plus_lent_facteur": 2.0},
     "approche": {"hauteur_max": 0.55},
     "poids": {"offre": 1.0, "pulsion": 0.6, "console": 1.5},
     "immobilite": {"base": 0.3, "pente_ennui": 0.3},
-    "gains": {"regarder": 1.0, "accueil": 0.8, "spontanee": 1.0, "approcher": 0.7, "lubie": 1.0,
-              "bouche": 1.0, "aller_voir": 1.0, "repartir": 2.0},
+    "gains": {"regarder": 1.0, "accueil": 0.8, "spontanee": 1.0, "approcher": 0.7, "lubie": 1.0},
     "emplois": {"bonjour": "accueil", "random": "spontanee", "little move": "spontanee"},
     "durees_s": {"regarder": 3.0, "expression_defaut": 5.0, "expression_marge": 2.0,
                  "deplacement_max": 70.0, "deplacement_accuse": 3.0, "arret": 3.0, "relais": 2.0},
@@ -66,6 +65,8 @@ def test_mode_superviseur_inconnu_refuse():
         Reglages(data)
 
 
-def test_chaque_action_a_un_gain():
+def test_chaque_action_choisie_par_le_score_a_un_gain():
+    # Lot S1 (R6) : « bouche », « aller_voir » et « repartir » ne sont plus que des ORDRES de
+    # David, exécutés sans score — ils n'ont plus de gain.
     from didier_jeu.scores import CATEGORIES
-    assert set(CATEGORIES) <= set(ATTENDU["gains"])
+    assert set(CATEGORIES) - {"bouche", "aller_voir", "repartir"} == set(ATTENDU["gains"])

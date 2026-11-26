@@ -100,7 +100,7 @@ superviseur:
 
 console:
   ignore_s: 30.0          # « ignore » : aucune action vers la cible pendant 30 s (T4)
-  ordre_ttl_s: 10.0       # un ordre macro non exécutable tombe (refus journalisé)
+  # (Lot S1, R6 : plus d'ordre_ttl_s — un ordre macro part au tick ou est refusé tout de suite.)
   # « joue avec lui » : biais console sur la piste pendant 30 s ; approches
   # RÉPÉTÉES permises (David, 02/11), bornées par approche.hauteur_max.
   joue_avec_s: 30.0
@@ -140,11 +140,8 @@ gains:
   spontanee: 1.0      # expression de types « random » / « little move »
   approcher: 0.7      # se tourner vers une piste puis avancer
   lubie: 1.0
-  # Jamais lu depuis le lot S1 (un geste de la bouche est un ordre, sans score) ;
-  # gardé parce que chaque action de scores.CATEGORIES a son gain (test_reglages).
-  bouche: 1.0
-  aller_voir: 1.0     # va_la vers un objet (console)
-  repartir: 2.0       # « reviens » de la console (la reprise ne passe plus par le score, S1)
+  # (Lot S1 : plus de gain « bouche », « aller_voir » ni « repartir » — gestes de la bouche,
+  # « va là » et « reviens » sont des ORDRES, exécutés sans score, R6.)
 
 # Emploi des séquences selon leur clé `types` (répertoire). Une séquence dont
 # aucun type n'est listé ici est chargée mais SANS EMPLOI (journalisée).

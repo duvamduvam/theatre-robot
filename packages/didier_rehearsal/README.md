@@ -90,8 +90,8 @@ le répertoire est illisible, le sélecteur ne fait que relayer stop/go). Il pas
 aussi `jeu:=true` au régisseur (paramètre `jeu`, lot S1) : **les lubies du
 scénario ne partent pas** (`fault_skip`, `reason: "jeu"`), le sélecteur a les
 siennes. Défaut `false` = séance Chantiers inchangée (V-R3). `scenario:=jeu-a1` :
-scénario VIDE (0 bug, 0 lubie), qu'il faut quand même **starter** (hors séance, la
-reprise du sélecteur, d'origine `didier`, est ignorée). `rehearsal/objects` porte depuis A1 `x`, `y`
+scénario VIDE (0 bug, 0 lubie), qu'il faut quand même **starter** (hors séance, le
+sélecteur ne prend aucune initiative et le régisseur refuse ses gestes, lot S1 R2). `rehearsal/objects` porte depuis A1 `x`, `y`
 de chaque objet (le sélecteur oriente le regard d'une lubie).
 
 ## Lot I1 — mouvement à la voix (étude §13.11, 22/10)
@@ -109,11 +109,13 @@ agit par `route` / `route_speed`, comme pour les lubies. Tout ordre est journali
 `voice_move` avec son `origine` (`effect` : `close_lubie` | `resume` | `relaunch` |
 `hold` | `ignored` + `reason`).
 
-- **Séance (règle symétrique, lot S1)** : hors séance, toute marche d'origine
-  `didier` est ignorée (`hors_seance`), `stop` comme `go` — Didier suit sa route ;
-  celle de David est appliquée, `stop` comme `go`. En séance, les deux s'appliquent.
+- **Origine (lot S1, règle R1 du 25/11)** : un `stop` n'est **jamais** ignoré, séance
+  ou non, quelle que soit son origine. L'arrêt vocal retient l'origine de qui l'a posé
+  (David l'emporte) : un `go` `didier` ne lève qu'un arrêt `didier` (sinon
+  `arret_de_david`), un `go` `david` lève tout. Hors séance, seuls les **gestes**
+  `didier` sont refusés (réponse `hors_seance` ; sous un arrêt de David, `arret_de_david`).
   Origine inconnue : `stop` lu `david`, `go` ignoré (`origine_inconnue`). Supprimé :
-  l'ancienne asymétrie (tout stop appliqué, tout go ignoré hors séance).
+  toute condition de séance sur la marche.
 
 - **go** : ferme la lubie active (`closed_by: "voix"`, la vitesse en vigueur
   EST rendue), sinon lève l'arrêt vocal (vitesse d'avant, plafonnée), sinon
@@ -122,16 +124,17 @@ agit par `route` / `route_speed`, comme pour les lubies. Tout ordre est journali
   `route_state`). **Jamais** après une extinction par commande (cause `cmd`,
   ou `off`/`false`/`0` vu sur `route`) : `route_off_par_david` ; cause jamais
   reçue : `cause_inconnue`. Anti-rebond 2 s.
-- **stop** : `route_speed 0` **toujours** republié (même pendant une lubie ;
-  hors séance, s'il vient de David), arrêt vocal **toujours** posé sans jamais
-  écraser une vitesse déjà retenue ; pas d'anti-rebond.
+- **stop** : `route_speed 0` **toujours** republié (même pendant une lubie, même
+  hors séance), arrêt vocal **toujours** posé sans jamais écraser une vitesse déjà
+  retenue ; pas d'anti-rebond.
 - **Règle générale** (défaut trouvé en sim le 22/10) : tant qu'un arrêt vocal
   est posé, le régisseur ne publie **jamais** de vitesse non nulle, sauf par
   « go » ou levée au fader — une lubie qui finit ne rend rien, une panne
   `speed` ne publie rien (`"suppressed_by": "voice_hold"` au journal).
 - Vitesse en vigueur : celle d'une panne `speed` active, sinon le fader.
-  Le fader lève l'arrêt vocal sans rien publier ; abort / fin de séance aussi
-  (Didier reste à l'arrêt) et annulent une salve de relance.
+  Le fader lève l'arrêt vocal sans rien publier. Abort / fin de séance le
+  **gardent** (lot S1, M2 : avant, ils le levaient en silence et le `go` de David
+  qui suivait ne rendait plus rien) et annulent une salve de relance.
 
 `route_driver` publie `route_state_cause` (latché, JSON `"boot"` | `"cmd"`) :
 `boot` au démarrage, `cmd` à chaque extinction par commande, tout format.

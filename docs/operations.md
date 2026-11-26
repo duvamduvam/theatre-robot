@@ -1048,15 +1048,20 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   repart de lui-même (geste terminé, après 23,4 s de silence) ». Un STOP de David (voix
   ou console), une Route OFF ou un `go` de David l'annule ; un nouveau geste le fait
   attendre. « En route » dit par David repart tout de suite. Inutile de recliquer
-  Route ON, mais la séance doit être **démarrée** (hors séance, le régisseur ignore
-  toute marche d'origine `didier`, donc cette reprise : `voice_move … hors_seance`).
+  Route ON, mais la séance doit être **démarrée** (hors séance, le sélecteur ne relance
+  pas un arrêt de fin de geste : journal du jeu `reprise_annulee … hors séance`, R2).
 - **Ordres et propositions** (lot S1, 25/11, `docs/spec-S1-ordres-propositions.md`) :
   un mot d'arrêt (« stop », « arrête ») est un **ordre** de David : il verrouille
-  jusqu'à SON « go » (console, ou « en route » dit à Didier). Le « stop » que le
-  LLM décide de lui-même (clé `marche`) est une **proposition** : Didier s'arrête,
-  sans verrou, et repart seul après le silence. Un tour spontané ne bouge plus
-  jamais le corps (ni go, ni stop, ni geste). Avec `jeu:=true`, les lubies du
-  scénario sont sautées (`fault_skip`, `reason: "jeu"`) : seul le sélecteur en joue.
+  jusqu'à SON « go » (console, ou « en route » dit à Didier). Un STOP de la console
+  ou une Route OFF ne se lèvent QUE par le GO de la console (R3). Le « stop » que le
+  LLM décide de lui-même (clé `marche`, tour humain ou continuation) est une
+  **proposition** : Didier s'arrête, sans verrou, et repart seul après le silence —
+  s'il exécutait un geste demandé par David, ce geste repart à la place (R4). Un
+  ordre de la console part au tick suivant, même pendant une expression (R6). Hors
+  séance, Didier ne prend aucune initiative (R2), mais tout « stop » s'applique et
+  ce que David demande s'exécute (R1) ; la fin de séance garde l'arrêt vocal, le
+  « go » de David le lève. Un tour spontané ne bouge plus jamais le corps. Avec
+  `jeu:=true`, les lubies du scénario sont sautées (`fault_skip`, `reason: "jeu"`).
 - **« Regarde ça »** (lot « texte raccord », 18/11) : « regarde », « tu as vu ? »,
   « il y a une lettre sur le banc, tu pourrais regarder » → Didier s'arrête, tourne
   la tête, puis **repart seul** après le silence tiré (même reprise, lot S1) ; journal

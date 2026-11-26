@@ -9,8 +9,8 @@ considérations dans [0, 1] :
 facteur réfractaire : 0 avant la fin de la période réfractaire de la
 catégorie de l'action, 1 après ; et 0 pour une initiative SPONTANÉE (ni
 offre, ni console) moins de refractaire_s.initiative_spontanee après la
-précédente. Un ORDRE de David (console « va là » / « reviens ») n'y est jamais
-soumis (lot S1, 25/11 : fini le « trop tôt » opposé à un ordre).
+précédente. Aucun ORDRE de David ne passe plus par le score (lot S1, R6 du 26/11) : la
+console n'y entre que par « joue avec », un biais.
 Supprimés au lot S1 : la considération « metteur en scène » (mots-clés, cf.
 selecteur) et la pression de route (la reprise ne passe plus par le score).
 « rien » (l'immobilité) est candidat aussi : immobilite.base − pente × ennui.
@@ -84,8 +84,7 @@ class Contexte:
     """Ce que le score lit du monde, figé pour un tick."""
     now: float
     jauges: Dict[str, float]               # pulsions (ennui, curiosite, lubie, fatigue, pression_route)
-    # {"action", "cible", "cmd", "ordre"?} : biais de l'ordre en cours (ordre=True) ou de « joue avec »
-    console: Optional[Dict] = None
+    console: Optional[Dict] = None         # {"action": None, "cible", "cmd"} : biais de « joue avec »
     derniers: Dict[str, float] = field(default_factory=dict)   # catégorie -> t de la dernière action
     derniere_spontanee: Optional[float] = None
     tempo: float = 1.0                     # « plus lent » : réfractaires × tempo
@@ -114,11 +113,10 @@ def score(c: Candidat, ctx: Contexte, reglages) -> Score:
         "console": 1.0 if _vise_console(c, ctx.console) else 0.0,
     }
     spontanee = cons["offre"] == 0.0 and cons["console"] == 0.0
-    ordre = bool(cons["console"]) and bool(ctx.console.get("ordre"))
     facteur, raison_ref = 1.0, ""
     for cat in c.categories:
-        if ordre or (cat == ARRET_DIDIER and cons["console"]):
-            continue   # ordre de David : jamais « trop tôt » (S1), jamais un arrêt de Didier
+        if cat == ARRET_DIDIER and cons["console"]:
+            continue   # « joue avec » de David : pas un arrêt de Didier
         if cat in ctx.derniers:
             periode = reglages.get(f"refractaire_s.{cat}") * ctx.tempo
             if ctx.now - ctx.derniers[cat] < periode - 1e-6:

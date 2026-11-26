@@ -79,8 +79,13 @@ def boite(debut, fin, azimut=0.3, hauteur=0.4):
     return f
 
 
+SEANCE = {"seance": "en_cours", "arret_vocal": False}      # rehearsal/state, séance lancée
+
+
 def marche(sel, t):
-    """Route en marche, tableau des objets vu de l'origine cap +x."""
+    """Séance lancée (lot S1, R2 : sans elle, aucune initiative), route en marche, tableau des
+    objets vu de l'origine cap +x."""
+    sel.sur_seance(SEANCE, t)
     sel.sur_route_state("on", t)
     sel.sur_tableau(TABLEAU, t)
 
@@ -113,25 +118,25 @@ def test_verrou_jusqu_au_go_aucun_deplacement():
 
 
 # ================================================================== T1 jamais deux changements < 2 s
-def _scene_rupture(sel):
-    # Piste née à 0 -> regarder ; David (console, ordre macro qui interrompt) envoie Didier
-    # voir le banc à 0,5. (Avant le lot S1 : une demande de la bouche, offre 0,9 ; c'est
-    # désormais un ordre exécuté sans score, hors de la porte T1.)
-    return jouer(sel, 0.0, 6.0, [(0.0, marche),
-                                 (0.5, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "banc"}, t))],
-                 continu=boite(0.0, 6.0))
+def _scene_rupture(surcharges=None):
+    # Piste née à 0 -> regarder ; POI à 0,5 -> la lubie veut l'interrompre (seuil de rupture
+    # abaissé à 0,75 pour que l'offre objet, 0,8, le puisse). Avant le lot S1, la rupture venait
+    # d'une demande de la bouche, puis (S1) d'un ordre de la console : ni l'un ni l'autre ne
+    # passe plus par le score (R6). Sans la porte T1, la lubie partirait à 0,8 s (hystérésis).
+    return jouer(fabriquer(dict({"engagement.seuil_rupture": 0.75}, **(surcharges or {}))), 0.0, 6.0,
+                 [(0.0, marche), (0.5, _poi("anneaux"))], continu=boite(0.0, 6.0))
 
 
 def test_deux_decisions_differentes_jamais_a_moins_de_2_s():
-    d = decisions(_scene_rupture(fabriquer()))
-    assert [a for _, a, _ in d] == ["regarder", "aller_voir"]
+    d = decisions(_scene_rupture())
+    assert d == [(0.3, "regarder", "p1"), (2.3, "lubie", "anneaux")]
     assert d[1][0] - d[0][0] >= 2.0 - 1e-9   # 2,3 − 0,3 vaut 1,999… en flottant
     assert d[0][0] == pytest.approx(0.3)     # hystérésis 0,3 s après la naissance
 
 
 def test_mutation_changement_min_s():
-    d = decisions(_scene_rupture(fabriquer({"changement.min_s": 0.0})))
-    assert d[1][0] - d[0][0] < 2.0
+    d = decisions(_scene_rupture({"changement.min_s": 0.0}))
+    assert d[1] == (0.8, "lubie", "anneaux")
 
 
 # ================================================================== hystérésis
@@ -423,10 +428,12 @@ def test_mutation_ignore_s():
 def test_va_la_objet_demande_aller_voir():
     out = jouer(fabriquer(), 0.0, 3.0, [(0.0, marche),
                                         (1.0, lambda s, t: s.sur_console({"cmd": "va_la", "cible": "anneaux"}, t))])
-    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "anneaux", "id": "carte/anneaux",   # id du tableau (O1)
+    # R6 : l'ordre part au tick de sa réception (avant : 1,3 s, par le score et l'hystérésis).
+    assert moves(out) == [(1.0, {"cmd": "aller_voir", "objet": "anneaux", "id": "carte/anneaux",   # id du tableau (O1)
                                  "origine": "david"})]
-    d = journal(out, "decision")[0][1]
-    assert d["considerations"]["console"] == 1.0 and d["branche"] == "ordre_macro"
+    assert journal(out, "decision") == []
+    assert [(t, p["pourquoi"], p["cmd"]) for t, p in journal(out, "ordre")] == [
+        (1.0, "David : va voir « anneaux »", "va_la")]
 
 
 def test_va_la_piste_tourne_puis_avance_1_m():
@@ -461,7 +468,7 @@ def test_superviseur_exigeant_absent_aucun_deplacement():
 
 def test_reviens_envoie_go():
     out = jouer(fabriquer(), 0.0, 3.0, [(0.0, marche), (1.0, lambda s, t: s.sur_console({"cmd": "reviens"}, t))])
-    assert moves(out) == [(1.3, GO_DAVID)]
+    assert moves(out) == [(1.0, GO_DAVID)]                  # R6 : au tick
 
 
 # ================================================================== bouche, arbitrage
@@ -665,7 +672,8 @@ def test_tache_va_voir_l_elephant_puis_tour_du_banc_10_s_apres():
 
 def test_lubie_note_si_le_regard_est_parti():
     # Sans tableau (aucun azimut connu), pas de regard.
-    sans_pose = jouer(fabriquer(), 0.0, 6.0, [(0.0, lambda s, t: s.sur_route_state("on", t)), (1.0, _poi("anneaux"))])
+    sans_pose = jouer(fabriquer(), 0.0, 6.0, [(0.0, lambda s, t: s.sur_seance(SEANCE, t)),
+                                              (0.0, lambda s, t: s.sur_route_state("on", t)), (1.0, _poi("anneaux"))])
     a = journal(sans_pose, "arret_didier")[0][1]
     assert a["regard"] is False and [o for o in sans_pose if o[1] == "look"] == []
     avec = jouer(fabriquer(), 0.0, 6.0, [(0.0, marche), (1.0, _poi("anneaux"))])
