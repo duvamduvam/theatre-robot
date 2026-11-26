@@ -219,6 +219,15 @@ class Sim:
             tar.add(d, arcname=".")
         shutil.rmtree(d, ignore_errors=True)
 
+    def arreter_sans_recolte(self):
+        """Arrêt sur interruption (SIGTERM) : la sim et rien d'autre, tout de suite."""
+        if not self.vivante:
+            return
+        self.compose("down", "-t", "5")
+        for c in CONTENEURS:
+            self.sy.sortie(["docker", "rm", "-f", c])
+        self.vivante = False
+
     def arreter(self, nom):
         """Seulement NOTRE sim (vivante = lancée par cette fumée), après récolte."""
         if not self.vivante:

@@ -1177,6 +1177,7 @@ seule, code dans `machines/sim/fumee/`, plan d'épreuves dans `machines/sim/fume
 ```bash
 cd machines/sim && python3 -m fumee                   # tout le plan, sur origin/main à jour
 python3 -m fumee --rev ma-branche --epreuves a1       # une révision, une épreuve (+ image, demarrage, rtf)
+systemd-run --user -p KillMode=mixed --working-directory=$PWD python3 -u -m fumee --rev ma-branche   # détachée ; « systemctl --user stop » arrête aussi la sim
 python3 -m fumee --rev '#42'                          # une PR
 python3 -m fumee --reprendre                          # même sha : vertes gardées, le reste rejoué
 python3 -m fumee --hors-ligne                         # aussi détecté seul (DNS de github.com)
