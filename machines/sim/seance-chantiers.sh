@@ -12,7 +12,7 @@ COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.banc.yml)
 export HEADLESS=true WORLD=chantiers REHEARSAL=true FACE=true DATA_EDIT=true CHAT=true
 # Journaux de la sim hors du dépôt et de Nextcloud (16/11) : même expression que le compose ;
 # créés par l'utilisateur (sinon Docker les crée root).
-export DIDIER_SIM_JOURNAUX="${DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier-sim}"
+export DIDIER_SIM_JOURNAUX="${DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier/sim}"
 mkdir -p "$DIDIER_SIM_JOURNAUX"/log "$DIDIER_SIM_JOURNAUX"/log-vision "$DIDIER_SIM_JOURNAUX"/log-telecommande
 
 # Veille audio du banc (22/11, onglet « Audio » de la page scène) : service HÔTE (PipeWire et

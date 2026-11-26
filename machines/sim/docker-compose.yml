@@ -31,7 +31,7 @@
 # Journaux (décision 11) : log/ partagé par monde et robot (robot.log, rehearsal/, jeu/,
 # tickets/ au même endroit pour les épreuves) ; build/ et install/ NON persistés (colcon à chaque
 # `up`). Depuis le 16/11 HORS du dépôt et de Nextcloud : $DIDIER_SIM_JOURNAUX, défaut
-# ~/tmp/didier-sim/{log,log-vision,log-telecommande} (fumee.sh et
+# ~/tmp/didier/sim/{log,log-vision,log-telecommande} (fumee.sh et
 # seance-chantiers.sh le créent ; à la main : mkdir -p avant `up`, sinon Docker le crée root). Doc : machines/sim/README.md, docs/operations.md.
 name: didier-sim
 
@@ -89,7 +89,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${XAUTHORITY:-/tmp/.docker.xauth}:${XAUTHORITY:-/tmp/.docker.xauth}:rw
       - /dev/dri:/dev/dri
-      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}/log:/home/ros2_ws/log
+      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier/sim}/log:/home/ros2_ws/log
       - ./monde/entree.sh:/home/ros2_ws/entree.sh:ro
       # Sources montées par-dessus la copie de l'image (itération sans rebuild) : SES packages.
       - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
@@ -190,7 +190,7 @@ services:
       - ../../data/json:/home/ros2_ws/src/robot/json
       - ../../data/medias:/home/ros2_ws/src/robot/medias
       - ${DIDIER_MEDIAS_PRIVES:-${HOME}/Nextcloud/dev/didier/medias-prives}/audios:/home/ros2_ws/src/robot/medias/audios:ro
-      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}/log:/home/ros2_ws/log
+      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier/sim}/log:/home/ros2_ws/log
       # Sources : la liste `packages` de machines/robot/machine.yml, ni plus ni moins (gravé).
       - ../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
       - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
@@ -240,7 +240,7 @@ services:
       # Le script de démarrage du Pi seul (pas toute la conf : elle porterait un éventuel secret
       # local, gitignoré, de machines/vision/).
       - ../vision/scripts:/home/ros2_ws/src/vision/conf/scripts:ro
-      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}/log-vision:/home/ros2_ws/log
+      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier/sim}/log-vision:/home/ros2_ws/log
       # Sources : la liste `packages` de machines/vision/machine.yml (gravé).
       - ../../packages/theatre_interfaces:/home/ros2_ws/src/theatre_interfaces
       - ../../packages/theatre_contrats:/home/ros2_ws/src/theatre_contrats
@@ -272,7 +272,7 @@ services:
     ipc: "host"
     pid: "service:monde"
     volumes:
-      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier-sim}/log-telecommande:/home/ros2_ws/log
+      - ${DIDIER_SIM_JOURNAUX:-${HOME}/tmp/didier/sim}/log-telecommande:/home/ros2_ws/log
       - ../../legacy/dadou_control_ros/conf:/home/ros2_ws/src/controller/conf
       - ../../legacy/dadou_control_ros/controller:/home/ros2_ws/src/controller/controller
       - ../../legacy/dadou_control_ros/json:/home/ros2_ws/src/controller/json

@@ -259,3 +259,53 @@ def test_adopt_threshold_none_ne_change_rien():
 
     assert vad.state is VadState.CALIBRATING
     assert vad.threshold is None
+
+
+# ---------------------------------------------------------------------------
+# Plancher de bruit suivi (26/11, lot « fin de phrase »). Vécu les 24 et 25/11 :
+# calibration sur un silence parfait (casque connecté APRÈS le démarrage), puis le
+# souffle du casque au-dessus du seuil : fin de phrase jamais vue, coupure à 12 s.
+# ---------------------------------------------------------------------------
+
+def _apres_calibration(vad, niveau=1.0):
+    for _ in range(20):          # calibration_ms 1000 / 50 ms
+        assert vad.feed(niveau) is None
+
+
+def test_souffle_continu_sans_adaptation_coupe_a_12_s():
+    vad = EnergyVad(VadConfig(threshold_factor=6.0), frame_ms=FRAME_MS)
+    _apres_calibration(vad)
+    evts = [(i, e) for i in range(1, 400) if (e := vad.feed(40.0)) is not None]
+    assert [(i, e.kind, e.reason) for i, e in evts][:2] == [(3, "speech_start", "silence"),
+                                                           (243, "speech_end", "max_duration")]
+
+
+def test_souffle_continu_avec_adaptation_fin_de_phrase_vue_en_2_6_s():
+    vad = EnergyVad(VadConfig(threshold_factor=6.0), frame_ms=FRAME_MS, adaptatif=True)
+    _apres_calibration(vad)
+    evts = [(i, e) for i in range(1, 60) if (e := vad.feed(40.0)) is not None]
+    # trame 40 : 2 s de mesures -> seuil 40 x 6 = 240, recalculé AVANT le test de la trame ;
+    # trames 40 à 51 = 12 trames (600 ms) sous le seuil -> fin à la trame 51
+    assert [(i, e.kind, e.reason) for i, e in evts] == [(3, "speech_start", "silence"),
+                                                       (51, "speech_end", "silence")]
+    assert vad.threshold == 240.0
+
+
+def test_avec_adaptation_la_voix_au_dessus_du_souffle_est_toujours_entendue():
+    vad = EnergyVad(VadConfig(threshold_factor=6.0), frame_ms=FRAME_MS, adaptatif=True)
+    _apres_calibration(vad)
+    for _ in range(60):
+        vad.feed(40.0)           # souffle : seuil monté à 240
+    kinds = []
+    for niveau in [800.0] * 20 + [40.0] * 13:   # 1 s de voix puis 650 ms de souffle
+        if (e := vad.feed(niveau)) is not None:
+            kinds.append((e.kind, e.reason))
+    assert kinds == [("speech_start", "silence"), ("speech_end", "silence")]
+
+
+def test_adaptation_jamais_sous_le_plancher_min_floor():
+    vad = EnergyVad(VadConfig(threshold_factor=6.0, min_floor=1.0), frame_ms=FRAME_MS, adaptatif=True)
+    _apres_calibration(vad, 0.0)
+    for _ in range(80):
+        vad.feed(0.0)
+    assert vad.threshold == 6.0

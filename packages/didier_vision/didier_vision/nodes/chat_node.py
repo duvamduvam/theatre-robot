@@ -718,7 +718,9 @@ class ChatNode(Node):
         # propre, pas un crash Python nu).
         try:
             mic = MicCapture(mic_device, sample_rate=MIC_SAMPLE_RATE, frame_ms=MIC_FRAME_MS)
-            vad = EnergyVad(config["chat_vad"], frame_ms=MIC_FRAME_MS)
+            # Écoute normale : plancher de bruit suivi en continu (26/11, cf. VadConfig.adapt_window_ms) ;
+            # l'écoute garde ci-dessous reste sur le seuil adopté (elle tourne pendant que Didier parle).
+            vad = EnergyVad(config["chat_vad"], frame_ms=MIC_FRAME_MS, adaptatif=True)
             # Gate « source audio vivante » (cf. docstring de module POURQUOI) :
             # construit ICI, avec micro/VAD, même philosophie de construction
             # pure protégée par le même try/except (peu de raisons d'échouer,

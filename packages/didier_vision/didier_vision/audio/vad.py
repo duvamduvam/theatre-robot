@@ -16,7 +16,8 @@ from __future__ import annotations
 import enum
 import statistics
 from dataclasses import dataclass
-from typing import List, Optional
+from collections import deque
+from typing import Deque, List, Optional
 
 
 class VadState(enum.Enum):
@@ -47,6 +48,17 @@ class VadConfig:
     # nul (micro très silencieux) — évite un seuil ~0 qui déclencherait sur le
     # moindre souffle.
     min_floor: float = 1.0
+    # Plancher de bruit SUIVI en continu (26/11, lot « fin de phrase ») : fenêtre glissante des
+    # niveaux, et le quantile pris comme bruit de fond. POURQUOI : la calibration unique de 1 s au
+    # démarrage avait mesuré un silence parfait (casque M50 connecté APRÈS le démarrage, 24 et
+    # 25/11) ; le souffle du casque en Bluetooth restait ensuite au-dessus du seuil, la fin de
+    # phrase n'était jamais vue : 17 énoncés sur 25 coupés à max_utterance_ms (12 s), et un
+    # « stop » attendait jusqu'à 12 s. Le 10e centile d'une fenêtre de 10 s tombe dans les pauses
+    # de la parole : il suit le bruit de fond, pas la voix. N'agit que si l'instance est créée
+    # `adaptatif=True` (écoute normale) ; l'écoute garde, elle, ne doit jamais apprendre la voix de
+    # Didier (elle tourne pendant qu'il parle, cf. adopt_threshold).
+    adapt_window_ms: int = 10000
+    adapt_quantile: float = 0.10
 
 
 @dataclass(frozen=True)
@@ -66,9 +78,12 @@ class EnergyVad:
     successifs sans recréer l'instance — seule la calibration initiale est à
     usage unique)."""
 
-    def __init__(self, config: VadConfig, frame_ms: int):
+    def __init__(self, config: VadConfig, frame_ms: int, adaptatif: bool = False):
         self._config = config
         self._frame_ms = frame_ms
+        self._adaptatif = adaptatif
+        self._fenetre: Deque[float] = deque(maxlen=max(1, config.adapt_window_ms // frame_ms))
+        self._frames_depuis_adaptation = 0
 
         self._state = VadState.CALIBRATING
         self._calib_levels: List[float] = []
@@ -103,6 +118,8 @@ class EnergyVad:
         changement d'état se produit (début/fin de parole), None sinon."""
         if self._state is VadState.CALIBRATING:
             return self._feed_calibrating(level)
+        if self._adaptatif:
+            self._suivre_bruit(level)
         if self._state is VadState.IDLE:
             return self._feed_idle(level)
         return self._feed_speech(level)
@@ -118,6 +135,19 @@ class EnergyVad:
             self._threshold = floor * self._config.threshold_factor
             self._state = VadState.IDLE
         return None
+
+    def _suivre_bruit(self, level: float) -> None:
+        """Fenêtre glissante ; le seuil est recalculé une fois par seconde, dès 2 s de mesures."""
+        self._fenetre.append(level)
+        self._frames_depuis_adaptation += 1
+        if self._frames_depuis_adaptation * self._frame_ms < 1000:
+            return
+        self._frames_depuis_adaptation = 0
+        if len(self._fenetre) * self._frame_ms < 2000:
+            return
+        tri = sorted(self._fenetre)
+        bruit = tri[min(len(tri) - 1, int(len(tri) * self._config.adapt_quantile))]
+        self._threshold = max(bruit, self._config.min_floor) * self._config.threshold_factor
 
     def _feed_idle(self, level: float) -> Optional[VadEvent]:
         if level > self._threshold:

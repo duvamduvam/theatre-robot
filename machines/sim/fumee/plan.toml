@@ -1,0 +1,141 @@
+# Plan de la fumée (lot F1, 25/11) : une entrée par épreuve, DANS L'ORDRE D'EXÉCUTION
+# (spec docs/spec-F1-programme-fumee.md §3). Lu par plan.py (tomllib, bibliothèque standard).
+#
+# Les valeurs `attendu` sont le CONTRAT des scripts de vérification (compteurs « N OK ») :
+# les changer se fait dans un commit qui le dit. Tant que fumee.sh existe, un test grave
+# qu'elles sont égales à ses ATTENDU_* (test_fumee_programme.py).
+#
+# Champs : id, type (« script » par défaut, « interne » pour image, demarrage, rtf, parle),
+# script, attendu, motif (expression de la ligne finale « N OK, M KO »), delai_s, sim,
+# corps_sur_arme (corps sûr du bringup ARMÉ exigé avant, verrous notés pendant), facultative,
+# chemins (servira au choix des épreuves en F2), bloque (["*"] : un résultat non vert arrête
+# tout ce qui suit — règle de fumee.sh pour image, demarrage, rtf et corps_sur).
+#
+# sim : monde (chantiers | stage), regie (scénario du régisseur lancé après le démarrage :
+# chantiers | jeu-a1), jeu (régisseur en mode jeu), tete (surcouche docker-compose.tete.yml),
+# neuve (jamais une sim qui a déjà servi à une épreuve : OBJ ne doit pas hériter d'A1).
+# Deux épreuves consécutives de même `sim` partagent la sim ; sinon elle est relancée.
+
+[[epreuve]]
+id = "image"
+type = "interne"
+bloque = ["*"]
+chemins = ["machines/sim/", "machines/robot/docker/", "machines/vision/docker/", "legacy/dadou_control_ros/conf/"]
+
+[[epreuve]]
+id = "demarrage"
+type = "interne"
+sim = { monde = "chantiers" }
+bloque = ["*"]
+chemins = ["machines/", "packages/"]
+
+[[epreuve]]
+id = "rtf"
+type = "interne"
+sim = { monde = "chantiers" }
+bloque = ["*"]
+chemins = ["machines/sim/", "packages/didier_sim/"]
+
+[[epreuve]]
+id = "namespace"
+script = "validate-namespace.sh"
+attendu = 5            # sentinelles, topics, nœuds, twist_mux, bridge
+motif = "validate-namespace"
+delai_s = 300
+sim = { monde = "chantiers" }
+chemins = ["packages/didier_bringup/", "packages/didier_core/", "machines/robot/"]
+
+[[epreuve]]
+id = "catalogue"
+script = "validate-catalogue.sh"
+attendu = 4            # 6 familles, sha dev, ajout, suppression
+motif = "validate-catalogue"
+delai_s = 180
+sim = { monde = "chantiers" }
+chemins = ["packages/theatre_contrats/", "data/"]
+
+[[epreuve]]
+id = "parle"
+type = "interne"
+attendu = 3            # états vus dans l'ordre : "" -> "parle" -> ""
+sim = { monde = "chantiers" }
+chemins = ["packages/didier_core/", "data/"]
+
+[[epreuve]]
+id = "edition"
+script = "validate-data-edit.sh"
+attendu = 13           # L1d : épreuves 1 à 12, 13 = porte sim depuis L1d-2
+motif = "validate-data-edit"
+delai_s = 300
+sim = { monde = "chantiers" }
+corps_sur_arme = true
+chemins = ["packages/didier_web/", "packages/didier_core/", "data/"]
+
+[[epreuve]]
+id = "machines"
+script = "validate-machines.sh"
+attendu = 5            # L2b : M1-M4, M6 (10 en L2c)
+motif = "validate-machines"
+delai_s = 180
+sim = { monde = "chantiers" }
+chemins = ["machines/"]
+
+[[epreuve]]
+id = "audio"
+script = "validate-audio.sh"
+attendu = 10           # onglet « Audio », 22/11 : AU1-AU10, fausse veille
+motif = "=== AUDIO"
+delai_s = 180
+sim = { monde = "chantiers" }
+chemins = ["packages/didier_web/"]
+
+[[epreuve]]
+id = "corps_sur"
+script = "validate-corps-sur.sh"
+attendu = 25           # CS, lot A0-4 : CS1-CS13, spec A0 §8.5
+motif = "=== CS"
+delai_s = 1800
+sim = { monde = "stage" }
+bloque = ["*"]         # spec A0 : pas de répétition sur un corps sûr en défaut
+chemins = ["packages/didier_corps_sur/", "packages/didier_drive/"]
+
+[[epreuve]]
+id = "chantiers"
+script = "validate-rehearsal-chantiers.sh"
+attendu = 21           # V-R3
+motif = "=== V-R3"
+delai_s = 1500
+sim = { monde = "chantiers", regie = "chantiers" }
+corps_sur_arme = true
+chemins = ["packages/didier_rehearsal/", "packages/didier_drive/", "packages/didier_core/"]
+
+[[epreuve]]
+id = "a1"
+script = "validate-jeu-a1.sh"
+attendu = 14           # A1
+motif = "=== A1"
+delai_s = 1500
+sim = { monde = "chantiers", regie = "jeu-a1", jeu = true }
+corps_sur_arme = true
+chemins = ["packages/didier_jeu/", "packages/didier_rehearsal/", "packages/didier_core/"]
+
+[[epreuve]]
+id = "objets"
+script = "validate-objets.sh"
+attendu = 13           # OBJ, lot O1 : E1a-e, E2a-e, E4a-c
+motif = "=== OBJ"
+delai_s = 900
+sim = { monde = "chantiers", regie = "jeu-a1", jeu = true, neuve = true }
+corps_sur_arme = true
+chemins = ["packages/didier_perception/", "packages/didier_jeu/"]
+
+[[epreuve]]
+id = "conversation"
+script = "validate-conversation.sh"
+attendu = 19           # CONV : P1, T0, A1-A3, B1-B5, C1-C3, D1-D6
+motif = "=== CONV"
+delai_s = 600
+sim = { monde = "chantiers", regie = "jeu-a1", jeu = true, tete = true }
+corps_sur_arme = true
+facultative = true     # sans clé Anthropic ou hors ligne : « non lancée », jamais rouge
+chemins = ["packages/didier_vision/", "machines/vision/"]

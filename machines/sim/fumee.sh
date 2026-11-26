@@ -14,9 +14,9 @@
 #   fumee.sh            forcé, à la main : déroule même si pas due (le RTF reste juge).
 #   fumee.sh --et-dodo  fumée forcée PUIS extinction du PC (à lancer en allant se coucher).
 #                       Essai à blanc : FUMEE_DRY_POWEROFF=1 remplace le poweroff par un echo.
-#   --forcer-verrou     (avec la fumée forcée ou --et-dodo) passe outre ~/tmp/sim-occupee.
+#   --forcer-verrou     (avec la fumée forcée ou --et-dodo) passe outre ~/tmp/didier/sim-occupee.
 #
-# Verrou « sim occupée » (18/11) : ~/tmp/sim-occupee (une ligne « <qui> <heure> ») est posé par
+# Verrou « sim occupée » (18/11) : ~/tmp/didier/sim-occupee (une ligne « <qui> <heure> ») est posé par
 # les agents et par David pendant LEUR sim. Présent et daté de moins de 6 h (mtime du fichier ;
 # le contenu n'a pas de jour et ne sert qu'à l'affichage) : --si-due reporte, la fumée forcée
 # REFUSE (code 2) sauf --forcer-verrou. Plus vieux : ignoré (noté au journal), jamais effacé —
@@ -69,11 +69,11 @@
 #   FUMEE_DEPOT        checkout de main à tester (défaut : le dépôt de David)
 #   FUMEE_SORTIE       dossier des pages VERSIONNÉES : HTML, index, historique.jsonl
 #                      (défaut : $FUMEE_DEPOT/docs/fumee)
-#   FUMEE_BRUT         journaux BRUTS, LOCAUX (défaut : ~/tmp/didier-fumee) — jamais dans git
+#   FUMEE_BRUT         journaux BRUTS, LOCAUX (défaut : ~/tmp/didier/fumee-brut) — jamais dans git
 #                      ni sur Nextcloud (décision du 16/11) ; vert purgé à 30 j, rouge gardé
 #                      tant que son dossier n'a pas le marqueur TRAITE
 #   DIDIER_SIM_JOURNAUX journaux de la sim, montés par le compose (défaut :
-#                      ~/tmp/didier-sim) — créé ici avant le démarrage
+#                      ~/tmp/didier/sim) — créé ici avant le démarrage
 #   FUMEE_COMMIT       1 (défaut) = commit de docs/fumee ; 0 = pas de commit (essais)
 #                      — le commit n'a de toute façon lieu que si FUMEE_SORTIE est le défaut
 #   FUMEE_RTF_MIN      seuil du facteur temps réel (défaut 0,8) ; tout autre = « essai provoqué »
@@ -81,7 +81,7 @@
 #                      (défaut : nb de cœurs × 0,5 — le RTF reste le vrai juge)
 #   FUMEE_ETAT         journal + verrou (défaut ~/.local/state/didier-fumee)
 #   FUMEE_VERROU_ATTENTE  secondes qu'une fumée forcée attend le verrou avant de refuser (défaut 60)
-#   FUMEE_SIM_OCCUPEE  verrou « sim occupée » des agents et de David (défaut ~/tmp/sim-occupee)
+#   FUMEE_SIM_OCCUPEE  verrou « sim occupée » des agents et de David (défaut ~/tmp/didier/sim-occupee)
 #   FUMEE_DRY_POWEROFF 1 = --et-dodo n'éteint pas, il l'affiche
 #   FUMEE_DODO_DELAI   secondes entre la fin et le poweroff (défaut 20)
 #   FUMEE_COEURS       CPU RÉSERVÉS à la sim pendant la fumée (défaut 8-15 = 4 cœurs rapides
@@ -109,7 +109,7 @@ ATTENDU_A1=14           # validate-jeu-a1.sh (A1)
 ATTENDU_OBJETS=13       # validate-objets.sh (OBJ, lot O1 : E1a-e, E2a-e, E4a-c)
 ATTENDU_CONVERSATION=19 # validate-conversation.sh (CONV : P1, T0, A1-A3, B1-B5, C1-C3, D1-D6)
 RTF_MIN_DEFAUT=0.8
-PEREMPTION_SIM_OCCUPEE_S=21600   # 6 h : au-delà, un ~/tmp/sim-occupee oublié ne bloque plus
+PEREMPTION_SIM_OCCUPEE_S=21600   # 6 h : au-delà, un ~/tmp/didier/sim-occupee oublié ne bloque plus
 
 ICI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PAGE_PY="$ICI/fumee_page.py"
@@ -119,12 +119,12 @@ SORTIE="${FUMEE_SORTIE:-$SORTIE_DEFAUT}"
 RTF_MIN="${FUMEE_RTF_MIN:-$RTF_MIN_DEFAUT}"
 ETAT="${FUMEE_ETAT:-$HOME/.local/state/didier-fumee}"
 JOURNAL="$ETAT/journal.log"
-BRUT="${FUMEE_BRUT:-$HOME/tmp/didier-fumee}"
-SIM_OCCUPEE="${FUMEE_SIM_OCCUPEE:-$HOME/tmp/sim-occupee}"
+BRUT="${FUMEE_BRUT:-$HOME/tmp/didier/fumee-brut}"
+SIM_OCCUPEE="${FUMEE_SIM_OCCUPEE:-$HOME/tmp/didier/sim-occupee}"
 VERROU_SIM_A_NOUS=0   # 1 si CETTE fumée a posé « fumee <heure> » (seule à pouvoir le retirer)
 # Journaux de la sim HORS du dépôt et de Nextcloud (16/11) : MÊME expression que le compose
 # (gravé par test_compose_sim.py) ; créés ici par l'utilisateur (sinon Docker les crée root).
-JOURNAUX_SIM="${DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier-sim}"
+JOURNAUX_SIM="${DIDIER_SIM_JOURNAUX:-$HOME/tmp/didier/sim}"
 # L2b : la sim multi-conteneurs (projet compose didier-sim). Un service = un conteneur = une image
 # locale, jamais poussée.
 DOCKER_DIR="$DEPOT/machines/sim"
@@ -800,13 +800,15 @@ panne_reseau_build() {
 
 # construire_images : reconstruit ; si l'échec vient du réseau, UN essai de plus après
 # ${FUMEE_ATTENTE_RESEAU:-60} s (une coupure DNS de quelques secondes ne doit pas rougir la fumée).
+# FUMEE_BUILD_ARGS : options en plus pour `docker compose build` (vide en local ; le workflow
+# GitHub y met le frontend Dockerfile « labs », son Docker ne connaît pas COPY --exclude).
 construire_images() {
-  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build) >"$TMP/image.log" 2>&1 && return 0
+  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build ${FUMEE_BUILD_ARGS:-}) >"$TMP/image.log" 2>&1 && return 0
   panne_reseau_build "$TMP/image.log" || return 1
   dit "registre Docker injoignable : nouvel essai dans ${FUMEE_ATTENTE_RESEAU:-60} s"
   sleep "${FUMEE_ATTENTE_RESEAU:-60}"
   echo "=== nouvel essai après panne réseau ===" >>"$TMP/image.log"
-  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build) >>"$TMP/image.log" 2>&1
+  (cd "$DOCKER_DIR" && docker compose -f "$COMPOSE" build ${FUMEE_BUILD_ARGS:-}) >>"$TMP/image.log" 2>&1
 }
 
 phase_demarrage() {

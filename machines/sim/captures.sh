@@ -5,7 +5,7 @@
 # PRÊT (abonnements appariés) avant que l'épreuve ne touche à quoi que ce soit.
 #
 # Les captures SURVIVENT : écrites sous /home/ros2_ws/log/captures/ (= $DIDIER_SIM_JOURNAUX/log/
-# captures/ du PC, défaut ~/tmp/didier-sim/), ou dans $CAPTURE_DIR quand la fumée le donne (elle les copie ensuite dans ses
+# captures/ du PC, défaut ~/tmp/didier/sim/), ou dans $CAPTURE_DIR quand la fumée le donne (elle les copie ensuite dans ses
 # journaux, docs/fumee/journaux/<id>/captures-<épreuve>/).
 #
 #   capture_demarrer <épreuve> --journal /t=pkg/msg/T … --dernier /t=pkg/msg/T[,latche] …
