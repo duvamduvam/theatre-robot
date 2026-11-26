@@ -31,7 +31,7 @@ une image que si ses fichiers ont changé, et marche hors ligne.
 ## 2. Commande
 
 ```
-python3 -m fumee [--rev <branche|sha|PR>] [--epreuves a1,objets | --tout]
+python3 -m fumee [--rev <branche|sha|#PR>] [--epreuves a1,objets | --tout | --reprendre]
                  [--hors-ligne] [--minuterie] [--forcer-verrou] [--essai]
 ```
 
@@ -42,6 +42,12 @@ python3 -m fumee [--rev <branche|sha|PR>] [--epreuves a1,objets | --tout]
 | `--hors-ligne` | aussi détecté seul (DNS de `github.com` injoignable) : aucune reconstruction d'image (absente du cache → `invalide : hors ligne`), `conversation` en `non_lance (hors ligne)`, pas de `git fetch` (la révision doit être locale) |
 | `--minuterie` | remplace `--si-due` : décide « due ? » avec les règles actuelles de `fumee_page.py due`, reporte sans page si le banc n'est pas sain |
 | `--essai` | marque la fumée « essai » (jamais référence, jamais commitée) |
+| `--reprendre` | (ajout du 25/11, demandé par David) relit le dernier `resultat.json` de la **même révision** (même sha complet) dans le brut, garde ses épreuves vertes et ne rejoue que les rouges, invalides et non lancées, plus leurs dépendances (`image`, `demarrage`, `rtf`, toujours rejouées) et les relances de sim nécessaires. Le résultat fusionne les deux passes dans l'ordre du plan, et la page note « reprise de la fumée `<id>` : N épreuves gardées ». Aucune fumée de ce sha → refus clair (« rien à reprendre pour ce sha », code 2) ; toutes vertes → refus aussi |
+
+Une sélection (`--epreuves`) est **marquée essai** : elle ne dit rien des épreuves non jouées,
+elle ne doit jamais devenir la « dernière verte » (sens le plus sûr, choisi en F1 ; F2 tranchera
+pour les fumées de lot). Une épreuve inconnue est refusée avant toute commande, avec la liste des
+ids valides. Une reprise qui couvre tout le plan n'est pas un essai.
 
 « Et dodo » (extinction) **reste dans `fumee.sh`** en F1 ; F3 tranchera.
 
@@ -73,7 +79,12 @@ les deux coexistent.
 sim (comme `namespace` → `audio` aujourd'hui). Une `sim` différente arrête et relance la sim
 (comme `corps_sur`, `chantiers`, `a1`, `objets`, `conversation`).
 
-**Bloquants.** `demarrage`, `rtf` et `corps_sur` bloquent tout ce qui suit (règle actuelle).
+Précision F1 : `neuve = true` dans `sim` (pour `objets`, qui ne doit pas hériter de l'état d'`a1`)
+relance la sim si elle a déjà servi à une épreuve ; c'est ce qui donne les 6 démarrages du plan
+actuel. Le démarrage et la sonde d'une sélection prennent la sim de sa première épreuve.
+
+**Bloquants.** `image`, `demarrage`, `rtf` et `corps_sur` bloquent tout ce qui suit (règle actuelle,
+`bloque = ["*"]`), qu'ils soient rouges ou invalides.
 Aucune autre épreuve ne bloque : un rouge n'arrête plus la fumée, toutes les épreuves rendent
 leur compteur.
 
