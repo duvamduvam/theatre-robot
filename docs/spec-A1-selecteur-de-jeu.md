@@ -5,6 +5,17 @@
 `robot_rehearsal`. Objet : répondre à « pourquoi et quand Didier agit » avec un mécanisme
 réglable, journalisé, lisible — pas encore avec la vraie perception (scriptée en A1).*
 
+> **Dépassée en partie par le lot S1 (25/11), `docs/spec-S1-ordres-propositions.md`** — qui fait
+> foi là où elles divergent : chaque demande porte son **origine** (`david` = ordre, `didier` =
+> proposition) ; le **verrou n'a qu'une source**, David (fini le verrou à deux sources
+> console/bouche du §9) ; un `stop` de Didier arrête sans verrou ; un geste demandé par David à
+> la bouche est un **ordre exécuté sans score** (plus une intention pondérée, §1) et n'est plus
+> refusé pour fatigue, `trop_tot`, `pas_retenu` ni `ignore` ; **une seule reprise**, silence tiré
+> dans [10, 40] s (remplace les 90 s du §8.3/§9, les 10 s après un geste et les 6 s du regard) ;
+> **mots-clés du metteur en scène supprimés** (§3 point 5, §9) ; le régisseur ignore hors séance
+> toute marche `didier` et applique celle de David (la règle `hors_seance` du §8.3 était
+> asymétrique) ; avec `jeu:=true`, les lubies du scénario sont sautées.
+
 ## 0. Ce que A1 prouve, et ce qu'il ne prouve pas
 
 **Prouve** (porte de sortie, §6) : qu'un sélecteur déterministe, nourri d'offres et de
@@ -32,6 +43,8 @@ actionneurs), la sécurité (A0 — en sim il n'y a pas d'obstacle).
   `go/stop/aller_voir/tour_de/regarder/tourner/avancer` : ils deviennent des **intentions**
   que le sélecteur pondère. **Exception gravée** : `stop` (arrêt vocal, clé `marche: stop`)
   est **relayé immédiatement et sans arbitrage** — l'arrêt gagne toujours (règle du 23/10).
+  *(S1, 25/11 : le `stop` reste toujours relayé, mais seul celui de David verrouille ; les
+  gestes demandés par David ne sont plus pondérés — spec S1 §1-§2.)*
 - Les arbitrages du régisseur (jamais contre un `off` de David, distance max, refus
   journalisés — `spec-aller-voir` §3) **restent** : le sélecteur propose, le régisseur dispose,
   `route_driver` exécute. Le sélecteur n'a **aucun** éditeur de Twist.
@@ -68,6 +81,7 @@ packages/didier_jeu/
 Racine = **sélecteur de priorités** py_trees :
 
 1. **Arrêt vocal** (`stop` reçu) → relayer, tout annuler, verrou jusqu'au `go`. *Jamais pondéré.*
+   *(S1 : verrou seulement pour un `stop` d'origine `david`, levé par un `go` de David.)*
 2. **Superviseur absent** (`jeu/console` sans battement depuis > 1 s **en mode exigeant** ;
    en A1 sim, mode « présence supposée » par défaut, réglable) → aucune initiative de
    déplacement ; expressions autorisées.
@@ -169,6 +183,8 @@ séquences, garde-fou 43 effectif, aucun Twist), **pas montrable comme porte pas
   répertoire est illisible) ; STOP CONTENUS de la page n'atteignait pas le jeu ; bouton
   Stop/Go unique à 2 s de retard ; T7 lançait un vrai nœud en domaine 42 ; journal aux jauges
   photographiées APRÈS mutation (pourquoi contredit par les chiffres).
+- *(Les points suivants sur le verrou, la reprise et les mots-clés sont remplacés par la
+  spec S1 du 25/11 : voir l'encadré en tête.)*
 - **Décisions de David (02/11)** : reprise après SON arrêt = **90 s de silence** (toute parole
   remet le compteur à zéro — lettre du 31/10) ; `joue_avec` = **approches répétées
   autorisées avec garde de distance** (hauteur de boîte < 0,55) ; `plus_lent` = **moins

@@ -106,7 +106,24 @@ CHAT_FAULT_OPS = ("pass", "delay", "garble", "deaf", "mute", "phantom")
 # route_speed (jamais au-dessus de la vitesse en vigueur, jamais contre un
 # `off` de David). Sur le vrai robot il n'y a pas de régisseur : sans effet.
 # Chaîne gravée des deux côtés (CHAT_MOVE_TOPIC de chat_node).
+# ORIGINE (lot S1, 25/11, docs/spec-S1-ordres-propositions.md §1) : chaque demande dit qui la
+# porte. Marche : {"cmd": "stop"|"go"|"pause", "origine": "david"|"didier"} ; les gestes
+# (aller_voir, tourner, avancer, tour_de) gagnent le même champ. « david » = un ORDRE (mot
+# d'arrêt, console, geste né d'un tour humain) ; « didier » = une PROPOSITION (le « marche:
+# stop » interprété par le LLM ou la continuation d'une tâche, les reprises et lubies du
+# sélecteur). Seul un ordre pose ou lève le verrou du sélecteur. Le régisseur n'ignore JAMAIS un
+# « stop » ; il retient l'origine de l'arrêt vocal en cours : un « go » « didier » ne lève qu'un
+# arrêt « didier », un « go » « david » lève tout ; hors séance, il refuse seulement les GESTES
+# « didier » (règle R1 du 25/11, après la relecture adverse du lot S1).
+# Les anciennes formes (chaîne "stop"/"go"/"pause", objet sans `origine`) restent acceptées
+# et sont lues « david » (sens sûr pour un stop : il verrouille) — cf. lire_chat_move.
 CHAT_MOVE_TOPIC = "rehearsal/chat_move"
+CHAT_MOVE_ORIGINE_DAVID = "david"
+CHAT_MOVE_ORIGINE_DIDIER = "didier"
+CHAT_MOVE_ORIGINES = (CHAT_MOVE_ORIGINE_DAVID, CHAT_MOVE_ORIGINE_DIDIER)
+# Ordres de marche (valeur de `cmd`, ou ancienne forme chaîne).
+CHAT_MOVE_STOP = "stop"
+CHAT_MOVE_GO = "go"
 # Lot M1 (spec-aller-voir.md §2.2) : même topic, payload JSON OBJET
 # {"cmd": "aller_voir", "objet": "<texte>"} en plus de "go"/"stop". Chaîne
 # gravée des deux côtés.
@@ -126,10 +143,12 @@ CHAT_MOVE_TOUR_CMD = "tour_de"
 # Lot « texte raccord » (18/11, séance de 21:35, « il y a une lettre sur le banc, tu pourrais
 # regarder ») : payload JSON "pause" = « regarde ça » — s'arrêter, regarder (le regard part de la
 # bouche sur `look`), puis reprendre la route. Consommateur : le sélecteur de jeu (jeu:=true), qui
-# relaie « stop » puis « go » au bout de reprise.apres_regard_s ; le régisseur seul (jeu:=false)
-# et le relais dégradé la prennent pour un « stop » (sens sûr, sans reprise). Chaîne gravée des
-# deux côtés (conversation.PAUSE_CMD de chat_node).
+# relaie « stop » sans verrou puis « go » après un silence tiré dans [reprise.min_s, reprise.max_s]
+# (lot S1, 25/11 : une seule reprise) ; le régisseur seul (jeu:=false) et le relais dégradé la
+# prennent pour un « stop » (sens sûr, sans reprise). Chaîne gravée des deux côtés
+# (conversation.PAUSE_CMD de chat_node).
 CHAT_MOVE_PAUSE = "pause"
+CHAT_MOVE_MARCHE = (CHAT_MOVE_STOP, CHAT_MOVE_GO, CHAT_MOVE_PAUSE)
 # Sens du tour -> orbit_dir de route_goto (+1 = trigonométrique, + = gauche
 # comme TURN_DEG_COMPAT : l'objet reste à GAUCHE de Didier). Autre valeur ->
 # refus « invalid » (jamais deviné) ; absent -> TOUR_SENS_DEFAUT.
@@ -164,7 +183,8 @@ ROUTE_GOTO_RESULT_TOPIC = "route_goto_result"
 #  - source "director" : UNE réponse par geste arbitré (aller_voir, tour_de,
 #    tourner, avancer ; jamais go/stop), effect = celui du journal
 #    (accepted | unknown | no_position | no_tour | invalid | route_off_by_david |
-#    no_pose | too_far), reason = sous-raison d'invalid (illisible, hors_bornes, recul, sens) ;
+#    no_pose | too_far | hors_seance — lot S1 : geste d'origine « didier » hors séance),
+#    reason = sous-raison d'invalid (illisible, hors_bornes, recul, sens) ;
 #  - source "jeu" (sélecteur didier_jeu, jeu:=true) : la demande de la bouche
 #    n'a PAS été transmise (effect "dropped", reason = CHAT_MOVE_REPLY_JEU_REASONS)
 #    ou le régisseur s'est tu (effect "no_reply").
@@ -185,8 +205,14 @@ CHAT_MOVE_REPLY_NO_REPLY = "no_reply"
 # trop incertain (hors_atteinte) ; la réponse porte alors "distance_m" (m, 0,1) et "cote"
 # (devant | gauche | droite | derriere) pour que Didier dise où il est. Le chat produit les
 # MÊMES codes quand sa propre garde refuse (source "chat").
-CHAT_MOVE_REPLY_JEU_REASONS = ("arrete", "sans_superviseur", "fatigue", "trop_tot", "ignore",
-                               "pas_retenu", "degrade", "pas_ici", "hors_atteinte")
+# Lot S1 (25/11) : un ORDRE de David n'est plus refusé que pour « arrete » (verrou de David),
+# « sans_superviseur », « pas_ici » / « hors_atteinte » (impossible) — « fatigue », « trop_tot »
+# et « ignore » ne servaient qu'à pondérer une demande de la bouche : retirés. « pas_retenu » ne
+# sert plus qu'à une PROPOSITION de geste (origine « didier »), qu'aucun producteur n'émet en S1.
+# Les refus « qui donnent du jeu » (étude assainissement §8.1, réponse 2) reviendront avec le
+# régisseur LLM (lot S4), seul à pouvoir les dire.
+CHAT_MOVE_REPLY_JEU_REASONS = ("arrete", "sans_superviseur", "pas_retenu", "degrade", "pas_ici",
+                               "hors_atteinte")
 # Distance de jeu : Didier s'arrête à ce rayon du CENTRE de l'objet (m) — un PLANCHER : la
 # distance d'arrêt réelle tient compte de la TAILLE de l'objet (director.standoff_pour, revue O1
 # du 19/11 : le banc, 1,1 m d'emprise, était touché à 1,5 m du centre — 1,1 + 0,4 de Didier) :
@@ -303,6 +329,33 @@ EXTERNAL_SPEED_DELTA = 0.05
 # et le twist_mux de Didier recevrait cmd_vel_follow. Chaque node vérifie au
 # démarrage et REFUSE hors du domaine autorisé.
 SIM_DOMAIN_ID = 43
+
+
+def lire_chat_move(payload):
+    """Une demande de chat_move DÉCODÉE (JSON ou brut) -> (demande, origine) — la règle de
+    lecture UNIQUE du régisseur, du sélecteur et de son relais dégradé (lot S1, 25/11).
+    - marche (chaîne "stop"/"go"/"pause", ou objet dont `cmd` en est une, casse et espaces
+      normalisés : " STOP" est un stop — sens sûr) -> demande = la chaîne normalisée ; geste
+      (tout autre objet) -> demande = l'objet TEL QUEL (`origine` comprise : la réponse au
+      geste est appariée par égalité) ; autre valeur -> elle-même (invalide) ;
+    - origine : `origine` de l'objet ; absente (ancienne forme) -> "david" ; présente mais hors
+      CHAT_MOVE_ORIGINES -> None. Au consommateur de trancher None : un « stop » est alors lu
+      « david » (un arrêt n'est jamais refusé), toute autre demande refusée."""
+    if isinstance(payload, dict):
+        origine = payload.get("origine", CHAT_MOVE_ORIGINE_DAVID)
+        origine = origine if origine in CHAT_MOVE_ORIGINES else None
+        cmd = _marche_normalisee(payload.get("cmd"))
+        if cmd in CHAT_MOVE_MARCHE:
+            return cmd, origine
+        return payload, origine
+    cmd = _marche_normalisee(payload)
+    return (cmd if cmd in CHAT_MOVE_MARCHE else payload), CHAT_MOVE_ORIGINE_DAVID
+
+
+def _marche_normalisee(valeur):
+    """Chaîne rognée et en minuscules (la marche du contrat n'a que des minuscules) ; tout
+    autre type tel quel."""
+    return valeur.strip().lower() if isinstance(valeur, str) else valeur
 
 
 def check_domain(env: dict) -> int:

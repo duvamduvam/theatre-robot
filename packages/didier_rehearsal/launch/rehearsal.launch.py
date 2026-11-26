@@ -21,10 +21,12 @@ mouvement automatique au démarrage). Le suivi de personne doit rester OFF
 jeu:=true (lot A1, spec theatre-robot/docs/spec-A1-selecteur-de-jeu.md §1) :
 UN SEUL DÉCIDEUR DU CORPS. Le régisseur écoute alors `jeu/chat_move` (le
 sélecteur didier_jeu, lancé par CE launch) au lieu de
-`rehearsal/chat_move` (la bouche, dont les demandes deviennent des intentions
-que le sélecteur pondère ; son « stop » est relayé sans arbitrage), et CE
+`rehearsal/chat_move` (la bouche, dont les demandes sont lues par leur ORIGINE :
+ordres de David exécutés, « stop » toujours relayé — lot S1, 25/11), et CE
 launch démarre lui-même le sélecteur (respawn) : jamais de remap sans relais.
-director ne change pas. Défaut false = séance Chantiers inchangée.
+Le régisseur reçoit aussi `jeu:=true` (paramètre `jeu`, lot S1) : les lubies du
+scénario ne partent pas, le sélecteur a les siennes. Défaut false = séance
+Chantiers inchangée.
 """
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
@@ -131,6 +133,8 @@ def _director(scenario_file, route_file, condition, remappings):
             # A0-4 (22/11) : le corps sûr de la SIM (le régisseur ne vit qu'en domaine 43), le
             # même fichier que lit le nœud corps_sur du conteneur robot ; monde monte machines/.
             "corps_sur_config": "/home/ros2_ws/machines/sim/robot/corps_sur.yaml",
+            # Lot S1 (25/11) : jeu:=true -> les lubies du scénario sont sautées (raison « jeu »).
+            "jeu": ParameterValue(LaunchConfiguration("jeu"), value_type=bool),
         }],
         remappings=remappings,
         condition=condition,

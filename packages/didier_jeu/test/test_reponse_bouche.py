@@ -10,17 +10,21 @@ le sélecteur journalisait « il y réfléchit » et PLUS RIEN : la demande
 mourait au bout de son TTL, bloquée par l'arrêt de Didier (120 s) compté au
 refus précédent, sans que le chat le sache.
 
+Lot S1 (25/11) : un geste de la bouche d'origine « david » est un ORDRE, transmis À LA
+RÉCEPTION ; plus de demande qui « meurt » au bout de son TTL (supprimé : _bouche_sans_suite et
+les codes fatigue / trop_tot / ignore). Il n'est refusé (« dropped ») que sous le verrou de
+David, sans superviseur, ou vers un objet hors d'atteinte.
+
 Mutations (doivent rougir) :
-  - _rendre_refractaires vidé -> test_seance_du_15_11_elephant_transmis_apres_un_refus
-  - _bouche_sans_suite vidé -> test_demande_morte_repond_dropped_trop_tot
-  - réponse « no_reply » retirée -> test_regisseur_muet_repond_no_reply_a_4_4_s
+  - _rendre_refractaires vidé -> test_refus_rend_refractaires_et_fatigue
+  - réponse « no_reply » retirée -> test_regisseur_muet_repond_no_reply_a_4_1_s
   - accusé par la réponse « accepted » retiré -> test_reponse_acceptee_accuse_sans_route_state
 """
 import pytest
 
 from conftest import fabriquer
 
-from test_selecteur import journal, jouer, marche, moves
+from test_selecteur import STOP_DAVID, journal, jouer, marche, moves
 
 GRUE = {"cmd": "tour_de", "objet": "grue_jaune", "sens": "gauche"}
 ELEPHANT = {"cmd": "tour_de", "objet": "elephant", "sens": "gauche"}
@@ -63,13 +67,13 @@ def bouche(demande):
 def test_seance_du_15_11_elephant_transmis_apres_un_refus():
     out = jouer_regisseur(fabriquer(pools={}), 20.0, [(0.0, marche), (1.0, bouche(GRUE)), (11.0, bouche(ELEPHANT))],
                           refus_no_tour)
-    # Les DEUX demandes partent au régisseur (avant : l'éléphant mourait en silence).
-    assert moves(out) == [(1.3, GRUE), (11.3, ELEPHANT)]
+    # Les DEUX demandes partent au régisseur, à la réception (avant : l'éléphant mourait en silence).
+    assert moves(out) == [(1.0, GRUE), (11.0, ELEPHANT)]
     fins = [(t, p["pourquoi"]) for t, p in journal(out, "fin")]
     assert fins == [
-        (1.4, "faire ce qu'il a dit (faire le tour de « grue_jaune ») : le régisseur refuse (no_tour) : "
+        (1.1, "faire ce qu'il a dit (faire le tour de « grue_jaune ») : le régisseur refuse (no_tour) : "
               "il n'a pas bougé"),
-        (11.4, "faire ce qu'il a dit (faire le tour de « elephant ») : le régisseur refuse (no_tour) : "
+        (11.1, "faire ce qu'il a dit (faire le tour de « elephant ») : le régisseur refuse (no_tour) : "
                "il n'a pas bougé")]
     # Le régisseur a répondu lui-même au chat : le jeu n'ajoute rien.
     assert reponses(out) == []
@@ -82,11 +86,9 @@ def test_refus_rend_refractaires_et_fatigue():
     assert sel.pulsions.fatigue == 0.0
 
 
-def test_demande_morte_repond_dropped_trop_tot():
-    """Après un geste RÉUSSI, la bouche redemande avant la fin du réfractaire
-    « deplacement » (10 s ; plus les 120 s depuis la décision de David du
-    15/11) : non transmise, et le chat le sait (code trop_tot) au tick où
-    l'offre meurt (TTL 3 s)."""
+def test_ordre_redemande_juste_apres_un_geste_reussi_part_tout_de_suite():
+    """Avant le lot S1 : redemandé 6 s après un geste réussi, il mourait « trop_tot » (réfractaire
+    « deplacement », 10 s). Un ordre de David n'est plus refusé pour ça : il part à la réception."""
     def arrive(demande):
         return {"demande": demande, "effect": "accepted", "reason": None, "source": "director"}
     sel = fabriquer(pools={})
@@ -94,28 +96,35 @@ def test_demande_morte_repond_dropped_trop_tot():
            (5.0, lambda s, t: s.sur_goto_result({"name": "banc", "result": "arrived"}, t)),
            (7.0, bouche(ELEPHANT))]
     out = jouer_regisseur(sel, 12.0, evs, arrive)
-    assert moves(out) == [(1.3, {"cmd": "aller_voir", "objet": "banc"})]
-    assert reponses(out) == [(10.0, {"demande": ELEPHANT, "effect": "dropped", "reason": "trop_tot",
-                                     "source": "jeu"})]
-    refus = [(t, p["pourquoi"], p["code"]) for t, p in journal(out, "refus")]
-    # Offre née à 7 s, morte à 10 s : avant la fin du réfractaire (1,3 + 10 = 11,3 s).
-    assert refus == [(10.0, "il voulait faire le tour de « elephant », mais non : il s'est déjà déplacé "
-                            "il y a moins de 10 s", "trop_tot")]
+    assert moves(out) == [(1.0, {"cmd": "aller_voir", "objet": "banc"}), (7.0, ELEPHANT)]
+    assert reponses(out) == [] and journal(out, "refus") == []
 
 
 def test_demande_sous_verrou_repond_dropped_arrete():
     out = jouer_regisseur(fabriquer(pools={}), 6.0, [(0.0, marche), (1.0, bouche("stop")), (2.0, bouche(ELEPHANT))],
                           refus_no_tour)
-    assert moves(out) == [(1.0, "stop")]
-    assert reponses(out) == [(5.0, {"demande": ELEPHANT, "effect": "dropped", "reason": "arrete",
+    assert moves(out) == [(1.0, STOP_DAVID)]
+    # Refusé À LA RÉCEPTION (avant le lot S1 : au bout du TTL de l'offre, 5,0 s).
+    assert reponses(out) == [(2.0, {"demande": ELEPHANT, "effect": "dropped", "reason": "arrete",
                                     "source": "jeu"})]
 
 
-def test_regisseur_muet_repond_no_reply_a_4_4_s():
+def test_proposition_de_geste_de_didier_non_retenue_et_dite_au_chat():
+    """Une demande de geste d'origine « didier » (aucun producteur en S1 : la bouche ne décide
+    aucun mouvement) ne part pas, et le chat le sait (« pas_retenu »)."""
+    propo = dict(ELEPHANT, origine="didier")
+    out = jouer_regisseur(fabriquer(pools={}), 3.0, [(0.0, marche), (1.0, bouche(propo))], refus_no_tour)
+    assert moves(out) == []
+    assert reponses(out) == [(1.0, {"demande": propo, "effect": "dropped", "reason": "pas_retenu",
+                                    "source": "jeu"})]
+
+
+def test_regisseur_muet_repond_no_reply_a_4_1_s():
     sel = fabriquer(pools={})
     out = jouer_regisseur(sel, 6.0, [(0.0, marche), (1.0, bouche(ELEPHANT))], lambda d: None)
-    assert moves(out) == [(1.3, ELEPHANT)]
-    assert reponses(out) == [(4.4, {"demande": ELEPHANT, "effect": "no_reply", "reason": None,
+    assert moves(out) == [(1.0, ELEPHANT)]
+    # Parti à 1,0 s ; muet au-delà de durees_s.deplacement_accuse (3 s) -> 4,1 s.
+    assert reponses(out) == [(4.1, {"demande": ELEPHANT, "effect": "no_reply", "reason": None,
                                     "source": "jeu"})]
     assert sel.derniers == {} and sel.pulsions.fatigue == 0.0     # il n'a pas bougé
 
@@ -164,7 +173,7 @@ def test_relais_seul_repond_dropped_degrade():
     r.sur_chat_move_bouche("stop", 1.1)
     assert [s for s in r.vider_sorties() if s[0] != "journal"] == [
         ("chat_move_reply", {"demande": ELEPHANT, "effect": "dropped", "reason": "degrade", "source": "jeu"}),
-        ("chat_move", "stop")]
+        ("chat_move", STOP_DAVID)]
 
 
 def test_jeu_node_publie_et_ecoute_la_reponse_au_geste():
@@ -192,19 +201,20 @@ def test_seance_2121_tour_pendant_aller_voir_puis_arrivee_de_l_ancien():
     """aller_voir elephant en cours -> « fais le tour de l'éléphant » 10 s après ->
     l'ancien aller_voir arrive. Avant : même clé « bouche:elephant », la demande
     du tour mourait (« autre chose l'a emporté ») et l'arrivée de l'ancien
-    finissait « il est arrivé ». Maintenant : le tour INTERROMPT l'aller_voir,
-    part au régisseur, est refusé ; l'arrivée de l'ancien ne finit rien."""
+    finissait « il est arrivé ». Maintenant : le tour INTERROMPT l'aller_voir (le
+    plus récent ordre de David, lot S1 : à la réception), part au régisseur, est
+    refusé ; l'arrivée de l'ancien ne finit rien."""
     out = jouer_regisseur(fabriquer(pools={}), 16.0, [
         (0.0, marche), (1.0, bouche(AV_ELEPHANT)), (11.0, bouche(ELEPHANT)),
         (13.0, lambda s, t: s.sur_goto_result({"name": "elephant", "result": "arrived", "reason": "arrived",
                                                "travelled": 3.17}, t)),
     ], regisseur_2121)
-    assert moves(out) == [(1.3, AV_ELEPHANT), (11.6, ELEPHANT)]
+    assert moves(out) == [(1.0, AV_ELEPHANT), (11.0, ELEPHANT)]
     assert [(t, p["pourquoi"]) for t, p in journal(out, "annulation")] == [
-        (11.6, "plus pressant : faire ce qu'il a dit (faire le tour de « elephant ») → il arrête de faire ce "
+        (11.0, "David demande : faire le tour de « elephant » → il arrête de faire ce "
                "qu'il a dit (aller voir « elephant »)")]
     assert [(t, p["pourquoi"]) for t, p in journal(out, "fin")] == [
-        (11.7, "faire ce qu'il a dit (faire le tour de « elephant ») : le régisseur refuse (no_tour) : "
+        (11.1, "faire ce qu'il a dit (faire le tour de « elephant ») : le régisseur refuse (no_tour) : "
                "il n'a pas bougé")]
     assert journal(out, "refus") == [] and reponses(out) == []
 

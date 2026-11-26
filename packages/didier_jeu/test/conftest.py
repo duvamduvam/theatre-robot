@@ -34,10 +34,16 @@ def donnees_reglages():
         return yaml.safe_load(f)
 
 
-def fabriquer(surcharges=None, pools=None):
+# Semence du tirage des reprises (lot S1) dans les tests : avec reprise [10, 40] s, les
+# durées tirées sont 17,1 s puis 26,3 s puis 21,1 s (random.Random(3), au dixième) — GRAVÉES
+# dans les tests qui en dépendent.
+GRAINE = 3
+
+
+def fabriquer(surcharges=None, pools=None, graine=GRAINE):
     """Sélecteur sur les VRAIS réglages et le VRAI vocabulaire, avec des
-    surcharges pointées {"hysteresis.marge": 0.0} (tests de mutation) et des
-    pools de séquences factices déterministes."""
+    surcharges pointées {"hysteresis.marge": 0.0} (tests de mutation), des
+    pools de séquences factices déterministes et une graine fixe."""
     from didier_jeu.reglages import Reglages
     from didier_jeu.repertoire import Sequence, charger_deplacements
     from didier_jeu.selecteur import Selecteur
@@ -54,7 +60,7 @@ def fabriquer(surcharges=None, pools=None):
             "spontanee": [Sequence("spont-a", ("random",), 4.0, "s1.json", False, True),
                           Sequence("spont-b", ("random",), 4.0, "s2.json", False, True)],
         }
-    return Selecteur(Reglages(data), pools, charger_deplacements(DEPLACEMENTS_YAML))
+    return Selecteur(Reglages(data), pools, charger_deplacements(DEPLACEMENTS_YAML), graine=graine)
 
 
 @pytest.fixture

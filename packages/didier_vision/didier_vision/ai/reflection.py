@@ -140,7 +140,10 @@ def build_messages(transcript, perception: str, mission_summary: str,
     déclenché l'appel, Didier en marche, jamais encore commenté — cf.
     SpontaneousPolicy) ajoute sous la perception la consigne de la remarque
     en marche (décision de David du 31/10, étude-interaction §10.2) : une
-    seule phrase courte, arrêt réclamable. `objets` (objets_ligne, lot O1) : la ligne
+    seule phrase courte. Lot S1 (25/11) : plus « arrêt réclamable » — servie en tour
+    spontané, la demande d'arrêt est ignorée (la bouche ne décide aucun mouvement), et
+    Didier aurait annoncé un arrêt qui n'a pas lieu ; ses arrêts d'initiative sont les
+    lubies du sélecteur. `objets` (objets_ligne, lot O1) : la ligne
     des objets du tableau, ajoutée sous la perception. Image jointe en data-URL JPEG
     base64."""
     lines = []
@@ -156,7 +159,7 @@ def build_messages(transcript, perception: str, mission_summary: str,
         perception_text += "\n" + objets
     if passing_poi:
         perception_text += (f"\nDidier passe devant : {passing_poi} — s'il en parle, une "
-                            "seule phrase courte ; il peut demander à s'arrêter pour le regarder")
+                            "seule phrase courte, en marchant, sans annoncer qu'il s'arrête")
     sections = [
         "Transcription récente :\n" + ("\n".join(lines) if lines else "(rien de dit pour l'instant)"),
         "Perception :\n" + perception_text,

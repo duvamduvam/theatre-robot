@@ -36,11 +36,20 @@ sont décidés par director.VoiceMove et journalisés `voice_move` :
   hold        -> « stop » : route_speed 0 TOUJOURS republié, arrêt vocal
                  TOUJOURS posé, même pendant une lubie (la vitesse en
                  vigueur — celle d'une panne `speed` active le cas échéant —
-                 est retenue, jamais écrasée) ; appliqué même hors séance,
-                 jamais filtré par l'anti-rebond ;
+                 est retenue, jamais écrasée) ; jamais filtré par
+                 l'anti-rebond ;
   ignored     -> avec sa raison (invalide, rebond — « go » seulement —,
-                 hors_seance, route_off_par_david, cause_inconnue,
-                 etat_inconnu, deja_en_marche).
+                 arret_de_david, origine_inconnue, route_off_par_david,
+                 cause_inconnue, etat_inconnu, deja_en_marche).
+ORIGINE (lot S1, 25/11, spec-S1 §1 et §3, règle R1) : chaque demande est lue par
+contracts.lire_chat_move (anciennes formes = « david ») et `voice_move` journalise
+son `origine` ; VoiceMove retient celle de l'arrêt vocal en cours. Un « stop »
+n'est JAMAIS ignoré, séance ou non ; un « go » de Didier ne lève qu'un arrêt de
+Didier. Hors séance, seuls les GESTES d'origine « didier » sont refusés (réponse
+et journal `hors_seance`), et sous un arrêt de David aussi (`arret_de_david`).
+La fin de séance et l'abort GARDENT l'arrêt vocal (M2). Paramètre `jeu` (rehearsal.launch.py, jeu:=true) :
+les lubies du scénario sont sautées à leur échéance (`fault_skip`, reason
+« jeu ») — le sélecteur de jeu a les siennes.
 RÈGLE GÉNÉRALE (défaut trouvé en sim le 22/10 : une lubie finie par sa
 durée rendait la vitesse, Didier repartait contre l'ordre de David) : tant
 qu'un arrêt vocal est posé, le régisseur ne publie JAMAIS de vitesse non
@@ -120,7 +129,7 @@ from theatre_contrats import stringtime, topics
 
 from didier_core.diagnostic.journal import JournalWriter, make_event
 from didier_corps_sur.reglages import ReglagesError, charger_reglages
-from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD,
+from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD, lire_chat_move,
                                        CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC, JOURNAL_TOPIC,
                                        OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
@@ -172,6 +181,9 @@ class DirectorNode(Node):
         # « Aller voir » gare Didier hors de sa bande d'arrêt (director.garde_corps_sur_m).
         # Absente ou refusée = refus AU DÉMARRAGE : jamais de standoff deviné.
         self.declare_parameter("corps_sur_config", "")
+        # Lot S1 (25/11) : true = le sélecteur de jeu tourne (rehearsal.launch.py jeu:=true) ;
+        # les lubies du scénario ne partent pas (un seul mécanisme de lubies, le sien).
+        self.declare_parameter("jeu", False)
 
         path = str(self.get_parameter("scenario_file").value)
         if not path:
@@ -215,7 +227,8 @@ class DirectorNode(Node):
             self.scenario = load_scenario(data, seed=None if seed < 0 else seed, pois=self._poi_lubie)
         except ScenarioError as e:
             raise RuntimeError(f"scénario invalide ({path}, itinéraire {route_file or 'aucun'}) : {e}") from e
-        self.director = Director(self.scenario)
+        self._jeu = bool(self.get_parameter("jeu").value)
+        self.director = Director(self.scenario, jeu=self._jeu)
         self.reenable = ReenablePolicy(
             min_delay_s=float(self.get_parameter("reenable_min_delay_s").value),
             max_delay_s=float(self.get_parameter("reenable_max_delay_s").value))
@@ -312,7 +325,7 @@ class DirectorNode(Node):
         # Les déclencheurs POI ont été tirés au CHARGEMENT (load_scenario) : le
         # journal dit ce qui a été tiré (timeline) et ce qui ne l'a pas été.
         self.log("scenario_loaded", {"name": self.scenario.name, "seed": self.scenario.seed,
-                                     "duration_s": self.scenario.duration_s,
+                                     "duration_s": self.scenario.duration_s, "jeu": self._jeu,
                                      "timeline": [{"id": f.id, "type": f.type, "t_s": f.t_s,
                                                    "trigger_poi": f.trigger_poi, "p": f.draw_p,
                                                    "duration_s": f.duration_s, "params": f.params}
@@ -361,7 +374,7 @@ class DirectorNode(Node):
             # Séance finie (durée, stop, abort) : « start » la REJOUE — même
             # timeline (graine et tirages du chargement), ordonnanceur neuf.
             # Avant : ignoré avec un simple warning, le START semblait perdu.
-            self.director = Director(self.scenario)
+            self.director = Director(self.scenario, jeu=self._jeu)
             self.log("scenario_reset", {"reason": "restart"})
         self.director.start(time.monotonic())
         self.log("scenario_start", {"name": self.scenario.name, "seed": self.scenario.seed})
@@ -505,25 +518,41 @@ class DirectorNode(Node):
             self.get_logger().warning(f"poi_event : événement inconnu {kind!r}")
 
     def _on_chat_move(self, msg: StringTime):
-        """Ordre de marche demandé par Didier (lot I1). Contrat chat_node :
-        json.dumps("go"|"stop") ; le brut est toléré (salve de test à la
-        main). Tout est journalisé `voice_move`, ignorés compris."""
+        """Ordre de marche demandé (lot I1 ; jeu:=true, remappé sur jeu/chat_move :
+        le sélecteur). Contrat (lot S1) : {"cmd", "origine"} ou un geste, lus par
+        contracts.lire_chat_move ; anciennes formes json.dumps("go"|"stop") et
+        brut tolérés (salve de test à la main). Tout est journalisé `voice_move`,
+        ignorés compris. Un geste est d'abord jugé sur son origine (_geste_refuse)."""
         try:
             raw = msg.msg.strip()
-            cmd = stringtime.decode_or_raw(raw, CHAT_MOVE_TOPIC)
-            if isinstance(cmd, dict) and cmd.get("cmd") == CHAT_MOVE_GOTO_CMD:
-                self._aller_voir(cmd)
-            elif isinstance(cmd, dict) and cmd.get("cmd") in (CHAT_MOVE_TURN_CMD, CHAT_MOVE_FORWARD_CMD):
-                self._geste(cmd)
-            elif isinstance(cmd, dict) and cmd.get("cmd") == CHAT_MOVE_TOUR_CMD:
-                self._tour_de(cmd)
+            cmd, origine = lire_chat_move(stringtime.decode_or_raw(raw, CHAT_MOVE_TOPIC))
+            gestes = {CHAT_MOVE_GOTO_CMD: self._aller_voir, CHAT_MOVE_TURN_CMD: self._geste,
+                      CHAT_MOVE_FORWARD_CMD: self._geste, CHAT_MOVE_TOUR_CMD: self._tour_de}
+            geste = gestes.get(cmd.get("cmd")) if isinstance(cmd, dict) else None
+            if geste is not None:
+                if not self._geste_refuse(cmd, origine):
+                    geste(cmd)
             else:
-                self._voice_move(cmd)   # tout autre objet JSON : « invalide », journalisé
+                self._voice_move(cmd, origine)   # tout autre objet JSON : « invalide », journalisé
         except Exception as e:   # un callback qui lève tue le node : jamais ici
             self.get_logger().error(f"chat_move {msg.msg!r} : {e!r}")
         # Y compris après un échec de publication : l'arrêt vocal a pu être
         # posé, relâché ou conservé -- l'état publié suit le VRAI état.
         self._publish_state()
+
+    def _en_seance(self) -> bool:
+        return self.director.started and not self.director.ended
+
+    def _geste_refuse(self, intent: dict, origine) -> bool:
+        """Geste d'origine « didier » hors séance ou sous un arrêt de David (VoiceMove.
+        geste_refuse, lot S1 R1) : journalisé sous le nom de la commande et répondu au chat
+        (sinon Didier affirmerait le geste). -> True si refusé."""
+        raison = self.voice.geste_refuse(origine, self._en_seance())
+        if raison is None:
+            return False
+        self.log(intent["cmd"], {"effect": raison, "origine": origine})
+        self._reply(intent, raison)
+        return True
 
     def _voice_context(self):
         """-> (lubie active ?, vitesse EN VIGUEUR) telles que la voix et
@@ -538,21 +567,21 @@ class DirectorNode(Node):
         # 0 — jamais de vitesse inventée.
         return fault is not None and fault.type == "lubie", self._speed_in_effect(0.0)
 
-    def _voice_move(self, cmd):
+    def _voice_move(self, cmd, origine):
         now = time.monotonic()
         relaunching = self.voice.relaunching
         had_hold = self.voice.hold_before is not None
         lubie_active, in_effect = self._voice_context()
         latched = self.reenable.latched_state
         decision = self.voice.decide(
-            cmd, now, in_session=self.director.started and not self.director.ended,
-            lubie_active=lubie_active,
+            cmd, now, lubie_active=lubie_active,
             # Manœuvre en cours : Didier est déjà en marche (« go » sans effet).
             route_on=self.reenable.route_on or latched == "goto",
             relaunch_refusal=self.reenable.voice_relaunch_refusal(),
             speed_in_effect=in_effect,
-            rejoin=self.goto_policy.rejoin_allowed(latched, self.reenable.off_by_cmd))
-        payload = {"cmd": cmd, "effect": decision.effect}
+            rejoin=self.goto_policy.rejoin_allowed(latched, self.reenable.off_by_cmd),
+            origine=origine)
+        payload = {"cmd": cmd, "origine": origine, "effect": decision.effect}
         if decision.reason is not None:
             payload["reason"] = decision.reason
         if decision.rejoin:
@@ -708,13 +737,9 @@ class DirectorNode(Node):
     def _abort(self, reason: str):
         """Tout révoquer, en une fois : pannes actives, relances armées,
         processus gelés (ceinture : le gardien détaché fera aussi SIGCONT)."""
-        # Voix d'abord (sinon l'action « end » ci-dessous la lèverait sous
-        # l'étiquette « fin ») : arrêt vocal levé SANS republier de vitesse
-        # (abort = tout révoquer, Didier reste où il est jusqu'au fader),
-        # salve de relance annulée.
-        held, relaunching = self.voice.abort()
-        if held is not None:
-            self.log("voice_hold_released", {"by": "abort", "held": held})
+        # Voix d'abord : salve de relance annulée ; l'arrêt vocal est GARDÉ (lot S1, M2 :
+        # Didier reste arrêté, le « go » de David ou le fader le relance avec sa vitesse).
+        relaunching = self.voice.fin_de_seance()
         if relaunching:
             self.log("voice_relaunch_cancelled", {"by": "abort"})
         # Toute manœuvre « aller voir » tombe aussi (Didier s'arrête) : cancel
@@ -769,10 +794,8 @@ class DirectorNode(Node):
         for a in actions:
             if a.kind == "end":
                 # Fin de séance (durée, ou abort qui l'a déjà fait) : comme
-                # _abort — arrêt vocal levé sans republier, salve annulée.
-                held, relaunching = self.voice.abort()
-                if held is not None:
-                    self.log("voice_hold_released", {"by": "fin", "held": held})
+                # _abort — salve annulée, arrêt vocal GARDÉ (M2).
+                relaunching = self.voice.fin_de_seance()
                 if relaunching:
                     self.log("voice_relaunch_cancelled", {"by": "fin"})
                 self.log("scenario_end", {"status": self.director.status()})
@@ -784,6 +807,8 @@ class DirectorNode(Node):
                 # La consigne RÉSOLUE (params.text vaut null quand elle vient de l'itinéraire).
                 payload["text"] = self._lubie_text(f)
             if a.kind == "skip":
+                if a.reason is not None:
+                    payload["reason"] = a.reason     # « jeu » : lubie du scénario, le sélecteur tourne
                 self.log("fault_skip", payload)
                 continue
             if a.kind == "stop" and closed_by is not None:

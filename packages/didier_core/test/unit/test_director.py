@@ -193,6 +193,19 @@ def test_exclusion_speed_contre_lubie_sans_seconde_chance():
     assert _kinds(e.tick(10.0)) == [("skip", "batterie")]
 
 
+def test_s1_8_jeu_lubies_du_scenario_sautees_raison_jeu():
+    """Spec S1 §5.8 : jeu:=true -> les lubies du scénario ne partent pas (« skip », raison
+    « jeu ») ; les autres pannes, si. jeu:=false : inchangé. Mutation faite à la livraison :
+    garde `self.jeu` retirée de _begin -> rouge."""
+    d = Director(_sc(_lubie("l", "banc"), _speed("batterie", 10.0, 20.0)), jeu=True); d.start(0.0)
+    sautee = d.trigger("banc", 5.0)
+    assert _kinds(sautee) == [("skip", "l")] and sautee[0].reason == "jeu"
+    assert _kinds(d.tick(10.0)) == [("start", "batterie")]        # une panne `speed` part toujours
+    assert d.status() == {"l": "skipped", "batterie": "active"}
+    e = Director(_sc(_lubie("l", "banc"))); e.start(0.0)
+    assert _kinds(e.trigger("banc", 5.0)) == [("start", "l")]     # jeu:=false (défaut) : inchangé
+
+
 def test_trigger_libere_d_abord_les_arrets_echus():
     d = Director(_sc(_speed("batterie", 0.0, 10.0), _lubie("l", "banc"))); d.start(0.0)
     d.tick(0.0)
@@ -359,7 +372,7 @@ def test_speed_factor_decode_comme_route_driver():
 from didier_rehearsal.director import VoiceDecision, VoiceMove, route_cmd_kind
 
 # Contexte par défaut : en séance, en route, rien d'arrêté, vitesse en vigueur 0.7.
-_EN_ROUTE = dict(in_session=True, lubie_active=False,
+_EN_ROUTE = dict(lubie_active=False,
                  route_on=True, relaunch_refusal="route_off_par_david", speed_in_effect=0.7)
 _RELANCABLE = dict(route_on=False, relaunch_refusal=None)
 
@@ -400,12 +413,54 @@ def test_voix_anti_rebond_2_s_sur_go_seulement():
     assert w.decide("go", 1.0, **_ctx()) == VoiceDecision("resume", speed=0.7)
 
 
-def test_voix_hors_seance_go_ignore_stop_applique():
+def test_s1_7_un_stop_n_est_jamais_ignore_le_go_de_didier_ne_leve_que_son_arret():
+    """Spec S1 §5.7, révisée par la règle R1 (relecture adverse du 25/11) : un « stop » n'est
+    jamais ignoré, quelle que soit son origine ; l'arrêt retient son origine ; un « go » de
+    Didier ne lève qu'un arrêt de Didier, celui de David lève tout. Plus de condition de
+    séance sur la marche. Mutation faite à la livraison (« go » didier qui lève tout) -> rouge."""
     v = VoiceMove()
-    assert v.decide("go", 0.0, **_ctx(in_session=False, lubie_active=True)) == \
-        VoiceDecision("ignored", "hors_seance")
-    assert v.decide("stop", 5.0, **_ctx(in_session=False)) == HOLD
-    assert v.hold_before == 0.7
+    assert v.decide("stop", 0.0, origine="didier", **_ctx()) == HOLD
+    assert (v.hold_before, v.hold_origine) == (0.7, "didier")
+    assert v.decide("go", 3.0, origine="didier", **_ctx()) == VoiceDecision("resume", speed=0.7)
+    assert v.hold_origine is None
+    # Arrêt de David : le go de Didier ne le lève pas, celui de David oui.
+    assert v.decide("stop", 4.0, origine="david", **_ctx()) == HOLD
+    assert v.decide("go", 8.0, origine="didier", **_ctx()) == VoiceDecision("ignored", "arret_de_david")
+    assert v.hold_origine == "david"
+    assert v.decide("go", 9.0, origine="david", **_ctx()) == VoiceDecision("resume", speed=0.7)
+    # Un stop de David sur un arrêt de Didier le fait passer à David ; jamais l'inverse.
+    w = VoiceMove()
+    w.decide("stop", 0.0, origine="didier", **_ctx())
+    w.decide("stop", 0.5, origine="david", **_ctx())
+    w.decide("stop", 1.0, origine="didier", **_ctx())
+    assert w.hold_origine == "david"
+    assert w.decide("go", 5.0, origine="didier", **_ctx()) == VoiceDecision("ignored", "arret_de_david")
+
+
+def test_s1_7_hors_seance_seuls_les_gestes_de_didier_sont_refuses():
+    v = VoiceMove()
+    assert v.geste_refuse("david", in_session=False) is None
+    assert v.geste_refuse("didier", in_session=False) == "hors_seance"
+    assert v.geste_refuse(None, in_session=False) == "hors_seance"          # inconnue : sens sûr
+    assert v.geste_refuse("didier", in_session=True) is None
+    v.decide("stop", 0.0, origine="david", **_ctx())
+    assert v.geste_refuse("didier", in_session=True) == "arret_de_david"    # il lèverait l'arrêt
+    assert v.geste_refuse("david", in_session=True) is None
+
+
+def test_s1_m2_la_fin_de_seance_garde_l_arret_vocal():
+    v = VoiceMove()
+    v.decide("stop", 0.0, origine="david", **_ctx(speed_in_effect=0.6))
+    assert v.fin_de_seance() is False
+    assert (v.hold_before, v.hold_origine) == (0.6, "david")
+    assert v.decide("go", 5.0, origine="david", **_ctx()) == VoiceDecision("resume", speed=0.6)
+
+
+def test_s1_origine_inconnue_stop_lu_david_go_refuse():
+    v = VoiceMove()
+    assert v.decide("stop", 0.0, origine=None, **_ctx()) == HOLD
+    assert v.decide("go", 5.0, origine=None, **_ctx()) == VoiceDecision("ignored", "origine_inconnue")
+    assert (v.hold_before, v.hold_origine) == (0.7, "david")
 
 
 def test_voix_stop_toujours_republie_et_garde_la_vitesse_retenue():
@@ -465,13 +520,14 @@ def test_voix_fader_leve_l_arret_au_dela_du_seuil_seulement():
     assert v.decide("go", 5.0, **_ctx()) == VoiceDecision("ignored", "deja_en_marche")
 
 
-def test_voix_release_hold_et_abort():
+def test_voix_release_hold_et_fin_de_seance():
     v = VoiceMove(); v.decide("stop", 0.0, **_ctx(speed_in_effect=0.6))
     assert v.release_hold() == 0.6 and v.release_hold() is None
     v.decide("stop", 5.0, **_ctx(speed_in_effect=0.3))
-    assert v.abort() == (0.3, False) and v.hold_before is None
+    # Lot S1, M2 : la fin de séance GARDE l'arrêt vocal (avant : levé en silence).
+    assert v.fin_de_seance() is False and v.hold_before == 0.3
     w = VoiceMove(); w.decide("go", 0.0, **_ctx(**_RELANCABLE))
-    assert w.abort() == (None, True) and not w.relaunching
+    assert w.fin_de_seance() is True and not w.relaunching
 
 
 def test_voix_salve_de_relance_3_envois_puis_expiration():

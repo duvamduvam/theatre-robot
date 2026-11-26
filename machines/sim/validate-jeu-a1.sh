@@ -16,7 +16,9 @@
 #   console : ignore A à sa naissance + 1,5 s ; va_la vers A (piste) à 104 s
 #     (approcher : se tourner puis avancer 1 m) ; va_la vers l'objet devant à
 #     150 s puis reviens ; dès 262 s « go » toutes les 5 s tant qu'il est arrêté
-#     puis STOP dès qu'il roule, GO 60 s après ; bouche : stop à 420 s, go à 430 s.
+#     puis STOP dès qu'il roule, GO 60 s après ; bouche : stop à 420 s, go à 430 s
+#     (anciennes formes : lues « david ») ; lot S1 (25/11) : « go » d'origine « didier »
+#     20 s après le stop de David, « stop » d'origine « didier » à 450 s.
 #
 # T1 zéro oscillation : deux décisions successives jamais à < 2 s (spontanée ->
 #                      spontanée comprise) ; aucun retour A -> B -> A en < 5 s
@@ -30,6 +32,11 @@
 #                      puis aucune vitesse, aucune demande, aucun déplacement décidé
 #                      jusqu'au go (fenêtres : dès le stop / dès l'arrêt constaté)
 # T5 arrêt vocal     : stop de la bouche relayé en < 200 ms, journal relais_stop
+# S1 ordres/propos.  : (docs/spec-S1-ordres-propositions.md) un « go » de Didier sous le
+#                      verrou de David est ignoré (journal refus, aucune demande) ; un
+#                      « stop » de Didier est relayé < 200 ms SANS verrou, puis Didier
+#                      repart seul (« go » d'origine didier) après le silence tiré, dans
+#                      [10, 40] s, à l'instant journalisé (reprise_armee)
 # T6 lisibilité      : jeu/intention jamais muette > 1 s ; chaque ligne du TOPIC
 #                      jeu/journal a un pourquoi non vide et jamais « (absent — bug) »
 # T7 domaine         : le vrai main() de jeu_node refuse hors 43 AVANT d'importer
@@ -302,6 +309,12 @@ class Pilote(Node):
             self.bouche("stop"); self.ev("stop_bouche")
         if self._une_fois("go_bouche", t >= 430.0):
             self.bouche("go"); self.ev("go_bouche")
+        # Lot S1 : une PROPOSITION de Didier ne lève jamais le verrou de David…
+        if st and self._une_fois("go_didier_sous_verrou", time.monotonic() >= st["t"] + 20.0):
+            self.bouche({"cmd": "go", "origine": "didier"}); self.ev("go_didier_sous_verrou")
+        # … et ce que Didier arrête, il le relance seul (silence tiré dans [10, 40] s).
+        if self._une_fois("stop_didier", t >= 450.0):
+            self.bouche({"cmd": "stop", "origine": "didier"}); self.ev("stop_didier")
 
     def objet_devant(self):
         """Objet de rehearsal/objects devant Didier, entre 5 et 35 m (le
@@ -366,6 +379,9 @@ def typ(t): return [e for e in J if e["type"] == t]
 def V(okb, texte): print(("1" if okb else "0") + "\t" + texte)
 def cle(e):
     p = e["payload"]; return (p["action"], p.get("cible"), p.get("sequence"))
+# Lot S1 : la marche publiée sur jeu/chat_move porte son origine ({"cmd", "origine"}).
+def cmd(m): return m.get("cmd") if isinstance(m, dict) else m
+def origine(m): return m.get("origine", "david") if isinstance(m, dict) else "david"
 
 # T1 : TOUTE paire de décisions successives (spontanée -> spontanée comprise) à >= 2 s
 # (t_mono_ms tronqué à la ms : 1 999 ms = 2,000 s) ; aucun retour A -> B -> A en < 5 s.
@@ -388,7 +404,7 @@ ta = [ts(e) for e in arrets]
 print("#  arrêts de Didier : " + ", ".join(f"{e['payload'].get('kind')} à {ts(e) - t0:.0f} s" for e in arrets))
 V(len(ta) >= 1 and all(b - a >= 119.999 for a, b in zip(ta, ta[1:])),
   "T2 au plus un arrêt de Didier (lubie, approche, bouche) par 120 s, au moins un joué")
-stops = [t for t, m in cap["jeu_chat_move"] if m == "stop"]
+stops = [t for t, m in cap["jeu_chat_move"] if cmd(m) == "stop"]
 inten = [(t, i) for t, i in cap["intention"] if i.get("action") == "lubie"]
 ok_pre, n_lubie = True, 0
 for e in arrets:
@@ -436,7 +452,7 @@ acc_av = [e["payload"].get("effect") for e in R if vp and e.get("type") == "avan
 tou = [m for t, m in cap["jeu_chat_move"] if vp and vp["t"] <= t <= vp["t"] + 20 and isinstance(m, dict)
        and m.get("cmd") == "tourner"]
 print(f"#  va_la {vp and vp['cible']} : tourner {tou} ; avancer {av[:1]} ; régisseur avancer {acc_av[:1]}")
-V(bool(av) and av[0] == {"cmd": "avancer", "metres": 1.0} and acc_av[:1] == ["accepted"],
+V(bool(av) and av[0] == {"cmd": "avancer", "metres": 1.0, "origine": "david"} and acc_av[:1] == ["accepted"],
   "T4 va_la vers une piste : s'approcher (avancer 1 m) accepté par le régisseur")
 # T4 va_la vers un objet.
 va = ev.get("va_la")
@@ -448,11 +464,11 @@ V(bool(acc) and acc[0]["payload"].get("effect") == "accepted" and bool(res),
   "T4 va_la vers un objet : aller_voir accepté par le régisseur et route_goto_result reçu")
 # T4 stop console : fenêtres SANS marge (revue A1) — demandes dès le stop, vitesse dès l'arrêt constaté.
 st, go = ev.get("stop_console"), ev.get("go_console")
-relais = min((t for t, m in cap["jeu_chat_move"] if m == "stop" and st and t >= st["t"]), default=None)
+relais = min((t for t, m in cap["jeu_chat_move"] if cmd(m) == "stop" and st and t >= st["t"]), default=None)
 avant = [abs(l) for t, l, a in cap["cmd_vel"] if st and st["t"] - 1.0 <= t < st["t"]]
 zero = min((t for t, l, a in cap["cmd_vel"] if st and t >= st["t"] and abs(l) < 0.02 and abs(a) < 0.05), default=None)
 pendant = [abs(l) for t, l, a in cap["cmd_vel"] if zero and go and zero <= t < go["t"]]
-moves = [m for t, m in cap["jeu_chat_move"] if st and go and st["t"] <= t < go["t"] and m != "stop"]
+moves = [m for t, m in cap["jeu_chat_move"] if st and go and st["t"] <= t < go["t"] and cmd(m) != "stop"]
 dep = [e["payload"]["action"] for e in dec if st and go and st["t"] <= ts(e) < go["t"] and e["payload"]["deplacement"]]
 print(f"#  stop console : relayé en {None if relais is None else round((relais - st['t']) * 1000)} ms ; "
       f"vitesse avant {round(max(avant), 3) if avant else None} ; à zéro après {None if zero is None else round(zero - st['t'], 2)} s ; "
@@ -463,11 +479,35 @@ V(bool(pendant) and max(pendant) < 0.02 and not moves and not dep,
   "T4 stop : aucune vitesse, aucune demande, aucun déplacement décidé jusqu'au go")
 # T5 arrêt vocal.
 sb = ev.get("stop_bouche")
-rel = min((t for t, m in cap["jeu_chat_move"] if m == "stop" and sb and t >= sb["t"]), default=None)
-jr = [e for e in typ("relais_stop") if e["payload"]["source"] == "bouche" and sb and ts(e) >= sb["t"] - 0.1]
+rel = min((t for t, m in cap["jeu_chat_move"] if cmd(m) == "stop" and sb and t >= sb["t"]), default=None)
+jr = [e for e in typ("relais_stop") if e["payload"]["source"] == "bouche" and sb and ts(e) >= sb["t"] - 0.1
+      and ts(e) < sb["t"] + 5.0]
 lat = None if rel is None else round((rel - sb["t"]) * 1000)
-print(f"#  stop de la bouche relayé en {lat} ms ; journal relais_stop : {len(jr)}")
-V(lat is not None and lat < 200 and bool(jr), "T5 stop de la bouche relayé en < 200 ms, sans score (relais_stop)")
+print(f"#  stop de la bouche relayé en {lat} ms ; journal relais_stop : {[e['payload'].get('origine') for e in jr]}")
+V(lat is not None and lat < 200 and bool(jr) and jr[0]["payload"].get("origine") == "david",
+  "T5 stop de la bouche (mot d'arrêt : origine david) relayé en < 200 ms, sans score (relais_stop)")
+# S1 : un « go » de Didier sous le verrou de David est ignoré (et la fenêtre T4 n'a vu aucune demande).
+gd = ev.get("go_didier_sous_verrou")
+refus_gd = [e for e in typ("refus") if gd and e["payload"].get("origine") == "didier" and gd["t"] - 0.1 <= ts(e) < gd["t"] + 2.0]
+gos_gd = [m for t, m in cap["jeu_chat_move"] if gd and go and gd["t"] <= t < go["t"] and cmd(m) == "go"]
+print(f"#  go de Didier sous le verrou : refus journalisé {len(refus_gd)} ; go relayé avant celui de David : {gos_gd}")
+V(bool(gd) and bool(refus_gd) and not gos_gd, "S1 un go de Didier ne lève jamais le verrou de David")
+# S1 : un « stop » de Didier arrête sans verrou, puis Didier repart seul après le silence tiré.
+sd = ev.get("stop_didier")
+st_d = min((t for t, m in cap["jeu_chat_move"] if sd and t >= sd["t"] and m == {"cmd": "stop", "origine": "didier"}),
+           default=None)
+armee = [e for e in typ("reprise_armee") if sd and sd["t"] - 0.1 <= ts(e) < sd["t"] + 2.0]
+delai = armee[0]["payload"].get("delai_s") if armee else None
+go_d = min((t for t, m in cap["jeu_chat_move"] if sd and t > sd["t"] and m == {"cmd": "go", "origine": "didier"}),
+           default=None)
+verrou_apres = [i.get("verrou") for t, i in cap["intention"] if st_d and st_d < t < st_d + 2.0]
+ecart = None if go_d is None or st_d is None else round(go_d - st_d, 2)
+print(f"#  stop de Didier : relayé en {None if st_d is None else round((st_d - sd['t']) * 1000)} ms ; "
+      f"tirage {delai} s ; go de Didier {ecart} s après ; verrou ensuite {set(verrou_apres)}")
+V(st_d is not None and st_d - sd["t"] < 0.2 and verrou_apres and not any(verrou_apres),
+  "S1 un stop de Didier est relayé en < 200 ms, sans verrou")
+V(delai is not None and 10.0 <= delai <= 40.0 and ecart is not None and abs(ecart - delai) <= 0.6,
+  "S1 ce que Didier arrête, il le relance : go d'origine didier au silence tiré (10 à 40 s)")
 # T6 lisibilité, sur ce que la page REÇOIT (topic jeu/journal, pas le fichier).
 ti = [t for t, i in cap["intention"] if t0 <= t <= tfin and i.get("action")]
 trous = max((b - a for a, b in zip(ti, ti[1:])), default=99.0)

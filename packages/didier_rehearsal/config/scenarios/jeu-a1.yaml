@@ -3,9 +3,11 @@
 # VIDE exprès : 0 bug, 0 lubie. Les lubies viennent du SÉLECTEUR (offres
 # « objet » nées des rehearsal/poi_event) ; un tirage du régisseur ferait
 # doublon et brouillerait la lecture du journal « pourquoi ». La séance doit
-# quand même être STARTÉE : le régisseur ignore un « go » hors séance
-# (journal voice_move reason hors_seance) et la reprise de Didier après SON
-# arrêt passe par ce « go ».
+# quand même être STARTÉE : le régisseur ignore hors séance toute marche
+# d'origine « didier » (lot S1 : journal voice_move reason hors_seance), et la
+# reprise de Didier après SON arrêt passe par un « go » d'origine « didier ».
+# (Avec jeu:=true, d'éventuelles lubies du scénario seraient de toute façon
+# sautées, fault_skip reason « jeu ».)
 # Lancement : rehearsal.launch.py route:=chantiers scenario:=jeu-a1 jeu:=true
 name: jeu-a1
 seed: 0

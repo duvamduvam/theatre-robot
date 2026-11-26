@@ -5,19 +5,20 @@ action la PREND, ou quand la console dit « ignore » sur sa cible. Les temps
 sont en secondes (horloge monotone injectée : tests sans sleep).
 """
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
 
-KINDS = ("personne", "objet", "bouche")
+# (Lot S1, 25/11 : plus d'offre « bouche » — un geste de la bouche est un ORDRE de David,
+# exécuté sans score par le sélecteur.)
+KINDS = ("personne", "objet")
 
 
 @dataclass
 class Offre:
-    kind: str                 # "personne" | "objet" | "bouche"
-    piste: str                # id de piste, nom d'objet, ou "bouche"
+    kind: str                 # "personne" | "objet"
+    piste: str                # id de piste ou nom d'objet
     valeur: float             # [0, 1]
     t_naissance: float
     ttl: float
-    payload: Optional[dict] = None   # bouche : la demande de chat_move telle quelle
     prise: bool = field(default=False)
 
     def __post_init__(self):

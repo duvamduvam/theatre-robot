@@ -4,7 +4,8 @@ Deux faits seulement, les deux déjà connus de David :
   - la séance : « attente » (pas encore démarrée), « en_cours », « terminee »
     (durée atteinte, stop ou abort) ;
   - l'arrêt vocal : Didier est retenu à l'arrêt par un « stop » dit à voix
-    haute (route_speed 0 retenu), levé par un « go » en séance ou le fader.
+    haute (route_speed 0 retenu), levé par un « go » (celui de Didier ne lève que le
+    sien, lot S1) ou le fader ; la fin de séance le garde (M2).
     Sans ce badge, la page affichait « route en marche » devant un Didier figé.
 
 INTERDIT ICI : toute info de panne ou de lubie (type, id, vitesse imposée,

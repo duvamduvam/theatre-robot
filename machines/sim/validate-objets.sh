@@ -35,11 +35,13 @@
 #       « le banc » : dropped / pas_ici, 22,3 m devant — la PREMIÈRE ligne, celle qu'on contourne
 #       ensuite pour éprouver la seconde
 # E4 une seule vérité, 10 gestes (aller_voir et tour_de, noms et alias), Didier replacé à (14 ; 0)
-#    avant chacun, un geste toutes les 12 s (réfractaire « déplacement » du jeu : 10 s)
+#    avant chacun, un geste toutes les 12 s (lot S1 : un geste de la bouche est un ordre, sans
+#    réfractaire ; l'écart de 12 s est gardé)
 #   E4a les 10 gestes acceptés par le régisseur
 #   E4b même id dans la demande de la bouche, l'ordre du sélecteur (jeu/chat_move) et la réponse du
 #       régisseur, pour les 10
-#   E4c même id dans le journal du sélecteur (offre) et celui du régisseur (aller_voir / tour_de)
+#   E4c même id dans le journal du sélecteur (ordre, lot S1 ; « offre » avant) et celui du régisseur
+#       (aller_voir / tour_de)
 source /opt/ros/${ROS_DISTRO}/setup.sh
 source /home/ros2_ws/install/setup.bash
 NS="/${ROBOT_NAME:-didier}"
@@ -351,7 +353,8 @@ for i, g in enumerate(gestes):
                None)
     rep = next((v for _, v in msgs("rehearsal/chat_move_reply", de, a)
                 if isinstance(v, dict) and v.get("source") == "director"), None)
-    offre = next((v for _, v in msgs("jeu/journal", de, a) if isinstance(v, dict) and v.get("type") == "offre"
+    # Lot S1 : le geste de la bouche est journalisé « ordre » (exécuté tout de suite, sans score).
+    offre = next((v for _, v in msgs("jeu/journal", de, a) if isinstance(v, dict) and v.get("type") == "ordre"
                   and isinstance((v.get("payload") or v).get("demande"), dict)), None)
     offre_id = ((offre.get("payload") or offre).get("demande") or {}).get("id") if offre else None
     reg = [e for e in regie if e.get("type") == intent["cmd"] and (e.get("payload") or {}).get("id") == id_]

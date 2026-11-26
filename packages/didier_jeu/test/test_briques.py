@@ -74,10 +74,9 @@ def test_score_poids_et_immobilite():
     # gain accueil 0,8 -> 1,04 ; approcher 0,7 -> 0,91 : regarder domine de plus de 15 %
     assert score(Candidat("accueil", "p1", o, "curiosite"), ctx, s.r).total == pytest.approx(1.04)
     assert score(Candidat("approcher", "p1", o, "curiosite"), ctx, s.r).total == pytest.approx(0.91)
-    # metteur en scène 0,8 et console 1,5
-    ctx2 = Contexte(now=0.0, jauges={}, metteur={"action": "regarder", "mot": "regarde"},
-                   console={"action": None, "cible": "p1", "cmd": "joue_avec"})
-    assert score(Candidat("regarder", "p1"), ctx2, s.r).total == pytest.approx(2.3)
+    # console 1,5 (lot S1 : la considération « metteur en scène » est supprimée)
+    ctx2 = Contexte(now=0.0, jauges={}, console={"action": None, "cible": "p1", "cmd": "joue_avec"})
+    assert score(Candidat("regarder", "p1"), ctx2, s.r).total == pytest.approx(1.5)
 
 
 def test_refractaire_facteur_zero_puis_un():
@@ -92,6 +91,15 @@ def test_refractaire_facteur_zero_puis_un():
     assert score(c, lent, s.r).total == 0.0                        # « plus lent » : 16 s
     lubie = Candidat("lubie", "x", None, "lubie")
     assert score(lubie, Contexte(now=119.0, jauges={"lubie": 1.0}, derniers={"arret_didier": 0.0}), s.r).total == 0.0
+    # Lot S1 : un ORDRE de David (console, ordre=True) n'est jamais « trop tôt » ; « joue avec »
+    # (un biais, pas un ordre) reste soumis au réfractaire « deplacement ».
+    av = Candidat("aller_voir", "banc")
+    ordre = {"action": "aller_voir", "cible": "banc", "cmd": "va_la", "ordre": True}
+    tot = {"deplacement": 0.0}
+    assert score(av, Contexte(now=1.0, jauges={}, console=ordre, derniers=tot), s.r).total == pytest.approx(1.5)
+    ap = Candidat("approcher", "p1")
+    biais = {"action": None, "cible": "p1", "cmd": "joue avec"}
+    assert score(ap, Contexte(now=1.0, jauges={}, console=biais, derniers=tot), s.r).total == 0.0
 
 
 # ------------------------------------------------------------------ arbre

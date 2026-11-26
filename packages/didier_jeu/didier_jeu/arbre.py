@@ -1,16 +1,18 @@
 """L'ARBRE (ce qui est PERMIS quand) — py_trees, spec A1 §3.
 
 Racine = sélecteur de PRIORITÉS (le premier enfant qui réussit gagne) :
-  1. arrêt vocal    : un « stop » a été relayé (bouche ou console) -> verrou
-                      jusqu'au « go » DE CELUI QUI L'A POSÉ (un go de la bouche ne
-                      lève jamais un stop de David) : aucune action de
-                      déplacement ; expressions et regards permis. Le relais
-                      lui-même est fait À LA RÉCEPTION, jamais dans l'arbre ni
-                      pondéré (selecteur.relayer_stop / relayer_go) ;
+  1. arrêt vocal    : un « stop » d'origine « david » a été relayé (mot d'arrêt ou
+                      console) -> verrou jusqu'au « go » de David (lot S1 : le
+                      verrou n'a qu'une source ; un stop de Didier n'en pose
+                      pas) : aucune action de déplacement ; expressions et
+                      regards permis. Le relais lui-même est fait À LA
+                      RÉCEPTION, jamais dans l'arbre ni pondéré
+                      (selecteur.relayer_stop / relayer_go) ;
   2. superviseur absent (mode « exigeant » seulement) : aucun déplacement ;
   3. ordre macro en cours (console) : il peut interrompre l'action engagée ;
   4. action engagée : on la finit — seule une offre de valeur >=
-                      engagement.seuil_rupture peut l'interrompre ;
+                      engagement.seuil_rupture peut l'interrompre, et jamais un
+                      ORDRE de David engagé (lot S1) ;
   5. choisir        : la feuille de score, tout est permis.
 Les feuilles « choisir » délèguent au sélecteur (Selecteur.choisir) : l'arbre
 porte la STRUCTURE, le score la VARIÉTÉ (décision 7 du 02/11). Les verrous

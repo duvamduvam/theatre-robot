@@ -4,8 +4,10 @@ Ce package répond à « pourquoi et quand Didier agit » : un **arbre py_trees*
 décide de ce qui est permis, et un **score** choisit l'action. Les offres, les
 pistes de personnes et les pulsions alimentent ce choix ; chaque décision est
 journalisée avec son `pourquoi`. Spec :
-`docs/spec-A1-selecteur-de-jeu.md` (décisions §8 du 02/11) ; le pourquoi se
-trouve dans `docs/etude-autonomie-improvisation.md` §4.1-4.2.
+`docs/spec-A1-selecteur-de-jeu.md` (décisions §8 du 02/11), **révisée par
+`docs/spec-S1-ordres-propositions.md`** (lot S1, 25/11 : ordres et propositions,
+verrou de David seul, une seule reprise) ; le pourquoi se trouve dans
+`docs/etude-autonomie-improvisation.md` §4.1-4.2 et `docs/etudes/etude-assainissement.md` §4.
 
 **SIM-ONLY** : `jeu_node` refuse de démarrer hors `ROS_DOMAIN_ID=43`. Il utilise
 le garde-fou `check_domain` de `didier_rehearsal`, importé tel quel ; son message
@@ -20,12 +22,12 @@ par des demandes au régisseur (`jeu/chat_move`), qui les arbitre, puis par
 |---|---|---|
 | `jeu/console` | page scène → sélecteur | StringTime JSON `{"cmd": "va_la"\|"joue_avec"\|"ignore"\|"reviens"\|"plus_lent"\|"stop"\|"go", "cible"?, "presence": true}` ; la page envoie `{"presence": true}` à 2 Hz (battement) |
 | `jeu/intention` | sélecteur → page | **latché**, republié toutes les 0,5 s : `{"action", "cible", "pourquoi", "t_ms", "fin_prevue_ms", "reste_ms", "verrou", "jauges", "proposition"?}` ; `"action": "rien"` au repos, jamais vide |
-| `jeu/chat_move` | sélecteur → régisseur | même payload que `rehearsal/chat_move` ; le régisseur y est remappé par `rehearsal.launch.py jeu:=true` |
-| `rehearsal/chat_move_reply` | sélecteur → chat_node (et régisseur → tous) | `{"demande", "effect", "reason", "source": "jeu"}` : demande de GESTE de la bouche **non transmise** (`dropped` + code `arrete`, `sans_superviseur`, `fatigue`, `ignore`, `trop_tot`, `pas_retenu`, `degrade`) ou transmise mais **régisseur muet** 3 s (`no_reply`). Le sélecteur écoute aussi les réponses `source: "director"` : `accepted` accuse l'étape, un refus finit l'engagement tout de suite (15/11) |
+| `jeu/chat_move` | sélecteur → régisseur | même contrat que `rehearsal/chat_move` (lot S1) : marche `{"cmd": "stop"\|"go", "origine": "david"\|"didier"}`, geste avec son `origine` ; les reprises et lubies du sélecteur sont `didier`, ce qui vient de David garde `david`. Le régisseur y est remappé par `rehearsal.launch.py jeu:=true` |
+| `rehearsal/chat_move_reply` | sélecteur → chat_node (et régisseur → tous) | `{"demande", "effect", "reason", "source": "jeu"}` : demande de GESTE de la bouche **non transmise** (`dropped` + code `arrete`, `sans_superviseur`, `pas_ici`, `hors_atteinte`, `pas_retenu` pour une proposition d'origine `didier`, `degrade`) ou transmise mais **régisseur muet** 3 s (`no_reply`). Le sélecteur écoute aussi les réponses `source: "director"` : `accepted` accuse l'étape, un refus finit l'engagement tout de suite (15/11) |
 | `jeu/journal` | sélecteur → page (+ fichier) | une ligne JSONL (format boîte noire `robot.diagnostic.journal`) par message |
 | `animation` | sélecteur → animations_node | nom de séquence (JSON chaîne) |
 | `look` | sélecteur → gaze_follower | `{"angle_deg", "hold_ms"}` (« regarder », spec-aller-voir §7.1) |
-| entrées | | `vision/person_box`, `rehearsal/poi_event`, `rehearsal/chat_move` (la bouche), `chat_transcript` (rôle `david` = parole entendue), `chat_situation`, `mission_state`, `route_state`, `route_state_cause`, `route_goto_result`, `rehearsal/chat_move_reply`, `animation_state`, `scene/objets` (le tableau des objets, latché, lot O1 — remplace `rehearsal/objects` et la pose vérité terrain) |
+| entrées | | `vision/person_box`, `rehearsal/poi_event`, `rehearsal/chat_move` (la bouche, lue par `didier_rehearsal.contracts.lire_chat_move` : anciennes formes = `david`), `chat_transcript` (rôle `david` = parole entendue), `route_state`, `route_state_cause`, `route_goto_result`, `rehearsal/chat_move_reply`, `animation_state`, `scene/objets` (le tableau des objets, latché, lot O1 — remplace `rehearsal/objects` et la pose vérité terrain) |
 
 Les noms `jeu/*` sont définis dans `theatre_contrats.topics`. Ceux du régisseur
 viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
@@ -62,13 +64,16 @@ viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
 
 ## Ce qui décide (dans l'ordre de l'arbre)
 
-1. **Arrêt vocal** : un `stop` venu de la bouche ou de la console est **relayé
-   dès sa réception, sans passer par le score**. Il pose un verrou sur tout
-   déplacement jusqu'au `go` **de celui qui l'a posé** : un `go` de la console
-   (David) lève tout ; un `go` de la bouche ne lève que le stop de la bouche,
-   jamais un stop de David. STOP CONTENUS de la page envoie aussi ce `stop`.
-   Une Route OFF par David (`route_state_cause = cmd`) compte comme un stop de
-   David. Il n'y a jamais de `go` automatique après un stop de David.
+1. **Arrêt vocal** : un `stop`, quelle que soit son origine, est **relayé dès
+   sa réception, sans passer par le score** — un arrêt n'est jamais refusé.
+   **Origine `david`** (mot d'arrêt, console, STOP CONTENUS de la page) : il pose
+   le **verrou de David**, seul verrou qui existe (lot S1 ; supprimé : le verrou à
+   deux sources console/bouche), levé par un `go` de David (console, ou bouche en
+   tour humain). **Origine `didier`** (le `marche: stop` interprété par le LLM) :
+   il arrête, **sans verrou**, et la reprise s'arme. Un `go` d'origine `didier`
+   est ignoré et journalisé. Une Route OFF par David (`route_state_cause = cmd`)
+   compte comme un stop de David. Il n'y a jamais de `go` automatique après un
+   stop de David.
 2. **Superviseur absent** (mode `exigeant` seulement ; le défaut en A1 est `suppose`) :
    aucun déplacement.
 3. **Ordre macro** : `va_la` vise un objet du tableau `scene/objets` (→ `aller_voir` avec son `id`)
@@ -80,8 +85,9 @@ viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
    Ce n'est pas une vitesse de roues : le sélecteur n'en a aucune.
    **Garde de distance** de toute approche : jamais si la hauteur de boîte de
    la piste atteint `approche.hauteur_max` (0,55, soit environ 2,7 m).
-4. **Action engagée** : elle se finit. Seule une offre de valeur ≥ 0,9 (la
-   bouche) peut l'interrompre.
+4. **Action engagée** : elle se finit. Seule une offre de valeur ≥ 0,9 peut
+   l'interrompre — il n'y en a plus depuis le lot S1 — et **jamais** un ordre
+   de David engagé.
 5. **Choisir** : le score de chaque candidat (immobilité comprise), puis
    l'hystérésis (+15 % pendant 300 ms), et jamais deux changements à moins de 2 s.
 
@@ -89,31 +95,43 @@ viennent de `didier_rehearsal.contracts`, qui est importé et non recopié.
 l'arrêt (par l'intention) **et** l'amorce (`look` vers l'objet, angle calculé
 depuis l'odométrie vérité terrain, donc SIM-ONLY ; à défaut de pose, il s'en
 tient à l'intention). Il ne demande `stop` que si la console n'a dit ni `ignore`
-ni `va_la` dans les 3 s. Il propose ensuite « repartir ? » et envoie `go` de
-lui-même après **90 s de silence** : toute parole entendue (`chat_transcript`,
-rôle `david`) remet le compteur à zéro (décision de David du 02/11).
+ni `va_la` dans les 3 s. Il propose ensuite « repartir ? » et repart de lui-même
+par **la reprise** (ci-dessous).
+
+**Une seule reprise** (lot S1, 25/11 ; remplace les trois minuteries 90 s / 10 s /
+6 s) : après un arrêt décidé par Didier — lubie, `stop` d'origine `didier`, pause
+« regarde ça », fin (réussie ou non) d'un geste de la bouche ou de son propre
+déplacement — il envoie `go` (origine `didier`) après **D s de silence**, D tiré au
+moment de l'arrêt dans `[reprise.min_s, reprise.max_s]` = **[10, 40] s** par le
+générateur semé du sélecteur (paramètre `graine` de `jeu_node`, journalisée au
+démarrage ; ligne `reprise_armee` : « il repartira après 23,4 s de silence »). Toute
+parole entendue (`chat_transcript`, rôle `david`) remet le silence à zéro sans
+retirer le tirage (02/11). Elle attend qu'aucun déplacement ne roule ; un stop de
+David, une Route OFF, un `ignore` ou un `go` de David l'annulent. L'humeur qui
+choisira D viendra avec le régisseur LLM (S4). Tests :
+`test/test_ordres_propositions.py`.
 
 **Un arrêt de Didier par 2 min** couvre tout arrêt de route qu'il cause : lubie,
 approche de sa propre initiative. Un ordre de David n'en est jamais un, et
 **une demande de geste de la bouche non plus** (décision de David du 15/11 :
 elle vient toujours d'un humain, donc une tâche peut enchaîner ses gestes).
-Restent la fatigue et le réfractaire « deplacement » de 10 s.
 
-**Reprise après un geste de la bouche** (David, 15/11) : fini ou échoué, plus
-aucun geste ne roulant, Didier rejoint sa route (`go`) après
-`reprise.apres_geste_s` = **10 s**. La parole ne remet pas ce compteur à zéro
-(il écoute en marche). Un nouveau geste le repousse ; un stop (bouche ou
-console) ou une Route OFF de David l'annule (`reprise_annulee`). Le `go` dit
-par la bouche (« en route ») est **relayé tout de suite**, comme le stop :
-pondéré, il mourait au réfractaire de 10 s. Les 90 s de silence restent pour
-SES arrêts (lubie, approche).
+**Un ordre de David n'est refusé que pour trois raisons** (lot S1, étude
+assainissement règle 1) : verrou de David (`arrete`), sécurité (dite par le
+régisseur et le corps sûr ; `sans_superviseur` ici) et impossible (`pas_ici`,
+`hors_atteinte` ; objet inconnu : le régisseur). Un geste de la bouche d'origine
+`david` (tour humain ou continuation de SA tâche) part **à la réception**, sans
+score ni hystérésis (journal `ordre`) ; la console passe par le score mais
+**ni fatigue ni réfractaire** ne l'arrêtent. Fatigue et réfractaires bornent les
+seules initiatives de Didier. Les refus « qui donnent du jeu » (étude §8.1,
+réponse 2) ne sont PAS là : ils viendront avec le régisseur LLM (S4).
 
-**« Regarde ça »** (lot « texte raccord », séance du 18/11 21:35) : la bouche envoie `"pause"`
-sur `rehearsal/chat_move`. Didier en marche : `stop` relayé tout de suite, **sans verrou**, puis
-`go` après `reprise.apres_regard_s` = **6 s** (la même reprise que les gestes, mêmes
-annulations ; journal `pause_regard` puis `reprise`). Déjà arrêté (verrou, arrêt de Didier) ou
-pas en route : rien ne bouge, jamais de `go` qu'il n'aurait pas eu sans elle. Mode dégradé : un
-`stop`. Tests : `test/test_pause_regard.py`.
+**« Regarde ça »** (lot « texte raccord », séance du 18/11 21:35) : la bouche envoie la pause
+(`{"cmd": "pause", "origine": "david"}`) sur `rehearsal/chat_move`. Didier en marche : `stop`
+relayé tout de suite (origine de la demande), **sans verrou**, puis la reprise (journal
+`pause_regard` puis `reprise`). Déjà arrêté (verrou, reprise armée) ou pas en route : rien ne
+bouge, jamais de `go` qu'il n'aurait pas eu sans elle. Mode dégradé : un `stop`. Tests :
+`test/test_pause_regard.py`.
 
 **Objets** (lot O1, 18/11 ; remplace les « distances » du 15/11) : le sélecteur LIT le
 tableau des objets `scene/objets` (écrit par `didier_perception`) ; il n'a plus ni pose ni
@@ -132,16 +150,15 @@ le régisseur qui répond. Non transmise (offre morte au bout de ses 3 s), une
 ligne `refus` dit pourquoi et `rehearsal/chat_move_reply` porte `dropped` + le
 code. Sinon Didier affirmait un geste qui n'avait pas eu lieu. Un déplacement
 **refusé** par le régisseur, ou resté sans réponse, n'a pas eu lieu : ses
-périodes réfractaires et sa fatigue sont **rendues**. Avant, un refus bloquait
-en silence la demande suivante. Une nouvelle demande de la bouche interrompt
-celle en cours, même sur le même objet (clé = demande entière, séance du 15/11
-21:21). Seule l'issue de l'ordre accepté (`name` de la réponse du régisseur)
+périodes réfractaires et sa fatigue sont **rendues**. Une nouvelle demande de la
+bouche interrompt celle en cours, même sur le même objet (le plus récent ordre de
+David gagne). Seule l'issue de l'ordre accepté (`name` de la réponse du régisseur)
 finit l'étape ; les autres sont journalisées `issue_ignoree`.
 
-**Metteur en scène** : un mot-clé d'expression ou de regard biaise le score. Un
-mot-clé de **déplacement** (« approche ») ne fait bouger Didier que si le texte
-nomme une piste (« p3 »). Dans ce cas, c'est au plus **un pas par piste nommée**,
-et jamais au-delà de la garde de distance.
+**Metteur en scène** : plus de mots-clés depuis le lot S1 (`sur_situation`,
+l'indication de `mission_state` et `metteur_en_scene.*` supprimés — « fragiles,
+sans identifiant ni retour », étude improvisation) ; `jeu/proposition` les
+remplacera (I3).
 
 Chaque offre née, personne ou objet, reçoit en ≤ 1 s une ligne de décision :
 un choix, ou un « il continue … : » qui dit pourquoi il ne réagit pas.
@@ -162,7 +179,9 @@ perdue : elle part avec « (absent — bug) » et un compteur.
 **Mode dégradé** (`relais.RelaisSeul`) : si le répertoire, les réglages ou le
 vocabulaire sont illisibles, `jeu_node` démarre quand même. Il relaie alors
 `stop`/`go` (bouche et console) sans aucune initiative et écrit `degrade` au
-journal. Le chemin d'arrêt vocal ne dépend jamais d'un JSON.
+journal, avec les mêmes règles d'origine : verrou de David seul, `go` de Didier
+ignoré, `stop` de Didier relayé sans verrou **ni reprise** (sens sûr : il reste
+arrêté jusqu'à un `go` de David). Le chemin d'arrêt vocal ne dépend jamais d'un JSON.
 
 Tous les chiffres sont dans `config/reglages.yaml` (« réglage de départ, se
 règle au journal »), et **gravés** dans `test/test_reglages.py`.
