@@ -160,3 +160,76 @@ class TestConsigneAppel2:
 
     def test_delai_de_garde_conforme_a_la_spec(self):
         assert ATTENTE_CORPS_S == 0.5
+
+
+# --------------------------------------------------------------------------------------
+# Lecture du flux de l'appel 1 (§3 « Latence »).
+# --------------------------------------------------------------------------------------
+
+from didier_vision.ai.geste_dabord import separe_geste_du_flux  # noqa: E402
+
+
+class _FluxCompte:
+    """Flux qui compte les deltas réellement tirés (preuve qu'on ne lit pas tout)."""
+
+    def __init__(self, deltas):
+        self._deltas = list(deltas)
+        self.tires = 0
+
+    def __iter__(self):
+        for d in self._deltas:
+            self.tires += 1
+            yield d
+
+
+class TestSepareGesteDuFlux:
+    def test_tour_de_geste_rien_nest_dit(self):
+        params, deltas = separe_geste_du_flux(iter(['GESTE {"marche"', ': "go"}\n', 'jamais dit']))
+        assert params == {"marche": "go"}
+        assert deltas is None
+
+    def test_tour_ordinaire_le_flux_est_rejoue_a_lidentique(self):
+        params, deltas = separe_geste_du_flux(iter(["Bon", "jour ", "David !"]))
+        assert params is None
+        assert "".join(deltas) == "Bonjour David !"
+
+    def test_tour_ordinaire_ne_tamponne_que_le_debut(self):
+        """Latence inchangée (§3) : on tranche sur les premiers caractères, pas sur tout le flux."""
+        flux = _FluxCompte(["Bonjour", " David", ", tu", " vas bien ?"] + ["x"] * 50)
+        params, deltas = separe_geste_du_flux(iter(flux))
+        assert params is None
+        assert flux.tires == 1, "un seul delta a suffi pour trancher"
+        assert "".join(deltas).startswith("Bonjour David")
+
+    def test_marqueur_tronque_en_plusieurs_deltas(self):
+        params, _ = separe_geste_du_flux(iter(["G", "E", "S", "T", "E", ' {"avancer": 2}\n']))
+        assert params == {"avancer": 2}
+
+    def test_faux_positif_le_mot_geste_dans_une_replique(self):
+        params, deltas = separe_geste_du_flux(iter(["Ge", "ste de la main, tu connais ?"]))
+        assert params is None
+        assert "".join(deltas) == "Geste de la main, tu connais ?"
+
+    def test_ligne_geste_illisible_rejouee_comme_replique(self):
+        params, deltas = separe_geste_du_flux(iter(['GESTE {casse\n', "la suite"]))
+        assert params is None
+        assert "".join(deltas) == 'GESTE {casse\nla suite'
+
+    def test_flux_vide(self):
+        params, deltas = separe_geste_du_flux(iter([]))
+        assert params is None
+        assert "".join(deltas) == ""
+
+    def test_flux_plus_court_que_le_marqueur(self):
+        params, deltas = separe_geste_du_flux(iter(["Oui"]))
+        assert params is None
+        assert "".join(deltas) == "Oui"
+
+    def test_deltas_non_textuels_ignores(self):
+        params, deltas = separe_geste_du_flux(iter([None, "Bonjour", 42, " David"]))
+        assert params is None
+        assert "".join(deltas) == "Bonjour David"
+
+    def test_ligne_geste_sans_saut_de_ligne_final(self):
+        params, _ = separe_geste_du_flux(iter(['GESTE {"aller_voir": "banc"}']))
+        assert params == {"aller_voir": "banc"}

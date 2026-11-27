@@ -152,6 +152,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from theatre_interfaces.msg import StringTime
+from theatre_contrats import corps_etat
 from theatre_contrats import objets as tableau_objets
 from theatre_contrats import stringtime, topics
 
@@ -1037,6 +1038,12 @@ class ChatNode(Node):
             self.create_subscription(
                 StringTime, reflection_contract.PROMPT_TOPIC, self._on_prompt, 10)
 
+        # Lot S2b : l'état du corps écrit par le sélecteur (corps/etat, latché) — la
+        # SEULE source de ce que la bouche dit de son corps (spec S2 §4).
+        self.create_subscription(
+            StringTime, topics.CORPS_ETAT, self._on_corps_etat,
+            QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+
         # --- Arbitrage amont (2026-07-12, cf. docstring de module POURQUOI) :
         # None = jamais reçu (topic ANIMATION_STATE absent ou robot pas encore
         # démarré) -- distinct de "" (repos), cf. didier_vision.ai.arbitration : ces
@@ -1325,6 +1332,10 @@ class ChatNode(Node):
         except (ValueError, TypeError):
             self.get_logger().warning(f"{CHAT_MOVE_REPLY_TOPIC} illisible : {ros_msg.msg!r}")
             return
+        # Lot S2b (§3) : la réponse du JEU débloque l'appel 2 (la bouche attend de savoir
+        # ce que le corps a fait avant de parler). Le chemin MoveTask ne change pas.
+        if payload.get("source") == "jeu":
+            self._engine.note_reponse_corps(payload)
         if self._move_task.on_reply(payload, time.monotonic()) is not None:
             self.get_logger().info(f"tâche : geste refusé ({payload.get('effect')}"
                                    f"/{payload.get('reason')}, {payload.get('source')})")
@@ -1333,6 +1344,23 @@ class ChatNode(Node):
         """Borne du geste resté sans réponse (MoveTask.check_ack)."""
         if self._move_task.check_ack(time.monotonic()) is not None:
             self.get_logger().warning("tâche : geste resté sans réponse, dit comme échoué")
+
+    def _on_corps_etat(self, ros_msg):
+        """`corps/etat` (lot S2) : range la PHRASE de l'état du corps dans StageState, avec
+        l'heure de réception locale (sa péremption se compte ici). Illisible = warning et
+        phrase effacée : la bouche parle alors sans état, jamais avec un état faux."""
+        try:
+            payload = stringtime.loads(ros_msg.msg)
+        except (ValueError, TypeError):
+            self.get_logger().warning(f"{topics.CORPS_ETAT} illisible : {ros_msg.msg!r}")
+            self._stage.set_corps_phrase(None, time.monotonic())
+            return
+        etat = corps_etat.lire(payload)
+        if etat is None:
+            self.get_logger().warning(f"{topics.CORPS_ETAT} refusé : {payload!r}")
+            self._stage.set_corps_phrase(None, time.monotonic())
+            return
+        self._stage.set_corps_phrase(etat.phrase, time.monotonic())
 
     def _on_situation(self, ros_msg):
         """Tableau de situation (reflection_contract.SITUATION_TOPIC) : rangé

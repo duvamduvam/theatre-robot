@@ -136,3 +136,61 @@ def consigne_appel_2(reponse, phrase_corps: Optional[str] = None) -> str:
     if isinstance(phrase_corps, str) and phrase_corps.strip():
         texte += " " + phrase_corps.strip()
     return texte + CORPS_CONSIGNE
+
+
+# --------------------------------------------------------------------------------------
+# Lecture du flux de l'appel 1 sans coûter de latence au tour SANS geste (§3 « Latence »).
+# --------------------------------------------------------------------------------------
+
+MARQUEUR_MOT = "geste"
+
+
+def separe_geste_du_flux(deltas):
+    """Lit le flux de l'appel 1 et décide, le PLUS TÔT possible, si le tour est un tour de
+    geste. -> `(params, deltas_replique)` :
+
+    - `params` None : tour ordinaire. `deltas_replique` rejoue le flux à l'identique (ce qui
+      a été lu est restitué en tête) — la réplique part aussitôt, latence inchangée.
+    - `params` dict : tour de geste. Le flux est consommé jusqu'à la fin de la ligne, puis
+      ABANDONNÉ (rien n'est dit) ; `deltas_replique` est None.
+
+    Coût pour un tour ordinaire : on ne tamponne que les ~5 premiers caractères, le temps de
+    savoir que le flux ne commence pas par « GESTE ». Un flux qui commence par le marqueur est
+    tamponné jusqu'au premier saut de ligne (il n'y a rien à dire avant, par construction).
+    """
+    tampon = ""
+    epuise = True
+    for delta in deltas:
+        if not isinstance(delta, str):
+            continue
+        tampon += delta
+        tete = tampon.lstrip()
+        if len(tete) < len(MARQUEUR_MOT):
+            continue                                   # pas encore de quoi trancher
+        if not tete[:len(MARQUEUR_MOT)].lower() == MARQUEUR_MOT:
+            epuise = False
+            break                                      # réplique ordinaire : on arrête de lire
+        if "\n" in tampon:
+            epuise = False
+            break                                      # ligne GESTE complète
+    else:
+        epuise = True
+
+    tete = tampon.lstrip()
+    if tete[:len(MARQUEUR_MOT)].lower() == MARQUEUR_MOT:
+        premiere, _reste = coupe_premiere_ligne(tampon)
+        params = lire_ligne_geste(premiere)
+        if params is not None:
+            return params, None
+        # Ligne « GESTE … » illisible : repli sûr, c'est une réplique — le tampon est rejoué
+        # TEL QUEL (le recomposer perdrait le saut de ligne quand le reste est vide).
+
+    def _rejoue():
+        if tampon:
+            yield tampon
+        if not epuise:
+            for suite in deltas:
+                if isinstance(suite, str):
+                    yield suite
+
+    return None, _rejoue()

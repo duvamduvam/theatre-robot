@@ -229,7 +229,7 @@ from typing import Callable, Optional, Union
 from didier_vision.ai import performance
 from didier_vision.audio.mic import frame_peak
 from didier_vision.ai.emergency import is_emergency_stop, normalized_words, stop_words_in
-from didier_vision.ai import raccord
+from didier_vision.ai import geste_dabord, raccord
 from didier_vision.ai.move_task import MoveTask
 from theatre_contrats import objets
 
@@ -288,6 +288,12 @@ TASK_MIN_SILENCE_S = 0.5
 # Texte « user » d'un tour de continuation (même raison que
 # SPONTANEOUS_USER_TEXT : alternance user/assistant exigée par Haiku 5.5). Le
 # FOND (issue du geste + demande de David) est dans la direction (MoveTask).
+def _joint_direction(direction: Optional[str], consigne: str) -> str:
+    """Consigne de l'appel 2 ajoutée à la direction de jeu en cours (continuation), sans
+    jamais l'écraser."""
+    return consigne if not direction else direction + " " + consigne
+
+
 TASK_USER_TEXT = "(Ton geste est fini. Personne ne te parle : poursuis ta tâche.)"
 
 # Plafond (s) d'une tranche de l'écoute garde (cf. docstring de module ÉCOUTE
@@ -753,6 +759,14 @@ class ConversationEngine:
         # O1, cf. set_objets) : None = garde NON BRANCHÉE (moteur sans tableau : tests, outils).
         # chat_node la branche sur le tableau VIDE dès le démarrage (jamais reçu = muet).
         self._tableau = None
+        # Lot S2b (§3) : attente de la réponse du corps entre l'appel 1 (ligne GESTE)
+        # et l'appel 2 (la réplique). `_corps_attente` est posé AVANT la publication de
+        # la demande et réveillé par note_reponse_corps (thread rclpy) ; `_corps_reponse`
+        # porte la réponse. Hors attente : None — une réponse qui arrive trop tard est
+        # ignorée ici (MoveTask la reçoit par son chemin habituel, inchangé).
+        self._corps_lock = threading.Lock()
+        self._corps_attente: Optional[threading.Event] = None
+        self._corps_reponse: Optional[dict] = None
         self._turn_request: Optional[str] = None
         self._turn_continuation = False
         self._turn_gesture = False
@@ -1062,6 +1076,50 @@ class ConversationEngine:
             return False
         self._emit_start("go", "Clé \"marche\" : go")
         return False
+
+    # ---------------------------------------------------------------------------------
+    # Lot S2b (§3) : « demander d'abord, parler ensuite »
+    # ---------------------------------------------------------------------------------
+
+    def note_reponse_corps(self, payload) -> bool:
+        """Réponse du corps (`rehearsal/chat_move_reply`), appelée depuis le thread rclpy
+        par chat_node EN PLUS de MoveTask (dont le chemin ne change pas). -> True si un tour
+        l'attendait (elle le réveille), False sinon (réponse hors attente : ignorée ici).
+
+        On ne retient que la réponse du JEU (source « jeu », posée par S2a à TOUTE demande de
+        David) : le verdict du régisseur arrive plus tard et n'a pas à débloquer l'appel 2."""
+        if not isinstance(payload, dict):
+            return False
+        with self._corps_lock:
+            attente = self._corps_attente
+            if attente is None or self._corps_reponse is not None:
+                return False
+            self._corps_reponse = payload
+            attente.set()
+            return True
+
+    def _armer_attente_corps(self) -> threading.Event:
+        """Pose l'emplacement d'attente AVANT de publier la demande (sinon une réponse très
+        rapide serait perdue). -> l'événement à attendre."""
+        attente = threading.Event()
+        with self._corps_lock:
+            self._corps_attente = attente
+            self._corps_reponse = None
+        return attente
+
+    def _attendre_corps(self, attente: threading.Event) -> Optional[dict]:
+        """Attend la réponse du corps au plus geste_dabord.ATTENTE_CORPS_S (§3). -> la réponse,
+        ou None si le corps n'a pas répondu — la bouche parle alors en DOUTANT (jamais en
+        affirmant que le geste est parti, cf. geste_dabord.phrase_reponse_corps)."""
+        attente.wait(geste_dabord.ATTENTE_CORPS_S)
+        with self._corps_lock:
+            reponse = self._corps_reponse
+            self._corps_attente = None
+            self._corps_reponse = None
+        if reponse is None:
+            logger.warning("Corps sans réponse après %.1f s : la bouche parle sans savoir.",
+                           geste_dabord.ATTENTE_CORPS_S)
+        return reponse
 
     def set_objets(self, tableau) -> None:
         """Tableau des objets (theatre_contrats.objets.Tableau, scene/objets ; appelé par
@@ -1812,6 +1870,39 @@ class ConversationEngine:
             text, extra_system=self._stage.instruction(now),
             situation=self._stage.situation(now), direction=direction, **kwargs)
 
+    def _tour_de_geste(self, deltas, text: str, direction: Optional[str]):
+        """Lot S2b (§3). Lit la première ligne de l'appel 1 : tour ordinaire -> rend le flux à
+        dire (rejoué à l'identique, latence inchangée) ; tour de GESTE -> publie la demande,
+        attend la réponse du corps (0,5 s max), puis rend le flux de l'appel 2, qui connaît
+        cette réponse. -> None si un arrêt vocal a interrompu l'attente (rien n'est dit).
+
+        C'est ici que meurt le mensonge du 26/11 (« Ça y est, je fonce vers la grue ! » sur un
+        GO refusé) : la réplique est écrite APRÈS le verdict du corps, jamais avant."""
+        params, flux_replique = geste_dabord.separe_geste_du_flux(deltas)
+        if params is None:
+            return flux_replique
+
+        # L'emplacement d'attente est posé AVANT la publication : le sélecteur répond en
+        # ~20 ms, une réponse plus rapide que nous ne doit pas être perdue.
+        attente = self._armer_attente_corps()
+        try:
+            self._notify_move(params, spontaneous=False)
+        except Exception:
+            logger.exception("Demande de geste non publiée — la bouche parlera sans elle.")
+        if self._reply_interrupted():
+            with self._corps_lock:
+                self._corps_attente = None
+                self._corps_reponse = None
+            return None
+        reponse = self._attendre_corps(attente)
+        if self._reply_interrupted():
+            return None
+
+        etat = self._stage.corps_phrase(time.monotonic()) if self._stage is not None else None
+        consigne = geste_dabord.consigne_appel_2(reponse, etat)
+        logger.info("Tour de geste : %s -> %s", params, consigne)
+        return self._brain_deltas(text, _joint_direction(direction, consigne))
+
     def _speak_reply(self, text: str, *, stt_ms: float = 0.0, stt_text: str = "",
                       speech_end_at: Optional[float] = None, mute: bool = False,
                       direction: Optional[str] = None, spontaneous: bool = False,
@@ -1857,6 +1948,16 @@ class ConversationEngine:
 
         try:
             deltas = iter([replay]) if replay is not None else self._brain_deltas(text, direction)
+            if replay is None and not spontaneous:
+                # Lot S2b (§3) : « demander d'abord, parler ensuite ». La ligne GESTE de
+                # l'appel 1 est lue AVANT toute parole ; si c'en est une, la demande part au
+                # corps, et la réplique est produite par un appel 2 qui connaît sa réponse.
+                # Tour spontané : aucun geste (S1), flux inchangé. Réplique rejouée
+                # (_controlled_reply) : déjà contrôlée, flux inchangé.
+                deltas = self._tour_de_geste(deltas, text, direction)
+                if deltas is None:
+                    return self._finish_interrupted_reply(
+                        guard, stt_ms, stt_text, timing_marks, reply_started_at, speech_end_at)
             # Urgence vérifiée avant CHAQUE événement : le thread de
             # conversation ne peut pas être interrompu en plein appel bloquant
             # (attente du delta LLM suivant, synthèse TTS) — il s'arrête au
