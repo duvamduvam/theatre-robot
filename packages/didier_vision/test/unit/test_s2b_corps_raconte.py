@@ -211,3 +211,96 @@ def test_publication_en_echec_la_bouche_parle_quand_meme():
     brain = _Brain([['GESTE {"marche": "go"}\n'], ["Je crois que je bouge."]])
     moteur = _moteur(brain, on_move=_leve)
     assert _demande_geste(moteur, brain) == "Je crois que je bouge."
+
+
+# --- Revue adverse du 27/11 : le geste ne part JAMAIS deux fois ------------------------
+#
+# Le prompt interdit à l'appel 2 de remettre une clé de mouvement dans son JSON de fin,
+# mais un LLM désobéit. Sans garde, David dit « va voir le banc » UNE fois et Didier part
+# DEUX fois (ligne GESTE de l'appel 1, puis JSON de fin de l'appel 2).
+
+def test_le_json_de_fin_de_lappel_2_ne_renvoie_pas_le_geste():
+    publies = []
+    brain = _Brain([['GESTE {"aller_voir": "banc"}\n'], ["J'y vais !"]])
+    moteur = _moteur(brain, on_move=publies.append)
+    moteur.note_reponse_corps  # (attente armée par _tour_de_geste)
+
+    _demande_geste(moteur, brain, "va voir le banc")
+    assert len(publies) == 1, "le geste est parti une fois (ligne GESTE)"
+
+    # L'appel 2 répète la clé dans son JSON de fin : elle doit être IGNORÉE.
+    assert moteur._notify_move({"aller_voir": "banc"}) is False
+    assert len(publies) == 1, "le geste ne part pas une seconde fois"
+
+
+def test_un_stop_du_json_de_fin_passe_toujours_apres_un_geste():
+    """Garde non bloquante pour les arrêts : un « stop » n'est JAMAIS avalé."""
+    publies = []
+    brain = _Brain([['GESTE {"aller_voir": "banc"}\n'], ["J'y vais… non, j'arrête."]])
+    moteur = _moteur(brain, on_move=publies.append)
+
+    _demande_geste(moteur, brain, "va voir le banc")
+    # (le retour de _notify_move dit « une pause est partie », pas « l'ordre est passé » :
+    # c'est ce qui est PUBLIÉ qui fait foi.)
+    moteur._notify_move({"marche": "stop"})
+    assert any(p.get("cmd") == "stop" for p in publies), "le stop est bien parti"
+
+
+def test_le_baillon_ne_fuit_pas_sur_le_tour_suivant():
+    """Un tour de geste ne doit pas empêcher le geste du tour SUIVANT."""
+    publies = []
+    brain = _Brain([['GESTE {"aller_voir": "banc"}\n'], ["J'y vais !"]])
+    moteur = _moteur(brain, on_move=publies.append)
+    _demande_geste(moteur, brain, "va voir le banc")
+    assert moteur._geste_deja_parti is True
+
+    # Entrée d'un nouveau tour : le drapeau est remis à zéro (_speak_reply).
+    moteur._geste_deja_parti = False
+    moteur._notify_move({"aller_voir": "grue"})
+    assert len(publies) == 2, "le geste du tour suivant part normalement"
+    assert publies[-1].get("objet") == "grue"
+
+
+def test_le_drapeau_est_remis_a_zero_a_lentree_de_chaque_tour():
+    """Mutation du 27/11 : si `_geste_deja_parti` n'est pas remis à zéro à l'entrée de
+    `_speak_reply`, le premier tour de geste BÂILLONNE les gestes de TOUS les tours
+    suivants — David dirait « va voir la grue » et plus rien ne partirait.
+
+    On appelle ici le VRAI `_speak_reply` (sans audio : tts/player None, mute=True), donc
+    la ligne de remise à zéro est réellement exécutée."""
+    class _Player:
+        def drain(self):
+            pass
+
+        def play(self, *a, **k):
+            pass
+
+    class _Tts:
+        def synth(self, *a, **k):
+            return b""
+
+    class _Mic:
+        def start(self):
+            pass
+
+        def stop(self):
+            pass
+
+    publies = []
+    brain = _Brain([['GESTE {"aller_voir": "banc"}\n'], ['J\'y vais ! {"emotion": "happy"}'],
+                    ['GESTE {"aller_voir": "grue"}\n'], ['La grue ! {"emotion": "happy"}']])
+    moteur = ConversationEngine(
+        mic=_Mic(), vad=None, stt=None, brain=brain, tts=_Tts(), player=_Player(),
+        publish=lambda msg: None, on_move=publies.append, stage=None)
+
+    moteur._speak_reply("va voir le banc", mute=True)
+    gestes_t1 = [p for p in publies if p.get("cmd") == "aller_voir"]
+    assert len(gestes_t1) == 1, "tour 1 : le geste part une fois"
+
+    # Tour 2, par le même chemin : le drapeau doit avoir été remis à zéro à l'entrée.
+    moteur._speak_reply("va voir la grue", mute=True)
+    gestes_t2 = [p for p in publies if p.get("cmd") == "aller_voir"]
+    assert len(gestes_t2) == 2, (
+        "tour 2 : le geste est bâillonné — `_geste_deja_parti` n'a pas été remis à zéro "
+        "à l'entrée de _speak_reply")
+    assert gestes_t2[-1].get("objet") == "grue"

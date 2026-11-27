@@ -767,6 +767,12 @@ class ConversationEngine:
         self._corps_lock = threading.Lock()
         self._corps_attente: Optional[threading.Event] = None
         self._corps_reponse: Optional[dict] = None
+        # Lot S2b, revue adverse du 27/11 (BLOQUANT) : le geste du tour est DÉJÀ parti
+        # (ligne GESTE de l'appel 1). Le prompt interdit au JSON de fin de l'appel 2 de
+        # reporter une clé de mouvement, mais un LLM désobéit : sans cette garde, Didier
+        # partirait DEUX fois sur un seul ordre de David. Posé avant l'appel 2, levé à la
+        # fin du tour (_speak_reply, finally).
+        self._geste_deja_parti = False
         self._turn_request: Optional[str] = None
         self._turn_continuation = False
         self._turn_gesture = False
@@ -965,6 +971,19 @@ class ConversationEngine:
         toute mise en mouvement. Mêmes règles qu'un go (elle finit par une
         reprise) : jamais en tour spontané, verrou de la garde. -> True si la
         pause est partie."""
+        if self._geste_deja_parti and not spontaneous:
+            # Lot S2b (revue adverse du 27/11) : le geste de CE tour est déjà parti avec
+            # la ligne GESTE de l'appel 1 ; le JSON de fin de l'appel 2 ne doit pas le
+            # renvoyer. Sans cette garde, un LLM qui répète sa clé fait partir Didier deux
+            # fois sur un seul ordre. Le "stop" N'EST PAS concerné (jamais avalé : un
+            # arrêt doit toujours pouvoir passer).
+            demandes = [cle for cle in MOVE_KEYS if cle in params]
+            if demandes and str(params.get("marche", "")).strip().lower() != "stop":
+                logger.warning(
+                    "Geste déjà parti ce tour : clé(s) de mouvement du JSON de fin ignorée(s) "
+                    "(%s).", demandes)
+                return False
+
         if self._on_move is None or not isinstance(params, dict):
             return False
         if spontaneous:
@@ -1901,6 +1920,9 @@ class ConversationEngine:
         etat = self._stage.corps_phrase(time.monotonic()) if self._stage is not None else None
         consigne = geste_dabord.consigne_appel_2(reponse, etat)
         logger.info("Tour de geste : %s -> %s", params, consigne)
+        # Le geste de ce tour est parti : le JSON de fin de l'appel 2 ne le renverra pas
+        # (garde de _notify_move, revue adverse du 27/11). Levé en fin de tour.
+        self._geste_deja_parti = True
         return self._brain_deltas(text, _joint_direction(direction, consigne))
 
     def _speak_reply(self, text: str, *, stt_ms: float = 0.0, stt_text: str = "",
@@ -1936,6 +1958,10 @@ class ConversationEngine:
         # compte pour la latence perçue).
         reply_started_at = time.monotonic()
         timing_marks = {"first_sentence_at": None, "first_play_at": None}
+        # Lot S2b : remis à zéro à l'ENTRÉE de chaque tour (et non en sortie) — un
+        # retour anticipé, une exception ou un arrêt vocal ne peuvent donc pas le laisser
+        # posé et bâillonner les gestes du tour SUIVANT.
+        self._geste_deja_parti = False
         # Écoute garde (cf. docstring de module ÉCOUTE GARDE) : déjà armée par
         # _reply_with_stage (I3), sinon démarrée ici (tour spontané), AVANT
         # l'appel LLM. None = inactive (vrai robot) : micro coupé comme avant.
