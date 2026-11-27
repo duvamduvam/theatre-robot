@@ -1006,7 +1006,7 @@ class Selecteur:
             # `tourner_vers` (l'angle est calculé par la régie, jamais deviné ici). Après le
             # stop : la régie l'accepte comme un geste, et le pivot sur place ne rompt pas
             # l'arrêt de la lubie.
-            self._tourner_corps_vers(e.candidat.cible)
+            self._tourner_corps_vers(e.candidat.cible, now)
             self.pourquoi_courant = f"arrêté devant « {e.candidat.cible} »" + (
                 f" ; repartir ? (après {phrases.s(self.reprise['delai'])} de silence)" if self.reprise else "")
             self._publier_intention(now)
@@ -1327,15 +1327,23 @@ class Selecteur:
         self._decision_tick = Decision(c.action, c.cible, pourquoi)
         self._publier_intention(now)
 
-    def _tourner_corps_vers(self, cible) -> None:
+    def _tourner_corps_vers(self, cible, now: float) -> None:
         """Tourner le CORPS vers un objet nommé (lot S2c) : demande `tourner_vers` au
-        régisseur, qui calcule l'angle depuis sa pose. Sans objet résolu, rien n'est demandé
-        (on ne se tourne pas vers ce qu'on ne situe pas). La régie répond « deja_face » quand
-        il lui fait déjà face : aucun pivot, et ce n'est pas un échec."""
+        régisseur, qui calcule l'angle depuis sa pose. La régie répond « deja_face » quand il
+        lui fait déjà face : aucun pivot, et ce n'est pas un échec.
+
+        L'`id` du tableau est JOINT, comme pour « aller voir » : depuis le lot O1 (18/11) la
+        régie ne résout plus aucun nom, elle ne connaît que l'id (`_target`). Sans objet
+        résolu, rien n'est demandé — on ne se tourne pas vers ce qu'on ne situe pas, et un
+        geste sans id serait de toute façon refusé « unknown »."""
         if cible is None:
             return
+        objet = self.tableau(now).resoudre(cible).objet
+        if objet is None:
+            return
         self.sorties.append(("chat_move", dict(
-            commande(self.deplacements, "tourner_vers", objet=cible), origine=DIDIER)))
+            commande(self.deplacements, "tourner_vers", objet=cible, id=objet.id),
+            origine=DIDIER)))
 
     def _noter_arret_didier(self, c: Candidat, now: float) -> None:
         """Un arrêt de route causé par Didier (revue A1, point 11). Lubie : l'arrêt
