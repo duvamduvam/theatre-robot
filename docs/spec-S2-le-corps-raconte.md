@@ -123,10 +123,17 @@ Trois lignes, dans le prompt, à côté de `phrase` :
   résolution du nom) et exécute un pivot **par le chemin existant de `tourner`** (mêmes bornes,
   même corps sûr). Objet inconnu ou sans position : refus dit. Le prompt indique : « pour
   regarder un objet nommé, utilise `tourner_vers`, jamais `tourner` avec un angle deviné ».
-- **Finir face à l'objet.** `aller_voir` et `tour_de` se terminent par un pivot d'ajustement
-  vers l'objet (tolérance ±10°, pivot plafonné comme `tourner`), compté dans le même geste :
-  `arrive` n'est rendu qu'après l'ajustement. Si le corps sûr interdit le pivot (angulaire
-  aveugle non autorisé) : arrivée sans ajustement, dite dans `geste.raison`.
+- ~~**Finir face à l'objet.**~~ **SANS OBJET (28/11, vérifié dans le code et les journaux
+  du 26/11).** `aller_voir` et `tour_de` se terminent DÉJÀ par un pivot face à la cible :
+  `goto.py`, phase `FACE`, tolérance `heading_tol_rad` = 0,1 rad (±6°), plus serré que les
+  ±10° demandés ici. Le diagnostic de cette ligne était faux.
+
+  **Le vrai défaut du « banc pas cadré » (séance du 26/11)** : Didier ne s'était pas *fait*
+  aller voir le banc, il s'est arrêté DE LUI-MÊME dessus par une **lubie** (`poi_enter` →
+  `arret_didier`). Dans ce chemin, le sélecteur ne tournait que sa **tête** (sortie `look`),
+  et la caméra est fixée au **buste** : il parlait au banc de profil. Corrigé en tournant le
+  **corps** par `tourner_vers` après le stop de la lubie — avec la garde `sur_place` côté
+  régie, sans quoi ce pivot aurait **relancé** Didier (il vient justement de s'arrêter).
 
 Ce lot touche le chemin des roues (régisseur → `route_driver`) : **Opus, relecture adverse
 Fable avant fusion**, corps sûr inchangé, sim seule.
