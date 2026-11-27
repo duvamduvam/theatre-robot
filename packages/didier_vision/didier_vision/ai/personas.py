@@ -150,7 +150,7 @@ Appelle-la par son prénom, ne lui demande jamais son nom, ne fais pas comme si 
 MOVE_TEMPLATE = """
 Mouvement (répétition) : tu marches seul sur un itinéraire. Tu peux demander à repartir ou à t'arrêter en ajoutant au JSON de fin "marche": "go" ou "marche": "stop" (ex. {"emotion": "happy", "marche": "go"}).
 Ton corps a quelques gestes simples, des OUTILS que tu choisis librement selon ce qu'on te dit, et que tu enchaînes d'une réplique à l'autre : un seul geste de corps par réplique (tu peux y ajouter un regard). Les angles sont en degrés, positifs vers ta GAUCHE, négatifs vers ta droite. Tes yeux (ta caméra) sont fixés sur ton buste : tourner la tête ne te montre pas ce qu'il y a de côté ; pour VOIR de côté ou derrière toi, il faut pivoter. Tu ne sais pas reculer, et tu ne contournes rien en un seul geste.
-- "go" : quand on te demande de repartir, de reprendre ta route, de continuer, ou quand TOI tu décides que ta lubie est finie et qu'il est temps de reprendre la route.
+- "go" : quand on te demande de repartir, de reprendre ta route, de continuer.
 - "stop" : seulement quand on te demande de t'arrêter ou d'attendre, ou pour une chose qui mérite VRAIMENT que tu t'arrêtes — jamais par simple prudence ni pour commenter ce que tu vois.
 - "pause" : quand on te dit de REGARDER quelque chose (« regarde ça », « tu as vu ? », « il y a une lettre sur le banc, tu pourrais regarder ») : tu t'arrêtes un instant pour regarder, puis tu repars tout seul. Ajoute "regarder" vers la chose (0 si elle est devant toi), ex. {"emotion": "surprise", "marche": "pause", "regarder": 0}. Tu n'y vas PAS : regarder n'est pas aller voir. Une chose qu'on t'invente (une lettre, un oiseau) : joue le jeu en la regardant, sans jamais dire que tu y es allé ni que tu l'as prise.
 - "aller_voir": "<nom exact d'un objet que tu vois ou qui est autour de toi>" : quand on te demande d'ALLER voir un de ces objets ou de t'en approcher (pas pour un simple « regarde » : c'est "pause"), ou quand TOI tu veux aller le voir (ex. {"emotion": "happy", "aller_voir": "anneaux"}) : il y va, se tourne face à lui et s'arrête. Un objet qui n'est pas autour de toi (plus loin, ou que tu ne connais pas) : tu ne le trouves pas ici, dis-le en personnage (et où il est, si tu le sais), sans la clé.
@@ -163,6 +163,33 @@ Ton corps a quelques gestes simples, des OUTILS que tu choisis librement selon c
 - Quand on te dit qu'un geste n'a PAS eu lieu, tu n'as pas bougé : dis-le en personnage, ne prétends jamais l'avoir fait.
 - Sinon, n'ajoute PAS les clés "marche", "aller_voir", "faire_le_tour", "tourner", "avancer" ni "regarder". N'évoque jamais ce JSON à voix haute.
 """
+
+# Lot S2b (§4) : les trois consignes de cohérence, collées à MOVE_TEMPLATE.
+COHERENCE_TEMPLATE = """
+Ce que tu dis de ton corps (lot S2, « le corps raconte ») :
+- Ce que tu dis de ton corps et de l'endroit où tu es vient UNIQUEMENT de « Ton corps ».
+- Tu peux broder sur ce que tu ressens (« ce banc m'appelle »), jamais sur ce que tu fais.
+- Si tu roules, tu continues de rouler : ne dis pas que tu t'arrêtes, que tu contournes ou que tu recules si « Ton corps » ne le dit pas.
+"""
+MOVE_TEMPLATE += COHERENCE_TEMPLATE
+
+# Lot S2b (§3) : quand la demande de David appelle un GESTE, la bouche ne parle
+# plus avant de savoir si le corps l'accepte — la séance du 26/11 (« Ça y est, je
+# fonce vers la grue ! » sur un GO refusé par le STOP console) venait de l'ordre
+# inverse : le LLM écrivait sa réplique, la demande partait APRÈS. Appel 1 : la
+# PREMIÈRE ligne est soit `GESTE {json}` et rien d'autre, soit la réplique (tour
+# sans geste : latence inchangée, un seul appel).
+GESTE_DABORD_TEMPLATE = """
+Avant de parler (important) : si ce qu'on vient de te demander appelle un de tes gestes ("marche", "aller_voir", "faire_le_tour", "tourner", "avancer", "tourner_vers"), alors ta TOUTE PREMIÈRE ligne est exactement :
+GESTE {"<clé>": <valeur>}
+et RIEN d'autre sur cette ligne (pas de réplique, pas de didascalie). Tu ne dis rien encore : on va d'abord demander à ton corps, puis on te rendra la parole en te disant ce qu'il a répondu.
+Sinon (on te parle, on te pose une question, on ne te demande aucun déplacement), réponds normalement, sans ligne GESTE.
+"""
+
+# Appel 2 (§3) : la réponse du corps, en clair, avant que la bouche parle.
+CORPS_REPONSE_PREFIX = "Ton corps répond : "
+CORPS_CONSIGNE = (" Annonce une intention ou raconte un résultat ; ne dis jamais d'un mouvement "
+                  "qu'il est fait s'il n'est pas dans cet état.")
 
 # « Ce qui t'entoure » (lot O1, 18/11, étude docs/etudes/etude-objets-vus-et-carte.md §6.6) :
 # la section du prompt écrite depuis le TABLEAU DES OBJETS (scene/objets). Elle REMPLACE les
@@ -306,4 +333,7 @@ def compose_system_prompt(name: str, partner: Optional[str] = None,
     if move:
         # Pas de .format() : le texte contient des accolades JSON littérales.
         prompt += MOVE_TEMPLATE
+        # Lot S2b (§3) : « demander d'abord, parler ensuite ». En DERNIER, après
+        # MOVE_TEMPLATE (il s'appuie sur les clés qu'il vient de décrire).
+        prompt += GESTE_DABORD_TEMPLATE
     return prompt

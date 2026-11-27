@@ -46,9 +46,11 @@ from __future__ import annotations
 import json
 import random
 import threading
+import time
 from collections import deque
 from typing import Optional, Sequence, Tuple
 
+from theatre_contrats import corps_etat
 from theatre_contrats.objets import ARTICLES, normaliser_nom
 
 from didier_vision.ai.reflection_contract import SITUATION_TTL_S
@@ -184,6 +186,10 @@ class StageState:
         # autre machine, cf. reflection_contract).
         self._situation: Optional[str] = None
         self._situation_at_s = 0.0
+        # Lot S2b : phrase de `corps/etat` (ce que le corps fait VRAIMENT), avec son heure
+        # de réception — périmée, elle n'est pas donnée au LLM (jamais un état figé).
+        self._corps_phrase: Optional[str] = None
+        self._corps_at_s = 0.0
         # Tour spontané (topic chat_prompt) : UN seul emplacement, cf. push_prompt.
         self._prompt: Optional[str] = None
         self._prompt_at_s = 0.0
@@ -255,6 +261,28 @@ class StageState:
             if self._situation is None or now_s - self._situation_at_s > SITUATION_TTL_S:
                 return None
             return self._situation
+
+    # --- État du corps (topic corps/etat, lot S2) --------------------------
+
+    def set_corps_phrase(self, phrase: Optional[str], now_s: float) -> None:
+        """Range la phrase de `corps/etat` (theatre_contrats.corps_etat), écrite par le
+        sélecteur. Vide = rien à dire du corps."""
+        phrase = (phrase or "").strip()
+        with self._lock:
+            self._corps_phrase = phrase or None
+            self._corps_at_s = now_s
+
+    def corps_phrase(self, now_s: Optional[float] = None) -> Optional[str]:
+        """Phrase du corps en vigueur, ou None (vide, jamais reçue, ou périmée depuis plus de
+        corps_etat.PEREMPTION_S). Le sélecteur republie au plus tard toutes les 2 s : une
+        phrase qui vieillit veut dire que la source est muette — la bouche parle alors sans
+        état plutôt qu'avec un état faux (même règle que le tableau de situation)."""
+        if now_s is None:
+            now_s = time.monotonic()
+        with self._lock:
+            if self._corps_phrase is None or now_s - self._corps_at_s > corps_etat.PEREMPTION_S:
+                return None
+            return self._corps_phrase
 
     # --- Tour spontané (topic chat_prompt, metteur en scène) ---------------
 

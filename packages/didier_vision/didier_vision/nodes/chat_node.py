@@ -157,7 +157,7 @@ from theatre_contrats import stringtime, topics
 
 from dadou_utils_ros.utils_static import ANIMATION, ANIMATION_STATE, FACE
 
-from didier_vision.ai import arbitration, llm_providers, personas, reflection_contract, stage
+from didier_vision.ai import arbitration, geste_dabord, llm_providers, personas, reflection_contract, stage
 from didier_vision.ai.conversation import ConversationEngine
 from didier_vision.ai.llm_stream import StreamingBrain
 from didier_vision.ai.move_task import TASK_MAX_STEPS, MoveTask
@@ -1037,6 +1037,12 @@ class ChatNode(Node):
             self.create_subscription(
                 StringTime, reflection_contract.PROMPT_TOPIC, self._on_prompt, 10)
 
+        # Lot S2b : l'état du corps écrit par le sélecteur (corps/etat, latché) — la
+        # SEULE source de ce que la bouche dit de son corps (spec S2 §4).
+        self.create_subscription(
+            StringTime, topics.CORPS_ETAT, self._on_corps_etat,
+            QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+
         # --- Arbitrage amont (2026-07-12, cf. docstring de module POURQUOI) :
         # None = jamais reçu (topic ANIMATION_STATE absent ou robot pas encore
         # démarré) -- distinct de "" (repos), cf. didier_vision.ai.arbitration : ces
@@ -1325,6 +1331,10 @@ class ChatNode(Node):
         except (ValueError, TypeError):
             self.get_logger().warning(f"{CHAT_MOVE_REPLY_TOPIC} illisible : {ros_msg.msg!r}")
             return
+        # Lot S2b (§3) : la réponse du JEU débloque l'appel 2 (la bouche attend de savoir
+        # ce que le corps a fait avant de parler). Le chemin MoveTask ne change pas.
+        if payload.get("source") == "jeu":
+            self._engine.note_reponse_corps(payload)
         if self._move_task.on_reply(payload, time.monotonic()) is not None:
             self.get_logger().info(f"tâche : geste refusé ({payload.get('effect')}"
                                    f"/{payload.get('reason')}, {payload.get('source')})")
@@ -1333,6 +1343,19 @@ class ChatNode(Node):
         """Borne du geste resté sans réponse (MoveTask.check_ack)."""
         if self._move_task.check_ack(time.monotonic()) is not None:
             self.get_logger().warning("tâche : geste resté sans réponse, dit comme échoué")
+
+    def _on_corps_etat(self, ros_msg):
+        """`corps/etat` (lot S2) : range la PHRASE de l'état du corps dans StageState, avec
+        l'heure de réception locale (sa péremption se compte ici, cf. corps_etat.lire).
+
+        `corps_etat.decoder` prend le JSON BRUT (jeu_node publie la chaîne telle quelle) et ne
+        lève JAMAIS : un état illisible rend INCONNU, dont la phrase dit l'ignorance — la bouche
+        parle alors sans savoir, jamais avec un état faux. Fumée du 27/11 : un appel à `lire()`
+        avec un seul argument tuait le nœud chat à la première publication."""
+        phrase, lisible = geste_dabord.lire_corps_etat(ros_msg.msg)
+        if not lisible:
+            self.get_logger().warning(f"{topics.CORPS_ETAT} illisible : {ros_msg.msg!r:.200}")
+        self._stage.set_corps_phrase(phrase, time.monotonic())
 
     def _on_situation(self, ros_msg):
         """Tableau de situation (reflection_contract.SITUATION_TOPIC) : rangé

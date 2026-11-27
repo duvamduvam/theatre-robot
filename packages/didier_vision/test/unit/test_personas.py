@@ -110,13 +110,16 @@ def test_mouvement_ajoute_en_dernier_apres_le_partenaire():
     assert ('ajoutant au JSON de fin "marche": "go" ou "marche": "stop" '
             '(ex. {"emotion": "happy", "marche": "go"}).') in prompt
     assert prompt.index("Mouvement (répétition)") > prompt.index("Contexte de répétition")
-    assert prompt.endswith("N'évoque jamais ce JSON à voix haute.\n")
+    # S2b : le prompt finit par « demander d'abord, parler ensuite » (§3).
+    assert "N'évoque jamais ce JSON à voix haute." in prompt
+    assert prompt.endswith(personas.GESTE_DABORD_TEMPLATE)
 
 
 def test_mouvement_sans_partenaire_suit_la_personnalite():
     prompt = personas.compose_system_prompt("bougon", move=True)
     assert "Contexte de répétition" not in prompt
-    assert prompt.endswith(personas.PERSONAS["bougon"] + personas.MOVE_TEMPLATE)
+    assert prompt.endswith(personas.PERSONAS["bougon"] + personas.MOVE_TEMPLATE
+                           + personas.GESTE_DABORD_TEMPLATE)
 
 
 # --- Demande de réflexion (lot P4 du metteur en scène, 23/10) -------------------
@@ -164,7 +167,9 @@ def test_mouvement_apprend_la_cle_aller_voir():
     assert "Tu ne sais pas reculer, et tu ne contournes rien en un seul geste." in template
     # …mais plus l'interdit d'aller ailleurs, que la clé contredirait.
     assert "ni aller ailleurs" not in template
-    assert template.endswith("N'évoque jamais ce JSON à voix haute.\n")
+    # S2b : MOVE_TEMPLATE se poursuit par les consignes de cohérence (§4).
+    assert "N'évoque jamais ce JSON à voix haute." in template
+    assert template.endswith(personas.COHERENCE_TEMPLATE)
 
 
 # --- « Ce qui t'entoure » (lot O1, 18/11) : la section écrite depuis le tableau des objets ---
@@ -268,9 +273,8 @@ def test_mouvement_ne_dit_plus_qu_il_ne_sait_pas_tourner():
 
 
 def test_mouvement_liste_toutes_les_cles_a_ne_pas_ajouter():
-    assert personas.MOVE_TEMPLATE.endswith(
-        '- Sinon, n\'ajoute PAS les clés "marche", "aller_voir", "faire_le_tour", "tourner", "avancer" '
-        'ni "regarder". N\'évoque jamais ce JSON à voix haute.\n')
+    assert ('- Sinon, n\'ajoute PAS les clés "marche", "aller_voir", "faire_le_tour", "tourner", "avancer" '
+            'ni "regarder". N\'évoque jamais ce JSON à voix haute.') in personas.MOVE_TEMPLATE
 
 
 # --- « Faire le tour » (lot M3, 01/11, spec-aller-voir.md §8.2) ---
@@ -289,7 +293,9 @@ def test_mouvement_apprend_la_cle_faire_le_tour():
             '"faire_le_tour": "poubelle_tri"}') in template
     # L'ancien exemple « impossible » est retiré : le geste existe.
     assert "fais le tour de la flaque" not in template
-    assert template.endswith("N'évoque jamais ce JSON à voix haute.\n")
+    # S2b : MOVE_TEMPLATE se poursuit par les consignes de cohérence (§4).
+    assert "N'évoque jamais ce JSON à voix haute." in template
+    assert template.endswith(personas.COHERENCE_TEMPLATE)
 
 
 # --- Tâche en cours (lot M4, 01/11, spec-aller-voir.md §9.4) ---
@@ -305,7 +311,9 @@ def test_mouvement_tache_enchainee_jusqu_au_bout():
             "le demande.") in template
     assert "réplique après réplique" not in template
     assert "un geste à la fois" not in template
-    assert template.endswith("N'évoque jamais ce JSON à voix haute.\n")
+    # S2b : MOVE_TEMPLATE se poursuit par les consignes de cohérence (§4).
+    assert "N'évoque jamais ce JSON à voix haute." in template
+    assert template.endswith(personas.COHERENCE_TEMPLATE)
 
 
 def test_mouvement_gestes_a_la_mesure_de_la_demande():
