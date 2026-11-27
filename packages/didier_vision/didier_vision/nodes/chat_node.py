@@ -152,13 +152,12 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from theatre_interfaces.msg import StringTime
-from theatre_contrats import corps_etat
 from theatre_contrats import objets as tableau_objets
 from theatre_contrats import stringtime, topics
 
 from dadou_utils_ros.utils_static import ANIMATION, ANIMATION_STATE, FACE
 
-from didier_vision.ai import arbitration, llm_providers, personas, reflection_contract, stage
+from didier_vision.ai import arbitration, geste_dabord, llm_providers, personas, reflection_contract, stage
 from didier_vision.ai.conversation import ConversationEngine
 from didier_vision.ai.llm_stream import StreamingBrain
 from didier_vision.ai.move_task import TASK_MAX_STEPS, MoveTask
@@ -1347,20 +1346,16 @@ class ChatNode(Node):
 
     def _on_corps_etat(self, ros_msg):
         """`corps/etat` (lot S2) : range la PHRASE de l'état du corps dans StageState, avec
-        l'heure de réception locale (sa péremption se compte ici). Illisible = warning et
-        phrase effacée : la bouche parle alors sans état, jamais avec un état faux."""
-        try:
-            payload = stringtime.loads(ros_msg.msg)
-        except (ValueError, TypeError):
-            self.get_logger().warning(f"{topics.CORPS_ETAT} illisible : {ros_msg.msg!r}")
-            self._stage.set_corps_phrase(None, time.monotonic())
-            return
-        etat = corps_etat.lire(payload)
-        if etat is None:
-            self.get_logger().warning(f"{topics.CORPS_ETAT} refusé : {payload!r}")
-            self._stage.set_corps_phrase(None, time.monotonic())
-            return
-        self._stage.set_corps_phrase(etat.phrase, time.monotonic())
+        l'heure de réception locale (sa péremption se compte ici, cf. corps_etat.lire).
+
+        `corps_etat.decoder` prend le JSON BRUT (jeu_node publie la chaîne telle quelle) et ne
+        lève JAMAIS : un état illisible rend INCONNU, dont la phrase dit l'ignorance — la bouche
+        parle alors sans savoir, jamais avec un état faux. Fumée du 27/11 : un appel à `lire()`
+        avec un seul argument tuait le nœud chat à la première publication."""
+        phrase, lisible = geste_dabord.lire_corps_etat(ros_msg.msg)
+        if not lisible:
+            self.get_logger().warning(f"{topics.CORPS_ETAT} illisible : {ros_msg.msg!r:.200}")
+        self._stage.set_corps_phrase(phrase, time.monotonic())
 
     def _on_situation(self, ros_msg):
         """Tableau de situation (reflection_contract.SITUATION_TOPIC) : rangé

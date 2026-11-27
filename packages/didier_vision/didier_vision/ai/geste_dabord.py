@@ -194,3 +194,25 @@ def separe_geste_du_flux(deltas):
                     yield suite
 
     return None, _rejoue()
+
+
+# --------------------------------------------------------------------------------------
+# Lecture de `corps/etat` (§4) — PURE, donc testable sans rclpy (fumée du 27/11).
+# --------------------------------------------------------------------------------------
+
+def lire_corps_etat(brut) -> Tuple[str, bool]:
+    """JSON brut de `corps/etat` -> `(phrase à donner à la bouche, lisible)`.
+
+    POURQUOI ICI. Le 27/11, `chat_node._on_corps_etat` appelait `corps_etat.lire(payload)`
+    avec un seul argument au lieu de trois : le nœud `chat` MOURAIT à la première
+    publication, et aucun test ne l'a vu — ils lisaient la source au lieu de l'exécuter
+    (rclpy est absent hors conteneur). La logique vit donc ici, dans un module pur, et
+    `_on_corps_etat` n'est plus qu'un branchement de trois lignes.
+
+    `corps_etat.decoder` ne lève JAMAIS : un état illisible rend INCONNU, dont la phrase dit
+    l'ignorance. La bouche parle alors sans savoir, jamais avec un état faux.
+    """
+    from theatre_contrats import corps_etat
+
+    etat = corps_etat.decoder(brut)
+    return etat.phrase, etat is not corps_etat.INCONNU

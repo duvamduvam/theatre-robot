@@ -716,3 +716,41 @@ def test_chat_node_construit_son_gate_par_construire_gate():
     assert "construire_gate" in appels and "LiveAudioGate" not in appels
     source = Path(__file__).resolve().parents[2] / "didier_vision" / "nodes" / "chat_node.py"
     assert 'config["chat_mic_trusted"]' in source.read_text(encoding="utf-8")
+
+
+# --- Lot S2b, fumée du 27/11 : `corps/etat` lu pour de VRAI --------------------------
+#
+# POURQUOI. Les tests ci-dessus lisent la SOURCE (noms d'appels, chaînes). Le 27/11,
+# `_on_corps_etat` appelait `corps_etat.lire(payload)` — un argument au lieu de trois : tous
+# les tests de source restaient verts et le nœud `chat` MOURAIT (TypeError) à la première
+# publication de `corps/etat` en sim. La logique vit maintenant dans `geste_dabord`
+# (module pur, exécutable sans rclpy) et elle est testée en l'APPELANT.
+
+def test_on_corps_etat_delegue_au_module_pur_et_range_la_phrase():
+    calls = _calls_in_method(CHAT_NODE_SOURCE, "_on_corps_etat")
+    assert "geste_dabord.lire_corps_etat" in calls
+    assert "self._stage.set_corps_phrase" in calls
+    assert "self.get_logger().warning" in calls
+
+
+def test_lire_corps_etat_rend_la_phrase_dun_etat_valide():
+    from didier_vision.ai.geste_dabord import lire_corps_etat
+    from theatre_contrats import corps_etat
+
+    brut = corps_etat.encoder(corps_etat.EtatCorps(
+        corps_etat.EMPECHE, "seance_non_lancee", "david_console", None, None,
+        corps_etat.Ici(), "Tu ne peux pas bouger : la séance n'est pas lancée."), 0)
+    phrase, lisible = lire_corps_etat(brut)
+
+    assert lisible is True
+    assert "séance" in phrase
+
+
+def test_lire_corps_etat_illisible_ne_leve_jamais_et_dit_lignorance():
+    from didier_vision.ai.geste_dabord import lire_corps_etat
+    from theatre_contrats import corps_etat
+
+    for brut in ('{"pas": "un etat"}', "pas du json", "", "{}", None):
+        phrase, lisible = lire_corps_etat(brut)      # ne doit JAMAIS lever
+        assert lisible is False
+        assert phrase == corps_etat.INCONNU.phrase, "la phrase dit l'ignorance"
