@@ -256,6 +256,21 @@ def zzz(t=0.0):
     return z.rgb()
 
 
+def coche(c=VERT):
+    """Oui : une coche, lisible de loin et sans langue."""
+    z = Toile()
+    z.trait([(5, 8.5), (10, 13.5), (19.5, 2.5)], c, 2.2)
+    return z.rgb()
+
+
+def croix(c=ROUGE):
+    """Non : une croix."""
+    z = Toile()
+    z.trait([(6.5, 2.5), (17.5, 13.5)], c, 2.2)
+    z.trait([(17.5, 2.5), (6.5, 13.5)], c, 2.2)
+    return z.rgb()
+
+
 def mot(s: str, c=CYAN):
     z = Toile()
     e = 2 if len(s) <= 3 else 1
@@ -343,7 +358,8 @@ FAMILLES = [
         ("la porte", visage("etoile", porte(1))),
         ("mode ange", visage("ange", bouche_de("joie"))),
         ("mode diable", visage("diable", m.dessiner_bouche(m.replace(m.VOCABULAIRE["malice"].bouche, couleur=ROUGE)))),
-        ("oui / non / ok", visage("joie", mot("OUI", VERT))),
+        ("oui", visage("joie", coche())),
+        ("non", visage("colère", croix())),
     ]),
 ]
 

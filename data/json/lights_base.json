@@ -46,7 +46,7 @@
         "method": "rainbow_sparkle"
     },
     "sparkle_pulse": {
-         "color": "GOLD",
+        "color": "GOLD",
         "method": "sparkle_pulse"
     },
     "pulse": {
@@ -88,5 +88,41 @@
     "comet2": {
         "color": "CYAN",
         "method": "comet"
+    },
+    "pulse cyan": {
+        "color": "CYAN",
+        "method": "pulse"
+    },
+    "comet cyan": {
+        "color": "CYAN",
+        "method": "comet"
+    },
+    "sparkle cyan": {
+        "color": "CYAN",
+        "method": "sparkle"
+    },
+    "sparkle pink": {
+        "color": "PINK",
+        "method": "sparkle"
+    },
+    "pulse pink": {
+        "color": "PINK",
+        "method": "pulse"
+    },
+    "sparkle gold": {
+        "color": "GOLD",
+        "method": "sparkle"
+    },
+    "sparkle red": {
+        "color": "RED",
+        "method": "sparkle"
+    },
+    "pulse blue": {
+        "color": "BLUE",
+        "method": "pulse"
+    },
+    "chase red": {
+        "color": "RED",
+        "method": "chase"
     }
 }

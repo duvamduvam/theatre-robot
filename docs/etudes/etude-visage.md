@@ -643,26 +643,67 @@ Les noms restent (47 séquences et les touches de la télécommande les appellen
 Nouvelles, sans touche pour l'instant : `etourdi`, `ko`, `idee`, `chante`, `gros mot`, `404`,
 `batterie`, `patientez`, `boussole`, `fleche gauche / droite / haut`, `porte`, `ange`, `oui`, `non`.
 
-### 12.3 Le corps
+### 12.3 Le corps — cyan, et toujours en mouvement
 
-Le ruban du corps reste **orange** (complémentaire du cyan du visage ; décision à confirmer).
-Chaque monde a son habit, pour que visage et corps racontent la même chose :
+**Correction du 27/11** : la proposition disait « le corps reste orange ». C'était une erreur de
+ma part : l'orange est la **peinture** de la carrosserie ; le ruban de LED du corps est **déjà
+cyan** (`chase me`). Le corps garde donc le cyan, la couleur de Didier ; la carrosserie orange
+fait le contraste, et l'ambre des vraies pannes (§11.7) ressort d'autant mieux.
 
-| Animation du corps | Aujourd'hui | Devient |
-|---|---|---|
-| `default`, `default dark` | un segment orange qui tourne | inchangé (c'est la signature) |
-| `speak`, `speak dark` | pulsation | pulsation orange, calée sur le « parle » |
-| `devil` | rouge fixe | rouge qui respire lentement : le mode diable |
-| `scan`, `transfer` | arc-en-ciel puis vert / rouge | **cyan** qui balaie (la machine travaille), sans arc-en-ciel |
-| `trip`, `color cycle`, `heidi` | arc-en-ciel | gardés pour la fête et la danse : c'est le seul endroit où l'arc-en-ciel a un sens |
-| `test`, `test2` | essais | hors répertoire |
+David (27/11) : « il faut que ça puisse bouger, c'est tout l'intérêt des LED RGB ». **Aucune
+animation du répertoire n'est plus fixe** ; tout est fait en données, avec les mouvements que
+le moteur sait déjà faire (chenillard, comète, pulsation, scintillement, arc-en-ciel).
+Aperçu (approché) : [`visage/corps-animations.gif`](visage/corps-animations.gif).
 
-Règle : **l'arc-en-ciel est réservé à la fête**, l'ambre qui bat « toc-toc » aux vraies pannes
-(§11.7), le rouge au diable, le cyan à la machine, le rose à l'amour.
+| Animation du corps | Avant | Maintenant | Monde |
+|---|---|---|---|
+| `default`, `default dark` | chenillard cyan / violet | inchangé | lui |
+| `speak` | pulsation bleue | pulsation **cyan** | lui |
+| `scan`, `transfer` | arc-en-ciel puis vert / rouge | **comète cyan** puis scintillement / pulsation cyan | machine |
+| `comet` | appelée par 2 séquences, **jamais définie** | comète cyan | machine |
+| `devil` | rouge **fixe** | pulsation rouge puis chenillard rouge | quête |
+| `amour` *(nouveau)* | — | scintillement puis pulsation roses | lui |
+| `colere` *(nouveau)* | — | scintillement puis pulsation rouges | lui |
+| `ange` *(nouveau)* | — | scintillement or | quête |
+| `dodo` *(nouveau)* | — | pulsation bleue | lui |
+| `fete` *(nouveau)* | — | comète, chenillard et scintillement arc-en-ciel | lui |
+| `trip`, `color cycle`, `heidi` | arc-en-ciel | inchangés : ce sont des fêtes | lui |
+| `test`, `test2` | essais | inchangés, hors répertoire | — |
 
-### 12.4 Questions pour David
+Règle : l'arc-en-ciel est réservé à la fête, l'ambre aux vraies pannes, le rouge au diable et à
+la colère, l'or à l'ange, le rose à l'amour, le cyan à Didier et à sa machine.
 
-1. Les trois mondes : c'est bien ça, la cohérence que tu cherches ?
-2. `scooby-doo` : le fantôme, ou on retire le numéro des trois séquences de l'ancien spectacle ?
-3. Sur la planche : lesquels te font rire, lesquels sont à jeter ?
-4. Le corps reste orange ?
+⚠️ Deux séquences de l'ancien spectacle (`eternel-show/seq1.json`, `seq2.json`) appellent les
+lumières `tata` et `tutu`, qui n'existent nulle part : le robot les ignore (erreur au journal).
+Non corrigé, faute de savoir ce qu'elles devaient être.
+
+### 12.4 Décisions de David (27/11)
+
+1. Les trois mondes : **oui**, c'est la cohérence voulue.
+2. `scooby-doo` → le fantôme, **à juger sur le résultat**.
+3. Tous les pictogrammes gardés (« le design est cohérent ») ; à voir à l'usage.
+4. Le corps doit **bouger** (voir §12.3, et la correction cyan).
+
+Appliqué le 27/11 (branche `visage-coherent`) : **59 expressions** au dessin v2 — les 18
+anciennes migrées sous leur nom, 28 nouvelles — et 12 animations du corps. Oui / non sont un
+**✓ vert** et un **✗ rouge** plutôt que des mots (lisibles de loin, sans langue ; le « N » à
+3 LED de large se lisait « H »). Planche de contrôle, image par image :
+[`visage/planche-complete.png`](visage/planche-complete.png) (`planche_expressions.py`).
+
+### 12.5 Comment ils sortent
+
+David (27/11) : « à l'usage ce n'est pas clair comment ils peuvent sortir ». Aujourd'hui, une
+expression peut être déclenchée par cinq chemins ; seuls les deux premiers marchent déjà pour
+les nouvelles :
+
+| Chemin | Qui décide | Les nouvelles expressions | État |
+|---|---|---|---|
+| **Page scène** (liste des expressions) | toi, à la main | toutes, dès le déploiement : la liste est lue dans `expressions.json` | **marche** |
+| **Séquences** (`data/json/sequences`) | toi, à l'écriture | toutes ; les 47 séquences existantes prennent le nouveau dessin sans rien changer | **marche** |
+| **Conversation** : l'émotion que donne le LLM à chaque réplique, et les didascalies (`*rit*`, `*soupire*`) | Didier | aujourd'hui 6 émotions seulement (joie, colère, tristesse, surprise, amour, dégoût) ; il faudra ajouter au vocabulaire du LLM : `chante`, `idee`, `hein`, `etourdi`, `ennui`, `bisou`, `boussole`, `fleche …`, `oui`, `non`, `ange`, `diable`… | **à faire**, dans le lot de l'assainissement qui touche à la bouche et au corps (S2-S3), pas en parallèle |
+| **Événements réels** : batterie, réseau, oreille | la détection des pannes | `batterie`, `pas de reseau`, `cherche reseau`, `patientez` + la marque ambre (§11.7) | **à faire** (lot G2) |
+| **Télécommande** (touches E0-E9, G1) | toi, en jeu | les touches existantes jouent les anciens noms, donc le nouveau dessin ; affecter des touches aux nouvelles relève de l'étude UX de la télécommande | **plus tard** |
+
+Le chemin qui compte le plus pour l'impro est le troisième : c'est le LLM qui choisira, au fil
+de la conversation, « hein ? », « une idée ! » ou « c'est par là ». La flèche, en particulier,
+n'a de sens que si elle suit la direction que le passant vient de donner.

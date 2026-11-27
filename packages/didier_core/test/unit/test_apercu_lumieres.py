@@ -59,8 +59,9 @@ def test_activations_de_track_frames(tables):
     # trip : 50 s, 5 briques jusqu'à 0,2 / 0,4 / 0,6 / 0,8 / 1.
     assert activations(lumieres["trip"]) == [(0.0, "sea colorcycle"), (10000.0, "rainbow"), (20000.0, "love"),
                                              (30000.0, "rainbow_comet"), (40000.0, "rainbow_chase")]
-    # scan : rainbow « jusqu'à 0 % » -> la pulsation verte prend la main tout de suite.
-    assert activations(lumieres["scan"]) == [(0.0, "rainbow"), (0.0, "pulse green")]
+    # scan (visage v2, 27/11 : la machine travaille en cyan) : comète jusqu'à 60 % des 24 s,
+    # puis scintillement.
+    assert activations(lumieres["scan"]) == [(0.0, "comet cyan"), (14400.0, "sparkle cyan")]
 
 
 def test_demarrage_sur_default(tables):
@@ -70,15 +71,15 @@ def test_demarrage_sur_default(tables):
 def test_scan_avec_duree_de_message_puis_repos(tables):
     e = etat(tables)
     e.recevoir("scan", 8000, 2000)
-    assert vu(e, 2010) == ("scan", "pulse green", "pulse", [0, 255, 0], 10)
-    assert vu(e, 10000) == ("scan", "pulse green", "pulse", [0, 255, 0], 8000)   # 8000 ms pile : encore
+    assert vu(e, 2010) == ("scan", "comet cyan", "comet", [0, 255, 255], 10)
+    assert vu(e, 10000) == ("scan", "comet cyan", "comet", [0, 255, 255], 8000)   # 8000 ms pile : encore
     assert vu(e, 10001) == ("default", "chase me", "chase", [0, 255, 255], 1)    # échue -> repos
 
 
 def test_scan_sans_duree_suit_le_json(tables):
     e = etat(tables)
     e.recevoir("scan", 0, 0)
-    assert vu(e, 23999)[:2] == ("scan", "pulse green")
+    assert vu(e, 23999)[:2] == ("scan", "sparkle cyan")
     assert vu(e, 24001)[:2] == ("default", "chase me")
 
 
@@ -112,9 +113,9 @@ def test_luminosite_et_nom_inconnu_ne_changent_pas_l_animation(tables):
     e.recevoir("n-existe-pas", 0, 200)
     e.recevoir({"brightness": "fort"}, 0, 300)
     i = e.instant(500)
-    assert (i["sequence"], i["brique"], i["rgb"], i["luminosite"]) == ("speak", "pulse", [0, 0, 255], 0.3)
-    # speak : 500 ms au JSON, 4000 ms par le message -> la pulsation bleue tient 4 s.
-    assert vu(e, 4000)[:2] == ("speak", "pulse")
+    assert (i["sequence"], i["brique"], i["rgb"], i["luminosite"]) == ("speak", "pulse cyan", [0, 255, 255], 0.3)
+    # speak : 500 ms au JSON, 4000 ms par le message -> la pulsation cyan tient 4 s.
+    assert vu(e, 4000)[:2] == ("speak", "pulse cyan")
     assert vu(e, 4001)[:2] == ("default", "chase me")
 
 
