@@ -33,8 +33,8 @@ DOSSIER_EXCLU = "bugs"
 DOSSIERS_EXCLUS = (DOSSIER_EXCLU, contrat_bugs.DOSSIER)
 # Commandes que le régisseur accepte sur chat_move (didier_rehearsal.contracts :
 # CHAT_MOVE_GOTO_CMD, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
-# CHAT_MOVE_FORWARD_CMD) ; égalité gravée par test_repertoire.py.
-COMMANDES_REGISSEUR = ("aller_voir", "tour_de", "tourner", "avancer")
+# CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_TURN_TO_CMD) ; égalité gravée par test_repertoire.py.
+COMMANDES_REGISSEUR = ("aller_voir", "tour_de", "tourner", "avancer", "tourner_vers")
 
 
 class RepertoireError(ValueError):

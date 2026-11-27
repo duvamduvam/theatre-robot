@@ -1000,6 +1000,13 @@ class Selecteur:
                           cible=e.candidat.cible, kind="lubie", regard=regard)
             self._armer_reprise(now, f"lubie « {e.candidat.cible} »", cible=e.candidat.cible,
                                 genre=corps_etat.DIDIER_LUBIE)
+            # Lot S2c (séance du 26/11, « il n'a pas cadré le banc ») : il s'arrête DEVANT
+            # l'objet de sa lubie, mais il lui parle de profil — seule sa TÊTE était tournée
+            # (`look`), et la caméra est fixée au BUSTE. Le corps se tourne vers l'objet, par
+            # `tourner_vers` (l'angle est calculé par la régie, jamais deviné ici). Après le
+            # stop : la régie l'accepte comme un geste, et le pivot sur place ne rompt pas
+            # l'arrêt de la lubie.
+            self._tourner_corps_vers(e.candidat.cible)
             self.pourquoi_courant = f"arrêté devant « {e.candidat.cible} »" + (
                 f" ; repartir ? (après {phrases.s(self.reprise['delai'])} de silence)" if self.reprise else "")
             self._publier_intention(now)
@@ -1319,6 +1326,16 @@ class Selecteur:
         self._journal("decision", pourquoi, **payload)
         self._decision_tick = Decision(c.action, c.cible, pourquoi)
         self._publier_intention(now)
+
+    def _tourner_corps_vers(self, cible) -> None:
+        """Tourner le CORPS vers un objet nommé (lot S2c) : demande `tourner_vers` au
+        régisseur, qui calcule l'angle depuis sa pose. Sans objet résolu, rien n'est demandé
+        (on ne se tourne pas vers ce qu'on ne situe pas). La régie répond « deja_face » quand
+        il lui fait déjà face : aucun pivot, et ce n'est pas un échec."""
+        if cible is None:
+            return
+        self.sorties.append(("chat_move", dict(
+            commande(self.deplacements, "tourner_vers", objet=cible), origine=DIDIER)))
 
     def _noter_arret_didier(self, c: Candidat, now: float) -> None:
         """Un arrêt de route causé par Didier (revue A1, point 11). Lubie : l'arrêt

@@ -714,7 +714,9 @@ class DirectorNode(Node):
                     name=decision.name if decision.effect == "accepted" else None)
         if decision.effect != "accepted":
             return
-        self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TURN_TO_CMD, now)
+        # sur_place : un pivot ne relance pas Didier (cf. _accept_maneuver).
+        self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TURN_TO_CMD, now,
+                              sur_place=True)
 
     def _tour_de(self, intent: dict):
         """« Faire le tour » (lot M3) : arbitré, journalisé `tour_de`, accepté
@@ -739,12 +741,24 @@ class DirectorNode(Node):
             self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TOUR_CMD, now,
                                   target=decision.poi)
 
-    def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None):
+    def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None,
+                         sur_place: bool = False):
         """Manœuvre ACCEPTÉE (aller voir, tourner, avancer, tour) : comme un
         « go » pour ce qui retient Didier, puis l'ordre part sur route_goto.
-        `target` : POI visé s'il diffère du nom (GotoPolicy.accept)."""
+        `target` : POI visé s'il diffère du nom (GotoPolicy.accept).
+
+        `sur_place` (lot S2c) : le geste ne DÉPLACE pas Didier (« se tourner vers »). Il ne
+        lève alors NI l'arrêt vocal NI la lubie en cours — sinon Didier, qui vient justement
+        de s'arrêter devant l'objet de sa lubie pour le regarder, repartirait en se tournant
+        vers lui. L'ordre part quand même : route_driver pivote sous l'arrêt (un pivot n'est
+        pas une avance), et le fader reste maître (facteur 0 = rien ne tourne)."""
         relaunching = self.voice.relaunching
         lubie_active, in_effect = self._voice_context()
+        if sur_place:
+            # Rien n'est levé ni fermé : seul l'ordre de pivot part (fin de la méthode).
+            self.goto_policy.accept(name, target)
+            self.pub_goto.publish(StringTime(msg=order, time=0, anim=False))
+            return
         voice = self.voice.accept_goto(lubie_active=lubie_active, speed_in_effect=in_effect)
         if relaunching:
             self.log("voice_relaunch_cancelled", {"by": by})

@@ -12,6 +12,8 @@ approcher:
   metres: 1.0
 se_tourner_vers:
   cmd: tourner          # angle_deg calculé depuis l'azimut de la piste
+tourner_vers:
+  cmd: tourner_vers     # objet NOMMÉ : l'angle est calculé par la régie (lot S2c)
 aller_voir:
   cmd: aller_voir       # objet = nom de rehearsal/objects
 faire_le_tour:

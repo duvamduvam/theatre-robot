@@ -27,6 +27,12 @@ TABLEAU = Tableau((ELEPHANT_O, BANC, ANNEAUX, FLAQUE))
 # La marche publiée sur jeu/chat_move (lot S1 : elle porte son origine), écrite EN DUR.
 STOP_DAVID = {"cmd": "stop", "origine": "david"}
 STOP_DIDIER = {"cmd": "stop", "origine": "didier"}
+
+
+def PIVOT_LUBIE(cible):
+    """Lot S2c : après le stop d'une lubie, Didier tourne son CORPS vers l'objet (sa tête
+    seule ne suffit pas, la caméra est fixée au buste — séance du 26/11, banc mal cadré)."""
+    return {"cmd": "tourner_vers", "objet": cible, "origine": "didier"}
 GO_DAVID = {"cmd": "go", "origine": "david"}
 GO_DIDIER = {"cmd": "go", "origine": "didier"}
 
@@ -259,7 +265,7 @@ def test_lubie_reclamee_amorcee_puis_stop_apres_3_s():
     assert looks == [(1.3, {"angle_deg": 45.0, "hold_ms": 6000})]      # objet à (10, 10) : 45° à gauche
     intentions = [o[0] for o in out if o[1] == "intention" and o[2]["action"] == "lubie"]
     assert intentions[0] == 1.3
-    assert moves(out) == [(4.3, STOP_DIDIER)]                            # 3 s après l'intention
+    assert moves(out) == [(4.3, STOP_DIDIER), (4.3, PIVOT_LUBIE("anneaux"))]   # 3 s après l'intention
     assert [p["cible"] for _, p in journal(out, "arret_didier")] == ["anneaux"]
 
 
@@ -344,7 +350,7 @@ def test_jamais_de_go_automatique_apres_un_stop_de_david():
     # Stop de la CONSOLE (David) après une lubie : ni reprise, ni go, 300 s durant.
     out = jouer(fabriquer(), 0.0, 300.0, [(0.0, marche), (1.0, _poi("anneaux")),
                                           (10.0, lambda s, t: s.sur_console({"cmd": "stop"}, t))])
-    assert moves(out) == [(4.3, STOP_DIDIER), (10.0, STOP_DAVID)]
+    assert moves(out) == [(4.3, STOP_DIDIER), (4.3, PIVOT_LUBIE("anneaux")), (10.0, STOP_DAVID)]
 
 
 def test_go_de_didier_ne_leve_pas_un_stop_de_david():
@@ -520,7 +526,7 @@ def test_route_off_par_david_annule_la_lubie_en_attente():
     assert moves(out) == []
     out2 = jouer(fabriquer(), 0.0, 8.0, [(0.0, marche), (1.0, _poi("anneaux")),
                                          (2.0, lambda s, t: s.sur_route_cause("boot", t))])
-    assert moves(out2) == [(4.3, STOP_DIDIER)]
+    assert moves(out2) == [(4.3, STOP_DIDIER), (4.3, PIVOT_LUBIE("anneaux"))]
 
 
 # ================================================================== journal lisible et cohérent (revue point 6)
@@ -653,6 +659,7 @@ def test_demande_de_la_bouche_n_est_pas_un_arret_de_didier():
     assert [(t, p["kind"]) for t, p in journal(out, "arret_didier")] == [(33.3, "lubie")]
     assert decisions(out) == [(30.3, "lubie", "anneaux")]
     assert moves(out) == [(1.0, {"cmd": "aller_voir", "objet": "banc"}), (20.0, GO_DAVID), (33.3, STOP_DIDIER),
+                          (33.3, PIVOT_LUBIE("anneaux")),
                           (45.0, {"cmd": "avancer", "metres": 1.0})]
 
 

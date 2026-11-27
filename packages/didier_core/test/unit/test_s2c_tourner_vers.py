@@ -120,3 +120,62 @@ def test_garde_objet_pas_ici_refuse_quand_meme():
     """On ne se tourne pas vers ce qu'on ne situe pas : « inconnu » reste un refus."""
     t = tableau(3.0, 3.0)
     assert objets.garde_geste(t, {"cmd": "tourner_vers", "objet": "zzz"}).effect == "unknown"
+
+
+# ================================================================ node (rclpy simulé)
+# Banc RÉUTILISÉ de test_director_node.py / test_director_node_goto.py.
+from test.unit.test_director_node import (LUBIE, _creer, _etat_route, _journal,  # noqa: E402
+                                          _publie, _recevoir, _voix, regisseur)  # noqa: F401
+from test.unit.test_director_node_goto import _odom, _tableau  # noqa: E402
+
+
+def _tourner_vers(noeud, objet, cap_deg=0.0, x=0.0, y=0.0):
+    """Comme la bouche : le nom est résolu dans le tableau, l'id est joint."""
+    r = _tableau(noeud).resoudre(objet)
+    intent = {"cmd": "tourner_vers", "objet": objet, "origine": "david"}
+    if r.objet is not None:
+        intent["id"] = r.objet.id
+    _odom(noeud, x, y, cap_deg=cap_deg)
+    _recevoir(noeud, "rehearsal/chat_move", json.dumps(intent))
+    return intent
+
+
+def _ordres(noeud):
+    return [json.loads(m) for m in _publie(noeud, "route_goto")]
+
+
+def test_node_tourner_vers_publie_un_pivot_calcule(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _etat_route(n, "on")
+    # Didier tourne le DOS au POI (cap 180) : un vrai pivot est nécessaire.
+    _tourner_vers(n, n._pois[0].name, cap_deg=180.0)
+    journal = [p for t, p in _journal(n) if t == "tourner_vers"]
+    assert len(journal) == 1 and journal[0]["effect"] == "accepted"
+    assert "angle_deg" in journal[0]           # l'angle CALCULÉ est tracé
+    assert len(_ordres(n)) == 1 and "turn_rad" in _ordres(n)[0]
+
+
+def test_node_un_pivot_ne_RELANCE_pas_didier(regisseur, monkeypatch, tmp_path):
+    """LE risque du lot : Didier s'arrête sur sa lubie DEVANT l'objet, puis se tourne vers
+    lui. Ce pivot ne doit NI lever l'arrêt vocal NI fermer la lubie — sinon il repart."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _etat_route(n, "on")
+    _voix(n, "stop")                            # l'arrêt de la lubie
+    avant = list(_publie(n, "route_speed"))
+    _tourner_vers(n, n._pois[0].name, cap_deg=180.0)
+    # Le « cancel » du stop vocal précède ; le pivot part quand même APRÈS lui.
+    ordres = _ordres(n)
+    assert ordres[0] == "cancel" and "turn_rad" in ordres[-1]
+    # ... mais RIEN n'a été relâché : aucune nouvelle vitesse publiée.
+    assert list(_publie(n, "route_speed")) == avant
+    assert not [t for t, _p in _journal(n) if t == "voice_hold_released"]
+
+
+def test_node_tourner_vers_objet_inconnu_rien_ne_part(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _etat_route(n, "on")
+    _odom(n, 0.0, 0.0)
+    _recevoir(n, "rehearsal/chat_move",
+              json.dumps({"cmd": "tourner_vers", "objet": "zzz", "id": "carte/zzz"}))
+    assert [p["effect"] for t, p in _journal(n) if t == "tourner_vers"] == ["unknown"]
+    assert _ordres(n) == []
