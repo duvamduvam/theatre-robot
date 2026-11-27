@@ -587,3 +587,82 @@ Signatures de départ, à affiner avec David au visuel :
 | batterie basse | pixels morts de plus en plus nombreux | le ruban s'éteint par un bout |
 
 Photosensibilité : 2 battements toutes les 2 s, sous la règle des 3 flashs par seconde.
+
+## 12. Un tout cohérent : les numéros, les pictogrammes, le corps (27/11, proposé)
+
+David (27/11) : reprendre **toutes** les animations dans le nouveau dessin ; les numéros peuvent
+être totalement décalés, mais il faut une cohérence générale — Scooby-Doo l'a amusé, sans avoir
+de sens. Recherche : [`visage/sources/brut-symboles-bd-et-gags-robots.md`](visage/sources/brut-symboles-bd-et-gags-robots.md).
+Dessins : [`visage/pictos.py`](visage/pictos.py).
+
+![Propositions de pictogrammes](visage/pictos-propositions.png)
+
+### 12.1 La règle de cohérence
+
+**Tout ce qui s'affiche sur Didier vient de l'un de ses trois mondes**, et de rien d'autre :
+
+| Monde | Ce que c'est | D'où ça sort |
+|---|---|---|
+| **Lui** | ses émotions, et les symboles de bande dessinée qui les grossissent : yeux en spirale, en croix, en étoile, en cœur, note de musique, ampoule, zzz, gros mot en signes | la grammaire du manga et de la BD (lue : spirale = vertige, croix = K.O., étoiles = émerveillement, cœurs = coup de foudre) — comprise sans un mot, de loin |
+| **Sa machine** | Didier est une âme hébergée par une start-up d'éternité en faillite : mise à jour 3/47, « 404 », réseau perdu, batterie, sablier, envoi dans le nuage, l'âme qui s'échappe | l'univers des séquences existantes (`appel-eternel-life`, `upload-cerveau`, `access-internet`) et les bugs joués |
+| **Sa quête** | il cherche un endroit et les passants savent où : boussole affolée, flèches, porte, mode ange, mode diable, oui / non | le spectacle ; **la flèche montre la direction que le passant vient d'indiquer** |
+
+Un gag « décalé » est le bienvenu s'il entre dans un de ces mondes. Scooby-Doo n'entre dans aucun.
+
+**Le dessin** suit la charte du §5 (P3) : trait néon de 2 LED, une couleur par image (deux au
+plus), fond noir. Les yeux restent les yeux de Didier, ou deviennent **un symbole** (jamais une
+image). La bouche sert d'écran aux pictogrammes et aux mots courts (police de 3 × 5 LED : 6
+caractères, ou 3 en grand).
+
+Ce que la recherche ajoute et que je retiens : les petits robots les plus attachants ne le sont
+pas par leurs émotions de base mais par leurs **petites faiblesses** (le faux rhume d'EMO est cité
+comme son moment le plus touchant) et par leurs **réactions à ce qu'on leur fait** (caresse,
+approche). Pour Didier : rougir quand on s'approche, éternuer en glitch. À garder pour plus tard,
+ça demande du code.
+
+### 12.2 Ce que devient chaque ancienne expression
+
+Les noms restent (47 séquences et les touches de la télécommande les appellent).
+
+| Nom actuel | Aujourd'hui | Devient | Monde |
+|---|---|---|---|
+| `speak`, `speak loop` | bouche rayée jaune | le « parle » v2 | lui |
+| `voila` | idem | « des étoiles plein les yeux » | lui |
+| `bored` | idem | « ennui » (yeux mi-clos, regard de côté) | lui |
+| `default red`, `speak red`, `repos braise` | yeux rouges | **mode diable**, au repos et parlant (yeux à cornes) | quête |
+| `sexy` | lèvres réalistes | « bisou » (lèvres au trait, yeux en cœur) | lui |
+| `love` | cœur arc-en-ciel | « grand amour » (un cœur qui bat sur toute la bouche) | lui |
+| `brain` (séquence `upload-cerveau`) | cerveau rose | « envoi dans le nuage » (l'âme monte), yeux à auréole | machine |
+| `upgrade` | losange violet | « mise à jour 3/47 », la barre avance | machine |
+| `internet` | globe bleu | « il cherche le réseau » | machine |
+| `warning` | rond violet | triangle « attention », yeux en point d'exclamation | machine |
+| `scooby-doo` | trois personnages | **à décider** : je propose « l'âme s'échappe » (le fantôme) — c'est le seul lien qui reste avec Scooby-Doo, et il entre dans la machine | machine |
+| `fuzz`, `repos glitch`, `glitch total` | bruit dessiné | images tirées du calque de glitchs (§11), sous la règle des 3 flashs | machine |
+| `off` | noir | inchangé | — |
+
+Nouvelles, sans touche pour l'instant : `etourdi`, `ko`, `idee`, `chante`, `gros mot`, `404`,
+`batterie`, `patientez`, `boussole`, `fleche gauche / droite / haut`, `porte`, `ange`, `oui`, `non`.
+
+### 12.3 Le corps
+
+Le ruban du corps reste **orange** (complémentaire du cyan du visage ; décision à confirmer).
+Chaque monde a son habit, pour que visage et corps racontent la même chose :
+
+| Animation du corps | Aujourd'hui | Devient |
+|---|---|---|
+| `default`, `default dark` | un segment orange qui tourne | inchangé (c'est la signature) |
+| `speak`, `speak dark` | pulsation | pulsation orange, calée sur le « parle » |
+| `devil` | rouge fixe | rouge qui respire lentement : le mode diable |
+| `scan`, `transfer` | arc-en-ciel puis vert / rouge | **cyan** qui balaie (la machine travaille), sans arc-en-ciel |
+| `trip`, `color cycle`, `heidi` | arc-en-ciel | gardés pour la fête et la danse : c'est le seul endroit où l'arc-en-ciel a un sens |
+| `test`, `test2` | essais | hors répertoire |
+
+Règle : **l'arc-en-ciel est réservé à la fête**, l'ambre qui bat « toc-toc » aux vraies pannes
+(§11.7), le rouge au diable, le cyan à la machine, le rose à l'amour.
+
+### 12.4 Questions pour David
+
+1. Les trois mondes : c'est bien ça, la cohérence que tu cherches ?
+2. `scooby-doo` : le fantôme, ou on retire le numéro des trois séquences de l'ancien spectacle ?
+3. Sur la planche : lesquels te font rire, lesquels sont à jeter ?
+4. Le corps reste orange ?
