@@ -28,7 +28,8 @@
                 1.0,
                 "v2-bouche-bisou-2.png"
             ]
-        ]
+        ],
+        "corps": "amour"
     },
     "default red": {
         "loop": true,
@@ -57,7 +58,8 @@
                 1.0,
                 "v2-bouche-diable-2.png"
             ]
-        ]
+        ],
+        "corps": "devil"
     },
     "upgrade": {
         "keys": [
@@ -94,7 +96,8 @@
                 1.0,
                 "v2-bouche-maj-6.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "voila": {
         "keys": [
@@ -123,7 +126,8 @@
                 1.0,
                 "v2-bouche-etoiles-2.png"
             ]
-        ]
+        ],
+        "corps": "joie"
     },
     "bored": {
         "keys": [
@@ -156,7 +160,8 @@
                 1.0,
                 "v2-bouche-ennui.png"
             ]
-        ]
+        ],
+        "corps": "dodo"
     },
     "scooby-doo": {
         "duration": 2400,
@@ -189,7 +194,8 @@
                 1.0,
                 "v2-bouche-fantome-2.png"
             ]
-        ]
+        ],
+        "corps": "ange"
     },
     "speak": {
         "duration": 800,
@@ -249,7 +255,8 @@
                 1.0,
                 "v2-bouche-parle-moyen.png"
             ]
-        ]
+        ],
+        "corps": "parle"
     },
     "speak red": {
         "duration": 800,
@@ -297,7 +304,8 @@
                 1.0,
                 "v2-bouche-diable-parle-2.png"
             ]
-        ]
+        ],
+        "corps": "devil"
     },
     "speak loop": {
         "duration": 800,
@@ -353,7 +361,8 @@
                 1.0,
                 "v2-bouche-parle-moyen.png"
             ]
-        ]
+        ],
+        "corps": "parle"
     },
     "default": {
         "duration": 6000,
@@ -500,7 +509,8 @@
                 1.0,
                 "v2-bouche-repos.png"
             ]
-        ]
+        ],
+        "corps": "default"
     },
     "fuzz": {
         "duration": 1000,
@@ -601,7 +611,8 @@
                 1.0,
                 "v2-bouche-grand-coeur-petit.png"
             ]
-        ]
+        ],
+        "corps": "amour"
     },
     "internet": {
         "duration": 1800,
@@ -635,7 +646,8 @@
                 1.0,
                 "v2-bouche-wifi-2.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "warning": {
         "duration": 1400,
@@ -665,7 +677,8 @@
                 1.0,
                 "v2-bouche-attention-sombre.png"
             ]
-        ]
+        ],
+        "corps": "alerte"
     },
     "brain": {
         "duration": 1500,
@@ -698,7 +711,8 @@
                 1.0,
                 "v2-bouche-nuage-2.png"
             ]
-        ]
+        ],
+        "corps": "ange"
     },
     "off": {
         "duration": 5000,
@@ -865,7 +879,8 @@
                 1.0,
                 "v2-bouche-repos.png"
             ]
-        ]
+        ],
+        "corps": "default"
     },
     "repos braise": {
         "name": "repos braise",
@@ -893,7 +908,8 @@
                 1.0,
                 "v2-bouche-diable-2.png"
             ]
-        ]
+        ],
+        "corps": "devil"
     },
     "repos glitch": {
         "name": "repos glitch",
@@ -1037,7 +1053,8 @@
                 1.0,
                 "v2-bouche-joie.png"
             ]
-        ]
+        ],
+        "corps": "joie"
     },
     "colere": {
         "name": "colere",
@@ -1073,7 +1090,8 @@
                 1.0,
                 "v2-bouche-colere-gronde.png"
             ]
-        ]
+        ],
+        "corps": "colere"
     },
     "tristesse": {
         "name": "tristesse",
@@ -1161,7 +1179,8 @@
                 1.0,
                 "v2-bouche-triste.png"
             ]
-        ]
+        ],
+        "corps": "triste"
     },
     "surprise": {
         "name": "surprise",
@@ -1201,7 +1220,8 @@
                 1.0,
                 "v2-bouche-surprise-3.png"
             ]
-        ]
+        ],
+        "corps": "surprise"
     },
     "glitch total": {
         "name": "glitch total",
@@ -1321,7 +1341,8 @@
                 1.0,
                 "v2-bouche-amour.png"
             ]
-        ]
+        ],
+        "corps": "amour"
     },
     "calib": {
         "name": "calib",
@@ -1557,7 +1578,8 @@
                 1.0,
                 "v2-bouche-reflechit-cote.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "parle": {
         "name": "parle",
@@ -1613,7 +1635,8 @@
                 1.0,
                 "v2-bouche-parle-moyen.png"
             ]
-        ]
+        ],
+        "corps": "parle"
     },
     "calib-couleurs": {
         "name": "calib-couleurs",
@@ -1725,7 +1748,8 @@
                 1.0,
                 "v2-bouche-ecoute.png"
             ]
-        ]
+        ],
+        "corps": "ecoute"
     },
     "emerveille": {
         "name": "emerveille",
@@ -1761,7 +1785,8 @@
                 1.0,
                 "v2-bouche-emerveille-plus.png"
             ]
-        ]
+        ],
+        "corps": "surprise"
     },
     "malice": {
         "name": "malice",
@@ -1805,7 +1830,8 @@
                 1.0,
                 "v2-bouche-malice-plus.png"
             ]
-        ]
+        ],
+        "corps": "default"
     },
     "dodo": {
         "name": "dodo",
@@ -1833,7 +1859,8 @@
                 1.0,
                 "v2-bouche-dodo-souffle.png"
             ]
-        ]
+        ],
+        "corps": "dodo"
     },
     "etourdi": {
         "name": "etourdi",
@@ -1869,7 +1896,8 @@
                 1.0,
                 "v2-bouche-etourdi-2.png"
             ]
-        ]
+        ],
+        "corps": "surprise"
     },
     "ko": {
         "name": "ko",
@@ -1893,7 +1921,8 @@
                 1.0,
                 "v2-bouche-ko.png"
             ]
-        ]
+        ],
+        "corps": "triste"
     },
     "etoiles": {
         "name": "etoiles",
@@ -1921,7 +1950,8 @@
                 1.0,
                 "v2-bouche-etoiles-2.png"
             ]
-        ]
+        ],
+        "corps": "joie"
     },
     "idee": {
         "name": "idee",
@@ -1957,7 +1987,8 @@
                 1.0,
                 "v2-bouche-ampoule-on.png"
             ]
-        ]
+        ],
+        "corps": "ange"
     },
     "hein": {
         "name": "hein",
@@ -1981,7 +2012,8 @@
                 1.0,
                 "v2-bouche-hein.png"
             ]
-        ]
+        ],
+        "corps": "surprise"
     },
     "chante": {
         "name": "chante",
@@ -2009,7 +2041,8 @@
                 1.0,
                 "v2-bouche-note-2.png"
             ]
-        ]
+        ],
+        "corps": "joie"
     },
     "ennui": {
         "name": "ennui",
@@ -2041,7 +2074,8 @@
                 1.0,
                 "v2-bouche-ennui.png"
             ]
-        ]
+        ],
+        "corps": "dodo"
     },
     "bisou": {
         "name": "bisou",
@@ -2069,7 +2103,8 @@
                 1.0,
                 "v2-bouche-bisou-2.png"
             ]
-        ]
+        ],
+        "corps": "amour"
     },
     "grand amour": {
         "name": "grand amour",
@@ -2129,7 +2164,8 @@
                 1.0,
                 "v2-bouche-grand-coeur-petit.png"
             ]
-        ]
+        ],
+        "corps": "amour"
     },
     "gros mot": {
         "name": "gros mot",
@@ -2157,7 +2193,8 @@
                 1.0,
                 "v2-bouche-gros-mot-moue.png"
             ]
-        ]
+        ],
+        "corps": "colere"
     },
     "zzz": {
         "name": "zzz",
@@ -2189,7 +2226,8 @@
                 1.0,
                 "v2-bouche-zzz-2.png"
             ]
-        ]
+        ],
+        "corps": "dodo"
     },
     "mise a jour": {
         "name": "mise a jour",
@@ -2225,7 +2263,8 @@
                 1.0,
                 "v2-bouche-maj-6.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "404": {
         "name": "404",
@@ -2253,7 +2292,8 @@
                 1.0,
                 "v2-bouche-404-noir.png"
             ]
-        ]
+        ],
+        "corps": "alerte"
     },
     "pas de reseau": {
         "name": "pas de reseau",
@@ -2277,7 +2317,8 @@
                 1.0,
                 "v2-bouche-wifi-barre.png"
             ]
-        ]
+        ],
+        "corps": "alerte"
     },
     "cherche reseau": {
         "name": "cherche reseau",
@@ -2309,7 +2350,8 @@
                 1.0,
                 "v2-bouche-wifi-2.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "batterie": {
         "name": "batterie",
@@ -2337,7 +2379,8 @@
                 1.0,
                 "v2-bouche-batterie-vide.png"
             ]
-        ]
+        ],
+        "corps": "triste"
     },
     "patientez": {
         "name": "patientez",
@@ -2373,7 +2416,8 @@
                 1.0,
                 "v2-bouche-sablier-3.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "nuage": {
         "name": "nuage",
@@ -2405,7 +2449,8 @@
                 1.0,
                 "v2-bouche-nuage-2.png"
             ]
-        ]
+        ],
+        "corps": "ange"
     },
     "attention": {
         "name": "attention",
@@ -2433,7 +2478,8 @@
                 1.0,
                 "v2-bouche-attention-sombre.png"
             ]
-        ]
+        ],
+        "corps": "alerte"
     },
     "fantome": {
         "name": "fantome",
@@ -2465,7 +2511,8 @@
                 1.0,
                 "v2-bouche-fantome-2.png"
             ]
-        ]
+        ],
+        "corps": "ange"
     },
     "boussole": {
         "name": "boussole",
@@ -2505,7 +2552,8 @@
                 1.0,
                 "v2-bouche-boussole-4.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "fleche droite": {
         "name": "fleche droite",
@@ -2533,7 +2581,8 @@
                 1.0,
                 "v2-bouche-vide.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "fleche gauche": {
         "name": "fleche gauche",
@@ -2561,7 +2610,8 @@
                 1.0,
                 "v2-bouche-vide.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "tout droit": {
         "name": "tout droit",
@@ -2589,7 +2639,8 @@
                 1.0,
                 "v2-bouche-vide.png"
             ]
-        ]
+        ],
+        "corps": "comet"
     },
     "porte": {
         "name": "porte",
@@ -2617,7 +2668,8 @@
                 1.0,
                 "v2-bouche-porte-ouverte.png"
             ]
-        ]
+        ],
+        "corps": "ange"
     },
     "ange": {
         "name": "ange",
@@ -2645,7 +2697,8 @@
                 1.0,
                 "v2-bouche-ange-2.png"
             ]
-        ]
+        ],
+        "corps": "ange"
     },
     "diable": {
         "name": "diable",
@@ -2673,7 +2726,8 @@
                 1.0,
                 "v2-bouche-diable-2.png"
             ]
-        ]
+        ],
+        "corps": "devil"
     },
     "oui": {
         "name": "oui",
@@ -2697,7 +2751,8 @@
                 1.0,
                 "v2-bouche-signe-oui.png"
             ]
-        ]
+        ],
+        "corps": "joie"
     },
     "non": {
         "name": "non",
@@ -2721,6 +2776,7 @@
                 1.0,
                 "v2-bouche-signe-non.png"
             ]
-        ]
+        ],
+        "corps": "colere"
     }
 }

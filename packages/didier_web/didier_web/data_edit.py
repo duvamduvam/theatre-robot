@@ -48,7 +48,7 @@ CLES_AUTORISEES = {
                  "left_arm", "left_eye", "lights", "loop", "neck", "right_arm", "right_eye",
                  "robot_lights", "types", "wheels"),
     "expression": ("name", "follow audio", "loop", "keys", "duration", "left_eyes", "right_eyes",
-                   "mouths", "default"),
+                   "mouths", "default", "corps"),
     "lumiere": ("loop", "duration", "keys", "sequences", "default"),
     "brique": ("method", "color", "speed", "period", "max_intensity", "min_intensity"),
 }

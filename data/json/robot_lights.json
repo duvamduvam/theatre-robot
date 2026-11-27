@@ -193,5 +193,54 @@
             "sparkle red": 0.5,
             "pulse red": 1
         }
+    },
+    "parle": {
+        "keys": [],
+        "loop": true,
+        "duration": 4000,
+        "sequences": {
+            "pulse cyan": 1
+        }
+    },
+    "joie": {
+        "keys": [],
+        "loop": true,
+        "duration": 3000,
+        "sequences": {
+            "sparkle cyan": 0.5,
+            "chase me": 1
+        }
+    },
+    "triste": {
+        "keys": [],
+        "loop": true,
+        "duration": 6000,
+        "sequences": {
+            "pulse blue": 1
+        }
+    },
+    "surprise": {
+        "keys": [],
+        "loop": true,
+        "duration": 2000,
+        "sequences": {
+            "sparkle cyan": 1
+        }
+    },
+    "ecoute": {
+        "keys": [],
+        "loop": true,
+        "duration": 4000,
+        "sequences": {
+            "pulse green": 1
+        }
+    },
+    "alerte": {
+        "keys": [],
+        "loop": true,
+        "duration": 3000,
+        "sequences": {
+            "sparkle red": 1
+        }
     }
 }

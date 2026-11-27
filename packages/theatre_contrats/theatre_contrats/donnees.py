@@ -362,6 +362,11 @@ def verifier_expression(nom, expression, references):
                 continue
             precedent = _verifier_temps(ou, keyframe, precedent, erreurs)
             _verifier_visuel(ou, zone, keyframe[1], references, erreurs)
+    # `corps` (facultatif) : la lumière du corps liée à l'expression (theatre_contrats.lumiere_visage).
+    if "corps" in expression:
+        corps = expression["corps"]
+        if not isinstance(corps, str) or corps not in references["robot_lights"]:
+            erreurs.append("{} : champ 'corps' : lumière inconnue de robot_lights.json : {!r}".format(nom, corps))
     return erreurs
 
 

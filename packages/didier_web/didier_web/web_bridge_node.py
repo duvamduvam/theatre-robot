@@ -78,6 +78,7 @@ from didier_web.tickets import PareRafale, construire_ticket, nom_fichier
 STATE_PERIOD_S = 2.0  # cadence de diffusion du message "state" à tous les clients
 # Topic de l'aperçu des bandes LED (lot I0) : littéral de la whitelist (WHITELIST_SPECTACLE).
 ROBOT_LIGHTS_TOPIC = "robot_lights"
+FACE_TOPIC = "face"
 # Relecture de l'aperçu : 10 Hz, ne pousse qu'au changement (quelques messages par bug).
 LUMIERES_PERIOD_S = 0.1
 
@@ -349,6 +350,9 @@ class WebBridgeNode(Node):
                 if topic == ROBOT_LIGHTS_TOPIC:
                     # msg.time compte : il remplace la durée de l'entrée (fin -> repos).
                     self.apercu_lumieres.recevoir(value, msg.time, _maintenant_ms())
+                elif topic == FACE_TOPIC:
+                    # Le corps suit le visage (même règle que lights_node, étude visage §12.6).
+                    self.apercu_lumieres.recevoir_visage(value, msg.time, _maintenant_ms())
         return _on_message
 
     def instant_lumieres(self) -> dict:

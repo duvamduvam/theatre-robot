@@ -36,6 +36,45 @@ def vu(e, now):
     return (i["sequence"], i["brique"], i["methode"], i["rgb"], i["depuis_ms"])
 
 
+def corps(apercu, now):
+    return apercu.instant(now)["sequence"]
+
+
+def test_le_corps_suit_le_visage_sur_les_vraies_donnees():
+    """Étude visage §12.6 : la même règle que lights_node (theatre_contrats.lumiere_visage)."""
+    a = Apercu(JSON, 0)
+    assert corps(a, 10) == "default"
+    a.recevoir_visage("colere", 0, 100)
+    assert corps(a, 200) == "colere"
+    a.recevoir_visage("parle", 0, 300)
+    assert corps(a, 400) == "parle"
+    a.recevoir_visage("stop", 0, 500)
+    assert corps(a, 600) == "default"
+
+
+def test_commande_explicite_gagne_puis_rend_le_corps_au_visage():
+    a = Apercu(JSON, 0)
+    a.recevoir_visage("amour neon", 0, 100)
+    a.recevoir("scan", 0, 200)                # scan : 24 s, non bouclée
+    a.recevoir_visage("joie", 0, 300)         # le visage change : le corps reste sur scan
+    assert corps(a, 400) == "scan"
+    assert corps(a, 200 + 24001) == "joie"    # scan fini -> le corps reprend le visage
+
+
+def test_fin_d_une_expression_non_bouclee_rend_le_corps_au_repos():
+    a = Apercu(JSON, 0)
+    a.recevoir_visage("surprise", 0, 100)     # surprise : 2500 ms, non bouclée
+    assert corps(a, 200) == "surprise"
+    assert corps(a, 100 + 2501) == "default"
+
+
+def test_expression_sans_corps_ne_touche_pas_au_corps():
+    a = Apercu(JSON, 0)
+    a.recevoir_visage("joie", 0, 100)
+    a.recevoir_visage("glitch total", 0, 200)  # pas de champ corps : les bugs posent leurs lumières
+    assert corps(a, 300) == "default"          # le visage tenait le corps : il le rend au repos
+
+
 def test_bandes_gravees():
     # La zone « corps » du ruban : LIGHTS_START_LED 513 -> LIGHTS_END_LED 673 (robot_config).
     from didier_core.robot_config import config

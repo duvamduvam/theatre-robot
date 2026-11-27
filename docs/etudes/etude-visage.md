@@ -707,3 +707,45 @@ les nouvelles :
 Le chemin qui compte le plus pour l'impro est le troisième : c'est le LLM qui choisira, au fil
 de la conversation, « hein ? », « une idée ! » ou « c'est par là ». La flèche, en particulier,
 n'a de sens que si elle suit la direction que le passant vient de donner.
+
+### 12.6 Le corps suit l'émotion (27/11)
+
+David (27/11) : « ajuste les LED du corps en fonction des émotions ». Jusqu'ici la conversation
+n'envoyait que le visage : le corps restait sur son chenillard quoi que Didier ressente.
+
+**Règle**, écrite une seule fois dans `theatre_contrats/lumiere_visage.py` et appliquée à
+l'identique par le robot (`lights_node`) et par l'aperçu de la page scène :
+
+1. une **commande explicite** du corps (séquence, page, télécommande) garde la main jusqu'à ce
+   qu'elle revienne au repos ; elle rend ensuite le corps au visage en cours ;
+2. sinon le corps prend la lumière **liée à l'expression** : le champ `corps` de
+   `expressions.json` (contrôlé par le contrat : il doit nommer une entrée de `robot_lights.json`) ;
+3. une expression sans `corps` rend le corps au repos s'il était tenu par le visage. Les glitchs
+   et l'écran noir n'en ont pas : les bugs joués posent leurs propres lumières.
+
+Les lumières liées **bouclent toutes** : une lumière courte (`speak` dure 500 ms) se serait éteinte
+pendant que Didier parle encore. D'où six entrées dédiées : `joie` (scintillement et chenillard
+cyan), `parle` (pulsation cyan), `ecoute` (pulsation verte), `surprise` (scintillement cyan),
+`triste` (pulsation bleue), `alerte` (scintillement rouge).
+
+| Expressions | Corps |
+|---|---|
+| repos, malice | `default` (chenillard cyan) |
+| joie, étoiles, chante, oui | `joie` |
+| parle (et `speak`) · écoute · réfléchit | `parle` · `ecoute` · `comet` |
+| colère, gros mot, non | `colere` |
+| tristesse, K.O., batterie | `triste` |
+| surprise, étourdi, hein, émerveillé | `surprise` |
+| amour, bisou, grand amour | `amour` |
+| dodo, zzz, ennui | `dodo` |
+| idée, ange, porte, nuage, fantôme | `ange` (scintillement or) |
+| mise à jour, cherche réseau, patientez, boussole, flèches | `comet` (la machine travaille) |
+| 404, pas de réseau, attention | `alerte` |
+| diable (et `default red`, `speak red`, `repos braise`) | `devil` |
+
+La table vit dans `generer_visuels.py` (`CORPS`), source unique ; aperçu des animations :
+[`visage/corps-animations.gif`](visage/corps-animations.gif).
+
+Tests : l'arbitre (10 cas), le contrat (corps connu / inconnu), le visage (champ et compteur),
+l'aperçu sur les vraies données (suivre, priorité de la commande, fin d'une expression non
+bouclée). Contrôle : supprimer la priorité de la commande explicite fait rougir 3 tests.

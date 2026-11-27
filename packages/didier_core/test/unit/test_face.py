@@ -143,6 +143,22 @@ def test_update_stop_revient_au_default(json_manager):
     assert face.current_face == "default"
 
 
+def test_corps_et_compteur_suivent_l_expression(json_manager):
+    """Le champ `corps` de l'expression en cours est exposé, et chaque VRAI changement
+    d'expression incrémente le compteur lu par lights_node (étude visage §12.6)."""
+    face = make_face(json_manager, FakeStrip())
+    depart = face.changements
+    face.update({FACE: "calib"})          # les mires n'ont pas de corps
+    assert face.corps is None
+    assert face.changements == depart + 1
+    face.update({FACE: "calib"})          # même expression : chrono relancé, pas un changement
+    assert face.changements == depart + 1
+    face.update({FACE: "stop"})
+    assert face.current_face == "default"
+    assert face.corps == "default"
+    assert face.changements == depart + 2
+
+
 # --- e) expression inconnue : pas d'exception, strip inchangé ---
 
 def test_expression_inconnue_ne_change_rien(json_manager):

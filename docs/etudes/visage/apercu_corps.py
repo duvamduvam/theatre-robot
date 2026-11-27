@@ -19,7 +19,8 @@ import maquette_visage as m
 R = m.RACINE
 ICI = Path(__file__).resolve().parent
 N, IPS = 40, 20
-NOMS = ["default", "speak", "scan", "transfer", "comet", "amour", "ange", "colere", "devil", "dodo", "fete", "trip"]
+NOMS = ["default", "joie", "parle", "ecoute", "surprise", "triste", "amour", "colere", "alerte", "comet", "ange", "devil",
+        "dodo", "fete", "scan", "transfer", "speak", "trip"]
 
 
 def couleurs():
@@ -83,9 +84,9 @@ def main():
     images, duree = [], 8.0
     for k in range(int(duree * IPS)):
         t = k / IPS
-        im = Image.new("RGB", (6 * 250, 2 * 120 + 30), (26, 26, 26))
+        im = Image.new("RGB", (6 * 250, 3 * 120 + 30), (26, 26, 26))
         d = ImageDraw.Draw(im)
-        d.text((8, 6), "Corps (approximation) — 12 animations, 40 LED en anneau", fill=(255, 255, 255), font=m.POLICE)
+        d.text((8, 6), "Corps (approximation) — animations du corps, 40 LED en anneau", fill=(255, 255, 255), font=m.POLICE)
         for j, nom in enumerate(NOMS):
             e = lum[nom]
             b = brique_a(e, t * 1000)

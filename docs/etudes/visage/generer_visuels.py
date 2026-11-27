@@ -466,6 +466,33 @@ ANIMATIONS.update({
 })
 
 
+
+# Le corps suit l'émotion (David, 27/11 ; étude §12.6) : champ `corps` de chaque expression,
+# nom d'une entrée BOUCLÉE de robot_lights.json. Absent = le corps n'est pas touché (mires,
+# glitchs et écran noir : les bugs joués posent leurs propres lumières).
+CORPS = {
+    "default": "default", "repos neon": "default",
+    # lui
+    "joie": "joie", "etoiles": "joie", "voila": "joie", "chante": "joie", "oui": "joie",
+    "colere": "colere", "gros mot": "colere", "non": "colere",
+    "tristesse": "triste", "ko": "triste", "batterie": "triste",
+    "surprise": "surprise", "etourdi": "surprise", "hein": "surprise", "emerveille": "surprise",
+    "amour neon": "amour", "love": "amour", "grand amour": "amour", "bisou": "amour", "sexy": "amour",
+    "malice": "default", "dodo": "dodo", "zzz": "dodo", "ennui": "dodo", "bored": "dodo",
+    "idee": "ange",
+    # conversation
+    "ecoute": "ecoute", "reflechit": "comet", "parle": "parle", "speak": "parle", "speak loop": "parle",
+    # machine
+    "mise a jour": "comet", "upgrade": "comet", "cherche reseau": "comet", "internet": "comet",
+    "patientez": "comet", "nuage": "ange", "brain": "ange",
+    "404": "alerte", "pas de reseau": "alerte", "attention": "alerte", "warning": "alerte",
+    "fantome": "ange", "scooby-doo": "ange",
+    # quête
+    "boussole": "comet", "fleche droite": "comet", "fleche gauche": "comet", "tout droit": "comet",
+    "porte": "ange", "ange": "ange",
+    "diable": "devil", "default red": "devil", "repos braise": "devil", "speak red": "devil",
+}
+
 def ecrire_png(chemin: Path, rgb) -> None:
     Image.fromarray(rgb, "RGB").save(chemin, optimize=True)
 
@@ -476,6 +503,8 @@ def main() -> None:
         pistes = fabrique()
         entree = catalogue.get(nom, {"name": nom, "keys": []})
         entree.update(pistes)  # garde keys, default, follow audio…
+        if nom in CORPS:
+            entree["corps"] = CORPS[nom]
         catalogue[nom] = entree
     for nom, (zone, objet, miroir) in IMAGES.items():
         if zone.endswith("-brut"):  # picto, œil-symbole ou glitch : déjà une image

@@ -42,6 +42,10 @@ class Face(AbstractJsonActions):
     start_time = 0
 
     current_face = ""
+    # Lumière du corps liée à l'expression en cours (champ `corps`, étude visage §12.6) et
+    # compteur de changements d'expression : lights_node les lit à chaque tick.
+    corps = None
+    changements = 0
 
     def __init__(self, config, json_manager,  strip):
         super().__init__(config=config, json_manager=json_manager, json_file=config[JSON_EXPRESSIONS], action_type=FACE)
@@ -119,6 +123,8 @@ class Face(AbstractJsonActions):
             return msg
 
         self.current_face = json_seq[NAME]
+        self.corps = json_seq.get("corps")
+        self.changements += 1
 
         logging.info("update face sequences : " + json_seq[NAME])
 

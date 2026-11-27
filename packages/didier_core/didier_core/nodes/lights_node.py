@@ -11,6 +11,7 @@ from rclpy.node import Node
 import time
 from theatre_interfaces.msg._string_time import StringTime
 from theatre_contrats import donnees, qos, topics
+from theatre_contrats.lumiere_visage import CorpsSuitVisage
 
 
 from dadou_utils_ros.misc import Misc
@@ -65,6 +66,10 @@ class LightsNode(Node):
         self.data_edit_subscription = self.create_subscription(
             StringTime, topics.DATA_EDIT_RESULT, self.data_edit_callback, qos.volatile(10))
 
+        # Le corps suit l'émotion du visage, sauf commande explicite (étude visage §12.6).
+        self.corps_visage = CorpsSuitVisage(repos=self.lights.default)
+        self.changements_visage_vus = self.face.changements
+        self.corps_visage.visage(self.face.corps)
         self.timer = self.create_timer(TICK_PERIOD_S, self.timer_callback)
 
     def data_edit_callback(self, ros_msg):
@@ -91,7 +96,22 @@ class LightsNode(Node):
             return
         duration = ros_msg.time
         logging.info('Lights: "%s"' % msg)
+        self.corps_visage.commande(msg)
         self.lights.update({ROBOT_LIGHTS: msg, DURATION: duration})
+
+    def suivre_visage(self):
+        """Applique la règle de theatre_contrats.lumiere_visage : la commande explicite finie
+        (le ruban est revenu au repos) rend le corps au visage ; un changement d'expression
+        (message, ou retour seul de Face au repos) pose la lumière liée."""
+        jouer = None
+        if self.corps_visage.explicite and self.lights.courante == self.lights.default:
+            jouer = self.corps_visage.fin_commande()
+        if self.face.changements != self.changements_visage_vus:
+            self.changements_visage_vus = self.face.changements
+            jouer = self.corps_visage.visage(self.face.corps) or jouer
+        if jouer:
+            logging.info("le corps suit le visage : %s", jouer)
+            self.lights.update({ROBOT_LIGHTS: jouer, DURATION: 0})
 
     def generic_callback(self, lights_type, ros_msg):
         msg = decode(ros_msg, lights_type)
@@ -107,6 +127,7 @@ class LightsNode(Node):
         try:
             self.face.process()
             self.lights.process()
+            self.suivre_visage()
         except Exception as e:
             logging.error(e, exc_info=True)
 
