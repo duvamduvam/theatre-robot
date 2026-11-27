@@ -273,8 +273,21 @@ def test_mouvement_ne_dit_plus_qu_il_ne_sait_pas_tourner():
 
 
 def test_mouvement_liste_toutes_les_cles_a_ne_pas_ajouter():
-    assert ('- Sinon, n\'ajoute PAS les clés "marche", "aller_voir", "faire_le_tour", "tourner", "avancer" '
-            'ni "regarder". N\'évoque jamais ce JSON à voix haute.') in personas.MOVE_TEMPLATE
+    assert ('- Sinon, n\'ajoute PAS les clés "marche", "aller_voir", "faire_le_tour", "tourner_vers", '
+            '"tourner", "avancer" ni "regarder". N\'évoque jamais ce JSON à voix haute.'
+            ) in personas.MOVE_TEMPLATE
+
+
+def test_la_liste_des_cles_a_ne_pas_ajouter_est_EXHAUSTIVE():
+    """Garde-fou : toute clé de mouvement comprise par la bouche (conversation.MOVE_KEYS)
+    doit figurer dans cette phrase du prompt — sinon le LLM l'ajoute à un tour spontané."""
+    from didier_vision.ai.conversation import MOVE_KEYS
+
+    lignes = [l for l in personas.MOVE_TEMPLATE.splitlines()
+              if l.startswith("- Sinon, n'ajoute PAS")]
+    assert len(lignes) == 1
+    for cle in MOVE_KEYS:
+        assert '"%s"' % cle in lignes[0], 'clé %r absente de la liste du prompt' % cle
 
 
 # --- « Faire le tour » (lot M3, 01/11, spec-aller-voir.md §8.2) ---

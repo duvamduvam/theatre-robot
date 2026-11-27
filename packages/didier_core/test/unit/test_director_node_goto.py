@@ -12,6 +12,7 @@ Revue M1 (31/10) :
   - lubie de la cible non sautée -> test_lubie_de_la_cible_sautee_pendant_la_manoeuvre
 """
 import json
+import math
 import types
 
 import pytest
@@ -27,10 +28,15 @@ from test.unit.test_director_node import (BATTERIE, LUBIE, _cmd, _creer, _echos,
 ORDRE_BANC = {"name": "banc", "x": 5.0, "y": 0.0, "standoff": 2.9}
 
 
-def _odom(noeud, x, y, t=None):
+def _odom(noeud, x, y, t=None, cap_deg=0.0):
+    """Odométrie du banc. `cap_deg` (lot S2c) : le CAP, que la vraie Odometry porte toujours
+    (quaternion) et dont « se tourner vers » a besoin — le banc l'omettait."""
     if t is not None:
         noeud.horloge.t = t
-    pose = types.SimpleNamespace(position=types.SimpleNamespace(x=x, y=y, z=0.0))
+    demi = math.radians(cap_deg) / 2.0
+    pose = types.SimpleNamespace(
+        position=types.SimpleNamespace(x=x, y=y, z=0.0),
+        orientation=types.SimpleNamespace(x=0.0, y=0.0, z=math.sin(demi), w=math.cos(demi)))
     _qos, callback = noeud.abonnements["ground_truth/odom"]
     callback(types.SimpleNamespace(pose=types.SimpleNamespace(pose=pose)))
 

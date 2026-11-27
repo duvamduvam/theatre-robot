@@ -130,20 +130,20 @@ from theatre_contrats import stringtime, topics
 from didier_core.diagnostic.journal import JournalWriter, make_event
 from didier_corps_sur.reglages import ReglagesError, charger_reglages
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD, lire_chat_move,
-                                       CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
+                                       CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD, CHAT_MOVE_TURN_TO_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC, JOURNAL_TOPIC,
                                        OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
                                        RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_GOTO_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
 from didier_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
-                                      decide_forward, decide_goto, decide_tour, decide_turn, fader_moved,
+                                      decide_forward, decide_goto, decide_tour, decide_turn, decide_turn_to, fader_moved,
                                       garde_corps_sur_m, goto_order,
                                       messages, move_reply, objects_payload, poi_name_of,
                                       route_cmd_kind, speed_factor, speed_in_effect)
 from didier_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from didier_rehearsal.rehearsal_state import rehearsal_state
-from didier_rehearsal.route import RouteConfig, RouteError, load_route, load_tours, tours_path
+from didier_rehearsal.route import RouteConfig, RouteError, load_route, load_tours, tours_path, yaw_from_quaternion
 from didier_rehearsal.scenario import ScenarioError, load_scenario
 
 
@@ -444,8 +444,10 @@ class DirectorNode(Node):
         return self._tableau
 
     def _on_odom(self, msg):
-        p = msg.pose.pose.position
-        self._pose = (p.x, p.y, time.monotonic())
+        p, q = msg.pose.pose.position, msg.pose.pose.orientation
+        # Le CAP est gardé depuis S2c (« se tourner vers ») : c'est la seule décision qui en a
+        # besoin. Les autres lisent _fresh_pose (x, y) et ne changent pas.
+        self._pose = (p.x, p.y, time.monotonic(), yaw_from_quaternion(q.x, q.y, q.z, q.w))
 
     def _on_route_speed(self, msg: StringTime):
         """route_speed vu sur le topic. NOS publications (speed, lubie) sont
@@ -527,7 +529,8 @@ class DirectorNode(Node):
             raw = msg.msg.strip()
             cmd, origine = lire_chat_move(stringtime.decode_or_raw(raw, CHAT_MOVE_TOPIC))
             gestes = {CHAT_MOVE_GOTO_CMD: self._aller_voir, CHAT_MOVE_TURN_CMD: self._geste,
-                      CHAT_MOVE_FORWARD_CMD: self._geste, CHAT_MOVE_TOUR_CMD: self._tour_de}
+                      CHAT_MOVE_FORWARD_CMD: self._geste, CHAT_MOVE_TOUR_CMD: self._tour_de,
+                      CHAT_MOVE_TURN_TO_CMD: self._tourner_vers}
             geste = gestes.get(cmd.get("cmd")) if isinstance(cmd, dict) else None
             if geste is not None:
                 if not self._geste_refuse(cmd, origine):
@@ -626,6 +629,13 @@ class DirectorNode(Node):
             return self._pose[:2]
         return None
 
+    def _fresh_pose_cap(self, now: float):
+        """(x, y, cap_rad) sous la MÊME fraîcheur que _fresh_pose, sinon None (lot S2c) :
+        « se tourner vers » calcule son angle, il ne le devine jamais sans cap frais."""
+        if self._pose is not None and (now - self._pose[2]) * 1000.0 <= RouteConfig.odom_timeout_ms:
+            return (self._pose[0], self._pose[1], self._pose[3])
+        return None
+
     def _off_by_david(self) -> bool:
         return self.goto_policy.off_by_david(self.reenable.latched_state, self.reenable.cause,
                                              self.reenable.off_by_cmd)
@@ -681,6 +691,30 @@ class DirectorNode(Node):
                     name=decision.name if decision.effect == "accepted" else None)
         if decision.effect == "accepted":
             self._accept_maneuver(decision.name, decision.order, kind, now)
+
+    def _tourner_vers(self, intent: dict):
+        """« Se tourner vers <objet> » (lot S2c) : l'angle est CALCULÉ ici depuis la pose et la
+        position de l'objet, jamais lu dans l'intention — le LLM nomme, il ne devine plus
+        (séance du 25/11 : « regarde l'éléphant à droite » -> pivot fixe de −90°). Exécuté par
+        le chemin EXISTANT de « tourner » : mêmes bornes, même corps sûr, même route_goto."""
+        now = time.monotonic()
+        decision = decide_turn_to(intent, tableau=self._tableau_frais(now),
+                                  pose=self._fresh_pose_cap(now), off_by_david=self._off_by_david())
+        # Champs du CONTRAT seulement (le producteur est un LLM).
+        payload = {k: intent[k] for k in ("objet", "id") if k in intent}
+        payload["effect"] = decision.effect
+        if decision.angle_deg is not None:
+            payload["angle_deg"] = decision.angle_deg
+        if decision.objet is not None:
+            payload["name"] = decision.objet.nom
+        self.log(CHAT_MOVE_TURN_TO_CMD, payload)
+        # `name` = nom de l'ORDRE parti (« pivot +45° »), comme les autres gestes : c'est lui
+        # que route_goto_result renverra, et c'est sur lui que le chat apparie l'issue.
+        self._reply(intent, decision.effect,
+                    name=decision.name if decision.effect == "accepted" else None)
+        if decision.effect != "accepted":
+            return
+        self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TURN_TO_CMD, now)
 
     def _tour_de(self, intent: dict):
         """« Faire le tour » (lot M3) : arbitré, journalisé `tour_de`, accepté

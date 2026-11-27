@@ -140,6 +140,14 @@ CHAT_MOVE_FORWARD_CMD = "avancer"
 # laborieux »). {"cmd": "tour_de", "objet": "<texte>", "sens": "gauche"|
 # "droite"} (sens absent = "gauche"). Chaîne gravée des deux côtés.
 CHAT_MOVE_TOUR_CMD = "tour_de"
+# Lot S2c (spec-S2-le-corps-raconte.md §5, 28/11) : « se tourner vers un objet NOMMÉ ».
+# {"cmd": "tourner_vers", "objet": "<texte>", "id": "<id du tableau>"} — la régie calcule
+# l'angle depuis SA pose (x, y, cap) et la position de l'objet, puis exécute le pivot par le
+# chemin EXISTANT de « tourner » (mêmes bornes TURN_MAX_DEG, même corps sûr, même route_goto).
+# Pourquoi : séances des 25 et 26/11 — « regarde l'éléphant à droite » donnait un pivot DEVINÉ
+# de -90° (le LLM invente un angle). Le LLM ne devine plus d'angle pour un objet qu'il nomme.
+# Chaîne gravée des deux côtés.
+CHAT_MOVE_TURN_TO_CMD = "tourner_vers"
 # Lot « texte raccord » (18/11, séance de 21:35, « il y a une lettre sur le banc, tu pourrais
 # regarder ») : payload JSON "pause" = « regarde ça » — s'arrêter, regarder (le regard part de la
 # bouche sur `look`), puis reprendre la route. Consommateur : le sélecteur de jeu (jeu:=true), qui

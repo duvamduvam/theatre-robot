@@ -356,7 +356,7 @@ ORIGINE_DAVID = "david"
 ORIGINE_DIDIER = "didier"
 # Clés du JSON de fin qui demandent un MOUVEMENT du corps (le regard n'en est pas un) : toutes
 # ignorées en tour spontané (lot S1).
-MOVE_KEYS = ("marche", "aller_voir", "faire_le_tour", "tourner", "avancer")
+MOVE_KEYS = ("marche", "aller_voir", "faire_le_tour", "tourner_vers", "tourner", "avancer")
 
 
 def _gesture_number(raw, words=None):
@@ -1028,6 +1028,16 @@ class ConversationEngine:
             else:
                 logger.warning("Clé \"faire_le_tour\" ignorée : %r (attendu un nom d'objet).",
                                raw)
+        if "tourner_vers" in params:
+            # Lot S2c : l'objet est NOMMÉ, l'angle est calculé par la régie (jamais deviné
+            # ici). Placé AVANT "tourner" : si le LLM donne les deux, l'objet nommé gagne.
+            raw = params["tourner_vers"]
+            objet = raw.strip() if isinstance(raw, str) else None
+            if objet:
+                gestures.append(("tourner_vers", objet,
+                                 {"cmd": "tourner_vers", "objet": objet, "origine": ORIGINE_DAVID}))
+            else:
+                logger.warning("Clé \"tourner_vers\" ignorée : %r (attendu un nom d'objet).", raw)
         if "tourner" in params:
             raw = params["tourner"]
             angle = _gesture_number(raw, TURN_WORDS)

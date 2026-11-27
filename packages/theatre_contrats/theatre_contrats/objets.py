@@ -205,7 +205,11 @@ def resoudre(tableau: Tableau, texte) -> Resolution:
 
 
 # ================================================================ garde des gestes
-GESTES_VERS_UN_OBJET = ("aller_voir", "tour_de")
+GESTES_VERS_UN_OBJET = ("aller_voir", "tour_de", "tourner_vers")
+# « Se tourner vers » (lot S2c) ne DÉPLACE pas Didier : il peut regarder un objet qu'il
+# n'irait pas voir. La garde « atteignable » (10 m) ne s'y applique donc pas — seules
+# « inconnu » et « pas ici » valent (on ne se tourne pas vers ce qu'on ne situe pas).
+GESTES_SANS_DEPLACEMENT = ("tourner_vers",)
 
 
 @dataclass(frozen=True)
@@ -236,7 +240,7 @@ def garde_geste(tableau: Tableau, intent) -> Garde:
         return Garde("dropped", "pas_ici", o)
     if cmd == "tour_de" and not o.tour:
         return Garde("no_tour", None, o)
-    if not o.atteignable:
+    if cmd not in GESTES_SANS_DEPLACEMENT and not o.atteignable:
         return Garde("dropped", "hors_atteinte", o)
     return Garde(None, None, o)
 

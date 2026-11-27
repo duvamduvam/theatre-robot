@@ -55,7 +55,7 @@ from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_ORIGINE_DAVI
                                        ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
                                        TOUR_CLEARANCE_M, TURN_DEG_COMPAT, TURN_MAX_DEG)
 from didier_rehearsal.goto import forward_name, tour_name, turn_name
-from didier_rehearsal.route import Tour
+from didier_rehearsal.route import Tour, wrap_angle
 from didier_rehearsal.scenario import Fault, Scenario
 
 
@@ -994,6 +994,58 @@ def decide_tour(intent: dict, *, tableau, tours, pose, off_by_david: bool) -> To
     order = json.dumps({"name": name, "orbit_x": tour.x, "orbit_y": tour.y, "orbit_r": tour.radius,
                         "orbit_dir": direction})
     return TourDecision("accepted", objet, name=name, distance=distance, order=order, poi=poi)
+
+
+@dataclass(frozen=True)
+class TurnToDecision:
+    """« Se tourner vers <objet> » (lot S2c)."""
+    # "accepted" | "unknown" | "no_position" | "route_off_by_david" | "no_pose"
+    # | "deja_face" | "hors_bornes"
+    effect: str
+    objet: object | None = None   # theatre_contrats.objets.Objet
+    angle_deg: float | None = None  # angle calcule (signe, + = gauche), pour le journal
+    name: str | None = None       # « pivot +37° » — MÊME texte que route_driver (goto.turn_name)
+    order: str | None = None      # payload route_goto, si accepte
+
+
+# Sous cet ecart de cap, Didier regarde DEJA l'objet : pas de pivot (le corps sur interdit
+# les micro-pivots aveugles, et un pivot de 2° ne se voit pas). Memes 10° que la tolerance
+# d'ajustement de la spec S2c §5.
+TURN_TO_TOL_DEG = 10.0
+
+
+def decide_turn_to(intent: dict, *, tableau, pose, off_by_david: bool) -> TurnToDecision:
+    """« Se tourner vers un objet NOMME » (spec S2c §5), dans l'ordre de `decide_goto` :
+    objet introuvable par son id -> « unknown » ; sans position en repere monde ->
+    « no_position » ; route OFF par David -> « route_off_by_david » ; pas de pose fraiche ->
+    « no_pose » (jamais un angle devine : c'est TOUT le point du lot).
+
+    L'angle est CALCULE depuis la pose (x, y, cap) et la position de l'objet, jamais lu dans
+    l'intention : le LLM nomme l'objet, il n'invente plus de valeur (seance du 25/11, « regarde
+    l'elephant a droite » -> pivot fixe de -90°). Deja face a moins de TURN_TO_TOL_DEG ->
+    « deja_face » (aucun ordre). Au-dela de TURN_MAX_DEG -> « hors_bornes », jamais sature :
+    comme `decide_turn`, un pivot faux ne tourne pas.
+
+    `pose` : (x, y, cap_rad) ou None — la SEULE decision qui a besoin du cap.
+    Ordre : {"turn_rad": ...}, celui de `decide_turn` (meme chemin, memes bornes)."""
+    objet = _target(intent, tableau)
+    if objet is None:
+        return TurnToDecision("unknown")
+    if objet.x is None or objet.repere != "monde":
+        return TurnToDecision("no_position", objet)
+    if off_by_david:
+        return TurnToDecision("route_off_by_david", objet)
+    if pose is None:
+        return TurnToDecision("no_pose", objet)
+    x, y, yaw = pose
+    rad = wrap_angle(math.atan2(objet.y - y, objet.x - x) - yaw)
+    angle_deg = round(math.degrees(rad), 1)
+    if abs(angle_deg) < TURN_TO_TOL_DEG:
+        return TurnToDecision("deja_face", objet, angle_deg=angle_deg)
+    if abs(angle_deg) > TURN_MAX_DEG:
+        return TurnToDecision("hors_bornes", objet, angle_deg=angle_deg)
+    return TurnToDecision("accepted", objet, angle_deg=angle_deg, name=turn_name(rad),
+                          order=json.dumps({"turn_rad": rad}))
 
 
 class GotoPolicy:
