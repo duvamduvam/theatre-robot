@@ -130,3 +130,70 @@ def test_noms_d_appareil_reserves():
     assert ap.nom_reserve("lights")
     for nom in ("sono", "lumieres", "essai", "fumee"):
         assert not ap.nom_reserve(nom), nom
+
+
+# --- relecture adverse de L3a (28/11, avant L3b) ----------------------------------------------
+def test_espaces_reserves_graves_et_independants_du_registre(monkeypatch):
+    assert len(ap.ESPACES_RESERVES) == 33 and "sono" not in ap.ESPACES_RESERVES
+    # Inscrire `corps_sur` ou `jeu` au registre ne les rend PAS admissibles (le trou d'avant).
+    monkeypatch.setitem(ap.REGISTRE, "corps_sur", {"etat": "corps_sur/etat", "ordres": {}})
+    monkeypatch.setitem(ap.REGISTRE, "jeu", {"etat": "jeu/journal", "ordres": {}})
+    assert ap.nom_reserve("corps_sur") and ap.nom_reserve("jeu")
+    assert "corps_sur" in ap.espaces_reserves() and "jeu" in ap.espaces_reserves()
+
+
+def test_tout_espace_de_topics_hors_registre_est_reserve():
+    """Un nouvel espace de topics dans topics.py sans entrée dans ESPACES_RESERVES = rouge."""
+    from theatre_contrats import topics
+    du_registre = set(ap.topics_etat()) | set(ap.topics_ordres())
+    espaces = {v.split("/")[0] for k, v in vars(topics).items()
+               if k.isupper() and isinstance(v, str) and v not in du_registre}
+    assert espaces - ap.ESPACES_RESERVES == set()
+    for nom in ap.REGISTRE:            # un appareil inscrit n'est jamais un nom réservé
+        assert not ap.nom_reserve(nom), nom
+
+
+def test_bornes_par_champ_gravees():
+    assert (ap.TEXTE_MAX, ap.NOM_MAX) == (512, 64)
+
+
+def _base():
+    return ap.decoder_etat(ENVELOPPE_REPOS_REFUS)
+
+
+@pytest.mark.parametrize("champ,limite", [("valeur", 512), ("nom", 64)])
+def test_decoder_dict_organe_audio_borne(champ, limite):
+    d = _base()
+    d["organes"][0][champ] = "a" * limite
+    assert ap.decoder_etat(d) is not None
+    d["organes"][0][champ] = "a" * (limite + 1)
+    assert ap.decoder_etat(d) is None
+
+
+def test_decoder_dict_nom_de_relais_borne():
+    d = _base()
+    d["organes"][1]["nom"] = "r" * 65
+    assert ap.decoder_etat(d) is None
+
+
+def test_decoder_dict_sha_et_detail_bornes():
+    assert ap.decoder_etat(dict(_base(), sha="f" * 64)) is not None
+    assert ap.decoder_etat(dict(_base(), sha="f" * 65)) is None
+    assert ap.decoder_etat(dict(_base(), refus={"code": "x", "detail": "d" * 512, "t_ms": 1})) is not None
+    assert ap.decoder_etat(dict(_base(), refus={"code": "x", "detail": "d" * 513, "t_ms": 1})) is None
+
+
+def test_decoder_dict_taille_totale_bornee():
+    """Les champs non bornés un à un (`code`, `appareil`) : la borne totale de 64 ko les tient."""
+    long_ = 65536 - len(ENVELOPPE_REPOS_REFUS) + len("audio_absent")
+    juste = dict(_base(), refus={"code": "c" * long_, "detail": "a/b.mp3", "t_ms": 4})
+    assert ap.decoder_etat(juste) is not None
+    trop = dict(_base(), refus={"code": "c" * (long_ + 1), "detail": "a/b.mp3", "t_ms": 4})
+    assert ap.decoder_etat(trop) is None
+
+
+def test_encoder_refuse_un_champ_trop_long():
+    with pytest.raises(ValueError):
+        ap.encoder_etat("sono", "sim", "s" * 65, 1, [])
+    with pytest.raises(ValueError):
+        ap.encoder_etat("sono", "sim", "dev", 1, [], ap.refus("x", "d" * 513, 1))

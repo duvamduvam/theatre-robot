@@ -19,8 +19,9 @@ Ce module porte ce que l'appareil, le pont web et la page scène doivent écrire
 
 `encoder_etat` lève ValueError sur une forme fausse (bug de l'écrivain) ; `decoder_etat` ne lève
 JAMAIS, quoi qu'on lui donne (relecture adverse du 28/11 : 20 000 « [ » levaient RecursionError
-dans la boucle d'état du pont) : illisible, trop gros (> TAILLE_MAX_OCTETS), trop d'organes
-(> ORGANES_MAX) ou d'un autre appareil que celui attendu -> None.
+dans la boucle d'état du pont) : illisible, trop gros (> TAILLE_MAX_OCTETS, chaîne OU dict déjà
+décodé), trop d'organes (> ORGANES_MAX), un champ trop long (`valeur`, `detail` > TEXTE_MAX ;
+`nom`, `sha` > NOM_MAX) ou d'un autre appareil que celui attendu -> None.
 Python PUR, stdlib seulement.
 """
 import json
@@ -37,6 +38,11 @@ SANTES = ("ok", "absent", "erreur")
 SHA_DEV = "dev"
 TAILLE_MAX_OCTETS = 64 * 1024
 ORGANES_MAX = 16
+# Bornes par champ (relecture adverse de L3a, 28/11) : TAILLE_MAX_OCTETS ne valait que pour une
+# chaîne, alors que le pont passe un dict déjà décodé. Un chemin d'audio du manifeste fait au plus
+# 53 caractères le 28/11, un sha 40 : marges larges, mais finies.
+TEXTE_MAX = 512        # `valeur` d'un organe audio, `detail` d'un refus
+NOM_MAX = 64           # `nom` d'un organe, `sha`
 
 # LA liste des appareils du parc : {appareil: {"etat": topic, "ordres": {type d'organe: topic}}}.
 REGISTRE = {
@@ -49,12 +55,21 @@ REGISTRE = {
 # topics existant (corps_sur, jeu, vision…) ou comme un préfixe de mouvement ou de séance
 # publierait sous des noms que d'autres nœuds écoutent — roues comprises.
 PREFIXES_RESERVES = ("cmd_vel", "route", "wheels", "chat", "rehearsal", "e_stop")
+# Liste GRAVÉE (relecture adverse de L3a, 28/11) : calculée hier en retirant les noms DÉJÀ au
+# registre, elle admettait `corps_sur` ou `jeu` dès qu'on les y inscrivait. Ici, rien de ce qui
+# entre au registre ne la change. test_appareils.py exige que tout 1er segment d'un topic de
+# theatre_contrats.topics HORS registre y figure : un nouvel espace de topics la fait grandir.
+ESPACES_RESERVES = frozenset({
+    "animation", "animation_state", "audio", "catalogue", "cmd_vel_anim_sur", "cmd_vel_follow_sur",
+    "cmd_vel_web_sur", "corps", "corps_sur", "data_edit", "data_edit_result", "deploy_sha",
+    "expression", "face", "jeu", "left_arm", "left_eye", "lights", "neck", "relay", "right_arm",
+    "right_eye", "robot_lights", "roues_refusees", "scan", "scene", "speak", "superviseur",
+    "system", "validation_sim", "validation_sim_demande", "vision", "wheels"})
 
 
 def espaces_reserves() -> frozenset:
-    """Le 1er segment de chaque topic de theatre_contrats.topics, hors appareils du registre."""
-    espaces = {v.split("/")[0] for k, v in vars(topics).items() if k.isupper() and isinstance(v, str)}
-    return frozenset(espaces - set(REGISTRE))
+    """Les espaces de topics interdits comme nom d'appareil (liste gravée ESPACES_RESERVES)."""
+    return ESPACES_RESERVES
 
 
 def nom_reserve(nom: str) -> bool:
@@ -97,14 +112,18 @@ def _entier_ou_nul(x) -> bool:
     return x is None or _entier(x)
 
 
+def _texte(x, longueur_max: int) -> bool:
+    return isinstance(x, str) and len(x) <= longueur_max
+
+
 def _organe_valide(o) -> bool:
-    if not isinstance(o, dict) or not isinstance(o.get("nom"), str) or not o["nom"]:
+    if not isinstance(o, dict) or not _texte(o.get("nom"), NOM_MAX) or not o["nom"]:
         return False
     if o.get("sante") not in SANTES:
         return False
     if o.get("type") == AUDIO:
         return (set(o) == {"nom", "type", "valeur", "debut_ms", "duree_ms", "sante"}
-                and isinstance(o["valeur"], str)
+                and _texte(o["valeur"], TEXTE_MAX)
                 and _entier_ou_nul(o["debut_ms"]) and _entier_ou_nul(o["duree_ms"]))
     if o.get("type") == RELAIS:
         return set(o) == {"nom", "type", "valeur", "sante"} and isinstance(o["valeur"], bool)
@@ -113,7 +132,7 @@ def _organe_valide(o) -> bool:
 
 def _refus_valide(r) -> bool:
     return r is None or (isinstance(r, dict) and set(r) == {"code", "detail", "t_ms"}
-                         and isinstance(r["code"], str) and isinstance(r["detail"], str)
+                         and isinstance(r["code"], str) and _texte(r["detail"], TEXTE_MAX)
                          and _entier(r["t_ms"]))
 
 
@@ -122,7 +141,7 @@ def _etat_valide(d) -> bool:
             and set(d) == {"v", "appareil", "pilote", "sha", "t_ms", "organes", "refus"}
             and type(d["v"]) is int and d["v"] == VERSION
             and isinstance(d["appareil"], str) and bool(d["appareil"])
-            and d["pilote"] in PILOTES and isinstance(d["sha"], str) and _entier(d["t_ms"])
+            and d["pilote"] in PILOTES and _texte(d["sha"], NOM_MAX) and _entier(d["t_ms"])
             and isinstance(d["organes"], list) and len(d["organes"]) <= ORGANES_MAX
             and all(_organe_valide(o) for o in d["organes"])
             and _refus_valide(d["refus"]))
@@ -147,6 +166,9 @@ def decoder_etat(brut, appareil: Optional[str] = None) -> Optional[dict]:
                 return None
             brut = json.loads(brut)
         if not _etat_valide(brut) or (appareil is not None and brut["appareil"] != appareil):
+            return None
+        # Dict déjà décodé (le pont) : même borne totale qu'une chaîne (relecture du 28/11).
+        if len(json.dumps(brut, ensure_ascii=False)) > TAILLE_MAX_OCTETS:
             return None
         return brut
     except Exception:  # noqa: BLE001 — RecursionError, MemoryError… : jamais propagé au lecteur

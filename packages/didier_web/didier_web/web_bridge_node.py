@@ -71,7 +71,7 @@ from didier_web.web_protocol import (
     ProtocolError, SessionManager, build_ack, build_err, build_feed,
     build_hb_ack, build_hello, build_lumieres, build_state, drive_to_twist,
     effective_whitelist, mode_from_domain_id, parse_client_message,
-    rehearsal_allowed, snapshot_visible, stop_all_commands, stop_appareils_commands,
+    ordres_hors_stop, rehearsal_allowed, snapshot_visible, stop_all_commands, stop_appareils_commands,
 )
 from didier_web.tickets import PareRafale, construire_ticket, nom_fichier
 
@@ -327,6 +327,12 @@ class WebBridgeNode(Node):
                 self.camera_topic, self.camera_compressed, self.video_fps,
                 self.rehearsal_enabled, self.perception_topic, self.exterior_topic,
                 self.data_edit_enabled, self.validation_sim, self.data_dir))
+        # Relecture adverse de L3a (28/11) : un ordre d'appareil que le STOP n'enverra pas (type
+        # d'organe inconnu ou hors whitelist) est dit au démarrage, jamais écarté en silence.
+        for appareil, type_organe, topic in ordres_hors_stop(self.whitelist):
+            self.get_logger().error(
+                "STOP : l'ordre {} de l'appareil {} (type {!r}) n'est PAS arrêté par STOP"
+                " (type d'organe inconnu ou hors whitelist)".format(topic, appareil, type_organe))
         if self.drive_enabled:
             # Trace explicite au démarrage : le pilotage roues est ACTIF (sim).
             self.get_logger().warning(
