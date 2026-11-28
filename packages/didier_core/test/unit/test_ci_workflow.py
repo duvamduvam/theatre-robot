@@ -33,4 +33,6 @@ def test_les_huit_suites_documentees_sont_dans_la_ci():
     assert suites == {
         "didier_core", "dadou_utils_ros", "didier_jeu", "theatre_contrats",
         "didier_corps_sur", "didier_perception", "didier_vision", "telecommande (legacy)",
+        # Lot L3a (28/11, spec L3 décision 8) : le gabarit d'appareil.
+        "theatre_gabarit",
     }

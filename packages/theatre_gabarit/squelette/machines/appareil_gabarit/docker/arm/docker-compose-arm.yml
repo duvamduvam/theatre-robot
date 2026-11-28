@@ -1,0 +1,2 @@
+# Compose du Pi (geste G8) : chemins relatifs à la disposition du Pi (../../.. = src/<projet>/).
+# APPAREIL : le service, ses contextes nommés (= packages de machine.yml), ROS_DOMAIN_ID 42.

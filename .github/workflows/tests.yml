@@ -39,6 +39,10 @@ jobs:
           - suite: didier_perception
             dir: packages/didier_perception
             requirements: requirements-test.txt
+          # Lot L3a (28/11) : le gabarit d'appareil (bibliothèque + squelette généré à blanc).
+          - suite: theatre_gabarit
+            dir: packages/theatre_gabarit
+            requirements: requirements-test.txt
           - suite: didier_vision
             dir: packages/didier_vision
             requirements: packages/didier_vision/requirements-test.txt
