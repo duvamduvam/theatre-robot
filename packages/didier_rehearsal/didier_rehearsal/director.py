@@ -1073,6 +1073,13 @@ def decide_turn_to(intent: dict, *, tableau, pose, off_by_david: bool) -> TurnTo
                           order=json.dumps({"turn_rad": rad}))
 
 
+# Issues de route_goto_result qui sont un ABANDON par route_driver lui-même (goto.py, `_end(ABORTED,
+# …)`), pas une décision de quelqu'un : seules elles autorisent le rejoin d'un go retenu sur un
+# `off`. Les autres raisons (« route_off », « route_on », « cancel », « goto_suivant ») viennent
+# d'une commande. NB : « odom_stale » n'est pas une issue (goto.py tient zéro et attend).
+GOTO_ABANDONS = ("timeout", "stalled", "max_travel", "off_track", "too_far")
+
+
 class GotoPolicy:
     """La manœuvre « aller voir » que NOUS avons ordonnée — logique PURE.
     Sert à trois choses :
@@ -1097,12 +1104,18 @@ class GotoPolicy:
     le pivot finissait `arrived` et plus rien ne relançait), et la course à l'arrivée (le go
     de reprise du sélecteur, parti sur SON `arrived`, traité ici avant le nôtre). Le go retenu
     tombe à tout ce qui retire la manœuvre (stop, cancel, abort, commande `route`, cause,
-    nouvelle manœuvre) : jamais de relance contre un arrêt posé après lui."""
+    nouvelle manœuvre, fin de séance) : jamais de relance contre un arrêt posé après lui.
+    Sur un `off` (3e relecture adverse, 28/11), le rejoin n'a lieu que si l'ISSUE de la
+    manœuvre (route_goto_result, même `name`) est CONNUE et est un abandon de route_driver
+    (GOTO_ABANDONS) ; issue pas encore reçue : on l'attend ; autre issue (« route_off » d'un
+    Route OFF de David dont ni la commande ni la cause ne nous sont encore parvenues,
+    « cancel », inconnue) : le go retenu tombe."""
 
     def __init__(self):
         self._name: str | None = None
         self._pivot_lubie = False           # la manœuvre est le pivot d'une lubie (go différé permis)
         self._go_differe: str | None = None  # origine du « go » retenu, None = aucun
+        self._issue: str | None = None      # raison de route_goto_result pour NOTRE manœuvre
         self._target: str | None = None   # POI visé (aller voir, tour) — sa lubie est sautée
         self._seen_goto = False
         self._cancel_by: str | None = None
@@ -1144,11 +1157,25 @@ class GotoPolicy:
         go, self._go_differe = self._go_differe, None
         return go
 
+    def note_result(self, payload) -> None:
+        """route_goto_result reçu : retient la raison de l'issue de NOTRE manœuvre (même `name`)."""
+        if self._name is not None and isinstance(payload, dict) and payload.get("name") == self._name:
+            reason = payload.get("reason")
+            self._issue = reason if isinstance(reason, str) else "illisible"
+
     def go_differe_du(self, latched_state: str | None, off_by_cmd: bool) -> str | None:
-        """Issue du pivot vue : -> origine du go retenu si le rejoin est permis MAINTENANT (il est
-        alors consommé), sinon None."""
+        """Issue du pivot vue (état latché, ou route_goto_result) : -> origine du go retenu si le
+        rejoin est permis MAINTENANT (il est alors consommé), sinon None. `arrived` suffit ;
+        `off` exige une issue connue d'abandon (GOTO_ABANDONS), sinon il attend l'issue ou, si
+        elle n'en est pas une, fait tomber le go retenu."""
         if self._go_differe is None or not self.rejoin_allowed(latched_state, off_by_cmd):
             return None
+        if latched_state == "off":
+            if self._issue is None:
+                return None                      # l'issue de cet off n'est pas encore arrivée
+            if self._issue not in GOTO_ABANDONS:
+                self.oublier_go_differe()        # Route OFF de David, cancel, inconnue
+                return None
         return self.oublier_go_differe()
 
     def release(self) -> None:
@@ -1158,6 +1185,7 @@ class GotoPolicy:
         self._name = name
         self._pivot_lubie = False
         self._go_differe = None
+        self._issue = None
         self._target = name
         self._seen_goto = False
         self._cancel_by = None

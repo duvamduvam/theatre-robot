@@ -152,8 +152,13 @@ Trois lignes, dans le prompt, à côté de `phrase` :
   - **aucun « go » n'est perdu pendant le pivot** (2e relecture, 28/11) : le régisseur
     RETIENT un « go » « deja_en_marche » reçu pendant le pivot d'une lubie — go de David
     (console ou voix), ou go de reprise arrivé avant son propre `arrived` — et fait rejoin à
-    l'issue du pivot (`arrived`, ou `off` après abandon). Tout stop, cancel, abort ou commande
-    `route` venu après le fait tomber. Borné au pivot d'une lubie : ailleurs rien ne change ;
+    l'issue du pivot (`arrived`, ou `off` après abandon). Tout stop, cancel, abort, commande
+    `route` ou fin de séance venus après le font tomber. Sur un `off`, le rejoin exige
+    l'issue CONNUE de la manœuvre (`route_goto_result`) et qu'elle soit un abandon de
+    route_driver (`timeout`, `stalled`, `max_travel`, `off_track`, `too_far`) ; issue pas encore
+    reçue : il l'attend ; autre issue (`route_off` d'un Route OFF de David dont la commande et
+    la cause ne sont pas encore arrivées, `cancel`, inconnue) : le go tombe (3e relecture,
+    28/11). Borné au pivot d'une lubie : ailleurs rien ne change ;
   - règles d'arrêt de David intactes : un stop de David pendant le pivot l'annule (`cancel`),
     sous son verrou le pivot est refusé `arret_de_david`, hors séance `hors_seance` ;
   - `tourner_vers` de David sous un arrêt : mêmes règles que `tourner` (il lève l'arrêt et

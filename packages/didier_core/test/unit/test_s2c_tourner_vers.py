@@ -21,6 +21,10 @@ Relecture adverse du 28/11 (une mutation par correction) :
 2e relecture adverse (28/11) :
   - A2/R1 : differer_go retiré -> test_node_a2_r1_go_pendant_le_pivot_retenu_puis_rejoin ;
     le stop n'oublie plus le go retenu -> test_node_a2_un_stop_apres_le_go_retenu_l_annule
+3e relecture adverse (28/11) :
+  - C1 : `off` sans issue d'abandon connue qui rejoint ->
+    test_node_c1_route_off_de_david_etat_avant_cause_rien_ne_part
+  - C2 : go retenu non purgé en fin de séance -> test_node_c2_fin_de_seance_par_la_duree_oublie_le_go_retenu
 """
 import json
 import math
@@ -188,7 +192,7 @@ def test_garde_objet_pas_ici_refuse_quand_meme():
 # ================================================================ node (rclpy simulé)
 # Banc RÉUTILISÉ de test_director_node.py / test_director_node_goto.py.
 from test.unit.test_director_node import (LUBIE, _cmd, _creer, _etat_route, _fader,  # noqa: E402
-                                          _journal, _publie, _recevoir, _voice_moves, _voix,
+                                          _journal, _publie, _recevoir, _tick_a, _voice_moves, _voix,
                                           regisseur)  # noqa: F401
 from test.unit.test_director_node_goto import _odom, _tableau  # noqa: E402
 
@@ -314,12 +318,55 @@ def test_node_a2_r1_go_pendant_le_pivot_retenu_puis_rejoin(regisseur, monkeypatc
     assert [p for t, p in _journal(n) if t == "goto_rejoin"] == [{"by": "go_differe", "origine": origine}]
 
 
-def test_node_a2_pivot_abandonne_off_le_go_retenu_rejoint_aussi(regisseur, monkeypatch, tmp_path):
+def _issue(n, reason, result="aborted"):
+    _recevoir(n, "route_goto_result", json.dumps({"name": "pivot -180°", "result": result, "reason": reason,
+                                                  "travelled": 0.0}))
+
+
+@pytest.mark.parametrize("issue_d_abord", [True, False])
+def test_node_a2_pivot_abandonne_off_le_go_retenu_rejoint_aussi(regisseur, monkeypatch, tmp_path, issue_d_abord):
+    """Abandon de route_driver (délai) : son issue, `timeout`, est connue -> rejoin, que
+    l'issue arrive avant ou après l'état `off`."""
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
     _pivot_en_cours(n)
     _voix(n, {"cmd": "go", "origine": "david"}, t=1005.0)
-    _etat_route(n, "off")                                              # abandon de route_driver (délai)
+    if issue_d_abord:
+        _issue(n, "timeout")
+    _etat_route(n, "off")
+    if not issue_d_abord:
+        assert _publie(n, "route") == []                               # l'issue n'est pas là : il attend
+        _issue(n, "timeout")
     assert _publie(n, "route") == ["on"]
+
+
+@pytest.mark.parametrize("issue", [None, "route_off"])
+def test_node_c1_route_off_de_david_etat_avant_cause_rien_ne_part(regisseur, monkeypatch, tmp_path, issue):
+    """3e relecture adverse (28/11), ordre DÉFAVORABLE : Route OFF de David pendant le pivot,
+    commande `route off` jamais vue par la régie, état `off` reçu AVANT la cause `cmd` (et
+    l'issue « route_off » de route_driver, ou aucune). Avant : rejoin go_differe puis
+    `route: on` contre David. Mutation : `off` sans issue connue qui rejoint -> « on »."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _pivot_en_cours(n)
+    _voix(n, {"cmd": "go", "origine": "david"}, t=1005.0)
+    if issue is not None:
+        _issue(n, issue)
+    _etat_route(n, "off")
+    _recevoir(n, "route_state_cause", json.dumps("cmd"))
+    _issue(n, "timeout")                                               # même une issue tardive : trop tard
+    assert _publie(n, "route") == []
+    assert not [p for t, p in _journal(n) if t == "goto_rejoin"]
+
+
+def test_node_c2_fin_de_seance_par_la_duree_oublie_le_go_retenu(regisseur, monkeypatch, tmp_path):
+    """3e relecture adverse : le go retenu survivait à la fin de séance par la durée, et
+    relançait Didier hors séance à l'arrivée du pivot. Mutation : purge retirée -> « on »."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE], duration_s=10)
+    _pivot_en_cours(n)
+    _voix(n, {"cmd": "go", "origine": "david"}, t=1005.0)
+    _tick_a(n, 1011.0)                                                 # fin par durée
+    assert [p for t, p in _journal(n) if t == "go_differe_oublie"] == [{"by": "fin", "origine": "david"}]
+    _etat_route(n, "arrived")
+    assert _publie(n, "route") == []
 
 
 def test_node_a2_un_stop_apres_le_go_retenu_l_annule(regisseur, monkeypatch, tmp_path):

@@ -394,10 +394,14 @@ class DirectorNode(Node):
         event = self.goto_policy.note_state(state, self._speed_in_effect(0.0))
         if event is not None:
             self.log(*event)
-        differe = self.goto_policy.go_differe_du(state, self.reenable.off_by_cmd)
+        self._go_differe_step()
+
+    def _go_differe_step(self):
+        """Le pivot de la lubie a fini : le « go » reçu pendant lui (ou juste avant notre
+        `arrived`) part MAINTENANT en reprise (GotoPolicy, GO DIFFÉRÉ). Appelé à l'état latché
+        ET à route_goto_result (l'issue d'un `off` peut arriver après lui)."""
+        differe = self.goto_policy.go_differe_du(self.reenable.latched_state, self.reenable.off_by_cmd)
         if differe is not None:
-            # Le pivot de la lubie a fini : le « go » reçu pendant lui (ou juste avant notre
-            # `arrived`) part MAINTENANT en reprise (GotoPolicy, GO DIFFÉRÉ).
             self.log("goto_rejoin", {"by": "go_differe", "origine": differe})
             self.voice.arm_relaunch(time.monotonic())
             self._voice_relaunch_step(time.monotonic())
@@ -428,9 +432,13 @@ class DirectorNode(Node):
     def _on_goto_result(self, msg: StringTime):
         """Contrat route_driver : JSON {name, result, reason, travelled} -> journal `goto_result`."""
         try:
-            self.log("goto_result", stringtime.loads(msg.msg))
+            payload = stringtime.loads(msg.msg)
         except (ValueError, TypeError):
             self.get_logger().warning(f"route_goto_result illisible : {msg.msg!r}")
+            return
+        self.log("goto_result", payload)
+        self.goto_policy.note_result(payload)
+        self._go_differe_step()
 
     def _on_scene_objets(self, msg: StringTime):
         """Tableau des objets : illisible -> warning, le précédent est gardé."""
@@ -856,6 +864,10 @@ class DirectorNode(Node):
                 relaunching = self.voice.fin_de_seance()
                 if relaunching:
                     self.log("voice_relaunch_cancelled", {"by": "fin"})
+                # Le go retenu pendant un pivot de lubie tombe aussi (3e relecture, 28/11).
+                differe = self.goto_policy.oublier_go_differe()
+                if differe is not None:
+                    self.log("go_differe_oublie", {"by": "fin", "origine": differe})
                 self.log("scenario_end", {"status": self.director.status()})
                 self._publish_state()
                 continue
