@@ -123,8 +123,10 @@ reconstruit tout ». `FUMEE_BUILD_ARGS` (frontend « labs » sur GitHub) est con
 
 Domaine 43 revérifié dans chaque conteneur ; sim de quelqu'un d'autre (`didier-sim-*` déjà là)
 → refus, jamais tuée ; verrou `~/tmp/didier/sim-occupee` (pose, péremption 6 h, `--forcer-verrou`) ;
-flock contre deux fumées ; cœurs réservés (`coeurs_reserves.py`) ; profil d'énergie
-`performance` sur secteur, rendu à la fin ; X d'une session pour Gazebo ; journaux récoltés
+flock contre deux fumées ; cœurs réservés (`coeurs_reserves.py`) ; profil d'énergie sur
+secteur, rendu à la fin — depuis le 28/11 réglage « auto » (`balanced`, `performance` à partir de
+78 °C, retour sous 70 °C, seuils `[profil]` du plan, `--profil` pour un profil fixe ou `aucun` ;
+`docs/operations.md`) ; X d'une session pour Gazebo ; journaux récoltés
 **avant** chaque arrêt de sim ; arbre de travail inchangé hors `docs/fumee` ; aucun commit
 ailleurs que `docs/fumee` (et seulement depuis le checkout de main, `FUMEE_COMMIT`).
 Toute variable `FUMEE_*` existante garde son sens.

@@ -2,6 +2,7 @@
 
     python3 -m fumee [--rev <branche|sha|#PR>] [--epreuves a1,objets | --tout | --reprendre]
                      [--hors-ligne] [--minuterie] [--forcer-verrou] [--essai]
+                     [--profil auto|balanced|performance|aucun]
 
 Codes : 0 vert (ou reporté, ou pas due) ; 1 rouge ; 2 refus ; 3 invalide. Spec :
 docs/spec-F1-programme-fumee.md ; mode d'emploi : docs/operations.md, « Fumée automatique ».
@@ -38,6 +39,9 @@ def options(argv):
     p.add_argument("--minuterie", action="store_true", help="seulement si due ; banc pas sain = reporté sans page")
     p.add_argument("--forcer-verrou", action="store_true", help="passe outre ~/tmp/didier/sim-occupee")
     p.add_argument("--essai", action="store_true", help="jamais référence, jamais commitée")
+    p.add_argument("--profil", choices=banc.MODES_PROFIL,
+                   help="profil d'énergie : auto (défaut : balanced, performance quand le PC chauffe), "
+                        "un profil fixe, ou aucun (rien touché ; FUMEE_PROFIL=0 sans l'option)")
     o = p.parse_args(argv)
     if o.minuterie and o.forcer_verrou:
         p.error("--forcer-verrou ne vaut que pour une fumée lancée à la main")
@@ -68,6 +72,7 @@ def main(argv=None, sy=None) -> int:
     try:
         le_plan = plans.lire()
         choisis = plans.choisir(le_plan, o.epreuves.split(",") if o.epreuves else None)
+        chaud_c, frais_c = plans.profil()
         verrou = banc.prendre_flock(etat, 0 if o.minuterie else float(env.get("FUMEE_VERROU_ATTENTE", "60")))
     except plans.PlanInvalide as erreur:
         print("fumée : " + str(erreur), file=sys.stderr)
@@ -117,7 +122,12 @@ def main(argv=None, sy=None) -> int:
         f = Contexte(sy, arbre, ICI, tmp, jdir, ident, etat, hors_ligne, rtf_min)
         f.notes += notes
         banc.autorite_x(sy, etat, f.notes)
-        profil = banc.basculer_profil(sy, etat)
+        # 28/11 : « performance uniquement quand nécessaire » : `auto` part en balanced et ne passe en
+        # performance qu'à chaud, sondé à chaque pause (Contexte.pause). FUMEE_PROFIL=0 = aucun.
+        mode = o.profil or ("auto" if env.get("FUMEE_PROFIL", "1") == "1" else "aucun")
+        profil = banc.ProfilEnergie(sy, etat, mode, chaud_c, frais_c, f.notes)
+        f.profil = profil
+        profil.demarrer()
         avant = sy.sortie(["git", "-C", str(arbre), "status", "--porcelain"])[1]
         banc.journal(etat, "début fumée {} sur {} ({}) — {}".format(ident, sha[:7], o.rev, raison))
         resultats = derouler(f, choisis)
@@ -162,7 +172,8 @@ def main(argv=None, sy=None) -> int:
             else:
                 f.sim.arreter("fin")   # idempotent : journaux récoltés avant l'arrêt
             f.liberer_coeurs()
-        banc.restaurer_profil(sy, etat, profil)
+        if profil is not None:
+            profil.restaurer()
         banc.liberer_verrou_sim(occupee, contenu_verrou)
         shutil.rmtree(tmp, ignore_errors=True)
         os.close(verrou)

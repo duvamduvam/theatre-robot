@@ -16,7 +16,7 @@ sys.path.insert(0, str(SIM))
 
 from fumee import __main__ as programme  # noqa: E402
 from fumee import epreuve, images, plan as plans, rapport  # noqa: E402
-from fumee.banc import CONTENEURS  # noqa: E402
+from fumee.banc import CONTENEURS, ProfilEnergie, Systeme  # noqa: E402
 
 fp = rapport.fp
 PLAN = plans.lire()
@@ -54,6 +54,12 @@ class Faux:
     def sortie(self, cmd, entree=None, cwd=None, env=None, delai=None):
         self.cmds.append(list(cmd))
         j = " ".join(cmd)
+        if cmd[0] == "powerprofilesctl":
+            # Le faux powerprofilesctl de la fixture `ppc`, SEUL dans le PATH ; sans elle : absent.
+            # Jamais le vrai (il est dans /usr/bin, hors de ce PATH).
+            if "FAUX_PPC_ETAT" not in self.env:
+                return 127, "powerprofilesctl absent (faux système)"
+            return Systeme(self.env).sortie(cmd)
         if cmd[:2] == ["docker", "compose"]:
             if " up " in j + " ":
                 self.sim_up = True
@@ -582,3 +588,246 @@ def test_sigterm_arrete_la_sim_sans_recolte():
     Sim.arreter_sans_recolte(s)
     assert appels[0] == ("compose", "down", "-t", "5") and ("recolter", "fin") not in appels
     assert s.vivante is False
+
+
+# --- 10. Profil d'énergie « auto » (28/11) ------------------------------------------------------
+# « performance uniquement quand nécessaire » : balanced au départ, performance à partir de 78 °C,
+# retour à balanced sous 70 °C, profil d'origine rendu à la fin. Le faux powerprofilesctl est SEUL
+# dans le PATH (le vrai, dans /usr/bin, y est introuvable) : il note ses appels et garde « son »
+# profil dans un fichier ; FAUX_PPC_ECHEC="<arguments>" fait échouer cet appel-là. N'utilise que
+# des commandes internes de bash : aucun autre chemin n'est nécessaire.
+FAUX_PPC = ('#!/bin/bash\necho "$*" >>"$FAUX_PPC_APPELS"\n[ "${FAUX_PPC_ECHEC:-}" = "$*" ] && exit 1\n'
+            'case "$1" in get) echo "$(<"$FAUX_PPC_ETAT")" ;; set) echo "$2" >"$FAUX_PPC_ETAT" ;; esac\nexit 0\n')
+
+
+@pytest.fixture
+def ppc(tmp_path):
+    bin_ = tmp_path / "faux-bin"
+    bin_.mkdir()
+    (bin_ / "powerprofilesctl").write_text(FAUX_PPC)
+    (bin_ / "powerprofilesctl").chmod(0o755)
+    (tmp_path / "ppc-etat").write_text("power-saver\n")
+    (tmp_path / "ppc-appels").write_text("")
+    (tmp_path / "secteur").write_text("1\n")
+    (tmp_path / "etat").mkdir(exist_ok=True)
+    env = {"PATH": str(bin_), "FAUX_PPC_ETAT": str(tmp_path / "ppc-etat"),
+           "FAUX_PPC_APPELS": str(tmp_path / "ppc-appels"), "FUMEE_SECTEUR": str(tmp_path / "secteur")}
+    return env, tmp_path
+
+
+def _appels(tmp):
+    return (tmp / "ppc-appels").read_text().splitlines()
+
+
+def _profil_ppc(tmp):
+    return (tmp / "ppc-etat").read_text().strip()
+
+
+def _journal_profil(tmp):
+    return [l.split(" ", 1)[1] for l in (tmp / "etat" / "journal.log").read_text().splitlines()]
+
+
+def _sans_heure(lignes):
+    return [re.sub(r"[0-9]{2}:[0-9]{2}:[0-9]{2}", "HH:MM:SS", l) for l in lignes]
+
+
+def _regulateur(env, tmp, mode="auto", **autres):
+    sy = Systeme({**env, **autres})
+    sy.temperature = lambda: 65.0
+    return ProfilEnergie(sy, tmp / "etat", mode, 78.0, 70.0, [])
+
+
+def test_profil_auto_hysteresis_puis_origine_rendue(ppc):
+    env, tmp = ppc
+    p = _regulateur(env, tmp)
+    p.demarrer()
+    for t in (60.0, 77.9, 78.0, 85.0, 75.0, 70.0, 69.5, 72.0, None):
+        p.sonder(t)
+    p.restaurer()
+    p.restaurer()   # idempotent : finally après un SIGTERM déjà traité
+    assert _appels(tmp) == ["get", "set balanced", "set performance", "set balanced", "set power-saver"]
+    assert _profil_ppc(tmp) == "power-saver"
+    attendues = ["profil d'énergie HH:MM:SS : power-saver -> balanced (65 °C, départ, réglage auto)",
+                 "profil d'énergie HH:MM:SS : balanced -> performance (78 °C, ≥ 78 °C)",
+                 "profil d'énergie HH:MM:SS : performance -> balanced (69.5 °C, < 70 °C)"]
+    assert _sans_heure(p.notes) == attendues
+    assert _sans_heure(_journal_profil(tmp)) == attendues + ["profil d'énergie rendu : balanced -> power-saver"]
+
+
+def test_profil_deja_balanced_et_jamais_chaud_rien_n_est_change(ppc):
+    env, tmp = ppc
+    (tmp / "ppc-etat").write_text("balanced\n")
+    p = _regulateur(env, tmp)
+    p.demarrer()
+    p.sonder(77.0)
+    p.restaurer()
+    assert _appels(tmp) == ["get"]
+    assert p.notes == [] and _journal_profil(tmp) == ["profil d'énergie : déjà balanced (réglage auto)"]
+
+
+def test_profil_absent_desactive_sans_jamais_echouer(ppc):
+    env, tmp = ppc
+    (tmp / "vide").mkdir()
+    p = _regulateur(env, tmp, PATH=str(tmp / "vide"))
+    p.demarrer()
+    p.sonder(90.0)
+    p.restaurer()
+    assert p.actif is False and p.origine is None and p.notes == []
+    (ligne_j,) = _journal_profil(tmp)
+    assert ligne_j.startswith("profil d'énergie : « powerprofilesctl get » a échoué (")
+    assert ligne_j.endswith(") : réglage désactivé, profil inchangé")
+
+
+def test_profil_get_en_echec_desactive(ppc):
+    env, tmp = ppc
+    p = _regulateur(env, tmp, FAUX_PPC_ECHEC="get")
+    p.demarrer()
+    p.sonder(90.0)
+    p.restaurer()
+    assert _appels(tmp) == ["get"]
+    assert _journal_profil(tmp) == ["profil d'énergie : « powerprofilesctl get » a échoué (rien lu) : "
+                                    "réglage désactivé, profil inchangé"]
+
+
+def test_profil_set_en_echec_pendant_la_fumee_coupe_l_auto_et_rend_l_origine(ppc):
+    env, tmp = ppc
+    p = _regulateur(env, tmp, FAUX_PPC_ECHEC="set performance")
+    p.demarrer()
+    p.sonder(80.0)
+    p.sonder(90.0)   # auto coupé : plus aucun appel
+    p.restaurer()
+    assert _appels(tmp) == ["get", "set balanced", "set performance", "set power-saver"]
+    assert _profil_ppc(tmp) == "power-saver" and p.actif is False
+    assert ("profil d'énergie : « powerprofilesctl set performance » a échoué () : réglage désactivé, "
+            "profil laissé à balanced") in _journal_profil(tmp)
+
+
+def test_profil_sur_batterie_jamais_touche(ppc):
+    env, tmp = ppc
+    (tmp / "secteur").write_text("0\n")
+    p = _regulateur(env, tmp)
+    p.demarrer()
+    p.sonder(90.0)
+    p.restaurer()
+    assert _appels(tmp) == []
+    assert _journal_profil(tmp) == ["profil d'énergie : pas sur secteur ('0'), profil inchangé"]
+
+
+def test_profil_fixe_performance_ne_regule_pas(ppc):
+    env, tmp = ppc
+    p = _regulateur(env, tmp, mode="performance")
+    p.demarrer()
+    p.sonder(60.0)
+    p.sonder(90.0)
+    p.restaurer()
+    assert _appels(tmp) == ["get", "set performance", "set power-saver"]
+    assert _profil_ppc(tmp) == "power-saver"
+
+
+def test_profil_aucun_ne_touche_rien(ppc):
+    env, tmp = ppc
+    p = _regulateur(env, tmp, mode="aucun")
+    p.demarrer()
+    p.sonder(90.0)
+    p.restaurer()
+    assert _appels(tmp) == []
+    assert _journal_profil(tmp) == ["profil d'énergie : réglage coupé (--profil aucun ou FUMEE_PROFIL=0)"]
+
+
+def test_seuils_du_profil_lus_dans_le_plan():
+    assert plans.profil() == (78.0, 70.0)
+
+
+def test_seuils_du_profil_par_defaut_sans_table(tmp_path):
+    (tmp_path / "plan.toml").write_text(PETIT_PLAN)
+    assert plans.profil(tmp_path / "plan.toml") == (78.0, 70.0)
+
+
+@pytest.mark.parametrize("table, message", [
+    ("chaud_c = 70\nfrais_c = 70\n", "plan, [profil] : frais_c (70) doit être sous chaud_c (70)"),
+    ("chaud_c = 78\nfroid_c = 60\n", "plan, [profil] : champs permis chaud_c, frais_c"),
+    ('chaud_c = "78"\n', "plan, [profil] : chaud_c et frais_c sont des nombres (°C)"),
+])
+def test_seuils_du_profil_invalides_refuses(tmp_path, table, message):
+    (tmp_path / "plan.toml").write_text("[profil]\n" + table + PETIT_PLAN)
+    with pytest.raises(plans.PlanInvalide) as erreur:
+        plans.profil(tmp_path / "plan.toml")
+    assert str(erreur.value) == message
+
+
+def _banc_ppc(banc, ppc, chaud):
+    sy, tmp_path = banc
+    env, _ = ppc
+    sy.env.update(env, FUMEE_PROFIL="1")
+    sy.chaud = chaud
+    return sy, tmp_path
+
+
+def _notes_profil(tmp_path):
+    res = json.loads(next((tmp_path / "brut").glob("*/resultat.json")).read_text())
+    return res, _sans_heure([n for n in res["notes"] if n.startswith("profil d'énergie")])
+
+
+@pytest.mark.parametrize("compte, code, verdict", [(None, 0, "vert"), ((ligne("edition", 12, 1), 1), 1, "rouge")])
+def test_fumee_verte_ou_rouge_bascule_a_chaud_et_rend_le_profil(banc, ppc, compte, code, verdict):
+    sy, tmp_path = _banc_ppc(banc, ppc, lambda sy: 80.0 if sy.en_cours == "validate-data-edit.sh" else 60.0)
+    if compte:
+        sy.comptes = {"validate-data-edit.sh": [compte]}
+    assert programme.main(["--epreuves", "edition"], sy=sy) == code
+    assert _appels(tmp_path) == ["get", "set balanced", "set performance", "set power-saver"]
+    assert _profil_ppc(tmp_path) == "power-saver"
+    res, notes = _notes_profil(tmp_path)
+    assert res["verdict"] == verdict
+    assert notes == ["profil d'énergie HH:MM:SS : power-saver -> balanced (60 °C, départ, réglage auto)",
+                     "profil d'énergie HH:MM:SS : balanced -> performance (80 °C, ≥ 78 °C)"]
+    page = (tmp_path / "pages" / res["page"]).read_text()
+    assert "balanced -&gt; performance (80 °C, ≥ 78 °C)" in page
+    assert "profil d'énergie rendu : performance -> power-saver" in _journal_profil(tmp_path)
+
+
+def test_fumee_invalide_par_la_chaleur_rend_le_profil(banc, ppc):
+    sy, tmp_path = _banc_ppc(banc, ppc, lambda sy: 86.0)
+    assert programme.main(["--epreuves", "edition"], sy=sy) == 3
+    assert _appels(tmp_path) == ["get", "set balanced", "set performance", "set power-saver"]
+    assert _profil_ppc(tmp_path) == "power-saver"
+
+
+@pytest.mark.parametrize("option, appels", [
+    (["--profil", "aucun"], []),
+    (["--profil", "performance"], ["get", "set performance", "set power-saver"]),
+    (["--profil", "balanced"], ["get", "set balanced", "set power-saver"]),
+])
+def test_option_profil_fixe_ou_coupe(banc, ppc, option, appels):
+    sy, tmp_path = _banc_ppc(banc, ppc, lambda sy: 80.0)
+    assert programme.main(["--epreuves", "edition"] + option, sy=sy) == 0
+    assert _appels(tmp_path) == appels
+    assert _profil_ppc(tmp_path) == "power-saver"
+
+
+def test_fumee_profil_0_sans_option_ne_touche_rien(banc, ppc):
+    sy, tmp_path = _banc_ppc(banc, ppc, lambda sy: 80.0)
+    sy.env["FUMEE_PROFIL"] = "0"
+    assert programme.main(["--epreuves", "edition"], sy=sy) == 0
+    assert _appels(tmp_path) == []
+
+
+def test_sigterm_pendant_l_epreuve_rend_le_profil(banc, ppc):
+    import os
+    import signal as signaux
+    sy, tmp_path = _banc_ppc(banc, ppc, lambda sy: 80.0)
+    lancer = sy.lancer
+
+    def lancer_puis_sigterm(cmd, journal):
+        proc = lancer(cmd, journal)
+        os.kill(os.getpid(), signaux.SIGTERM)   # comme `systemctl stop` : le gestionnaire de main()
+        return proc
+    sy.lancer = lancer_puis_sigterm
+    avant = signaux.getsignal(signaux.SIGTERM)
+    try:
+        with pytest.raises(SystemExit) as sortie:
+            programme.main(["--epreuves", "edition"], sy=sy)
+    finally:
+        signaux.signal(signaux.SIGTERM, avant)
+    assert sortie.value.code == 143
+    assert _appels(tmp_path) == ["get", "set balanced", "set performance", "set power-saver"]
+    assert _profil_ppc(tmp_path) == "power-saver"

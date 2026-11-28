@@ -10,6 +10,7 @@ PLAN = Path(__file__).with_name("plan.toml")
 INTERNES = ("image", "demarrage", "rtf", "parle")   # codées dans le programme (spec §3)
 SOCLE = ("image", "demarrage", "rtf")               # ajoutées seules à toute sélection
 CLES_SIM = {"monde", "regie", "jeu", "tete", "neuve"}
+PROFIL_DEFAUT = {"chaud_c": 78.0, "frais_c": 70.0}  # [profil] absent (plan d'une révision ancienne)
 
 
 class PlanInvalide(ValueError):
@@ -81,6 +82,25 @@ def lire(chemin=None) -> list:
         if set(e.bloque) - set(ids) - {"*"}:
             raise PlanInvalide("plan, {} : « bloque » cite un id inconnu".format(e.id))
     return plan
+
+
+def profil(chemin=None) -> tuple:
+    """(chaud_c, frais_c) du profil d'énergie « auto » ([profil] du plan) ; défauts 78 / 70 si la
+    table manque. Refusé si un champ est inconnu, non numérique, ou si frais_c ≥ chaud_c."""
+    chemin = chemin or PLAN
+    try:
+        table = tomllib.loads(Path(chemin).read_text(encoding="utf-8")).get("profil", {})
+    except (OSError, tomllib.TOMLDecodeError) as erreur:
+        raise PlanInvalide("plan illisible ({}) : {}".format(chemin, erreur)) from None
+    if not isinstance(table, dict) or set(table) - {"chaud_c", "frais_c"}:
+        raise PlanInvalide("plan, [profil] : champs permis chaud_c, frais_c")
+    valeurs = {**PROFIL_DEFAUT, **table}
+    if any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in valeurs.values()):
+        raise PlanInvalide("plan, [profil] : chaud_c et frais_c sont des nombres (°C)")
+    if valeurs["frais_c"] >= valeurs["chaud_c"]:
+        raise PlanInvalide("plan, [profil] : frais_c ({}) doit être sous chaud_c ({})".format(
+            valeurs["frais_c"], valeurs["chaud_c"]))
+    return float(valeurs["chaud_c"]), float(valeurs["frais_c"])
 
 
 def choisir(plan: list, ids=None) -> list:

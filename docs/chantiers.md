@@ -12,7 +12,7 @@ défaut de fiabilité). Avant de coder un morceau, on vérifie qu'aucun paquet R
 standard ne le fait déjà (essai borné, verdict écrit).
 
 1. **F4** — fumée sur GitHub Actions (correctif de build à fusionner) ; étude fumée §8 bis.
-2. **F1** — le programme de fumée (`docs/spec-F1-programme-fumee.md`).
+2. **F1** — le programme de fumée (`docs/spec-F1-programme-fumee.md`). 28/11 : profil d'énergie « auto » (`balanced`, `performance` seulement à partir de 78 °C, retour sous 70 °C, `--profil`), branche `f1-profil-auto`.
 3. **Fin de phrase** — **FAIT le 26/11** (#46) : vérifié en séance par David (casque allumé après le démarrage, aucune phrase coupée à 12 s, stop immédiat).
 4. **S1** — ordres et propositions : **FUSIONNÉ le 26/11** (PR #47) après trois relectures Fable, une fumée ciblée verte et l'essai de David (`docs/seances/2026-11-26-seance-s1.md`).
 5. **Essais de réutilisation** — **TRANCHÉS le 27/11** : A0-1 (`nav2_collision_monitor`) **sauté par David le 18/11** (spec A0 §13, réponse 2 ; remis ici par erreur le 25/11) ; `ros2 bag record` ne remplace pas `capture_topics.py` pour les épreuves (pas de sentinelle `PRET`, pas de lecture en direct), il reste le choix de la boîte noire du robot (étude standards §5.4).
