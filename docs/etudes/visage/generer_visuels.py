@@ -18,9 +18,12 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
+import maquette_glitchs as gl
 import maquette_visage as m
+import pictos as px
 
 RACINE = m.RACINE
 VISUELS = RACINE / "data/medias/visuals"
@@ -209,6 +212,287 @@ ANIMATIONS = {
 }
 
 
+
+# =========================================================================================
+# §12 — les trois mondes (27/11) : les 18 expressions restantes et les nouveaux pictogrammes.
+# Les images « brutes » (pictos, yeux-symboles, glitchs) ne passent pas par les dessins
+# paramétriques : elles sont rangées telles quelles dans IMAGES, zone « eye-brut »/« mouth-brut ».
+# =========================================================================================
+
+
+def brut(zone: str, nom: str, rgb) -> str:
+    IMAGES[f"v2-{nom}"] = (zone + "-brut", np.asarray(rgb, np.uint8), False)
+    return f"v2-{nom}.png"
+
+
+def yeux_symbole(nom: str) -> tuple[str, str]:
+    return (brut("eye", f"oeil-{nom}-g", px.oeil_symbole(nom)),
+            brut("eye", f"oeil-{nom}-d", px.oeil_symbole(nom, miroir=True)))
+
+
+def b_picto(nom: str, rgb) -> str:
+    return brut("mouth", f"bouche-{nom}", rgb)
+
+
+def yeux_de(nom_vocabulaire: str, nom_fichier: str) -> tuple[str, str]:
+    v = V[nom_vocabulaire]
+    return oeil_asym(nom_fichier, v.oeil_g, v.oeil_d)
+
+
+# --- Lui --------------------------------------------------------------------------------
+def _etourdi():
+    sp, cr = yeux_symbole("spirale"), yeux_symbole("croix")
+    o1, o2 = bch("etourdi", V["surprise"].bouche), bch("etourdi-2", bouche(V["surprise"].bouche, largeur=10, ouverture=5))
+    return expression(2400, True, [(0.85, sp), (1.0, cr)], [(0.5, o1), (1.0, o2)])
+
+
+def _ko():
+    cr = yeux_symbole("croix")
+    return expression(3000, False, [(1.0, cr)], [(1.0, bch("ko", V["triste"].bouche))])
+
+
+def _etoiles():
+    et = yeux_symbole("etoile")
+    rit, rit2 = bch("etoiles", V["joie"].bouche), bch("etoiles-2", bouche(V["joie"].bouche, ouverture=5.5))
+    return expression(1600, True, [(1.0, et)], [(0.5, rit), (1.0, rit2)])
+
+
+def _idee():
+    yeux = yeux_de("émerveillé", "idee")
+    eteinte, allumee = b_picto("ampoule", px.ampoule(0)), b_picto("ampoule-on", px.ampoule(1))
+    return expression(2500, False, [(1.0, yeux)], [(0.35, eteinte), (0.45, allumee), (0.55, eteinte), (1.0, allumee)])
+
+
+def _hein():
+    q = yeux_symbole("interro")
+    return expression(2000, False, [(1.0, q)], [(1.0, bch("hein", V["réfléchit"].bouche))])
+
+
+def _chante():
+    yeux = oeil("chante", V["joie"].oeil_g)
+    n1, n2 = b_picto("note", px.note(0)), b_picto("note-2", px.note(1))
+    return expression(1000, True, [(1.0, yeux)], [(0.5, n1), (1.0, n2)])
+
+
+def _ennui():
+    e = yeux_symbole("ennui")
+    o = V["repos"].oeil_g
+    cote = oeil("ennui-cote", regard(paupiere(o, 0.45), -1.4))
+    m1 = bch("ennui", V["réfléchit"].bouche)
+    return expression(5000, True, [(0.6, e), (1.0, cote)], [(1.0, m1)])
+
+
+def _bisou():
+    c = oeil("coeur", V["amour"].oeil_g)
+    b1, b2 = b_picto("bisou", px.bisou(0)), b_picto("bisou-2", px.bisou(1))
+    return expression(1500, True, [(1.0, c)], [(0.6, b1), (1.0, b2)])
+
+
+def _grand_amour():
+    c = oeil("coeur", V["amour"].oeil_g)
+    battu = oeil("coeur-battu", replace(V["amour"].oeil_g, couleur=tuple(int(x * 0.55) for x in V["amour"].oeil_g.couleur)))
+    g, p = b_picto("grand-coeur", px.coeur(1)), b_picto("grand-coeur-petit", px.coeur(0))
+    return expression(1200, True, [(0.15, c), (0.3, battu), (0.45, c), (1.0, battu)], [(0.15, g), (0.3, p), (0.45, g), (1.0, p)])
+
+
+def _gros_mot():
+    yeux = yeux_de("colère", "gros-mot")
+    return expression(1800, False, [(1.0, yeux)], [(0.5, b_picto("gros-mot", px.mot("#!*", px.ROUGE))), (1.0, bch("gros-mot-moue", V["colère"].bouche))])
+
+
+def _dodo_zzz():
+    yeux = oeil("dodo", V["dodo"].oeil_g)
+    z = [b_picto(f"zzz-{i}", px.zzz(t)) for i, t in enumerate((0.0, 0.4, 0.8))]
+    return expression(3000, True, [(1.0, yeux)], [(0.33, z[0]), (0.66, z[1]), (1.0, z[2])])
+
+
+# --- Sa machine ---------------------------------------------------------------------------
+def _mise_a_jour():
+    e = yeux_symbole("ennui")
+    etapes = [b_picto(f"maj-{n}", px.mise_a_jour(n, 47)) for n in (3, 4, 5, 6)]
+    return expression(8000, False, [(1.0, e)], [(0.4, etapes[0]), (0.65, etapes[1]), (0.85, etapes[2]), (1.0, etapes[3])])
+
+
+def _404():
+    cr = yeux_symbole("croix")
+    a, b = b_picto("404", px.erreur_404()), b_picto("404-noir", np.zeros((16, 24, 3), np.uint8))
+    return expression(2000, True, [(1.0, cr)], [(0.7, a), (1.0, b)])  # 404 qui clignote lentement
+
+
+def _pas_de_reseau():
+    q = yeux_symbole("interro")
+    return expression(3000, True, [(1.0, q)], [(1.0, b_picto("wifi-barre", px.wifi(1, barre=True)))])
+
+
+def _cherche_reseau():
+    yeux = yeux_de("réfléchit", "cherche-reseau")
+    w = [b_picto(f"wifi-{i}", px.wifi(t)) for i, t in enumerate((0.34, 0.67, 1.0))]
+    return expression(1800, True, [(1.0, yeux)], [(0.33, w[0]), (0.66, w[1]), (1.0, w[2])])
+
+
+def _batterie():
+    yeux = oeil_asym("batterie", V["triste"].oeil_g, V["triste"].oeil_d)
+    p, v = b_picto("batterie", px.batterie(0.15)), b_picto("batterie-vide", px.batterie(0.0))
+    return expression(2000, True, [(1.0, yeux)], [(0.6, p), (1.0, v)])
+
+
+def _patientez():
+    e = yeux_symbole("ennui")
+    s = [b_picto(f"sablier-{i}", px.sablier(t)) for i, t in enumerate((0.0, 0.35, 0.7, 1.0))]
+    return expression(3200, True, [(1.0, e)], [(0.25, s[0]), (0.5, s[1]), (0.75, s[2]), (1.0, s[3])])
+
+
+def _nuage():
+    an = yeux_symbole("ange")
+    n = [b_picto(f"nuage-{i}", px.nuage(t, fleche_haut=True)) for i, t in enumerate((0.0, 0.35, 0.7))]
+    return expression(1500, True, [(1.0, an)], [(0.33, n[0]), (0.66, n[1]), (1.0, n[2])])
+
+
+def _attention():
+    ex = yeux_symbole("exclam")
+    a, b = b_picto("attention", px.attention(1)), b_picto("attention-sombre", px.attention(0))
+    return expression(1400, True, [(1.0, ex)], [(0.6, a), (1.0, b)])
+
+
+def _fantome():
+    cr = yeux_symbole("croix")
+    f = [b_picto(f"fantome-{i}", px.fantome(t)) for i, t in enumerate((0.0, 0.3, 0.6))]
+    return expression(2400, False, [(1.0, cr)], [(0.33, f[0]), (0.66, f[1]), (1.0, f[2])])
+
+
+# Glitchs dessinés (en attendant le calque du §11) : tirés de la maquette, graine fixe,
+# changements pleine face ≤ 3 par seconde (règle des 3 flashs).
+def _glitch(nom, duree, effets, boucle=True):
+    rng = np.random.default_rng(sum(map(ord, nom)))
+    base = gl.zones(V["repos"])
+    yeux_g, yeux_d, bouches = [], [], []
+    for i, (fin, efs) in enumerate(effets):
+        z = [x.copy() for x in base]
+        for effet, ou, kw in efs:
+            for k in ou:
+                z[k] = effet(z[k], rng, **kw)
+        yeux_g.append((fin, brut("eye", f"oeil-{nom}-{i}-g", z[0])))
+        yeux_d.append((fin, brut("eye", f"oeil-{nom}-{i}-d", z[1])))
+        bouches.append((fin, brut("mouth", f"bouche-{nom}-{i}", z[2])))
+    return {"duration": duree, "loop": boucle, "left_eyes": piste(*yeux_g), "right_eyes": piste(*yeux_d), "mouths": piste(*bouches)}
+
+
+def _fuzz():
+    return _glitch("fuzz", 1000, [
+        (0.5, [(gl.neige, (2,), {"n": 6}), (gl.couleurs_separees, (2,), {})]),
+        (1.0, [(gl.ligne_decalee, (2,), {"lignes": 2, "dx": 2}), (gl.pixel_chaud, (0, 1), {"n": 1})]),
+    ])
+
+
+def _repos_glitch():
+    return _glitch("repos-glitch", 7000, [
+        (0.40, []), (0.42, [(gl.ligne_decalee, (0,), {"dx": 2})]), (0.70, []),
+        (0.72, [(gl.couleurs_separees, (2,), {})]), (0.95, []), (0.97, [(gl.pixel_mort, (2,), {"n": 4})]), (1.0, []),
+    ])
+
+
+def _glitch_total():
+    lourd = lambda dx: [(gl.ligne_decalee, (0, 1), {"dx": dx}), (gl.ligne_decalee, (2,), {"lignes": 2, "dx": dx + 1}),
+                        (gl.couleurs_separees, (0, 1, 2), {"dx": 1}), (gl.neige, (0, 1, 2), {"n": 3})]
+    return _glitch("glitch-total", 1400, [(0.25, lourd(1)), (0.5, lourd(3)), (0.75, lourd(2) + [(gl.derive, (0, 1, 2), {"tour": 0.28})]), (1.0, lourd(1))])
+
+
+# --- Sa quête -----------------------------------------------------------------------------
+def _boussole():
+    sp = yeux_symbole("spirale")
+    b = [b_picto(f"boussole-{i}", px.boussole(t)) for i, t in enumerate((0.0, 0.3, 0.55, 0.62, 0.9))]
+    return expression(1500, True, [(1.0, sp)], [(0.2, b[0]), (0.4, b[1]), (0.6, b[2]), (0.8, b[3]), (1.0, b[4])])
+
+
+def _fleche(sens, couleur, yeux_nom):
+    def f():
+        yeux = yeux_symbole("interro") if yeux_nom == "interro" else yeux_de(yeux_nom, f"fleche-{sens}")
+        pleine = b_picto(f"fleche-{sens}", px.fleche(sens, couleur))
+        vide = b_picto("vide", np.zeros((16, 24, 3), np.uint8))
+        return expression(1500, True, [(1.0, yeux)], [(0.7, pleine), (1.0, vide)])
+    return f
+
+
+def _porte():
+    et = yeux_symbole("etoile")
+    f, o = b_picto("porte", px.porte(0)), b_picto("porte-ouverte", px.porte(1))
+    return expression(3000, False, [(1.0, et)], [(0.4, f), (1.0, o)])
+
+
+def _ange():
+    an = yeux_symbole("ange")
+    return expression(4000, True, [(1.0, an)], [(0.6, bch("ange", V["joie"].bouche)), (1.0, bch("ange-2", bouche(V["joie"].bouche, ouverture=2.5)))])
+
+
+def _diable(parle=False):
+    def f():
+        d = yeux_symbole("diable")
+        b = replace(V["malice"].bouche, couleur=px.ROUGE)
+        if not parle:
+            return expression(5000, True, [(1.0, d)], [(0.8, bch("diable", b)), (1.0, bch("diable-2", bouche(b, courbure=4.2)))])
+        ouv = [bch(f"diable-parle-{i}", bouche(b, ouverture=h, courbure=1.4, largeur=18)) for i, h in enumerate((0.6, 2.6, 4.6, 6.0))]
+        return expression(800, True, [(1.0, d)], [(0.12, ouv[1]), (0.3, ouv[3]), (0.4, ouv[0]), (0.58, ouv[2]), (0.7, ouv[1]), (0.82, ouv[0]), (1.0, ouv[2])])
+    return f
+
+
+def _signe(nom, image, yeux_nom):
+    """Oui / non : un signe (coche, croix) plutôt qu'un mot, lisible de loin et sans langue."""
+    def f():
+        yeux = yeux_de(yeux_nom, f"signe-{nom}")
+        return expression(1500, False, [(1.0, yeux)], [(1.0, b_picto(f"signe-{nom}", image()))])
+    return f
+
+
+# Anciennes expressions : le nom reste, le dessin passe au v2 (table §12.2).
+ANIMATIONS.update({
+    "speak": _parle, "speak loop": _parle, "voila": _etoiles, "bored": _ennui,
+    "default red": _diable(), "repos braise": _diable(), "speak red": _diable(parle=True),
+    "sexy": _bisou, "love": _grand_amour, "brain": _nuage, "upgrade": _mise_a_jour,
+    "internet": _cherche_reseau, "warning": _attention, "scooby-doo": _fantome,
+    "fuzz": _fuzz, "repos glitch": _repos_glitch, "glitch total": _glitch_total,
+})
+# Nouvelles expressions (noms sans accent, règle MOTIF_NOM_ENTREE).
+ANIMATIONS.update({
+    "etourdi": _etourdi, "ko": _ko, "etoiles": _etoiles, "idee": _idee, "hein": _hein,
+    "chante": _chante, "ennui": _ennui, "bisou": _bisou, "grand amour": _grand_amour,
+    "gros mot": _gros_mot, "zzz": _dodo_zzz,
+    "mise a jour": _mise_a_jour, "404": _404, "pas de reseau": _pas_de_reseau,
+    "cherche reseau": _cherche_reseau, "batterie": _batterie, "patientez": _patientez,
+    "nuage": _nuage, "attention": _attention, "fantome": _fantome,
+    "boussole": _boussole, "fleche droite": _fleche("droite", px.VERT, "émerveillé"),
+    "fleche gauche": _fleche("gauche", px.AMBRE, "interro"), "tout droit": _fleche("haut", px.VERT, "joie"),
+    "porte": _porte, "ange": _ange, "diable": _diable(), "oui": _signe("oui", px.coche, "joie"),
+    "non": _signe("non", px.croix, "colère"),
+})
+
+
+
+# Le corps suit l'émotion (David, 27/11 ; étude §12.6) : champ `corps` de chaque expression,
+# nom d'une entrée BOUCLÉE de robot_lights.json. Absent = le corps n'est pas touché (mires,
+# glitchs et écran noir : les bugs joués posent leurs propres lumières).
+CORPS = {
+    "default": "default", "repos neon": "default",
+    # lui
+    "joie": "joie", "etoiles": "joie", "voila": "joie", "chante": "joie", "oui": "joie",
+    "colere": "colere", "gros mot": "colere", "non": "colere",
+    "tristesse": "triste", "ko": "triste", "batterie": "triste",
+    "surprise": "surprise", "etourdi": "surprise", "hein": "surprise", "emerveille": "surprise",
+    "amour neon": "amour", "love": "amour", "grand amour": "amour", "bisou": "amour", "sexy": "amour",
+    "malice": "default", "dodo": "dodo", "zzz": "dodo", "ennui": "dodo", "bored": "dodo",
+    "idee": "ange",
+    # conversation
+    "ecoute": "ecoute", "reflechit": "comet", "parle": "parle", "speak": "parle", "speak loop": "parle",
+    # machine
+    "mise a jour": "comet", "upgrade": "comet", "cherche reseau": "comet", "internet": "comet",
+    "patientez": "comet", "nuage": "ange", "brain": "ange",
+    "404": "alerte", "pas de reseau": "alerte", "attention": "alerte", "warning": "alerte",
+    "fantome": "ange", "scooby-doo": "ange",
+    # quête
+    "boussole": "comet", "fleche droite": "comet", "fleche gauche": "comet", "tout droit": "comet",
+    "porte": "ange", "ange": "ange",
+    "diable": "devil", "default red": "devil", "repos braise": "devil", "speak red": "devil",
+}
+
 def ecrire_png(chemin: Path, rgb) -> None:
     Image.fromarray(rgb, "RGB").save(chemin, optimize=True)
 
@@ -219,9 +503,14 @@ def main() -> None:
         pistes = fabrique()
         entree = catalogue.get(nom, {"name": nom, "keys": []})
         entree.update(pistes)  # garde keys, default, follow audio…
+        if nom in CORPS:
+            entree["corps"] = CORPS[nom]
         catalogue[nom] = entree
     for nom, (zone, objet, miroir) in IMAGES.items():
-        rgb = m.dessiner_oeil(objet, miroir=miroir) if zone == "eye" else m.dessiner_bouche(objet)
+        if zone.endswith("-brut"):  # picto, œil-symbole ou glitch : déjà une image
+            zone, rgb = zone[:-5], objet
+        else:
+            rgb = m.dessiner_oeil(objet, miroir=miroir) if zone == "eye" else m.dessiner_bouche(objet)
         ecrire_png(VISUELS / zone / f"{nom}.png", rgb)
     EXPRESSIONS.write_text(json.dumps(catalogue, ensure_ascii=False, indent=4) + "\n", encoding="utf-8")
     print(f"{len(ANIMATIONS)} expressions, {len(IMAGES)} images écrites")

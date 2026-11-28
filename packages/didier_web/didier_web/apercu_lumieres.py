@@ -30,6 +30,8 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from theatre_contrats.lumiere_visage import CorpsSuitVisage
+
 Chemin = Union["os.PathLike[str]", str]
 Rgb = Tuple[int, int, int]
 
@@ -173,15 +175,37 @@ def charger(json_dir: Chemin) -> Tuple[Dict[str, Any], Dict[str, Dict[str, Any]]
     return lumieres, resoudre_briques(base, couleurs)
 
 
+def charger_expressions(json_dir: Chemin) -> Dict[str, Any]:
+    """expressions.json : seul le champ `corps` (et loop/duration) sert à l'aperçu."""
+    try:
+        with open(os.path.join(str(json_dir), "expressions.json"), encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
 class Apercu:
     """L'aperçu tenu par le pont : relit les fichiers s'ils ont changé (sans perdre ce qui joue :
-    le modèle reprend avec les nouvelles tables à la prochaine commande)."""
+    le modèle reprend avec les nouvelles tables à la prochaine commande).
+
+    Le corps suit aussi le visage (theatre_contrats.lumiere_visage, la même règle que
+    lights_node) : le pont lui passe les messages `face`. Le retour seul du visage au repos à la
+    fin d'une expression non bouclée est modélisé ici (le vrai Face le fait de lui-même)."""
 
     def __init__(self, json_dir: Chemin, now_ms: float) -> None:
         self.json_dir = json_dir
         self._signature = signature(json_dir)
         lumieres, briques = charger(json_dir)
         self.etat = EtatLumieres(lumieres, briques, now_ms)
+        self.expressions = charger_expressions(json_dir)
+        self.arbitre = CorpsSuitVisage(repos=REPOS)
+        self._fin_visage: Optional[float] = None
+        self.arbitre.visage(self._corps(REPOS))
+
+    def _corps(self, expression: str) -> Optional[str]:
+        entree = self.expressions.get(expression)
+        return entree.get("corps") if isinstance(entree, dict) else None
 
     def _relire_si_modifie(self) -> None:
         sig = signature(self.json_dir)
@@ -190,8 +214,32 @@ class Apercu:
             self.etat.lumieres, self.etat.briques = charger(self.json_dir)
 
     def recevoir(self, valeur: object, time_ms: float, now_ms: float) -> None:
+        """Un message `robot_lights` : commande explicite du corps."""
         self._relire_si_modifie()
+        self.arbitre.commande(valeur)
         self.etat.recevoir(valeur, time_ms, now_ms)
 
+    def recevoir_visage(self, valeur: object, time_ms: float, now_ms: float) -> None:
+        """Un message `face` : le visage change (ou revient au repos sur « stop »)."""
+        nom = REPOS if valeur == STOP else valeur
+        if not isinstance(nom, str):
+            return
+        self.expressions = charger_expressions(self.json_dir)  # relu : une retouche compte tout de suite
+        if nom not in self.expressions:
+            return  # expression inconnue : le vrai Face l'ignore aussi
+        entree = self.expressions.get(nom, {})
+        duree = float(time_ms) if time_ms else float(entree.get("duration") or 0)
+        self._fin_visage = None if entree.get("loop") or nom == REPOS else now_ms + duree
+        self._jouer_corps(self.arbitre.visage(self._corps(nom)), now_ms)
+
+    def _jouer_corps(self, nom: Optional[str], now_ms: float) -> None:
+        if nom:
+            self.etat.recevoir(nom, 0, now_ms)
+
     def instant(self, now_ms: float) -> Dict[str, Any]:
+        if self._fin_visage is not None and now_ms > self._fin_visage:
+            self._fin_visage = None
+            self._jouer_corps(self.arbitre.visage(self._corps(REPOS)), now_ms)
+        if self.arbitre.explicite and self.etat.instant(now_ms)["sequence"] == self.etat.repos:
+            self._jouer_corps(self.arbitre.fin_commande(), now_ms)
         return dict(self.etat.instant(now_ms), bandes=[dict(b) for b in BANDES])

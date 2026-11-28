@@ -22,7 +22,7 @@ Invalid payloads are rejected with an explicit ERROR log naming the topic
 | Topic | Node | Payload examples | Description |
 |-------|------|------------------|-------------|
 | `animation` | `animations_node` | `"parle"`, `false` (stop) | Plays/stops a JSON sequence; fans out per-track messages to the topics below. |
-| `face` | `lights_node` | `"joie"`, `"calib"`, `"stop"` | Facial expression (mouth 24x16 + two 8x8 eyes). |
+| `face` | `lights_node` | `"joie"`, `"calib"`, `"stop"` | Facial expression (mouth 24x16 + two 8x8 eyes). Since 27/11 the body LEDs **follow the face**: an expression's optional `corps` field names a (looping) `robot_lights` entry, played when the face changes — unless an explicit `robot_lights` command holds the body, until it falls back to rest (`theatre_contrats.lumiere_visage`, same rule in `lights_node` and the scene page preview). |
 | `robot_lights` | `lights_node` | `"trip"`, `{"brightness": 0.15}` | Body LED sequences; brightness is global and non-persistent (default 0.05). |
 | `audio` | `audio_node` | `"didier20/superbe-jack.mp3"`, `"stop"` | Audio cues (VLC). |
 | `relay` | `relays_node` | relay keys | Accessory relays. |

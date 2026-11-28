@@ -587,3 +587,165 @@ Signatures de départ, à affiner avec David au visuel :
 | batterie basse | pixels morts de plus en plus nombreux | le ruban s'éteint par un bout |
 
 Photosensibilité : 2 battements toutes les 2 s, sous la règle des 3 flashs par seconde.
+
+## 12. Un tout cohérent : les numéros, les pictogrammes, le corps (27/11, proposé)
+
+David (27/11) : reprendre **toutes** les animations dans le nouveau dessin ; les numéros peuvent
+être totalement décalés, mais il faut une cohérence générale — Scooby-Doo l'a amusé, sans avoir
+de sens. Recherche : [`visage/sources/brut-symboles-bd-et-gags-robots.md`](visage/sources/brut-symboles-bd-et-gags-robots.md).
+Dessins : [`visage/pictos.py`](visage/pictos.py).
+
+![Propositions de pictogrammes](visage/pictos-propositions.png)
+
+### 12.1 La règle de cohérence
+
+**Tout ce qui s'affiche sur Didier vient de l'un de ses trois mondes**, et de rien d'autre :
+
+| Monde | Ce que c'est | D'où ça sort |
+|---|---|---|
+| **Lui** | ses émotions, et les symboles de bande dessinée qui les grossissent : yeux en spirale, en croix, en étoile, en cœur, note de musique, ampoule, zzz, gros mot en signes | la grammaire du manga et de la BD (lue : spirale = vertige, croix = K.O., étoiles = émerveillement, cœurs = coup de foudre) — comprise sans un mot, de loin |
+| **Sa machine** | Didier est une âme hébergée par une start-up d'éternité en faillite : mise à jour 3/47, « 404 », réseau perdu, batterie, sablier, envoi dans le nuage, l'âme qui s'échappe | l'univers des séquences existantes (`appel-eternel-life`, `upload-cerveau`, `access-internet`) et les bugs joués |
+| **Sa quête** | il cherche un endroit et les passants savent où : boussole affolée, flèches, porte, mode ange, mode diable, oui / non | le spectacle ; **la flèche montre la direction que le passant vient d'indiquer** |
+
+Un gag « décalé » est le bienvenu s'il entre dans un de ces mondes. Scooby-Doo n'entre dans aucun.
+
+**Le dessin** suit la charte du §5 (P3) : trait néon de 2 LED, une couleur par image (deux au
+plus), fond noir. Les yeux restent les yeux de Didier, ou deviennent **un symbole** (jamais une
+image). La bouche sert d'écran aux pictogrammes et aux mots courts (police de 3 × 5 LED : 6
+caractères, ou 3 en grand).
+
+Ce que la recherche ajoute et que je retiens : les petits robots les plus attachants ne le sont
+pas par leurs émotions de base mais par leurs **petites faiblesses** (le faux rhume d'EMO est cité
+comme son moment le plus touchant) et par leurs **réactions à ce qu'on leur fait** (caresse,
+approche). Pour Didier : rougir quand on s'approche, éternuer en glitch. À garder pour plus tard,
+ça demande du code.
+
+### 12.2 Ce que devient chaque ancienne expression
+
+Les noms restent (47 séquences et les touches de la télécommande les appellent).
+
+| Nom actuel | Aujourd'hui | Devient | Monde |
+|---|---|---|---|
+| `speak`, `speak loop` | bouche rayée jaune | le « parle » v2 | lui |
+| `voila` | idem | « des étoiles plein les yeux » | lui |
+| `bored` | idem | « ennui » (yeux mi-clos, regard de côté) | lui |
+| `default red`, `speak red`, `repos braise` | yeux rouges | **mode diable**, au repos et parlant (yeux à cornes) | quête |
+| `sexy` | lèvres réalistes | « bisou » (lèvres au trait, yeux en cœur) | lui |
+| `love` | cœur arc-en-ciel | « grand amour » (un cœur qui bat sur toute la bouche) | lui |
+| `brain` (séquence `upload-cerveau`) | cerveau rose | « envoi dans le nuage » (l'âme monte), yeux à auréole | machine |
+| `upgrade` | losange violet | « mise à jour 3/47 », la barre avance | machine |
+| `internet` | globe bleu | « il cherche le réseau » | machine |
+| `warning` | rond violet | triangle « attention », yeux en point d'exclamation | machine |
+| `scooby-doo` | trois personnages | **à décider** : je propose « l'âme s'échappe » (le fantôme) — c'est le seul lien qui reste avec Scooby-Doo, et il entre dans la machine | machine |
+| `fuzz`, `repos glitch`, `glitch total` | bruit dessiné | images tirées du calque de glitchs (§11), sous la règle des 3 flashs | machine |
+| `off` | noir | inchangé | — |
+
+Nouvelles, sans touche pour l'instant : `etourdi`, `ko`, `idee`, `chante`, `gros mot`, `404`,
+`batterie`, `patientez`, `boussole`, `fleche gauche / droite / haut`, `porte`, `ange`, `oui`, `non`.
+
+### 12.3 Le corps — cyan, et toujours en mouvement
+
+**Correction du 27/11** : la proposition disait « le corps reste orange ». C'était une erreur de
+ma part : l'orange est la **peinture** de la carrosserie ; le ruban de LED du corps est **déjà
+cyan** (`chase me`). Le corps garde donc le cyan, la couleur de Didier ; la carrosserie orange
+fait le contraste, et l'ambre des vraies pannes (§11.7) ressort d'autant mieux.
+
+David (27/11) : « il faut que ça puisse bouger, c'est tout l'intérêt des LED RGB ». **Aucune
+animation du répertoire n'est plus fixe** ; tout est fait en données, avec les mouvements que
+le moteur sait déjà faire (chenillard, comète, pulsation, scintillement, arc-en-ciel).
+Aperçu (approché) : [`visage/corps-animations.gif`](visage/corps-animations.gif).
+
+| Animation du corps | Avant | Maintenant | Monde |
+|---|---|---|---|
+| `default`, `default dark` | chenillard cyan / violet | inchangé | lui |
+| `speak` | pulsation bleue | pulsation **cyan** | lui |
+| `scan`, `transfer` | arc-en-ciel puis vert / rouge | **comète cyan** puis scintillement / pulsation cyan | machine |
+| `comet` | appelée par 2 séquences, **jamais définie** | comète cyan | machine |
+| `devil` | rouge **fixe** | pulsation rouge puis chenillard rouge | quête |
+| `amour` *(nouveau)* | — | scintillement puis pulsation roses | lui |
+| `colere` *(nouveau)* | — | scintillement puis pulsation rouges | lui |
+| `ange` *(nouveau)* | — | scintillement or | quête |
+| `dodo` *(nouveau)* | — | pulsation bleue | lui |
+| `fete` *(nouveau)* | — | comète, chenillard et scintillement arc-en-ciel | lui |
+| `trip`, `color cycle`, `heidi` | arc-en-ciel | inchangés : ce sont des fêtes | lui |
+| `test`, `test2` | essais | inchangés, hors répertoire | — |
+
+Règle : l'arc-en-ciel est réservé à la fête, l'ambre aux vraies pannes, le rouge au diable et à
+la colère, l'or à l'ange, le rose à l'amour, le cyan à Didier et à sa machine.
+
+⚠️ Deux séquences de l'ancien spectacle (`eternel-show/seq1.json`, `seq2.json`) appellent les
+lumières `tata` et `tutu`, qui n'existent nulle part : le robot les ignore (erreur au journal).
+Non corrigé, faute de savoir ce qu'elles devaient être.
+
+### 12.4 Décisions de David (27/11)
+
+1. Les trois mondes : **oui**, c'est la cohérence voulue.
+2. `scooby-doo` → le fantôme, **à juger sur le résultat**.
+3. Tous les pictogrammes gardés (« le design est cohérent ») ; à voir à l'usage.
+4. Le corps doit **bouger** (voir §12.3, et la correction cyan).
+
+Appliqué le 27/11 (branche `visage-coherent`) : **59 expressions** au dessin v2 — les 18
+anciennes migrées sous leur nom, 28 nouvelles — et 12 animations du corps. Oui / non sont un
+**✓ vert** et un **✗ rouge** plutôt que des mots (lisibles de loin, sans langue ; le « N » à
+3 LED de large se lisait « H »). Planche de contrôle, image par image :
+[`visage/planche-complete.png`](visage/planche-complete.png) (`planche_expressions.py`).
+
+### 12.5 Comment ils sortent
+
+David (27/11) : « à l'usage ce n'est pas clair comment ils peuvent sortir ». Aujourd'hui, une
+expression peut être déclenchée par cinq chemins ; seuls les deux premiers marchent déjà pour
+les nouvelles :
+
+| Chemin | Qui décide | Les nouvelles expressions | État |
+|---|---|---|---|
+| **Page scène** (liste des expressions) | toi, à la main | toutes, dès le déploiement : la liste est lue dans `expressions.json` | **marche** |
+| **Séquences** (`data/json/sequences`) | toi, à l'écriture | toutes ; les 47 séquences existantes prennent le nouveau dessin sans rien changer | **marche** |
+| **Conversation** : l'émotion que donne le LLM à chaque réplique, et les didascalies (`*rit*`, `*soupire*`) | Didier | aujourd'hui 6 émotions seulement (joie, colère, tristesse, surprise, amour, dégoût) ; il faudra ajouter au vocabulaire du LLM : `chante`, `idee`, `hein`, `etourdi`, `ennui`, `bisou`, `boussole`, `fleche …`, `oui`, `non`, `ange`, `diable`… | **à faire**, dans le lot de l'assainissement qui touche à la bouche et au corps (S2-S3), pas en parallèle |
+| **Événements réels** : batterie, réseau, oreille | la détection des pannes | `batterie`, `pas de reseau`, `cherche reseau`, `patientez` + la marque ambre (§11.7) | **à faire** (lot G2) |
+| **Télécommande** (touches E0-E9, G1) | toi, en jeu | les touches existantes jouent les anciens noms, donc le nouveau dessin ; affecter des touches aux nouvelles relève de l'étude UX de la télécommande | **plus tard** |
+
+Le chemin qui compte le plus pour l'impro est le troisième : c'est le LLM qui choisira, au fil
+de la conversation, « hein ? », « une idée ! » ou « c'est par là ». La flèche, en particulier,
+n'a de sens que si elle suit la direction que le passant vient de donner.
+
+### 12.6 Le corps suit l'émotion (27/11)
+
+David (27/11) : « ajuste les LED du corps en fonction des émotions ». Jusqu'ici la conversation
+n'envoyait que le visage : le corps restait sur son chenillard quoi que Didier ressente.
+
+**Règle**, écrite une seule fois dans `theatre_contrats/lumiere_visage.py` et appliquée à
+l'identique par le robot (`lights_node`) et par l'aperçu de la page scène :
+
+1. une **commande explicite** du corps (séquence, page, télécommande) garde la main jusqu'à ce
+   qu'elle revienne au repos ; elle rend ensuite le corps au visage en cours ;
+2. sinon le corps prend la lumière **liée à l'expression** : le champ `corps` de
+   `expressions.json` (contrôlé par le contrat : il doit nommer une entrée de `robot_lights.json`) ;
+3. une expression sans `corps` rend le corps au repos s'il était tenu par le visage. Les glitchs
+   et l'écran noir n'en ont pas : les bugs joués posent leurs propres lumières.
+
+Les lumières liées **bouclent toutes** : une lumière courte (`speak` dure 500 ms) se serait éteinte
+pendant que Didier parle encore. D'où six entrées dédiées : `joie` (scintillement et chenillard
+cyan), `parle` (pulsation cyan), `ecoute` (pulsation verte), `surprise` (scintillement cyan),
+`triste` (pulsation bleue), `alerte` (scintillement rouge).
+
+| Expressions | Corps |
+|---|---|
+| repos, malice | `default` (chenillard cyan) |
+| joie, étoiles, chante, oui | `joie` |
+| parle (et `speak`) · écoute · réfléchit | `parle` · `ecoute` · `comet` |
+| colère, gros mot, non | `colere` |
+| tristesse, K.O., batterie | `triste` |
+| surprise, étourdi, hein, émerveillé | `surprise` |
+| amour, bisou, grand amour | `amour` |
+| dodo, zzz, ennui | `dodo` |
+| idée, ange, porte, nuage, fantôme | `ange` (scintillement or) |
+| mise à jour, cherche réseau, patientez, boussole, flèches | `comet` (la machine travaille) |
+| 404, pas de réseau, attention | `alerte` |
+| diable (et `default red`, `speak red`, `repos braise`) | `devil` |
+
+La table vit dans `generer_visuels.py` (`CORPS`), source unique ; aperçu des animations :
+[`visage/corps-animations.gif`](visage/corps-animations.gif).
+
+Tests : l'arbitre (10 cas), le contrat (corps connu / inconnu), le visage (champ et compteur),
+l'aperçu sur les vraies données (suivre, priorité de la commande, fin d'une expression non
+bouclée). Contrôle : supprimer la priorité de la commande explicite fait rougir 3 tests.
