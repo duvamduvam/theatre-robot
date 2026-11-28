@@ -1790,3 +1790,74 @@ def test_scene_corps_sur_bouton_rearmer_regles_gravees():
     assert "réarmement refusé : cause encore là" in js
     # Un err du pont pendant la demande est dit tel quel (pas « cause encore là »).
     assert "surReponseRearmer(msg);" in js and '"réarmement refusé par le pont : " + msg.reason' in js
+
+
+# ------------------------------------------------- lot S3 (28/11) : Séance en haut, Réarmer qui parle
+def _raisons_rearmer(appels):
+    """Résultats de raisonRearmerInactif(...) pour chaque appel, calculés par le VRAI scene.js
+    (la fonction seule, extraite du fichier : le reste de la page exige un DOM)."""
+    import subprocess
+    js = _lire("scene.js")
+    m = re.search(r"^function raisonRearmerInactif\(.*?^}\n", js, re.S | re.M)
+    assert m is not None, "raisonRearmerInactif introuvable dans scene.js"
+    script = m.group(0) + "\nconsole.log(JSON.stringify(" + json.dumps(appels) \
+        + ".map(a => raisonRearmerInactif(...a))));"
+    sortie = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30, check=True)
+    return json.loads(sortie.stdout)
+
+
+@pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node absent : scene.js non joué")
+def test_scene_rearmer_dit_pourquoi_il_est_inactif():
+    """Séance du 24/11 : « Réarmer » grisé et muet sans la main. Sans la main, la page dit de la
+    prendre (quel que soit l'état) ; avec la main hors VERROU, elle dit pourquoi ; "" = actif."""
+    assert _raisons_rearmer([
+        [False, "VERROU", False], [False, "ARME", False], [False, None, False],
+        [True, "VERROU", False], [True, "VERROU", True],
+        [True, None, False], [True, "ARME", False], [True, "DEMARRAGE", False],
+        [True, "PAUSE_DUREE", False], [True, "INCONNU", False],
+    ]) == [
+        "prends la main d'abord pour réarmer",
+        "prends la main d'abord pour réarmer",
+        "prends la main d'abord pour réarmer",
+        "",
+        "",
+        "rien à réarmer : aucun état reçu du corps sûr",
+        "rien à réarmer : le corps sûr est armé",
+        "rien à réarmer : au démarrage, il s'arme seul dès que la cause disparaît",
+        "rien à réarmer : Réarmer ne sert qu'en VERROU",
+        "rien à réarmer : Réarmer ne sert qu'en VERROU",
+    ]
+
+
+def test_scene_rearmer_raison_affichee_sans_toucher_a_la_regle():
+    """La raison s'affiche sous le bouton et dans son title ; la règle d'activation reste la ligne
+    gravée par test_scene_corps_sur_bouton_rearmer_regles_gravees (main ET VERROU, côté page) —
+    le pont et le nœud refusent de toute façon."""
+    html = _lire("scene.html")
+    groupe = html[html.index('<div id="scene-corps-sur"'):html.index('<p id="corps-sur-detail"')]
+    # Au chargement on n'a pas la main : la raison est déjà écrite, avant tout JS.
+    assert '<p id="corps-sur-raison" class="scene-note scene-raison">prends la main d\'abord pour réarmer</p>' in groupe
+    js = _lire("scene.js")
+    assert '$("corps-sur-raison").textContent = raison;' in js
+    assert '$("corps-sur-rearmer").title = raison ? "inactif : " + raison : TITRE_REARMER;' in js
+    # La raison est recalculée à chaque changement d'écriture (surLiaison) et d'état du corps.
+    assert js.count("majBoutonRearmer();") >= 5
+
+
+def test_scene_seance_dans_le_bandeau_et_toujours_sim_seulement():
+    """Séance du 26/11 : « Séance → Démarrer » était en bas du rail, il fallait défiler. Il vit dans
+    le BANDEAU (en tête de page, PC et téléphone), juste après « Prendre la main », toujours sous
+    scene-repetition + hidden ; plus rien de la séance dans « Préparer »."""
+    html = _lire("scene.html")
+    bandeau = html[html.index('<header id="bandeau">'):html.index("</header>")]
+    seance = bandeau[bandeau.index('<span id="scene-seance"'):]
+    assert seance.startswith('<span id="scene-seance" class="scene-seance scene-repetition" hidden>')
+    assert bandeau.index('id="btn-prendre-main"') < bandeau.index('id="scene-seance"') \
+        < bandeau.index('id="audio-bandeau"')
+    for attendu in ('data-topic="rehearsal/cmd" data-value="start">Démarrer</button>',
+                    'data-topic="rehearsal/cmd" data-value="stop">Finir</button>',
+                    'id="scene-etat-seance"'):
+        assert attendu in seance
+    preparer = html[html.index('<details id="scene-preparer"'):html.index("</details>", html.index('<details id="scene-preparer"'))]
+    assert "rehearsal/cmd" not in preparer and "scene-etat-seance" not in preparer
+    assert html.count('data-topic="rehearsal/cmd"') == 2

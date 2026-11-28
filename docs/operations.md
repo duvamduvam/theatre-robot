@@ -921,8 +921,8 @@ utilisé → Re-détecter » (de même pour la sortie).
 **3. La page scène** : http://localhost:8765/scene — un poste de jeu qui tient
 dans l'écran (refonte du 12/11, `docs/spec-refonte-page-scene.md`, captures
 `docs/pictures/page-scene/`) :
-- **à gauche, « Préparer »** : Parole, Personnalité, Vision, Route (+ vitesse),
-  Séance. Chaque paire ON/OFF est un contrôle segmenté : le segment **vert est
+- **à gauche, « Préparer »** : Parole, Personnalité, Vision, Corps sûr, Route (+ vitesse),
+  Bugs joués. Chaque paire ON/OFF est un contrôle segmenté : le segment **vert est
   l'état réel** (il arrive avec ~2 s de retard), pas le dernier clic ; le badge
   d'état est à droite du titre du groupe ;
 - **au centre** : une **vue principale** et trois vignettes (extérieur, caméra
@@ -933,15 +933,16 @@ dans l'écran (refonte du 12/11, `docs/spec-refonte-page-scene.md`, captures
 - **à droite** : la conversation (ce que Didier a *compris* et ce qu'il dit),
   le champ « Souffler » pour lui parler au clavier, la consigne de jeu à la
   main, et l'« Oreille de Didier » repliée (diagnostic du son) ;
-- **bandeau** : mode, connexion, prise de main, un **⚠ n** quand des erreurs
-  récentes existent (clic = liste), et le ticket ;
+- **bandeau** : mode, connexion, prise de main, **Séance** (Démarrer / Finir et son
+  badge, sim seulement — dans le bandeau depuis le 28/11, lot S3, pour l'avoir sans
+  défiler), un **⚠ n** quand des erreurs récentes existent (clic = liste), et le ticket ;
 - sur **téléphone** : une colonne (vues, Jeu, conversation, « Préparer »
   replié en bas) et **STOP collé en bas de l'écran**.
 
 Puis **Route ON**, vitesse au curseur (ou au fader de la vraie télécommande en
 `ROS_DOMAIN_ID=43 SLIDERS_PROFILE=repetition`), **Séance → Démarrer**. La page
 n'affiche **ni** les pannes **ni** les lubies tirées : David joue sans savoir.
-- **Badges de retour (31/10)** : dans le groupe Séance, « séance : en attente /
+- **Badges de retour (31/10)** : à côté de Séance (bandeau), « séance : en attente /
   en cours / terminée » (topic latché `rehearsal/state`, publié par le
   régisseur) — inutile de recliquer « Démarrer » tant qu'il ne dit pas « en cours ».
   À côté de « route en marche », un badge orange **« arrêt vocal — bouger le
@@ -1125,7 +1126,8 @@ conventions, mutants, points ouverts). Le nœud `/didier/corps_sur` est lancé p
   rend la télécommande, PAS l'autonomie. **Depuis la page scène (A0-5, 24/11)** : groupe « Corps
   sûr » (robot ET sim), badge d'état (armé / démarrage / VERROU / pause, avec la cause), ligne
   zone · obstacle le plus proche · régions vues, bouton **Réarmer** actif seulement en VERROU et
-  avec la main ; 2,5 s après, la page dit « réarmé » ou « refusé : cause encore là ». Sur le Pi :
+  avec la main — inactif, la page dit pourquoi sous le bouton (S3, 28/11) : « prends la main
+  d'abord pour réarmer », ou « rien à réarmer : … » hors VERROU ; 2,5 s après, la page dit « réarmé » ou « refusé : cause encore là ». Sur le Pi :
   `~/ros2_ws/src/robot/conf/scripts/rearmer-corps-sur.sh`. La page montre le DERNIER état publié
   (à chaque changement) : elle ne voit pas un nœud mort.
 - **Sur le robot sans lidar** (aujourd'hui) : DEMARRAGE `capteur_absent` permanent, aucune

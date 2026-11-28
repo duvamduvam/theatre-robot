@@ -750,9 +750,41 @@ function surReponseRearmer(msg) {
   majBoutonRearmer();
 }
 
+// Pourquoi « Réarmer » est inactif (lot S3, 28/11) : un bouton grisé muet laissait croire à une
+// panne (séance du 24/11). Fonction PURE (jouée par node dans test_web_protocol.py) : "" = actif.
+// Elle ne décide RIEN : la règle reste la ligne `disabled` de majBoutonRearmer, et le pont
+// refuse de toute façon sans la main, le nœud sans VERROU ni cause disparue.
+function raisonRearmerInactif(ecrivain, etat, demandeEnCours) {
+  if (!ecrivain) {
+    return "prends la main d'abord pour réarmer";
+  }
+  if (demandeEnCours) {
+    return "";  // la ligne de détail dit déjà « réarmement demandé… »
+  }
+  if (etat === null) {
+    return "rien à réarmer : aucun état reçu du corps sûr";
+  }
+  if (etat === "VERROU") {
+    return "";
+  }
+  if (etat === "ARME") {
+    return "rien à réarmer : le corps sûr est armé";
+  }
+  if (etat === "DEMARRAGE") {
+    return "rien à réarmer : au démarrage, il s'arme seul dès que la cause disparaît";
+  }
+  return "rien à réarmer : Réarmer ne sert qu'en VERROU";
+}
+
+const TITRE_REARMER = "lève un VERROU si sa cause a disparu (lidar sain, pas d'arrêt d'urgence)";
+
 function majBoutonRearmer() {
   const verrou = corpsSur.etat !== null && corpsSur.etat.etat === "VERROU";
   $("corps-sur-rearmer").disabled = !(state.isWriter && verrou && corpsSur.demande === null);
+  const raison = raisonRearmerInactif(state.isWriter, corpsSur.etat === null ? null : corpsSur.etat.etat,
+                                      corpsSur.demande !== null);
+  $("corps-sur-raison").textContent = raison;
+  $("corps-sur-rearmer").title = raison ? "inactif : " + raison : TITRE_REARMER;
 }
 
 $("corps-sur-rearmer").addEventListener("click", (event) => {
