@@ -1154,9 +1154,10 @@ conventions, mutants, points ouverts). Le nœud `/didier/corps_sur` est lancé p
 
 ## Fumée automatique — la sim rejouée toute seule (lot F, 07/11)
 
-**Sur GitHub Actions (essai du 22/11, retenu le 25/11, automatique depuis le 28/11).**
-`.github/workflows/fumee.yml` part SEUL sur chaque PR vers main et chaque fusion dans main (hors
-PR de doc seule ; une nouvelle poussée annule la passe en cours de la même branche) ; à la main :
+**Sur GitHub Actions (essai du 22/11, retenu le 25/11).** `.github/workflows/fumee.yml`, à la
+main seulement. Automatique essayé le 28/11 puis retiré le jour même : les runners publics ne
+tiennent plus le seuil RTF (0,762 puis 0,679 ; une passe sous le seuil est « invalide », job non
+en échec) — la fumée de référence est celle du PC, à rouvrir en F2/F3.
 `gh workflow run fumee.yml --ref <branche>` (≈ 55 min, runner gratuit, 4 vCPU,
 sans carte graphique). Résultat du 22/11 : temps réel 0,896, 13 épreuves sur 13. Le verdict se
 lit dans le résumé du run (`gh run view <id> --log | grep Résumé`). La conversation n'y tourne que
