@@ -14,6 +14,8 @@ Mutations (doivent rougir) :
   - stop de David qui ne désarme pas la pause  -> test_stop_de_david_pendant_la_pause_ne_repart_pas
   - pause qui pose le verrou                   -> test_pause_sans_verrou_un_geste_peut_suivre
   - pause qui relance un Didier déjà arrêté    -> test_pause_deja_arrete_ne_repart_jamais
+  - pause sans `look` du corps (fumée du 28/11, D4 rouge : le regard ne venait que de la bouche,
+    3,1 s après, au gré du LLM)                -> test_pause_le_corps_regarde_dans_le_meme_tick
 """
 from conftest import fabriquer
 
@@ -84,6 +86,26 @@ def test_pause_pendant_un_aller_voir_l_annule_puis_rejoint_la_route():
     assert [(t, p["pourquoi"]) for t, p in journal(out, "annulation")] == [
         (3.0, "« regarde » : il s'arrête pour regarder → il arrête de faire ce qu'il a dit "
               "(aller voir « elephant »)")]
+
+
+REGARD_DEVANT = {"angle_deg": 0.0, "hold_ms": 3000}   # durees_s.regarder = 3,0 s
+
+
+def looks(out):
+    return [(o[0], o[2]) for o in out if o[1] == "look"]
+
+
+def test_pause_le_corps_regarde_dans_le_meme_tick():
+    # En marche : le look part au tick du stop (2,0 s), pas « quand le LLM y pense ».
+    en_marche = scene([(2.0, bouche(PAUSE_DAVID))])
+    assert looks(en_marche) == [(2.0, REGARD_DEVANT)]
+    assert stops_gos(en_marche)[0] == (2.0, STOP_DIDIER)
+    # Déjà arrêté : il regarde aussi (sans repartir).
+    deja_arrete = scene([(1.0, bouche("stop")), (2.0, bouche(PAUSE_DAVID))])
+    assert looks(deja_arrete) == [(2.0, REGARD_DEVANT)]
+    # Hors route : il regarde sur place.
+    hors_route = jouer_regisseur(fabriquer(pools={}), 10.0, [(1.0, bouche(PAUSE_DAVID))], regisseur_2121)
+    assert looks(hors_route) == [(1.0, REGARD_DEVANT)]
 
 
 def test_mode_degrade_la_pause_est_un_stop():

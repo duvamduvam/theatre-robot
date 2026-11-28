@@ -149,8 +149,9 @@ CHAT_MOVE_TOUR_CMD = "tour_de"
 # Chaîne gravée des deux côtés.
 CHAT_MOVE_TURN_TO_CMD = "tourner_vers"
 # Lot « texte raccord » (18/11, séance de 21:35, « il y a une lettre sur le banc, tu pourrais
-# regarder ») : payload JSON "pause" = « regarde ça » — s'arrêter, regarder (le regard part de la
-# bouche sur `look`), puis reprendre la route. Consommateur : le sélecteur de jeu (jeu:=true), qui
+# regarder ») : payload JSON "pause" = « regarde ça » — s'arrêter, regarder (le sélecteur publie
+# lui-même un `look` devant, dans le même tick — fumée du 28/11 ; la bouche peut en ajouter un),
+# puis reprendre la route. Consommateur : le sélecteur de jeu (jeu:=true), qui
 # relaie « stop » sans verrou puis « go » après un silence tiré dans [reprise.min_s, reprise.max_s]
 # (lot S1, 25/11 : une seule reprise) ; le régisseur seul (jeu:=false) et le relais dégradé la
 # prennent pour un « stop » (sens sûr, sans reprise). Chaîne gravée des deux côtés
