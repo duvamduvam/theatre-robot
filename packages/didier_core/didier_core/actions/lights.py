@@ -42,6 +42,7 @@ class Lights(AbstractJsonActions):
         self.current_animation = {}
         self.animations_methods = {}
         self.default = DEFAULT
+        self.courante = None  # nom de l'entrée en cours (posé par update)
         self.duration = 0
         self.start_time = 0
 
@@ -124,6 +125,7 @@ class Lights(AbstractJsonActions):
 
         if DEFAULT in json_seq:
             self.default = json_seq[NAME]
+        self.courante = json_seq[NAME]
 
         # Chaque entrée de séquence = {nom_de_brique: position_relative_0..1}.
         # La couleur n'est PAS portée à ce niveau : elle vient de lights_base.json,

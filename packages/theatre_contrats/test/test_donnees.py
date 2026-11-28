@@ -303,6 +303,17 @@ def test_expression_une_faute_par_regle(refs, expression, erreurs):
     assert donnees.verifier_expression("joie", expression, refs) == erreurs
 
 
+def test_expression_corps_connu_accepte(refs):
+    # « calme » est la lumière posée par data_dir dans robot_lights.json.
+    assert donnees.verifier_expression("joie", avec(EXPRESSION, corps="calme"), refs) == []
+
+
+@pytest.mark.parametrize("corps, recu", [("fete", "'fete'"), (3, "3"), ("", "''")])
+def test_expression_corps_inconnu_refuse(refs, corps, recu):
+    assert donnees.verifier_expression("joie", avec(EXPRESSION, corps=corps), refs) == [
+        "joie : champ 'corps' : lumière inconnue de robot_lights.json : " + recu]
+
+
 def test_expression_oeil_a_la_taille_de_la_bouche_refuse(data_dir, refs):
     (data_dir / "medias" / "visuals" / "eye" / "large.png").write_bytes(BOUCHE)
     assert donnees.verifier_expression("joie", avec(EXPRESSION, left_eyes=[[1, "large.png"]]), refs) == [

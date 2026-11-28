@@ -36,6 +36,45 @@ def vu(e, now):
     return (i["sequence"], i["brique"], i["methode"], i["rgb"], i["depuis_ms"])
 
 
+def corps(apercu, now):
+    return apercu.instant(now)["sequence"]
+
+
+def test_le_corps_suit_le_visage_sur_les_vraies_donnees():
+    """Étude visage §12.6 : la même règle que lights_node (theatre_contrats.lumiere_visage)."""
+    a = Apercu(JSON, 0)
+    assert corps(a, 10) == "default"
+    a.recevoir_visage("colere", 0, 100)
+    assert corps(a, 200) == "colere"
+    a.recevoir_visage("parle", 0, 300)
+    assert corps(a, 400) == "parle"
+    a.recevoir_visage("stop", 0, 500)
+    assert corps(a, 600) == "default"
+
+
+def test_commande_explicite_gagne_puis_rend_le_corps_au_visage():
+    a = Apercu(JSON, 0)
+    a.recevoir_visage("amour neon", 0, 100)
+    a.recevoir("scan", 0, 200)                # scan : 24 s, non bouclée
+    a.recevoir_visage("joie", 0, 300)         # le visage change : le corps reste sur scan
+    assert corps(a, 400) == "scan"
+    assert corps(a, 200 + 24001) == "joie"    # scan fini -> le corps reprend le visage
+
+
+def test_fin_d_une_expression_non_bouclee_rend_le_corps_au_repos():
+    a = Apercu(JSON, 0)
+    a.recevoir_visage("surprise", 0, 100)     # surprise : 2500 ms, non bouclée
+    assert corps(a, 200) == "surprise"
+    assert corps(a, 100 + 2501) == "default"
+
+
+def test_expression_sans_corps_ne_touche_pas_au_corps():
+    a = Apercu(JSON, 0)
+    a.recevoir_visage("joie", 0, 100)
+    a.recevoir_visage("glitch total", 0, 200)  # pas de champ corps : les bugs posent leurs lumières
+    assert corps(a, 300) == "default"          # le visage tenait le corps : il le rend au repos
+
+
 def test_bandes_gravees():
     # La zone « corps » du ruban : LIGHTS_START_LED 513 -> LIGHTS_END_LED 673 (robot_config).
     from didier_core.robot_config import config
@@ -59,8 +98,9 @@ def test_activations_de_track_frames(tables):
     # trip : 50 s, 5 briques jusqu'à 0,2 / 0,4 / 0,6 / 0,8 / 1.
     assert activations(lumieres["trip"]) == [(0.0, "sea colorcycle"), (10000.0, "rainbow"), (20000.0, "love"),
                                              (30000.0, "rainbow_comet"), (40000.0, "rainbow_chase")]
-    # scan : rainbow « jusqu'à 0 % » -> la pulsation verte prend la main tout de suite.
-    assert activations(lumieres["scan"]) == [(0.0, "rainbow"), (0.0, "pulse green")]
+    # scan (visage v2, 27/11 : la machine travaille en cyan) : comète jusqu'à 60 % des 24 s,
+    # puis scintillement.
+    assert activations(lumieres["scan"]) == [(0.0, "comet cyan"), (14400.0, "sparkle cyan")]
 
 
 def test_demarrage_sur_default(tables):
@@ -70,15 +110,15 @@ def test_demarrage_sur_default(tables):
 def test_scan_avec_duree_de_message_puis_repos(tables):
     e = etat(tables)
     e.recevoir("scan", 8000, 2000)
-    assert vu(e, 2010) == ("scan", "pulse green", "pulse", [0, 255, 0], 10)
-    assert vu(e, 10000) == ("scan", "pulse green", "pulse", [0, 255, 0], 8000)   # 8000 ms pile : encore
+    assert vu(e, 2010) == ("scan", "comet cyan", "comet", [0, 255, 255], 10)
+    assert vu(e, 10000) == ("scan", "comet cyan", "comet", [0, 255, 255], 8000)   # 8000 ms pile : encore
     assert vu(e, 10001) == ("default", "chase me", "chase", [0, 255, 255], 1)    # échue -> repos
 
 
 def test_scan_sans_duree_suit_le_json(tables):
     e = etat(tables)
     e.recevoir("scan", 0, 0)
-    assert vu(e, 23999)[:2] == ("scan", "pulse green")
+    assert vu(e, 23999)[:2] == ("scan", "sparkle cyan")
     assert vu(e, 24001)[:2] == ("default", "chase me")
 
 
@@ -112,9 +152,9 @@ def test_luminosite_et_nom_inconnu_ne_changent_pas_l_animation(tables):
     e.recevoir("n-existe-pas", 0, 200)
     e.recevoir({"brightness": "fort"}, 0, 300)
     i = e.instant(500)
-    assert (i["sequence"], i["brique"], i["rgb"], i["luminosite"]) == ("speak", "pulse", [0, 0, 255], 0.3)
-    # speak : 500 ms au JSON, 4000 ms par le message -> la pulsation bleue tient 4 s.
-    assert vu(e, 4000)[:2] == ("speak", "pulse")
+    assert (i["sequence"], i["brique"], i["rgb"], i["luminosite"]) == ("speak", "pulse cyan", [0, 255, 255], 0.3)
+    # speak : 500 ms au JSON, 4000 ms par le message -> la pulsation cyan tient 4 s.
+    assert vu(e, 4000)[:2] == ("speak", "pulse cyan")
     assert vu(e, 4001)[:2] == ("default", "chase me")
 
 

@@ -48,10 +48,9 @@
         "loop": false,
         "duration": 500,
         "sequences": {
-            "pulse": 1
+            "pulse cyan": 1
         }
     },
-
     "speak dark": {
         "keys": [
             "B9"
@@ -79,7 +78,8 @@
         "duration": 10000,
         "keys": "None",
         "sequences": {
-            "solid red": 0
+            "pulse red": 0.5,
+            "chase red": 1
         }
     },
     "scan": {
@@ -89,8 +89,8 @@
         "loop": false,
         "duration": 24000,
         "sequences": {
-            "rainbow": 0,
-            "pulse green": 0.8
+            "comet cyan": 0.6,
+            "sparkle cyan": 1
         }
     },
     "transfer": {
@@ -100,8 +100,8 @@
         "loop": false,
         "duration": 32000,
         "sequences": {
-            "rainbow": 0,
-            "pulse red": 0.55
+            "comet cyan": 0.5,
+            "pulse cyan": 1
         }
     },
     "test": {
@@ -140,6 +140,107 @@
             "rainbow_chase": 0.42,
             "sparkle_pulse": 0.56,
             "rainbow_sparkle": 1
+        }
+    },
+    "comet": {
+        "keys": [],
+        "loop": true,
+        "duration": 8000,
+        "sequences": {
+            "comet cyan": 1
+        }
+    },
+    "amour": {
+        "keys": [],
+        "loop": true,
+        "duration": 4000,
+        "sequences": {
+            "sparkle pink": 0.5,
+            "pulse pink": 1
+        }
+    },
+    "ange": {
+        "keys": [],
+        "loop": true,
+        "duration": 6000,
+        "sequences": {
+            "sparkle gold": 1
+        }
+    },
+    "dodo": {
+        "keys": [],
+        "loop": true,
+        "duration": 8000,
+        "sequences": {
+            "pulse blue": 1
+        }
+    },
+    "fete": {
+        "keys": [],
+        "loop": true,
+        "duration": 9000,
+        "sequences": {
+            "rainbow_comet": 0.3,
+            "rainbow_chase": 0.7,
+            "rainbow_sparkle": 1
+        }
+    },
+    "colere": {
+        "keys": [],
+        "loop": true,
+        "duration": 3000,
+        "sequences": {
+            "sparkle red": 0.5,
+            "pulse red": 1
+        }
+    },
+    "parle": {
+        "keys": [],
+        "loop": true,
+        "duration": 4000,
+        "sequences": {
+            "pulse cyan": 1
+        }
+    },
+    "joie": {
+        "keys": [],
+        "loop": true,
+        "duration": 3000,
+        "sequences": {
+            "sparkle cyan": 0.5,
+            "chase me": 1
+        }
+    },
+    "triste": {
+        "keys": [],
+        "loop": true,
+        "duration": 6000,
+        "sequences": {
+            "pulse blue": 1
+        }
+    },
+    "surprise": {
+        "keys": [],
+        "loop": true,
+        "duration": 2000,
+        "sequences": {
+            "sparkle cyan": 1
+        }
+    },
+    "ecoute": {
+        "keys": [],
+        "loop": true,
+        "duration": 4000,
+        "sequences": {
+            "pulse green": 1
+        }
+    },
+    "alerte": {
+        "keys": [],
+        "loop": true,
+        "duration": 3000,
+        "sequences": {
+            "sparkle red": 1
         }
     }
 }
