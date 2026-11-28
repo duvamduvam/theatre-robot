@@ -9,15 +9,31 @@ Mutations du lot (doivent rougir) :
   - refus « no_pose » retiré (angle deviné sans cap) -> test_sans_pose_fraiche_aucun_angle_devine
   - tolérance « déjà face » retirée -> test_deja_face_ne_fait_pas_pivoter
   - garde « atteignable » appliquée à tourner_vers -> test_garde_se_tourner_vers_objet_lointain
+Relecture adverse du 28/11 (une mutation par correction) :
+  - B1/B2 : régime « sur place » remis (le pivot ne lève pas l'arrêt) ->
+    test_node_lubie_le_pivot_tourne_vraiment[apres_un_stop_de_didier],
+    test_node_c1_tourner_vers_de_david_sous_son_arret_meme_regle_que_tourner
+  - C2 : garde de finitude retirée -> test_c2_pose_ou_cap_non_finis_no_pose ; garde de la norme
+    du quaternion retirée -> test_c2_cap_odometrie_refuse_un_quaternion_abime,
+    test_node_c2_quaternion_nul_no_pose_aucun_ordre ; « trop_pres » retiré ->
+    test_c2_objet_sous_les_pieds_trop_pres
+  - C3 : tolérance « deja_face » gravée EN DUR (10°), plus importée du module testé.
 """
 import json
 import math
+import types
 
 import pytest
 
-from didier_rehearsal.director import TURN_TO_TOL_DEG, decide_turn_to
+from didier_rehearsal.director import cap_odometrie, decide_turn_to
+from didier_rehearsal.goto import ARRIVED, GotoManeuver, parse_order
+from didier_rehearsal.route import wrap_angle
 from theatre_contrats import objets
 from theatre_contrats.objets import Objet, Tableau
+
+# Tolérance « déjà face » de la spec S2 §5, GRAVÉE (jamais importée : un test qui relit la
+# constante du module la suit dans toutes ses dérives).
+TOLERANCE_DEG = 10.0
 
 
 def tableau(x, y, *, nom="elephant", repere="monde", atteignable=True, distance_m=4.0,
@@ -92,7 +108,7 @@ def test_sans_pose_fraiche_aucun_angle_devine():
 
 def test_deja_face_ne_fait_pas_pivoter():
     """Sous la tolérance : aucun ordre (un pivot de 2° ne se voit pas et réveille le corps sûr)."""
-    petit = math.radians(TURN_TO_TOL_DEG - 1.0)
+    petit = math.radians(TOLERANCE_DEG - 1.0)
     d = decide_turn_to(INTENT, tableau=tableau(math.cos(petit) * 5, math.sin(petit) * 5),
                        pose=(0.0, 0.0, 0.0), off_by_david=False)
     assert d.effect == "deja_face"
@@ -100,9 +116,53 @@ def test_deja_face_ne_fait_pas_pivoter():
 
 
 def test_juste_au_dela_de_la_tolerance_il_pivote():
-    grand = math.radians(TURN_TO_TOL_DEG + 1.0)
+    grand = math.radians(TOLERANCE_DEG + 1.0)
     d = decide_turn_to(INTENT, tableau=tableau(math.cos(grand) * 5, math.sin(grand) * 5),
                        pose=(0.0, 0.0, 0.0), off_by_david=False)
+    assert d.effect == "accepted"
+
+
+# ---------------------------------------------------------------- C2 : jamais de cap inventé
+@pytest.mark.parametrize("pose", [
+    (0.0, 0.0, math.nan), (math.nan, 0.0, 0.0), (0.0, math.inf, 0.0),
+    (0.0, 0.0, None),          # cap refusé par cap_odometrie (quaternion abîmé)
+])
+def test_c2_pose_ou_cap_non_finis_no_pose(pose):
+    """Avant : un cap NaN publiait {"turn_rad": NaN} (wrap_angle(NaN) = NaN)."""
+    d = decide_turn_to(INTENT, tableau=tableau(3.0, 3.0), pose=pose, off_by_david=False)
+    assert d.effect == "no_pose"
+    assert d.order is None and d.angle_deg is None
+
+
+def test_c2_objet_a_position_non_finie_no_position():
+    d = decide_turn_to(INTENT, tableau=tableau(math.nan, 1.0), pose=(0.0, 0.0, 0.0), off_by_david=False)
+    assert d.effect == "no_position" and d.order is None
+
+
+@pytest.mark.parametrize("q", [
+    (0.0, 0.0, 0.0, 0.0),                    # quaternion NUL : atan2(0, 1) donnait un cap de 0
+    (0.0, 0.0, 0.0, 2.0),                    # norme 2
+    (0.0, 0.0, math.nan, 1.0), (0.0, 0.0, 0.0, math.inf), (0.0, 0.0, 0.0, True),
+])
+def test_c2_cap_odometrie_refuse_un_quaternion_abime(q):
+    assert cap_odometrie(*q) is None
+
+
+def test_c2_cap_odometrie_d_un_quaternion_unitaire():
+    demi = math.radians(90.0) / 2.0
+    assert cap_odometrie(0.0, 0.0, math.sin(demi), math.cos(demi)) == pytest.approx(math.pi / 2)
+    assert cap_odometrie(0.0, 0.0, 0.0, 1.0) == 0.0
+
+
+@pytest.mark.parametrize("distance", [0.0, 0.05, 0.29])
+def test_c2_objet_sous_les_pieds_trop_pres(distance):
+    """Sous 0,3 m du centre, le cap vers l'objet tient au bruit de l'odométrie : refus DIT."""
+    d = decide_turn_to(INTENT, tableau=tableau(distance, 0.0), pose=(0.0, 0.0, math.pi), off_by_david=False)
+    assert d.effect == "trop_pres" and d.order is None
+
+
+def test_c2_a_0_31_m_il_pivote():
+    d = decide_turn_to(INTENT, tableau=tableau(0.31, 0.0), pose=(0.0, 0.0, math.pi), off_by_david=False)
     assert d.effect == "accepted"
 
 
@@ -124,8 +184,9 @@ def test_garde_objet_pas_ici_refuse_quand_meme():
 
 # ================================================================ node (rclpy simulé)
 # Banc RÉUTILISÉ de test_director_node.py / test_director_node_goto.py.
-from test.unit.test_director_node import (LUBIE, _creer, _etat_route, _journal,  # noqa: E402
-                                          _publie, _recevoir, _voix, regisseur)  # noqa: F401
+from test.unit.test_director_node import (LUBIE, _cmd, _creer, _etat_route, _fader,  # noqa: E402
+                                          _journal, _publie, _recevoir, _voice_moves, _voix,
+                                          regisseur)  # noqa: F401
 from test.unit.test_director_node_goto import _odom, _tableau  # noqa: E402
 
 
@@ -155,20 +216,159 @@ def test_node_tourner_vers_publie_un_pivot_calcule(regisseur, monkeypatch, tmp_p
     assert len(_ordres(n)) == 1 and "turn_rad" in _ordres(n)[0]
 
 
-def test_node_un_pivot_ne_RELANCE_pas_didier(regisseur, monkeypatch, tmp_path):
-    """LE risque du lot : Didier s'arrête sur sa lubie DEVANT l'objet, puis se tourne vers
-    lui. Ce pivot ne doit NI lever l'arrêt vocal NI fermer la lubie — sinon il repart."""
+# Ce que le sélecteur publie pour l'arrêt d'une lubie (didier_jeu, test_selecteur.PIVOT_LUBIE),
+# GRAVÉ ici : un pivot d'origine « didier », sans « stop » avant.
+def PIVOT_LUBIE(noeud, poi):
+    return {"cmd": "tourner_vers", "objet": poi, "id": "carte/" + poi, "origine": "didier"}
+
+
+def _en_seance(noeud, fader="0.6"):
+    """Route en marche, séance lancée, fader du boîtier à `fader` (vitesse en vigueur)."""
+    _recevoir(noeud, "route", "on")
+    _etat_route(noeud, "on")
+    _cmd(noeud, "start")
+    _fader(noeud, fader)
+
+
+def _vitesse_route_driver(noeud, fader):
+    """Le facteur que route_driver applique : la DERNIÈRE consigne route_speed vue sur le topic —
+    celle du régisseur s'il en a publié une après le fader, sinon le fader."""
+    publiees = _publie(noeud, "route_speed")
+    return float(publiees[-1]) if publiees else float(fader)
+
+
+def _jouer_le_pivot(ordre, vitesse, cap0):
+    """Le VRAI GotoManeuver de route_driver, tické à 10 Hz avec `vitesse`, sur une pose qui suit
+    ses consignes. -> (sorties, cap final)."""
+    m = GotoManeuver(parse_order(ordre), 0)
+    cap, sorties = cap0, []
+    for i in range(1, 400):
+        t_ms = i * 100
+        m.update_pose(0.0, 0.0, cap, t_ms)
+        out = m.tick(t_ms, vitesse)
+        sorties.append(out)
+        cap = wrap_angle(cap + out.ang * 0.1)
+        if m.finished:
+            break
+    return m, sorties, cap
+
+
+@pytest.mark.parametrize("apres_un_stop_de_didier", [False, True])
+def test_node_lubie_le_pivot_tourne_vraiment(regisseur, monkeypatch, tmp_path, apres_un_stop_de_didier):
+    """B1 (relecture adverse du 28/11) : la lubie envoyait « stop » puis un pivot « sur place » ;
+    route_driver le tenait à facteur 0 (`held`) et RIEN ne tournait. Le pivot de la lubie est
+    une manœuvre ordinaire : il part, tourne, et finit ARRIVÉ, face à l'objet. Même derrière un
+    arrêt de Didier (une pause « regarde ça ») : il le lève, comme « tourner »."""
     n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
-    _etat_route(n, "on")
-    _voix(n, "stop")                            # l'arrêt de la lubie
-    avant = list(_publie(n, "route_speed"))
-    _tourner_vers(n, n._pois[0].name, cap_deg=180.0)
-    # Le « cancel » du stop vocal précède ; le pivot part quand même APRÈS lui.
-    ordres = _ordres(n)
-    assert ordres[0] == "cancel" and "turn_rad" in ordres[-1]
-    # ... mais RIEN n'a été relâché : aucune nouvelle vitesse publiée.
-    assert list(_publie(n, "route_speed")) == avant
-    assert not [t for t, _p in _journal(n) if t == "voice_hold_released"]
+    _en_seance(n)
+    _tableau(n)
+    if apres_un_stop_de_didier:
+        _voix(n, {"cmd": "stop", "origine": "didier"})
+    _odom(n, 0.0, 0.0, cap_deg=180.0)            # dos au banc (5, 0) : demi-tour
+    _voix(n, PIVOT_LUBIE(n, "banc"))
+    assert [p["effect"] for t, p in _journal(n) if t == "tourner_vers"] == ["accepted"]
+    ordre = _ordres(n)[-1]
+    vitesse = _vitesse_route_driver(n, "0.6")
+    assert vitesse == pytest.approx(0.6)
+    m, sorties, cap = _jouer_le_pivot(ordre, vitesse, math.pi)
+    assert sorties[0].reason == "ok" and abs(sorties[0].ang) > 0.0      # PAS « held »
+    assert "held" not in {o.reason for o in sorties}
+    assert m.phase == ARRIVED                                           # à l'arrêt...
+    assert abs(math.degrees(cap)) < 6.0                                 # ... face au banc
+
+
+def test_node_go_de_reprise_apres_le_pivot_rejoint_la_route(regisseur, monkeypatch, tmp_path):
+    """B2 : le « go » de la reprise trouve le pivot ARRIVÉ -> « rejoin », la route repart. Un
+    « go » reçu PENDANT le pivot est sans effet (« deja_en_marche ») : c'est pourquoi la reprise
+    du sélecteur attend la fin du pivot (didier_jeu, test_s2c_la_reprise_attend_la_fin_du_pivot)
+    — et il ne casse rien : le « go » suivant rejoint quand même."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _en_seance(n)
+    _tableau(n)
+    _odom(n, 0.0, 0.0, cap_deg=180.0)
+    _voix(n, PIVOT_LUBIE(n, "banc"))
+    _etat_route(n, "goto")
+    _voix(n, {"cmd": "go", "origine": "didier"}, t=1005.0)             # pendant le pivot
+    assert _publie(n, "route") == []                                   # rien ne part
+    _etat_route(n, "arrived")
+    _voix(n, {"cmd": "go", "origine": "didier"}, t=1010.0)             # la reprise, à l'arrivée
+    assert [(m.get("reason") or m["effect"], m.get("rejoin", False)) for m in _voice_moves(n)] == [
+        ("deja_en_marche", False), ("rejoin", True)]
+    assert _publie(n, "route") == ["on"]                               # la route repart
+
+
+def test_node_tourner_vers_de_didier_sous_un_arret_de_david_refuse(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _en_seance(n)
+    _tableau(n)
+    _voix(n, {"cmd": "stop", "origine": "david"})
+    _odom(n, 0.0, 0.0, cap_deg=180.0)
+    _voix(n, PIVOT_LUBIE(n, "banc"))
+    assert [p for t, p in _journal(n) if t == "tourner_vers"] == [
+        {"effect": "arret_de_david", "origine": "didier"}]
+    assert _ordres(n) == ["cancel"]                                     # celui du stop, rien d'autre
+    assert _publie(n, "route_speed") == ["0"]
+
+
+def test_node_stop_de_david_pendant_le_pivot_l_annule(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _en_seance(n)
+    _tableau(n)
+    _odom(n, 0.0, 0.0, cap_deg=180.0)
+    _voix(n, PIVOT_LUBIE(n, "banc"))
+    _etat_route(n, "goto")
+    _voix(n, {"cmd": "stop", "origine": "david"})
+    assert _ordres(n)[-1] == "cancel"
+    assert _publie(n, "route_speed") == ["0"]
+    _etat_route(n, "off")
+    assert [p for t, p in _journal(n) if t == "goto_cancelled"] == [{"name": "pivot -180°", "by": "stop"}]
+
+
+def test_node_tourner_vers_de_didier_hors_seance_refuse(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _tableau(n)
+    _odom(n, 0.0, 0.0, cap_deg=180.0)
+    _voix(n, PIVOT_LUBIE(n, "banc"))
+    assert [p["effect"] for t, p in _journal(n) if t == "tourner_vers"] == ["hors_seance"]
+    assert _ordres(n) == []
+
+
+@pytest.mark.parametrize("cmd", ["tourner", "tourner_vers"])
+def test_node_c1_tourner_vers_de_david_sous_son_arret_meme_regle_que_tourner(regisseur, monkeypatch,
+                                                                           tmp_path, cmd):
+    """C1 : sous un arrêt vocal de David, son « tourne-toi vers le banc » était « accepted » mais
+    MUET (retenu à facteur 0). Même règle que « tourner » : l'arrêt est levé, le pivot part."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _en_seance(n)
+    _tableau(n)
+    _voix(n, {"cmd": "stop", "origine": "david"})
+    _odom(n, 0.0, 0.0, cap_deg=180.0)
+    geste = ({"cmd": "tourner", "angle_deg": 180.0} if cmd == "tourner"
+             else {"cmd": "tourner_vers", "objet": "banc", "id": "carte/banc"})
+    _voix(n, dict(geste, origine="david"))
+    assert [p["effect"] for t, p in _journal(n) if t == cmd] == ["accepted"]
+    assert [p["by"] for t, p in _journal(n) if t == "voice_hold_released"] == [cmd]
+    assert _publie(n, "route_speed") == ["0", "0.6"]                   # la vitesse d'avant l'arrêt
+    assert abs(_ordres(n)[-1]["turn_rad"]) == pytest.approx(math.pi)
+
+
+def _odom_brut(noeud, x, y, q):
+    pose = types.SimpleNamespace(position=types.SimpleNamespace(x=x, y=y, z=0.0),
+                                 orientation=types.SimpleNamespace(x=q[0], y=q[1], z=q[2], w=q[3]))
+    _qos, callback = noeud.abonnements["ground_truth/odom"]
+    callback(types.SimpleNamespace(pose=types.SimpleNamespace(pose=pose)))
+
+
+@pytest.mark.parametrize("x, q", [(0.0, (0.0, 0.0, 0.0, 0.0)), (0.0, (0.0, 0.0, math.nan, 1.0)),
+                                  (math.nan, (0.0, 0.0, 0.0, 1.0))])
+def test_node_c2_quaternion_nul_no_pose_aucun_ordre(regisseur, monkeypatch, tmp_path, x, q):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _en_seance(n)
+    _tableau(n)
+    _odom_brut(n, x, 0.0, q)
+    _voix(n, PIVOT_LUBIE(n, "banc"))
+    assert [p["effect"] for t, p in _journal(n) if t == "tourner_vers"] == ["no_pose"]
+    assert _ordres(n) == []
 
 
 def test_node_tourner_vers_objet_inconnu_rien_ne_part(regisseur, monkeypatch, tmp_path):

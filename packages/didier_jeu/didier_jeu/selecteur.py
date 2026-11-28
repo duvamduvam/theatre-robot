@@ -60,8 +60,13 @@ test/test_ordres_propositions.py pour le lot S1) :
   route qu'il cause (lubie, approche de lui-même ; PAS une demande de geste de
   la bouche, qui vient d'un humain : décision de David du 15/11) ; un
   ordre de David n'en est jamais un ; une lubie est RÉCLAMÉE (intention) ET
-  AMORCÉE (regard ; à défaut de pose/objet, l'intention seule, 3 s) puis le stop
-  n'est demandé que si la console n'a dit ni ignore ni va_la entre-temps ;
+  AMORCÉE (regard ; à défaut de pose/objet, l'intention seule, 3 s) puis son arrêt
+  n'est demandé que si la console n'a dit ni ignore ni va_la entre-temps. Lot S2c
+  (relecture adverse du 28/11) : cet arrêt EST un pivot du corps vers l'objet
+  (`tourner_vers` d'origine « didier », une manœuvre ordinaire : Didier quitte la route,
+  pivote, finit à l'arrêt face à l'objet) ; objet non situé dans le tableau, ou pivot
+  refusé (« deja_face », « no_pose », …) ou laissé sans réponse par le régisseur au-delà
+  de durees_s.deplacement_accuse : repli sur l'arrêt d'avant S2c, un « stop » « didier » ;
 - UNE SEULE REPRISE (lot S1 ; remplace les trois minuteries 10 s / 6 s / 90 s) :
   après un arrêt décidé par Didier — lubie, « stop » d'origine « didier », pause
   « regarde ça », fin (réussie ou non) d'un geste de la bouche ou de son propre
@@ -69,7 +74,10 @@ test/test_ordres_propositions.py pour le lot S1) :
   SILENCE, D tiré AU MOMENT DE L'ARRÊT dans [reprise.min_s, reprise.max_s] par le
   générateur semé du sélecteur (journalisé « il repartira après … de silence »).
   Toute parole entendue (chat_transcript, rôle david) remet le silence à zéro
-  sans retirer le tirage (règle du 02/11). Attend qu'aucun geste ne roule.
+  sans retirer le tirage (règle du 02/11). Attend qu'aucun geste ne roule ; celle
+  d'une lubie attend aussi la fin de son pivot (route_state « goto » : un « go »
+  pendant une manœuvre est sans effet au régisseur, « deja_en_marche », et Didier
+  resterait planté à son arrivée).
   Annulée par un stop de David, une Route OFF de David, un « ignore » de la
   console, un « go » de David. Arrêt posé par David : jamais de reprise seule ;
 - HORS SÉANCE (rehearsal/state ≠ « en_cours », ou inconnu — R2) : aucune initiative
@@ -163,7 +171,11 @@ class Engagement:
     accuse: bool = False              # route_state « goto » vu pour l'étape en cours
     t_etape: float = 0.0
     anim_vue: bool = False            # animation_state a montré NOTRE séquence
-    stop_envoye: bool = False         # lubie : le « stop » est parti
+    stop_envoye: bool = False         # lubie : son arrêt est demandé (pivot ou « stop »)
+    # Lubie (S2c) : le pivot `tourner_vers` demandé comme arrêt, tant que le régisseur ne l'a
+    # pas accepté (None ensuite, ou s'il n'y en a pas) ; refusé ou sans suite -> « stop ».
+    pivot: Optional[dict] = None
+    t_pivot: float = 0.0
     etape: Optional[dict] = None      # chat_move de l'étape EN COURS (appariement des réponses)
     nom_ordre: Optional[str] = None   # `name` de l'ordre ACCEPTÉ (seule son issue finit l'étape)
     # Instant de l'ordre de David D'ORIGINE (R4, 3e relecture) : l'âge d'un ordre suspendu se
@@ -533,6 +545,7 @@ class Selecteur:
         e = self.en_cours
         if e is not None and etat == "goto":
             e.accuse = True
+            e.pivot = None             # le pivot d'une lubie roule : accusé, comme un déplacement
         if self.verrou == VERROU_ROUTE:
             # La route revient à « on » APRÈS avoir été vue « off » (route_driver publie la cause
             # avant l'état : l'ancien « on » latché ne lève rien) : David l'a relancée.
@@ -633,6 +646,14 @@ class Selecteur:
         if not isinstance(payload, dict) or payload.get("source") != "director":
             return
         e = self.en_cours
+        if e is not None and e.pivot is not None and payload.get("demande") == e.pivot:
+            # Le pivot qui sert d'arrêt à la lubie (S2c) : accepté, il roule ; sinon repli.
+            effet = payload.get("effect")
+            if effet == "accepted":
+                e.pivot = None
+            else:
+                self._arret_lubie_sans_pivot(e, f"pivot refusé par le régisseur ({effet})", now)
+            return
         if e is None or not e.candidat.deplacement or e.etape is None or payload.get("demande") != e.etape:
             return
         effet = payload.get("effect")
@@ -992,24 +1013,31 @@ class Selecteur:
             # Ni ignore ni va_la pendant le délai de refus (ils auraient annulé
             # la lubie) : Didier demande l'arrêt au régisseur.
             e.stop_envoye = True
-            self.sorties.append(("chat_move", marche(STOP, DIDIER)))
+            # Lot S2c (séance du 26/11, « il n'a pas cadré le banc ») : il s'arrêtait DEVANT
+            # l'objet de sa lubie mais lui parlait de profil — seule sa TÊTE était tournée
+            # (`look`), et la caméra est fixée au BUSTE. Son arrêt est désormais un pivot du
+            # CORPS vers l'objet (`tourner_vers`, l'angle est calculé par la régie, jamais
+            # deviné ici) : une manœuvre ordinaire, qui quitte la route et finit à l'arrêt.
+            # Jamais « stop » PUIS pivot (relecture adverse du 28/11) : sous l'arrêt, le pivot
+            # restait retenu (facteur 0) et partait au « go » de la reprise — Didier planté.
+            e.pivot = self._pivot_vers(e.candidat.cible, now)
+            if e.pivot is None:
+                self.sorties.append(("chat_move", marche(STOP, DIDIER)))
+            else:
+                e.t_pivot = now
+                self.sorties.append(("chat_move", e.pivot))
             regard = bool(e.candidat.detail.get("regard"))
             self._journal("arret_didier", f"lubie « {e.candidat.cible} » réclamée"
                           + (", regard tourné vers elle" if regard else " (sans regard : position inconnue)")
                           + f", pas de refus en {self.r.get('lubie.delai_refus_s'):g} s → il s'arrête",
-                          cible=e.candidat.cible, kind="lubie", regard=regard)
+                          cible=e.candidat.cible, kind="lubie", regard=regard, pivot=e.pivot is not None)
             self._armer_reprise(now, f"lubie « {e.candidat.cible} »", cible=e.candidat.cible,
                                 genre=corps_etat.DIDIER_LUBIE)
-            # Lot S2c (séance du 26/11, « il n'a pas cadré le banc ») : il s'arrête DEVANT
-            # l'objet de sa lubie, mais il lui parle de profil — seule sa TÊTE était tournée
-            # (`look`), et la caméra est fixée au BUSTE. Le corps se tourne vers l'objet, par
-            # `tourner_vers` (l'angle est calculé par la régie, jamais deviné ici). Après le
-            # stop : la régie l'accepte comme un geste, et le pivot sur place ne rompt pas
-            # l'arrêt de la lubie.
-            self._tourner_corps_vers(e.candidat.cible, now)
             self.pourquoi_courant = f"arrêté devant « {e.candidat.cible} »" + (
                 f" ; repartir ? (après {phrases.s(self.reprise['delai'])} de silence)" if self.reprise else "")
             self._publier_intention(now)
+        if e.pivot is not None and now - e.t_pivot > self.r.get("durees_s.deplacement_accuse") + EPS:
+            self._arret_lubie_sans_pivot(e, "le régisseur n'a pas répondu au pivot", now)
         if e.candidat.deplacement and e.candidat.action != "repartir" and not e.accuse \
                 and now - e.t_etape > self.r.get("durees_s.deplacement_accuse") + EPS:
             self._rendre_refractaires(e)
@@ -1020,7 +1048,9 @@ class Selecteur:
             self._issue_geste(corps_etat.GESTE_REFUSE, "sans_suite", 0.0, now)
             self._finir(now, "le régisseur n'a pas donné suite (voir son journal) : il n'a pas bougé")
             return
-        if now >= e.fin_prevue - EPS:
+        # Une lubie dont le pivot attend sa réponse ne finit pas : son repli sur « stop »
+        # (refus, silence du régisseur) mourrait avec elle, et Didier ne s'arrêterait pas.
+        if now >= e.fin_prevue - EPS and e.pivot is None:
             self._finir(now, "c'est fini")
 
     def _etape_suivante(self, e: Engagement, now: float) -> None:
@@ -1111,6 +1141,11 @@ class Selecteur:
             self._desarmer_reprise("la séance s'est arrêtée")      # R2
             return
         if self.en_cours is not None and self.en_cours.candidat.deplacement:
+            return
+        if rep["genre"] == corps_etat.DIDIER_LUBIE and self.route_state == "goto":
+            # Le pivot de la lubie roule (S2c) : un « go » maintenant serait « deja_en_marche »
+            # au régisseur, et Didier resterait planté à son arrivée. On attend son issue
+            # (arrived / off) : le « go » part alors en reprise (« rejoin » au régisseur).
             return
         if self.superviseur_absent():
             return
@@ -1327,23 +1362,29 @@ class Selecteur:
         self._decision_tick = Decision(c.action, c.cible, pourquoi)
         self._publier_intention(now)
 
-    def _tourner_corps_vers(self, cible, now: float) -> None:
-        """Tourner le CORPS vers un objet nommé (lot S2c) : demande `tourner_vers` au
-        régisseur, qui calcule l'angle depuis sa pose. La régie répond « deja_face » quand il
-        lui fait déjà face : aucun pivot, et ce n'est pas un échec.
+    def _pivot_vers(self, cible, now: float) -> Optional[dict]:
+        """Le `tourner_vers` d'origine « didier » qui tourne le CORPS vers un objet nommé (lot
+        S2c), à publier tel quel ; le régisseur calcule l'angle depuis sa pose.
 
         L'`id` du tableau est JOINT, comme pour « aller voir » : depuis le lot O1 (18/11) la
         régie ne résout plus aucun nom, elle ne connaît que l'id (`_target`). Sans objet
-        résolu, rien n'est demandé — on ne se tourne pas vers ce qu'on ne situe pas, et un
-        geste sans id serait de toute façon refusé « unknown »."""
+        résolu -> None : on ne se tourne pas vers ce qu'on ne situe pas, et un geste sans id
+        serait de toute façon refusé « unknown »."""
         if cible is None:
-            return
+            return None
         objet = self.tableau(now).resoudre(cible).objet
         if objet is None:
-            return
-        self.sorties.append(("chat_move", dict(
-            commande(self.deplacements, "tourner_vers", objet=cible, id=objet.id),
-            origine=DIDIER)))
+            return None
+        return dict(commande(self.deplacements, "tourner_vers", objet=cible, id=objet.id), origine=DIDIER)
+
+    def _arret_lubie_sans_pivot(self, e: Engagement, pourquoi: str, now: float) -> None:
+        """Le pivot de la lubie n'a pas lieu (refusé : « deja_face », « no_pose », … ; ou sans
+        réponse) : Didier roule encore, il s'arrête comme avant S2c, par un « stop » « didier ».
+        La reprise, déjà armée, reste celle de la lubie."""
+        e.pivot = None
+        self.sorties.append(("chat_move", marche(STOP, DIDIER)))
+        self._journal("lubie_sans_pivot", f"lubie « {e.candidat.cible} » : {pourquoi} → il s'arrête sans se "
+                      "tourner", cible=e.candidat.cible, raison=pourquoi)
 
     def _noter_arret_didier(self, c: Candidat, now: float) -> None:
         """Un arrêt de route causé par Didier (revue A1, point 11). Lubie : l'arrêt

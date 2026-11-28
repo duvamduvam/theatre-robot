@@ -133,7 +133,7 @@ REFUSAL_REASONS = {
     "invalid": "ta demande de geste était incompréhensible",
     # Lot S2c (« se tourner vers ») : l'angle est calculé par la régie.
     "deja_face": "tu lui fais déjà face, tu n'as pas eu à bouger",
-    "hors_bornes": "c'est plus que ce que ton corps sait pivoter en un geste",
+    "trop_pres": "tu es presque dessus, tu ne peux pas te tourner vers lui",
     "arrete": "tu es arrêté jusqu'à ce qu'on te dise de repartir",
     "sans_superviseur": "personne ne te surveille, tu ne te déplaces pas seul",
     "pas_retenu": "ton corps ne t'a pas suivi",

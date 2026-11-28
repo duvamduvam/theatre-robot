@@ -112,7 +112,7 @@ chemins = ["packages/didier_rehearsal/", "packages/didier_drive/", "packages/did
 [[epreuve]]
 id = "a1"
 script = "validate-jeu-a1.sh"
-attendu = 17            # 14 + 3 vérifications S1 (ordres et propositions, 26/11)
+attendu = 18            # 14 + 3 vérifications S1 (26/11) + pivot de lubie S2c (28/11)
 motif = "=== A1"
 delai_s = 1500
 sim = { monde = "chantiers", regie = "jeu-a1", jeu = true }

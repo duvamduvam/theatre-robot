@@ -137,13 +137,14 @@ from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_GOTO_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
 from didier_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
-                                      decide_forward, decide_goto, decide_tour, decide_turn, decide_turn_to, fader_moved,
+                                      cap_odometrie, decide_forward, decide_goto, decide_tour, decide_turn,
+                                      decide_turn_to, fader_moved,
                                       garde_corps_sur_m, goto_order,
                                       messages, move_reply, objects_payload, poi_name_of,
                                       route_cmd_kind, speed_factor, speed_in_effect)
 from didier_rehearsal.process_faults import ProcessFaultError, apply, find_pids, pause_bounded
 from didier_rehearsal.rehearsal_state import rehearsal_state
-from didier_rehearsal.route import RouteConfig, RouteError, load_route, load_tours, tours_path, yaw_from_quaternion
+from didier_rehearsal.route import RouteConfig, RouteError, load_route, load_tours, tours_path
 from didier_rehearsal.scenario import ScenarioError, load_scenario
 
 
@@ -446,8 +447,9 @@ class DirectorNode(Node):
     def _on_odom(self, msg):
         p, q = msg.pose.pose.position, msg.pose.pose.orientation
         # Le CAP est gardé depuis S2c (« se tourner vers ») : c'est la seule décision qui en a
-        # besoin. Les autres lisent _fresh_pose (x, y) et ne changent pas.
-        self._pose = (p.x, p.y, time.monotonic(), yaw_from_quaternion(q.x, q.y, q.z, q.w))
+        # besoin. Les autres lisent _fresh_pose (x, y) et ne changent pas. Quaternion nul ou
+        # abîmé : cap None (cap_odometrie), « se tourner vers » refuse alors « no_pose ».
+        self._pose = (p.x, p.y, time.monotonic(), cap_odometrie(q.x, q.y, q.z, q.w))
 
     def _on_route_speed(self, msg: StringTime):
         """route_speed vu sur le topic. NOS publications (speed, lubie) sont
@@ -696,7 +698,14 @@ class DirectorNode(Node):
         """« Se tourner vers <objet> » (lot S2c) : l'angle est CALCULÉ ici depuis la pose et la
         position de l'objet, jamais lu dans l'intention — le LLM nomme, il ne devine plus
         (séance du 25/11 : « regarde l'éléphant à droite » -> pivot fixe de −90°). Exécuté par
-        le chemin EXISTANT de « tourner » : mêmes bornes, même corps sûr, même route_goto."""
+        le chemin EXISTANT de « tourner » : mêmes bornes, même corps sûr, même route_goto.
+
+        Une manœuvre ORDINAIRE, acceptée exactement comme « tourner » (relecture adverse S2c,
+        28/11) : elle lève l'arrêt vocal qu'un « tourner » lèverait, et rien d'autre. Elle n'a
+        plus de régime « sur place » : retenu sous l'arrêt, le pivot ne tournait pas (facteur 0,
+        `held` dans goto.py) puis partait au « go » suivant, et Didier restait planté. La lubie
+        n'envoie donc plus « stop » puis « tourner_vers » : son arrêt EST ce pivot (didier_jeu,
+        selecteur), qui finit `arrived`, à l'arrêt face à l'objet."""
         now = time.monotonic()
         decision = decide_turn_to(intent, tableau=self._tableau_frais(now),
                                   pose=self._fresh_pose_cap(now), off_by_david=self._off_by_david())
@@ -712,11 +721,8 @@ class DirectorNode(Node):
         # que route_goto_result renverra, et c'est sur lui que le chat apparie l'issue.
         self._reply(intent, decision.effect,
                     name=decision.name if decision.effect == "accepted" else None)
-        if decision.effect != "accepted":
-            return
-        # sur_place : un pivot ne relance pas Didier (cf. _accept_maneuver).
-        self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TURN_TO_CMD, now,
-                              sur_place=True)
+        if decision.effect == "accepted":
+            self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TURN_TO_CMD, now)
 
     def _tour_de(self, intent: dict):
         """« Faire le tour » (lot M3) : arbitré, journalisé `tour_de`, accepté
@@ -741,24 +747,12 @@ class DirectorNode(Node):
             self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TOUR_CMD, now,
                                   target=decision.poi)
 
-    def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None,
-                         sur_place: bool = False):
-        """Manœuvre ACCEPTÉE (aller voir, tourner, avancer, tour) : comme un
+    def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None):
+        """Manœuvre ACCEPTÉE (aller voir, tourner, avancer, tour, se tourner vers) : comme un
         « go » pour ce qui retient Didier, puis l'ordre part sur route_goto.
-        `target` : POI visé s'il diffère du nom (GotoPolicy.accept).
-
-        `sur_place` (lot S2c) : le geste ne DÉPLACE pas Didier (« se tourner vers »). Il ne
-        lève alors NI l'arrêt vocal NI la lubie en cours — sinon Didier, qui vient justement
-        de s'arrêter devant l'objet de sa lubie pour le regarder, repartirait en se tournant
-        vers lui. L'ordre part quand même : route_driver pivote sous l'arrêt (un pivot n'est
-        pas une avance), et le fader reste maître (facteur 0 = rien ne tourne)."""
+        `target` : POI visé s'il diffère du nom (GotoPolicy.accept)."""
         relaunching = self.voice.relaunching
         lubie_active, in_effect = self._voice_context()
-        if sur_place:
-            # Rien n'est levé ni fermé : seul l'ordre de pivot part (fin de la méthode).
-            self.goto_policy.accept(name, target)
-            self.pub_goto.publish(StringTime(msg=order, time=0, anim=False))
-            return
         voice = self.voice.accept_goto(lubie_active=lubie_active, speed_in_effect=in_effect)
         if relaunching:
             self.log("voice_relaunch_cancelled", {"by": by})

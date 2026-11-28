@@ -115,8 +115,8 @@ def test_reprise_le_reste_du_silence_glisse_sans_republier_a_chaque_tick():
 
 def test_lubie_arretee_d_elle_meme():
     out = jouer_corps(fabriquer(), 0.0, 5.0, [(0.0, scene), (1.0, _poi("anneaux"))])
-    # Lot S2c : le stop, puis le pivot du CORPS vers l'objet de la lubie.
-    assert moves(out) == [(4.3, STOP_DIDIER), (4.3, PIVOT_LUBIE("anneaux"))]
+    # Lot S2c (28/11) : son arrêt est le pivot du CORPS vers l'objet, sans « stop » avant.
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux"))]
     t, e = next((t, e) for t, e in corps(out) if e["cause"] == "didier_lubie")
     assert (t, e["qui_relance"], e["repart_dans_s"]) == (4.3, "didier", 17.1)
     assert e["phrase"] == ("Tu es arrêté, attiré par « anneaux » : c'est toi qui t'es arrêté. Tu repars dans 17 s "

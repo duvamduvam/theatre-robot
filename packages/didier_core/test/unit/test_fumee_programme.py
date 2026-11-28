@@ -203,7 +203,7 @@ def test_valeurs_attendues_du_plan_egales_a_celles_de_fumee_sh():
     sh = {m[0].lower(): int(m[1]) for m in re.findall(r"^ATTENDU_([A-Z0-9_]+)=([0-9]+)", texte, re.M)}
     du_plan = {e.id: e.attendu for e in PLAN if e.attendu is not None}
     assert du_plan == {"namespace": 5, "catalogue": 4, "parle": 3, "edition": 13, "machines": 5, "audio": 10,
-                       "corps_sur": 25, "chantiers": 21, "a1": 17, "objets": 13, "conversation": 19}
+                       "corps_sur": 25, "chantiers": 21, "a1": 18, "objets": 13, "conversation": 19}
     assert du_plan == sh
     # Script, motif et délai de chaque lancer_validation de fumee.sh.
     appels = re.findall(r"lancer_validation (\w+) (\S+) \"\$ATTENDU_\w+\" '([^']+)' ([0-9]+)", texte)
@@ -229,10 +229,10 @@ A1 = next(e for e in PLAN if e.id == "a1")
 
 
 @pytest.mark.parametrize("texte, rc, gardien, statut, ok, ko, detail", [
-    ("=== A1 : 17 OK, 0 KO\n", 0, None, "vert", 17, 0, None),
+    ("=== A1 : 18 OK, 0 KO\n", 0, None, "vert", 18, 0, None),
     ("=== A1 : 13 OK, 1 KO\n", 1, None, "rouge", 13, 1, None),
     ("=== A1 : 15 OK, 0 KO\n", 0, None, "rouge", 15, 0, None),
-    ("=== A1 : 17 OK, 0 KO\n", 2, None, "rouge", 17, 0, "compteur conforme mais code de retour 2"),
+    ("=== A1 : 18 OK, 0 KO\n", 2, None, "rouge", 18, 0, "compteur conforme mais code de retour 2"),
     ("trace\n", 124, None, "rouge", 0, 0, "aucun compteur lu en fin de script (code 124) : précondition, "
                                            "délai dépassé ou crash — voir le journal"),
     ("MESURE INVALIDE : capture_topics mort\n", 3, None, "invalide", 0, 0,
@@ -243,7 +243,7 @@ A1 = next(e for e in PLAN if e.id == "a1")
 def test_verdict_d_une_epreuve(texte, rc, gardien, statut, ok, ko, detail):
     r = epreuve.verdict_script(texte, rc, A1, gardien)
     assert (r["statut"], r["ok"], r["ko"], r.get("detail")) == (statut, ok, ko, detail)
-    assert r["journal"] == "a1.log" and r["attendu"] == 17
+    assert r["journal"] == "a1.log" and r["attendu"] == 18
 
 
 def test_image_absente_hors_ligne_invalide_sans_aucun_build(tmp_path):

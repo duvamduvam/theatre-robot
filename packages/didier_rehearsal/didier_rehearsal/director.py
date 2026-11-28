@@ -55,7 +55,7 @@ from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_ORIGINE_DAVI
                                        ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
                                        TOUR_CLEARANCE_M, TURN_DEG_COMPAT, TURN_MAX_DEG)
 from didier_rehearsal.goto import forward_name, tour_name, turn_name
-from didier_rehearsal.route import Tour, wrap_angle
+from didier_rehearsal.route import Tour, wrap_angle, yaw_from_quaternion
 from didier_rehearsal.scenario import Fault, Scenario
 
 
@@ -1000,7 +1000,7 @@ def decide_tour(intent: dict, *, tableau, tours, pose, off_by_david: bool) -> To
 class TurnToDecision:
     """« Se tourner vers <objet> » (lot S2c)."""
     # "accepted" | "unknown" | "no_position" | "route_off_by_david" | "no_pose"
-    # | "deja_face" | "hors_bornes"
+    # | "trop_pres" | "deja_face"
     effect: str
     objet: object | None = None   # theatre_contrats.objets.Objet
     angle_deg: float | None = None  # angle calcule (signe, + = gauche), pour le journal
@@ -1012,38 +1012,63 @@ class TurnToDecision:
 # les micro-pivots aveugles, et un pivot de 2° ne se voit pas). Memes 10° que la tolerance
 # d'ajustement de la spec S2c §5.
 TURN_TO_TOL_DEG = 10.0
+# Objet à moins de cette distance du CENTRE de Didier (m) : refus « trop_pres » (relecture
+# adverse S2c, 28/11). Le cap vers un point quasi confondu avec la pose tient au bruit de
+# l'odométrie — à 5 cm près, l'angle calculé peut valoir n'importe quoi. 0,3 m = la tolérance
+# d'arrivée de goto.py (arrive_tol_m) : en deçà, la régie ne sait déjà plus où est l'objet.
+TURN_TO_MIN_DISTANCE_M = 0.3
+# Écart toléré à la norme 1 du quaternion de l'odométrie : au-delà (quaternion nul, abîmé), le
+# cap qu'on en tirerait est faux SANS le dire (un quaternion nul donne un cap de 0) — refus.
+QUATERNION_NORM_TOL = 0.01
+
+
+def cap_odometrie(qx, qy, qz, qw) -> float | None:
+    """Cap (rad) d'un quaternion de l'odométrie, par la MÊME formule que route_driver
+    (route.yaw_from_quaternion), ou None s'il n'est pas un quaternion unitaire fini : nul,
+    NaN, infini, de norme ≠ 1 à QUATERNION_NORM_TOL près (relecture adverse S2c, 28/11 :
+    « se tourner vers » publiait un pivot calculé sur un cap inventé)."""
+    q = [_number(v) for v in (qx, qy, qz, qw)]
+    if any(v is None for v in q):
+        return None
+    norme = math.sqrt(sum(v * v for v in q))
+    if not abs(norme - 1.0) <= QUATERNION_NORM_TOL:
+        return None
+    return yaw_from_quaternion(*q)
 
 
 def decide_turn_to(intent: dict, *, tableau, pose, off_by_david: bool) -> TurnToDecision:
-    """« Se tourner vers un objet NOMME » (spec S2c §5), dans l'ordre de `decide_goto` :
-    objet introuvable par son id -> « unknown » ; sans position en repere monde ->
-    « no_position » ; route OFF par David -> « route_off_by_david » ; pas de pose fraiche ->
-    « no_pose » (jamais un angle devine : c'est TOUT le point du lot).
+    """« Se tourner vers un objet NOMMÉ » (spec S2c §5), dans l'ordre de `decide_goto` :
+    objet introuvable par son id -> « unknown » ; sans position FINIE en repère monde ->
+    « no_position » ; route OFF par David -> « route_off_by_david » ; pas de pose fraîche, ou
+    pose / cap non finis ou absents (quaternion refusé par cap_odometrie) -> « no_pose » (jamais
+    un angle deviné : c'est TOUT le point du lot, et jamais de `turn_rad: NaN` publié) ; objet à
+    moins de TURN_TO_MIN_DISTANCE_M du centre de Didier -> « trop_pres ».
 
-    L'angle est CALCULE depuis la pose (x, y, cap) et la position de l'objet, jamais lu dans
-    l'intention : le LLM nomme l'objet, il n'invente plus de valeur (seance du 25/11, « regarde
-    l'elephant a droite » -> pivot fixe de -90°). Deja face a moins de TURN_TO_TOL_DEG ->
-    « deja_face » (aucun ordre). Au-dela de TURN_MAX_DEG -> « hors_bornes », jamais sature :
-    comme `decide_turn`, un pivot faux ne tourne pas.
+    L'angle est CALCULÉ depuis la pose (x, y, cap) et la position de l'objet, jamais lu dans
+    l'intention : le LLM nomme l'objet, il n'invente plus de valeur (séance du 25/11, « regarde
+    l'éléphant à droite » -> pivot fixe de −90°). Déjà face à moins de TURN_TO_TOL_DEG ->
+    « deja_face » (aucun ordre). Pas de refus « hors bornes » : l'angle, replié dans ]−180°,
+    180°], est toujours dans TURN_MAX_DEG (180°) — la branche, inatteignable, est retirée.
 
-    `pose` : (x, y, cap_rad) ou None — la SEULE decision qui a besoin du cap.
-    Ordre : {"turn_rad": ...}, celui de `decide_turn` (meme chemin, memes bornes)."""
+    `pose` : (x, y, cap_rad) ou None ; cap_rad None = cap refusé — la SEULE décision qui a
+    besoin du cap. Ordre : {"turn_rad": ...}, celui de `decide_turn` (même chemin, mêmes bornes)."""
     objet = _target(intent, tableau)
     if objet is None:
         return TurnToDecision("unknown")
-    if objet.x is None or objet.repere != "monde":
+    if objet.repere != "monde" or _number(objet.x) is None or _number(objet.y) is None:
         return TurnToDecision("no_position", objet)
     if off_by_david:
         return TurnToDecision("route_off_by_david", objet)
-    if pose is None:
+    pose = tuple(_number(v) for v in pose) if pose is not None else None
+    if pose is None or len(pose) != 3 or any(v is None for v in pose):
         return TurnToDecision("no_pose", objet)
     x, y, yaw = pose
+    if math.hypot(objet.x - x, objet.y - y) < TURN_TO_MIN_DISTANCE_M:
+        return TurnToDecision("trop_pres", objet)
     rad = wrap_angle(math.atan2(objet.y - y, objet.x - x) - yaw)
     angle_deg = round(math.degrees(rad), 1)
     if abs(angle_deg) < TURN_TO_TOL_DEG:
         return TurnToDecision("deja_face", objet, angle_deg=angle_deg)
-    if abs(angle_deg) > TURN_MAX_DEG:
-        return TurnToDecision("hors_bornes", objet, angle_deg=angle_deg)
     return TurnToDecision("accepted", objet, angle_deg=angle_deg, name=turn_name(rad),
                           order=json.dumps({"turn_rad": rad}))
 

@@ -101,8 +101,6 @@ REFUS_PHRASES = {
     "no_pose": "tu ne sais pas où tu es",
     "invalid": "la demande est incompréhensible",
     "sans_reponse": "ton corps n'a pas répondu : tu ne sais pas s'il a bougé",
-    # Lot S2c (« se tourner vers ») : la régie calcule l'angle.
-    "hors_bornes": "c'est plus que ce que ton corps sait pivoter en un geste",
 }
 
 # « Se tourner vers » un objet auquel Didier fait DÉJÀ face (lot S2c) : ce n'est pas un refus,

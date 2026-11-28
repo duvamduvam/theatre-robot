@@ -131,9 +131,32 @@ Trois lignes, dans le prompt, à côté de `phrase` :
   **Le vrai défaut du « banc pas cadré » (séance du 26/11)** : Didier ne s'était pas *fait*
   aller voir le banc, il s'est arrêté DE LUI-MÊME dessus par une **lubie** (`poi_enter` →
   `arret_didier`). Dans ce chemin, le sélecteur ne tournait que sa **tête** (sortie `look`),
-  et la caméra est fixée au **buste** : il parlait au banc de profil. Corrigé en tournant le
-  **corps** par `tourner_vers` après le stop de la lubie — avec la garde `sur_place` côté
-  régie, sans quoi ce pivot aurait **relancé** Didier (il vient justement de s'arrêter).
+  et la caméra est fixée au **buste** : il parlait au banc de profil.
+
+  **Ce qui est fait (corrigé après la relecture adverse du 28/11).** La première version
+  envoyait « stop » puis un `tourner_vers` en régime « sur place » (qui ne levait pas
+  l'arrêt) : `route_driver` tient tout pivot à facteur de vitesse 0 (`held`), donc **rien ne
+  tournait**, puis le pivot retenu partait au « go » de la reprise et Didier restait planté
+  (la reprise exige `arrived` ou `off`). Le régime « sur place » est **supprimé**. Désormais :
+  - l'**arrêt de la lubie EST le pivot** : un `tourner_vers` d'origine « didier », manœuvre
+    ordinaire acceptée exactement comme `tourner` (la route s'interrompt, Didier pivote, finit
+    `arrived` à l'arrêt face à l'objet). Pas de « stop » avant ;
+  - **repli** sur l'arrêt d'avant S2c (« stop » « didier ») si l'objet n'est pas situé dans le
+    tableau, si le régisseur refuse le pivot (`deja_face`, `no_pose`, `trop_pres`, …) ou s'il
+    ne répond pas en `durees_s.deplacement_accuse` (3 s ; la lubie ne finit pas avant) ;
+  - **la reprise d'une lubie attend la fin du pivot** (`route_state` « goto ») : un « go »
+    pendant une manœuvre est sans effet au régisseur (« deja_en_marche »). Elle part à
+    l'arrivée, où le régisseur la prend en « rejoin » ;
+  - règles d'arrêt de David intactes : un stop de David pendant le pivot l'annule (`cancel`),
+    sous son verrou le pivot est refusé `arret_de_david`, hors séance `hors_seance` ;
+  - `tourner_vers` de David sous un arrêt : mêmes règles que `tourner` (il lève l'arrêt et
+    pivote ; refusé « arrete » sous le verrou de la console, par le sélecteur) — plus jamais
+    « accepted » sans mouvement ;
+  - la régie ne calcule **jamais** sur un cap inventé : pose ou cap non finis, quaternion de
+    l'odométrie nul ou de norme ≠ 1 à 0,01 près → « no_pose » ; objet à moins de 0,3 m du
+    centre de Didier → « trop_pres » ; l'angle replié dans ]−180°, 180°] tient toujours dans
+    la borne de 180° (pas de refus « hors bornes »).
+  Épreuve de fumée : A1, verdict « S2c pivot de lubie » (18 contrôles au lieu de 17).
 
 Ce lot touche le chemin des roues (régisseur → `route_driver`) : **Opus, relecture adverse
 Fable avant fusion**, corps sûr inchangé, sim seule.

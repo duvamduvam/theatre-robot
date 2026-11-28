@@ -26,14 +26,6 @@ from test_selecteur import SEANCE, boite, decisions, journal, jouer, marche, mov
 # La marche telle que le sélecteur la publie sur jeu/chat_move (contrat lot S1), écrite EN DUR.
 STOP_DAVID = {"cmd": "stop", "origine": "david"}
 STOP_DIDIER = {"cmd": "stop", "origine": "didier"}
-
-
-def PIVOT_LUBIE(cible, id_=None):
-    """Lot S2c : après le stop d'une lubie, Didier tourne son CORPS vers l'objet (sa tête
-    seule ne suffit pas, la caméra est fixée au buste — séance du 26/11, banc mal cadré).
-    L'`id` du tableau est joint : depuis O1 la régie ne résout plus aucun nom."""
-    return {"cmd": "tourner_vers", "objet": cible, "id": id_ or ("carte/" + cible),
-            "origine": "didier"}
 GO_DAVID = {"cmd": "go", "origine": "david"}
 GO_DIDIER = {"cmd": "go", "origine": "didier"}
 AV_ELEPHANT_DAVID = dict(AV_ELEPHANT, origine="david")
