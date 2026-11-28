@@ -1181,6 +1181,7 @@ systemd-run --user -p KillMode=mixed --working-directory=$PWD python3 -u -m fume
 python3 -m fumee --rev '#42'                          # une PR
 python3 -m fumee --reprendre                          # même sha : vertes gardées, le reste rejoué
 python3 -m fumee --hors-ligne                         # aussi détecté seul (DNS de github.com)
+python3 -m fumee --profil performance                 # profil d'énergie fixe (ou balanced ; aucun = rien touché)
 ```
 
 - **Arbre de travail à lui** : `~/tmp/didier/fumee-arbre` (worktree git, `FUMEE_ARBRE`), remis
@@ -1207,8 +1208,22 @@ python3 -m fumee --hors-ligne                         # aussi détecté seul (DN
 - Une **sélection** (`--epreuves`) est marquée essai : elle ne devient jamais la référence.
 - Inchangé, repris de `fumee.sh` : domaine 43 revérifié dans chaque conteneur (sinon arrêt), sim de
   quelqu'un d'autre jamais touchée, verrou `~/tmp/didier/sim-occupee` (`--forcer-verrou`), flock
-  commun aux deux programmes, cœurs réservés, profil `performance` sur secteur, toutes les
-  variables `FUMEE_*`, page et `historique.jsonl` au même format.
+  commun aux deux programmes, cœurs réservés, toutes les variables `FUMEE_*`, page et
+  `historique.jsonl` au même format.
+- **Profil d'énergie « auto »** (28/11, « performance uniquement quand nécessaire » ; remplace le
+  `performance` de toute la fumée, que `fumee.sh` garde) : au départ, le profil d'origine est noté et
+  le PC passe en `balanced` ; à chaque pause de la fumée (toutes les 5 s pendant une épreuve), la
+  température du paquet CPU lue par les gardiens (`sensors`, ou `FUMEE_THERMOMETRE`) le fait
+  passer en `performance` à partir de **78 °C** (ventilateurs plus forts, même raison que le 22/11)
+  et revenir en `balanced` sous **70 °C** (hystérésis ; `[profil]` `chaud_c` / `frais_c` de
+  `fumee/plan.toml`, celui du programme). Chaque bascule (heure, température, profils) va au
+  journal (`~/.local/state/didier-fumee/journal.log`), sur la sortie et dans les notes de la page ;
+  le profil d'origine est rendu dans le `finally` (verte, rouge, invalide, SIGTERM). Sur secteur
+  seulement ; `powerprofilesctl` absent ou en échec (CI, autre PC) : réglage désactivé, une ligne au
+  journal, jamais d'échec de fumée. `--profil balanced|performance` : profil fixe toute la fumée ;
+  `--profil aucun` ou `FUMEE_PROFIL=0` (sans l'option) : rien touché. **Limite** : la température
+  n'est sondée qu'aux pauses ; une reconstruction d'image (un seul appel bloquant) n'est pas
+  régulée. Tests : faux `powerprofilesctl` SEUL dans le PATH (`test_fumee_programme.py`, § 10).
 
 **Ordre, arrêt au PREMIER rouge** (`fumee.sh`) (les suivantes restent « non lancée » sur la page) :
 les 4 images de la sim (reconstruites seulement si un chemin de `CHEMINS_IMAGES` — `machines/sim/`,

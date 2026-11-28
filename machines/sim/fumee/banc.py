@@ -1,6 +1,7 @@
 """Le banc (F1, 25/11) : la SEULE porte vers le système (classe Systeme, remplacée par un faux en
 test), et les règles de fumee.sh reprises sans changement : flock, verrou « sim occupée », sim de
-quelqu'un d'autre jamais touchée, profil d'énergie, autorité X, arbre de travail à nous.
+quelqu'un d'autre jamais touchée, profil d'énergie (réglage « auto » depuis le 28/11), autorité X,
+arbre de travail à nous.
 """
 import fcntl
 import os
@@ -166,29 +167,102 @@ def autorite_x(sy: Systeme, etat: Path, notes: list) -> None:
     notes.append("aucune autorité X de session trouvée : Gazebo risque de ne pas démarrer")
 
 
-def basculer_profil(sy: Systeme, etat: Path):
-    """« performance » pendant la fumée, SUR SECTEUR seulement (22/11) ; rend le profil d'origine."""
-    ppc = sy.env.get("FUMEE_POWERPROFILESCTL", "powerprofilesctl")
-    if sy.env.get("FUMEE_PROFIL", "1") != "1":
-        return None
-    try:
-        secteur = Path(sy.env.get("FUMEE_SECTEUR", "/sys/class/power_supply/ADP0/online")).read_text().strip()
-    except OSError:
-        secteur = ""
-    rc, actuel = sy.sortie([ppc, "get"])
-    actuel = actuel.strip()
-    if secteur != "1" or rc != 0 or not actuel or actuel == "performance":
-        journal(etat, "profil d'énergie inchangé (secteur {!r}, profil {!r})".format(secteur, actuel))
-        return None
-    if sy.sortie([ppc, "set", "performance"])[0] != 0:
-        return None
-    journal(etat, "profil d'énergie : {} -> performance (sur secteur)".format(actuel))
-    return actuel
+MODES_PROFIL = ("auto", "balanced", "performance", "aucun")
 
 
-def restaurer_profil(sy: Systeme, etat: Path, origine) -> None:
-    if origine and sy.sortie([sy.env.get("FUMEE_POWERPROFILESCTL", "powerprofilesctl"), "set", origine])[0] != 0:
-        journal(etat, "ÉCHEC : profil d'énergie NON rendu ({}) — à remettre à la main".format(origine))
+class ProfilEnergie:
+    """Profil d'énergie pendant la fumée (22/11, réglage « auto » du 28/11) : la courbe des
+    ventilateurs du portable suit le profil de power-profiles-daemon. « auto » : `balanced` au
+    départ, `performance` seulement quand le paquet CPU chauffe (≥ chaud_c), retour à `balanced`
+    sous frais_c (hystérésis, seuils dans plan.toml [profil]). `balanced` / `performance` : profil
+    fixe toute la fumée ; `aucun` : rien touché. SUR SECTEUR seulement (sur batterie on ne vide pas
+    le pack pour un test). Jamais bloquant : `powerprofilesctl` absent ou en échec = réglage
+    désactivé, une ligne au journal, la fumée continue. Le profil d'origine est rendu à la fin."""
+
+    def __init__(self, sy: Systeme, etat: Path, mode: str, chaud_c: float, frais_c: float, notes=None):
+        self.sy, self.etat, self.mode, self.chaud_c, self.frais_c = sy, etat, mode, chaud_c, frais_c
+        self.ppc = sy.env.get("FUMEE_POWERPROFILESCTL", "powerprofilesctl")
+        self.notes = notes if notes is not None else []   # celles de la page (Contexte.notes)
+        self.origine = self.actuel = None   # origine non None = CETTE fumée a changé le profil
+        self.actif = False                  # vrai = « auto » régule
+
+    def _set(self, profil) -> bool:
+        rc, texte = self.sy.sortie([self.ppc, "set", profil], delai=10)
+        if rc != 0:
+            journal(self.etat, "profil d'énergie : « {} set {} » a échoué ({}) : réglage désactivé, "
+                               "profil laissé à {}".format(self.ppc, profil, texte.strip()[:120], self.actuel))
+        return rc == 0
+
+    def _noter(self, temperature, avant, apres, pourquoi) -> None:
+        """Une bascule : journal de la fumée, sortie et page (heure, température, profils)."""
+        t = "?" if temperature is None else "{:g} °C".format(round(temperature, 1))
+        texte = "profil d'énergie {} : {} -> {} ({}, {})".format(
+            datetime.now().strftime("%H:%M:%S"), avant, apres, t, pourquoi)
+        journal(self.etat, texte)
+        self.notes.append(texte)
+        print("[fumée] " + texte, flush=True)
+
+    def demarrer(self) -> None:
+        if self.mode == "aucun":
+            journal(self.etat, "profil d'énergie : réglage coupé (--profil aucun ou FUMEE_PROFIL=0)")
+            return
+        try:
+            secteur = Path(self.sy.env.get("FUMEE_SECTEUR", "/sys/class/power_supply/ADP0/online")).read_text().strip()
+        except OSError:
+            secteur = ""
+        if secteur != "1":
+            journal(self.etat, "profil d'énergie : pas sur secteur ({!r}), profil inchangé".format(secteur))
+            return
+        rc, actuel = self.sy.sortie([self.ppc, "get"], delai=10)
+        actuel = actuel.strip()
+        if rc != 0 or not actuel:
+            journal(self.etat, "profil d'énergie : « {} get » a échoué ({}) : réglage désactivé, profil "
+                               "inchangé".format(self.ppc, actuel[:120] or "rien lu"))
+            return
+        self.actuel = actuel
+        voulu = "balanced" if self.mode == "auto" else self.mode
+        if voulu != actuel:
+            # Mémorisée AVANT le set : un SIGTERM entre les deux rend quand même le profil d'origine.
+            self.origine = actuel
+            if not self._set(voulu):
+                return
+            self.actuel = voulu
+            self._noter(self.sy.temperature(), actuel, voulu, "départ, réglage {}".format(self.mode))
+        else:
+            journal(self.etat, "profil d'énergie : déjà {} (réglage {})".format(actuel, self.mode))
+        self.actif = self.mode == "auto"
+
+    def sonder(self, temperature) -> None:
+        """Appelé à chaque pause de la fumée, avec la température que les gardiens viennent de lire."""
+        if not self.actif or temperature is None:
+            return
+        if self.actuel != "performance" and temperature >= self.chaud_c:
+            voulu, pourquoi = "performance", "≥ {:g} °C".format(self.chaud_c)
+        elif self.actuel == "performance" and temperature < self.frais_c:
+            voulu, pourquoi = "balanced", "< {:g} °C".format(self.frais_c)
+        else:
+            return
+        if self.origine is None:
+            self.origine = self.actuel
+        if not self._set(voulu):
+            self.actif = False
+            return
+        self._noter(temperature, self.actuel, voulu, pourquoi)
+        self.actuel = voulu
+
+    def restaurer(self) -> None:
+        """Idempotent : ne rend que ce que CETTE fumée a changé (verte, rouge, invalide, SIGTERM)."""
+        self.actif = False
+        if self.origine is None:
+            return
+        origine, self.origine = self.origine, None
+        if origine == self.actuel:
+            journal(self.etat, "profil d'énergie : {} (celui d'origine), rien à rendre".format(origine))
+        elif self.sy.sortie([self.ppc, "set", origine], delai=10)[0] == 0:
+            journal(self.etat, "profil d'énergie rendu : {} -> {}".format(self.actuel, origine))
+            self.actuel = origine
+        else:
+            journal(self.etat, "ÉCHEC : profil d'énergie NON rendu ({}) — à remettre à la main".format(origine))
 
 
 def preparer_arbre(sy: Systeme, depot: Path, arbre: Path, rev: str, hors_ligne: bool):

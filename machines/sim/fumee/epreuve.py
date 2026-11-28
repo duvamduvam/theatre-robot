@@ -22,6 +22,7 @@ class Contexte:
         self.hors_ligne, self.rtf_min, self.rtf, self.image_reconstruite = hors_ligne, rtf_min, None, False
         self.notes, self.coeurs, self._sims, self._maintenu = [], sy.env.get("FUMEE_COEURS", "8-15"), [], None
         self.sim = Sim(self)
+        self.profil = None   # banc.ProfilEnergie, posé par main() ; sondé à chaque pause
 
     def _coeurs(self, action, *sims):
         cmd = ["python3", str(self.ici / "coeurs_reserves.py"), action, "--etat", str(self.etat / "coeurs.json")]
@@ -47,9 +48,13 @@ class Contexte:
         self._sims = []
 
     def pause(self, secondes):
-        """Toute attente passe ici : 88 °C arrête la fumée ; les cœurs sont maintenus (15 s)."""
-        if chaleur(self.sy.temperature()) == "arret":
+        """Toute attente passe ici : 88 °C arrête la fumée ; le profil d'énergie « auto » suit la
+        même lecture du paquet CPU ; les cœurs sont maintenus (15 s)."""
+        t = self.sy.temperature()
+        if chaleur(t) == "arret":
             raise Arret("chaleur : paquet CPU ≥ 88 °C, fumée arrêtée (jamais au-delà de 90 °C)")
+        if self.profil:
+            self.profil.sonder(t)
         self.sy.dormir(secondes)
         maintenant = self.sy.horloge()
         if self._sims and (self._maintenu is None or maintenant - self._maintenu >= 15):
