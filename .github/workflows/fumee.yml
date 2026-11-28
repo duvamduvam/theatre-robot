@@ -5,8 +5,12 @@
 # mesure qui compte est le RTF de la sonde (seuil 0,8) ; le verdict des épreuves est un bonus.
 # Compte rendu : docs/operations.md § « Fumée sur GitHub Actions », docs/chantiers.md.
 #
-# Lancement à la main SEULEMENT (jamais à la poussée : ≈ 2 h de runner) :
+# Lancement (28/11) : SEUL sur chaque PR vers main et chaque fusion dans main — dépôt public,
+# minutes de runner gratuites ; ≈ 2 h par passe, une seule passe par branche (la précédente est
+# annulée à chaque poussée). Les PR qui ne touchent que docs/ ne la déclenchent pas.
+# À la main, toujours possible :
 #   gh workflow run fumee.yml --ref <branche> [-f ref=<sha ou branche à tester>]
+# Le PC de David garde ses séances et les épreuves qui ont besoin de son GPU.
 #
 # Adaptations, toutes explicites par variable (fumee.sh garde ses défauts du PC de David) :
 #   FUMEE_DEPOT=$GITHUB_WORKSPACE, tous les chemins sous $RUNNER_TEMP/fumee/ ;
@@ -26,6 +30,12 @@
 name: fumee
 
 on:
+  pull_request:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md"]
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md"]
   workflow_dispatch:
     inputs:
       ref:
@@ -35,6 +45,11 @@ on:
 
 permissions:
   contents: read
+
+# Une seule passe par branche : une nouvelle poussée annule la passe en cours.
+concurrency:
+  group: fumee-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   fumee:
