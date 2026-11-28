@@ -1093,6 +1093,11 @@ class ConversationEngine:
                 self._note_gesture(intent)
                 if self._move_task is not None:
                     self._move_task.on_reply(refusal, time.monotonic())
+                # Lot S2b : ce refus EST la réponse du corps pour l'appel 2 (fumée du 28/11,
+                # « fais le tour de l'éléphant » : rien n'était publié, l'attente courait ses
+                # 0,5 s et la bouche apprenait « ton corps n'a pas répondu » au lieu de la
+                # vraie raison). Sans attente armée, sans effet.
+                self.note_reponse_corps(refusal)
                 return False
             if self._emit_start(intent, f"Clé \"{key}\" : {value!r}"):
                 self._note_gesture(intent)
@@ -1331,6 +1336,12 @@ class ConversationEngine:
 
         `spontaneous` : tour spontané, transmis à _notify_move (aucun mouvement, lot S1)."""
         if isinstance(event, Sentence):
+            if geste_dabord.est_ligne_geste(event.text):
+                # Dernière barrière (fumée du 28/11, « GESTE » prononcé) : une phrase qui est
+                # une ligne du protocole n'est ni dite, ni écrite au transcript, quel que soit
+                # le chemin qui l'a laissée passer.
+                logger.warning("Phrase GESTE retirée de la parole : %r", event.text[:200])
+                return emotion_params
             if timing_marks["first_sentence_at"] is None:
                 # Horodaté AVANT même la synthèse TTS qui suit (elle peut
                 # prendre du temps) : c'est la latence "il réfléchit" telle
@@ -1909,7 +1920,9 @@ class ConversationEngine:
         GO refusé) : la réplique est écrite APRÈS le verdict du corps, jamais avant."""
         params, flux_replique = geste_dabord.separe_geste_du_flux(deltas)
         if params is None:
-            return flux_replique
+            # Filtre posé aussi sur le tour ordinaire : une ligne GESTE plus bas dans la
+            # réplique n'est jamais dite non plus (cf. filtre_lignes_geste).
+            return geste_dabord.filtre_lignes_geste(flux_replique)
 
         # L'emplacement d'attente est posé AVANT la publication : le sélecteur répond en
         # ~20 ms, une réponse plus rapide que nous ne doit pas être perdue.
@@ -1933,7 +1946,10 @@ class ConversationEngine:
         # Le geste de ce tour est parti : le JSON de fin de l'appel 2 ne le renverra pas
         # (garde de _notify_move, revue adverse du 27/11). Levé en fin de tour.
         self._geste_deja_parti = True
-        return self._brain_deltas(text, _joint_direction(direction, consigne))
+        # Fumée du 28/11 : l'appel 2 a recommencé par « GESTE {…} », et « GESTE » a été dit.
+        # La consigne le lui interdit ; le filtre le garantit.
+        return geste_dabord.filtre_lignes_geste(
+            self._brain_deltas(text, _joint_direction(direction, consigne)))
 
     def _speak_reply(self, text: str, *, stt_ms: float = 0.0, stt_text: str = "",
                       speech_end_at: Optional[float] = None, mute: bool = False,

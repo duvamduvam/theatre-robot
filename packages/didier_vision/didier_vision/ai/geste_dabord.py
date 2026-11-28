@@ -27,6 +27,19 @@ logger = logging.getLogger(__name__)
 # POSITION (première ligne) — une ligne « GESTE » au milieu d'une réplique est du texte.
 _MARQUEUR = re.compile(r"^\s*geste\s*:?\s*(\{.*)$", re.IGNORECASE | re.DOTALL)
 
+# Ligne DU PROTOCOLE, lisible ou non : le mot seul, suivi au plus d'un « : » ou d'un « . »,
+# puis d'une accolade ou de la fin de la ligne. « GESTE », « Geste: {casse », « GESTE {…} » en
+# sont ; « Geste de la main, tu connais ? » n'en est pas (c'est une réplique). Fumée du
+# 28/11 : « GESTE » a été PRONONCÉ deux fois — aucune ligne de cette forme ne doit plus
+# atteindre la parole, ni à l'appel 1, ni à l'appel 2 (cf. filtre_lignes_geste).
+_LIGNE_PROTOCOLE = re.compile(r"^\s*geste\s*[:.]?\s*(\{|$)", re.IGNORECASE)
+# En plein flux, « GESTE » sans rien derrière n'est pas encore tranché (« Geste de la main »
+# peut suivre) : il faut l'accolade ou le saut de ligne. La fin du flux tranche avec la
+# forme ci-dessus.
+_LIGNE_PROTOCOLE_TRANCHEE = re.compile(r"^\s*geste\s*[:.]?\s*(\{|\n)", re.IGNORECASE)
+# Début de ligne qui PEUT encore devenir une ligne du protocole (on attend la suite).
+_LIGNE_PROTOCOLE_EN_COURS = re.compile(r"^\s*geste\s*[:.]?\s*$", re.IGNORECASE)
+
 # Clés de mouvement acceptées sur cette ligne (mêmes clés que le JSON de fin, cf.
 # conversation.MOVE_KEYS + "tourner_vers" du lot S2c). Une ligne GESTE qui n'en porte
 # AUCUNE est ignorée (repli sûr : on la traite comme une réplique).
@@ -45,6 +58,12 @@ def coupe_premiere_ligne(texte: str):
     if i < 0:
         return texte, ""
     return texte[:i], texte[i + 1:]
+
+
+def est_ligne_geste(texte) -> bool:
+    """True si `texte` (une ligne, ou une phrase du parseur) est une ligne du protocole GESTE,
+    lisible ou non. C'est la barrière de la parole : une telle ligne n'est JAMAIS dite."""
+    return isinstance(texte, str) and _LIGNE_PROTOCOLE.match(texte) is not None
 
 
 def lire_ligne_geste(premiere_ligne) -> Optional[dict]:
@@ -132,6 +151,10 @@ def phrase_reponse_corps(reponse) -> str:
     raison = reponse.get("reason")
     if isinstance(raison, str) and raison in REFUS_PHRASES:
         return REFUS_PHRASES[raison]
+    # Refus du tableau des objets (conversation._local_refusal, source « chat ») : la cause
+    # est dans `effect` (« unknown », « no_tour »…), `reason` est vide — mêmes clés que la table.
+    if isinstance(effet, str) and effet in REFUS_PHRASES:
+        return REFUS_PHRASES[effet]
     return REFUS_INCONNU
 
 
@@ -190,8 +213,17 @@ def separe_geste_du_flux(deltas):
         params = lire_ligne_geste(premiere)
         if params is not None:
             return params, None
-        # Ligne « GESTE … » illisible : repli sûr, c'est une réplique — le tampon est rejoué
-        # TEL QUEL (le recomposer perdrait le saut de ligne quand le reste est vide).
+        if est_ligne_geste(premiere):
+            # Ligne du protocole ILLISIBLE (« GESTE » seul, JSON cassé, JSON sur la ligne
+            # suivante, aucune clé de geste) : rien n'est dit et rien ne part. La rejouer comme
+            # réplique faisait PRONONCER « GESTE » (fumée du 28/11), et lire le reste du flux
+            # laisserait un JSON de fin envoyer le geste par l'ancien chemin. Pas de geste
+            # inventé, pas de phrase inventée : le tour se tait (le flux est abandonné).
+            logger.warning("Ligne GESTE illisible : rien n'est dit, aucun geste ne part : %r",
+                           premiere[:200])
+            return None, iter(())
+        # « Geste de la main, tu connais ? » : une vraie réplique, rejouée TELLE QUELLE (la
+        # recomposer perdrait le saut de ligne quand le reste est vide).
 
     def _rejoue():
         if tampon:
@@ -202,6 +234,57 @@ def separe_geste_du_flux(deltas):
                     yield suite
 
     return None, _rejoue()
+
+
+def filtre_lignes_geste(deltas):
+    """Flux de deltas -> le même flux, privé de toute ligne du protocole GESTE (cf.
+    est_ligne_geste), où qu'elle soit. Posé sur le flux DIT de l'appel 1 (tour ordinaire) et
+    sur celui de l'appel 2.
+
+    POURQUOI. Fumée du 28/11 (main 74735a24) : « Va voir la table basse. » -> la demande part
+    bien (ligne GESTE de l'appel 1 lue), le corps accepte, puis Didier dit « GESTE ». L'appel 2
+    porte le même prompt système (gabarit GESTE compris) et la même demande de David : le LLM
+    recommence par `GESTE {…}`, et rien ne filtrait ce flux-là. Le parseur coupait au « { »
+    (JSON de fin) et prononçait « GESTE ».
+
+    Coût en latence : seul un DÉBUT de ligne qui peut encore devenir « geste » est retenu (au
+    plus « geste : » et des espaces) ; tout autre texte part aussitôt, delta par delta.
+    Fermer ce générateur ferme le flux amont (arrêt vocal : connexion HTTP libérée)."""
+    tete = ""            # début de la ligne courante, retenu le temps de trancher
+    etat = "debut"       # "debut" (on tranche), "dit" (ligne à dire), "jette" (ligne GESTE)
+    try:
+        for delta in deltas:
+            if not isinstance(delta, str):
+                continue
+            i = 0
+            while i < len(delta):
+                j = delta.find("\n", i)
+                morceau = delta[i:] if j < 0 else delta[i:j + 1]
+                i += len(morceau)
+                fin_de_ligne = morceau.endswith("\n")
+                if etat == "dit":
+                    yield morceau
+                elif etat == "debut":
+                    tete += morceau
+                    if _LIGNE_PROTOCOLE_TRANCHEE.match(tete):
+                        logger.warning("Ligne GESTE retirée de la parole : %r", tete[:200])
+                        tete, etat = "", "jette"
+                    elif (not fin_de_ligne and (_LIGNE_PROTOCOLE_EN_COURS.match(tete)
+                                                or MARQUEUR_MOT.startswith(tete.lstrip().lower()))):
+                        continue                   # « Ges », « GESTE : » : pas encore tranché
+                    else:
+                        yield tete
+                        tete, etat = "", "dit"
+                if fin_de_ligne:
+                    etat = "debut"
+        if tete and not est_ligne_geste(tete):
+            yield tete                             # « Ges » en fin de flux : c'est du texte
+        elif tete:
+            logger.warning("Ligne GESTE retirée de la parole : %r", tete[:200])
+    finally:
+        close = getattr(deltas, "close", None)
+        if close is not None:
+            close()
 
 
 # --------------------------------------------------------------------------------------

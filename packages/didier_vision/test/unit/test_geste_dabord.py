@@ -210,10 +210,20 @@ class TestSepareGesteDuFlux:
         assert params is None
         assert "".join(deltas) == "Geste de la main, tu connais ?"
 
-    def test_ligne_geste_illisible_rejouee_comme_replique(self):
-        params, deltas = separe_geste_du_flux(iter(['GESTE {casse\n', "la suite"]))
+    # Fumée du 28/11 : rejouer une ligne GESTE illisible comme réplique faisait PRONONCER
+    # « GESTE ». Désormais : rien n'est dit, aucun geste ne part (ni par la ligne, ni par un
+    # JSON de fin lu plus bas).
+    @pytest.mark.parametrize("flux", [
+        ['GESTE {casse\n', "la suite"],
+        ["GESTE"],                                         # le mot seul, fin de flux
+        ["GESTE\n", '{"faire_le_tour": "elephant"}'],      # JSON sur la ligne suivante
+        ["Ges", "te", ":", " {aller_voir: banc}\n"],        # JSON non quoté, en morceaux
+        ['GESTE {"emotion": "happy"}\n', "Bonjour."],       # aucune clé de geste
+    ])
+    def test_ligne_geste_illisible_rien_nest_dit(self, flux):
+        params, deltas = separe_geste_du_flux(iter(flux))
         assert params is None
-        assert "".join(deltas) == 'GESTE {casse\nla suite'
+        assert "".join(deltas) == ""
 
     def test_flux_vide(self):
         params, deltas = separe_geste_du_flux(iter([]))
@@ -233,3 +243,71 @@ class TestSepareGesteDuFlux:
     def test_ligne_geste_sans_saut_de_ligne_final(self):
         params, _ = separe_geste_du_flux(iter(['GESTE {"aller_voir": "banc"}']))
         assert params == {"aller_voir": "banc"}
+
+
+# --------------------------------------------------------------------------------------
+# Barrière de la parole (fumée du 28/11 : « GESTE » prononcé).
+# --------------------------------------------------------------------------------------
+
+from didier_vision.ai.geste_dabord import est_ligne_geste, filtre_lignes_geste  # noqa: E402
+
+
+class TestEstLigneGeste:
+    @pytest.mark.parametrize("texte", [
+        "GESTE", "geste", "  Geste  ", "GESTE {", 'GESTE {"aller_voir": "banc"}',
+        'Geste: {"marche": "go"}', "GESTE.", "GESTE\n"])
+    def test_lignes_du_protocole(self, texte):
+        assert est_ligne_geste(texte) is True
+
+    @pytest.mark.parametrize("texte", [
+        "Geste de la main, tu connais ?", "Gestes lents.", "Mon geste préféré.", "", None,
+        "D'accord, j'y vais."])
+    def test_vraies_repliques(self, texte):
+        assert est_ligne_geste(texte) is False
+
+
+class TestFiltreLignesGeste:
+    """Valeurs attendues GRAVÉES (jamais recalculées avec la fonction testée)."""
+
+    @pytest.mark.parametrize("flux, attendu", [
+        # L'appel 2 du 28/11 : la ligne entière, JSON compris, disparaît.
+        (['GESTE {"aller_voir": "table_basse"}'], ""),
+        (['GESTE {"aller_voir": "table_basse"}\n', "J'y vais !"], "J'y vais !"),
+        # Découpée comme par l'API, le marqueur à cheval sur plusieurs deltas.
+        (["G", "ES", "TE ", '{"faire_', 'le_tour": "elephant"}', "\nJe fais le tour."],
+         "Je fais le tour."),
+        # Plus bas dans une réplique, sur sa propre ligne.
+        (["D'accord.\n", "geste", ' {"marche": "go"}\n', "En route."],
+         "D'accord.\nEn route."),
+        # Le mot seul, sans saut de ligne final.
+        (["Bon.\n", "GESTE"], "Bon.\n"),
+        # Vraies répliques : rendues à l'identique.
+        (["Geste de la main, tu connais ?"], "Geste de la main, tu connais ?"),
+        (["Ge", "ste", " de la main"], "Geste de la main"),
+        (["Ges"], "Ges"),
+        (["Bonjour ", "David !\n", "\n", "Ça va ?"], "Bonjour David !\n\nÇa va ?"),
+        ([None, "Oui", 3], "Oui"),
+        ([], ""),
+    ])
+    def test_filtre(self, flux, attendu):
+        assert "".join(filtre_lignes_geste(iter(flux))) == attendu
+
+    def test_le_texte_ordinaire_part_delta_par_delta(self):
+        """Latence : une réplique ordinaire n'est pas tamponnée jusqu'au saut de ligne."""
+        sortis = list(filtre_lignes_geste(iter(["Bonjour", " David", ", tu vas bien ?"])))
+        assert sortis == ["Bonjour", " David", ", tu vas bien ?"]
+
+    def test_fermer_le_filtre_ferme_le_flux_amont(self):
+        ferme = []
+
+        def _amont():
+            try:
+                yield "Bonjour"
+                yield " David"
+            finally:
+                ferme.append(True)
+
+        filtre = filtre_lignes_geste(_amont())
+        assert next(filtre) == "Bonjour"
+        filtre.close()
+        assert ferme == [True], "arrêt vocal : la connexion LLM doit être libérée"

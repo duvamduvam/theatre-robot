@@ -190,8 +190,12 @@ Sinon (on te parle, on te pose une question, on ne te demande aucun déplacement
 
 # Appel 2 (§3) : la réponse du corps, en clair, avant que la bouche parle.
 CORPS_REPONSE_PREFIX = "Ton corps répond : "
+# Fumée du 28/11 : l'appel 2 porte le même prompt système (gabarit GESTE compris) et la même
+# demande ; le LLM recommençait par « GESTE {…} » et ne disait rien d'autre. La dernière phrase
+# lui rend la parole (le filtre geste_dabord.filtre_lignes_geste garantit le reste).
 CORPS_CONSIGNE = (" Annonce une intention ou raconte un résultat ; ne dis jamais d'un mouvement "
-                  "qu'il est fait s'il n'est pas dans cet état.")
+                  "qu'il est fait s'il n'est pas dans cet état. Ta demande est déjà partie : "
+                  "cette fois, pas de ligne GESTE, tu parles.")
 
 # « Ce qui t'entoure » (lot O1, 18/11, étude docs/etudes/etude-objets-vus-et-carte.md §6.6) :
 # la section du prompt écrite depuis le TABLEAU DES OBJETS (scene/objets). Elle REMPLACE les

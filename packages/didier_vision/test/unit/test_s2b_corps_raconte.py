@@ -304,3 +304,98 @@ def test_le_drapeau_est_remis_a_zero_a_lentree_de_chaque_tour():
         "tour 2 : le geste est bâillonné — `_geste_deja_parti` n'a pas été remis à zéro "
         "à l'entrée de _speak_reply")
     assert gestes_t2[-1].get("objet") == "grue"
+
+
+# --- Fumée du 28/11 (main 74735a24) : « GESTE » PRONONCÉ ------------------------------
+# « Va voir la table basse. » -> l'aller_voir part, le corps accepte, puis Didier dit
+# « GESTE » et rien d'autre ; « Fais le tour de l'éléphant. » -> « GESTE » seul aussi. Cause :
+# l'appel 2 porte le même prompt (gabarit GESTE compris) et la même demande ; le LLM
+# recommence par `GESTE {…}`, et ce flux n'était pas filtré — le parseur coupait au « { » et
+# disait « GESTE ». Ces tests rejouent les sorties fautives par le VRAI `_speak_reply` (parseur
+# de flux compris, découpé en deltas comme l'API), sans audio (mute=True).
+
+class _Muet:
+    def drain(self):
+        pass
+
+    def play(self, *a, **k):
+        pass
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+
+def _tour_complet(reponses, texte, *, objets=None):
+    """Joue un tour humain complet. -> (répliques dites au transcript, gestes publiés, brain)."""
+    dits, publies = [], []
+    brain = _Brain(reponses)
+    moteur = ConversationEngine(
+        mic=_Muet(), vad=None, stt=None, brain=brain, tts=None, player=_Muet(),
+        publish=lambda msg: None, on_move=publies.append, stage=None,
+        on_transcript=lambda role, t: dits.append(t))
+    if objets is not None:
+        moteur.set_objets(objets)
+    moteur._speak_reply(texte, mute=True)
+    return dits, publies, brain
+
+
+def test_fumee_28_11_lappel_2_qui_recommence_par_geste_nest_pas_dit():
+    """Le cas exact de la table basse : l'appel 2 ne rend QUE la ligne GESTE (et une émotion)."""
+    dits, publies, brain = _tour_complet(
+        [['GESTE {"aller_voir": "table_basse"}', "\n"],
+         ['GES', 'TE {"aller_', 'voir": "table_basse"} {"emotion": "happy"}']],
+        "Va voir la table basse.")
+    assert dits == [], "« GESTE » ne doit jamais être dit"
+    assert [p["cmd"] for p in publies] == ["aller_voir"], "le geste part une fois, pas deux"
+    assert len(brain.appels) == 2, "l'appel 2 a bien lieu"
+    assert "pas de ligne GESTE" in brain.appels[1][1], "la consigne de l'appel 2 l'interdit"
+
+
+def test_fumee_28_11_lappel_2_parle_apres_sa_ligne_geste():
+    dits, _, _ = _tour_complet(
+        [['GESTE {"aller_voir": "table_basse"}\n'],
+         ['GESTE {"aller_voir": "table_basse"}\n', "J'y vais, ", 'la table m\'appelle ! {"emotion": "happy"}']],
+        "Va voir la table basse.")
+    assert dits == ["J'y vais, la table m'appelle !"]
+
+
+@pytest.mark.parametrize("appel_1", [
+    ["GESTE"],                                            # le mot seul
+    ["GESTE\n", '{"faire_le_tour": "elephant"}'],         # JSON sur la ligne suivante
+    ["Geste", ' {faire_le_tour: elephant}\n', "Je fais le tour !"],   # JSON illisible
+])
+def test_ligne_geste_illisible_rien_nest_dit_aucun_geste_ne_part(appel_1):
+    dits, publies, brain = _tour_complet([appel_1, ["ne doit pas être demandé"]],
+                                         "Fais le tour de l'éléphant.")
+    assert dits == []
+    assert publies == [], "aucun geste inventé (ni par la ligne, ni par un JSON de fin)"
+    assert len(brain.appels) == 1, "pas d'appel 2 sans geste lu"
+
+
+def test_une_phrase_geste_au_milieu_dune_replique_nest_pas_dite():
+    """Dernière barrière (Sentence du parseur) : « D'accord. GESTE {…} » sur une seule ligne."""
+    dits, _, _ = _tour_complet([["D'accord. ", 'GESTE {"emotion": "happy"}']], "Tu viens ?")
+    assert dits == ["D'accord."]
+
+
+def test_fumee_28_11_le_refus_local_est_la_reponse_du_corps():
+    """« Fais le tour de l'éléphant » refusé par le tableau des objets : rien n'est publié, mais
+    la bouche doit apprendre la VRAIE raison, tout de suite — pas « ton corps n'a pas répondu »
+    après 0,5 s d'attente."""
+    from theatre_contrats import objets
+
+    debut = time.monotonic()
+    dits, publies, brain = _tour_complet(
+        [['GESTE {"faire_le_tour": "elephant"}\n'], ["Un éléphant ? Je n'en vois pas ici."]],
+        "Fais le tour de l'éléphant.", objets=objets.VIDE)
+    duree = time.monotonic() - debut
+
+    assert publies == [], "un geste refusé par le tableau n'est jamais publié"
+    direction = brain.appels[1][1]
+    assert "tu ne connais pas cet objet ici" in direction
+    assert "n'a pas répondu" not in direction
+    assert duree < geste_dabord.ATTENTE_CORPS_S * 0.8, "aucune attente du délai de garde"
+    assert dits == ["Un éléphant ?", "Je n'en vois pas ici."]
