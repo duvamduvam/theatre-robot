@@ -63,7 +63,7 @@ from theatre_interfaces.msg import StringTime
 # n'attrape que TypeError/JSONDecodeError (pas tout ValueError) et sa
 # sémantique générique est gardée à l'identique.
 from theatre_contrats import donnees, qos, stringtime, topics as contrats_topics
-from didier_web import apercu_lumieres, lecture_donnees, panneau_audio
+from didier_web import apercu_lumieres, lecture_donnees, panneau_appareils, panneau_audio
 from didier_web.web_catalog import build_catalog
 from didier_web.web_protocol import (
     DATA_EDIT_TOPIC, DRIVE_TIMEOUT_S, TOPICS_FLUX, TOPICS_LECTURE,
@@ -982,12 +982,15 @@ async def _state_loop(app: web.Application) -> None:
             node.refresh_node_names()
             last_nodes_refresh = now_s
 
+        topics = node.snapshot_topics()
         await _broadcast(app, build_state(
-            topics=node.snapshot_topics(),
+            topics=topics,
             nodes=node.node_names_cache,
             clients=len(app["clients"]),
             writer_present=node.sessions.writer_present(),
             lumieres=node.instant_lumieres(),
+            # Lot L3a : la tuile « Appareils », jugée ici (module pur), affichée par la page.
+            appareils_lignes=panneau_appareils.lignes(topics),
         ))
 
 

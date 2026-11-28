@@ -88,10 +88,12 @@ def test_whitelist_est_l_union_spectacle_technique():
     # souffle un texte « entendu » ou pose une consigne de jeu -- conversation,
     # pas un actionneur.
     assert WHITELIST == WHITELIST_SPECTACLE | WHITELIST_TECHNIQUE
-    assert WHITELIST_SPECTACLE == {"animation", "face", "audio", "robot_lights"}
+    # Lot L3a (28/11, spec L3 décision 19) : ordres d'appareils construits depuis le registre
+    # (theatre_contrats.appareils) — type audio en spectacle, type relais en technique.
+    assert WHITELIST_SPECTACLE == {"animation", "face", "audio", "robot_lights", "sono/audio"}
     assert WHITELIST_TECHNIQUE == {"relay", "neck", "left_eye", "right_eye", "left_arm",
                                     "right_arm", "gaze", "chat", "persona", "system",
-                                    "chat_text", "chat_instruction"}
+                                    "chat_text", "chat_instruction", "sono/relais"}
 
 
 def test_topics_lecture_jamais_publiables():
@@ -113,7 +115,9 @@ def test_topics_lecture_jamais_publiables():
                               # corps_sur/etat (24/11, lot A0-5) : état du corps sûr, LATCHÉ.
                               "corps_sur/etat",
                               # corps/etat (27/11, lot S2a) : état du corps écrit par le sélecteur, LATCHÉ.
-                              "corps/etat"}
+                              "corps/etat",
+                              # sono/etat (28/11, lot L3a) : état d'appareil du registre, LATCHÉ.
+                              "sono/etat"}
     # Les topics VOLATILS du panneau « Coulisses » n'y sont PAS : un abonnement
     # TRANSIENT_LOCAL est incompatible avec un publieur volatile (ils sont en flux).
     assert TOPICS_LECTURE.isdisjoint({"chat_situation", "chat_prompt", "rehearsal/journal"})
@@ -239,6 +243,9 @@ def test_stop_all_commands_liste_et_ordre_exacts():
         ("right_eye", "stop"),
         ("left_arm", "stop"),
         ("right_arm", "stop"),
+        # Lot L3a (28/11, spec L3 décision 19) : tout topic d'ordre du registre des appareils.
+        ("sono/audio", "stop"),
+        ("sono/relais", "stop"),
     ]
 
 
@@ -336,6 +343,14 @@ def test_build_state():
         "clients": 2,
         "writer_present": True,
     }
+
+
+def test_build_state_porte_les_lignes_d_appareils():
+    # Lot L3a : la tuile « Appareils » voyage dans `state`, sous la clé `appareils`.
+    assert build_state({}, [], 0, False, appareils_lignes=[{"appareil": "sono"}]) == {
+        "type": "state", "topics": {}, "nodes": [], "clients": 0, "writer_present": False,
+        "appareils": [{"appareil": "sono"}]}
+    assert "appareils" not in build_state({}, [], 0, False)
 
 
 # --- SessionManager : auth ---------------------------------------------------
@@ -584,6 +599,8 @@ WHITELIST_BASE_GRAVEE = {
     "animation", "face", "audio", "robot_lights",
     "relay", "neck", "left_eye", "right_eye", "left_arm", "right_arm", "gaze",
     "chat", "persona", "system", "chat_text", "chat_instruction",
+    # Lot L3a (28/11) : ordres des appareils du registre (sono).
+    "sono/audio", "sono/relais",
 }
 TOPICS_REPETITION_GRAVES = {"route", "route_speed", "rehearsal/cmd", "camera_enable",
                             "camera_source", "jeu/console"}
@@ -1861,3 +1878,46 @@ def test_scene_seance_dans_le_bandeau_et_toujours_sim_seulement():
     preparer = html[html.index('<details id="scene-preparer"'):html.index("</details>", html.index('<details id="scene-preparer"'))]
     assert "rehearsal/cmd" not in preparer and "scene-etat-seance" not in preparer
     assert html.count('data-topic="rehearsal/cmd"') == 2
+
+
+# ------------------------------------------------- lot L3a (28/11) : tuile « Appareils »
+def test_scene_tuile_appareils_ids_graves_hors_repetition():
+    """Spec L3 décision 18 : tuile générique dans la colonne technique, à côté du corps sûr,
+    robot ET sim (hors .scene-repetition) ; id gravé (épreuve SO10 de la fumée sono)."""
+    html = _lire("scene.html")
+    debut = html.index('<div id="scene-appareils"')
+    assert html.index('<div id="scene-corps-sur"') < debut
+    groupe = html[debut:html.index('<div id="appareils-lignes"')]
+    assert "scene-repetition" not in groupe and "<h2>Appareils</h2>" in groupe
+    js = _lire("scene.js")
+    assert "afficherAppareils(msg.appareils);" in js
+    # Les boutons de la tuile sont inertes sans la main (même liste que les autres).
+    assert "#audio-tester, #audio-redetecter, .appareil-bouton" in js
+
+
+def test_scene_appareils_n_ecrit_que_vers_le_topic_d_ordre_de_l_organe():
+    """Aucun nom de topic d'appareil écrit dans la page : elle publie vers `organe.topic_ordre`
+    (jugé par le pont depuis le registre), et seulement ces trois ordres."""
+    js = _lire("scene.js")
+    bloc = js[js.index("// --- Appareils (lot L3a"):]
+    assert re.findall(r"envoyerSaisie\(([^,]+),", bloc) == ["organe.topic_ordre"] * 3
+    assert "sono" not in bloc
+
+
+@pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node absent : scene.js non joué")
+def test_scene_texte_audio_avance_calculee_par_la_page():
+    import subprocess
+    js = _lire("scene.js")
+    fonctions = "".join(re.search(r"^function " + nom + r"\(.*?^}\n", js, re.S | re.M).group(0)
+                        for nom in ("secondes", "texteAudio"))
+    appels = [
+        [{"actif": False, "texte": "silence"}, 0],
+        [{"actif": True, "texte": "bugs-joues/begaiement.wav", "debut_ms": 1000, "duree_ms": 2160}, 2200],
+        [{"actif": True, "texte": "a.wav", "debut_ms": 1000, "duree_ms": 2160}, 9000],
+        [{"actif": True, "texte": "a.wav", "debut_ms": None, "duree_ms": None}, 9000],
+    ]
+    script = fonctions + "\nconsole.log(JSON.stringify(" + json.dumps(appels) \
+        + ".map(a => texteAudio(...a))));"
+    sortie = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30, check=True)
+    assert json.loads(sortie.stdout) == [
+        "silence", "♪ bugs-joues/begaiement.wav — 1,2 / 2,2 s", "♪ a.wav — 2,2 / 2,2 s", "♪ a.wav"]

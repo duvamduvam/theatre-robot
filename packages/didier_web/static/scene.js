@@ -114,7 +114,7 @@ liaison.surLiaison = () => {
   document.querySelectorAll(".bouton-catalogue, #scene-form-texte button, "
       + "#scene-form-consigne button, #scene-vitesse, .jeu-bouton, #jeu-cible-va-la, "
       + "#editeur-envoyer, #editeur-rejouer, #editeur-valider-roues, #editeur-image-envoyer, #bugs-couper, "
-      + "#audio-tester, #audio-redetecter")
+      + "#audio-tester, #audio-redetecter, .appareil-bouton")
     .forEach((el) => { el.disabled = !state.isWriter; });
   majEditeurVisible();
   majAudioVisible();
@@ -315,6 +315,7 @@ liaison.surEtat = (msg) => {
   afficherJeu(msg);
   afficherMission(msg);
   afficherCorpsSur(msg);
+  afficherAppareils(msg.appareils);
   // Bandes LED (lot I0) : le `state` resynchronise (page ouverte en cours de jeu) ; les
   // changements arrivent aussitôt par le message `lumieres`.
   if (msg.lumieres) {
@@ -1734,3 +1735,152 @@ installerVisage();
 installerBugs();
 requestAnimationFrame(peindreLumieres);
 connecter();
+
+// --- Appareils (lot L3a, 28/11) : tuile générique d'après le registre -------------------------
+// Le pont juge (didier_web/panneau_appareils.py : présence, pilote, version, textes) et envoie
+// les lignes dans `state.appareils` ; la page AFFICHE, et ne calcule que l'avance d'un audio
+// d'après `debut_ms`. Aucun nom d'appareil ni de topic ici : chaque organe porte son
+// `topic_ordre`, et le pont refuse tout topic hors whitelist.
+const PASTILLES_PRESENCE = { vue: "badge-on", muette: "badge-off", jamais_vue: "badge-off",
+                             illisible: "badge-off" };
+const appareilsCommandes = {};   // "<appareil>/<organe>" -> contrôles créés une fois (choix gardé)
+let audiosCatalogue = null;      // [{label, value}] de GET /api/catalog, lu une fois
+
+function secondes(ms) {
+  return (ms / 1000).toFixed(1).replace(".", ",");
+}
+
+// « ♪ <chemin> — 1,2 / 2,2 s » ; fonction PURE (jouée par node dans test_web_protocol.py).
+function texteAudio(organe, maintenantMs) {
+  if (!organe.actif) {
+    return "silence";
+  }
+  if (typeof organe.debut_ms !== "number" || typeof organe.duree_ms !== "number") {
+    return "♪ " + organe.texte;
+  }
+  const avance = Math.min(Math.max(maintenantMs - organe.debut_ms, 0), organe.duree_ms);
+  return "♪ " + organe.texte + " — " + secondes(avance) + " / " + secondes(organe.duree_ms) + " s";
+}
+
+function chargerAudiosCatalogue(select) {
+  if (audiosCatalogue !== null) {
+    remplirAudios(select);
+    return;
+  }
+  audiosCatalogue = [];
+  fetch(urlHttp("/api/catalog"))
+    .then((r) => r.json())
+    .then((catalogue) => {
+      audiosCatalogue = catalogue.audios || [];
+      document.querySelectorAll(".appareil-audios").forEach(remplirAudios);
+    })
+    .catch(() => { audiosCatalogue = null; });
+}
+
+function remplirAudios(select) {
+  if (select.options.length > 0) {
+    return;
+  }
+  audiosCatalogue.forEach((a) => {
+    const option = document.createElement("option");
+    option.value = typeof a === "string" ? a : a.value;
+    option.textContent = typeof a === "string" ? a : a.label;
+    select.append(option);
+  });
+}
+
+function boutonAppareil(libelle, quand) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "appareil-bouton";
+  b.textContent = libelle;
+  b.disabled = !state.isWriter;
+  b.addEventListener("click", (event) => {
+    if (state.isWriter) {
+      quand(event.currentTarget);
+    }
+  });
+  return b;
+}
+
+function commandesOrgane(appareil, organe) {
+  const cle = appareil + "/" + organe.nom;
+  if (appareilsCommandes[cle]) {
+    return appareilsCommandes[cle];
+  }
+  const span = document.createElement("span");
+  span.className = "scene-boutons";
+  if (organe.type === "audio") {
+    const select = document.createElement("select");
+    select.className = "appareil-audios";
+    chargerAudiosCatalogue(select);
+    span.append(select,
+      boutonAppareil("Jouer", (b) => envoyerSaisie(organe.topic_ordre, select.value, b)),
+      boutonAppareil("Stop", (b) => envoyerSaisie(organe.topic_ordre, "stop", b)));
+  } else if (organe.type === "relais") {
+    span.append(boutonAppareil("Impulsion", (b) => envoyerSaisie(organe.topic_ordre, organe.nom, b)));
+  }
+  appareilsCommandes[cle] = span;
+  return span;
+}
+
+function ligneOrgane(appareil, organe) {
+  const div = document.createElement("div");
+  div.className = "appareil-organe";
+  const texte = document.createElement("span");
+  if (organe.type === "relais") {
+    const pastille = document.createElement("span");
+    pastille.className = "badge " + (organe.actif ? "badge-on" : "badge-off");
+    pastille.textContent = organe.actif ? "●" : "○";
+    div.append(pastille);
+    texte.textContent = " " + organe.texte;
+  } else {
+    texte.textContent = texteAudio(organe, Date.now());
+  }
+  if (organe.barre) {
+    texte.className = "appareil-barre";
+    texte.textContent += " (" + organe.sante_texte + ")";
+  }
+  div.append(texte, commandesOrgane(appareil, organe));
+  return div;
+}
+
+function afficherAppareils(lignes) {
+  if (!Array.isArray(lignes)) {
+    return;
+  }
+  const conteneur = $("appareils-lignes");
+  conteneur.innerHTML = "";
+  lignes.forEach((l) => {
+    const bloc = document.createElement("div");
+    bloc.className = "appareil-ligne";
+    const tete = document.createElement("div");
+    const nom = document.createElement("strong");
+    nom.textContent = l.appareil + " ";
+    const presence = document.createElement("span");
+    presence.className = "badge " + (PASTILLES_PRESENCE[l.presence] || "badge-off");
+    presence.textContent = l.presence === "vue" ? "vue" : l.presence_texte;
+    tete.append(nom, presence);
+    if (l.pilote_texte) {
+      const pilote = document.createElement("span");
+      pilote.className = "badge badge-off";
+      pilote.textContent = l.pilote_texte;
+      tete.append(" ", pilote);
+    }
+    if (l.version) {
+      const version = document.createElement("span");
+      version.className = "badge " + (l.version.differente ? "badge-alerte" : "badge-off");
+      version.textContent = l.version.sha + (l.version.differente ? " — " + l.version.texte : "");
+      tete.append(" ", version);
+    }
+    bloc.append(tete);
+    l.organes.forEach((o) => bloc.append(ligneOrgane(l.appareil, o)));
+    if (l.refus_texte) {
+      const refus = document.createElement("p");
+      refus.className = "scene-note appareil-refus";
+      refus.textContent = l.refus_texte;
+      bloc.append(refus);
+    }
+    conteneur.append(bloc);
+  });
+}
