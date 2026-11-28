@@ -168,6 +168,7 @@ propre à la sono, ni dans le pont ni dans la page.
 - **Page** : affiche ; calcule seulement l'avance d'un audio (« ♪ chemin — 1,2 / 2,2 s ») d'après
   `debut_ms`. Avec la main : liste des audios (`/api/catalog`), **Jouer**, **Stop**, impulsion par
   relais, vers le `topic_ordre` de l'organe (jamais un nom de topic écrit dans la page).
+- Captures (état factice, 28/11) : [bureau](../../docs/pictures/l3a/tuile-appareils-bureau.png), [téléphone](../../docs/pictures/l3a/tuile-appareils-telephone.png).
 - Tests : `didier_core/test/unit/test_panneau_appareils.py` (fraîcheur 4,9 / 5,1 s, version,
   textes gravés) et `test_web_protocol.py` (whitelists, `stop_all`, ids, `texteAudio` joué par node).
 
