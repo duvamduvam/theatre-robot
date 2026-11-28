@@ -27,6 +27,22 @@ TABLEAU = Tableau((ELEPHANT_O, BANC, ANNEAUX, FLAQUE))
 # La marche publiée sur jeu/chat_move (lot S1 : elle porte son origine), écrite EN DUR.
 STOP_DAVID = {"cmd": "stop", "origine": "david"}
 STOP_DIDIER = {"cmd": "stop", "origine": "didier"}
+
+
+def PIVOT_LUBIE(cible, id_=None):
+    """Lot S2c : l'arrêt d'une lubie EST un pivot du CORPS vers l'objet (sa tête seule ne
+    suffit pas, la caméra est fixée au buste — séance du 26/11, banc mal cadré), sans « stop »
+    avant (relecture adverse du 28/11 : retenu sous l'arrêt, le pivot ne tournait pas).
+    L'`id` du tableau est joint : depuis O1 la régie ne résout plus aucun nom."""
+    return {"cmd": "tourner_vers", "objet": cible, "id": id_ or ("carte/" + cible),
+            "origine": "didier"}
+
+
+def reponse_pivot(cible, effet="accepted"):
+    """Événement : le RÉGISSEUR répond au pivot de la lubie (rehearsal/chat_move_reply)."""
+    return lambda s, t: s.sur_move_reply({"demande": PIVOT_LUBIE(cible), "effect": effet, "reason": None,
+                                          "name": "pivot +45°" if effet == "accepted" else None,
+                                          "source": "director"}, t)
 GO_DAVID = {"cmd": "go", "origine": "david"}
 GO_DIDIER = {"cmd": "go", "origine": "didier"}
 
@@ -253,14 +269,123 @@ def _poi(nom):
 
 
 def test_lubie_reclamee_amorcee_puis_stop_apres_3_s():
-    out = jouer(fabriquer(), 0.0, 8.0, [(0.0, marche), (1.0, _poi("anneaux"))])
+    out = jouer(fabriquer(), 0.0, 8.0, [(0.0, marche), (1.0, _poi("anneaux")), (4.4, reponse_pivot("anneaux"))])
     assert decisions(out) == [(1.3, "lubie", "anneaux")]
     looks = [(o[0], o[2]) for o in out if o[1] == "look"]
     assert looks == [(1.3, {"angle_deg": 45.0, "hold_ms": 6000})]      # objet à (10, 10) : 45° à gauche
     intentions = [o[0] for o in out if o[1] == "intention" and o[2]["action"] == "lubie"]
     assert intentions[0] == 1.3
-    assert moves(out) == [(4.3, STOP_DIDIER)]                            # 3 s après l'intention
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux"))]   # 3 s après l'intention ; pas de « stop »
     assert [p["cible"] for _, p in journal(out, "arret_didier")] == ["anneaux"]
+
+
+# ---------------------------------------------------------------- S2c, relecture adverse du 28/11
+# L'arrêt d'une lubie EST le pivot du corps vers l'objet ; repli sur l'arrêt d'avant S2c (« stop »
+# « didier ») s'il n'a pas lieu. Mutations faites (doivent rougir) : « stop » remis avant le pivot
+# -> test_lubie_reclamee_amorcee_puis_stop_apres_3_s ; repli retiré -> test_s2c_pivot_refuse_* et
+# test_s2c_regie_muette_* ; attente du pivot retirée de la reprise -> test_s2c_la_reprise_attend_*.
+def test_s2c_lubie_d_un_objet_non_situe_stop_comme_avant():
+    """Objet absent du tableau : pas de pivot (on ne se tourne pas vers ce qu'on ne situe pas),
+    le « stop » d'avant S2c, tout de suite."""
+    out = jouer(fabriquer(), 0.0, 9.0, [(0.0, marche), (1.0, _poi("zzz"))])
+    assert moves(out) == [(4.3, STOP_DIDIER)]
+
+
+@pytest.mark.parametrize("effet", ["deja_face", "no_pose", "trop_pres", "unknown", "arret_de_david"])
+def test_s2c_pivot_refuse_repli_sur_stop(effet):
+    """« deja_face » compris : il regarde déjà l'objet, mais il roule encore — il s'arrête."""
+    out = jouer(fabriquer(), 0.0, 9.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                        (4.4, reponse_pivot("anneaux", effet))])
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (4.4, STOP_DIDIER)]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "lubie_sans_pivot")] == [
+        (4.4, f"lubie « anneaux » : pivot refusé par le régisseur ({effet}) → il s'arrête sans se tourner")]
+
+
+def test_s2c_regie_muette_repli_sur_stop_apres_3_s():
+    """Ni réponse ni « goto » en durees_s.deplacement_accuse (3 s) : « stop ». La lubie ne finit pas
+    avant (sa fin prévue, 6 s après son début, tombait AVANT le repli)."""
+    out = jouer(fabriquer(), 0.0, 9.0, [(0.0, marche), (1.0, _poi("anneaux"))])
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (7.4, STOP_DIDIER)]
+    assert [t for t, _p in journal(out, "fin")] == [7.4]
+
+
+def test_s2c_pivot_accuse_par_goto_aucun_repli():
+    out = jouer(fabriquer(), 0.0, 12.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                         (4.4, lambda s, t: s.sur_route_state("goto", t))])
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux"))]
+
+
+def test_s2c_refus_tardif_apres_un_stop_de_david_aucun_stop_de_didier():
+    """La lubie tombe au stop de David : un refus du pivot reçu ensuite n'ajoute rien."""
+    out = jouer(fabriquer(), 0.0, 9.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                        (4.4, lambda s, t: s.sur_console({"cmd": "stop"}, t)),
+                                        (4.5, reponse_pivot("anneaux", "deja_face"))])
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (4.4, STOP_DAVID)]
+
+
+def test_s2c_la_reprise_attend_la_fin_du_pivot():
+    """Reprise tirée à 17,1 s (graine 3) : due à 21,4 s, mais le pivot roule jusqu'à 30 s. Un
+    « go » à 21,4 s serait « deja_en_marche » au régisseur et Didier resterait planté à
+    l'arrivée : il part à l'arrivée, où le régisseur le prend en « rejoin »."""
+    out = jouer(fabriquer(pools={}), 0.0, 40.0, [
+        (0.0, marche), (1.0, _poi("anneaux")), (4.4, lambda s, t: s.sur_route_state("goto", t)),
+        (30.0, lambda s, t: s.sur_route_state("arrived", t))])
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (30.0, GO_DIDIER)]
+
+
+def test_s2c_pivot_court_la_reprise_garde_son_tirage():
+    out = jouer(fabriquer(pools={}), 0.0, 40.0, [
+        (0.0, marche), (1.0, _poi("anneaux")), (4.4, lambda s, t: s.sur_route_state("goto", t)),
+        (7.0, lambda s, t: s.sur_route_state("arrived", t))])
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (21.4, GO_DIDIER)]
+
+
+def _presence(s, t):
+    s.sur_console({"presence": True}, t)
+
+
+def test_s2c_a1_superviseur_exigeant_absent_pas_de_pivot_stop():
+    """2e relecture adverse (28/11) : le pivot DÉPLACE le corps — sans superviseur (mode
+    exigeant, aucun battement de console), pas de pivot, le « stop » d'avant S2c. Mutation :
+    garde retirée -> le pivot partait à 4,3 s."""
+    out = jouer(fabriquer({"superviseur.mode": "exigeant"}), 0.0, 9.0, [(0.0, marche), (1.0, _poi("anneaux"))])
+    assert moves(out) == [(4.3, STOP_DIDIER)]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "lubie_sans_pivot")] == [
+        (4.3, "lubie « anneaux » : pas de pivot, personne ne surveille (page fermée) → il s'arrête sans se tourner")]
+
+
+def test_s2c_a1_superviseur_exigeant_present_il_pivote():
+    out = jouer(fabriquer({"superviseur.mode": "exigeant"}), 0.0, 9.0,
+                [(0.0, marche), (1.0, _poi("anneaux")), (4.4, reponse_pivot("anneaux"))], continu=_presence)
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux"))]
+
+
+def test_s2c_a1_fatigue_pas_de_pivot_stop():
+    out = jouer(fabriquer(), 0.0, 9.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                        (4.0, lambda s, t: setattr(s.pulsions, "fatigue", 0.9))])
+    assert moves(out) == [(4.3, STOP_DIDIER)]
+    assert [p["pourquoi"] for _, p in journal(out, "lubie_sans_pivot")] == [
+        "lubie « anneaux » : pas de pivot, il est fatigué (0,88 > 0,80) → il s'arrête sans se tourner"]
+
+
+@pytest.mark.parametrize("go", [lambda s, t: s.sur_console({"cmd": "go"}, t),
+                                lambda s, t: s.sur_chat_move_bouche({"cmd": "go", "origine": "david"}, t)],
+                         ids=["console", "voix"])
+def test_s2c_a2_go_de_david_pendant_le_pivot_est_relaye(go):
+    """Le go de David pendant le pivot part TOUT DE SUITE au régisseur (qui le retient jusqu'à
+    l'issue du pivot : test_s2c_tourner_vers.py, go différé) ; la reprise de Didier tombe."""
+    out = jouer(fabriquer(pools={}), 0.0, 60.0, [
+        (0.0, marche), (1.0, _poi("anneaux")), (4.4, lambda s, t: s.sur_route_state("goto", t)),
+        (6.0, go), (8.0, lambda s, t: s.sur_route_state("arrived", t))])
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (6.0, GO_DAVID)]
+
+
+def test_s2c_stop_de_david_pendant_le_pivot_ni_reprise_ni_go():
+    out = jouer(fabriquer(pools={}), 0.0, 120.0, [
+        (0.0, marche), (1.0, _poi("anneaux")), (4.4, lambda s, t: s.sur_route_state("goto", t)),
+        (6.0, lambda s, t: s.sur_console({"cmd": "stop"}, t)),
+        (6.1, lambda s, t: s.sur_route_state("off", t))])
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (6.0, STOP_DAVID)]
 
 
 @pytest.mark.parametrize("ordre", [{"cmd": "ignore"}, {"cmd": "ignore", "cible": "anneaux"},
@@ -342,9 +467,9 @@ def test_jamais_de_go_automatique_apres_un_stop_de_la_bouche():
 
 def test_jamais_de_go_automatique_apres_un_stop_de_david():
     # Stop de la CONSOLE (David) après une lubie : ni reprise, ni go, 300 s durant.
-    out = jouer(fabriquer(), 0.0, 300.0, [(0.0, marche), (1.0, _poi("anneaux")),
+    out = jouer(fabriquer(), 0.0, 300.0, [(0.0, marche), (1.0, _poi("anneaux")), (4.4, reponse_pivot("anneaux")),
                                           (10.0, lambda s, t: s.sur_console({"cmd": "stop"}, t))])
-    assert moves(out) == [(4.3, STOP_DIDIER), (10.0, STOP_DAVID)]
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (10.0, STOP_DAVID)]
 
 
 def test_go_de_didier_ne_leve_pas_un_stop_de_david():
@@ -519,8 +644,9 @@ def test_route_off_par_david_annule_la_lubie_en_attente():
                                         (2.0, lambda s, t: s.sur_route_cause("cmd", t))])
     assert moves(out) == []
     out2 = jouer(fabriquer(), 0.0, 8.0, [(0.0, marche), (1.0, _poi("anneaux")),
-                                         (2.0, lambda s, t: s.sur_route_cause("boot", t))])
-    assert moves(out2) == [(4.3, STOP_DIDIER)]
+                                         (2.0, lambda s, t: s.sur_route_cause("boot", t)),
+                                         (4.4, reponse_pivot("anneaux"))])
+    assert moves(out2) == [(4.3, PIVOT_LUBIE("anneaux"))]
 
 
 # ================================================================== journal lisible et cohérent (revue point 6)
@@ -550,11 +676,12 @@ def test_pourquoi_lisible_par_un_humain():
 
 # ================================================================== reprise après un SILENCE tiré (David, 02/11 ; S1)
 def _reprise(parole_a=None):
-    evs = [(0.0, marche), (1.0, _poi("anneaux"))]
+    evs = [(0.0, marche), (1.0, _poi("anneaux")), (4.4, reponse_pivot("anneaux"))]
     if parole_a is not None:
         evs.append((parole_a, lambda s, t: s.sur_parole("dis donc, tu fais quoi ?", t)))
     out = jouer(fabriquer(pools={}), 0.0, 200.0, evs)
-    stop = [t for t, m in moves(out) if m == STOP_DIDIER][0]
+    # L'arrêt de la lubie est son pivot (S2c, 28/11).
+    stop = [t for t, m in moves(out) if m == PIVOT_LUBIE("anneaux")][0]
     return stop, [t for t, m in moves(out) if m == GO_DIDIER]
 
 
@@ -652,8 +779,8 @@ def test_demande_de_la_bouche_n_est_pas_un_arret_de_didier():
     out = _bouche_puis_lubie()
     assert [(t, p["kind"]) for t, p in journal(out, "arret_didier")] == [(33.3, "lubie")]
     assert decisions(out) == [(30.3, "lubie", "anneaux")]
-    assert moves(out) == [(1.0, {"cmd": "aller_voir", "objet": "banc"}), (20.0, GO_DAVID), (33.3, STOP_DIDIER),
-                          (45.0, {"cmd": "avancer", "metres": 1.0})]
+    assert moves(out) == [(1.0, {"cmd": "aller_voir", "objet": "banc"}), (20.0, GO_DAVID),
+                          (33.3, PIVOT_LUBIE("anneaux")), (45.0, {"cmd": "avancer", "metres": 1.0})]
 
 
 def test_tache_va_voir_l_elephant_puis_tour_du_banc_10_s_apres():

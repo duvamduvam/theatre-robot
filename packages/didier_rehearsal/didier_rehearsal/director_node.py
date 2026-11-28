@@ -130,14 +130,16 @@ from theatre_contrats import stringtime, topics
 from didier_core.diagnostic.journal import JournalWriter, make_event
 from didier_corps_sur.reglages import ReglagesError, charger_reglages
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD, lire_chat_move,
-                                       CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD,
+                                       CHAT_MOVE_ORIGINE_DIDIER,
+                                       CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD, CHAT_MOVE_TURN_TO_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC, JOURNAL_TOPIC,
                                        OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
                                        RELAY_CMD_TOPIC, ROUTE_CMD_TOPIC, ROUTE_GOTO_CANCEL,
                                        ROUTE_GOTO_RESULT_TOPIC, ROUTE_GOTO_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSE_TOPIC,
                                        ROUTE_STATE_TOPIC, check_domain)
 from didier_rehearsal.director import (MESSAGE_TYPES, Director, GotoPolicy, ReenablePolicy, VoiceMove,
-                                      decide_forward, decide_goto, decide_tour, decide_turn, fader_moved,
+                                      cap_odometrie, decide_forward, decide_goto, decide_tour, decide_turn,
+                                      decide_turn_to, fader_moved,
                                       garde_corps_sur_m, goto_order,
                                       messages, move_reply, objects_payload, poi_name_of,
                                       route_cmd_kind, speed_factor, speed_in_effect)
@@ -392,6 +394,17 @@ class DirectorNode(Node):
         event = self.goto_policy.note_state(state, self._speed_in_effect(0.0))
         if event is not None:
             self.log(*event)
+        self._go_differe_step()
+
+    def _go_differe_step(self):
+        """Le pivot de la lubie a fini : le « go » reçu pendant lui (ou juste avant notre
+        `arrived`) part MAINTENANT en reprise (GotoPolicy, GO DIFFÉRÉ). Appelé à l'état latché
+        ET à route_goto_result (l'issue d'un `off` peut arriver après lui)."""
+        differe = self.goto_policy.go_differe_du(self.reenable.latched_state, self.reenable.off_by_cmd)
+        if differe is not None:
+            self.log("goto_rejoin", {"by": "go_differe", "origine": differe})
+            self.voice.arm_relaunch(time.monotonic())
+            self._voice_relaunch_step(time.monotonic())
 
     def _on_route_cmd(self, msg: StringTime):
         # Décodé comme route_driver le décode (off = "off"/false/0/"0") :
@@ -419,9 +432,13 @@ class DirectorNode(Node):
     def _on_goto_result(self, msg: StringTime):
         """Contrat route_driver : JSON {name, result, reason, travelled} -> journal `goto_result`."""
         try:
-            self.log("goto_result", stringtime.loads(msg.msg))
+            payload = stringtime.loads(msg.msg)
         except (ValueError, TypeError):
             self.get_logger().warning(f"route_goto_result illisible : {msg.msg!r}")
+            return
+        self.log("goto_result", payload)
+        self.goto_policy.note_result(payload)
+        self._go_differe_step()
 
     def _on_scene_objets(self, msg: StringTime):
         """Tableau des objets : illisible -> warning, le précédent est gardé."""
@@ -444,8 +461,11 @@ class DirectorNode(Node):
         return self._tableau
 
     def _on_odom(self, msg):
-        p = msg.pose.pose.position
-        self._pose = (p.x, p.y, time.monotonic())
+        p, q = msg.pose.pose.position, msg.pose.pose.orientation
+        # Le CAP est gardé depuis S2c (« se tourner vers ») : c'est la seule décision qui en a
+        # besoin. Les autres lisent _fresh_pose (x, y) et ne changent pas. Quaternion nul ou
+        # abîmé : cap None (cap_odometrie), « se tourner vers » refuse alors « no_pose ».
+        self._pose = (p.x, p.y, time.monotonic(), cap_odometrie(q.x, q.y, q.z, q.w))
 
     def _on_route_speed(self, msg: StringTime):
         """route_speed vu sur le topic. NOS publications (speed, lubie) sont
@@ -527,7 +547,8 @@ class DirectorNode(Node):
             raw = msg.msg.strip()
             cmd, origine = lire_chat_move(stringtime.decode_or_raw(raw, CHAT_MOVE_TOPIC))
             gestes = {CHAT_MOVE_GOTO_CMD: self._aller_voir, CHAT_MOVE_TURN_CMD: self._geste,
-                      CHAT_MOVE_FORWARD_CMD: self._geste, CHAT_MOVE_TOUR_CMD: self._tour_de}
+                      CHAT_MOVE_FORWARD_CMD: self._geste, CHAT_MOVE_TOUR_CMD: self._tour_de,
+                      CHAT_MOVE_TURN_TO_CMD: self._tourner_vers}
             geste = gestes.get(cmd.get("cmd")) if isinstance(cmd, dict) else None
             if geste is not None:
                 if not self._geste_refuse(cmd, origine):
@@ -584,6 +605,10 @@ class DirectorNode(Node):
         payload = {"cmd": cmd, "origine": origine, "effect": decision.effect}
         if decision.reason is not None:
             payload["reason"] = decision.reason
+        if (decision.reason == "deja_en_marche"
+                and self.goto_policy.differer_go(origine, latched)):
+            # Pivot d'une lubie en cours : ce « go » n'est pas perdu, il partira à son issue.
+            payload["differe"] = True
         if decision.rejoin:
             payload["rejoin"] = True
         self.log("voice_move", payload)
@@ -624,6 +649,13 @@ class DirectorNode(Node):
         """(x, y) si la pose a moins de RouteConfig.odom_timeout_ms, sinon None."""
         if self._pose is not None and (now - self._pose[2]) * 1000.0 <= RouteConfig.odom_timeout_ms:
             return self._pose[:2]
+        return None
+
+    def _fresh_pose_cap(self, now: float):
+        """(x, y, cap_rad) sous la MÊME fraîcheur que _fresh_pose, sinon None (lot S2c) :
+        « se tourner vers » calcule son angle, il ne le devine jamais sans cap frais."""
+        if self._pose is not None and (now - self._pose[2]) * 1000.0 <= RouteConfig.odom_timeout_ms:
+            return (self._pose[0], self._pose[1], self._pose[3])
         return None
 
     def _off_by_david(self) -> bool:
@@ -682,6 +714,39 @@ class DirectorNode(Node):
         if decision.effect == "accepted":
             self._accept_maneuver(decision.name, decision.order, kind, now)
 
+    def _tourner_vers(self, intent: dict):
+        """« Se tourner vers <objet> » (lot S2c) : l'angle est CALCULÉ ici depuis la pose et la
+        position de l'objet, jamais lu dans l'intention — le LLM nomme, il ne devine plus
+        (séance du 25/11 : « regarde l'éléphant à droite » -> pivot fixe de −90°). Exécuté par
+        le chemin EXISTANT de « tourner » : mêmes bornes, même corps sûr, même route_goto.
+
+        Une manœuvre ORDINAIRE, acceptée exactement comme « tourner » (relecture adverse S2c,
+        28/11) : elle lève l'arrêt vocal qu'un « tourner » lèverait, et rien d'autre. Elle n'a
+        plus de régime « sur place » : retenu sous l'arrêt, le pivot ne tournait pas (facteur 0,
+        `held` dans goto.py) puis partait au « go » suivant, et Didier restait planté. La lubie
+        n'envoie donc plus « stop » puis « tourner_vers » : son arrêt EST ce pivot (didier_jeu,
+        selecteur), qui finit `arrived`, à l'arrêt face à l'objet."""
+        now = time.monotonic()
+        decision = decide_turn_to(intent, tableau=self._tableau_frais(now),
+                                  pose=self._fresh_pose_cap(now), off_by_david=self._off_by_david())
+        # Champs du CONTRAT seulement (le producteur est un LLM).
+        payload = {k: intent[k] for k in ("objet", "id") if k in intent}
+        payload["effect"] = decision.effect
+        if decision.angle_deg is not None:
+            payload["angle_deg"] = decision.angle_deg
+        if decision.objet is not None:
+            payload["name"] = decision.objet.nom
+        self.log(CHAT_MOVE_TURN_TO_CMD, payload)
+        # `name` = nom de l'ORDRE parti (« pivot +45° »), comme les autres gestes : c'est lui
+        # que route_goto_result renverra, et c'est sur lui que le chat apparie l'issue.
+        self._reply(intent, decision.effect,
+                    name=decision.name if decision.effect == "accepted" else None)
+        if decision.effect == "accepted":
+            # Origine « didier » = le pivot d'une LUBIE (sélecteur) : un « go » reçu pendant
+            # lui est retenu, jamais perdu (GotoPolicy, GO DIFFÉRÉ).
+            self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TURN_TO_CMD, now,
+                                  pivot_lubie=intent.get("origine") == CHAT_MOVE_ORIGINE_DIDIER)
+
     def _tour_de(self, intent: dict):
         """« Faire le tour » (lot M3) : arbitré, journalisé `tour_de`, accepté
         comme « aller voir » (cible = le POI : sa lubie est sautée)."""
@@ -705,10 +770,11 @@ class DirectorNode(Node):
             self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TOUR_CMD, now,
                                   target=decision.poi)
 
-    def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None):
-        """Manœuvre ACCEPTÉE (aller voir, tourner, avancer, tour) : comme un
+    def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None,
+                         pivot_lubie: bool = False):
+        """Manœuvre ACCEPTÉE (aller voir, tourner, avancer, tour, se tourner vers) : comme un
         « go » pour ce qui retient Didier, puis l'ordre part sur route_goto.
-        `target` : POI visé s'il diffère du nom (GotoPolicy.accept)."""
+        `target` : POI visé s'il diffère du nom ; `pivot_lubie` : cf. GotoPolicy.accept."""
         relaunching = self.voice.relaunching
         lubie_active, in_effect = self._voice_context()
         voice = self.voice.accept_goto(lubie_active=lubie_active, speed_in_effect=in_effect)
@@ -722,7 +788,7 @@ class DirectorNode(Node):
         if voice.speed is not None:
             self.log("voice_hold_released", {"by": by, "speed": voice.speed})
             self._publish(ROUTE_SPEED_TOPIC, json.dumps(voice.speed))
-        self.goto_policy.accept(name, target)
+        self.goto_policy.accept(name, target, pivot_lubie=pivot_lubie)
         self.pub_goto.publish(StringTime(msg=order, time=0, anim=False))
 
     def _voice_relaunch_step(self, now: float):
@@ -798,6 +864,10 @@ class DirectorNode(Node):
                 relaunching = self.voice.fin_de_seance()
                 if relaunching:
                     self.log("voice_relaunch_cancelled", {"by": "fin"})
+                # Le go retenu pendant un pivot de lubie tombe aussi (3e relecture, 28/11).
+                differe = self.goto_policy.oublier_go_differe()
+                if differe is not None:
+                    self.log("go_differe_oublie", {"by": "fin", "origine": differe})
                 self.log("scenario_end", {"status": self.director.status()})
                 self._publish_state()
                 continue

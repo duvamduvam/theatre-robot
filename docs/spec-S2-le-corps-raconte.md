@@ -123,10 +123,52 @@ Trois lignes, dans le prompt, à côté de `phrase` :
   résolution du nom) et exécute un pivot **par le chemin existant de `tourner`** (mêmes bornes,
   même corps sûr). Objet inconnu ou sans position : refus dit. Le prompt indique : « pour
   regarder un objet nommé, utilise `tourner_vers`, jamais `tourner` avec un angle deviné ».
-- **Finir face à l'objet.** `aller_voir` et `tour_de` se terminent par un pivot d'ajustement
-  vers l'objet (tolérance ±10°, pivot plafonné comme `tourner`), compté dans le même geste :
-  `arrive` n'est rendu qu'après l'ajustement. Si le corps sûr interdit le pivot (angulaire
-  aveugle non autorisé) : arrivée sans ajustement, dite dans `geste.raison`.
+- ~~**Finir face à l'objet.**~~ **SANS OBJET (28/11, vérifié dans le code et les journaux
+  du 26/11).** `aller_voir` et `tour_de` se terminent DÉJÀ par un pivot face à la cible :
+  `goto.py`, phase `FACE`, tolérance `heading_tol_rad` = 0,1 rad (±6°), plus serré que les
+  ±10° demandés ici. Le diagnostic de cette ligne était faux.
+
+  **Le vrai défaut du « banc pas cadré » (séance du 26/11)** : Didier ne s'était pas *fait*
+  aller voir le banc, il s'est arrêté DE LUI-MÊME dessus par une **lubie** (`poi_enter` →
+  `arret_didier`). Dans ce chemin, le sélecteur ne tournait que sa **tête** (sortie `look`),
+  et la caméra est fixée au **buste** : il parlait au banc de profil.
+
+  **Ce qui est fait (corrigé après la relecture adverse du 28/11).** La première version
+  envoyait « stop » puis un `tourner_vers` en régime « sur place » (qui ne levait pas
+  l'arrêt) : `route_driver` tient tout pivot à facteur de vitesse 0 (`held`), donc **rien ne
+  tournait**, puis le pivot retenu partait au « go » de la reprise et Didier restait planté
+  (la reprise exige `arrived` ou `off`). Le régime « sur place » est **supprimé**. Désormais :
+  - l'**arrêt de la lubie EST le pivot** : un `tourner_vers` d'origine « didier », manœuvre
+    ordinaire acceptée exactement comme `tourner` (la route s'interrompt, Didier pivote, finit
+    `arrived` à l'arrêt face à l'objet). Pas de « stop » avant ;
+  - **repli** sur l'arrêt d'avant S2c (« stop » « didier ») si l'objet n'est pas situé dans le
+    tableau, si le régisseur refuse le pivot (`deja_face`, `no_pose`, `trop_pres`, …) ou s'il
+    ne répond pas en `durees_s.deplacement_accuse` (3 s ; la lubie ne finit pas avant) ;
+  - le pivot passe par les **gardes d'un déplacement d'initiative** (superviseur absent en
+    mode exigeant, fatigue, verrou de David) : refusé, c'est le « stop » d'avant S2c ;
+  - **la reprise d'une lubie attend la fin du pivot** (`route_state` « goto ») : un « go »
+    pendant une manœuvre est sans effet au régisseur (« deja_en_marche »). Elle part à
+    l'arrivée, où le régisseur la prend en « rejoin » ;
+  - **aucun « go » n'est perdu pendant le pivot** (2e relecture, 28/11) : le régisseur
+    RETIENT un « go » « deja_en_marche » reçu pendant le pivot d'une lubie — go de David
+    (console ou voix), ou go de reprise arrivé avant son propre `arrived` — et fait rejoin à
+    l'issue du pivot (`arrived`, ou `off` après abandon). Tout stop, cancel, abort, commande
+    `route` ou fin de séance venus après le font tomber. Sur un `off`, le rejoin exige
+    l'issue CONNUE de la manœuvre (`route_goto_result`) et qu'elle soit un abandon de
+    route_driver (`timeout`, `stalled`, `max_travel`, `off_track`, `too_far`) ; issue pas encore
+    reçue : il l'attend ; autre issue (`route_off` d'un Route OFF de David dont la commande et
+    la cause ne sont pas encore arrivées, `cancel`, inconnue) : le go tombe (3e relecture,
+    28/11). Borné au pivot d'une lubie : ailleurs rien ne change ;
+  - règles d'arrêt de David intactes : un stop de David pendant le pivot l'annule (`cancel`),
+    sous son verrou le pivot est refusé `arret_de_david`, hors séance `hors_seance` ;
+  - `tourner_vers` de David sous un arrêt : mêmes règles que `tourner` (il lève l'arrêt et
+    pivote ; refusé « arrete » sous le verrou de la console, par le sélecteur) — plus jamais
+    « accepted » sans mouvement ;
+  - la régie ne calcule **jamais** sur un cap inventé : pose ou cap non finis, quaternion de
+    l'odométrie nul ou de norme ≠ 1 à 0,01 près → « no_pose » ; objet à moins de 0,3 m du
+    centre de Didier → « trop_pres » ; l'angle replié dans ]−180°, 180°] tient toujours dans
+    la borne de 180° (pas de refus « hors bornes »).
+  Épreuve de fumée : A1, verdict « S2c pivot de lubie » (18 contrôles au lieu de 17).
 
 Ce lot touche le chemin des roues (régisseur → `route_driver`) : **Opus, relecture adverse
 Fable avant fusion**, corps sûr inchangé, sim seule.

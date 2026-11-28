@@ -94,6 +94,7 @@ def test_vocabulaire_de_deplacements_grave():
     assert charger_deplacements(DEPLACEMENTS_YAML) == {
         "approcher": {"cmd": "avancer", "metres": 1.0},
         "se_tourner_vers": {"cmd": "tourner"},
+        "tourner_vers": {"cmd": "tourner_vers"},
         "aller_voir": {"cmd": "aller_voir"},
         "faire_le_tour": {"cmd": "tour_de"},
     }
@@ -103,7 +104,8 @@ def test_commandes_regisseur_egales_au_contrat():
     from didier_rehearsal import contracts
     from didier_jeu.repertoire import COMMANDES_REGISSEUR
     assert set(COMMANDES_REGISSEUR) == {contracts.CHAT_MOVE_GOTO_CMD, contracts.CHAT_MOVE_TOUR_CMD,
-                                        contracts.CHAT_MOVE_TURN_CMD, contracts.CHAT_MOVE_FORWARD_CMD}
+                                        contracts.CHAT_MOVE_TURN_CMD, contracts.CHAT_MOVE_FORWARD_CMD,
+                                        contracts.CHAT_MOVE_TURN_TO_CMD}
 
 
 def test_reculer_refuse_comme_le_regisseur():

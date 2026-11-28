@@ -55,7 +55,7 @@ from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_ORIGINE_DAVI
                                        ROUTE_CMD_TOPIC, ROUTE_SPEED_TOPIC, ROUTE_STATE_CAUSES, ROUTE_STATES, TOUR_SENS, TOUR_SENS_DEFAUT,
                                        TOUR_CLEARANCE_M, TURN_DEG_COMPAT, TURN_MAX_DEG)
 from didier_rehearsal.goto import forward_name, tour_name, turn_name
-from didier_rehearsal.route import Tour
+from didier_rehearsal.route import Tour, wrap_angle, yaw_from_quaternion
 from didier_rehearsal.scenario import Fault, Scenario
 
 
@@ -996,6 +996,90 @@ def decide_tour(intent: dict, *, tableau, tours, pose, off_by_david: bool) -> To
     return TourDecision("accepted", objet, name=name, distance=distance, order=order, poi=poi)
 
 
+@dataclass(frozen=True)
+class TurnToDecision:
+    """« Se tourner vers <objet> » (lot S2c)."""
+    # "accepted" | "unknown" | "no_position" | "route_off_by_david" | "no_pose"
+    # | "trop_pres" | "deja_face"
+    effect: str
+    objet: object | None = None   # theatre_contrats.objets.Objet
+    angle_deg: float | None = None  # angle calcule (signe, + = gauche), pour le journal
+    name: str | None = None       # « pivot +37° » — MÊME texte que route_driver (goto.turn_name)
+    order: str | None = None      # payload route_goto, si accepte
+
+
+# Sous cet ecart de cap, Didier regarde DEJA l'objet : pas de pivot (le corps sur interdit
+# les micro-pivots aveugles, et un pivot de 2° ne se voit pas). Memes 10° que la tolerance
+# d'ajustement de la spec S2c §5.
+TURN_TO_TOL_DEG = 10.0
+# Objet à moins de cette distance du CENTRE de Didier (m) : refus « trop_pres » (relecture
+# adverse S2c, 28/11). Le cap vers un point quasi confondu avec la pose tient au bruit de
+# l'odométrie — à 5 cm près, l'angle calculé peut valoir n'importe quoi. 0,3 m = la tolérance
+# d'arrivée de goto.py (arrive_tol_m) : en deçà, la régie ne sait déjà plus où est l'objet.
+TURN_TO_MIN_DISTANCE_M = 0.3
+# Écart toléré à la norme 1 du quaternion de l'odométrie : au-delà (quaternion nul, abîmé), le
+# cap qu'on en tirerait est faux SANS le dire (un quaternion nul donne un cap de 0) — refus.
+QUATERNION_NORM_TOL = 0.01
+
+
+def cap_odometrie(qx, qy, qz, qw) -> float | None:
+    """Cap (rad) d'un quaternion de l'odométrie, par la MÊME formule que route_driver
+    (route.yaw_from_quaternion), ou None s'il n'est pas un quaternion unitaire fini : nul,
+    NaN, infini, de norme ≠ 1 à QUATERNION_NORM_TOL près (relecture adverse S2c, 28/11 :
+    « se tourner vers » publiait un pivot calculé sur un cap inventé)."""
+    q = [_number(v) for v in (qx, qy, qz, qw)]
+    if any(v is None for v in q):
+        return None
+    norme = math.sqrt(sum(v * v for v in q))
+    if not abs(norme - 1.0) <= QUATERNION_NORM_TOL:
+        return None
+    return yaw_from_quaternion(*q)
+
+
+def decide_turn_to(intent: dict, *, tableau, pose, off_by_david: bool) -> TurnToDecision:
+    """« Se tourner vers un objet NOMMÉ » (spec S2c §5), dans l'ordre de `decide_goto` :
+    objet introuvable par son id -> « unknown » ; sans position FINIE en repère monde ->
+    « no_position » ; route OFF par David -> « route_off_by_david » ; pas de pose fraîche, ou
+    pose / cap non finis ou absents (quaternion refusé par cap_odometrie) -> « no_pose » (jamais
+    un angle deviné : c'est TOUT le point du lot, et jamais de `turn_rad: NaN` publié) ; objet à
+    moins de TURN_TO_MIN_DISTANCE_M du centre de Didier -> « trop_pres ».
+
+    L'angle est CALCULÉ depuis la pose (x, y, cap) et la position de l'objet, jamais lu dans
+    l'intention : le LLM nomme l'objet, il n'invente plus de valeur (séance du 25/11, « regarde
+    l'éléphant à droite » -> pivot fixe de −90°). Déjà face à moins de TURN_TO_TOL_DEG ->
+    « deja_face » (aucun ordre). Pas de refus « hors bornes » : l'angle, replié dans ]−180°,
+    180°], est toujours dans TURN_MAX_DEG (180°) — la branche, inatteignable, est retirée.
+
+    `pose` : (x, y, cap_rad) ou None ; cap_rad None = cap refusé — la SEULE décision qui a
+    besoin du cap. Ordre : {"turn_rad": ...}, celui de `decide_turn` (même chemin, mêmes bornes)."""
+    objet = _target(intent, tableau)
+    if objet is None:
+        return TurnToDecision("unknown")
+    if objet.repere != "monde" or _number(objet.x) is None or _number(objet.y) is None:
+        return TurnToDecision("no_position", objet)
+    if off_by_david:
+        return TurnToDecision("route_off_by_david", objet)
+    pose = tuple(_number(v) for v in pose) if pose is not None else None
+    if pose is None or len(pose) != 3 or any(v is None for v in pose):
+        return TurnToDecision("no_pose", objet)
+    x, y, yaw = pose
+    if math.hypot(objet.x - x, objet.y - y) < TURN_TO_MIN_DISTANCE_M:
+        return TurnToDecision("trop_pres", objet)
+    rad = wrap_angle(math.atan2(objet.y - y, objet.x - x) - yaw)
+    angle_deg = round(math.degrees(rad), 1)
+    if abs(angle_deg) < TURN_TO_TOL_DEG:
+        return TurnToDecision("deja_face", objet, angle_deg=angle_deg)
+    return TurnToDecision("accepted", objet, angle_deg=angle_deg, name=turn_name(rad),
+                          order=json.dumps({"turn_rad": rad}))
+
+
+# Issues de route_goto_result qui sont un ABANDON par route_driver lui-même (goto.py, `_end(ABORTED,
+# …)`), pas une décision de quelqu'un : seules elles autorisent le rejoin d'un go retenu sur un
+# `off`. Les autres raisons (« route_off », « route_on », « cancel », « goto_suivant ») viennent
+# d'une commande. NB : « odom_stale » n'est pas une issue (goto.py tient zéro et attend).
+GOTO_ABANDONS = ("timeout", "stalled", "max_travel", "off_track", "too_far")
+
+
 class GotoPolicy:
     """La manœuvre « aller voir » que NOUS avons ordonnée — logique PURE.
     Sert à trois choses :
@@ -1011,10 +1095,27 @@ class GotoPolicy:
     La manœuvre cesse d'être « la nôtre » (release) dès que David reprend la
     main (commande `route` on/off vue), que la route repart (état « on »),
     ou qu'une cause est publiée (route_driver la publie au boot et à CHAQUE
-    `off` par commande : un `off` qui nous aurait échappé tombe ici)."""
+    `off` par commande : un `off` qui nous aurait échappé tombe ici).
+
+    GO DIFFÉRÉ (S2c, 2e relecture adverse du 28/11) : pendant le pivot d'une LUBIE (un
+    `tourner_vers` d'origine « didier »), un « go » qui ne lève rien (« deja_en_marche ») n'est
+    plus perdu. Il est retenu (differer_go) et le node fait rejoin dès l'issue du pivot
+    (arrived, ou off après goto). Deux cas : le go de David pendant le pivot (avant : avalé,
+    le pivot finissait `arrived` et plus rien ne relançait), et la course à l'arrivée (le go
+    de reprise du sélecteur, parti sur SON `arrived`, traité ici avant le nôtre). Le go retenu
+    tombe à tout ce qui retire la manœuvre (stop, cancel, abort, commande `route`, cause,
+    nouvelle manœuvre, fin de séance) : jamais de relance contre un arrêt posé après lui.
+    Sur un `off` (3e relecture adverse, 28/11), le rejoin n'a lieu que si l'ISSUE de la
+    manœuvre (route_goto_result, même `name`) est CONNUE et est un abandon de route_driver
+    (GOTO_ABANDONS) ; issue pas encore reçue : on l'attend ; autre issue (« route_off » d'un
+    Route OFF de David dont ni la commande ni la cause ne nous sont encore parvenues,
+    « cancel », inconnue) : le go retenu tombe."""
 
     def __init__(self):
         self._name: str | None = None
+        self._pivot_lubie = False           # la manœuvre est le pivot d'une lubie (go différé permis)
+        self._go_differe: str | None = None  # origine du « go » retenu, None = aucun
+        self._issue: str | None = None      # raison de route_goto_result pour NOTRE manœuvre
         self._target: str | None = None   # POI visé (aller voir, tour) — sa lubie est sautée
         self._seen_goto = False
         self._cancel_by: str | None = None
@@ -1025,22 +1126,66 @@ class GotoPolicy:
         """Nom de l'objet de la manœuvre ordonnée, None si aucune."""
         return self._name
 
-    def accept(self, name: str, target: str | None = None) -> None:
+    def accept(self, name: str, target: str | None = None, *, pivot_lubie: bool = False) -> None:
         """`target` : POI visé s'il diffère du nom (tour : « tour de X » vise
-        X) ; défaut = le nom (aller voir : le nom EST le POI)."""
+        X) ; défaut = le nom (aller voir : le nom EST le POI). `pivot_lubie` : la
+        manœuvre est le pivot d'une lubie (cf. GO DIFFÉRÉ)."""
         self._reset(name)
         self._target = name if target is None else target
+        self._pivot_lubie = pivot_lubie
 
     def cancel(self, by: str) -> None:
         """Nous envoyons « cancel » (stop vocal, abort) : l'issue sera goto_cancelled."""
+        self._go_differe = None
         if self._name is not None and self._cancel_by is None:
             self._cancel_by = by
+
+    @property
+    def go_differe(self) -> str | None:
+        return self._go_differe
+
+    def differer_go(self, origine: str, latched_state: str | None) -> bool:
+        """« go » sans effet (« deja_en_marche ») reçu PENDANT le pivot d'une lubie : retenu
+        -> True. Ailleurs (aller voir, tour, gestes de David) : rien ne change -> False."""
+        if self._name is None or not self._pivot_lubie or latched_state != "goto":
+            return False
+        self._go_differe = origine
+        return True
+
+    def oublier_go_differe(self) -> str | None:
+        """Un « stop » est arrivé après le go retenu : il tombe -> son origine, ou None."""
+        go, self._go_differe = self._go_differe, None
+        return go
+
+    def note_result(self, payload) -> None:
+        """route_goto_result reçu : retient la raison de l'issue de NOTRE manœuvre (même `name`)."""
+        if self._name is not None and isinstance(payload, dict) and payload.get("name") == self._name:
+            reason = payload.get("reason")
+            self._issue = reason if isinstance(reason, str) else "illisible"
+
+    def go_differe_du(self, latched_state: str | None, off_by_cmd: bool) -> str | None:
+        """Issue du pivot vue (état latché, ou route_goto_result) : -> origine du go retenu si le
+        rejoin est permis MAINTENANT (il est alors consommé), sinon None. `arrived` suffit ;
+        `off` exige une issue connue d'abandon (GOTO_ABANDONS), sinon il attend l'issue ou, si
+        elle n'en est pas une, fait tomber le go retenu."""
+        if self._go_differe is None or not self.rejoin_allowed(latched_state, off_by_cmd):
+            return None
+        if latched_state == "off":
+            if self._issue is None:
+                return None                      # l'issue de cet off n'est pas encore arrivée
+            if self._issue not in GOTO_ABANDONS:
+                self.oublier_go_differe()        # Route OFF de David, cancel, inconnue
+                return None
+        return self.oublier_go_differe()
 
     def release(self) -> None:
         self._reset(None)
 
     def _reset(self, name: str | None) -> None:
         self._name = name
+        self._pivot_lubie = False
+        self._go_differe = None
+        self._issue = None
         self._target = name
         self._seen_goto = False
         self._cancel_by = None

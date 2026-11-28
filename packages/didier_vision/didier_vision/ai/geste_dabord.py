@@ -102,6 +102,12 @@ REFUS_PHRASES = {
     "invalid": "la demande est incompréhensible",
     "sans_reponse": "ton corps n'a pas répondu : tu ne sais pas s'il a bougé",
 }
+
+# « Se tourner vers » un objet auquel Didier fait DÉJÀ face (lot S2c) : ce n'est pas un refus,
+# c'est un succès SANS mouvement. Le dire comme un refus ferait mentir la bouche dans l'autre
+# sens (« je n'ai pas pu me tourner ») alors qu'elle regarde bien l'objet.
+DEJA_FACE = "deja_face"
+DEJA_FACE_PHRASE = "tu lui fais déjà face : rien n'a bougé, et c'est normal"
 REFUS_INCONNU = "ton corps a refusé, pour une raison que tu ne connais pas"
 
 ACCEPTE_PHRASE = "il accepte, tu t'y mets"
@@ -121,6 +127,8 @@ def phrase_reponse_corps(reponse) -> str:
     effet = reponse.get("effect")
     if effet == "accepted":
         return ACCEPTE_PHRASE
+    if effet == DEJA_FACE:
+        return DEJA_FACE_PHRASE
     raison = reponse.get("reason")
     if isinstance(raison, str) and raison in REFUS_PHRASES:
         return REFUS_PHRASES[raison]

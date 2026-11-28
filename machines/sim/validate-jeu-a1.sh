@@ -24,7 +24,14 @@
 #                      spontanée comprise) ; aucun retour A -> B -> A en < 5 s
 # T2 fréquences      : initiatives spontanées >= 8 s ; tout arrêt de Didier (lubie,
 #                      approche, bouche) >= 120 s ; chaque arrêt-lubie : regard
-#                      (look) ET intention publiés >= 3 s avant le stop
+#                      (look) ET intention publiés >= 3 s avant son arrêt (depuis S2c,
+#                      le pivot `tourner_vers` d'origine didier, ou un « stop » en repli)
+# S2c pivot de lubie : (relecture adverse du 28/11) chaque pivot accepté par le régisseur
+#                      TOURNE (|ω| cmd_vel_follow > 0,05 rad/s — avant, retenu à facteur 0
+#                      sous le « stop » qui le précédait), finit `arrived` en <= 16 s
+#                      (TURN_TIMEOUT_S 15 s), puis la route repart (« on », ou une manœuvre
+#                      de David) en <= 45 s (reprise tirée <= 40 s) — sauf stop de David ;
+#                      un pivot refusé ou sans réponse retombe sur un « stop » de Didier < 4 s
 # T3 réaction        : chaque offre née (personne OU objet) -> choix ou maintien <= 1 s
 # T4 console         : ignore -> rien vers la piste 30 s ; va_la piste -> avancer
 #                      accepté par le régisseur ; va_la objet -> aller_voir accepté +
@@ -404,7 +411,10 @@ ta = [ts(e) for e in arrets]
 print("#  arrêts de Didier : " + ", ".join(f"{e['payload'].get('kind')} à {ts(e) - t0:.0f} s" for e in arrets))
 V(len(ta) >= 1 and all(b - a >= 119.999 for a, b in zip(ta, ta[1:])),
   "T2 au plus un arrêt de Didier (lubie, approche, bouche) par 120 s, au moins un joué")
-stops = [t for t, m in cap["jeu_chat_move"] if cmd(m) == "stop"]
+# Lot S2c (28/11) : l'arrêt d'une lubie est son PIVOT (`tourner_vers` d'origine didier), ou un
+# « stop » de Didier en repli (objet non situé, pivot refusé ou laissé sans réponse).
+def pivot_didier(m): return cmd(m) == "tourner_vers" and origine(m) == "didier"
+stops = [t for t, m in cap["jeu_chat_move"] if cmd(m) == "stop" or pivot_didier(m)]
 inten = [(t, i) for t, i in cap["intention"] if i.get("action") == "lubie"]
 ok_pre, n_lubie = True, 0
 for e in arrets:
@@ -418,10 +428,41 @@ for e in arrets:
     t_look = max((t for t, l in cap["look"] if t_stop and t_stop - 10.0 <= t <= t_stop), default=None)
     di = None if t_stop is None or t_int is None else round(t_stop - t_int, 2)
     dl = None if t_stop is None or t_look is None else round(t_stop - t_look, 2)
-    print(f"#    arrêt-lubie {cible} : intention {di} s et regard {dl} s avant le stop (regard={e['payload'].get('regard')})")
+    print(f"#    arrêt-lubie {cible} : intention {di} s et regard {dl} s avant son arrêt (regard={e['payload'].get('regard')})")
     # Capture = réception : 0,1 s de transport toléré ; pas de capture = KO (plus de « hors fenêtre »).
     ok_pre = ok_pre and di is not None and di >= 2.9 and dl is not None and dl >= 2.9
-V(ok_pre and n_lubie >= 1, "T2 chaque arrêt-lubie : regard ET intention publiés >= 3 s avant le stop")
+V(ok_pre and n_lubie >= 1, "T2 chaque arrêt-lubie : regard ET intention publiés >= 3 s avant son arrêt")
+
+# S2c : le pivot d'une lubie tourne vraiment, finit arrivé, puis Didier reprend sa route.
+rs = cap["route_state"]
+STOP_DIDIER = {"cmd": "stop", "origine": "didier"}
+ok_piv, n_piv = True, 0
+for t_p, m in [(t, m) for t, m in cap["jeu_chat_move"] if pivot_didier(m)]:
+    juge = [e["payload"].get("effect") for e in R if e.get("type") == "tourner_vers"
+            and t_p - 0.1 <= e["t_mono_ms"] / 1000.0 <= t_p + 2.0]
+    if juge[:1] != ["accepted"]:
+        repli = min((t for t, mm in cap["jeu_chat_move"] if t_p < t <= t_p + 4.0 and mm == STOP_DIDIER), default=None)
+        print(f"#    pivot vers {m.get('objet')} : régisseur {juge[:1]} -> repli stop "
+              f"{None if repli is None else round(repli - t_p, 2)} s après")
+        ok_piv = ok_piv and repli is not None
+        continue
+    stop_david = min((t for t, mm in cap["jeu_chat_move"] if t > t_p and cmd(mm) == "stop" and origine(mm) == "david"),
+                     default=None)
+    t_arr = min((t for t, s_ in rs if t > t_p and s_ == "arrived"), default=None)
+    if t_arr is None and stop_david is not None and stop_david - t_p <= 16.0:
+        print(f"#    pivot vers {m.get('objet')} : annulé par un stop de David {round(stop_david - t_p, 2)} s après")
+        continue
+    n_piv += 1
+    w = max((abs(a) for t, l, a in cap["cmd_vel"] if t_arr and t_p <= t <= t_arr), default=0.0)
+    t_rep = min((t for t, s_ in rs if t_arr and t > t_arr and s_ in ("on", "goto")), default=None)
+    interrompu = stop_david is not None and t_arr is not None and t_arr <= stop_david <= t_arr + 45.0
+    print(f"#    pivot vers {m.get('objet')} : arrivé {None if t_arr is None else round(t_arr - t_p, 2)} s après, "
+          f"|ω| max {round(w, 3)} ; route repartie {None if t_rep is None else round(t_rep - t_arr, 2)} s après"
+          + (" (stop de David entre-temps)" if interrompu else ""))
+    ok_piv = (ok_piv and t_arr is not None and t_arr - t_p <= 16.0 and w > 0.05
+              and ((t_rep is not None and t_rep - t_arr <= 45.0) or interrompu))
+V(ok_piv and n_piv >= 1, "S2c le pivot d'une lubie tourne, finit arrivé (<= 16 s), puis la route repart (<= 45 s) ; "
+  "refusé : repli sur un stop de Didier")
 
 # T3 : chaque offre née (personne OU objet) -> ligne de décision (choix ou maintien) <= 1 s.
 nees = [(ts(e), e["payload"]["piste"], "personne") for e in typ("naissance_piste")] + \
