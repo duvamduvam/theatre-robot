@@ -17,9 +17,12 @@ SECRET_OPENROUTER = Path.home() / ".config/didier/vision-conf-secret"
 class Contexte:
     """L'état d'UNE fumée ; `sy` est le seul accès au système (faux en test)."""
 
-    def __init__(self, sy, arbre, ici, tmp, jdir, ident, etat, hors_ligne=False, rtf_min=0.8):
+    def __init__(self, sy, arbre, ici, tmp, jdir, ident, etat, hors_ligne=False, rtf_min=0.8, rtf_exige=True):
         self.sy, self.arbre, self.ici, self.tmp, self.jdir, self.id, self.etat = sy, arbre, ici, tmp, jdir, ident, etat
         self.hors_ligne, self.rtf_min, self.rtf, self.image_reconstruite = hors_ligne, rtf_min, None, False
+        # Faux seulement pour `--famille logique` (F2) : aucune sonde avant les épreuves, la porte
+        # rtf ne s'applique pas. Toute autre fumée garde la sonde avant la 1re épreuve de chaque sim.
+        self.rtf_exige = rtf_exige
         self.notes, self.coeurs, self._sims, self._maintenu = [], sy.env.get("FUMEE_COEURS", "8-15"), [], None
         self.sim = Sim(self)
         self.profil = None   # banc.ProfilEnergie, posé par main() ; sondé à chaque pause

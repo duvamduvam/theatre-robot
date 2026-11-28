@@ -1154,14 +1154,30 @@ conventions, mutants, points ouverts). Le nœud `/didier/corps_sur` est lancé p
 
 ## Fumée automatique — la sim rejouée toute seule (lot F, 07/11)
 
-**Sur GitHub Actions (essai du 22/11, retenu le 25/11).** `.github/workflows/fumee.yml`, à la
-main seulement. Automatique essayé le 28/11 puis retiré le jour même : les runners publics ne
-tiennent plus le seuil RTF (0,762 puis 0,679 ; une passe sous le seuil est « invalide », job non
-en échec) — la fumée de référence est celle du PC, à rouvrir en F2/F3.
-`gh workflow run fumee.yml --ref <branche>` (≈ 55 min, runner gratuit, 4 vCPU,
-sans carte graphique). Résultat du 22/11 : temps réel 0,896, 13 épreuves sur 13. Le verdict se
-lit dans le résumé du run (`gh run view <id> --log | grep Résumé`). La conversation n'y tourne que
-si le secret `ANTHROPIC_API_KEY` du dépôt est posé (par David). Étude : `docs/etudes/etude-fumee.md` §8 bis.
+**Sur GitHub Actions : la fumée de LOGIQUE, à chaque PR (F2, 28/11).** `.github/workflows/fumee.yml`
+se déclenche sur toute PR vers `main` et tout push sur `main` (sauf doc seule : `docs/**`,
+`**/*.md`), et à la main (`gh workflow run fumee.yml --ref <branche> [-f ref=<sha>]`) ; une
+nouvelle poussée annule la passe en cours de la même ref. Il lance le programme F1
+(`python3 -u -m fumee --rev <commit extrait> --famille logique --profil aucun`) sur un runner
+gratuit (4 vCPU, sans carte graphique, Gazebo sous Xvfb). Pourquoi la famille seulement : ces
+runners tournent à RTF 0,68-0,76 (28/11), sous le seuil de 0,8 ; la sonde rtf arrêtait tout et
+aucune épreuve n'était jouée. `--famille logique` joue les épreuves qui ne dépendent ni de
+l'horloge simulée ni de la conduite — **namespace, catalogue, parle, machines, audio** (champ
+`famille = "logique"` de `plan.toml`, scripts relus le 28/11) — avec `image` et `demarrage`,
+**sans sonde rtf** (ni exigée ni bloquante). `edition` en est exclue (corps sûr armé exigé, piste de
+roues jouée par la chaîne roues en `use_sim_time`), comme `corps_sur`, `chantiers`, `a1`, `objets`
+et `conversation` : le **comportement** se juge sur le PC, qui reste la fumée de référence.
+Verdict : **vert** = job vert ; **rouge** = job en échec ; **invalide** (un gardien a parlé :
+registre Docker injoignable, enregistreur mort…) = avertissement, job non en échec ; refus ou
+échec du banc = job en échec. Le résumé du run donne le tableau des épreuves ; page,
+`resultat.json` et journaux bruts sont dans l'artefact `fumee-<run>` (30 jours). Adaptations du
+runner (toutes par variable, en tête du workflow) : chemins sous `RUNNER_TEMP` (arbre de travail
+compris), `FUMEE_COEURS=` vide, `FUMEE_PROFIL=0`, `FUMEE_COMMIT=0`, médias privés vides, frontend
+Dockerfile « labs » ; sans `sensors` le thermomètre est absent (gardien de chaleur muet). Aucun
+secret n'est posé (aucune épreuve jouée ici n'en consomme) ; les valeurs de `ANTHROPIC_API_KEY` et
+`OPENROUTER_API_KEY`, si elles existent, servent seulement à fouiller les artefacts avant
+publication. Historique : fumée complète verte le 22/11 (RTF 0,896, 13/13), à la main seulement
+du 28/11 au matin jusqu'à F2. Étude : `docs/etudes/etude-fumee.md` §8 bis.
 
 Un script shell (`machines/sim/fumee.sh` depuis L1e-4c, zéro token) rejoue sur le **checkout de main** toutes
 les épreuves de la sim et compare chaque compteur à une valeur **gravée en tête du script** :
@@ -1182,6 +1198,7 @@ seule, code dans `machines/sim/fumee/`, plan d'épreuves dans `machines/sim/fume
 ```bash
 cd machines/sim && python3 -m fumee                   # tout le plan, sur origin/main à jour
 python3 -m fumee --rev ma-branche --epreuves a1       # une révision, une épreuve (+ image, demarrage, rtf)
+python3 -m fumee --rev ma-branche --famille logique   # la fumée du runner GitHub : SANS sonde rtf (F2)
 systemd-run --user -p KillMode=mixed --working-directory=$PWD python3 -u -m fumee --rev ma-branche   # détachée ; « systemctl --user stop » arrête aussi la sim
 python3 -m fumee --rev '#42'                          # une PR
 python3 -m fumee --reprendre                          # même sha : vertes gardées, le reste rejoué
@@ -1210,7 +1227,12 @@ python3 -m fumee --profil performance                 # profil d'énergie fixe (
   (`FUMEE_BUILD_ARGS` conservé). Hors ligne : jamais de build, image manquante = invalide.
 - **Hors ligne** : pas de `git fetch` (la révision doit être locale), `conversation` « non lancée
   (hors ligne) », jamais rouge.
-- Une **sélection** (`--epreuves`) est marquée essai : elle ne devient jamais la référence.
+- Une **sélection** (`--epreuves`, `--famille`) est marquée essai : elle ne devient jamais la référence.
+- **`--famille logique`** (F2, 28/11) : les épreuves `famille = "logique"` du plan, précédées de
+  `image` et `demarrage` seuls ; la sonde rtf n'est **ni jouée ni exigée** (`rtf` absent du
+  résultat, note sur la page). Toute autre fumée garde la porte rtf intacte. Le plan refuse une
+  famille logique sur une épreuve à `corps_sur_arme` ou à régisseur (chaîne roues en horloge
+  simulée) ; une seule famille existe.
 - Inchangé, repris de `fumee.sh` : domaine 43 revérifié dans chaque conteneur (sinon arrêt), sim de
   quelqu'un d'autre jamais touchée, verrou `~/tmp/didier/sim-occupee` (`--forcer-verrou`), flock
   commun aux deux programmes, cœurs réservés, toutes les variables `FUMEE_*`, page et

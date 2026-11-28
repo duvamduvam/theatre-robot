@@ -157,6 +157,7 @@ def test_plan_dans_l_ordre_de_fumee_sh_et_de_la_page():
     assert [e.id for e in PLAN if "*" in e.bloque] == ["image", "demarrage", "rtf", "corps_sur"]
     assert [e.id for e in PLAN if e.corps_sur_arme] == ["edition", "chantiers", "a1", "objets", "conversation"]
     assert [e.id for e in PLAN if e.facultative] == ["conversation"]
+    assert [e.id for e in PLAN if e.famille == "logique"] == ["namespace", "catalogue", "parle", "machines", "audio"]
 
 
 @pytest.mark.parametrize("texte, message", [
@@ -171,6 +172,13 @@ def test_plan_dans_l_ordre_de_fumee_sh_et_de_la_page():
     ('[[epreuve]]\nid = "x"\nscript = "a.sh"\nattendu = 0\nmotif = "A"\ndelai_s = 9\nsim = {}\n',
      "plan, épreuve n°1 (x) : « attendu » doit être un entier positif"),
     ("rien = 1\n", "plan sans aucune [[epreuve]]"),
+    ('[[epreuve]]\nid = "x"\nscript = "a.sh"\nattendu = 1\nmotif = "A"\ndelai_s = 9\nsim = {}\nfamille = "roues"\n',
+     "plan, épreuve n°1 (x) : famille « roues » (familles : logique)"),
+    ('[[epreuve]]\nid = "rtf"\ntype = "interne"\nfamille = "logique"\n', "plan, épreuve n°1 (rtf) : le socle n'a pas de famille"),
+    ('[[epreuve]]\nid = "x"\nscript = "a.sh"\nattendu = 1\nmotif = "A"\ndelai_s = 9\nsim = {}\nfamille = "logique"\n'
+     'corps_sur_arme = true\n', "plan, épreuve n°1 (x) : famille logique incompatible avec corps_sur_arme"),
+    ('[[epreuve]]\nid = "x"\nscript = "a.sh"\nattendu = 1\nmotif = "A"\ndelai_s = 9\nfamille = "logique"\n'
+     'sim = { regie = "chantiers" }\n', "plan, épreuve n°1 (x) : famille logique incompatible avec corps_sur_arme"),
 ])
 def test_plan_invalide_refuse_avec_un_message_clair(tmp_path, texte, message):
     f = tmp_path / "plan.toml"
@@ -831,3 +839,102 @@ def test_sigterm_pendant_l_epreuve_rend_le_profil(banc, ppc):
     assert sortie.value.code == 143
     assert _appels(tmp_path) == ["get", "set balanced", "set performance", "set power-saver"]
     assert _profil_ppc(tmp_path) == "power-saver"
+
+
+# --- 11. Famille « logique » sans porte rtf (F2, 28/11) -----------------------------------------
+# Runner GitHub : RTF 0,68-0,76, sous le seuil de 0,8 ; la sonde arrêtait tout. `--famille logique`
+# joue les épreuves qui ne dépendent ni de l'horloge simulée ni de la conduite, SANS sonde rtf.
+# Contrôle de mutation (28/11) : retirer `self.f.rtf_exige` de Sim.preparer rougit les deux tests
+# « porte_famille » ; le test « porte_rtf_intacte » rougit si la sonde saute hors famille.
+
+def _rtf_bas(sy):
+    """Sonde à 0,700 (runner GitHub), commande notée comme les autres."""
+    reponse = sy.sortie
+
+    def sortie(cmd, **k):
+        if "python3 - rtf" in " ".join(cmd):
+            sy.cmds.append(list(cmd))
+            return 0, "RTF=0.700 messages=300\n"
+        return reponse(cmd, **k)
+    sy.sortie = sortie
+
+
+def _sondes_rtf(sy):
+    return [c for c in sy.cmds if "python3 - rtf" in " ".join(c)]
+
+
+def test_choisir_famille_logique_sans_rtf_ni_edition():
+    choisis = plans.choisir_famille(PLAN, "logique")
+    assert [e.id for e in choisis] == ["image", "demarrage", "namespace", "catalogue", "parle", "machines", "audio"]
+    assert choisis[1].sim == {"monde": "chantiers"}
+
+
+def test_choisir_famille_inconnue_ou_vide_refusee(tmp_path):
+    with pytest.raises(plans.PlanInvalide, match="^famille inconnue : roues ; familles : logique$"):
+        plans.choisir_famille(PLAN, "roues")
+    f = tmp_path / "plan.toml"
+    f.write_text(PETIT_PLAN)
+    with pytest.raises(plans.PlanInvalide, match="^famille logique : aucune épreuve du plan n'en porte le champ$"):
+        plans.choisir_famille(plans.lire(f), "logique")
+
+
+def test_porte_famille_logique_rtf_bas_jamais_sonde_tout_vert(tmp_path):
+    sy = Faux()
+    _rtf_bas(sy)
+    f = contexte(tmp_path, sy)
+    f.rtf_exige = False
+    r = epreuve.derouler(f, plans.choisir_famille(PLAN, "logique"))
+    assert statuts(r) == {"image": "vert", "demarrage": "vert", "namespace": "vert", "catalogue": "vert",
+                          "parle": "vert", "machines": "vert", "audio": "vert"}
+    assert _sondes_rtf(sy) == [] and f.rtf is None
+    assert sy.lances == ["validate-namespace.sh", "validate-catalogue.sh", "validate-machines.sh", "validate-audio.sh"]
+    assert len(sy.ups()) == 1
+    assert rapport.verdict(r) == ("vert", None)         # le programme, sur les épreuves jouées
+
+
+def test_porte_rtf_intacte_hors_famille_memes_epreuves(tmp_path):
+    # Les MÊMES épreuves choisies par --epreuves : la sonde est jouée et bloque tout (gravé).
+    sy = Faux()
+    _rtf_bas(sy)
+    r = epreuve.derouler(contexte(tmp_path, sy), plans.choisir(PLAN, ["namespace", "parle"]))
+    assert statuts(r) == {"image": "vert", "demarrage": "vert", "rtf": "invalide", "namespace": "non_lance",
+                          "parle": "non_lance"}
+    assert len(_sondes_rtf(sy)) == 2 and sy.lances == []
+
+
+PLAN_FAMILLE = PETIT_PLAN.replace('motif = "validate-catalogue"\n', 'motif = "validate-catalogue"\nfamille = "logique"\n') \
+    .replace('motif = "=== AUDIO"\n', 'motif = "=== AUDIO"\nfamille = "logique"\n')
+
+
+def test_porte_famille_main_runner_sans_sensors_ni_ppc_ni_coeurs(banc, capsys):
+    # Variables du runner (fumee.yml) : FUMEE_COEURS vide, FUMEE_PROFIL=0, pas de thermomètre,
+    # sorties hors du dépôt. RTF bas : la fumée est quand même VERTE, marquée essai, rien commité.
+    sy, tmp_path = banc
+    (tmp_path / "plan.toml").write_text(PLAN_FAMILLE)
+    _rtf_bas(sy)
+    assert programme.main(["--famille", "logique", "--rev", sy.sha], sy=sy) == 0
+    assert sy.lances == ["validate-catalogue.sh", "validate-audio.sh"]
+    assert _sondes_rtf(sy) == []
+    assert not [c for c in sy.cmds if c[:2] == ["docker", "update"] or "coeurs_reserves.py" in " ".join(c)]
+    assert not [c for c in sy.cmds if c[0] in ("sensors", "powerprofilesctl")]
+    res = json.loads(next((tmp_path / "brut").glob("*/resultat.json")).read_text())
+    assert [e["id"] for e in res["epreuves"]] == ["image", "demarrage", "catalogue", "audio"]
+    assert (res["verdict"], res["famille"], res["rtf"], res["essai"]) == ("vert", "logique", None, True)
+    assert ("famille logique : temps réel ni mesuré ni exigé (épreuves sans horloge simulée ni conduite) ; "
+            "le comportement se juge sur le PC") in res["notes"]
+    assert "page non commitée" in capsys.readouterr().out
+
+
+def test_famille_exclusive_des_autres_choix(banc, capsys):
+    sy, _ = banc
+    with pytest.raises(SystemExit) as sortie:
+        programme.main(["--famille", "logique", "--epreuves", "audio"], sy=sy)
+    assert sortie.value.code == 2 and sy.cmds == []
+    with pytest.raises(SystemExit):
+        programme.main(["--famille", "roues"], sy=sy)
+    assert "invalid choice: 'roues'" in capsys.readouterr().err
+
+
+def test_systeme_sans_sensors_rend_un_thermometre_absent(tmp_path):
+    # Runner GitHub : ni lm-sensors ni powerprofilesctl. Absent = banc sain, jamais une exception.
+    assert Systeme({"PATH": str(tmp_path)}).temperature() is None

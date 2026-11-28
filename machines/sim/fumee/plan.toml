@@ -9,7 +9,15 @@
 # script, attendu, motif (expression de la ligne finale « N OK, M KO »), delai_s, sim,
 # corps_sur_arme (corps sûr du bringup ARMÉ exigé avant, verrous notés pendant), facultative,
 # chemins (servira au choix des épreuves en F2), bloque (["*"] : un résultat non vert arrête
-# tout ce qui suit — règle de fumee.sh pour image, demarrage, rtf et corps_sur).
+# tout ce qui suit — règle de fumee.sh pour image, demarrage, rtf et corps_sur), famille.
+#
+# famille = "logique" (F2, 28/11) : l'épreuve ne dépend ni de l'horloge simulée ni de la conduite
+# (graphe ROS, contrats, catalogue, pont web, animations jouées en temps mural). Scripts relus le
+# 28/11 : namespace, catalogue, parle, machines, audio. PAS edition (corps sûr armé exigé, piste de
+# roues jouée par la chaîne roues en use_sim_time). `--famille logique` joue ces épreuves avec image
+# et demarrage, SANS la sonde rtf (ni exigée ni bloquante) : c'est la fumée du runner GitHub
+# (.github/workflows/fumee.yml), où le RTF est sous le seuil. Le plan refuse une famille logique
+# avec corps_sur_arme ou un régisseur.
 #
 # sim : monde (chantiers | stage), regie (scénario du régisseur lancé après le démarrage :
 # chantiers | jeu-a1), jeu (régisseur en mode jeu), tete (surcouche docker-compose.tete.yml),
@@ -52,6 +60,7 @@ attendu = 5            # sentinelles, topics, nœuds, twist_mux, bridge
 motif = "validate-namespace"
 delai_s = 300
 sim = { monde = "chantiers" }
+famille = "logique"
 chemins = ["packages/didier_bringup/", "packages/didier_core/", "machines/robot/"]
 
 [[epreuve]]
@@ -61,6 +70,7 @@ attendu = 4            # 6 familles, sha dev, ajout, suppression
 motif = "validate-catalogue"
 delai_s = 180
 sim = { monde = "chantiers" }
+famille = "logique"
 chemins = ["packages/theatre_contrats/", "data/"]
 
 [[epreuve]]
@@ -68,6 +78,7 @@ id = "parle"
 type = "interne"
 attendu = 3            # états vus dans l'ordre : "" -> "parle" -> ""
 sim = { monde = "chantiers" }
+famille = "logique"
 chemins = ["packages/didier_core/", "data/"]
 
 [[epreuve]]
@@ -87,6 +98,7 @@ attendu = 5            # L2b : M1-M4, M6 (10 en L2c)
 motif = "validate-machines"
 delai_s = 180
 sim = { monde = "chantiers" }
+famille = "logique"
 chemins = ["machines/"]
 
 [[epreuve]]
@@ -96,6 +108,7 @@ attendu = 10           # onglet « Audio », 22/11 : AU1-AU10, fausse veille
 motif = "=== AUDIO"
 delai_s = 180
 sim = { monde = "chantiers" }
+famille = "logique"
 chemins = ["packages/didier_web/"]
 
 [[epreuve]]

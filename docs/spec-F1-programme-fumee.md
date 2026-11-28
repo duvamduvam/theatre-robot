@@ -31,20 +31,21 @@ une image que si ses fichiers ont changé, et marche hors ligne.
 ## 2. Commande
 
 ```
-python3 -m fumee [--rev <branche|sha|#PR>] [--epreuves a1,objets | --tout | --reprendre]
-                 [--hors-ligne] [--minuterie] [--forcer-verrou] [--essai]
+python3 -m fumee [--rev <branche|sha|#PR>] [--epreuves a1,objets | --famille logique | --tout | --reprendre]
+                 [--hors-ligne] [--minuterie] [--forcer-verrou] [--essai] [--profil …]
 ```
 
 | Option | Effet |
 |---|---|
 | `--rev` | révision testée (défaut : `origin/main` à jour). Mise en place dans l'arbre de travail du programme, `~/tmp/didier/fumee-arbre` (worktree git, recréé si absent, jamais le checkout de David) |
 | `--epreuves` / `--tout` | sous-ensemble (défaut `--tout` en F1 ; le choix par chemins touchés est F2) ; les dépendances du plan (`demarrage`, `rtf`) sont ajoutées seules |
+| `--famille` | (F2, 28/11) les épreuves du plan qui portent `famille = "<nom>"`, dans l'ordre du plan, précédées de `image` et `demarrage` **seuls** : `rtf` n'est ni joué ni exigé, aucune sonde avant les épreuves (`Contexte.rtf_exige` faux). Seule famille : `logique`. C'est la fumée du runner GitHub (`.github/workflows/fumee.yml`), où le RTF est sous le seuil. Famille sans épreuve dans le plan de la révision → refus |
 | `--hors-ligne` | aussi détecté seul (DNS de `github.com` injoignable) : aucune reconstruction d'image (absente du cache → `invalide : hors ligne`), `conversation` en `non_lance (hors ligne)`, pas de `git fetch` (la révision doit être locale) |
 | `--minuterie` | remplace `--si-due` : décide « due ? » avec les règles actuelles de `fumee_page.py due`, reporte sans page si le banc n'est pas sain |
 | `--essai` | marque la fumée « essai » (jamais référence, jamais commitée) |
 | `--reprendre` | (ajout du 25/11, demandé par David) relit le dernier `resultat.json` de la **même révision** (même sha complet) dans le brut, garde ses épreuves vertes et ne rejoue que les rouges, invalides et non lancées, plus leurs dépendances (`image`, `demarrage`, `rtf`, toujours rejouées) et les relances de sim nécessaires. Le résultat fusionne les deux passes dans l'ordre du plan, et la page note « reprise de la fumée `<id>` : N épreuves gardées ». Aucune fumée de ce sha → refus clair (« rien à reprendre pour ce sha », code 2) ; toutes vertes → refus aussi |
 
-Une sélection (`--epreuves`) est **marquée essai** : elle ne dit rien des épreuves non jouées,
+Une sélection (`--epreuves`, `--famille`) est **marquée essai** : elle ne dit rien des épreuves non jouées,
 elle ne doit jamais devenir la « dernière verte » (sens le plus sûr, choisi en F1 ; F2 tranchera
 pour les fumées de lot). Une épreuve inconnue est refusée avant toute commande, avec la liste des
 ids valides. Une reprise qui couvre tout le plan n'est pas un essai.
@@ -70,7 +71,16 @@ bloque = []                   # épreuves rendues inutiles par un rouge de celle
 
 Champs : `id`, `type` (`script` par défaut ; `interne` pour `image`, `demarrage`, `rtf`, `parle`,
 codées dans le programme), `script`, `attendu`, `motif`, `delai_s`, `sim` (monde, régie,
-jeu, tête), `corps_sur_arme`, `facultative`, `chemins` (servira en F2, écrit dès F1), `bloque`.
+jeu, tête), `corps_sur_arme`, `facultative`, `chemins` (servira en F2, écrit dès F1), `bloque`,
+`famille` (F2, 28/11).
+
+**Famille `logique` (F2, 28/11).** Une épreuve qui ne dépend ni de l'horloge simulée ni de la
+conduite : graphe ROS, contrats, catalogue, pont web, animations jouées en temps mural (la chaîne
+roues seule tourne en `use_sim_time`). Scripts relus le 28/11 : `namespace`, `catalogue`, `parle`,
+`machines`, `audio`. **Pas `edition`** : corps sûr armé exigé et piste de roues jouée. Le plan
+refuse une famille inconnue, une famille sur le socle (`image`, `demarrage`, `rtf`), et une
+famille `logique` avec `corps_sur_arme` ou un régisseur. Sans `--famille`, la porte rtf ne change
+pas, pour toutes les épreuves, celles de la famille comprises.
 Les **valeurs attendues** (aujourd'hui `ATTENDU_*` de `fumee.sh`) passent dans le plan avec
 leur commentaire ; un test grave que le plan et `fumee.sh` donnent les mêmes valeurs tant que
 les deux coexistent.
@@ -145,6 +155,11 @@ Valeurs gravées, jamais recalculées par le code testé :
 7. Regroupement des sims : le plan actuel donne exactement 6 démarrages de sim.
 8. Empreinte d'image : stable, change si un fichier de `CHEMINS_IMAGES` change.
 9. Hors ligne : aucune commande `docker compose build`, conversation `non_lance`.
+10. Profil d'énergie « auto » (28/11) : faux `powerprofilesctl` seul dans le PATH.
+11. Famille `logique` (F2, 28/11) : choix sans `rtf` ni `edition` ; RTF à 0,700 → aucune sonde,
+    tout vert ; les mêmes épreuves par `--epreuves` → sonde jouée deux fois, tout bloqué ;
+    `main()` avec les variables du runner (cœurs vides, profil coupé, pas de `sensors`) → vert,
+    essai, rien commité. Mutation : retirer `rtf_exige` de `Sim.preparer` rougit deux tests.
 
 Les appels système (docker, git, sensors) passent par **un seul** objet injecté, remplacé par
 un faux dans les tests.
@@ -162,4 +177,5 @@ un faux dans les tests.
 ## 9. Ce que F1 ne fait pas
 
 Choix des épreuves par chemins touchés et statut sur la PR (F2) ; suppression de `fumee.sh`
-et minuterie basculée (F3) ; workflow GitHub appelant le nouveau programme (F4 bis, après F1).
+et minuterie basculée (F3) ; workflow GitHub appelant le nouveau programme (F4 bis, après F1 :
+**fait en F2 le 28/11**, `--famille logique`, à chaque PR).
