@@ -469,6 +469,16 @@ def stop_appareils_commands(whitelist) -> list:
             if type_organe in appareils.TYPES_ORGANES and topic in whitelist]
 
 
+def ordres_hors_stop(whitelist) -> list:
+    """Relecture adverse de L3a (28/11) : les ordres du registre que stop_appareils_commands
+    ÉCARTE (type d'organe hors TYPES_ORGANES ou topic hors whitelist), en (appareil, type,
+    topic). Le pont les journalise au démarrage : un appareil que le STOP n'arrête pas ne doit
+    jamais l'être en silence. Le complément exact de stop_appareils_commands."""
+    return [(nom, type_organe, topic) for nom, a in appareils.REGISTRE.items()
+            for type_organe, topic in a["ordres"].items()
+            if type_organe not in appareils.TYPES_ORGANES or topic not in whitelist]
+
+
 # --- Mode robot / sim (sécurité : toujours savoir à qui on parle) ----------
 
 def mode_from_domain_id(domain_id: int) -> str:

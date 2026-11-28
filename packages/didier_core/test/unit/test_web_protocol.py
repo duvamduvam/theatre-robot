@@ -31,6 +31,7 @@ from didier_web.web_protocol import (
     TOPICS_MASQUES, parse_client_message, rehearsal_allowed, snapshot_visible,
     stop_all_commands,
     stop_appareils_commands,
+    ordres_hors_stop,
 )
 
 # Racine du package didier_web (static/ est un frère de didier_web/ dans le dépôt).
@@ -1980,3 +1981,26 @@ def test_pont_stop_organe_inconnu_au_registre(pont, monkeypatch):
     assert "lumieres/dmx" not in noeud.publishers
     assert len(noeud.publishers["cmd_vel_web"].messages) == 1
     assert ws.envoyes == [{"type": "ack", "topic": "stop_all"}]
+
+
+# ------------------------------------------------- relecture adverse de L3a (28/11) : rien d'écarté en silence
+def test_ordres_hors_stop_complement_du_stop(monkeypatch):
+    from theatre_contrats import appareils
+    assert ordres_hors_stop(effective_whitelist(False)) == []
+    monkeypatch.setitem(appareils.REGISTRE, "lumieres", {"etat": "lumieres/etat",
+                                                         "ordres": {"dmx": "lumieres/dmx"}})
+    assert ordres_hors_stop(effective_whitelist(False)) == [("lumieres", "dmx", "lumieres/dmx")]
+    assert ordres_hors_stop(frozenset({"sono/relais"})) == [
+        ("sono", "audio", "sono/audio"), ("lumieres", "dmx", "lumieres/dmx")]
+
+
+def test_pont_journalise_au_demarrage_un_ordre_hors_stop(pont, monkeypatch):
+    from theatre_contrats import appareils
+    noeud = _creer_noeud(pont, monkeypatch)
+    assert [t for n, t in noeud.journal.lignes if n == "error" and t.startswith("STOP")] == []
+    monkeypatch.setitem(appareils.REGISTRE, "lumieres", {"etat": "lumieres/etat",
+                                                         "ordres": {"dmx": "lumieres/dmx"}})
+    noeud = _creer_noeud(pont, monkeypatch)
+    assert [t for n, t in noeud.journal.lignes if n == "error" and t.startswith("STOP")] == [
+        "STOP : l'ordre lumieres/dmx de l'appareil lumieres (type 'dmx') n'est PAS arrêté par STOP"
+        " (type d'organe inconnu ou hors whitelist)"]
