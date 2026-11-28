@@ -59,6 +59,11 @@ CAS = {
     "topic": ({"packages/sono_core/sono_core/contrat.py": 'TOPICS = ("/sono/etat", "sono/klaxon")\n'},
               ["G2 contrat : topic '/sono/etat' absolu ou absent de theatre_contrats.topics",
                "G2 contrat : topic 'sono/klaxon' absolu ou absent de theatre_contrats.topics"]),
+    # 3 bis. un topic du contrat hors du préfixe sono/ (diagnostics admis)
+    "prefixe": ({"packages/sono_core/sono_core/contrat.py":
+                 'TOPICS = ("sono/etat", "diagnostics", "cmd_vel_web_sur", "corps_sur/etat")\n'},
+                ["G2 contrat : topic 'cmd_vel_web_sur' hors du préfixe « sono/ »",
+                 "G2 contrat : topic 'corps_sur/etat' hors du préfixe « sono/ »"]),
     # 5. machine.yml sans deux clés
     "machine": ({"machines/sono/machine.yml": "packages: [a]\nlaunch_cmd: x\n"},
                 ["G8 machine : machine.yml sans noeuds_attendus, sentinelle_build"]),
@@ -93,9 +98,21 @@ def test_cause_4_hors_registre(tmp_path):
     fichiers[".github/workflows/tests.yml"] = fichiers[".github/workflows/tests.yml"].replace("sono", "essai")
     fichiers["machines/sim/docker-compose.yml"] = "services:\n  essai:\n    image: s\n"
     fichiers["machines/sim/fumee/plan.toml"] = '[[epreuve]]\nid = "essai"\n'
+    fichiers["packages/essai_core/essai_core/contrat.py"] = 'TOPICS = ("diagnostics",)\n'
     _poser(tmp_path, fichiers)
     assert verifier_appareil(tmp_path / "packages" / "essai_core") == [
         "G2 contrat : « essai » absent de theatre_contrats.appareils.REGISTRE"]
+
+
+def test_nom_reserve_est_un_geste(tmp_path):
+    """Relecture adverse du 28/11 : un appareil « corps_sur » publierait chez le corps sûr."""
+    fichiers = {k.replace("sono_core", "corps_sur_core").replace("machines/sono/", "machines/corps_sur/"): v
+                for k, v in FICHIERS_COMPLETS.items()}
+    fichiers["packages/corps_sur_core/corps_sur_core/contrat.py"] = 'TOPICS = ("corps_sur/etat",)\n'
+    _poser(tmp_path, fichiers)
+    assert verifier_appareil(tmp_path / "packages" / "corps_sur_core")[:2] == [
+        "G1 nom : « corps_sur » est réservé (espace de topics existant ou préfixe de mouvement)",
+        "G2 contrat : « corps_sur » absent de theatre_contrats.appareils.REGISTRE"]
 
 
 def test_fichiers_absents_sont_des_gestes(tmp_path):
@@ -171,7 +188,12 @@ def test_generateur_refuse_d_ecraser(racine_essai):
                             capture_output=True, text=True, timeout=60)
     assert sortie.returncode == 2
     assert "existe déjà : packages/essai_core, machines/essai, machines/sim/essai" in sortie.stderr
-    for nom in ("Essai", "x", "essai_core", "1a"):
+    reserve = subprocess.run([sys.executable, str(OUTIL), "corps_sur", "--racine", str(racine_essai)],
+                             capture_output=True, text=True, timeout=60)
+    assert "nom réservé : 'corps_sur'" in reserve.stderr
+    assert not (racine_essai / "packages" / "corps_sur_core").exists()
+    for nom in ("Essai", "x", "essai_core", "1a", "corps_sur", "jeu", "cmd_vel_x", "route2", "wheels",
+                "chat_move", "rehearsal"):
         assert subprocess.run([sys.executable, str(OUTIL), nom, "--racine", str(racine_essai)],
                               capture_output=True, timeout=60).returncode == 2
 

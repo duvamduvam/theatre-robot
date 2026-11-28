@@ -71,7 +71,7 @@ from didier_web.web_protocol import (
     ProtocolError, SessionManager, build_ack, build_err, build_feed,
     build_hb_ack, build_hello, build_lumieres, build_state, drive_to_twist,
     effective_whitelist, mode_from_domain_id, parse_client_message,
-    rehearsal_allowed, snapshot_visible, stop_all_commands,
+    rehearsal_allowed, snapshot_visible, stop_all_commands, stop_appareils_commands,
 )
 from didier_web.tickets import PareRafale, construire_ticket, nom_fichier
 
@@ -693,6 +693,13 @@ async def _handle_stop_all(node, app, client_id, ws, msg):
     # (cf. stop_all_commands) -- les topics existent alors dans la whitelist.
     for topic, value in stop_all_commands(node.rehearsal_enabled):
         node.publish_cmd(topic, value)
+    # Lot L3a : les appareils APRÈS les arrêts d'avant L3a, chacun isolé — un envoi qui lève
+    # est journalisé et n'empêche ni les suivants, ni le Twist nul, ni l'ack (relecture 28/11).
+    for topic, value in stop_appareils_commands(node.whitelist):
+        try:
+            node.publish_cmd(topic, value)
+        except Exception as erreur:  # noqa: BLE001 — le STOP doit aller au bout
+            node.get_logger().error("STOP : arrêt de l'appareil {} impossible : {!r}".format(topic, erreur))
     # STOP CONTENUS coupe aussi le mouvement web (le Twist nul, en plus des
     # StringTime de stop_all_commands qui ne touchent QUE les contenus).
     node.publish_drive_zero()
@@ -983,6 +990,13 @@ async def _state_loop(app: web.Application) -> None:
             last_nodes_refresh = now_s
 
         topics = node.snapshot_topics()
+        # Lot L3a : un état d'appareil hostile ne doit jamais tuer cette boucle (elle porte aussi
+        # « perte d'écriture -> Twist nul ») : la tuile est vide ce tour-là, c'est journalisé.
+        try:
+            lignes_appareils = panneau_appareils.lignes(topics)
+        except Exception as erreur:  # noqa: BLE001
+            node.get_logger().error("tuile Appareils non jugée : {!r}".format(erreur))
+            lignes_appareils = []
         await _broadcast(app, build_state(
             topics=topics,
             nodes=node.node_names_cache,
@@ -990,7 +1004,7 @@ async def _state_loop(app: web.Application) -> None:
             writer_present=node.sessions.writer_present(),
             lumieres=node.instant_lumieres(),
             # Lot L3a : la tuile « Appareils », jugée ici (module pur), affichée par la page.
-            appareils_lignes=panneau_appareils.lignes(topics),
+            appareils_lignes=lignes_appareils,
         ))
 
 

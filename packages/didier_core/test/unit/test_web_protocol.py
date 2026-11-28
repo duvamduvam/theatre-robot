@@ -30,6 +30,7 @@ from didier_web.web_protocol import (
     drive_to_twist, effective_whitelist, mode_from_domain_id,
     TOPICS_MASQUES, parse_client_message, rehearsal_allowed, snapshot_visible,
     stop_all_commands,
+    stop_appareils_commands,
 )
 
 # Racine du package didier_web (static/ est un frère de didier_web/ dans le dépôt).
@@ -243,9 +244,6 @@ def test_stop_all_commands_liste_et_ordre_exacts():
         ("right_eye", "stop"),
         ("left_arm", "stop"),
         ("right_arm", "stop"),
-        # Lot L3a (28/11, spec L3 décision 19) : tout topic d'ordre du registre des appareils.
-        ("sono/audio", "stop"),
-        ("sono/relais", "stop"),
     ]
 
 
@@ -1921,3 +1919,64 @@ def test_scene_texte_audio_avance_calculee_par_la_page():
     sortie = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30, check=True)
     assert json.loads(sortie.stdout) == [
         "silence", "♪ bugs-joues/begaiement.wav — 1,2 / 2,2 s", "♪ a.wav — 2,2 / 2,2 s", "♪ a.wav"]
+
+
+# ------------------------------------------------- lot L3a (28/11) : STOP et appareils (relecture adverse)
+def test_stop_appareils_seulement_types_connus_et_whitelistes(monkeypatch):
+    from theatre_contrats import appareils
+    assert stop_appareils_commands(effective_whitelist(False)) == [("sono/audio", "stop"), ("sono/relais", "stop")]
+    # Un 3e type d'organe au registre (hors whitelist, sans publisher) n'entre pas dans le STOP.
+    monkeypatch.setitem(appareils.REGISTRE, "lumieres", {"etat": "lumieres/etat",
+                                                         "ordres": {"dmx": "lumieres/dmx"}})
+    assert stop_appareils_commands(effective_whitelist(True)) == [("sono/audio", "stop"), ("sono/relais", "stop")]
+    assert stop_appareils_commands(frozenset({"sono/relais"})) == [("sono/relais", "stop")]
+
+
+def _stop(pont, monkeypatch, **params):
+    # Le Twist factice de la fixture n'a pas de champs : un vrai gabarit linear/angular ici.
+    monkeypatch.setattr(pont, "Twist", lambda: types.SimpleNamespace(
+        linear=types.SimpleNamespace(x=None), angular=types.SimpleNamespace(z=None)))
+    noeud = _creer_noeud(pont, monkeypatch, drive_enabled=True, **params)
+    noeud.sessions.authenticate("c1", token=None, now_s=0.0)
+    ws = _WsFactice()
+    return noeud, ws
+
+
+def _publies(noeud):
+    return [(t, m.msg) for t, p in noeud.publishers.items() if t != "cmd_vel_web" for m in p.messages]
+
+
+def test_pont_stop_ordre_contenus_seance_appareils_puis_twist_et_ack(pont, monkeypatch):
+    noeud, ws = _stop(pont, monkeypatch, rehearsal_enabled=True)
+    ordre = []
+    for topic, pub in noeud.publishers.items():
+        monkeypatch.setattr(pub, "publish", lambda m, t=topic: ordre.append(t))
+    asyncio.run(pont.handle_client_message(noeud, {"clients": {}}, "c1", ws, '{"type":"stop_all"}'))
+    assert ordre == ["animation", "audio", "face", "neck", "left_eye", "right_eye", "left_arm", "right_arm",
+                     "jeu/console", "route", "rehearsal/cmd", "sono/audio", "sono/relais", "cmd_vel_web"]
+    assert ws.envoyes == [{"type": "ack", "topic": "stop_all"}]
+
+
+def test_pont_stop_un_appareil_qui_leve_n_empeche_ni_le_reste_ni_le_twist_ni_l_ack(pont, monkeypatch):
+    noeud, ws = _stop(pont, monkeypatch, rehearsal_enabled=True)
+
+    def casse(_msg):
+        raise RuntimeError("publish cassé")
+    monkeypatch.setattr(noeud.publishers["sono/audio"], "publish", casse)
+    asyncio.run(pont.handle_client_message(noeud, {"clients": {}}, "c1", ws, '{"type":"stop_all"}'))
+    assert ("route", '"off"') in _publies(noeud) and ("sono/relais", '"stop"') in _publies(noeud)
+    assert len(noeud.publishers["cmd_vel_web"].messages) == 1          # le Twist nul est parti
+    assert ws.envoyes == [{"type": "ack", "topic": "stop_all"}]
+    erreurs = [t for n, t in noeud.journal.lignes if n == "error"]
+    assert erreurs == ["STOP : arrêt de l'appareil sono/audio impossible : RuntimeError('publish cassé')"]
+
+
+def test_pont_stop_organe_inconnu_au_registre(pont, monkeypatch):
+    from theatre_contrats import appareils
+    monkeypatch.setitem(appareils.REGISTRE, "lumieres", {"etat": "lumieres/etat",
+                                                         "ordres": {"dmx": "lumieres/dmx"}})
+    noeud, ws = _stop(pont, monkeypatch)
+    asyncio.run(pont.handle_client_message(noeud, {"clients": {}}, "c1", ws, '{"type":"stop_all"}'))
+    assert "lumieres/dmx" not in noeud.publishers
+    assert len(noeud.publishers["cmd_vel_web"].messages) == 1
+    assert ws.envoyes == [{"type": "ack", "topic": "stop_all"}]

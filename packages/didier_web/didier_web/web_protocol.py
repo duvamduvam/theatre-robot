@@ -441,9 +441,9 @@ def stop_all_commands(rehearsal_enabled: bool = False) -> list:
     Lot A1 (revue du 02/11) : en répétition, STOP envoie D'ABORD {"cmd": "stop"}
     au sélecteur de jeu (jeu/console) — c'est un stop de David : verrou
     jusqu'au « go » de la console, jamais de reprise automatique.
-    Lot L3a (28/11, spec L3 décision 19) : STOP publie aussi "stop" sur CHAQUE topic d'ordre
-    des appareils du registre (sono/audio, sono/relais) — le bouton STOP arrête tout son, et
-    remet les relais au repos. Valable en sim comme sur le robot."""
+    Les appareils (lot L3a) n'y sont PAS : voir stop_appareils_commands, envoyés APRÈS cette
+    liste, chacun isolé (relecture adverse du 28/11 : un envoi d'appareil qui lève ne doit
+    jamais empêcher route off, l'arrêt de séance, le Twist nul ni l'ack)."""
     commands = [
         ("animation", False),
         ("audio", "stop"),
@@ -453,10 +453,20 @@ def stop_all_commands(rehearsal_enabled: bool = False) -> list:
         ("right_eye", "stop"),
         ("left_arm", "stop"),
         ("right_arm", "stop"),
-    ] + [(topic, "stop") for topic in appareils.topics_ordres()]
+    ]
     if rehearsal_enabled:
         commands += [("jeu/console", {"cmd": "stop"}), ("route", "off"), ("rehearsal/cmd", "stop")]
     return commands
+
+
+def stop_appareils_commands(whitelist) -> list:
+    """Lot L3a (spec L3 décision 19) : (topic, "stop") pour chaque topic d'ordre des appareils
+    du registre — le STOP arrête tout son et remet les relais au repos. Seulement les types
+    d'organes connus (theatre_contrats.appareils.TYPES_ORGANES) ET présents dans la whitelist
+    du nœud : un 3e type au registre, hors whitelist, n'a pas de publisher et n'y entre pas."""
+    return [(topic, "stop") for a in appareils.REGISTRE.values()
+            for type_organe, topic in a["ordres"].items()
+            if type_organe in appareils.TYPES_ORGANES and topic in whitelist]
 
 
 # --- Mode robot / sim (sécurité : toujours savoir à qui on parle) ----------

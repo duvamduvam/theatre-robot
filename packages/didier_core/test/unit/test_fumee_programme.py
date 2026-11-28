@@ -160,7 +160,7 @@ def test_services_du_compose_lecteur_stdlib(tmp_path):
     from fumee.banc import services_du_compose
     compose = tmp_path / "c.yml"
     compose.write_text("# en-tête\nname: x\n\nservices:\n  # commentaire\n  b:\n    image: i\n"
-                       "    environment:\n      A: 1\n  a:\n    image: j\nnetworks:\n  n:\n",
+                       "    environment:\n      A: 1\n  \n  a:  # commentaire\n    image: j\nnetworks:\n  n:\n",
                        encoding="utf-8")
     assert services_du_compose(compose) == ("b", "a")
 

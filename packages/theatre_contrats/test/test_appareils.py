@@ -83,3 +83,50 @@ def test_encoder_refuse_une_forme_fausse(kw):
     base.update(kw)
     with pytest.raises(ValueError):
         ap.encoder_etat(**base)
+
+
+# --- relecture adverse du 28/11 : decoder_etat ne lève jamais, bornes -------------------------
+def test_decoder_recursion_ne_leve_pas():
+    assert ap.decoder_etat("[" * 20000) is None
+    assert ap.decoder_etat(b"[" * 20000) is None
+
+
+def test_decoder_taille_bornee_a_64_ko():
+    assert ap.TAILLE_MAX_OCTETS == 65536
+    marge = 65536 - len(ENVELOPPE_DECISION_10)
+    juste = ENVELOPPE_DECISION_10[:-1] + " " * marge + "}"           # 65 536 octets : lu
+    assert len(juste) == 65536 and ap.decoder_etat(juste) is not None
+    assert ap.decoder_etat(juste[:-1] + " }") is None                 # 65 537 : refusé
+
+
+def test_decoder_nombre_d_organes_borne_a_16():
+    relais = [{"nom": f"r{i}", "type": "relais", "valeur": False, "sante": "ok"} for i in range(17)]
+    base = ap.decoder_etat(ENVELOPPE_DECISION_10)
+    assert ap.decoder_etat(dict(base, organes=relais[:16])) is not None
+    assert ap.decoder_etat(dict(base, organes=relais)) is None
+    with pytest.raises(ValueError):
+        ap.encoder_etat("sono", "sim", "dev", 1, relais)
+
+
+@pytest.mark.parametrize("v", [True, 1.0, "1"])
+def test_decoder_version_entier_strict(v):
+    assert ap.decoder_etat(dict(ap.decoder_etat(ENVELOPPE_DECISION_10), v=v)) is None
+
+
+def test_decoder_appareil_du_topic():
+    assert ap.decoder_etat(ENVELOPPE_DECISION_10, "sono") is not None
+    assert ap.decoder_etat(ENVELOPPE_DECISION_10, "lumieres") is None
+
+
+def test_noms_d_appareil_reserves():
+    assert ap.PREFIXES_RESERVES == ("cmd_vel", "route", "wheels", "chat", "rehearsal", "e_stop")
+    assert ap.espaces_reserves() >= {"corps_sur", "jeu", "vision", "scene", "corps", "superviseur",
+                                     "audio", "face", "wheels", "cmd_vel_web_sur", "deploy_sha"}
+    assert "sono" not in ap.espaces_reserves()
+    for nom in ("corps_sur", "jeu", "cmd_vel", "cmd_vel_web", "route", "route_speed", "wheels_bridge",
+                "chat_move", "rehearsal", "e_stop", "audio", "relay"):
+        assert ap.nom_reserve(nom), nom
+    # « lights » est DÉJÀ un topic (lumières de scène, topics.LIGHTS) : réservé.
+    assert ap.nom_reserve("lights")
+    for nom in ("sono", "lumieres", "essai", "fumee"):
+        assert not ap.nom_reserve(nom), nom

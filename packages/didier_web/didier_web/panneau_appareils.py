@@ -80,7 +80,7 @@ def ligne(appareil: str, info: Json | None, deploy_sha: Any = None) -> Json:
             "organes": [], "refus_texte": None}
     if info is None:
         return dict(base, presence=JAMAIS_VUE, presence_texte=TEXTES_PRESENCE[JAMAIS_VUE])
-    etat = appareils.decoder_etat(info.get("msg"))
+    etat = appareils.decoder_etat(info.get("msg"), appareil)
     if etat is None:
         return dict(base, presence=ILLISIBLE, presence_texte=TEXTES_PRESENCE[ILLISIBLE])
     age = info.get("age_s")

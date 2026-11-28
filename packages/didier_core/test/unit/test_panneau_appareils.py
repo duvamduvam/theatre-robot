@@ -51,7 +51,7 @@ def test_ligne_materiel_sante_refus_version():
 
 
 @pytest.mark.parametrize("age, presence, texte", [
-    (4.9, "vue", ""), (5.1, "muette", "muette"), (None, "muette", "muette")])
+    (4.9, "vue", ""), (5.0, "muette", "muette"), (5.1, "muette", "muette"), (None, "muette", "muette")])
 def test_fraicheur_a_cinq_secondes(age, presence, texte):
     (l,) = pap.lignes({"sono/etat": {"msg": ETAT_SIM, "age_s": age}})
     assert (l["presence"], l["presence_texte"]) == (presence, texte)
@@ -83,3 +83,19 @@ def test_sha_court():
     assert pap.sha_court("7caeecbc1234") == "7caeecb"
     assert pap.sha_court("7caeecbc1234-dirty") == "7caeecb-dirty"
     assert pap.sha_court("dev") == "dev"
+
+
+def test_etat_hostile_ou_d_un_autre_appareil_illisible_sans_exception():
+    """Relecture adverse du 28/11 : rien de ce qui arrive sur sono/etat ne fait lever le panneau."""
+    for msg in ("[" * 20000, dict(ETAT_SIM, appareil="lumieres"), dict(ETAT_SIM, v=True),
+                {"organes": [[[]]]}, 12, None):
+        (l,) = pap.lignes({"sono/etat": {"msg": msg, "age_s": 0.1}})
+        assert l["presence"] == "illisible"
+
+
+def test_la_boucle_d_etat_du_pont_survit_au_panneau():
+    """_state_loop porte aussi « perte d'écriture -> Twist nul » : l'appel au panneau y est gardé."""
+    import pathlib as pl
+    src = (pl.Path(pap.__file__).parent / "web_bridge_node.py").read_text(encoding="utf-8")
+    assert ("        try:\n            lignes_appareils = panneau_appareils.lignes(topics)\n"
+            "        except Exception as erreur:  # noqa: BLE001\n") in src

@@ -29,14 +29,15 @@ exige un 2e appareil qui en a besoin.
 Exemple : `sono`. Chaque geste dit ce qu'il produit et le test qui passe au vert.
 
 1. **G1 — générer** : `python3 packages/theatre_gabarit/tools/nouvel_appareil.py sono` (refus si
-   l'appareil existe). Écrit `packages/sono_core/`, `machines/sono/`, `machines/sim/sono/entree.sh`.
+   l'appareil existe ou si le nom est réservé : `theatre_contrats.appareils.nom_reserve`, par exemple
+   `lights`, déjà un topic). Écrit `packages/sono_core/`, `machines/sono/`, `machines/sim/sono/entree.sh`.
    Lancer `cd packages/sono_core && ../../.venv/bin/python -m pytest -q -o addopts=` : 5 tests
    rouges ; celui de `test_gabarit.py` liste les gestes restants.
 2. **G2 — contrat** : dans `packages/theatre_contrats/`, ajouter l'appareil à
    `appareils.REGISTRE` (topic d'état, topics d'ordres par type d'organe), ses topics à
    `topics.py`, à `test/test_inventaire.py` et au compte de `test/test_topics_relatifs.py` ;
    graver le registre dans `test/test_appareils.py`. Dans `sono_core/contrat.py` : `TOPICS` et
-   les noms, depuis `theatre_contrats.topics`. Le pont web et la page scène suivent seuls
+   les noms, depuis `theatre_contrats.topics` — tous sous le préfixe `sono/`, sauf `diagnostics`. Le pont web et la page scène suivent seuls
    (whitelists, `stop_all`, tuile) : relancer `packages/didier_core` (`test_web_protocol.py`
    grave les listes du pont — les y étendre).
 3. **G3 — réglages** : `reglages.py` (YAML + bornes dures, `ReglagesError`), `config/sono.yaml`

@@ -9,7 +9,9 @@ README du gabarit (packages/theatre_gabarit/README.md), G1 à G11.
 Les 9 causes, dans cet ordre :
 1. un titre du README-contrat manque (8 titres, dans l'ordre de TITRES_README) ;
 2. le mot APPAREIL du squelette subsiste (un trou à remplir) ;
-3. un topic de `contrat.TOPICS` est absolu, ou absent de theatre_contrats.topics ;
+3. un topic de `contrat.TOPICS` est absolu, absent de theatre_contrats.topics, ou hors du
+   préfixe `<nom>/` (seul `diagnostics` y échappe) ; le nom de l'appareil est réservé
+   (theatre_contrats.appareils.nom_reserve : espace de topics existant, préfixe de mouvement) ;
 4. l'appareil n'est pas au registre (theatre_contrats.appareils.REGISTRE) ;
 5. machines/<m>/machine.yml manque, ou n'a pas packages, launch_cmd, noeuds_attendus,
    sentinelle_build ;
@@ -37,6 +39,7 @@ TROU = re.compile(r"\bAPPAREIL\b")
 CLES_MACHINE = ("packages", "launch_cmd", "noeuds_attendus", "sentinelle_build")
 SI_PERMIS_NOEUD = ["__name__ == '__main__'"]
 SUFFIXE = "_core"
+HORS_PREFIXE = ("diagnostics",)
 
 
 class Enregistreur:
@@ -85,7 +88,7 @@ def _trous(dossiers: list[pathlib.Path], racine: pathlib.Path) -> list[str]:
     return restes
 
 
-def _contrat(fichier: pathlib.Path) -> list[str]:
+def _contrat(fichier: pathlib.Path, nom: str) -> list[str]:
     spec = importlib.util.spec_from_file_location("_contrat_verifie", fichier)
     try:
         module = importlib.util.module_from_spec(spec)
@@ -94,8 +97,15 @@ def _contrat(fichier: pathlib.Path) -> list[str]:
     except Exception as erreur:  # noqa: BLE001 — tout défaut du contrat devient un geste
         return [f"G2 contrat : {fichier.name} illisible ou sans TOPICS ({erreur!r})"]
     connus = {v for k, v in vars(topics).items() if k.isupper() and isinstance(v, str)}
-    return [f"G2 contrat : topic {n!r} absolu ou absent de theatre_contrats.topics"
-            for n in noms if not isinstance(n, str) or n.startswith("/") or n not in connus]
+    gestes = []
+    for n in noms:
+        if n in HORS_PREFIXE:
+            continue
+        if not isinstance(n, str) or n.startswith("/") or n not in connus:
+            gestes.append(f"G2 contrat : topic {n!r} absolu ou absent de theatre_contrats.topics")
+        elif not n.startswith(nom + "/"):
+            gestes.append(f"G2 contrat : topic {n!r} hors du préfixe « {nom}/ »")
+    return gestes
 
 
 def _machine(fichier: pathlib.Path) -> list[str]:
@@ -156,7 +166,9 @@ def verifier_appareil(dossier: Any) -> list[str]:
     module = paquet_dir / paquet
     gestes = _titres_manquants(_lire(paquet_dir / "README.md"))
     gestes += _trous([paquet_dir, racine / "machines" / nom, racine / "machines" / "sim" / nom], racine)
-    gestes += _contrat(module / "contrat.py")
+    if appareils.nom_reserve(nom):
+        gestes.append(f"G1 nom : « {nom} » est réservé (espace de topics existant ou préfixe de mouvement)")
+    gestes += _contrat(module / "contrat.py", nom)
     if nom not in appareils.REGISTRE:
         gestes.append(f"G2 contrat : « {nom} » absent de theatre_contrats.appareils.REGISTRE")
     gestes += _machine(racine / "machines" / nom / "machine.yml")

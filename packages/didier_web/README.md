@@ -160,7 +160,10 @@ propre à la sono, ni dans le pont ni dans la page.
 - **Registre** : `theatre_contrats.appareils.REGISTRE` est la seule source. Le pont en tire ses
   listes : l'état de chaque appareil (`sono/etat`) entre dans `TOPICS_LECTURE`, les ordres de type
   `audio` dans `WHITELIST_SPECTACLE`, ceux de type `relais` dans `WHITELIST_TECHNIQUE`, et
-  **`stop_all` publie `"stop"` sur chaque topic d'ordre du registre** (le STOP arrête tout son).
+  **le STOP publie `"stop"` sur chaque topic d'ordre du registre** (le STOP arrête tout son) :
+  `stop_appareils_commands`, APRÈS la liste d'avant L3a (contenus, séance), chaque envoi isolé et
+  journalisé, puis le Twist nul et l'ack — un appareil qui lève n'arrête jamais le STOP
+  (relecture adverse du 28/11). La boucle d'état garde l'appel au panneau (`try` + journal).
 - **Jugement** : `panneau_appareils.lignes(instantané)` (pur) — présence (« vue » < 5 s, « muette »,
   « jamais vue », « état illisible »), pilote « simulé »/« matériel », sha court et « version
   différente du robot » face à `deploy_sha` (aucun des deux `dev`), organes (silence ou chemin +

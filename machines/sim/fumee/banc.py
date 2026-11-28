@@ -23,11 +23,13 @@ def services_du_compose(chemin=COMPOSE):
     espaces sous `services:`, jusqu'à la prochaine clé de premier niveau. Le compose est écrit
     à la main et gravé par test_arborescence.py ; ce lecteur n'a pas à comprendre plus."""
     services, dedans = [], False
-    for ligne in Path(chemin).read_text(encoding="utf-8").splitlines():
-        if ligne and not ligne[0].isspace() and not ligne.startswith("#"):
-            dedans = ligne.rstrip() == "services:"
-        elif dedans and ligne.startswith("  ") and not ligne[2].isspace() and ligne.rstrip().endswith(":") \
-                and not ligne.lstrip().startswith("#"):
+    for brute in Path(chemin).read_text(encoding="utf-8").splitlines():
+        ligne = brute.split(" #")[0].rstrip()          # commentaire de fin de ligne retiré
+        if not ligne.strip() or ligne.lstrip().startswith("#"):
+            continue
+        if not ligne[0].isspace():
+            dedans = ligne == "services:"
+        elif dedans and ligne.startswith("  ") and not ligne[2].isspace() and ligne.endswith(":"):
             services.append(ligne.strip()[:-1])
     return tuple(services)
 

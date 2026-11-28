@@ -18,7 +18,9 @@ Ce module porte ce que l'appareil, le pont web et la page scène doivent écrire
 - les types d'organes connus : `audio`, `relais` (un 3e type = un appareil qui en a besoin).
 
 `encoder_etat` lève ValueError sur une forme fausse (bug de l'écrivain) ; `decoder_etat` ne lève
-jamais : illisible -> None (le lecteur montre « illisible », il ne plante pas).
+JAMAIS, quoi qu'on lui donne (relecture adverse du 28/11 : 20 000 « [ » levaient RecursionError
+dans la boucle d'état du pont) : illisible, trop gros (> TAILLE_MAX_OCTETS), trop d'organes
+(> ORGANES_MAX) ou d'un autre appareil que celui attendu -> None.
 Python PUR, stdlib seulement.
 """
 import json
@@ -33,12 +35,30 @@ TYPES_ORGANES = (AUDIO, RELAIS)
 PILOTES = ("sim", "materiel")
 SANTES = ("ok", "absent", "erreur")
 SHA_DEV = "dev"
+TAILLE_MAX_OCTETS = 64 * 1024
+ORGANES_MAX = 16
 
 # LA liste des appareils du parc : {appareil: {"etat": topic, "ordres": {type d'organe: topic}}}.
 REGISTRE = {
     "sono": {"etat": topics.SONO_ETAT,
              "ordres": {AUDIO: topics.SONO_AUDIO, RELAIS: topics.SONO_RELAIS}},
 }
+
+
+# Noms d'appareil INTERDITS (relecture adverse du 28/11) : un appareil nommé comme un espace de
+# topics existant (corps_sur, jeu, vision…) ou comme un préfixe de mouvement ou de séance
+# publierait sous des noms que d'autres nœuds écoutent — roues comprises.
+PREFIXES_RESERVES = ("cmd_vel", "route", "wheels", "chat", "rehearsal", "e_stop")
+
+
+def espaces_reserves() -> frozenset:
+    """Le 1er segment de chaque topic de theatre_contrats.topics, hors appareils du registre."""
+    espaces = {v.split("/")[0] for k, v in vars(topics).items() if k.isupper() and isinstance(v, str)}
+    return frozenset(espaces - set(REGISTRE))
+
+
+def nom_reserve(nom: str) -> bool:
+    return nom in espaces_reserves() or nom.startswith(PREFIXES_RESERVES)
 
 
 def topics_etat() -> tuple:
@@ -100,10 +120,11 @@ def _refus_valide(r) -> bool:
 def _etat_valide(d) -> bool:
     return (isinstance(d, dict)
             and set(d) == {"v", "appareil", "pilote", "sha", "t_ms", "organes", "refus"}
-            and d["v"] == VERSION and not isinstance(d["v"], bool)
+            and type(d["v"]) is int and d["v"] == VERSION
             and isinstance(d["appareil"], str) and bool(d["appareil"])
             and d["pilote"] in PILOTES and isinstance(d["sha"], str) and _entier(d["t_ms"])
-            and isinstance(d["organes"], list) and all(_organe_valide(o) for o in d["organes"])
+            and isinstance(d["organes"], list) and len(d["organes"]) <= ORGANES_MAX
+            and all(_organe_valide(o) for o in d["organes"])
             and _refus_valide(d["refus"]))
 
 
@@ -117,10 +138,16 @@ def encoder_etat(appareil: str, pilote: str, sha: str, t_ms: int, organes: list,
     return json.dumps(d, ensure_ascii=False)
 
 
-def decoder_etat(brut) -> Optional[dict]:
-    """Enveloppe lue (chaîne JSON ou dict déjà décodé) ; illisible -> None, jamais d'exception."""
+def decoder_etat(brut, appareil: Optional[str] = None) -> Optional[dict]:
+    """Enveloppe lue (chaîne JSON ou dict déjà décodé) ; illisible -> None, JAMAIS d'exception.
+    `appareil` donné : une enveloppe d'un autre appareil est refusée (None)."""
     try:
-        d = json.loads(brut) if isinstance(brut, (str, bytes)) else brut
-    except (ValueError, TypeError):
+        if isinstance(brut, (str, bytes)):
+            if len(brut) > TAILLE_MAX_OCTETS:
+                return None
+            brut = json.loads(brut)
+        if not _etat_valide(brut) or (appareil is not None and brut["appareil"] != appareil):
+            return None
+        return brut
+    except Exception:  # noqa: BLE001 — RecursionError, MemoryError… : jamais propagé au lecteur
         return None
-    return d if _etat_valide(d) else None
