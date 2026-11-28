@@ -60,6 +60,20 @@
     <span id="rtt">RTT -- ms</span>
     <span id="badge-ecriture" class="badge badge-off">lecture seule</span>
     <button id="btn-prendre-main" type="button">Prendre la main</button>
+    <!-- Séance (lot S3, 28/11) : DANS LE BANDEAU, visible sans défiler sur PC comme sur
+         téléphone — en bas du rail « Préparer », il fallait le chercher alors que c'est le
+         premier geste d'une séance (séance du 26/11). Groupe de répétition : sous
+         scene-repetition + hidden comme les autres (sim seulement, hello.rehearsal). -->
+    <span id="scene-seance" class="scene-seance scene-repetition" hidden>
+      <b class="scene-seance-titre">Séance</b>
+      <span id="groupe-seance" class="scene-boutons scene-segment">
+        <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="start">Démarrer</button>
+        <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="stop">Finir</button>
+      </span>
+      <!-- Retour visuel du régisseur (rehearsal/state, latché) : sans lui, 5 clics sur START
+           faute de savoir s'il était pris en compte (vécu le 31/10). -->
+      <span id="scene-etat-seance" class="badge badge-off" title="état de la séance (rehearsal/state)"></span>
+    </span>
     <!-- Onglet « Audio » (22/11) : son verdict dans le bandeau, toujours sous les yeux ;
          un clic ouvre l'onglet (colonne de droite). Masqué hors banc PC. -->
     <button id="audio-bandeau" class="audio-bandeau" type="button" hidden
@@ -146,7 +160,10 @@
            latché, lu dans `state`) et « Réarmer » (type WebSocket corps_sur_rearmer -> Empty sur
            corps_sur/rearmer, avoir la main). Sur le robot ET en sim : un VERROU en pleine rue
            doit se lever d'ici (spec A0 §15). Le nœud refuse tant que la cause est là ; la page
-           le dit en relisant l'état. Aucun lien avec la télécommande, jamais filtrée. -->
+           le dit en relisant l'état. Aucun lien avec la télécommande, jamais filtrée.
+           Bouton inactif (lot S3) : corps-sur-raison dit POURQUOI (« prends la main d'abord »,
+           « rien à réarmer… ») et le title du bouton le reprend — un bouton grisé muet laissait
+           croire à une panne (séance du 24/11). -->
       <div id="scene-corps-sur" class="scene-groupe">
         <div class="scene-groupe-tete">
           <h2>Corps sûr</h2>
@@ -154,6 +171,7 @@
           <button id="corps-sur-rearmer" type="button" disabled
                   title="lève un VERROU si sa cause a disparu (lidar sain, pas d'arrêt d'urgence)">Réarmer</button>
         </div>
+        <p id="corps-sur-raison" class="scene-note scene-raison">prends la main d'abord pour réarmer</p>
         <p id="corps-sur-detail" class="scene-note">nœud corps_sur muet : rien ne roule en autonome</p>
       </div>
 
@@ -192,18 +210,6 @@
         <p id="bugs-refuses" class="scene-note" hidden></p>
       </div>
 
-      <div class="scene-groupe scene-repetition" hidden>
-        <div class="scene-groupe-tete">
-          <h2>Séance</h2>
-          <!-- Retour visuel du régisseur (rehearsal/state, latché) : sans lui, 5 clics sur START
-               faute de savoir s'il était pris en compte (vécu le 31/10). -->
-          <span id="scene-etat-seance" class="badge badge-off" title="état de la séance (rehearsal/state)"></span>
-        </div>
-        <span id="groupe-seance" class="scene-boutons scene-segment">
-          <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="start">Démarrer</button>
-          <button class="bouton-catalogue" type="button" data-topic="rehearsal/cmd" data-value="stop">Finir</button>
-        </span>
-      </div>
       </div>
     </details>
 
