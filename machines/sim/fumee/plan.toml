@@ -15,6 +15,15 @@
 # chantiers | jeu-a1), jeu (régisseur en mode jeu), tete (surcouche docker-compose.tete.yml),
 # neuve (jamais une sim qui a déjà servi à une épreuve : OBJ ne doit pas hériter d'A1).
 # Deux épreuves consécutives de même `sim` partagent la sim ; sinon elle est relancée.
+#
+# [profil] : seuils du profil d'énergie « auto » (28/11, banc.ProfilEnergie), paquet CPU lu comme
+# les gardiens. `performance` (ventilateurs plus forts) à partir de chaud_c, retour à `balanced`
+# sous frais_c : l'écart évite de basculer à chaque pause. Lus dans le plan du PROGRAMME (le banc),
+# pas dans celui de la révision testée.
+
+[profil]
+chaud_c = 78.0
+frais_c = 70.0
 
 [[epreuve]]
 id = "image"
