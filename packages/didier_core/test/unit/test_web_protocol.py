@@ -233,32 +233,40 @@ def test_parse_type_inconnu_leve():
 
 
 # --- stop_all_commands : liste et ordre exacts ------------------------------
+# Décision de David du 28/11 : arrêt général, roues d'abord. Le Twist nul (hors liste) part
+# avant tout, cf. les tests du pont `test_pont_stop_*`.
+
+ORGANES_AVANT_L3A = [
+    ("animation", False),
+    ("audio", "stop"),
+    ("face", "stop"),
+    ("neck", "stop"),
+    ("left_eye", "stop"),
+    ("right_eye", "stop"),
+    ("left_arm", "stop"),
+    ("right_arm", "stop"),
+]
+
 
 def test_stop_all_commands_liste_et_ordre_exacts():
-    assert stop_all_commands() == [
-        ("animation", False),
-        ("audio", "stop"),
-        ("face", "stop"),
-        ("neck", "stop"),
-        ("left_eye", "stop"),
-        ("right_eye", "stop"),
-        ("left_arm", "stop"),
-        ("right_arm", "stop"),
-    ]
+    assert stop_all_commands() == ORGANES_AVANT_L3A + [("sono/audio", "stop"), ("sono/relais", "stop")]
+    assert stop_all_commands(False) == stop_all_commands()
 
 
-def test_stop_all_commands_repetition_coupe_la_route_et_la_seance():
-    """SIM-ONLY : avec la répétition activée, STOP ajoute EXACTEMENT, à la fin,
-    `route off` puis `rehearsal/cmd stop` (ordre : la route d'abord, la séance
-    ensuite). Sans répétition, rien de plus (liste gravée ci-dessus)."""
-    base = stop_all_commands()
-    assert stop_all_commands(False) == base
-    # Lot A1 (revue du 02/11) : le sélecteur de jeu reçoit un stop de David, en premier.
-    assert stop_all_commands(True) == base + [("jeu/console", {"cmd": "stop"}), ("route", "off"),
-                                              ("rehearsal/cmd", "stop")]
-    assert {t for t, _ in stop_all_commands(True)} - {t for t, _ in base} == {"jeu/console", "route",
-                                                                               "rehearsal/cmd"}
+def test_stop_all_commands_repetition_route_et_console_d_abord_seance_en_dernier():
+    """SIM-ONLY : répétition activée, `route off` puis `jeu/console stop` AVANT `animation=false`
+    (ce qui empêche les roues de repartir), `rehearsal/cmd stop` APRÈS les appareils."""
+    assert stop_all_commands(True) == (
+        [("route", "off"), ("jeu/console", {"cmd": "stop"})]
+        + ORGANES_AVANT_L3A
+        + [("sono/audio", "stop"), ("sono/relais", "stop"), ("rehearsal/cmd", "stop")])
     assert {"jeu/console", "route", "rehearsal/cmd"} <= WHITELIST_REPETITION
+
+
+def test_stop_all_commands_ne_publie_que_des_topics_de_la_whitelist_effective():
+    # Un topic hors whitelist n'a pas de publisher : le pont lèverait KeyError.
+    for repetition in (False, True):
+        assert {t for t, _ in stop_all_commands(repetition)} <= effective_whitelist(repetition)
 
 
 def test_topics_masques_graves_et_filtres_du_state():
@@ -1942,33 +1950,60 @@ def _stop(pont, monkeypatch, **params):
     return noeud, ws
 
 
-def _publies(noeud):
-    return [(t, m.msg) for t, p in noeud.publishers.items() if t != "cmd_vel_web" for m in p.messages]
+# Liste EXACTE, dans l'ordre, de tout ce que publie le vrai _handle_stop_all (Twist nul compris) :
+# décision de David du 28/11, « on stop tout mais on commence bien par les roues ».
+STOP_REPETITION = [
+    ("cmd_vel_web", (0.0, 0.0)),
+    ("route", '"off"'), ("jeu/console", '{"cmd": "stop"}'),
+    ("animation", "false"), ("audio", '"stop"'), ("face", '"stop"'), ("neck", '"stop"'),
+    ("left_eye", '"stop"'), ("right_eye", '"stop"'), ("left_arm", '"stop"'), ("right_arm", '"stop"'),
+    ("sono/audio", '"stop"'), ("sono/relais", '"stop"'),
+    ("rehearsal/cmd", '"stop"'),
+]
+STOP_SANS_REPETITION = [e for e in STOP_REPETITION if e[0] not in ("route", "jeu/console", "rehearsal/cmd")]
 
 
-def test_pont_stop_ordre_contenus_seance_appareils_puis_twist_et_ack(pont, monkeypatch):
-    noeud, ws = _stop(pont, monkeypatch, rehearsal_enabled=True)
+def _espionner(noeud, monkeypatch, casse=None):
+    """Remplace le publish de CHAQUE publisher du nœud : l'ordre global de tout ce qui part
+    (rien d'autre ne peut sortir sans passer par là). `casse` : topic dont le publish lève."""
     ordre = []
     for topic, pub in noeud.publishers.items():
-        monkeypatch.setattr(pub, "publish", lambda m, t=topic: ordre.append(t))
-    asyncio.run(pont.handle_client_message(noeud, {"clients": {}}, "c1", ws, '{"type":"stop_all"}'))
-    assert ordre == ["animation", "audio", "face", "neck", "left_eye", "right_eye", "left_arm", "right_arm",
-                     "jeu/console", "route", "rehearsal/cmd", "sono/audio", "sono/relais", "cmd_vel_web"]
-    assert ws.envoyes == [{"type": "ack", "topic": "stop_all"}]
+        def publier(m, t=topic):
+            if t == casse:
+                raise RuntimeError("publish cassé")
+            ordre.append((t, (m.linear.x, m.angular.z) if t == "cmd_vel_web" else m.msg))
+        monkeypatch.setattr(pub, "publish", publier)
+    return ordre
 
 
-def test_pont_stop_un_appareil_qui_leve_n_empeche_ni_le_reste_ni_le_twist_ni_l_ack(pont, monkeypatch):
+def test_pont_stop_twist_nul_d_abord_puis_liste_exacte_et_ack(pont, monkeypatch):
     noeud, ws = _stop(pont, monkeypatch, rehearsal_enabled=True)
-
-    def casse(_msg):
-        raise RuntimeError("publish cassé")
-    monkeypatch.setattr(noeud.publishers["sono/audio"], "publish", casse)
+    ordre = _espionner(noeud, monkeypatch)
     asyncio.run(pont.handle_client_message(noeud, {"clients": {}}, "c1", ws, '{"type":"stop_all"}'))
-    assert ("route", '"off"') in _publies(noeud) and ("sono/relais", '"stop"') in _publies(noeud)
-    assert len(noeud.publishers["cmd_vel_web"].messages) == 1          # le Twist nul est parti
+    assert ordre == STOP_REPETITION
     assert ws.envoyes == [{"type": "ack", "topic": "stop_all"}]
-    erreurs = [t for n, t in noeud.journal.lignes if n == "error"]
-    assert erreurs == ["STOP : arrêt de l'appareil sono/audio impossible : RuntimeError('publish cassé')"]
+    assert [t for n, t in noeud.journal.lignes if n == "error"] == []
+
+
+def test_pont_stop_sans_repetition_ni_route_ni_console_et_aucune_erreur(pont, monkeypatch):
+    noeud, ws = _stop(pont, monkeypatch)
+    ordre = _espionner(noeud, monkeypatch)
+    asyncio.run(pont.handle_client_message(noeud, {"clients": {}}, "c1", ws, '{"type":"stop_all"}'))
+    assert ordre == STOP_SANS_REPETITION
+    assert ws.envoyes == [{"type": "ack", "topic": "stop_all"}]
+    assert [t for n, t in noeud.journal.lignes if n == "error"] == []
+
+
+@pytest.mark.parametrize("casse", [t for t, _ in STOP_REPETITION])
+def test_pont_stop_un_envoi_qui_leve_n_empeche_ni_les_suivants_ni_l_ack(pont, monkeypatch, casse):
+    noeud, ws = _stop(pont, monkeypatch, rehearsal_enabled=True)
+    ordre = _espionner(noeud, monkeypatch, casse=casse)
+    asyncio.run(pont.handle_client_message(noeud, {"clients": {}}, "c1", ws, '{"type":"stop_all"}'))
+    assert ordre == [e for e in STOP_REPETITION if e[0] != casse]
+    assert ws.envoyes == [{"type": "ack", "topic": "stop_all"}]
+    attendu = ("STOP : Twist nul impossible : RuntimeError('publish cassé')" if casse == "cmd_vel_web"
+               else "STOP : arrêt de {} impossible : RuntimeError('publish cassé')".format(casse))
+    assert [t for n, t in noeud.journal.lignes if n == "error"] == [attendu]
 
 
 def test_pont_stop_organe_inconnu_au_registre(pont, monkeypatch):

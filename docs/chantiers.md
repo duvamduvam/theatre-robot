@@ -750,6 +750,13 @@ passerait pas par `OE`/`/CLR` contournerait le watchdog.
 Plan : [`etude-interface-web.md`](etude-interface-web.md) (décidé 2026-07-11 —
 ne pas re-trancher, inconnues §9).
 
+**STOP de la console (28/11, branche `stop-roues`)** : arrêt général, roues d'abord (décision de
+David du 28/11, « on stop tout mais on commence bien par les roues ») — Twist nul, puis Route OFF et
+stop du sélecteur (répétition), `animation=false`, les autres organes, les appareils, la séance ;
+chaque envoi isolé (détail : `docs/interfaces.md`, `stop_all`). **Deux trous connus, pas corrigés** :
+sur le vrai robot le Twist web est inerte (`drive_enabled` faux), le STOP de la page n'y arrête donc
+pas les roues ; le suivi de personne (`cmd_vel_follow`) n'est arrêté par aucun STOP de la page.
+
 FAIT : **W0** vérifiée en sim le 11/07 (package `didier_web` autonome — node
 rclpy+aiohttp, whitelist sans roues/e_stop, session exclusive + heartbeat, UI
 vanilla — 511 tests, protocole WS validé de bout en bout, `WEB=true` port

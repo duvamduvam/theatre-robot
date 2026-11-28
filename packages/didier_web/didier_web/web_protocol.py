@@ -428,23 +428,34 @@ def parse_client_message(raw: str, whitelist=WHITELIST) -> dict:
     return parser(msg)
 
 
-# --- Bouton STOP CONTENUS ---------------------------------------------------
+# --- Bouton STOP (arrêt général, roues d'abord) -----------------------------
 
-def stop_all_commands(rehearsal_enabled: bool = False) -> list:
-    """Liste EXACTE (topic, valeur_python) publiée par le bouton STOP CONTENUS,
-    dans cet ordre. Pas de roues en W0 ; le verrou e_stop viendra en W1.
-    Répétition activée (SIM-ONLY) : STOP coupe AUSSI le cheminement (`route off`
-    -- la route est un mode latché, comme `follow` : sans ça, un STOP en pleine
-    séance laisserait Didier continuer sa rue) et termine la séance
-    (`rehearsal/cmd stop` : le régisseur révoque toutes ses pannes, SIGCONT
-    compris). Le deadman reste derrière dans tous les cas.
-    Lot A1 (revue du 02/11) : en répétition, STOP envoie D'ABORD {"cmd": "stop"}
-    au sélecteur de jeu (jeu/console) — c'est un stop de David : verrou
-    jusqu'au « go » de la console, jamais de reprise automatique.
-    Les appareils (lot L3a) n'y sont PAS : voir stop_appareils_commands, envoyés APRÈS cette
-    liste, chacun isolé (relecture adverse du 28/11 : un envoi d'appareil qui lève ne doit
-    jamais empêcher route off, l'arrêt de séance, le Twist nul ni l'ack)."""
-    commands = [
+def stop_all_commands(rehearsal_enabled: bool = False, whitelist=None) -> list:
+    """Liste EXACTE (topic, valeur_python) publiée par le bouton STOP, dans cet ordre, APRÈS le
+    Twist nul que le pont envoie en tout premier (publish_drive_zero, hors de cette liste : ce
+    n'est pas un StringTime). Décision de David du 28/11 : « on stop tout mais on commence bien
+    par les roues ». Chaque envoi est isolé par le pont (un envoi qui lève n'empêche ni les
+    suivants ni l'ack). Ordre, par familles :
+      1. ce qui empêche les roues de REPARTIR. Répétition activée (SIM-ONLY, topics absents de
+         la whitelist sinon) : `route off` (route_driver met un zéro franc, abandonne la
+         manœuvre et refuse tout `route_goto` jusqu'au `on` de David ; la cause latchée `cmd`
+         interdit au régisseur toute relance vocale ou après kill), puis `jeu/console stop`
+         (verrou console de David, règle S1 R3, levé seulement par GO console : le sélecteur ne
+         relance pas). Puis, toujours, `animation=false` : seule commande publiable qui coupe
+         les pistes roues des séquences (cmd_vel_anim) ; le Twist nul web (priorité 50) ne
+         les masque que 0,5 s (délai du twist_mux) ;
+      2. le reste de l'arrêt général d'avant L3a (audio, visage, cou, yeux, bras) ;
+      3. les appareils du registre (stop_appareils_commands, lot L3a) ;
+      4. répétition activée : `rehearsal/cmd stop` en dernier (le régisseur révoque ses pannes,
+         SIGCONT compris) — pas nécessaire à l'immobilité, `route off` la tient déjà.
+    `whitelist` : celle du nœud (filtre des appareils) ; par défaut effective_whitelist().
+    Le deadman reste derrière dans tous les cas."""
+    if whitelist is None:
+        whitelist = effective_whitelist(rehearsal_enabled)
+    commands = []
+    if rehearsal_enabled:
+        commands += [("route", "off"), ("jeu/console", {"cmd": "stop"})]
+    commands += [
         ("animation", False),
         ("audio", "stop"),
         ("face", "stop"),
@@ -454,8 +465,9 @@ def stop_all_commands(rehearsal_enabled: bool = False) -> list:
         ("left_arm", "stop"),
         ("right_arm", "stop"),
     ]
+    commands += stop_appareils_commands(whitelist)
     if rehearsal_enabled:
-        commands += [("jeu/console", {"cmd": "stop"}), ("route", "off"), ("rehearsal/cmd", "stop")]
+        commands.append(("rehearsal/cmd", "stop"))
     return commands
 
 
