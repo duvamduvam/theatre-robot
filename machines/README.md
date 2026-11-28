@@ -9,7 +9,7 @@ est dans `packages/`, le contenu du robot dans `data/`, Ansible dans `deploy/`.
 | `vision/` | Pi 5 de la tête (hôte `ai`) | conf complète (ex `legacy/dadou_vision_ros/{conf,mediamtx}`) |
 | `sim/` | le PC de David (pas un hôte Ansible) | sim multi-conteneurs depuis L2b (`docker-compose.yml` : `monde`, `robot`, `vision`, `telecommande`, mêmes Dockerfiles que les Pi), surcouche banc vision, épreuves, fumée et sa minuterie |
 | `telecommande/`, `gant-gauche/`, `gant-droit/` | console de pilotage, gants | `machine.yml` seul : le code et la conf sont encore dans `legacy/dadou_control_ros/` (lot L4) |
-| `lights/` | — | vide (pas encore d'hôte) |
+| `lights/` | — | pas encore d'hôte : à créer avec `nouvel_appareil.py` (gabarit d'appareil, L3a) |
 
 ## La convention `machine.yml`
 
@@ -33,21 +33,13 @@ font rougir `packages/didier_core/test/unit/test_arborescence.py`.
 
 ## Ajouter une machine (ou en remettre une retirée)
 
-Le 11/11, les hôtes `d` (disque), `s` (sono) et `test` ont été retirés de `deploy/hosts`, avec
-`machines/disque/` et `machines/sono/` : leurs projets n'étaient pas dans le dépôt, le déploiement
-ne pouvait pas marcher (l'ancien contenu reste dans l'historique git, commit de retrait du 11/11).
-Pour en (re)mettre une — la sono reviendra ainsi au lot L3 :
-
-1. `machines/<machine>/machine.yml` : partir de `machines/robot/machine.yml` ou
-   `machines/vision/machine.yml` et ne garder que ce qui tourne sur l'hôte (tableau ci-dessus) ;
-   un `README.md` d'une ligne (rôle de la machine).
-2. `deploy/hosts` : un groupe, l'hôte avec `ansible_host: <IP>` et `machine: <machine>` — RIEN
-   d'autre (utilisateur et clé au niveau d'un groupe parent, comme `didier_pi`).
-3. `packages/didier_core/test/unit/test_arborescence.py` : ajouter l'hôte à `HOTES_MACHINES`.
-4. Vérifier : `ansible-playbook -i hosts deploy-pios.yml --syntax-check`, les tests, puis
-   `ansible-playbook -i hosts deploy-pios.yml -e target_group=<groupe>` et graver l'inventaire
-   attendu (`attendu/<groupe>.txt`, voir `docs/ansible-ecarts.md`) pour que `./ecart-pi.sh <groupe>`
-   ait une référence.
+**Un appareil du spectacle** (sono, lumières…) se crée avec le gabarit : `python3
+packages/theatre_gabarit/tools/nouvel_appareil.py <nom>`, puis les gestes numérotés de
+[`packages/theatre_gabarit/README.md`](../packages/theatre_gabarit/README.md) — les tests rouges
+du nouvel appareil (`test_gabarit.py`) disent ce qui manque, `deploy/hosts` et
+`HOTES_MACHINES` de `test_arborescence.py` compris (geste G8). C'est la seule procédure écrite
+(lot L3a, 28/11). Le 11/11, les hôtes `d` (disque), `s` (sono) et `test` avaient été retirés de
+`deploy/hosts` avec leurs dossiers ; la sono revient par le gabarit au lot L3b.
 
 ## Ce qui part sur un Pi
 

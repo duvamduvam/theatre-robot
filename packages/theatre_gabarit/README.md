@@ -57,8 +57,10 @@ Exemple : `sono`. Chaque geste dit ce qu'il produit et le test qui passe au vert
 8. **G8 — machine, CI** : `machines/sono/` (Dockerfile, compose ARM, script, `machine.yml` :
    `packages`, `launch_cmd`, `noeuds_attendus`, `sentinelle_build`, et les variables du tableau
    de `machines/README.md` — `sha_deploye`, `audios_prives`…) ; `deploy/hosts` (groupe, hôte
-   `machine: sono`) et `HOTES_MACHINES` de `test_arborescence.py` ; une ligne `suite:` dans
-   `.github/workflows/tests.yml`.
+   `machine: sono` — rien d'autre : utilisateur et clé au groupe parent `didier_pi`) et
+   `HOTES_MACHINES` de `test_arborescence.py` ; une ligne `suite:` dans
+   `.github/workflows/tests.yml`. Vérifier : `cd deploy && ansible-playbook -i hosts
+   deploy-pios.yml --syntax-check`.
 9. **G9 — sim** : service `sono` dans `machines/sim/docker-compose.yml` (le Dockerfile du Pi,
    domaine 43 littéral, `pilote:=sim` posé par `machines/sim/sono/entree.sh`) ; la fumée le prend
    seule (conteneurs déduits du compose) ; l'appareil apparaît dans la tuile « Appareils ».
