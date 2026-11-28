@@ -11,6 +11,10 @@ INTERNES = ("image", "demarrage", "rtf", "parle")   # codées dans le programme 
 SOCLE = ("image", "demarrage", "rtf")               # ajoutées seules à toute sélection
 CLES_SIM = {"monde", "regie", "jeu", "tete", "neuve"}
 PROFIL_DEFAUT = {"chaud_c": 78.0, "frais_c": 70.0}  # [profil] absent (plan d'une révision ancienne)
+# F2 (28/11) : famille « logique » = épreuve qui ne dépend ni de l'horloge simulée ni de la conduite
+# (graphe, contrats, pont web, animations en temps mural). `--famille logique` la joue SANS la porte
+# rtf : c'est ce qui rend un verdict sur un runner GitHub (RTF 0,68-0,76, sous le seuil de 0,8).
+FAMILLES = ("logique",)
 
 
 class PlanInvalide(ValueError):
@@ -28,6 +32,7 @@ class Epreuve:
     sim: dict | None = None
     corps_sur_arme: bool = False
     facultative: bool = False
+    famille: str | None = None
     chemins: tuple = ()
     bloque: tuple = ()
     # Clé de partage de la sim : deux épreuves de même clé partagent la même sim (`neuve` à part).
@@ -43,7 +48,7 @@ def _verifier(n: int, e: dict) -> Epreuve:
     def refus(msg):
         raise PlanInvalide("plan, épreuve n°{} ({}) : {}".format(n, e.get("id", "sans id"), msg))
     connus = {"id", "type", "script", "attendu", "motif", "delai_s", "sim", "corps_sur_arme",
-              "facultative", "chemins", "bloque"}
+              "facultative", "famille", "chemins", "bloque"}
     if set(e) - connus:
         refus("champ(s) inconnu(s) : " + ", ".join(sorted(set(e) - connus)))
     if not isinstance(e.get("id"), str) or not e["id"]:
@@ -62,6 +67,14 @@ def _verifier(n: int, e: dict) -> Epreuve:
             refus("« {} » doit être un entier positif".format(cle))
     if "sim" in e and (not isinstance(e["sim"], dict) or set(e["sim"]) - CLES_SIM):
         refus("« sim » : clés permises {}".format(", ".join(sorted(CLES_SIM))))
+    if "famille" in e:
+        if e["famille"] not in FAMILLES:
+            refus("famille « {} » (familles : {})".format(e["famille"], ", ".join(FAMILLES)))
+        if e["id"] in SOCLE:
+            refus("le socle n'a pas de famille")
+        # Corps sûr armé ou régisseur = la chaîne roues, en horloge simulée : jamais sans la porte rtf.
+        if e.get("corps_sur_arme") or (e.get("sim") or {}).get("regie"):
+            refus("famille logique incompatible avec corps_sur_arme ou un régisseur (horloge simulée)")
     return Epreuve(**{**e, "chemins": tuple(e.get("chemins", ())), "bloque": tuple(e.get("bloque", ()))})
 
 
@@ -120,3 +133,14 @@ def choisir(plan: list, ids=None) -> list:
         return garde
     sim = {k: v for k, v in premiere.sim.items() if k != "neuve"}
     return [replace(e, sim=sim) if e.id in ("demarrage", "rtf") else e for e in garde]
+
+
+def choisir_famille(plan: list, nom: str) -> list:
+    """Les épreuves de la famille, dans l'ordre du plan, précédées de image et demarrage SEULS :
+    rtf n'est pas joué (ni exigé ni bloquant, F2). Famille inconnue ou vide : refus."""
+    if nom not in FAMILLES:
+        raise PlanInvalide("famille inconnue : {} ; familles : {}".format(nom, ", ".join(FAMILLES)))
+    ids = [e.id for e in plan if e.famille == nom]
+    if not ids:
+        raise PlanInvalide("famille {} : aucune épreuve du plan n'en porte le champ".format(nom))
+    return [e for e in choisir(plan, ids) if e.id != "rtf"]

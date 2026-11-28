@@ -1,6 +1,6 @@
 """python3 -m fumee (depuis machines/sim/) — le programme de fumée, lot F1 (25/11).
 
-    python3 -m fumee [--rev <branche|sha|#PR>] [--epreuves a1,objets | --tout | --reprendre]
+    python3 -m fumee [--rev <branche|sha|#PR>] [--epreuves a1,objets | --famille logique | --tout | --reprendre]
                      [--hors-ligne] [--minuterie] [--forcer-verrou] [--essai]
                      [--profil auto|balanced|performance|aucun]
 
@@ -32,6 +32,9 @@ def options(argv):
     p.add_argument("--rev", default="origin/main", help="branche, sha ou #PR (défaut origin/main à jour)")
     choix = p.add_mutually_exclusive_group()
     choix.add_argument("--epreuves", help="ids séparés par des virgules (le socle image, demarrage, rtf est ajouté)")
+    choix.add_argument("--famille", choices=plans.FAMILLES,
+                       help="les épreuves de cette famille du plan, SANS la sonde rtf (ni exigée ni bloquante) "
+                            "+ image, demarrage ; runner GitHub (F2)")
     choix.add_argument("--tout", action="store_true", help="tout le plan (défaut)")
     choix.add_argument("--reprendre", action="store_true",
                        help="reprend la dernière fumée de CETTE révision : vertes gardées, le reste rejoué")
@@ -55,7 +58,7 @@ def main(argv=None, sy=None) -> int:
     # 26/11 (1re vraie fumée F1) : un ESSAI (ou une sélection d'épreuves) avait écrit sa page et
     # son historique dans docs/fumee du checkout de David. Ses pages vont désormais hors du dépôt ;
     # seule une fumée de référence écrit dans docs/fumee (et seule elle peut y être commitée).
-    essai = o.essai or bool(o.epreuves)
+    essai = o.essai or bool(o.epreuves or o.famille)
     sortie_defaut = (Path.home() / "tmp/didier/fumee-essais") if essai else depot / "docs" / "fumee"
     sortie = Path(env.get("FUMEE_SORTIE", sortie_defaut))
     etat = Path(env.get("FUMEE_ETAT", Path.home() / ".local/state/didier-fumee"))
@@ -71,7 +74,7 @@ def main(argv=None, sy=None) -> int:
     signal.signal(signal.SIGTERM, lambda *_: (interrompu.append(True), sys.exit(143)))
     try:
         le_plan = plans.lire()
-        choisis = plans.choisir(le_plan, o.epreuves.split(",") if o.epreuves else None)
+        choisis = _choisir(le_plan, o)
         chaud_c, frais_c = plans.profil()
         verrou = banc.prendre_flock(etat, 0 if o.minuterie else float(env.get("FUMEE_VERROU_ATTENTE", "60")))
     except plans.PlanInvalide as erreur:
@@ -101,7 +104,7 @@ def main(argv=None, sy=None) -> int:
         if plan_rev.is_file():
             try:
                 le_plan = plans.lire(plan_rev)
-                choisis = plans.choisir(le_plan, o.epreuves.split(",") if o.epreuves else None)
+                choisis = _choisir(le_plan, o)
             except plans.PlanInvalide as erreur:
                 raise Refus("plan de la révision testée : {}".format(erreur)) from None
         gardees, reprise = {}, None
@@ -119,8 +122,11 @@ def main(argv=None, sy=None) -> int:
                                                        else maintenant.strftime("%S"))
         jdir = brut / ident
         jdir.mkdir(parents=True)
-        f = Contexte(sy, arbre, ICI, tmp, jdir, ident, etat, hors_ligne, rtf_min)
+        f = Contexte(sy, arbre, ICI, tmp, jdir, ident, etat, hors_ligne, rtf_min, rtf_exige=not o.famille)
         f.notes += notes
+        if o.famille:
+            f.notes.append("famille {} : temps réel ni mesuré ni exigé (épreuves sans horloge simulée ni "
+                           "conduite) ; le comportement se juge sur le PC".format(o.famille))
         banc.autorite_x(sy, etat, f.notes)
         # 28/11 : « performance uniquement quand nécessaire » : `auto` part en balanced et ne passe en
         # performance qu'à chaud, sondé à chaque pause (Contexte.pause). FUMEE_PROFIL=0 = aucun.
@@ -153,7 +159,7 @@ def main(argv=None, sy=None) -> int:
                 "rtf_min": rtf_min, "charge_1min": charge, "nb_coeurs": os.cpu_count(),
                 "essai": o.essai or partielle or env.get("FUMEE_ESSAI") == "1" or rtf_min != RTF_MIN,
                 "image_reconstruite": f.image_reconstruite, "coeurs_reserves": f.coeurs or "aucun",
-                "programme": "fumee F1", "hors_ligne": hors_ligne, "reprise_de": reprise and reprise["id"]}
+                "programme": "fumee F1", "famille": o.famille, "hors_ligne": hors_ligne, "reprise_de": reprise and reprise["id"]}
         res = rapport.finaliser(f, sortie, brut, meta, resultats)
         quoi = (rapport.commiter(sy, depot, res) if env.get("FUMEE_COMMIT", "1") == "1" and sortie == sortie_defaut
                 else "page non commitée (FUMEE_COMMIT ou FUMEE_SORTIE)")
@@ -177,6 +183,12 @@ def main(argv=None, sy=None) -> int:
         banc.liberer_verrou_sim(occupee, contenu_verrou)
         shutil.rmtree(tmp, ignore_errors=True)
         os.close(verrou)
+
+
+def _choisir(le_plan, o) -> list:
+    if o.famille:
+        return plans.choisir_famille(le_plan, o.famille)
+    return plans.choisir(le_plan, o.epreuves.split(",") if o.epreuves else None)
 
 
 def _refus(etat, refus) -> int:

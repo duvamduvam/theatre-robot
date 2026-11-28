@@ -55,7 +55,7 @@ class Sim:
 
     # --- Démarrage ---------------------------------------------------------------------------
     def preparer(self, ep, sonder=True):
-        """La sim de l'épreuve, prête et sondée ; None si prête, sinon le résultat (rouge/invalide)."""
+        """La sim de l'épreuve, prête et sondée (si f.rtf_exige) ; None si prête, sinon le résultat (rouge/invalide)."""
         neuve = bool((ep.sim or {}).get("neuve")) and self.servie
         if not self.vivante or self.cle != ep.cle_sim or neuve:
             self.arreter(ep.id)
@@ -64,7 +64,7 @@ class Sim:
                 self.arreter(ep.id)
                 return {"id": ep.id, "statut": "rouge", "journal": "demarrage.log",
                         "detail": "la sim (monde {}) n'a pas démarré : {}".format(ep.cle_sim[0], cause)}
-        if sonder and not self.sondee:
+        if sonder and self.f.rtf_exige and not self.sondee:
             r = self.sonder(ep.id)
             if r["statut"] != "vert":
                 self.arreter(ep.id)
