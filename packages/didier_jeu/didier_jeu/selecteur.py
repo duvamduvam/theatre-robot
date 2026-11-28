@@ -732,7 +732,12 @@ class Selecteur:
         reprise s'arme. Le stop part d'origine « didier » (révision R1 du 25/11) : c'est un arrêt
         que Didier relancera lui-même — d'origine « david », son propre « go » ne le lèverait pas
         au régisseur. Ce n'est pas un arrêt « de Didier » au sens du réfractaire de 120 s : la
-        demande vient d'un humain, comme un geste de la bouche."""
+        demande vient d'un humain, comme un geste de la bouche.
+        Dans les trois cas il REGARDE, et c'est le corps qui le fait (fumée du 28/11, D4 rouge :
+        le seul `look` venait de la bouche, 3,1 s plus tard, au gré du LLM) : `look` publié ici,
+        dans le même tick que le stop (_regard_de_pause). Un `look` de la bouche peut suivre :
+        gaze_follower prend le dernier."""
+        self._regard_de_pause()
         if self.verrou_david or self.reprise is not None:
             self._journal("pause_regard", "« regarde » : il est déjà arrêté → il regarde sans repartir "
                           "de lui-même", arrete=True)
@@ -751,6 +756,12 @@ class Selecteur:
         self._armer_reprise(now, "regard terminé", genre=corps_etat.DIDIER_PAUSE)
         self.pourquoi_courant = "il s'arrête pour regarder ; il repartira seul"
         self._publier_intention(now)
+
+    def _regard_de_pause(self) -> None:
+        """Le regard d'un « regarde ça » : devant (angle 0 — la pause ne nomme aucun objet),
+        tenu durees_s.regarder, comme le « regarder » d'une piste (_executer)."""
+        hold = self.r.get("durees_s.regarder")
+        self.sorties.append(("look", {"angle_deg": 0.0, "hold_ms": int(hold * 1000)}))
 
     def relayer_go(self, origine: str, source: str, now: float) -> Optional[str]:
         """« go » d'origine « david » (console, tour humain) : lève le verrou, repart tout de

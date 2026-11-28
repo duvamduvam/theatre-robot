@@ -146,7 +146,9 @@ réponse 2) ne sont PAS là : ils viendront avec le régisseur LLM (S4).
 (`{"cmd": "pause", "origine": "david"}`) sur `rehearsal/chat_move`. Didier en marche : `stop`
 relayé tout de suite, d'origine `didier` (c'est lui qui le relancera), **sans verrou**, puis la reprise (journal
 `pause_regard` puis `reprise`). Déjà arrêté (verrou, reprise armée) ou pas en route : rien ne
-bouge, jamais de `go` qu'il n'aurait pas eu sans elle. Mode dégradé : un `stop`. Tests :
+bouge, jamais de `go` qu'il n'aurait pas eu sans elle. Dans les trois cas, le sélecteur publie
+lui-même un `look` devant (angle 0, `durees_s.regarder`) dans le même tick (fumée du 28/11 : le
+regard ne venait que de la bouche, au gré du LLM). Mode dégradé : un `stop`. Tests :
 `test/test_pause_regard.py`.
 
 **Objets** (lot O1, 18/11 ; remplace les « distances » du 15/11) : le sélecteur LIT le
