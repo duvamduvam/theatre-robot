@@ -16,7 +16,7 @@ pas supposées) :
                      contrairement à faces/robot_lights). Les entrées à path
                      vide (ex. "stop", qui n'existe que pour le mapping
                      clavier legacy KEY) sont exclues : publier "" casserait
-                     play_sound() sans rien jouer ; le bouton STOP CONTENUS
+                     play_sound() sans rien jouer ; le bouton STOP
                      couvre déjà l'arrêt audio (stop_all_commands()) ;
  - "animations"   : noms de séquences sous json/sequences/** (sans extension,
                      AnimationManager les indexe par basename via

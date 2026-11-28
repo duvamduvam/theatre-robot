@@ -71,7 +71,7 @@ from didier_web.web_protocol import (
     ProtocolError, SessionManager, build_ack, build_err, build_feed,
     build_hb_ack, build_hello, build_lumieres, build_state, drive_to_twist,
     effective_whitelist, mode_from_domain_id, parse_client_message,
-    rehearsal_allowed, snapshot_visible, stop_all_commands, stop_appareils_commands,
+    rehearsal_allowed, snapshot_visible, stop_all_commands,
 )
 from didier_web.tickets import PareRafale, construire_ticket, nom_fichier
 
@@ -689,21 +689,20 @@ async def _handle_stop_all(node, app, client_id, ws, msg):
         node.get_logger().warning("stop_all refusé (lecture seule) id={}".format(client_id))
         await _send_json_safe(ws, build_err(ERR_LECTURE_SEULE))
         return
-    # Répétition activée : STOP coupe aussi la route et termine la séance
-    # (cf. stop_all_commands) -- les topics existent alors dans la whitelist.
-    for topic, value in stop_all_commands(node.rehearsal_enabled):
-        node.publish_cmd(topic, value)
-    # Lot L3a : les appareils APRÈS les arrêts d'avant L3a, chacun isolé — un envoi qui lève
-    # est journalisé et n'empêche ni les suivants, ni le Twist nul, ni l'ack (relecture 28/11).
-    for topic, value in stop_appareils_commands(node.whitelist):
+    # Arrêt général, roues d'abord (décision de David du 28/11) : le Twist nul en tout premier,
+    # puis stop_all_commands dans son ordre (ce qui empêche les roues de repartir, le reste,
+    # les appareils, la séance). Chaque envoi isolé : un envoi qui lève est journalisé et
+    # n'empêche ni les suivants ni l'ack.
+    try:
+        node.publish_drive_zero()
+    except Exception as erreur:  # noqa: BLE001 — le STOP doit aller au bout
+        node.get_logger().error("STOP : Twist nul impossible : {!r}".format(erreur))
+    for topic, value in stop_all_commands(node.rehearsal_enabled, node.whitelist):
         try:
             node.publish_cmd(topic, value)
         except Exception as erreur:  # noqa: BLE001 — le STOP doit aller au bout
-            node.get_logger().error("STOP : arrêt de l'appareil {} impossible : {!r}".format(topic, erreur))
-    # STOP CONTENUS coupe aussi le mouvement web (le Twist nul, en plus des
-    # StringTime de stop_all_commands qui ne touchent QUE les contenus).
-    node.publish_drive_zero()
-    node.get_logger().info("STOP CONTENUS déclenché id={}".format(client_id))
+            node.get_logger().error("STOP : arrêt de {} impossible : {!r}".format(topic, erreur))
+    node.get_logger().info("STOP déclenché id={}".format(client_id))
     await _send_json_safe(ws, build_ack("stop_all"))
 
 

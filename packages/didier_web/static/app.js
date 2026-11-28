@@ -67,7 +67,7 @@ document.querySelectorAll(".onglet-btn").forEach((btn) => {
 // --- STOP -----------------------------------------------------------------------
 
 $("btn-stop-contenus").addEventListener("click", () => {
-  // STOP contenus ET mouvement : le serveur coupe aussi cmd_vel_web (Twist nul).
+  // Arrêt général, roues d'abord : le serveur publie le Twist nul en premier (cf. stop_all_commands).
   envoyer({ type: "stop_all" });
   arreterPilotage(true);
 });

@@ -1027,7 +1027,9 @@ docker exec -d didier-sim-robot bash -c 'source /opt/ros/$ROS_DISTRO/setup.sh &&
   jeu »), et sept boutons : va là
   (objet, ou dernière piste vue), joue avec lui, ignore, reviens, plus lent,
   STOP et GO (deux boutons distincts). La page envoie un battement (`presence`)
-  tant que l'onglet est visible et qu'elle a la main. **STOP CONTENUS** arrête
+  tant que l'onglet est visible et qu'elle a la main. Le **STOP** de la console (arrêt
+  général, roues d'abord : Twist nul, Route OFF, stop du sélecteur, `animation=false`, puis
+  les autres organes, les appareils et la séance ; détail dans `docs/interfaces.md`) arrête
   aussi le sélecteur (stop de David). Un « go » dit à voix haute ne relance
   jamais un stop posé à la console : seul GO le fait.
 - **Reprise** : après un arrêt de sa part, Didier repart seul après **90 s de
