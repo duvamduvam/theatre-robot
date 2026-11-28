@@ -13,7 +13,29 @@ from datetime import datetime
 from pathlib import Path
 
 PEREMPTION_SIM_OCCUPEE_S = 6 * 3600   # au-delà, un sim-occupee oublié ne bloque plus (jamais effacé)
-CONTENEURS = ("didier-sim-monde", "didier-sim-robot", "didier-sim-vision", "didier-sim-telecommande")
+COMPOSE = Path(__file__).resolve().parents[1] / "docker-compose.yml"
+
+
+def services_du_compose(chemin=COMPOSE):
+    """Les services du compose de la sim, dans l'ordre du fichier (lot L3a, spec L3 décision 21).
+
+    Lecture en stdlib, sans PyYAML (le programme tourne sur l'hôte, hors venv) : les clés à deux
+    espaces sous `services:`, jusqu'à la prochaine clé de premier niveau. Le compose est écrit
+    à la main et gravé par test_arborescence.py ; ce lecteur n'a pas à comprendre plus."""
+    services, dedans = [], False
+    for brute in Path(chemin).read_text(encoding="utf-8").splitlines():
+        ligne = brute.split(" #")[0].rstrip()          # commentaire de fin de ligne retiré
+        if not ligne.strip() or ligne.lstrip().startswith("#"):
+            continue
+        if not ligne[0].isspace():
+            dedans = ligne == "services:"
+        elif dedans and ligne.startswith("  ") and not ligne[2].isspace() and ligne.endswith(":"):
+            services.append(ligne.strip()[:-1])
+    return tuple(services)
+
+
+# Un conteneur par service, `didier-sim-<service>` : ajouter un service au compose suffit (L3b, sono).
+CONTENEURS = tuple("didier-sim-" + s for s in services_du_compose())
 
 
 class Refus(Exception):

@@ -1,0 +1,1 @@
+# Dépendances pip de l image (geste G8). APPAREIL : la liste (vide si aucune).

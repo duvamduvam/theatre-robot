@@ -64,5 +64,6 @@ def test_nombre_de_topics_grave():
     # + 1 scene/objets (lot O0, 18/11 ; les objets proches du sélecteur du 15/11 sont supprimés en O1)
     # + 7 corps sûr (lot A0-4, 20/11 : scan, trois sorties _sur, battement, état, réarmement)
     # + 4 improvisation (lot I0, 22/11 : impro, impro_state, proposition, repertoire)
-    # + 1 corps/etat (lot S2a, 27/11 : l'état du corps écrit par le sélecteur).
-    assert len(_noms_de_topics()) == 43
+    # + 1 corps/etat (lot S2a, 27/11 : l'état du corps écrit par le sélecteur)
+    # + 3 sono (lot L3a, 28/11 : sono/audio, sono/relais, sono/etat — premier appareil du registre).
+    assert len(_noms_de_topics()) == 46

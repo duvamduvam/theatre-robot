@@ -175,6 +175,18 @@
         <p id="corps-sur-detail" class="scene-note">nœud corps_sur muet : rien ne roule en autonome</p>
       </div>
 
+      <!-- Appareils (lot L3a, 28/11, spec L3 décisions 18-19) : une ligne par appareil du registre
+           (theatre_contrats.appareils), rendue d'après la ligne jugée par le pont
+           (didier_web/panneau_appareils.py, dans `state.appareils`) — aucun code propre à un
+           appareil ici. Avec la main : Jouer / Stop par organe audio, impulsion par relais, vers
+           le topic d'ordre que porte l'organe (whitelist du pont). Robot ET sim. -->
+      <div id="scene-appareils" class="scene-groupe">
+        <div class="scene-groupe-tete">
+          <h2>Appareils</h2>
+        </div>
+        <div id="appareils-lignes"><p class="scene-note">aucun état d'appareil reçu</p></div>
+      </div>
+
       <div class="scene-groupe scene-repetition" hidden>
         <div class="scene-groupe-tete">
           <h2>Route</h2>

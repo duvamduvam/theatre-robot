@@ -19,13 +19,21 @@ TwistDeadman.is_expired(now_ms) dans didier_drive.deadman).
 import json
 import math
 
+# Lot L3a (28/11) : le registre des appareils du parc (sono…) — SEULE source des topics
+# d'appareils ci-dessous (pas de recopie : spec L3 décision 19). theatre_contrats est pur.
+from theatre_contrats import appareils
+
 # --- Whitelist des topics publiables --------------------------------------
 # Chaînes littérales dupliquées volontairement (pas d'import dadou_utils_ros.
 # utils_static) : didier_web est un package AUTONOME façon didier_drive, le
 # conteneur de simulation ne l'embarque pas. wheels/cmd_vel_*/e_stop sont
 # ABSENTS ici par construction -- c'est la garantie W0 (pas d'accès roues ni
 # verrou e_stop tant que W1/W3 ne sont pas faits, voir etude-interface-web.md).
-WHITELIST_SPECTACLE = {"animation", "face", "audio", "robot_lights"}
+# Lot L3a (28/11, spec L3 décision 19) : les ordres de type `audio` des appareils du registre
+# (sono/audio) sont du spectacle ; ceux de type `relais` (sono/relais) sont techniques. Construits
+# depuis theatre_contrats.appareils.REGISTRE : un appareil ajouté au registre y entre seul.
+WHITELIST_SPECTACLE = {"animation", "face", "audio", "robot_lights"} | set(
+    appareils.topics_ordres(appareils.AUDIO))
 # "chat" (2026-07-12) : toggle on/off de la parole IA (conversation) — consommé
 # par chat_node sur le Pi vision (même contrat StringTime "on"/"off" que
 # "gaze"). Ce n'est PAS un topic d'actionneur : aucun risque roues/e_stop.
@@ -43,7 +51,7 @@ WHITELIST_SPECTACLE = {"animation", "face", "audio", "robot_lights"}
 # celle du régisseur ; la page « scène » ne doit donc JAMAIS afficher ce topic
 # (David ne voit pas le tirage).
 WHITELIST_TECHNIQUE = {"relay", "neck", "left_eye", "right_eye", "left_arm", "right_arm", "gaze", "chat", "persona", "system",
-                       "chat_text", "chat_instruction"}
+                       "chat_text", "chat_instruction"} | set(appareils.topics_ordres(appareils.RELAIS))
 WHITELIST = WHITELIST_SPECTACLE | WHITELIST_TECHNIQUE
 
 # Topics de RÉPÉTITION SIMULÉE (page « scène », 2026-10-14) : cheminement de
@@ -133,7 +141,10 @@ TOPICS_LECTURE = {"chat_state", "persona_state", "route_state", "chat_audio_chai
                   "corps_sur/etat",
                   # Lot S2a (27/11) : l'état du corps écrit par le sélecteur de jeu (latché, JSON
                   # theatre_contrats.corps_etat) — sa `phrase` en tête de la colonne Jeu.
-                  "corps/etat"}
+                  "corps/etat"} | set(
+    # Lot L3a (28/11) : l'état de chaque appareil du registre (sono/etat, latché, enveloppe
+    # theatre_contrats.appareils) — la tuile « Appareils » (didier_web.panneau_appareils).
+    appareils.topics_etat())
 
 # Topics de FLUX (2026-10-14) : un événement par message, à diffuser TOUS aux
 # clients (message "feed"), contrairement à `state` qui ne porte que la
@@ -429,7 +440,10 @@ def stop_all_commands(rehearsal_enabled: bool = False) -> list:
     compris). Le deadman reste derrière dans tous les cas.
     Lot A1 (revue du 02/11) : en répétition, STOP envoie D'ABORD {"cmd": "stop"}
     au sélecteur de jeu (jeu/console) — c'est un stop de David : verrou
-    jusqu'au « go » de la console, jamais de reprise automatique."""
+    jusqu'au « go » de la console, jamais de reprise automatique.
+    Les appareils (lot L3a) n'y sont PAS : voir stop_appareils_commands, envoyés APRÈS cette
+    liste, chacun isolé (relecture adverse du 28/11 : un envoi d'appareil qui lève ne doit
+    jamais empêcher route off, l'arrêt de séance, le Twist nul ni l'ack)."""
     commands = [
         ("animation", False),
         ("audio", "stop"),
@@ -443,6 +457,16 @@ def stop_all_commands(rehearsal_enabled: bool = False) -> list:
     if rehearsal_enabled:
         commands += [("jeu/console", {"cmd": "stop"}), ("route", "off"), ("rehearsal/cmd", "stop")]
     return commands
+
+
+def stop_appareils_commands(whitelist) -> list:
+    """Lot L3a (spec L3 décision 19) : (topic, "stop") pour chaque topic d'ordre des appareils
+    du registre — le STOP arrête tout son et remet les relais au repos. Seulement les types
+    d'organes connus (theatre_contrats.appareils.TYPES_ORGANES) ET présents dans la whitelist
+    du nœud : un 3e type au registre, hors whitelist, n'a pas de publisher et n'y entre pas."""
+    return [(topic, "stop") for a in appareils.REGISTRE.values()
+            for type_organe, topic in a["ordres"].items()
+            if type_organe in appareils.TYPES_ORGANES and topic in whitelist]
 
 
 # --- Mode robot / sim (sécurité : toujours savoir à qui on parle) ----------
@@ -534,13 +558,17 @@ def build_lumieres(instant: dict) -> dict:
 
 
 def build_state(topics: dict, nodes: list, clients: int, writer_present: bool,
-                lumieres: dict | None = None) -> dict:
+                lumieres: dict | None = None, appareils_lignes: list | None = None) -> dict:
     """`lumieres` (lot I0) : l'aperçu des bandes LED (didier_web.apercu_lumieres), ce que le
-    ruban afficherait d'après les `robot_lights` reçus ; absent si le pont n'en tient pas."""
+    ruban afficherait d'après les `robot_lights` reçus ; absent si le pont n'en tient pas.
+    `appareils_lignes` (lot L3a) : les lignes de la tuile « Appareils »
+    (didier_web.panneau_appareils.lignes), sous la clé `appareils` ; absente si None."""
     etat = {"type": "state", "topics": topics, "nodes": nodes, "clients": clients,
             "writer_present": writer_present}
     if lumieres is not None:
         etat["lumieres"] = lumieres
+    if appareils_lignes is not None:
+        etat["appareils"] = appareils_lignes
     return etat
 
 

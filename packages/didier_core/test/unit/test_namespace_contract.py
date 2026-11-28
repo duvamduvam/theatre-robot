@@ -46,13 +46,36 @@ CREATE_ABSOLU = re.compile(r"create_(publisher|subscription)\([^,]+,\s*f?['\"]/"
 EXCLUS = {"build", "install", "log", ".venv", "node_modules", "__pycache__"}
 
 
+def _ignore_par_colcon(p, racine):
+    """Lot L3a : un dossier marqué COLCON_IGNORE n'est jamais construit ni lancé — le squelette
+    du gabarit (packages/theatre_gabarit/squelette/) est un modèle à recopier, pas un launch."""
+    return any((d / "COLCON_IGNORE").exists() for d in p.relative_to(racine).parents
+               for d in [racine / d])
+
+
 def _fichiers(racine, motif):
     return sorted(p for p in racine.rglob(motif)
-                  if p.is_file() and not EXCLUS.intersection(p.relative_to(racine).parts))
+                  if p.is_file() and not EXCLUS.intersection(p.relative_to(racine).parts)
+                  and not _ignore_par_colcon(p, racine))
+
+
+# Lot L3a : le launch d'un APPAREIL tient en un appel à theatre_gabarit.lancement.groupe_appareil,
+# qui porte le namespace ; c'est ce module qui subit les contrôles de structure, une fois.
+LANCEMENT_GABARIT = DEPS / "theatre_gabarit" / "theatre_gabarit" / "lancement.py"
+
+
+def _par_le_gabarit(p):
+    return "groupe_appareil(" in p.read_text(encoding="utf-8")
 
 
 def _launch_files():
     return [p for r in (ROBOT, VISION, CONTROL, DEPS) for p in _fichiers(r, "*.launch.py")]
+
+
+def _launch_structures():
+    """Les sources dont la structure est contrôlée : chaque launch classique, et le module du
+    gabarit à la place des launch d'appareils."""
+    return [p for p in _launch_files() if not _par_le_gabarit(p)] + [LANCEMENT_GABARIT]
 
 
 # --- (a) launch files ---------------------------------------------------------
@@ -79,7 +102,7 @@ def _appels(arbre, nom):
 
 
 def test_chaque_launch_pousse_un_namespace_absolu_tire_de_robot_name():
-    for p in _launch_files():
+    for p in _launch_structures():
         src = p.read_text(encoding="utf-8")
         assert "PushRosNamespace" in src and "ROBOT_NAME" in src, p
         arbre = ast.parse(src)
@@ -99,7 +122,7 @@ def test_chaque_launch_pousse_un_namespace_absolu_tire_de_robot_name():
 
 
 def test_aucun_node_n_a_son_propre_namespace():
-    for p in _launch_files():
+    for p in _launch_structures():
         for c in _appels(ast.parse(p.read_text(encoding="utf-8")), "Node"):
             assert "namespace" not in {k.arg for k in c.keywords}, p
 
@@ -107,9 +130,16 @@ def test_aucun_node_n_a_son_propre_namespace():
 def test_tous_les_nodes_sont_dans_le_groupe():
     """Seul ce que porte le LaunchDescription renvoyé est lancé : il ne doit
     contenir QUE des DeclareLaunchArgument et l'unique GroupAction namespacé —
-    aucun Node ni include ne peut alors échapper au namespace."""
+    aucun Node ni include ne peut alors échapper au namespace.
+    Lot L3a : un launch d'appareil = `LaunchDescription(groupe_appareil(...))`, rien d'autre ;
+    la liste rendue par groupe_appareil suit la même règle (DeclareLaunchArgument…, GroupAction)."""
     for p in _launch_files():
         arbre = ast.parse(p.read_text(encoding="utf-8"))
+        if _par_le_gabarit(p):
+            (description,) = _appels(arbre, "LaunchDescription")
+            assert getattr(description.args[0].func, "id", None) == "groupe_appareil", p
+            assert "PushRosNamespace" not in p.read_text(encoding="utf-8"), p
+            continue
         assert len(_appels(arbre, "GroupAction")) == 1, p
         assert "add_action" not in p.read_text(encoding="utf-8"), p
         descriptions = _appels(arbre, "LaunchDescription")
@@ -119,6 +149,19 @@ def test_tous_les_nodes_sont_dans_le_groupe():
         assert types[-1] == "GroupAction" and set(types[:-1]) <= {"DeclareLaunchArgument"}, (p, types)
         groupe = elements[-1].args[0].elts
         assert getattr(groupe[0].func, "id", None) == "PushRosNamespace", p
+    fonction = next(f for f in ast.parse(LANCEMENT_GABARIT.read_text(encoding="utf-8")).body
+                    if isinstance(f, ast.FunctionDef) and f.name == "groupe_appareil")
+    retour = next(n for n in ast.walk(fonction) if isinstance(n, ast.Return))
+    types = [getattr(e.func, "id", None) for e in retour.value.elts]
+    assert types == ["DeclareLaunchArgument"] * 3 + ["GroupAction"]
+    assert getattr(retour.value.elts[-1].args[0].elts[0].func, "id", None) == "PushRosNamespace"
+
+
+def test_le_squelette_du_gabarit_n_est_pas_un_launch_inventorie():
+    squelette = DEPS / "theatre_gabarit" / "squelette"
+    assert (squelette / "COLCON_IGNORE").is_file()
+    assert list(squelette.rglob("*.launch.py")) != []
+    assert not any(p.is_relative_to(squelette) for p in _launch_files())
 
 
 # --- twist_mux : le piège du params-file sous namespace ------------------------

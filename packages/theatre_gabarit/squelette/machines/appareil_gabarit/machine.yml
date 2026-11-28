@@ -1,0 +1,16 @@
+# Contenu de la machine « appareil_gabarit » (geste G8) — chargé par Ansible (include_vars) pour
+# tout hôte de deploy/hosts qui porte `machine: appareil_gabarit`. Convention : machines/README.md.
+project_ros_dir: appareil_gabarit
+project_name: appareil_gabarit
+conf_machine_dir: "{{ machines_dir }}/appareil_gabarit"
+# Liste EXPLICITE : jamais dadou_utils_ros pour un appareil.
+packages:
+  - theatre_contrats
+  - theatre_interfaces
+  - theatre_gabarit
+  - appareil_gabarit_core
+launch_cmd: ros2 launch appareil_gabarit_core appareil_gabarit.launch.py
+sentinelle_build: src/appareil_gabarit_core/change
+noeuds_attendus:
+  - /didier/appareil_gabarit
+# APPAREIL : sha_deploye, audios_prives, dossiers_montes, fichiers_etc… (tableau de machines/README.md).

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>theatre_gabarit</name>
+  <version>0.1.0</version>
+  <description>Gabarit d'appareil du parc Didier (lot L3a, spec docs/spec-L3-gabarit-sono.md) : bibliothèque bornée à 4 modules (noeud, pilotes, lancement, essais) importée par chaque appareil ; le squelette recopié par tools/nouvel_appareil.py.</description>
+  <maintainer email="achats@duvam.net">dadou</maintainer>
+  <license>MIT</license>
+
+  <!-- noeud.py : rclpy, StringTime, diagnostics (importés à l'appel : la lib s'importe sur le PC).
+       lancement.py : launch, launch_ros. essais.py : PyYAML (tests hôte seulement). -->
+  <exec_depend>theatre_contrats</exec_depend>
+  <exec_depend>theatre_interfaces</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

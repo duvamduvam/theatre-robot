@@ -758,3 +758,10 @@
 /* Le titre « Visage » passe au-dessus des bandes LED (il les masquait en vignette). */
 #scene-visage-tuile .scene-tuile-titre { bottom: 1.9rem; }
 .scene-tuile:not(.principale)#scene-visage-tuile .scene-tuile-titre { bottom: 1.2rem; }
+
+/* Tuile « Appareils » (lot L3a, 28/11) : une ligne par appareil du registre. */
+.appareil-ligne { margin: 0.3rem 0 0.6rem; font-size: 0.85rem; overflow-wrap: anywhere; }
+.appareil-organe { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.25rem 0; }
+.appareil-barre { text-decoration: line-through; opacity: 0.7; }
+.appareil-refus { color: #ffcf8a; }
+.appareil-audios { max-width: 14rem; }

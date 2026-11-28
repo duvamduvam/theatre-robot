@@ -150,6 +150,21 @@ def ligne(ep_id, ok, ko=0):
 
 # --- 1. Lecture du plan ------------------------------------------------------------------
 
+def test_conteneurs_deduits_du_compose_dans_l_ordre_du_fichier():
+    # Lot L3a (spec L3 décision 21) : plus de liste écrite à la main ; GRAVÉ à 4 (L3b : 5, sono).
+    assert CONTENEURS == ("didier-sim-monde", "didier-sim-robot", "didier-sim-vision",
+                          "didier-sim-telecommande")
+
+
+def test_services_du_compose_lecteur_stdlib(tmp_path):
+    from fumee.banc import services_du_compose
+    compose = tmp_path / "c.yml"
+    compose.write_text("# en-tête\nname: x\n\nservices:\n  # commentaire\n  b:\n    image: i\n"
+                       "    environment:\n      A: 1\n  \n  a:  # commentaire\n    image: j\nnetworks:\n  n:\n",
+                       encoding="utf-8")
+    assert services_du_compose(compose) == ("b", "a")
+
+
 def test_plan_dans_l_ordre_de_fumee_sh_et_de_la_page():
     assert [e.id for e in PLAN] == IDS
     assert [i for i, _ in fp.EPREUVES] == IDS          # la page range les épreuves dans le même ordre

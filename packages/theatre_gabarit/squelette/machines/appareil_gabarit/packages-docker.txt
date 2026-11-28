@@ -1,0 +1,1 @@
+# Paquets apt de l image (geste G8). APPAREIL : la liste.

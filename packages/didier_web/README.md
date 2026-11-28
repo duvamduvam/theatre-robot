@@ -12,6 +12,7 @@ Package ROS 2 du robot Didier, autonome (aucun import `robot.*` ni `dadou_utils_
 | — | `lecture_donnees` | **lot L1d-3** : lecture pure des données éditables pour `GET /api/data` (liste + états de la porte sim, contenu + sha) ; **lot I0** : `bugs_joues()` pour `GET /api/bugs-joues` |
 | — | `apercu_lumieres` | **lot I0** : modèle pur de ce que le ruban LED afficherait (aperçu des bandes de la page scène) |
 | — | `panneau_audio` | **22/11** : verdict pur de l'onglet « Audio » de la page scène (`GET /api/audio`, sim seulement) |
+| — | `panneau_appareils` | **lot L3a** (28/11) : jugement pur de la tuile « Appareils » de la page scène (une ligne par appareil du registre `theatre_contrats.appareils`, dans `state.appareils`) |
 
 ## `catalogue_node` (L1c)
 
@@ -150,6 +151,29 @@ Groupe « Corps sûr » de `scene.html`, hors `.scene-repetition` : il vit aussi
   bouton n'est actif qu'en VERROU ; le nœud refuse tant que la cause est là (la page le dit en
   relisant l'état 2,5 s plus tard). Règles gravées : `test_web_protocol.py`.
 - Limite connue : l'état n'est publié qu'à son changement ; un nœud mort laisse son dernier état.
+
+## Page scène : appareils (lot L3a, 28/11, robot et sim)
+
+Tuile « Appareils » de `scene.html` (`#scene-appareils`, à côté du corps sûr, hors
+`.scene-repetition`), spec `docs/spec-L3-gabarit-sono.md` décisions 18-19. **Générique** : rien de
+propre à la sono, ni dans le pont ni dans la page.
+- **Registre** : `theatre_contrats.appareils.REGISTRE` est la seule source. Le pont en tire ses
+  listes : l'état de chaque appareil (`sono/etat`) entre dans `TOPICS_LECTURE`, les ordres de type
+  `audio` dans `WHITELIST_SPECTACLE`, ceux de type `relais` dans `WHITELIST_TECHNIQUE`, et
+  **le STOP publie `"stop"` sur chaque topic d'ordre du registre** (le STOP arrête tout son) :
+  `stop_appareils_commands`, APRÈS la liste d'avant L3a (contenus, séance), chaque envoi isolé et
+  journalisé, puis le Twist nul et l'ack — un appareil qui lève n'arrête jamais le STOP
+  (relecture adverse du 28/11). La boucle d'état garde l'appel au panneau (`try` + journal).
+- **Jugement** : `panneau_appareils.lignes(instantané)` (pur) — présence (« vue » < 5 s, « muette »,
+  « jamais vue », « état illisible »), pilote « simulé »/« matériel », sha court et « version
+  différente du robot » face à `deploy_sha` (aucun des deux `dev`), organes (silence ou chemin +
+  durée, relais allumé/éteint, barré si `absent`/`erreur`), dernier refus. Joint au `state`.
+- **Page** : affiche ; calcule seulement l'avance d'un audio (« ♪ chemin — 1,2 / 2,2 s ») d'après
+  `debut_ms`. Avec la main : liste des audios (`/api/catalog`), **Jouer**, **Stop**, impulsion par
+  relais, vers le `topic_ordre` de l'organe (jamais un nom de topic écrit dans la page).
+- Captures (état factice, 28/11) : [bureau](../../docs/pictures/l3a/tuile-appareils-bureau.png), [téléphone](../../docs/pictures/l3a/tuile-appareils-telephone.png).
+- Tests : `didier_core/test/unit/test_panneau_appareils.py` (fraîcheur 4,9 / 5,1 s, version,
+  textes gravés) et `test_web_protocol.py` (whitelists, `stop_all`, ids, `texteAudio` joué par node).
 
 ## Page scène : onglet « Audio » (22/11, banc PC en simulation)
 

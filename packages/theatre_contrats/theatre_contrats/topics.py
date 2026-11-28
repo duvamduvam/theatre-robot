@@ -140,3 +140,14 @@ SUPERVISEUR_BATTEMENT = 'superviseur/battement'
 CORPS_SUR_ETAT = 'corps_sur/etat'
 # std_msgs/Empty, fiable profondeur 10 : lève un VERROU si sa cause a disparu (spec §5.6).
 CORPS_SUR_REARMER = 'corps_sur/rearmer'
+
+# ---------------------------------------------------------------- appareils du parc (lot L3a)
+# Spec : docs/spec-L3-gabarit-sono.md §2, décisions 9 à 12 ; registre et enveloppe d'état dans
+# theatre_contrats/appareils.py. Un appareil tourne sous le namespace du robot, ses topics sont
+# préfixés par son nom. Sono : StringTime qos.volatile(10) des deux côtés pour les ORDRES —
+# `sono/audio` = chemin relatif d'un audio du manifeste ou "stop" (même forme que `audio` du
+# robot), `sono/relais` = nom d'un relais de machines/sono/sono.yaml ou "stop" ; `sono/etat` =
+# l'enveloppe d'état, StringTime LATCHÉ (qos.latched() des DEUX côtés).
+SONO_AUDIO = 'sono/audio'
+SONO_RELAIS = 'sono/relais'
+SONO_ETAT = 'sono/etat'
