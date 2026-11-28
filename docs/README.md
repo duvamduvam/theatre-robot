@@ -15,7 +15,7 @@ Documentation vivante du mono-dépôt (arrivée de `legacy/dadou_robot_ros/docs/
 ## Études et specs
 
 - `etude-*.md` (à plat dans ce dossier) : études de chantier — globale (`etude-architecture-globale.md`), actionneurs, arbitrage, autonomie, danse, conversation, odométrie, torse, voix, interface web, télédiagnostic, télécommande USB, etc.
-- [`spec-L1-contrats-donnees.md`](spec-L1-contrats-donnees.md), [`spec-A1-selecteur-de-jeu.md`](spec-A1-selecteur-de-jeu.md), [`spec-aller-voir.md`](spec-aller-voir.md), [`spec-metteur-en-scene.md`](spec-metteur-en-scene.md) : specs fermées.
+- [`spec-L1-contrats-donnees.md`](spec-L1-contrats-donnees.md), [`spec-L3-gabarit-sono.md`](spec-L3-gabarit-sono.md) (gabarit d'appareil + sono, écrite le 2026-11-28), [`spec-A1-selecteur-de-jeu.md`](spec-A1-selecteur-de-jeu.md), [`spec-aller-voir.md`](spec-aller-voir.md), [`spec-metteur-en-scene.md`](spec-metteur-en-scene.md) : specs fermées.
 - [`etudes/`](etudes/) : études plus récentes — [`etude-standards-robotique.md`](etudes/etude-standards-robotique.md) (ROS et standards, **décidé le 2026-11-11**, état des actions au §7), [`etude-banc-temoin.md`](etudes/etude-banc-temoin.md), [`etude-visage.md`](etudes/etude-visage.md) (dessin, animation et lumière du visage LED, maquette et planches dans `etudes/visage/` — proposée le 2026-11-22, **rien d'acté**), [`etude-improvisation.md`](etudes/etude-improvisation.md) (bugs joués, scénariste, STOP IMPRO — proposée le 2026-11-21), [`etude-objets-vus-et-carte.md`](etudes/etude-objets-vus-et-carte.md) (ce que Didier voit ↔ ce qu'il sait du lieu : un seul tableau des objets, banc de pointage mesuré les 2026-11-17 et 18, **rien d'acté**).
 
 ## Dossiers
