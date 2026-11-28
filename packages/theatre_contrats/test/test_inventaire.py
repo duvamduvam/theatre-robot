@@ -45,6 +45,9 @@ TOPICS_CORPS_SUR = {"SCAN": "scan", "CMD_VEL_ANIM_SUR": "cmd_vel_anim_sur",
                     "CMD_VEL_FOLLOW_SUR": "cmd_vel_follow_sur", "CMD_VEL_WEB_SUR": "cmd_vel_web_sur",
                     "SUPERVISEUR_BATTEMENT": "superviseur/battement", "CORPS_SUR_ETAT": "corps_sur/etat",
                     "CORPS_SUR_REARMER": "corps_sur/rearmer"}
+# Nouveaux au lot L3a (appareils du parc, theatre_contrats/appareils.py, spec docs/spec-L3-gabarit-sono.md
+# décision 9) : PAS repris de utils_static.
+TOPICS_APPAREILS = {"SONO_AUDIO": "sono/audio", "SONO_RELAIS": "sono/relais", "SONO_ETAT": "sono/etat"}
 CLES = {
     "A": "A", "ANGLO": "anglo", "AUDIOS": "audios", "B": "B", "BACKWARD": "backward",
     "BRIGHTNESS": "brightness", "COLOR": "color", "DEFAULT": "default", "DEVICES": "devices",
@@ -69,7 +72,8 @@ def test_organes():
 def test_topics():
     assert _constantes(topics) == {**ORGANES, **TOPICS_HORS_ORGANES, **TOPICS_PERCEPTION, **TOPICS_JEU,
                                          **TOPICS_CATALOGUE, **TOPICS_EDITION, **TOPICS_PORTE_SIM,
-                                         **TOPICS_OBJETS, **TOPICS_CORPS_SUR, **TOPICS_CORPS_ETAT}
+                                         **TOPICS_OBJETS, **TOPICS_CORPS_SUR, **TOPICS_CORPS_ETAT,
+                                         **TOPICS_APPAREILS}
 
 
 def test_cles():
