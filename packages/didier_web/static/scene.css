@@ -66,6 +66,16 @@
 .scene-ticket { margin-left: auto; width: min(24rem, 32vw); }
 .scene-ticket input { padding: 0.35rem 0.6rem; }
 
+/* --- Séance, dans le bandeau (lot S3, 28/11) ----------------------------------
+   Premier geste d'une séance : à portée sans défiler (PC et téléphone). Le bandeau
+   passe à la ligne au besoin ; le groupe reste d'un bloc. Badge vide = rien à dire. */
+.scene-seance { display: inline-flex; align-items: center; gap: 0.4rem; flex-wrap: nowrap; }
+.scene-seance-titre { font-size: 0.85rem; }
+/* Pas de « Dém… » : dans le bandeau, chaque segment prend la largeur de son libellé. */
+.scene-seance .scene-segment .bouton-catalogue { flex: none; }
+.scene-seance .badge { font-size: 0.72rem; padding: 0.15rem 0.55rem; }
+.scene-seance .badge:empty { display: none; }
+
 /* --- Erreurs récentes, dans le bandeau (D8) --------------------------------- */
 
 .scene-erreurs { position: relative; }
@@ -742,6 +752,9 @@
 #scene-bugs .bouton-catalogue { font-size: 0.8rem; }
 #bugs-couper { min-height: 28px; padding: 0.1rem 0.6rem; font-size: 0.75rem; }
 .scene-note { white-space: pre-line; margin: 0.3rem 0 0; font-size: 0.72rem; color: var(--texte-doux, #9aa3b2); }
+/* Pourquoi « Réarmer » est inactif (lot S3) : lisible d'un coup d'œil, vide = bouton actif. */
+.scene-raison { color: #ffe9c7; }
+.scene-raison:empty { display: none; }
 /* Le titre « Visage » passe au-dessus des bandes LED (il les masquait en vignette). */
 #scene-visage-tuile .scene-tuile-titre { bottom: 1.9rem; }
 .scene-tuile:not(.principale)#scene-visage-tuile .scene-tuile-titre { bottom: 1.2rem; }
