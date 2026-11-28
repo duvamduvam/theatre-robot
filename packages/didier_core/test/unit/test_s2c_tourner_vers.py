@@ -18,6 +18,9 @@ Relecture adverse du 28/11 (une mutation par correction) :
     test_node_c2_quaternion_nul_no_pose_aucun_ordre ; « trop_pres » retiré ->
     test_c2_objet_sous_les_pieds_trop_pres
   - C3 : tolérance « deja_face » gravée EN DUR (10°), plus importée du module testé.
+2e relecture adverse (28/11) :
+  - A2/R1 : differer_go retiré -> test_node_a2_r1_go_pendant_le_pivot_retenu_puis_rejoin ;
+    le stop n'oublie plus le go retenu -> test_node_a2_un_stop_apres_le_go_retenu_l_annule
 """
 import json
 import math
@@ -277,24 +280,74 @@ def test_node_lubie_le_pivot_tourne_vraiment(regisseur, monkeypatch, tmp_path, a
     assert abs(math.degrees(cap)) < 6.0                                 # ... face au banc
 
 
-def test_node_go_de_reprise_apres_le_pivot_rejoint_la_route(regisseur, monkeypatch, tmp_path):
-    """B2 : le « go » de la reprise trouve le pivot ARRIVÉ -> « rejoin », la route repart. Un
-    « go » reçu PENDANT le pivot est sans effet (« deja_en_marche ») : c'est pourquoi la reprise
-    du sélecteur attend la fin du pivot (didier_jeu, test_s2c_la_reprise_attend_la_fin_du_pivot)
-    — et il ne casse rien : le « go » suivant rejoint quand même."""
-    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+def _pivot_en_cours(n):
     _en_seance(n)
     _tableau(n)
     _odom(n, 0.0, 0.0, cap_deg=180.0)
     _voix(n, PIVOT_LUBIE(n, "banc"))
     _etat_route(n, "goto")
-    _voix(n, {"cmd": "go", "origine": "didier"}, t=1005.0)             # pendant le pivot
-    assert _publie(n, "route") == []                                   # rien ne part
+
+
+def test_node_go_de_reprise_apres_le_pivot_rejoint_la_route(regisseur, monkeypatch, tmp_path):
+    """B2 : le « go » de la reprise trouve le pivot ARRIVÉ -> « rejoin », la route repart."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _pivot_en_cours(n)
     _etat_route(n, "arrived")
-    _voix(n, {"cmd": "go", "origine": "didier"}, t=1010.0)             # la reprise, à l'arrivée
-    assert [(m.get("reason") or m["effect"], m.get("rejoin", False)) for m in _voice_moves(n)] == [
-        ("deja_en_marche", False), ("rejoin", True)]
+    _voix(n, {"cmd": "go", "origine": "didier"}, t=1010.0)
+    assert [(m.get("reason") or m["effect"], m.get("rejoin", False)) for m in _voice_moves(n)] == [("rejoin", True)]
+    assert _publie(n, "route") == ["on"]
+
+
+@pytest.mark.parametrize("origine", ["david", "didier"])
+def test_node_a2_r1_go_pendant_le_pivot_retenu_puis_rejoin(regisseur, monkeypatch, tmp_path, origine):
+    """2e relecture adverse (28/11). A2 : un go de DAVID (console ou voix : même message ici)
+    pendant le pivot était avalé (« deja_en_marche ») et le pivot finissait planté. R1 : le go
+    de reprise du sélecteur, parti sur SON `arrived`, traité ici AVANT le nôtre, pareil.
+    Retenu, il part à l'issue du pivot. Mutation : differer_go retiré -> rien ne repart."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _pivot_en_cours(n)
+    _voix(n, {"cmd": "go", "origine": origine}, t=1005.0)
+    assert [(m.get("reason"), m.get("differe")) for m in _voice_moves(n)] == [("deja_en_marche", True)]
+    assert _publie(n, "route") == []                                   # rien pendant le pivot
+    _etat_route(n, "arrived")
     assert _publie(n, "route") == ["on"]                               # la route repart
+    assert [p for t, p in _journal(n) if t == "goto_rejoin"] == [{"by": "go_differe", "origine": origine}]
+
+
+def test_node_a2_pivot_abandonne_off_le_go_retenu_rejoint_aussi(regisseur, monkeypatch, tmp_path):
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _pivot_en_cours(n)
+    _voix(n, {"cmd": "go", "origine": "david"}, t=1005.0)
+    _etat_route(n, "off")                                              # abandon de route_driver (délai)
+    assert _publie(n, "route") == ["on"]
+
+
+def test_node_a2_un_stop_apres_le_go_retenu_l_annule(regisseur, monkeypatch, tmp_path):
+    """Jamais de relance contre un arrêt posé après le go retenu. Mutation : le cancel du stop
+    n'oublie plus le go retenu -> « on » publié."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _pivot_en_cours(n)
+    _voix(n, {"cmd": "go", "origine": "david"}, t=1005.0)
+    _voix(n, {"cmd": "stop", "origine": "didier"}, t=1006.0)
+    _etat_route(n, "off")
+    _etat_route(n, "arrived")
+    assert _publie(n, "route") == []
+    assert not [p for t, p in _journal(n) if t == "goto_rejoin"]
+
+
+def test_node_a2_hors_lubie_rien_ne_change(regisseur, monkeypatch, tmp_path):
+    """Un pivot de DAVID (pas une lubie) : le go pendant lui reste « deja_en_marche », sans
+    retenue — le go différé est borné au pivot d'une lubie."""
+    n = _creer(regisseur, monkeypatch, tmp_path, [LUBIE])
+    _en_seance(n)
+    _tableau(n)
+    _odom(n, 0.0, 0.0, cap_deg=180.0)
+    _voix(n, {"cmd": "tourner_vers", "objet": "banc", "id": "carte/banc", "origine": "david"})
+    _etat_route(n, "goto")
+    _voix(n, {"cmd": "go", "origine": "david"}, t=1005.0)
+    _etat_route(n, "arrived")
+    assert [m.get("differe") for m in _voice_moves(n)] == [None]
+    assert _publie(n, "route") == []
 
 
 def test_node_tourner_vers_de_didier_sous_un_arret_de_david_refuse(regisseur, monkeypatch, tmp_path):

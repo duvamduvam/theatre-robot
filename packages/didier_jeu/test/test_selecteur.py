@@ -340,6 +340,46 @@ def test_s2c_pivot_court_la_reprise_garde_son_tirage():
     assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (21.4, GO_DIDIER)]
 
 
+def _presence(s, t):
+    s.sur_console({"presence": True}, t)
+
+
+def test_s2c_a1_superviseur_exigeant_absent_pas_de_pivot_stop():
+    """2e relecture adverse (28/11) : le pivot DÉPLACE le corps — sans superviseur (mode
+    exigeant, aucun battement de console), pas de pivot, le « stop » d'avant S2c. Mutation :
+    garde retirée -> le pivot partait à 4,3 s."""
+    out = jouer(fabriquer({"superviseur.mode": "exigeant"}), 0.0, 9.0, [(0.0, marche), (1.0, _poi("anneaux"))])
+    assert moves(out) == [(4.3, STOP_DIDIER)]
+    assert [(t, p["pourquoi"]) for t, p in journal(out, "lubie_sans_pivot")] == [
+        (4.3, "lubie « anneaux » : pas de pivot, personne ne surveille (page fermée) → il s'arrête sans se tourner")]
+
+
+def test_s2c_a1_superviseur_exigeant_present_il_pivote():
+    out = jouer(fabriquer({"superviseur.mode": "exigeant"}), 0.0, 9.0,
+                [(0.0, marche), (1.0, _poi("anneaux")), (4.4, reponse_pivot("anneaux"))], continu=_presence)
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux"))]
+
+
+def test_s2c_a1_fatigue_pas_de_pivot_stop():
+    out = jouer(fabriquer(), 0.0, 9.0, [(0.0, marche), (1.0, _poi("anneaux")),
+                                        (4.0, lambda s, t: setattr(s.pulsions, "fatigue", 0.9))])
+    assert moves(out) == [(4.3, STOP_DIDIER)]
+    assert [p["pourquoi"] for _, p in journal(out, "lubie_sans_pivot")] == [
+        "lubie « anneaux » : pas de pivot, il est fatigué (0,88 > 0,80) → il s'arrête sans se tourner"]
+
+
+@pytest.mark.parametrize("go", [lambda s, t: s.sur_console({"cmd": "go"}, t),
+                                lambda s, t: s.sur_chat_move_bouche({"cmd": "go", "origine": "david"}, t)],
+                         ids=["console", "voix"])
+def test_s2c_a2_go_de_david_pendant_le_pivot_est_relaye(go):
+    """Le go de David pendant le pivot part TOUT DE SUITE au régisseur (qui le retient jusqu'à
+    l'issue du pivot : test_s2c_tourner_vers.py, go différé) ; la reprise de Didier tombe."""
+    out = jouer(fabriquer(pools={}), 0.0, 60.0, [
+        (0.0, marche), (1.0, _poi("anneaux")), (4.4, lambda s, t: s.sur_route_state("goto", t)),
+        (6.0, go), (8.0, lambda s, t: s.sur_route_state("arrived", t))])
+    assert moves(out) == [(4.3, PIVOT_LUBIE("anneaux")), (6.0, GO_DAVID)]
+
+
 def test_s2c_stop_de_david_pendant_le_pivot_ni_reprise_ni_go():
     out = jouer(fabriquer(pools={}), 0.0, 120.0, [
         (0.0, marche), (1.0, _poi("anneaux")), (4.4, lambda s, t: s.sur_route_state("goto", t)),

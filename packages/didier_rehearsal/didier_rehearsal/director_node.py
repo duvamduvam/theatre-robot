@@ -130,6 +130,7 @@ from theatre_contrats import stringtime, topics
 from didier_core.diagnostic.journal import JournalWriter, make_event
 from didier_corps_sur.reglages import ReglagesError, charger_reglages
 from didier_rehearsal.contracts import (CHAT_FAULT_TOPIC, CHAT_MOVE_FORWARD_CMD, CHAT_MOVE_GOTO_CMD, lire_chat_move,
+                                       CHAT_MOVE_ORIGINE_DIDIER,
                                        CHAT_MOVE_REPLY_TOPIC, CHAT_MOVE_TOPIC, CHAT_MOVE_TOUR_CMD, CHAT_MOVE_TURN_CMD, CHAT_MOVE_TURN_TO_CMD,
                                        DIRECTOR_CMD_TOPIC, HEARTBEAT_TOPIC, INSTRUCTION_TOPIC, JOURNAL_TOPIC,
                                        OBJECTS_TOPIC, ODOM_TOPIC, POI_EVENT_TOPIC, REHEARSAL_STATE_TOPIC,
@@ -393,6 +394,13 @@ class DirectorNode(Node):
         event = self.goto_policy.note_state(state, self._speed_in_effect(0.0))
         if event is not None:
             self.log(*event)
+        differe = self.goto_policy.go_differe_du(state, self.reenable.off_by_cmd)
+        if differe is not None:
+            # Le pivot de la lubie a fini : le « go » reçu pendant lui (ou juste avant notre
+            # `arrived`) part MAINTENANT en reprise (GotoPolicy, GO DIFFÉRÉ).
+            self.log("goto_rejoin", {"by": "go_differe", "origine": differe})
+            self.voice.arm_relaunch(time.monotonic())
+            self._voice_relaunch_step(time.monotonic())
 
     def _on_route_cmd(self, msg: StringTime):
         # Décodé comme route_driver le décode (off = "off"/false/0/"0") :
@@ -589,6 +597,10 @@ class DirectorNode(Node):
         payload = {"cmd": cmd, "origine": origine, "effect": decision.effect}
         if decision.reason is not None:
             payload["reason"] = decision.reason
+        if (decision.reason == "deja_en_marche"
+                and self.goto_policy.differer_go(origine, latched)):
+            # Pivot d'une lubie en cours : ce « go » n'est pas perdu, il partira à son issue.
+            payload["differe"] = True
         if decision.rejoin:
             payload["rejoin"] = True
         self.log("voice_move", payload)
@@ -722,7 +734,10 @@ class DirectorNode(Node):
         self._reply(intent, decision.effect,
                     name=decision.name if decision.effect == "accepted" else None)
         if decision.effect == "accepted":
-            self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TURN_TO_CMD, now)
+            # Origine « didier » = le pivot d'une LUBIE (sélecteur) : un « go » reçu pendant
+            # lui est retenu, jamais perdu (GotoPolicy, GO DIFFÉRÉ).
+            self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TURN_TO_CMD, now,
+                                  pivot_lubie=intent.get("origine") == CHAT_MOVE_ORIGINE_DIDIER)
 
     def _tour_de(self, intent: dict):
         """« Faire le tour » (lot M3) : arbitré, journalisé `tour_de`, accepté
@@ -747,10 +762,11 @@ class DirectorNode(Node):
             self._accept_maneuver(decision.name, decision.order, CHAT_MOVE_TOUR_CMD, now,
                                   target=decision.poi)
 
-    def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None):
+    def _accept_maneuver(self, name: str, order: str, by: str, now: float, target: str | None = None,
+                         pivot_lubie: bool = False):
         """Manœuvre ACCEPTÉE (aller voir, tourner, avancer, tour, se tourner vers) : comme un
         « go » pour ce qui retient Didier, puis l'ordre part sur route_goto.
-        `target` : POI visé s'il diffère du nom (GotoPolicy.accept)."""
+        `target` : POI visé s'il diffère du nom ; `pivot_lubie` : cf. GotoPolicy.accept."""
         relaunching = self.voice.relaunching
         lubie_active, in_effect = self._voice_context()
         voice = self.voice.accept_goto(lubie_active=lubie_active, speed_in_effect=in_effect)
@@ -764,7 +780,7 @@ class DirectorNode(Node):
         if voice.speed is not None:
             self.log("voice_hold_released", {"by": by, "speed": voice.speed})
             self._publish(ROUTE_SPEED_TOPIC, json.dumps(voice.speed))
-        self.goto_policy.accept(name, target)
+        self.goto_policy.accept(name, target, pivot_lubie=pivot_lubie)
         self.pub_goto.publish(StringTime(msg=order, time=0, anim=False))
 
     def _voice_relaunch_step(self, now: float):

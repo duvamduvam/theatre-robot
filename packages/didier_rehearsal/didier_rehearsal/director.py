@@ -1088,10 +1088,21 @@ class GotoPolicy:
     La manœuvre cesse d'être « la nôtre » (release) dès que David reprend la
     main (commande `route` on/off vue), que la route repart (état « on »),
     ou qu'une cause est publiée (route_driver la publie au boot et à CHAQUE
-    `off` par commande : un `off` qui nous aurait échappé tombe ici)."""
+    `off` par commande : un `off` qui nous aurait échappé tombe ici).
+
+    GO DIFFÉRÉ (S2c, 2e relecture adverse du 28/11) : pendant le pivot d'une LUBIE (un
+    `tourner_vers` d'origine « didier »), un « go » qui ne lève rien (« deja_en_marche ») n'est
+    plus perdu. Il est retenu (differer_go) et le node fait rejoin dès l'issue du pivot
+    (arrived, ou off après goto). Deux cas : le go de David pendant le pivot (avant : avalé,
+    le pivot finissait `arrived` et plus rien ne relançait), et la course à l'arrivée (le go
+    de reprise du sélecteur, parti sur SON `arrived`, traité ici avant le nôtre). Le go retenu
+    tombe à tout ce qui retire la manœuvre (stop, cancel, abort, commande `route`, cause,
+    nouvelle manœuvre) : jamais de relance contre un arrêt posé après lui."""
 
     def __init__(self):
         self._name: str | None = None
+        self._pivot_lubie = False           # la manœuvre est le pivot d'une lubie (go différé permis)
+        self._go_differe: str | None = None  # origine du « go » retenu, None = aucun
         self._target: str | None = None   # POI visé (aller voir, tour) — sa lubie est sautée
         self._seen_goto = False
         self._cancel_by: str | None = None
@@ -1102,22 +1113,51 @@ class GotoPolicy:
         """Nom de l'objet de la manœuvre ordonnée, None si aucune."""
         return self._name
 
-    def accept(self, name: str, target: str | None = None) -> None:
+    def accept(self, name: str, target: str | None = None, *, pivot_lubie: bool = False) -> None:
         """`target` : POI visé s'il diffère du nom (tour : « tour de X » vise
-        X) ; défaut = le nom (aller voir : le nom EST le POI)."""
+        X) ; défaut = le nom (aller voir : le nom EST le POI). `pivot_lubie` : la
+        manœuvre est le pivot d'une lubie (cf. GO DIFFÉRÉ)."""
         self._reset(name)
         self._target = name if target is None else target
+        self._pivot_lubie = pivot_lubie
 
     def cancel(self, by: str) -> None:
         """Nous envoyons « cancel » (stop vocal, abort) : l'issue sera goto_cancelled."""
+        self._go_differe = None
         if self._name is not None and self._cancel_by is None:
             self._cancel_by = by
+
+    @property
+    def go_differe(self) -> str | None:
+        return self._go_differe
+
+    def differer_go(self, origine: str, latched_state: str | None) -> bool:
+        """« go » sans effet (« deja_en_marche ») reçu PENDANT le pivot d'une lubie : retenu
+        -> True. Ailleurs (aller voir, tour, gestes de David) : rien ne change -> False."""
+        if self._name is None or not self._pivot_lubie or latched_state != "goto":
+            return False
+        self._go_differe = origine
+        return True
+
+    def oublier_go_differe(self) -> str | None:
+        """Un « stop » est arrivé après le go retenu : il tombe -> son origine, ou None."""
+        go, self._go_differe = self._go_differe, None
+        return go
+
+    def go_differe_du(self, latched_state: str | None, off_by_cmd: bool) -> str | None:
+        """Issue du pivot vue : -> origine du go retenu si le rejoin est permis MAINTENANT (il est
+        alors consommé), sinon None."""
+        if self._go_differe is None or not self.rejoin_allowed(latched_state, off_by_cmd):
+            return None
+        return self.oublier_go_differe()
 
     def release(self) -> None:
         self._reset(None)
 
     def _reset(self, name: str | None) -> None:
         self._name = name
+        self._pivot_lubie = False
+        self._go_differe = None
         self._target = name
         self._seen_goto = False
         self._cancel_by = None

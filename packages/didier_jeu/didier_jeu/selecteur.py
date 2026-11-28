@@ -1020,9 +1020,15 @@ class Selecteur:
             # deviné ici) : une manœuvre ordinaire, qui quitte la route et finit à l'arrêt.
             # Jamais « stop » PUIS pivot (relecture adverse du 28/11) : sous l'arrêt, le pivot
             # restait retenu (facteur 0) et partait au « go » de la reprise — Didier planté.
-            e.pivot = self._pivot_vers(e.candidat.cible, now)
+            # Le pivot DÉPLACE le corps : mêmes gardes qu'un déplacement de son initiative
+            # (2e relecture adverse du 28/11 : superviseur absent, fatigue). Refusé -> « stop ».
+            refus = self._refus_deplacement(now)
+            e.pivot = None if refus else self._pivot_vers(e.candidat.cible, now)
             if e.pivot is None:
                 self.sorties.append(("chat_move", marche(STOP, DIDIER)))
+                if refus:
+                    self._journal("lubie_sans_pivot", f"lubie « {e.candidat.cible} » : pas de pivot, {refus} → "
+                                  "il s'arrête sans se tourner", cible=e.candidat.cible, raison=refus)
             else:
                 e.t_pivot = now
                 self.sorties.append(("chat_move", e.pivot))

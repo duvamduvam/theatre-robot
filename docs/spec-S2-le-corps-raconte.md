@@ -144,9 +144,16 @@ Trois lignes, dans le prompt, à côté de `phrase` :
   - **repli** sur l'arrêt d'avant S2c (« stop » « didier ») si l'objet n'est pas situé dans le
     tableau, si le régisseur refuse le pivot (`deja_face`, `no_pose`, `trop_pres`, …) ou s'il
     ne répond pas en `durees_s.deplacement_accuse` (3 s ; la lubie ne finit pas avant) ;
+  - le pivot passe par les **gardes d'un déplacement d'initiative** (superviseur absent en
+    mode exigeant, fatigue, verrou de David) : refusé, c'est le « stop » d'avant S2c ;
   - **la reprise d'une lubie attend la fin du pivot** (`route_state` « goto ») : un « go »
     pendant une manœuvre est sans effet au régisseur (« deja_en_marche »). Elle part à
     l'arrivée, où le régisseur la prend en « rejoin » ;
+  - **aucun « go » n'est perdu pendant le pivot** (2e relecture, 28/11) : le régisseur
+    RETIENT un « go » « deja_en_marche » reçu pendant le pivot d'une lubie — go de David
+    (console ou voix), ou go de reprise arrivé avant son propre `arrived` — et fait rejoin à
+    l'issue du pivot (`arrived`, ou `off` après abandon). Tout stop, cancel, abort ou commande
+    `route` venu après le fait tomber. Borné au pivot d'une lubie : ailleurs rien ne change ;
   - règles d'arrêt de David intactes : un stop de David pendant le pivot l'annule (`cancel`),
     sous son verrou le pivot est refusé `arret_de_david`, hors séance `hors_seance` ;
   - `tourner_vers` de David sous un arrêt : mêmes règles que `tourner` (il lève l'arrêt et
