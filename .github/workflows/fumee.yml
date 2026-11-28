@@ -1,34 +1,41 @@
-# Passe d'ESSAI de la fumée complète sur un runner GitHub gratuit (22/11/2026).
+# Fumée de LOGIQUE sur un runner GitHub gratuit, à chaque PR vers main (lot F2, 28/11/2026).
 #
-# Question posée : la fumée de machines/sim/fumee.sh tient-elle sur un runner public (4 vCPU,
-# 16 Go, aucun GPU : Gazebo, ses caméras et le lidar simulé rendus par le CPU, sous Xvfb) ? La
-# mesure qui compte est le RTF de la sonde (seuil 0,8) ; le verdict des épreuves est un bonus.
-# Compte rendu : docs/operations.md § « Fumée sur GitHub Actions », docs/chantiers.md.
+# Pourquoi la famille « logique » seulement : les runners publics (4 vCPU, 16 Go, aucun GPU :
+# Gazebo, ses caméras et le lidar simulé rendus par le CPU, sous Xvfb) tournent à RTF 0,68-0,76,
+# sous le seuil de 0,8 ; la sonde rtf arrêtait tout, aucune épreuve n'était jouée (28/11). Le
+# programme F1 (machines/sim/fumee/) joue donc ici `--famille logique` : les épreuves qui ne
+# dépendent ni de l'horloge simulée ni de la conduite (namespace, catalogue, parle, machines,
+# audio ; plan.toml), SANS la sonde rtf. Les épreuves de COMPORTEMENT (edition, corps_sur,
+# chantiers, a1, objets, conversation) restent sur le PC (fumée de référence).
+# Compte rendu : docs/operations.md § « Fumée automatique », docs/spec-F1-programme-fumee.md.
 #
-# Lancement à la MAIN seulement (re-tranché le 28/11 : automatique essayé le matin même, mais
-# les runners publics ne tiennent plus le seuil RTF — 0,762 puis 0,679 — donc aucune épreuve
-# jouée ; la fumée de référence est celle du PC) :
-#   gh workflow run fumee.yml --ref <branche> [-f ref=<sha ou branche à tester>]
-# À rouvrir en F2/F3 (programme F1 + sim allégée pour le runner).
+# Lancement : automatique sur toute PR vers main et tout push sur main, sauf doc seule ; à la
+# main : gh workflow run fumee.yml --ref <branche> [-f ref=<sha ou branche à tester>]
 #
-# Adaptations, toutes explicites par variable (fumee.sh garde ses défauts du PC de David) :
-#   FUMEE_DEPOT=$GITHUB_WORKSPACE, tous les chemins sous $RUNNER_TEMP/fumee/ ;
+# Adaptations du runner, toutes explicites par variable (le programme garde ses défauts du PC) :
+#   FUMEE_DEPOT=$GITHUB_WORKSPACE, tous les chemins (arbre de travail compris) sous $RUNNER_TEMP/fumee/ ;
 #   FUMEE_COEURS=        pas de réservation de cœurs (4 vCPU, rien d'autre ne tourne) ;
 #   FUMEE_SIM_OCCUPEE    verrou « sim occupée » propre au runner (aucune séance de David ici) ;
-#   FUMEE_PROFIL=0       pas de profil d'énergie (pas de power-profiles-daemon) ;
-#   FUMEE_COMMIT=0       aucun commit depuis la CI ;
+#   FUMEE_PROFIL=0 et --profil aucun : pas de profil d'énergie (pas de power-profiles-daemon) ;
+#   FUMEE_COMMIT=0       aucun commit depuis la CI (et FUMEE_SORTIE hors du dépôt) ;
+#   FUMEE_BUILD_ARGS     frontend Dockerfile « labs » (COPY --exclude), Docker du runner plus ancien ;
 #   FUMEE_DELAI_DEMARRAGE=1200  colcon ×4 sur 4 vCPU est plus lent que sur le PC ;
 #   DISPLAY=:99          Xvfb lancé sur l'hôte du runner (le compose monte /tmp/.X11-unix) ;
 #   DIDIER_MEDIAS_PRIVES dossier VIDE (les audios privés ne quittent pas le PC).
-# fumee.sh n'a ni garde thermique, ni test llama-server, ni bascule réseau : rien à couper.
+# Sans `sensors`, le thermomètre est absent : gardien de chaleur muet (banc sain), comme prévu.
 #
-# Clé Anthropic : lue dans secrets.ANTHROPIC_API_KEY S'IL EXISTE (posé par David, jamais ici).
-# Sans clé, CONV est « non lancée (pas de clé) » — facultative, jamais rouge. Avec la clé, les deux
-# fichiers de la surcouche tête sont écrits dans ~/.config/didier/ du runner (VM jetable, 600),
-# effacés en fin de job, et les artefacts sont fouillés pour la valeur avant d'être publiés.
+# Secrets ANTHROPIC / OPENROUTER : plus aucune épreuve ne les consomme ici (la conversation est
+# sur le PC, le compose de base n'en monte aucun) ; ils ne sont plus posés. Leurs valeurs servent
+# SEULEMENT à fouiller les artefacts avant publication ; jamais lues dans un journal, jamais affichées.
 name: fumee
 
 on:
+  pull_request:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md"]
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md"]
   workflow_dispatch:
     inputs:
       ref:
@@ -39,7 +46,7 @@ on:
 permissions:
   contents: read
 
-# Une seule passe par branche : une nouvelle poussée annule la passe en cours.
+# Une seule passe par ref : une nouvelle poussée annule la passe en cours.
 concurrency:
   group: fumee-${{ github.ref }}
   cancel-in-progress: true
@@ -47,11 +54,13 @@ concurrency:
 jobs:
   fumee:
     runs-on: ubuntu-24.04
-    timeout-minutes: 170
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
+          # Le programme fait `git fetch origin` puis un worktree de la révision : historique complet.
+          fetch-depth: 0
 
       - name: Chemins de la passe (sous RUNNER_TEMP)
         run: |
@@ -61,6 +70,7 @@ jobs:
           {
             echo "FUMEE_R=$R"
             echo "FUMEE_DEPOT=$GITHUB_WORKSPACE"
+            echo "FUMEE_ARBRE=$R/arbre"
             echo "FUMEE_ETAT=$R/etat"
             echo "FUMEE_BRUT=$R/brut"
             echo "FUMEE_SORTIE=$R/pages"
@@ -76,6 +86,8 @@ jobs:
             echo "DISPLAY=:99"
             echo "XAUTHORITY=$R/xauthority"
           } >>"$GITHUB_ENV"
+          # La révision testée : le commit extrait (pour une PR, son commit de fusion avec main).
+          echo "FUMEE_REV=$(git rev-parse HEAD)" >>"$GITHUB_ENV"
 
       - name: Libérer le disque (4 images ≈ 11 Go)
         run: |
@@ -94,63 +106,34 @@ jobs:
           nohup Xvfb :99 -screen 0 1280x1024x24 -ac +extension GLX +render -noreset >"$FUMEE_R/xvfb.log" 2>&1 &
           sleep 3
           test -S /tmp/.X11-unix/X99 && echo "Xvfb :99 prêt"
-          nproc; free -g
+          nproc; free -g; python3 --version
 
-      - name: Secrets de la tête (si ANTHROPIC_API_KEY existe)
-        id: secrets
-        env:
-          CLE_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY }}
-          CLE_OPENROUTER: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          if [ -z "$CLE_ANTHROPIC" ]; then
-            echo "pas de secret ANTHROPIC_API_KEY : CONV sera « non lancée (pas de clé) »"
-            echo "cle=0" >>"$GITHUB_OUTPUT"; exit 0
-          fi
-          umask 077
-          mkdir -p "$HOME/.config/didier"
-          printf 'ANTHROPIC_API_KEY=%s\n' "$CLE_ANTHROPIC" >"$HOME/.config/didier/secrets.env"
-          # chat_node exige openrouter_key au démarrage (secours LLM + STT). Sans secret OpenRouter,
-          # une valeur factice : la conversation passe par Anthropic, le secours échouerait.
-          printf 'openrouter_key=%s\n' "${CLE_OPENROUTER:-absente-en-ci}" >"$HOME/.config/didier/vision-conf-secret"
-          echo "secrets de la tête posés (valeurs non affichées)"
-          echo "cle=1" >>"$GITHUB_OUTPUT"
-
-      - name: Construire les 4 images de la sim
+      # Les 4 images sont construites par l'épreuve « image » du programme (étiquette d'empreinte,
+      # FUMEE_BUILD_ARGS) : pas d'étape de build à part, qui construirait deux fois.
+      - name: Fumée de logique (programme F1, sans porte rtf)
+        id: fumee
+        timeout-minutes: 90
         working-directory: machines/sim
         run: |
-          t0=$SECONDS
-          # COPY --exclude (Dockerfile du robot, audios privés) exige le frontend Dockerfile « labs » (1.18 stable ne suffit pas, essai du 22/11) ;
-          # le Docker du runner est plus ancien : on force le frontend ici seulement (le PC et le Pi
-          # ont un BuildKit récent, leur build ne change pas).
-          if ! docker compose build --build-arg BUILDKIT_SYNTAX=docker/dockerfile:1-labs >"$FUMEE_R/build.log" 2>&1; then
-            tail -80 "$FUMEE_R/build.log"; exit 1
-          fi
-          echo "images construites en $(( (SECONDS - t0) / 60 )) min"
-          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep didier-sim
-          df -h /
-
-      - name: Fumée complète (headless)
-        id: fumee
-        timeout-minutes: 140
-        run: |
           set +e
-          bash machines/sim/fumee.sh
+          python3 -u -m fumee --rev "$FUMEE_REV" --famille logique --profil aucun
           rc=$?
           echo "rc=$rc" >>"$GITHUB_OUTPUT"
-          echo "fumee.sh a rendu le code $rc"
+          echo "le programme de fumée a rendu le code $rc (0 vert, 1 rouge, 2 refus, 3 invalide)"
 
-      - name: Résumé (RTF, verdict par épreuve)
+      - name: Résumé (verdict par épreuve)
         if: always()
         run: |
           res="$(ls -t "$FUMEE_R"/brut/*/resultat.json 2>/dev/null | head -1)"
-          if [ -z "$res" ]; then echo "aucun resultat.json" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          if [ -z "$res" ]; then echo "aucun resultat.json (refus ou échec avant la fumée : voir le journal)" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
           python3 - "$res" <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
           import json, sys
           r = json.load(open(sys.argv[1]))
-          print("## Fumée sur GitHub Actions : %s" % r.get("verdict"))
+          print("## Fumée de logique sur GitHub Actions : %s" % r.get("verdict"))
           print()
-          print("RTF **%s** (seuil %s), %s min, sha %s, %s cœurs" % (
-              r.get("rtf"), r.get("rtf_min"), round((r.get("duree_s") or 0) / 60), r.get("sha"), r.get("nb_coeurs")))
+          rtf = "non exigé (famille %s)" % r["famille"] if r.get("famille") else "**%s** (seuil %s)" % (r.get("rtf"), r.get("rtf_min"))
+          print("RTF %s · %s min · sha %s · %s cœurs" % (
+              rtf, round((r.get("duree_s") or 0) / 60), r.get("sha"), r.get("nb_coeurs")))
           print()
           print("| épreuve | statut | ok/attendu | durée (s) | détail |")
           print("|---|---|---|---|---|")
@@ -168,10 +151,11 @@ jobs:
           CLE_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY }}
           CLE_OPENROUTER: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
+          # Rien ne les pose plus ; on efface quand même (VM réutilisée par erreur, ancienne étape).
           rm -f "$HOME/.config/didier/secrets.env" "$HOME/.config/didier/vision-conf-secret"
           A="$FUMEE_R/artefact"; mkdir -p "$A"
           cp -r "$FUMEE_R/pages" "$FUMEE_R/brut" "$A/" 2>/dev/null || true
-          cp "$FUMEE_R/build.log" "$FUMEE_R/xvfb.log" "$A/" 2>/dev/null || true
+          cp "$FUMEE_R/xvfb.log" "$A/" 2>/dev/null || true
           cp "$FUMEE_R/etat/journal.log" "$A/journal-fumee.log" 2>/dev/null || true
           # Journaux de la sim (écrits root par les conteneurs) : réduits à l'essentiel lisible.
           sudo tar -czf "$A/journaux-sim.tar.gz" -C "$FUMEE_R" sim 2>/dev/null || true
@@ -202,20 +186,12 @@ jobs:
       - name: Verdict de la fumée
         if: always()
         run: |
-          [ "${{ steps.fumee.outputs.rc }}" = 0 ] && exit 0
-          # Runner trop lent (RTF sous le seuil, seule épreuve rouge) : banc INVALIDE, pas un
-          # défaut du code — le job ne passe pas en échec (pas de faux rouge ni de courriel),
-          # un avertissement le dit. F2/F3 : passer ce workflow sur le programme F1 (invalide +
-          # rejeu natifs).
-          res="$(ls -t "$FUMEE_R"/brut/*/resultat.json 2>/dev/null | head -1)"
-          if [ -n "$res" ] && python3 - "$res" <<'PY'
-          import json, sys
-          r = json.load(open(sys.argv[1]))
-          rouges = [e.get("id") for e in r.get("epreuves", []) if e.get("statut") == "rouge"]
-          sys.exit(0 if rouges == ["rtf"] else 1)
-          PY
-          then
-            echo "::warning::fumée INVALIDE : runner trop lent (RTF sous le seuil), aucune épreuve jouée — relancer ou juger sur le PC"
-            exit 0
-          fi
-          echo "fumée non verte (code ${{ steps.fumee.outputs.rc }}) : voir le résumé"; exit 1
+          case "${{ steps.fumee.outputs.rc }}" in
+            0) echo "fumée de logique VERTE"; exit 0 ;;
+            3) # Un gardien a parlé (registre Docker injoignable, enregistreur mort…) : banc
+               # INVALIDE, pas un défaut du code — pas de job en échec, un avertissement le dit.
+               echo "::warning::fumée INVALIDE : défaut du banc, pas de Didier — relancer ou juger sur le PC (voir le résumé)"
+               exit 0 ;;
+            1) echo "::error::fumée ROUGE : voir le résumé (tableau des épreuves)"; exit 1 ;;
+            *) echo "::error::fumée non jouée (code ${{ steps.fumee.outputs.rc }} : refus ou échec du banc) : voir le journal"; exit 1 ;;
+          esac
